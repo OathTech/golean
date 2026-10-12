@@ -3012,6 +3012,13 @@ private def bug078BudgetTests : IO Bool := do
       ["make([][1024]uint8, 32768)", "footprint budget for a constant-length make"]))
   passed := passed && (← expectTrue "BUG-078 (2b): a scalar element type at the same count is far inside the budget (the element footprint is what the count-only sliceCapBudget misses)"
     (decodeMsg (makeWire u8 (toString (1 <<< 19)) none)).isOk)
+  -- PRECEDENCE (the lane's first --diff catch, builtins/make-maxalloc):
+  -- the bound sits BEHIND gc's own makeslice panic and the machine's
+  -- count refusal — both stay the machine's, so the wire decodes.
+  passed := passed && (← expectTrue "BUG-078 (2b): make([]uint8, 1<<48+1) — gc's own `len out of range` panic at run time — DECODES (never pre-empted by the decoder's bound)"
+    (decodeMsg (makeWire u8 (toString ((1 <<< 48) + 1)) none)).isOk)
+  passed := passed && (← expectTrue "BUG-078 (2b): make([][1024]uint8, 1<<24) — a count past sliceCapBudget — DECODES (the machine's own named refusal, not the decoder's)"
+    (decodeMsg (makeWire row1024 (toString (1 <<< 24)) none)).isOk)
   pure passed
 
 set_option maxRecDepth 4096 in

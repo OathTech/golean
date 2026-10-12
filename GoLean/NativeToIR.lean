@@ -3,6 +3,10 @@ import GoLean.StrictJson
 import GoLean.GoCore.Syntax
 import GoLean.GoCore.Unseq
 import GoLean.GoCore.Locals
+-- The make-site budget order the decoder's constant-count bound mirrors
+-- (`checkMakeFootprint`: gc's own `makeslice` panic by `tySizeBytes` /
+-- `maxAllocBytes`, then the machine's `sliceCapBudget`, then this bound).
+import GoLean.GoCore.Machine
 
 /-!
 # Native frontend lowering
@@ -74,6 +78,11 @@ private structure LowerCtx where
   method decodes, so the array arm's product check resolves every `.defined`
   element type it meets there. -/
   tyFootprint : Array (Option Nat) := #[]
+  /-- The decoded TYPE TABLE itself (fix round 2026-10-12): set once the table is
+  accepted, read by `checkMakeFootprint` for `tySizeBytes` — the constant-count
+  make bound sits BEHIND gc's own `makeslice` panic, which is a byte-size test.
+  Empty while the table decodes. -/
+  types : TypeEnv := #[]
   /-- B6 (2026-09-30): the enclosing function's WIRE name table — the frontend's
   source entries, indexed by the `local` indices its nodes carry; the decoder's
   `$`-temporaries are interned after them (`LowerSt`). Empty outside a function. -/
@@ -518,7 +527,9 @@ budget, BUG-078), never a wall-clock kill. The bound is on the TYPE, as
 materializes — the same policy, a type the machine could not
 materialize is refused where it is spelled. A `make` with a CONSTANT
 length or cap is bounded by the same number through
-`checkMakeFootprint` (`n × footprint(T)`; BUG-078 residual (2b), the
+`checkMakeFootprint` (`n × footprint(T)`, and only where the machine
+would otherwise materialize — behind gc's own `makeslice` panic and
+`sliceCapBudget`, the make site's order; BUG-078 residual (2b), the
 decoder's half: `make([][1024]byte, 1<<19)`, 2^29 leaves at a count
 16× under `sliceCapBudget`, was a kill — exit 137 at 16.7 GB after
 57 s under `capped -m 16G`, the reviewer's reproduction; `1<<18` ran
@@ -1498,13 +1509,31 @@ soundness/completeness cases in lockstep). Negative constants are not this check
 (go/types rejects them; the unseq arm's `unseqCheckConstSize` names them; `Int.toNat` makes
 them 0 here). Both `make-slice` arms (the statement and the unseq allocation) call this;
 a `.defined` element with no footprint cannot occur in a body (the table is asserted
-complete before bodies decode) and fails closed if it does. -/
+complete before bodies decode) and fails closed if it does.
+
+PRECEDENCE — the make site's own order, mirrored (the lane's first `--diff` at a39a1c67
+caught the first cut skipping it: the whole `builtins/make-maxalloc/` wire, 15 rows,
+flipped, because `make([]byte, 1<<48+1)` — a count gc REJECTS AT RUN TIME, «makeslice: len
+out of range», a Go-observable panic the machine models — was refused at decode instead,
+and a decode refusal is per wire. A decode-time refusal that pre-empts a Go-observable
+panic is a WRONG ANSWER, not a fail-close.) So this bound fires only where the machine
+would otherwise MATERIALIZE: (i) gc's own check first — `n × tySizeBytes(T) >
+maxAllocBytes` is gc's panic, the machine's, not this check's (a `T` whose size the
+machine cannot compute refuses there too, before any backing); (ii) then the machine's
+count bound — `n > sliceCapBudget` is its named `unsupported`; (iii) only then the
+footprint. -/
 private def checkMakeFootprint (path : String) (elemTy : Ty) (lenJ : Json) (capJ : Option Json) :
     LowerM Unit := do
   let constOf (j : Json) : Nat := match unseqConstInt? j with | some v => v.toNat | none => 0
   let n := max (constOf lenJ) ((capJ.map constOf).getD 0)
   if n == 0 then return
-  match tyFootprint? (← read).tyFootprint elemTy with
+  let ctx ← read
+  match tySizeBytes ctx.types elemTy with
+  | .error _ => return
+  | .ok size =>
+      if n * size > maxAllocBytes then return
+  if n > Machine.sliceCapBudget then return
+  match tyFootprint? ctx.tyFootprint elemTy with
   | .error e => throw e
   | .ok (some f) =>
       if n * f > arrayFootprintBudget then
@@ -4102,7 +4131,7 @@ partial def decodeProgram (json : Json) : Except String Program := do
   for (f, i) in footprints.toList.zipIdx do
     if f.isNone then
       throw s!"native lowering: type table entry {i} has no footprint after the well-foundedness decision (internal inconsistency; fail closed)"
-  let ctx0 : LowerCtx := { nGlobals := 0, typeIdx, tyFootprint := footprints }
+  let ctx0 : LowerCtx := { nGlobals := 0, typeIdx, tyFootprint := footprints, types := typeDefs }
   let globals ←
     match obj.get? "globals" with
     | none => pure #[]
@@ -4121,7 +4150,7 @@ partial def decodeProgram (json : Json) : Except String Program := do
     if seenGlobals.contains g.name then
       throw s!"native lowering: duplicate global {g.name} in program"
     seenGlobals := seenGlobals.insert g.name
-  let ctx : LowerCtx := { nGlobals := globals.size, typeIdx, tyFootprint := footprints }
+  let ctx : LowerCtx := { nGlobals := globals.size, typeIdx, tyFootprint := footprints, types := typeDefs }
   let funcsJson ← StrictJson.array "program.funcs" (← StrictJson.field "program" obj "funcs")
   let funcs ← funcsJson.mapIdxM (fun i f => runLower (decodeFunc s!"program.funcs[{i}]" f) ctx)
   let methodsJson ← StrictJson.array "program.methods" (← StrictJson.field "program" obj "methods")

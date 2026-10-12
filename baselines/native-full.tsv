@@ -5,6 +5,9 @@
 #   count × element footprint is past arrayFootprintBudget refuses by name (`checkMakeFootprint`, both make-slice arms; cause key
 #   error:make-footprint-budget, a sibling of array-footprint-budget). 3974 + 2 = 3976; PASS 3740 + 1 = 3741; FAIL 234 + 1 = 235.
 #   NO existing row moved; 0 PASS->non-PASS (no corpus `make` has a constant count whose footprint nears the budget).
+#   (The lane's first --diff at a39a1c67 caught the first cut: all 15 builtins/make-maxalloc rows flipped PASS->FAIL because
+#   `make([]byte, 1<<48+1)` — gc's run-time `len out of range` panic — was refused at decode and the refusal is per wire;
+#   fixed by mirroring the make site's order (gc's panic, then sliceCapBudget, then the bound); the --diff at the tip judges.)
 #   NEW rows:
 #     arrays/materialization-budget-make/over-budget FAIL/lean-observation error:make-footprint-budget — BY DESIGN, on BUG-078's
 #       Cases line (Expect: FAIL): `make([][1024]byte, 1<<19)`, 2^29 leaves at a count 16x under sliceCapBudget, the reviewer's

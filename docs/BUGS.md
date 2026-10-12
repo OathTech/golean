@@ -4752,7 +4752,17 @@ refuses `n × footprint(T) > arrayFootprintBudget` for the largest
 CONSTANT operand `n` (the cap when constant — the backing is
 cap-sized — else the len, a lower bound on it), naming the make's
 spelling, `n`, the per-element footprint, the product, the budget and
-this entry; cause key `error:make-footprint-budget`
+this entry — and ONLY where the machine would otherwise materialize, in
+the make site's own order: gc's `makeslice` panic first (`n ×
+tySizeBytes(T) > maxAllocBytes` stays the machine's Go-observable
+panic), then the machine's `sliceCapBudget` refusal, then this bound.
+The lane's first `--diff` at a39a1c67 caught the first cut skipping that
+order: the whole `builtins/make-maxalloc/` wire (15 rows) flipped
+PASS→FAIL because `make([]byte, 1<<48+1)` — a count gc rejects at run
+time — was refused at decode (a decode refusal is per wire); a
+decode-time refusal that pre-empts a Go-observable panic is a wrong
+answer, not a fail-close, and the gate said so. Cause key
+`error:make-footprint-budget`
 (`scripts/machine-causes.tsv`, a sibling of `array-footprint-budget`
 so the baseline pins which bound fired). Pins:
 `arrays/materialization-budget-make/over-budget` (`make([][1024]byte,
