@@ -598,6 +598,10 @@ capped scripts/ci                                                  # fast gate (
 capped scripts/ci --diff                                           # expect PASS 3936/3936 (3705/231) as at r75
 python3 tools/certification.py release-check --base <origin/main at the push>
 ```
+  **Note 2026-10-12** ([AGENT] records lane `docs/release-records-1012`, release-readiness item 15; this plan is a
+  record and is not rewritten): `tools/certification.py` and the certificate apparatus were DELETED in the 2026-10-12
+  gate cull (`docs/2026-10-12_gate-cull-plan.md` §9), so the last command above no longer exists; `capped scripts/ci
+  --diff` is the whole merge gate now.
   Expectations to treat as findings, not failures to fix: the certificate
   provenance step compares compiled inputs, so a different machine with the
   same toolchain should pass; if it goes STALE the cause must be named
