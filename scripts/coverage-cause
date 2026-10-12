@@ -1,0 +1,349 @@
+#!/usr/bin/env python3
+"""Derive each corpus row's normalized refusal-CAUSE key from a recorded run.
+
+Refusal-cause pinning (release-readiness item 8 / gate-audit F9; design and
+key grammar: docs/2026-10-12_refusal-cause-pinning-design.md §3; [USER]
+Mike 2026-10-12 «1,3-6 approved», D1-D6 as recommended). The baseline
+(baselines/native-full.tsv, column 4) pins the key this script derives, and
+scripts/coverage-baseline-diff compares it, so a crash, a timeout or a
+DIFFERENT refusal at the same (result, stage) is drift by name. The column is
+REGENERATED from a run by this script (--apply), never hand-maintained.
+
+Usage:
+  scripts/coverage-cause <results.tsv>
+      one `id<TAB>cause` line per results row (PASS rows: `-`).
+  scripts/coverage-cause --unclassified <results.tsv>
+      the D5 speedbump: list FAIL rows whose key is unclassified
+      (`fe?:<head>` or `<status>:?`); exit 1 if any, 0 if none.
+  scripts/coverage-cause --apply <baseline.tsv> <results.tsv>
+      print the baseline with column 4 (`cause`) set from the run: every
+      comment/header line kept verbatim, every row's result/id/stage kept.
+      REFUSES (exit 2) if a baseline row is absent from the run or its
+      result/stage disagrees with it (re-pin the rows first: this regenerates
+      the cause column only), and on an alternation row (`|` stage) whose
+      cause column is not already a paired `|` set the run's (stage, cause)
+      is a member of (alternation causes are [USER]-ruled per row, set by
+      hand alongside the stage set).
+
+The key grammar (first rule that applies wins; PASS rows are `-`):
+  1. a runner non-verdict phrase (scripts/diff-coverage's signal_cause /
+     undecided_cause / obs_eq_cause), at ANY stage, searched only in the
+     runner's own words (before the first captured observation/output):
+     `KILLED (exit N` -> killed:N; `TIMED OUT after` -> timeout;
+     `failed with exit N (did not decide)` -> undecided:N;
+     `could not decode the observation (exit 2` -> undecided:decode.
+  2. frontend-export: `native frontend (exit 1): <text>` -> the
+     tools/lowerdiag/causes.tsv class `<fr>/<id>` of <text>'s first line
+     (`lowerdiag classify`, first match in table order); any other exit ->
+     crash:frontend; a run-time quarantine stub (the observation JSON) -> its
+     `message` classified the same way; unclassified -> fe?:<lowerdiag's
+     8-word head, blanks as _>.
+  3. lean-observation: `<status>:<scripts/machine-causes.tsv id>`, the
+     status from the observation JSON (or the variant-stream phrase `the
+     machine produced status '<s>'`); no table row -> `<status>:?`; no
+     readable observation JSON -> crash:lean-output.
+  4. every other stage (differential, go-*, manifest, confluent, ...) -> `-`
+     (D4: the stage names the verdict).
+
+Exit 0 = keys printed; 1 = (--unclassified only) unclassified rows exist;
+2 = could not derive (unreadable input, a malformed row, a record that
+predates the exit-code detail, lowerdiag failed) — never a partial answer.
+"""
+import json
+import os
+import re
+import subprocess
+import sys
+
+ROOT = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+MACHINE_TABLE = os.path.join(ROOT, "scripts", "machine-causes.tsv")
+
+
+def die(msg):
+    sys.stderr.write("coverage-cause: " + msg + "\n")
+    sys.exit(2)
+
+
+# ---- rule 1: the runner's non-verdict phrases ------------------------------
+# The phrases come only from diff-coverage's cause helpers, a fixed
+# vocabulary, and always sit in the runner's own words — BEFORE any captured
+# observation (`{`), program output (`captured output:`) or oracle stream
+# (`stdout=`), which could contain the same text verbatim.
+NONVERDICT = [
+    (re.compile(r" KILLED \(exit (\d+)"), lambda m: "killed:" + m.group(1)),
+    (re.compile(r" TIMED OUT after "), lambda m: "timeout"),
+    (re.compile(r" failed with exit (\d+) \(did not decide\)"), lambda m: "undecided:" + m.group(1)),
+    (re.compile(r"could not decode the observation \(exit 2 "), lambda m: "undecided:decode"),
+]
+RUNNER_WORDS_END = ["{", "captured output:", "stdout="]
+
+
+def nonverdict(detail):
+    end = len(detail)
+    for marker in RUNNER_WORDS_END:
+        i = detail.find(marker)
+        if i >= 0:
+            end = min(end, i)
+    head = detail[:end]
+    best = None
+    for rx, key in NONVERDICT:
+        m = rx.search(head)
+        if m and (best is None or m.start() < best[0]):
+            best = (m.start(), key(m))
+    return best[1] if best else None
+
+
+def first_json(text):
+    """The first JSON object in text, or None."""
+    dec = json.JSONDecoder()
+    i = text.find("{")
+    while i >= 0:
+        try:
+            obj, _ = dec.raw_decode(text[i:])
+            if isinstance(obj, dict):
+                return obj
+        except ValueError:
+            pass
+        i = text.find("{", i + 1)
+    return None
+
+
+def first_line(text):
+    # Details are one_line-flattened (a newline is the two characters `\n`);
+    # a decoded JSON message may carry a real one.
+    return text.split("\\n", 1)[0].split("\n", 1)[0].strip()
+
+
+def load_machine_table():
+    rows = []
+    try:
+        with open(MACHINE_TABLE, encoding="utf-8") as f:
+            for n, line in enumerate(f, 1):
+                line = line.rstrip("\n")
+                if not line or line.startswith("#"):
+                    continue
+                p = line.split("\t")
+                if p == ["id", "status", "substring"]:
+                    continue
+                if len(p) != 3 or not all(p) or ":" in p[0] or "|" in p[0]:
+                    die(f"{MACHINE_TABLE}:{n}: malformed row (want id<TAB>status<TAB>substring, no ':'/'|' in the id): {line!r}")
+                rows.append(tuple(p))
+    except OSError as e:
+        die(f"cannot read {MACHINE_TABLE}: {e}")
+    if not rows:
+        die(f"{MACHINE_TABLE} has no rows")
+    return rows
+
+
+def machine_key(table, status, message):
+    for cid, st, sub in table:
+        if st == status and sub in message:
+            return f"{status}:{cid}"
+    return f"{status}:?"
+
+
+VARIANT_STATUS = re.compile(r"the machine produced status '([^']*)'")
+
+
+def lean_key(table, detail):
+    m = VARIANT_STATUS.search(detail)
+    if m:
+        obs = first_json(detail[m.end():])
+        status = m.group(1) or "<none>"
+        message = obs.get("message", "") if isinstance(obs, dict) else ""
+        return machine_key(table, status, message if isinstance(message, str) else "")
+    if detail.startswith("expected status "):
+        i = detail.find(", got ")
+        obs = None
+        if i >= 0:
+            rest = detail[i + len(", got "):]
+            try:
+                obs, _ = json.JSONDecoder().raw_decode(rest)
+            except ValueError:
+                obs = None
+        if not isinstance(obs, dict) or not isinstance(obs.get("status"), str):
+            return "crash:lean-output"
+        message = obs.get("message", "")
+        return machine_key(table, obs["status"], message if isinstance(message, str) else "")
+    return "crash:lean-output"
+
+
+FE_EXIT = re.compile(r"^native frontend \(exit (\d+)\): ")
+
+
+def blank_key(head):
+    return "_".join(head.replace("|", "_").split()) or "_"
+
+
+def derive(rows):
+    """rows: list of (result, id, stage, detail). Returns {id: cause}."""
+    table = load_machine_table()
+    keys = {}
+    to_classify = []  # (id, text)
+    for result, cid, stage, detail in rows:
+        if result == "PASS":
+            keys[cid] = "-"
+            continue
+        if result != "FAIL":
+            die(f"row {cid}: result {result!r} is neither PASS nor FAIL")
+        nv = nonverdict(detail)
+        if nv:
+            keys[cid] = nv
+            continue
+        if stage == "frontend-export":
+            m = FE_EXIT.match(detail)
+            if m:
+                if m.group(1) != "1":
+                    keys[cid] = "crash:frontend"
+                else:
+                    to_classify.append((cid, first_line(detail[m.end():])))
+                continue
+            if detail.startswith("native frontend: "):
+                die(f"row {cid}: the frontend-export detail has no exit code (`native frontend: …`) — the record predates the "
+                    "refusal-cause runner (scripts/diff-coverage records `native frontend (exit N): …`); re-run the corpus "
+                    "(scripts/ci --diff) — a crash and a refusal cannot be told apart from this record")
+            if detail.startswith("{"):
+                obs = first_json(detail)
+                msg = obs.get("message") if isinstance(obs, dict) else None
+                if isinstance(msg, str) and msg:
+                    to_classify.append((cid, first_line(msg)))
+                else:
+                    keys[cid] = "crash:lean-output"
+                continue
+            keys[cid] = "fe?:" + blank_key(" ".join(first_line(detail).split()[:8]))
+            continue
+        if stage == "lean-observation":
+            keys[cid] = lean_key(table, detail)
+            continue
+        keys[cid] = "-"
+    if to_classify:
+        texts = "".join(t.replace("\r", " ") + "\n" for _, t in to_classify)
+        env = dict(os.environ, GO111MODULE="off")
+        env.setdefault("GOCACHE", os.path.join(ROOT, "artifacts", "go-build-cache"))
+        try:
+            p = subprocess.run(["go", "run", "./tools/lowerdiag", "classify"], cwd=ROOT, env=env,
+                               input=texts, capture_output=True, text=True, timeout=300)
+        except (OSError, subprocess.TimeoutExpired) as e:
+            die(f"lowerdiag classify could not run: {e}")
+        if p.returncode != 0:
+            die(f"lowerdiag classify exited {p.returncode}: {p.stderr.strip()[:2000]}")
+        out = p.stdout.split("\n")
+        if out and out[-1] == "":
+            out.pop()
+        if len(out) != len(to_classify):
+            die(f"lowerdiag classify returned {len(out)} line(s) for {len(to_classify)} text(s) — refusing a misaligned answer")
+        for (cid, _), line in zip(to_classify, out):
+            parts = line.split("\t", 1)
+            if len(parts) != 2:
+                die(f"row {cid}: lowerdiag classify line is malformed: {line!r}")
+            label, key = parts
+            if label == "UNCLASSIFIED":
+                keys[cid] = "fe?:" + blank_key(key)
+            elif not label or "|" in label or any(c.isspace() for c in label):
+                die(f"row {cid}: lowerdiag class label {label!r} is not a usable key")
+            else:
+                keys[cid] = label
+    return keys
+
+
+def read_results(path):
+    try:
+        f = open(path, encoding="utf-8", errors="surrogateescape")
+    except OSError as e:
+        die(f"cannot read results {path}: {e}")
+    rows, seen = [], set()
+    with f:
+        for n, line in enumerate(f, 1):
+            line = line.rstrip("\n")
+            if not line or line.startswith("#"):
+                continue
+            p = line.split("\t")
+            if p[0] == "result":
+                continue
+            if len(p) < 5:
+                die(f"{path}:{n}: results row has {len(p)} column(s), want result/id/features/stage/detail: {line[:200]!r}")
+            if p[1] in seen:
+                die(f"{path}:{n}: duplicate id {p[1]}")
+            seen.add(p[1])
+            rows.append((p[0], p[1], p[3], "\t".join(p[4:])))
+    return rows
+
+
+def is_unclassified(key):
+    return key.startswith("fe?:") or key.endswith(":?")
+
+
+def apply(baseline, results_path):
+    rows = read_results(results_path)
+    run = {r[1]: r for r in rows}
+    keys = derive(rows)
+    try:
+        lines = open(baseline, encoding="utf-8").read().split("\n")
+    except OSError as e:
+        die(f"cannot read baseline {baseline}: {e}")
+    if lines and lines[-1] == "":
+        lines.pop()
+    out, bad = [], []
+    for line in lines:
+        if line.startswith("#"):
+            out.append(line)
+            continue
+        p = line.split("\t")
+        if p[0] == "result":
+            out.append("result\tid\tstage\tcause")
+            continue
+        if len(p) not in (3, 4):
+            bad.append(f"malformed baseline row: {line!r}")
+            continue
+        res, cid, stage = p[0], p[1], p[2]
+        if cid not in run:
+            bad.append(f"{cid}: in the baseline, absent from the run (a full run is required)")
+            continue
+        rres, rstage = run[cid][0], run[cid][2]
+        key = keys[cid]
+        if "|" in stage:
+            members = stage.split("|")
+            old = p[3] if len(p) == 4 else ""
+            causes = old.split("|") if old else []
+            if len(causes) != len(members):
+                bad.append(f"{cid}: alternation row [{stage}] needs a hand-set paired cause set ({len(members)} members); the run says {rstage} -> {key}")
+            elif rres != res or rstage not in members or causes[members.index(rstage)] != key:
+                bad.append(f"{cid}: alternation row [{res}/{stage} {old}] does not admit the run's [{rres}/{rstage} {key}]")
+            out.append(line)
+            continue
+        if (rres, rstage) != (res, stage):
+            bad.append(f"{cid}: baseline [{res}/{stage}] != run [{rres}/{rstage}] — re-pin the rows first (this regenerates the cause column only)")
+            continue
+        out.append(f"{res}\t{cid}\t{stage}\t{key}")
+    if bad:
+        die("REFUSED --apply:\n  " + "\n  ".join(bad))
+    sys.stdout.write("\n".join(out) + "\n")
+
+
+def main(argv):
+    if len(argv) == 1 and not argv[0].startswith("--"):
+        rows = read_results(argv[0])
+        keys = derive(rows)
+        sys.stdout.write("".join(f"{cid}\t{keys[cid]}\n" for _, cid, _, _ in rows))
+        return 0
+    if len(argv) == 2 and argv[0] == "--unclassified":
+        rows = read_results(argv[1])
+        keys = derive(rows)
+        un = [(cid, st, keys[cid]) for res, cid, st, _ in rows if res == "FAIL" and is_unclassified(keys[cid])]
+        fails = sum(1 for r in rows if r[0] == "FAIL")
+        for cid, st, k in un:
+            print(f"UNCLASSIFIED\t{cid}\t{st}\t{k}")
+        if un:
+            print(f"{len(un)} of {fails} FAIL row(s) carry an unclassified cause key (pinned all the same; add a "
+                  f"tools/lowerdiag/causes.tsv or scripts/machine-causes.tsv row) — {os.path.basename(argv[1])}")
+            return 1
+        print(f"every FAIL row's cause is classified ({fails} FAIL row(s), {os.path.basename(argv[1])})")
+        return 0
+    if len(argv) == 3 and argv[0] == "--apply":
+        apply(argv[1], argv[2])
+        return 0
+    die("usage: coverage-cause <results.tsv> | --unclassified <results.tsv> | --apply <baseline.tsv> <results.tsv>")
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

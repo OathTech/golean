@@ -167,7 +167,11 @@ var staticCauseIDs = []string{
 
 // methodWrap unwraps the per-declaration quarantine's "method T.M (cause;
 // satisfaction answers, calls fail closed)" wrapper.
-var methodWrap = regexp.MustCompile(`^method \S+ \((.*)\)$`)
+// The wrapped name is QUALIFIED (it carries a '.'): a refusal TEXT that
+// merely begins with "method expression (*T).M over … (…)" is not a wrapper
+// (refusal-cause lane, 2026-10-12: the unanchored form unwrapped that text to
+// "*main.T).Mv over …" and left FR-3's rows unclassified).
+var methodWrap = regexp.MustCompile(`^method \S*\.\S* \((.*)\)$`)
 
 const refusalPrefix = "native frontend unsupported: "
 

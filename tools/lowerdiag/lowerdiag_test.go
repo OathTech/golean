@@ -206,9 +206,15 @@ func TestClassifyTextVocabulary(t *testing.T) {
 		// value arms' fail-closed fallback names the shape; a qualified
 		// instantiation into a non-source-through stdlib package is FR-14's
 		// value-position text. FR-28: the make hoist joins the A6 guard.
-		`explicit instantiation gset.Immutable[string] at main.go:12:9: the base (*ast.SelectorExpr) is not a generic function of a source package — FR-27 residual`:                                                                                                  "explicit-instantiation-call",
-		`stdlib-qualified selector maps.Clone in callee position (explicit instantiation of a generic function of package maps, which is not source-through — the stdlib admission register decides; FR-14)`:                                                          "stdlib-value-position",
-		`stdlib-qualified selector maps.Clone in value position (explicit instantiation of a generic function of package maps, which is not source-through — the stdlib admission register decides; FR-14)`:                                                           "stdlib-value-position",
+		`explicit instantiation gset.Immutable[string] at main.go:12:9: the base (*ast.SelectorExpr) is not a generic function of a source package — FR-27 residual`:                                         "explicit-instantiation-call",
+		`stdlib-qualified selector maps.Clone in callee position (explicit instantiation of a generic function of package maps, which is not source-through — the stdlib admission register decides; FR-14)`: "stdlib-value-position",
+		`stdlib-qualified selector maps.Clone in value position (explicit instantiation of a generic function of package maps, which is not source-through — the stdlib admission register decides; FR-14)`:  "stdlib-value-position",
+		// refusal-cause lane (2026-10-12): two texts the recorded corpus run
+		// produced that the table left UNCLASSIFIED — a multi-word type in the
+		// print-builtin row (`chan int`), and a method-expression text the
+		// method-stub unwrapper mistook for a wrapper.
+		`frontend-quarantined: builtin println operand 1 of type chan int prints an address in gc (runtime/print.go printpointer/printslice/printeface/printiface) — the machine has no addresses; refused by name, permanently (stdlib slice 3; ledger §5.1 item 3)`: "print-builtin",
+		`frontend-quarantined: method expression (*main.T).Mv over a value-receiver method (deref adapter not modeled)`:                                                                                                                                               "method-expr-deref",
 		`make of a potentially-panicking size/hint operand with a potentially-panicking operand to its left in the same statement (the make hoist would reorder the panics; realizing gc's left-to-right point needs full-statement linearization — BUG-032/BUG-083)`: "len-hoist-panic-order",
 	}
 	for text, want := range cases {

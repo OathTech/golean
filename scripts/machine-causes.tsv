@@ -1,0 +1,27 @@
+# scripts/machine-causes.tsv — the MACHINE-refusal cause table, read by
+# scripts/coverage-cause for FAIL rows at stage `lean-observation`
+# (refusal-cause pinning, release-readiness item 8;
+# docs/2026-10-12_refusal-cause-pinning-design.md §3 rule 3, §4 step 3).
+# NOT a gate table: it names the machine's refusal/stuck/race/error
+# messages so the baseline can pin WHICH one a designed red produces.
+# A row's key is `<status>:<id>`, the status read from the run's
+# observation JSON. Matching: the FIRST row (table order) whose status
+# equals the observation's status AND whose substring occurs in the
+# observation's message. A message no row matches keys as `<status>:?`
+# — still pinned by the baseline, and reported under scripts/ci's
+# speedbump heading (D5) until a row is added here.
+# Columns: id <TAB> status <TAB> substring (literal, case-sensitive).
+id	status	substring
+float-bits-nan	unsupported	bits of the machine's default NaN
+float-to-int-range	unsupported	float-to-int conversion out of range/NaN
+select-select	unsupported	select-with-select rendezvous
+slice-to-array-l2b	unsupported	slice-to-array value conversion (succeeding form
+panic-while-printing	unsupported	panic while printing panic value
+recovered-runtime-error-type	unsupported	names the dynamic type of a recovered runtime error
+init-print	unsupported	package init: print/println during package initialization
+init-go	unsupported	package init: go spawn outside the thread pool
+imported-type-hashability	unsupported	map key hashability for unknown defined type
+slice-cap-budget	unsupported	sliceCapBudget
+array-materialization-budget	error	elements exceeds the interpreter's materialization budget
+nil-slice-base	stuck	expected array or slice value for slice expression, got GoLean.GoValue.nil
+race	race	data race detected

@@ -48,7 +48,6 @@ interface wire name registered with two different method sets: X
 invalid or untyped declaration basic X
 map literal in X
 method X not found on substituted receiver X
-method expression (*X).X over a value-receiver method (deref adapter not modeled)
 package-level initializer of X does not lower (X) and is not H-11 effect-isolated — skipping it cannot be argued unobservable, so the WHOLE export refuses (FR-22: per-declaration poisoning covers only initializers whose every call is a direct call to an init-callee register row [pureUnmodeledCallees, rendered in docs/stdlib-admission-register.md] with effect- and panic-free argument shapes)
 package-level initializer with no declaration site
 package-level var X: its initializer does not lower (X) — H-11 poison: the cell is seeded as the `$poisoned` placeholder and every reference (read, write, address-of) refuses by name; reference refused
