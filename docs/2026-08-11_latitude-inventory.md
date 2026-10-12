@@ -3790,6 +3790,13 @@ lanes», relayed by the [AGENT] coordinator — cite as relayed). Source:
 review §6/§9 (`docs/2026-09-11_project-review.md`); §0's vocabulary;
 anchors read at `a461ed8b`; adds no site, moves no row.
 
+**Note on `file:line` anchors (2026-10-12, [AGENT] records lane `docs/release-records-1012`, release-readiness
+item 18):** every `file:line` anchor in this inventory (here and in §1–§10) is as of its entry's date (or the commit it
+names, as `a461ed8b` above) and is NOT maintained: the code has moved since, and nothing checks the anchors since
+`tools/reconcile-records` was retired in the 2026-10-12 gate cull (`docs/2026-10-12_gate-cull-plan.md` §9 row 42, §11
+item 5). Resolve an anchor at its dated commit, or find the named symbol at `main`. The `spec#`/`mem#` tokens are a
+different matter: they resolve against the pinned documents and `scripts/check-spec-anchors` still reports on them (a `scripts/ci` speedbump).
+
 **Contract A — the portable Go 1.26 language semantics (the upper
 bound).** At every site of §1–§3 the target is modeled = permitted,
 "permitted" being what the PINNED spec / memory model / library docs
