@@ -140,9 +140,11 @@ Everything else is untrusted tooling.
   no axioms anywhere in `GoLean/`; no `partial` in the semantic
   core `GoLean/GoCore/` — structural/well-founded recursion so the
   coherence proofs here and the customer's proofs downstream stay
-  reachable. (The wire decoder `NativeToIR.lean`, the CLI, and
-  `EnumDedup.lean` use `partial` for JSON/search descent; they are
-  outside the core. The in-build Audit sweep left with the proofs
+  reachable. (Six files outside the core use `partial` for JSON,
+  wire and search descent — 35 `partial def`s: the wire decoder
+  `NativeToIR.lean` 17, `CLI.lean` 7, `StrictJsonParse.lean` 5,
+  `ChoiceTrace.lean` 4, `NativeDeclaration.lean` 1, `EnumDedup.lean`
+  1, as of 2026-10-12. The in-build Audit sweep left with the proofs
   package; the ci escape-hatch scans are the standing check here.)
 - **Fail closed, always.** Unknown wire node, unsupported feature,
   unclassified case, exhausted budget → an explicit refusal that
