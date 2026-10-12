@@ -2751,11 +2751,14 @@ def atomicArity : AtomicStmtOp → Nat
   | .cas => 3
 
 /-- The integer kinds the wave-1 op family is defined over — exactly
-the `sync/atomic` integer functions' operand types (`uintptr` arrives
-as `uint64` from the frontend, the R1 pin). Any other kind is a
-malformed statement (fail closed at the plan). -/
+the `sync/atomic` integer functions' operand types, `uintptr` as its
+own kind (`IntKind.uintptr`, BUG-124 fixed 2026-10-12; its width is the
+platform's `intBits`, the R1 pin). The decoder's `asAtomicOp?`
+(`NativeToIR.lean`) is the LOCKSTEP twin of this set: widen both or
+neither. Any other kind is a malformed statement (fail closed at the
+plan). -/
 def atomicKindOk : IntKind → Bool
-  | .int32 | .int64 | .uint32 | .uint64 => true
+  | .int32 | .int64 | .uint32 | .uint64 | .uintptr => true
   | _ => false
 
 /-- Classify an atomic statement (`atomicPlan`): op + kind + result

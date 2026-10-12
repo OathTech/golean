@@ -697,10 +697,15 @@ private partial def decodeGoValueObservation (seedN : Option Nat) (path : String
       -- Kind-carrying shape (F15, the float arm's discipline): exact
       -- keys, kind restricted to the ten concrete integer kinds, value
       -- range-checked per the kind's width/signedness — fail closed on
-      -- anything else. `uintptr` is deliberately ABSENT: the frontend
-      -- maps uintptr to uint64 (`intKindOfName`), so the machine could
-      -- never emit it and a Go-side uintptr observation must refuse
-      -- here rather than alias into uint64.
+      -- anything else. `uintptr` is deliberately ABSENT: since BUG-124's
+      -- repair (2026-10-12) the machine carries it as its own kind and
+      -- `goValueJson` would spell `{"kind":"uintptr"}`, but
+      -- `golean-observation-v1`'s kind set stays the ten concrete kinds
+      -- ([USER] 2026-10-12, D2 = O1 of
+      -- `docs/2026-10-12_uintptr-repair-design.md`): a returned uintptr
+      -- is refused HERE by name — and by the Go observer first
+      -- (`tools/coverageharness`, `reflect.Uintptr`) — never aliased
+      -- into uint64.
       StrictJson.requireExactKeys path obj ["kind", "tag", "value"]
       let kind ← StrictJson.string s!"{path}.kind" (← StrictJson.field path obj "kind")
       let value ← StrictJson.int s!"{path}.value" (← StrictJson.field path obj "value")

@@ -15,6 +15,9 @@ inductive IntKind where
   | uint32
   | int64
   | uint64
+  /-- `uintptr`: a DISTINCT basic integer kind (spec#Numeric_types, spec#Type_identity;
+  BUG-124 fixed 2026-10-12). Its width is the platform's `intBits` (`bitsAt` below). -/
+  | uintptr
   | unbounded (name : String)
   deriving Repr, BEq, Inhabited, DecidableEq
 
@@ -29,12 +32,15 @@ def IntKind.name : IntKind → String
   | .uint32 => "uint32"
   | .int64 => "int64"
   | .uint64 => "uint64"
+  | .uintptr => "uintptr"
   | .unbounded name => name
 
-/-- The bit width of an integer kind on platform `p`: `int`/`uint` take
-the platform's `intBits` (PINNED LATITUDE R1 — the envelope statement
-lives on `gcAmd64`, `Platform.lean`); sized kinds are their own width;
-untyped constants have none. -/
+/-- The bit width of an integer kind on platform `p`: `int`/`uint` and
+`uintptr` take the platform's `intBits` (PINNED LATITUDE R1 — the envelope
+statement lives on `gcAmd64`, `Platform.lean`; go/types sizes `Int`, `Uint`
+and `Uintptr` by the one `WordSize`, `sizes.go` `Sizeof`'s catch-all, so
+the three widths never separate on a gc target); sized kinds are their own
+width; untyped constants have none. -/
 def IntKind.bitsAt (p : Platform) : IntKind → Option Nat
   | .int => some p.intBits
   | .uint => some p.intBits
@@ -46,6 +52,7 @@ def IntKind.bitsAt (p : Platform) : IntKind → Option Nat
   | .uint32 => some 32
   | .int64 => some 64
   | .uint64 => some 64
+  | .uintptr => some p.intBits
   | .unbounded _ => none
 
 /-- The bit width at THE pinned platform (`platform = gcAmd64`: 64-bit
@@ -63,6 +70,7 @@ def IntKind.signed : IntKind → Bool
   | .uint32 => false
   | .int64 => true
   | .uint64 => false
+  | .uintptr => false
   | .unbounded _ => true
 
 def IntKind.normalize (kind : IntKind) (value : Int) : Int :=

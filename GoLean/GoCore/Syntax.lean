@@ -420,8 +420,9 @@ machine-level `AtomicOp` (head + the cell's integer kind + the
 validated result target) is derived by `atomicPlan`, exactly the
 `syncPlan`/`SyncOp` split. `Load`/`Store`/`Add`/`Swap`/
 `CompareAndSwap` over the integer kinds the frontend admits
-(`int32`/`int64`/`uint32`/`uint64`; `uintptr` arrives as `uint64`, the
-R1 pin). `And`/`Or`, the `unsafe.Pointer` family, and
+(`int32`/`int64`/`uint32`/`uint64`/`uintptr` — the last its own kind since
+BUG-124's repair, 2026-10-12; only its WIDTH is the R1 pin). `And`/`Or`,
+the `unsafe.Pointer` family, and
 `atomic.Value`/`Bool`/`Pointer` are wave 2 and refuse at the frontend
 by name. -/
 inductive AtomicStmtOp where

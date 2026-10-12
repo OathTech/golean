@@ -3268,15 +3268,71 @@ def main : IO UInt32 := do
     (CLI.observationOfRun (fun _ => none) (.ok { values := #[.int 6 .uint8] })).compress
     "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"kind\":\"uint8\",\"tag\":\"int\",\"value\":6}]}")
   -- Fail-closed decode discipline for the new fields (the float arm's
-  -- mold): unknown kinds — including uintptr, which the frontend maps
-  -- to uint64 so the machine can never answer it — and out-of-range
-  -- values refuse; the machine encoder's own output round-trips.
+  -- mold): unknown kinds and out-of-range values refuse; the machine
+  -- encoder's own output round-trips. `uintptr` is refused HERE, at the
+  -- observation seam, by name: since BUG-124's repair (2026-10-12) the
+  -- machine carries the kind (`IntKind.uintptr`) and its encoder would
+  -- spell `{"kind":"uintptr"}`, but `golean-observation-v1`'s kind set
+  -- stays the ten concrete kinds and the Go observer refuses
+  -- `reflect.Uintptr` first ([USER] Mike 2026-10-12 «1,3-6 approved»,
+  -- item 4 = the repair note's D1–D5, D2 = O1 «keep both seams
+  -- refusing», relayed; `docs/2026-10-12_uintptr-repair-design.md` §2.4).
   passed := passed && (← expectTrue "F15: decode accepts the machine encoder's kind-carrying output"
     (CLI.decodeObservation "left"
       (CLI.observationOfRun (fun _ => none) (.ok { values := #[.int (-5) .int8, .int 255 .uint8] })).compress).isOk)
-  passed := passed && (← expectTrue "F15: decode refuses an unknown integer kind (uintptr)"
+  passed := passed && (← expectTrue "F15 / BUG-124 D2: decode refuses the integer kind uintptr by name (the seam's refusal, not the frontend's)"
     !(CLI.decodeObservation "left"
       "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"kind\":\"uintptr\",\"value\":1}]}").isOk)
+  passed := passed && (← expectTrue "BUG-124 D2 (O1): the machine's own encoding of a uintptr result is refused by its own decoder (a returned uintptr stays unobservable)"
+    (let enc := (CLI.observationOfRun (fun _ => none) (.ok { values := #[.int 7 .uintptr] })).compress
+     (enc.splitOn "\"kind\":\"uintptr\"").length == 2 && !(CLI.decodeObservation "left" enc).isOk))
+  -- BUG-124 FIXED (2026-10-12, lane core/uintptr-repair-impl-1012; [USER]
+  -- Mike 2026-10-12 «D6: agree on both - refuse and repair asap» and
+  -- «1,3-6 approved» (item 4 = the repair note's D1–D5), relayed):
+  -- `uintptr` is a DISTINCT integer kind, so the release-trust review's
+  -- six identity-bearing shapes answer as gc does — every one through
+  -- `Ty.eqb`'s structural equality (`.int k₁, .int k₂ => k₁ == k₂`), no
+  -- identity site edited. The box payloads are legal Go values (a boxed
+  -- `uintptr(1)`; a boxed nil `[]uintptr` / nil `*uintptr`).
+  passed := passed && (← expectTrue "BUG-124: any(uintptr(1)).(uint64) comma-ok is false (gc false; was true)"
+    (match GoCore.typeAssertValue emptyCtx (.interface (.int .uintptr) (.int 1 .uintptr)) (.int .uint64) with
+      | .ok (_, ok) => !ok
+      | .error _ => false))
+  passed := passed && (← expectTrue "BUG-124: any(uintptr(1)).(uintptr) comma-ok is true with the value — the type switch takes `case uintptr` (gc 1; was `case uint64`)"
+    (match GoCore.typeAssertValue emptyCtx (.interface (.int .uintptr) (.int 1 .uintptr)) (.int .uintptr) with
+      | .ok (v, ok) => ok && v == .int 1 .uintptr
+      | .error _ => false))
+  passed := passed && (← expectTrue "BUG-124: any(uintptr(1)) == any(uint64(1)) is false (gc false; was true)"
+    (match GoCore.valueEq emptyCtx (.interface ⟨"any"⟩)
+        (.interface (.int .uintptr) (.int 1 .uintptr)) (.interface (.int .uint64) (.int 1 .uint64)) with
+      | .ok eq => !eq
+      | .error _ => false))
+  passed := passed && (← expectTrue "BUG-124: map[any]int{uintptr(1): 7, uint64(1): 9} keeps two keys — uint64(1) finds no entry among {uintptr(1)} (gc 2; was 1)"
+    (match GoCore.mapEntryIndex? emptyCtx (.interface ⟨"any"⟩)
+        #[(0, .interface (.int .uintptr) (.int 1 .uintptr), .int 7)]
+        (.interface (.int .uint64) (.int 1 .uint64)) true with
+      | .ok none => true
+      | _ => false))
+  passed := passed && (← expectTrue "BUG-124: any([]uintptr(nil)).([]uint64) comma-ok is false (gc false; was true)"
+    (match GoCore.typeAssertValue emptyCtx
+        (.interface (.slice (.int .uintptr)) (.slice { base := none, offset := 0, len := 0, cap := 0 }))
+        (.slice (.int .uint64)) with
+      | .ok (_, ok) => !ok
+      | .error _ => false))
+  passed := passed && (← expectTrue "BUG-124: any((*uintptr)(nil)).(*uint64) comma-ok is false (gc false; was true)"
+    (match GoCore.typeAssertValue emptyCtx (.interface (.pointer (.int .uintptr)) .nil) (.pointer (.int .uint64)) with
+      | .ok (_, ok) => !ok
+      | .error _ => false))
+  passed := passed && (← expectTrue "BUG-124: the kind's name is `uintptr` on both the panic text and the observation `dynamic` field (reflect.Type.Name())"
+    (GoCore.goTypeNameForMessage emptyCtx (.int .uintptr) == "uintptr" &&
+      GoCore.Ty.dynamicName (fun _ => none) (.int .uintptr) == "uintptr" &&
+      GoCore.goTypeNameForMessage emptyCtx (.pointer (.int .uintptr)) == "*uintptr"))
+  passed := passed && (← expectTrue "BUG-124: width arithmetic unchanged — uintptr is 64 bits and unsigned at the pin (bitsAt reads intBits; ^uintptr(0)+1 wraps to 0)"
+    (GoCore.IntKind.uintptr.bits? == some 64 && !GoCore.IntKind.uintptr.signed &&
+      GoCore.IntKind.bitsAt GoCore.gcAmd64 .uintptr == some GoCore.gcAmd64.intBits &&
+      GoCore.IntKind.uintptr.normalize ((2 : Int) ^ 64) == 0 &&
+      GoCore.IntKind.uintptr.normalize (-1) == (2 : Int) ^ 64 - 1 &&
+      GoCore.IntKind.uintptr.normalize 7 == 7))
   passed := passed && (← expectTrue "F15: decode refuses a kindless int observation (the retired shape)"
     !(CLI.decodeObservation "left"
       "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":1}]}").isOk)
