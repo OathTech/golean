@@ -65,6 +65,8 @@ A few dated files are still the **plan of record or a live design**:
   carries its status.
 - `2026-10-09_seeded-heap-design.md`: the seeded-heap entry for function-level runs, a design
   gate pending [USER].
+- `2026-10-12_uintptr-repair-design.md`: the `uintptr` runtime-identity repair (release-readiness
+  item 26, the REPAIR half of D6), a design gate pending [USER].
 - `2026-10-12_gate-cull-plan.md`: the gate's current shape and its follow-ups.
 - `2026-10-03_offer-to-logic-team.md`: the last re-pin offer to the logic repository, whose §4
   lists the stated limits.
