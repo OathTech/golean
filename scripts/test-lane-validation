@@ -364,6 +364,13 @@ bd_res $'FAIL\tfx/fe\tx\tfrontend-export\tnative frontend (exit 2): panic: runti
 bd_expect "(xi) a frontend CRASH (exit 2) where a named refusal is pinned -> drift (class b)" 1 'now[FAIL/frontend-export cause=crash:frontend] CAUSE CHANGED'
 bd_res $'FAIL\tfx/fe\tx\tfrontend-export\tnative frontend TIMED OUT after 30s (GO_TIMEOUT_SECONDS) — no wire produced; captured output: '
 bd_expect "(xi) a frontend TIMEOUT where a named refusal is pinned -> drift (class b)" 1 'now[FAIL/frontend-export cause=timeout] CAUSE CHANGED'
+# A non-verdict phrase QUOTED inside a refusal text or an oracle stream is
+# not the runner's (fix round, review MEDIUM-3): it keys by the class / `-`.
+bd_res $'FAIL\tfx/fe\tx\tfrontend-export\tnative frontend (exit 1): nativefrontend: native frontend unsupported: basic type complex128 in fmt.Sprintf("%s KILLED (exit 137 — x", …)'
+bd_expect "(xi) a refusal text QUOTING ' KILLED (exit 137' keys its class, not killed:137" 0 "no regression"
+bd_base $'FAIL\tfx/g\tgo-observation\t-\nFAIL\tfx/s\tmembership\tkilled:137'
+bd_res $'FAIL\tfx/g\tx\tgo-observation\tcould not extract Go panic message: stderr="panic: Lean run KILLED (exit 137 — fake"\nFAIL\tfx/s\tx\tmembership\tsampling rule: observation-eq KILLED (exit 137 — SIGKILL: cgroup/OOM or an external kill; did not decide) comparing draw 3/32'
+bd_expect "(xi) a go-observation detail carrying the phrase stays \`-\`; a runner prefix + phrase keys killed:N" 0 "no regression"
 bd_base $'FAIL\tfx/m\tlean-observation\tunsupported:float-to-int-range'
 bd_res $'FAIL\tfx/m\tx\tlean-observation\texpected status ok, got {"message":"float-to-int conversion out of range/NaN (implementation-dependent in Go)","output":"","schema":"golean-observation-v1","status":"unsupported"}'
 bd_expect "(xii) the pinned machine refusal -> no drift" 0 "no regression"
@@ -417,6 +424,10 @@ printf 'result\tid\tfeatures\tstage\tdetail\nFAIL\tfx/fe\tx\tfrontend-export\t%s
 rc=0; out="$(scripts/coverage-cause --apply "$BD/apply-base.tsv" "$BD/results.tsv" 2>&1)" || rc=$?
 if [ "$rc" -eq 0 ] && [ "$out" = "$(printf '# header kept\nresult\tid\tstage\tcause\nFAIL\tfx/fe\tfrontend-export\tFR-15/complex\nPASS\tfx/p\t-\t-')" ]; then echo "ok: coverage-cause --apply regenerates the cause column (rows and header kept)"
 else echo "FAIL: coverage-cause --apply (exit $rc) produced: $out"; fail=1; fi
+printf 'result\tid\tstage\nFAIL\tfx/fe\tfrontend-export\n' > "$BD/apply-base.tsv"
+rc=0; out="$(scripts/coverage-cause --apply "$BD/apply-base.tsv" "$BD/results.tsv" 2>&1 >/dev/null)" || rc=$?
+if [ "$rc" -eq 0 ] && [[ "$out" == *"NOT added"* && "$out" == *"fx/p"* ]]; then echo "ok: coverage-cause --apply names a run id with no baseline row on stderr (never dropped silently)"
+else echo "FAIL: coverage-cause --apply did not name the unbaselined id fx/p (exit $rc): $out"; fail=1; fi
 printf 'result\tid\tstage\nFAIL\tfx/fe\tlean-observation\nPASS\tfx/p\t-\n' > "$BD/apply-base.tsv"
 rc=0; out="$(scripts/coverage-cause --apply "$BD/apply-base.tsv" "$BD/results.tsv" 2>&1)" || rc=$?
 if [ "$rc" -eq 2 ] && [[ "$out" == *"re-pin the rows first"* ]]; then echo "ok: coverage-cause --apply refuses a result/stage disagreement (cause column only)"
@@ -442,6 +453,29 @@ printf 'result\tid\tstage\n# reason: fixture\nFAIL\tfx/alt\tdifferential|nondet\
 sv_expect "(ix) alternation survives -> ok" 0 ""
 rc=0; out="$(scripts/check-alternation-survival "$SV/old.tsv" "$SV/absent.tsv" 2>&1)" || rc=$?
 if [ "$rc" -eq 2 ]; then echo "ok: alternation-survival unreadable input -> exit 2"; else echo "FAIL: alternation-survival unreadable input exited $rc, expected 2: $out"; fail=1; fi
+# Cause REGRESSION across a re-pin (refusal-cause fix round, review HIGH-1):
+# the ci re-pin guard calls scripts/check-cause-regressions OLD NEW.
+CR="$TMP/cause-regr"; mkdir -p "$CR"
+printf 'result\tid\tstage\tcause\nFAIL\tfx/fe\tfrontend-export\tFR-15/complex\n# reason: fixture\nFAIL\tfx/alt\tlean-observation|differential\tunsupported:select-select|-\n' > "$CR/old.tsv"
+printf '## BUG-902 — fixture\n\n- Status: open\n- Cases: fx/other\n' > "$CR/bugs.md"
+cr_expect() {  # $1 name, $2 expected exit, $3 required text
+  local name="$1" want="$2" needle="$3" out rc=0
+  out="$(CAUSE_GUARD_BUGS="$CR/bugs.md" scripts/check-cause-regressions "$CR/old.tsv" "$CR/new.tsv" 2>&1)" || rc=$?
+  if [ "$rc" -ne "$want" ]; then echo "FAIL: cause-regressions $name: exit $rc, expected $want: $out"; fail=1
+  elif [[ "$out" != *"$needle"* ]]; then echo "FAIL: cause-regressions $name: exit $want but without the expected text ($needle): $out"; fail=1
+  else echo "ok: cause-regressions $name"; fi
+}
+printf 'result\tid\tstage\tcause\nFAIL\tfx/fe\tfrontend-export\tcrash:frontend\n# reason: fixture\nFAIL\tfx/alt\tlean-observation|differential\tunsupported:select-select|-\n' > "$CR/new.tsv"
+cr_expect "named -> crash:frontend without a Cases line -> FAIL by name" 1 $'UNEXPLAINED\tfx/fe'
+printf '## BUG-902 — fixture\n\n- Status: open\n- Cases: fx/other, fx/fe\n' > "$CR/bugs.md"
+cr_expect "named -> crash:frontend WITH a Cases line -> ok (noted)" 0 $'NOTE\tfx/fe'
+printf '## BUG-902 — fixture\n\n- Status: open\n- Cases: fx/other\n' > "$CR/bugs.md"
+printf 'result\tid\tstage\tcause\nFAIL\tfx/fe\tfrontend-export\tFR-13/anon-struct\n# reason: fixture\nFAIL\tfx/alt\tlean-observation|differential\tunsupported:select-select|-\n' > "$CR/new.tsv"
+cr_expect "named -> another named class -> ok (designed churn)" 0 ""
+printf 'result\tid\tstage\tcause\nFAIL\tfx/fe\tfrontend-export\tFR-15/complex\n# reason: fixture\nFAIL\tfx/alt\tlean-observation|differential\tkilled:139|-\n' > "$CR/new.tsv"
+cr_expect "alternation member -> killed:139 without a Cases line -> FAIL by name" 1 $'UNEXPLAINED\tfx/alt'
+printf 'result\tid\tstage\tcause\nFAIL\tfx/fe\tlean-observation\ttimeout\n' > "$CR/new.tsv"
+cr_expect "named -> timeout at another stage -> FAIL by name" 1 $'UNEXPLAINED\tfx/fe'
 # check-bugs: the alternation row is counted, by name.
 printf '## BUG-901 — fixture\n\n- Status: fixed\n- Pinned-by: none (fixture)\n- Cases: fx/other\n' > "$CB/bugs.md"
 printf 'result\tid\tstage\nFAIL\tfx/other\tlean-observation\nFAIL\tfx/alt\tnondet|differential\n' > "$CB/baseline.tsv"

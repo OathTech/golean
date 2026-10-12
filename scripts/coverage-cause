@@ -20,15 +20,18 @@ Usage:
       comment/header line kept verbatim, every row's result/id/stage kept.
       REFUSES (exit 2) if a baseline row is absent from the run or its
       result/stage disagrees with it (re-pin the rows first: this regenerates
-      the cause column only), and on an alternation row (`|` stage) whose
+      the cause column only; run ids with no baseline row are listed on
+      stderr and NOT added), and on an alternation row (`|` stage) whose
       cause column is not already a paired `|` set the run's (stage, cause)
       is a member of (alternation causes are [USER]-ruled per row, set by
       hand alongside the stage set).
 
 The key grammar (first rule that applies wins; PASS rows are `-`):
   1. a runner non-verdict phrase (scripts/diff-coverage's signal_cause /
-     undecided_cause / obs_eq_cause), at ANY stage, searched only in the
-     runner's own words (before the first captured observation/output):
+     undecided_cause / obs_eq_cause), at ANY stage, matched only at the
+     detail's start or right after `sampling rule: ` / `driver-coupling pin: `
+     / `membership check: ` (never inside quoted text; a frontend-export
+     `native frontend (exit N): ` detail is a verdict exit and skips rule 1):
      `KILLED (exit N` -> killed:N; `TIMED OUT after` -> timeout;
      `failed with exit N (did not decide)` -> undecided:N;
      `could not decode the observation (exit 2` -> undecided:decode.
@@ -65,32 +68,35 @@ def die(msg):
 
 
 # ---- rule 1: the runner's non-verdict phrases ------------------------------
-# The phrases come only from diff-coverage's cause helpers, a fixed
-# vocabulary, and always sit in the runner's own words — BEFORE any captured
-# observation (`{`), program output (`captured output:`) or oracle stream
-# (`stdout=`), which could contain the same text verbatim.
+# The phrases come only from diff-coverage's cause helpers (signal_cause /
+# undecided_cause / obs_eq_cause, a fixed vocabulary) and are written as
+# `<what> KILLED (exit N …` / `<what> TIMED OUT after …` / `<what> failed
+# with exit N (did not decide)` / `observation-eq could not decode the
+# observation (exit 2 …` — ALWAYS at the detail's start, or right after one
+# of three runner prefixes (fix round, review MEDIUM-3: a phrase quoted
+# anywhere else — a refusal text echoing a format string, an oracle's
+# stderr — is not the runner's and must not key as a non-verdict). <what>
+# is the runner's own short name: no ':', '{' or '—' in it.
+RUNNER_PREFIXES = ("sampling rule: ", "driver-coupling pin: ", "membership check: ")
 NONVERDICT = [
-    (re.compile(r" KILLED \(exit (\d+)"), lambda m: "killed:" + m.group(1)),
-    (re.compile(r" TIMED OUT after "), lambda m: "timeout"),
-    (re.compile(r" failed with exit (\d+) \(did not decide\)"), lambda m: "undecided:" + m.group(1)),
-    (re.compile(r"could not decode the observation \(exit 2 "), lambda m: "undecided:decode"),
+    (re.compile(r"^[^:{\u2014]*? KILLED \(exit (\d+)"), lambda m: "killed:" + m.group(1)),
+    (re.compile(r"^[^:{\u2014]*? TIMED OUT after "), lambda m: "timeout"),
+    (re.compile(r"^[^:{\u2014]*? failed with exit (\d+) \(did not decide\)"), lambda m: "undecided:" + m.group(1)),
+    (re.compile(r"^observation-eq could not decode the observation \(exit 2 "), lambda m: "undecided:decode"),
 ]
-RUNNER_WORDS_END = ["{", "captured output:", "stdout="]
 
 
 def nonverdict(detail):
-    end = len(detail)
-    for marker in RUNNER_WORDS_END:
-        i = detail.find(marker)
-        if i >= 0:
-            end = min(end, i)
-    head = detail[:end]
-    best = None
+    head = detail
+    for p in RUNNER_PREFIXES:
+        if head.startswith(p):
+            head = head[len(p):]
+            break
     for rx, key in NONVERDICT:
-        m = rx.search(head)
-        if m and (best is None or m.start() < best[0]):
-            best = (m.start(), key(m))
-    return best[1] if best else None
+        m = rx.match(head)
+        if m:
+            return key(m)
+    return None
 
 
 def first_json(text):
@@ -186,12 +192,16 @@ def derive(rows):
             continue
         if result != "FAIL":
             die(f"row {cid}: result {result!r} is neither PASS nor FAIL")
-        nv = nonverdict(detail)
+        # The frontend's `(exit N): ` form is by construction a VERDICT exit
+        # (diff-coverage writes it only for codes that are neither 124 nor a
+        # signal) — tested before rule 1, so a refusal text quoting a
+        # non-verdict phrase keys by its class (review MEDIUM-3).
+        m = FE_EXIT.match(detail) if stage == "frontend-export" else None
+        nv = None if m else nonverdict(detail)
         if nv:
             keys[cid] = nv
             continue
         if stage == "frontend-export":
-            m = FE_EXIT.match(detail)
             if m:
                 if m.group(1) != "1":
                     keys[cid] = "crash:frontend"
@@ -317,6 +327,19 @@ def apply(baseline, results_path):
         out.append(f"{res}\t{cid}\t{stage}\t{key}")
     if bad:
         die("REFUSED --apply:\n  " + "\n  ".join(bad))
+    # Run ids the baseline has no row for are NOT added (this regenerates
+    # the cause column only; bearing a row is the lane's re-pin) — said
+    # out loud, never dropped silently (fix round, review LOW-1).
+    based = set()
+    for line in lines:
+        p = line.split("\t")
+        if not line.startswith("#") and len(p) >= 2 and p[0] != "result":
+            based.add(p[1])
+    extra = [cid for _, cid, _, _ in rows if cid not in based]
+    if extra:
+        sys.stderr.write(f"coverage-cause --apply: NOTE {len(extra)} run id(s) have no baseline row and were NOT added "
+                         "(bear them in the row re-pin; the baseline diff reports them as NEW):\n"
+                         + "".join(f"  {cid}\n" for cid in extra))
     sys.stdout.write("\n".join(out) + "\n")
 
 

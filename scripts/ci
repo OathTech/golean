@@ -386,8 +386,10 @@ if [ -f artifacts/coverage/latest.tsv ]; then
   run_bump "every FAIL row's refusal cause classified (scripts/coverage-cause --unclassified)" ./scripts/coverage-cause --unclassified artifacts/coverage/latest.tsv
 fi
 
-# ── GATE: the re-pin guard. A re-pin that flips a case PASS -> non-PASS must
-# list it on a `- Cases:` line in docs/BUGS.md; a stage alternation of the old
+# ── GATE: the re-pin guard. A re-pin that flips a case PASS -> non-PASS, or
+# moves a FAIL row's cause from a named key into the non-verdict/crash family
+# (scripts/check-cause-regressions), must list it on a `- Cases:` line in
+# docs/BUGS.md; a stage alternation of the old
 # baseline must survive unless the new one names its removal. Dirty tree:
 # worktree vs HEAD; clean tree: HEAD vs HEAD~1 (a shallow clone fails closed).
 repin_guard() {  # <baseline file>
@@ -428,6 +430,13 @@ repin_guard() {  # <baseline file>
   surv_out="$(./scripts/check-alternation-survival "git:$old:$base" "$surv_new" 2>&1)" || surv_rc=$?
   if [ "$surv_rc" -eq 0 ]; then [ -n "$surv_out" ] && printf '%s\n' "$surv_out" | sed 's/^/  /'
   else printf '%s\n' "$surv_out" | sed 's/^/  /'; bad "re-pin guard ($base: a stage alternation of $old dropped without a named removal, or the check could not run — exit $surv_rc)"; fi
+  # Cause regressions (refusal-cause fix round, review HIGH-1): a FAIL row
+  # re-pinned from a named cause into killed:/timeout/undecided:/crash:
+  # needs a BUGS.md Cases: line, like a PASS→non-PASS flip.
+  local cause_rc=0 cause_out
+  cause_out="$(./scripts/check-cause-regressions "git:$old:$base" "$surv_new" 2>&1)" || cause_rc=$?
+  if [ "$cause_rc" -eq 0 ]; then [ -n "$cause_out" ] && printf '%s\n' "$cause_out" | sed 's/^/  /'
+  else printf '%s\n' "$cause_out" | sed 's/^/  /'; bad "re-pin guard ($base: a FAIL row's cause regressed into the non-verdict/crash family without a BUGS.md Cases: line, or the check could not run — exit $cause_rc)"; fi
 }
 step "baseline re-pin guard (PASS→non-PASS flips must be on a BUGS.md Cases: line; alternations survive)"
 repin_guard baselines/native-full.tsv

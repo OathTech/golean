@@ -8356,3 +8356,27 @@ run — merge protocol 5a fires), give `uintptr` its own machine identity, then 
 flip the six rows PASS (`Expect: FAIL` and the `Pinned-by: none` reason go with it) and mark this entry fixed. Fix
 criterion: the six rows PASS against go1.26.5 with the gc values above; `width-only` still PASSes; the unit suite's
 refusing shapes become lowering shapes with the gc answers.
+
+## BUG-125 — the native frontend LOWERS a `package main` with no `func main`, a program gc rejects («function main is undeclared in the main package») [frontend boundary; over-acceptance, no wrong answer observed; found by the negative corpus's new frontend leg, lane `apparatus/refusal-cause-1012` fix round (review MEDIUM-1), 2026-10-12]
+
+- Status: open
+- Pinned-by: none (the witness is a NEGATIVE-corpus row, `functions/main-undeclared`, born FAIL at
+  `frontend-accepts` in `baselines/negative-full.tsv`; `scripts/check-bugs.sh` reads only the differential baseline,
+  so it carries no Cases line here. The negative baseline diff holds it: the row turning PASS is drift, read at the fix.)
+- Discovered: the pre-merge adversarial review of lane `apparatus/refusal-cause-1012` (relayed by the [AGENT]
+  coordinator, 2026-10-12): `package main` with only `func f()` — gc exits 1, the frontend exits 0 and writes a wire.
+  This entry and the row: [AGENT] lane worker `apparatus/refusal-cause-1012`, 2026-10-12.
+
+WHAT: the frontend is a SUBJECT lowerer — the machine's entry is the CLI's `--function <name>`, and the differential
+corpus's exec directories are `package main` files WITHOUT `func main` by design (the oracle harness generates the
+`main` around the subject; 436 of the 1396 `package main` directories under `Corpus/coverage/exec` have no `func main`, measured 2026-10-12). So the frontend has no
+notion of «a whole program gc would build», and the gc check «function main is undeclared in the main package» (made
+by cmd/compile, not go/types) has no counterpart. No wrong answer follows from it today: running the wire with
+`--function main` is the machine's named error (`entry function not found: main`); any other entry runs a function gc
+never ran as part of this (rejected) program, which is the subject mode's contract, not an observation of the program.
+
+WHY NOT FIXED IN-LANE: the smallest frontend check («package main declares no func main» at load) would refuse every
+subject-mode export of the exec corpus; the real fix is a whole-program MODE (a flag the negative leg passes, or a
+manifest-driven entry contract) — a frontend-contract design question, not a few lines. Fix criterion: the
+negative-corpus row `functions/main-undeclared` PASSes on the frontend leg (`frontend=type-check` or a named
+whole-program refusal) with no exec-corpus row moving.

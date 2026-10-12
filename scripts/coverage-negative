@@ -201,7 +201,8 @@ report_negative_pass() {
 # the row passes) and fe_detail. The frontend's only deliberate exit is 1
 # (tools/nativefrontend/main.go: `nativefrontend: <error>`); its first
 # line is classed:
-#   type-check      `nativefrontend: type-check: …` (go/types, load.go)
+#   type-check      `nativefrontend: type-check: …` (go/types, load.go) —
+#                   but NOT an importer failure (`could not import`)
 #   parse           `nativefrontend: <go_dir>/<file>.go:L:C: …` (go/parser
 #                   via fileselect.go — gc's syntax errors)
 #   file-selection  `nativefrontend: native frontend unsupported: file
@@ -224,7 +225,11 @@ frontend_leg() {
     124) fe_stage="frontend-crash"; fe_detail="native frontend TIMED OUT after ${GO_TIMEOUT_SECONDS}s (GO_TIMEOUT_SECONDS): $out"; return ;;
     *)   fe_stage="frontend-crash"; fe_detail="native frontend (exit $rc) — not its refusal exit 1: $out"; return ;;
   esac
-  if [[ "$first" == "nativefrontend: type-check: "* ]]; then
+  # An IMPORTER failure surfaces as `type-check: … could not import X` — it
+  # is not the program's rejection (an import-cycle row would pass for an
+  # unrelated reason; a broken stdlib importer would pass every importing
+  # row vacuously): frontend-reason (fix round, review MEDIUM-2).
+  if [[ "$first" == "nativefrontend: type-check: "* && "$first" != *"could not import"* ]]; then
     fe_detail="frontend=type-check"
   elif [[ "$first" == "nativefrontend: native frontend unsupported: file selection "* ]]; then
     fe_detail="frontend=file-selection"

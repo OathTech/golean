@@ -1,6 +1,6 @@
 # GoLean negative-corpus (compile-rejection) baseline
 # recorded: 2026-08-18  commit: f68a4d86+ (spec-truth P3 slice 2)  oracle: go build (rejection)  [header corrected 2026-08-31: the old "+ frontend fail-closed" conjunct claimed a check that does not exist — scripts/coverage-negative invokes no GoLean tool (p2-fact claim 5)]
-# manifest_cases: 394  pass: 394  fail: 0
+# manifest_cases: 395  pass: 394  fail: 1
 # Columns: result<TAB>id<TAB>stage (sorted by id); detail omitted (churns).
 # Regression = any flip/stage change vs this file (scripts/coverage-baseline-diff
 # --no-cause --baseline baselines/negative-full.tsv artifacts/coverage/negative-latest.tsv;
@@ -12,6 +12,12 @@
 #   program gc rejects), frontend-crash (a timeout, a signal, exit 2 or any other code) or frontend-reason (exit 1
 #   for another reason). The 2026-08-31 correction above («invokes no GoLean tool») is SUPERSEDED from this date.
 #   HEADER ONLY: no row moves — all 394 PASS under the leg (356 type-check, 37 parse, 1 file-selection; measured).
+# re-pinned: 2026-10-12 [AGENT], lane apparatus/refusal-cause-1012 FIX ROUND (the pre-merge adversarial review, MEDIUM-1,
+#   relayed by the [AGENT] coordinator): ONE BORN ROW, FAIL functions/main-undeclared at frontend-accepts — a `package main`
+#   with no `func main`: gc rejects it («function main is undeclared in the main package»), the native frontend LOWERS it
+#   (a subject lowerer has no whole-program mode). Born FAIL on docs/BUGS.md BUG-125 (the frontend fix is a contract design
+#   question, not a few lines: 436 exec-corpus directories are main-less by design). No other row moves; no flip.
+#   Counts: 394 + 1 = 395; PASS 394; FAIL 0 + 1 = 1. Measured by capped scripts/ci --diff at the fix round's tip.
 # Re-pin reason (2026-09-02, bug082-maphint lane, [AGENT] inside the BUG-082 fix
 # mandate): 4 NEW ids, no other change — maps/make-map-{float,string,
 # negative-const,overflow-const}-hint pin that a non-integer or non-
@@ -165,6 +171,7 @@ PASS	functions/array-func-compare	-
 PASS	functions/call-nonfunction	-
 PASS	functions/duplicate-parameter	-
 PASS	functions/func-compare	-
+FAIL	functions/main-undeclared	frontend-accepts
 PASS	functions/struct-func-compare	-
 PASS	functions/wrong-arity	-
 PASS	generics/alias-method-receiver	-

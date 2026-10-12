@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# Cause REGRESSIONS across a baseline re-pin (refusal-cause pinning fix round,
+# 2026-10-12, review HIGH-1). scripts/ci's re-pin guard demands a BUGS.md
+# `- Cases:` line for a PASS -> non-PASS flip; a FAIL row whose pinned CAUSE
+# moved from a named key into the non-verdict/crash family (killed:*,
+# timeout, undecided:*, crash:*) was laundered by `scripts/coverage-cause
+# --apply` with no written reason. Rule, mirroring the flip rule: for every
+# id that is FAIL in both OLD and NEW, each cause member of NEW (a `|` set on
+# an alternation row) that is in the family and was NOT a member of OLD's
+# cause must be on a `- Cases:` line of docs/BUGS.md. Moves between two named
+# classes stay free (designed churn: the baseline diff already reported them
+# and the re-pin header gives the reason). An OLD without the cause column
+# counts as no member at all (a first pin of a crash key needs the line too).
+#
+# Usage: scripts/check-cause-regressions <old> <new>
+#   <old>/<new> are a file path or `git:<rev>:<path>`; BUGS file =
+#   $CAUSE_GUARD_BUGS (fixtures) or docs/BUGS.md.
+# Exit 0 = none unexplained (each explained one printed as a note); 1 = at
+#   least one unexplained (ids printed); 2 = an input could not be read.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+[ $# -eq 2 ] || { echo "usage: $0 <old> <new>   (file path or git:<rev>:<path>)" >&2; exit 2; }
+BUGS="${CAUSE_GUARD_BUGS:-docs/BUGS.md}"
+[ -f "$BUGS" ] || { echo "check-cause-regressions: no $BUGS" >&2; exit 2; }
+
+slurp() {
+  case "$1" in
+    git:*) git show "${1#git:}" 2>/dev/null || { echo "check-cause-regressions: cannot read $1" >&2; exit 2; } ;;
+    *)     [ -f "$1" ] || { echo "check-cause-regressions: no file $1" >&2; exit 2; }; cat "$1" ;;
+  esac
+}
+old="$(slurp "$1")"; new="$(slurp "$2")"
+
+rc=0
+out="$(printf '===OLD===\n%s\n===NEW===\n%s\n' "$old" "$new" | awk -F'\t' -v BUGS="$BUGS" '
+  function family(c) { return c ~ /^(killed:|undecided:|crash:)/ || c == "timeout" }
+  BEGIN {
+    while ((getline l < BUGS) > 0)
+      if (l ~ /^- Cases:/) { n = split(substr(l, 9), a, /[, ]+/); for (i = 1; i <= n; i++) if (a[i] != "") cased[a[i]] = 1 }
+  }
+  /^===OLD===$/ { sec = 1; next }
+  /^===NEW===$/ { sec = 2; next }
+  /^#/ || $1 == "result" || NF < 2 { next }
+  sec == 1 { ores[$2] = $1; ocause[$2] = (NF >= 4 ? $4 : "") }
+  sec == 2 && $1 == "FAIL" && ($2 in ores) && ores[$2] == "FAIL" {
+    m = split($4, nc, "|"); k = split(ocause[$2], oc, "|"); delete had
+    for (i = 1; i <= k; i++) had[oc[i]] = 1
+    for (i = 1; i <= m; i++) if (family(nc[i]) && !(nc[i] in had)) {
+      if ($2 in cased) print "NOTE\t" $2 "\tcause [" ocause[$2] "] -> [" $4 "] (non-verdict/crash family) — on a BUGS.md Cases: line"
+      else { print "UNEXPLAINED\t" $2 "\tcause [" ocause[$2] "] -> [" $4 "]: a pinned cause regressed into the non-verdict/crash family and no BUGS.md `- Cases:` line names the id"; bad = 1 }
+      break
+    }
+  }
+  END { if (bad) exit 1 }')" || rc=$?
+if [ "$rc" -ge 2 ]; then
+  echo "check-cause-regressions: internal comparison error (awk rc=$rc) — refusing to certify" >&2
+  { printf '%s\n' "$out" | grep . >&2; } || true
+  exit 2
+fi
+{ printf '%s\n' "$out" | grep . | LC_ALL=C sort; } || true
+if [ "$rc" -eq 1 ]; then
+  echo "check-cause-regressions: FAIL — a FAIL row's cause re-pinned from a named key into killed:/timeout/undecided:/crash: without a BUGS.md Cases: line"
+  exit 1
+fi
+exit 0
