@@ -245,9 +245,8 @@ validate_path_id() {
 #   cap     = N, max distinct observations (default 64)
 #   samples = RETIRED (2026-09-03, [USER]-ruled sampling rule — docs/
 #             2026-09-01_membership-depth.md §4.3 / P2): the Go-side draw
-#             budget is set by RUN MODE in scripts/diff-coverage
-#             (MEMBERSHIP_DRAWS: K=32 on the gate path, K=80 under
-#             --slow; draws alternate plain/-race and stop early at the
+#             budget is scripts/diff-coverage's MEMBERSHIP_DRAWS (K=32;
+#             draws alternate plain/-race and stop early at the
 #             members= pin). A row carrying samples= is REFUSED here and
 #             again by the harness — a per-row count the budget no
 #             longer reads would be a silent no-op.
@@ -282,7 +281,7 @@ validate_lane_params() {
     key="${kv%%=*}"
     value="${kv#*=}"
     case "$key" in
-      width|sites|cap|work|members|statuses|tier|backedge|iters|engine) ;;
+      width|sites|cap|work|members|statuses|backedge|iters|engine) ;;
       nonterm)
         # RETIRED 2026-10-06 (docs/2026-10-06_spin-bounds.md): a per-branch
         # budget in pool STEPS moved with every step-count refactor (C4,
@@ -296,8 +295,14 @@ validate_lane_params() {
         echo "coverage-manifest: $cases_file: depth= is a strict-lane param (the enumerating lanes certify the whole tree): $kv (lane=$lane_ctx)" >&2
         return 1
         ;;
+      tier)
+        # RETIRED (gate cull 2026-10-12, docs/2026-10-12_gate-cull-plan.md §3.1):
+        # the cached-certificate tier is gone; every enumerating row runs fresh.
+        echo "coverage-manifest: $cases_file: tier= is RETIRED (no cached rows since the 2026-10-12 gate cull; every enumerating row runs fresh — a slow row is a budget question, not a tier): remove $kv" >&2
+        return 1
+        ;;
       samples)
-        echo "coverage-manifest: $cases_file: samples= is RETIRED (2026-09-03 sampling rule: the membership draw budget is K by run mode — 32 on the gate path, 80 under --slow — alternating plain/-race with early stop at the members= pin; a per-row sample count is no longer read): remove $kv" >&2
+        echo "coverage-manifest: $cases_file: samples= is RETIRED (2026-09-03 sampling rule: the membership draw budget is K=32, alternating plain/-race with early stop at the members= pin; a per-row sample count is no longer read): remove $kv" >&2
         return 1
         ;;
       *)
@@ -310,43 +315,6 @@ validate_lane_params() {
       return 1
     fi
     seen="$seen $key"
-    if [[ "$key" == "tier" ]]; then
-      # Tiered checking (user directive 2026-08-08; membership-lane note
-      # addendum of the same date): tier=slow marks a row whose full
-      # certification exceeds the ~30 s budget. Quick/per-commit runs
-      # verify against the row's TRACKED certified-set record
-      # (baselines/certified/) and report CERTIFIED-CACHED; only
-      # `scripts/ci --slow` (or GOLEAN_SLOW=1) re-enumerates. Membership
-      # and (since W3.2 stage C) confluent rows — the other lanes have
-      # no cached path, so the param fails closed there.
-      if [[ "$value" != "slow" ]]; then
-        echo "coverage-manifest: $cases_file: tier must be 'slow' (the only tier): $kv" >&2
-        return 1
-      fi
-      # Membership OR confluent (W3.2 stage C: the confluent lane
-      # gained the same cached-certification path — the record is a
-      # certified singleton; scripts/diff-coverage's rule widened in
-      # the same commit).
-      if [[ "$lane_ctx" != "membership" && "$lane_ctx" != "confluent" ]]; then
-        echo "coverage-manifest: $cases_file: tier=slow is a membership/confluent-lane param (lane=$lane_ctx has no cached certification path): $kv" >&2
-        return 1
-      fi
-      # A cached MEMBERSHIP row's only machine-cardinality constraint
-      # is the members= pin against the recorded set (pre-merge audit,
-      # 2026-08-08) — require it explicitly. (A confluent row's
-      # cardinality is the lane itself: |set| = 1.)
-      if [[ "$lane_ctx" != "membership" ]]; then
-        continue
-      fi
-      case ",$params," in
-        *,members=*) ;;
-        *)
-          echo "coverage-manifest: $cases_file: tier=slow requires an explicit members=<n> pin (the cached path's cardinality constraint): $kv" >&2
-          return 1
-          ;;
-      esac
-      continue
-    fi
     if [[ "$key" == "statuses" ]]; then
       # Status-diverse envelope declaration (audit F8) — its own shape,
       # not an integer. Membership-only: the other lanes' claims are

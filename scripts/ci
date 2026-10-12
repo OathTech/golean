@@ -10,12 +10,8 @@
 #   scripts/ci --diff   also re-runs the full native differential corpus first
 #                       (slow: `go run` per case), then diffs it. Do this when
 #                       you touched runtime code (frontend / interpreter / Ops).
-#                       tier=slow rows verify against their tracked
-#                       certified-set records (baselines/certified/) and
-#                       report CERTIFIED-CACHED — visible, never silent.
-#   scripts/ci --slow   --diff plus FULL re-certification of tier=slow rows
-#                       (the nightly / pre-merge path; a re-certification
-#                       that differs from the tracked record fails loud).
+#                       Every row runs fresh: there is no cached tier and no
+#                       --slow (gate cull 2026-10-12).
 #
 # NOTE: the differential is the FOUNDATION of the trust chain. `scripts/ci`
 # (no flag) only checks that the LAST recorded run still matches the baseline;
@@ -66,16 +62,11 @@ case "${CAPPED_STATE:-${GOLEAN_CAPPED:-}}" in
 esac
 
 RUN_DIFF=0
-RUN_SLOW=0
 for arg in "$@"; do
   case "$arg" in
     --diff) RUN_DIFF=1 ;;
-    # Tiered checking (user directive 2026-08-08): --slow implies --diff
-    # and RE-CERTIFIES tier=slow rows fully (GOLEAN_SLOW=1 to the
-    # differential); without it, slow-tier rows verify against their
-    # tracked certified-set records and report CERTIFIED-CACHED —
-    # visibly, never as a silent skip.
-    --slow) RUN_DIFF=1; RUN_SLOW=1 ;;
+    --slow) echo "scripts/ci: --slow is RETIRED (gate cull 2026-10-12): no cached rows; --diff enumerates every row fresh" >&2
+            exit 2 ;;
     # FAIL CLOSED ON TYPOS (2026-08-09). This loop used to ignore anything it
     # didn't recognise, so `scripts/ci --dif` ran the FAST gate and printed
     # RESULT: PASS — the operator believes the differential ran when it never
@@ -86,7 +77,7 @@ for arg in "$@"; do
     # with no systemd user bus this guard is unreachable, the operator getting
     # the wrapper's error instead (pre-merge audit F7; the original commit
     # message's "before any work" was imprecise).
-    *) echo "scripts/ci: unknown argument '$arg' (expected --diff or --slow)" >&2
+    *) echo "scripts/ci: unknown argument '$arg' (expected --diff)" >&2
        echo "  Refusing to run: a mistyped flag must never silently downgrade" >&2
        echo "  the gate to a weaker one that still reports PASS." >&2
        exit 2 ;;
@@ -532,7 +523,7 @@ fi
 step "core build (lake build; must be WARNING-free — GoLean/ module warnings
 # replay into the runner's stdout and corrupt the JSON observation channel,
 # the recorded ops failure mode that produced mass phantom drift 2026-07-23)"
-core_out="$(library_step core bash scripts/build-certified 2>&1)"
+core_out="$(library_step core scripts/capped lake build 2>&1)"
 core_rc=$?
 echo "$core_out" | tail -3
 # Root modules included in the warning watch (split audit A8, 2026-08-31):
@@ -546,15 +537,6 @@ elif [ -n "$core_warns" ]; then
 else
   ok "core build (warning-free)"
 fi
-
-step "certificate provenance (compiled inputs, mutation controls, current records)"
-cert_started=$SECONDS
-if bash scripts/check-certification; then
-  ok "certificate provenance"
-else
-  bad "certificate provenance"
-fi
-printf 'Certificate provenance wall seconds: %s\n' "$((SECONDS - cert_started))"
 
 # The core totality audit (2026-09-16, docs/2026-09-16_typed-profiles-parked.md
 # §3): re-homed from the parked `semantic interface` step when the typed-profile
@@ -781,14 +763,7 @@ if [ "$evrc" -eq 0 ] && [ "$evbad" -eq 0 ] && [ "$evok" -gt 0 ]; then ok "eval t
 # reported as partial and NEVER as a full certification — and if the recorded
 # run predates HEAD, that staleness is surfaced too.
 if [ "$RUN_DIFF" -eq 1 ]; then
-  # Mode in the banner (audit fix 2026-08-21, finding A-INFO): --diff and
-  # --slow print otherwise-identical step lists, so a saved log could not
-  # be told apart after the fact. Say which one ran.
-  if [ "$RUN_SLOW" -eq 1 ]; then
-    step "re-run full native differential corpus (--slow: --diff + GOLEAN_SLOW=1 tier=slow re-certification)"
-  else
-    step "re-run full native differential corpus (--diff: tier=slow rows verified against their cached certified records)"
-  fi
+  step "re-run full native differential corpus (--diff: every row fresh, no cached tier)"
   # Exit semantics of diff-coverage: 1 = some cases FAIL (expected — the corpus
   # deliberately outruns the tool; whether the failing SET is acceptable is the
   # baseline diff's job below), >=2 = the run itself broke (no cases, bad
@@ -797,7 +772,7 @@ if [ "$RUN_DIFF" -eq 1 ]; then
   # binary; those also remove latest.tsv/meta up front, so a dead run
   # leaves nothing for the baseline diff below to judge as fresh).
   # Judge run-completion here, regression below.
-  GOLEAN_SLOW="$RUN_SLOW" ./scripts/diff-smoke 2>&1 | tail -3; drc=${PIPESTATUS[0]}
+  ./scripts/diff-smoke 2>&1 | tail -3; drc=${PIPESTATUS[0]}
   case "$drc" in
     0|1) ok "differential run completed (exit $drc; failing-set judged by baseline diff)" ;;
     *)   bad "differential run BROKE (exit $drc — not a case failure; see output)" ;;

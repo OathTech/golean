@@ -11,7 +11,7 @@ Deliberately NOT in scripts/: this is an audit instrument, not a gate.
 invariants and runs inside `scripts/ci`; this tool covers the invariants
 that live only in prose — ledger cross-references, the language-coverage
 ledger's closing arithmetic, the interpretations index's backing entries,
-the certified record's currency, and the census evidence's reproducibility.
+and the census evidence's reproducibility.
 
 Usage:
     tools/reconcile-records            # all static checks
@@ -34,7 +34,6 @@ import subprocess
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
-import certification
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
@@ -55,7 +54,6 @@ TRIAGE = p("docs", "2026-08-19_triage-table.md")
 BACKLOG = p("docs", "discrepancy-backlog.md")
 UNTRIAGED_IDS = p("baselines", "untriaged-ids")
 UNTRIAGED_COUNT = p("baselines", "untriaged-count")
-CERTIFIED_DIR = p("baselines", "certified")
 
 FIDELITY_STAGES = {
     "lean-observation",
@@ -737,59 +735,6 @@ def check_untriaged(bl, bugs):
 
 
 # ---------------------------------------------------------------------------
-# C9 — the certified record's currency
-# ---------------------------------------------------------------------------
-
-
-def check_certified(bl):
-    out = {}
-    if not os.path.isdir(CERTIFIED_DIR):
-        finding("C9", "high", f"no certified record directory at {CERTIFIED_DIR}")
-        return out
-    files = sorted(
-        f for f in os.listdir(CERTIFIED_DIR) if f.endswith(".certified.tsv")
-    )
-    out["files"] = files
-    if not files:
-        finding("C9", "high", "the certified-record directory is empty — no tier=slow membership row is pinned")
-    for fn in files:
-        path = os.path.join(CERTIFIED_DIR, fn)
-        txt = read(path)
-        cid = fn[: -len(".certified.tsv")].replace("__", "/")
-        rec = {"case": cid}
-        m = re.search(r"^# certified: (\S+)\s+commit: (.*)$", txt, re.M)
-        if m:
-            rec["certified"] = m.group(1)
-            rec["commit_note"] = m.group(2).strip()
-        else:
-            finding("C9", "medium", f"{path}: no parseable `# certified: <date> commit: <note>` header line")
-        sha = re.search(r"wire[- ]sha[^0-9a-f]*([0-9a-f]{8,64})", txt, re.I)
-        if sha:
-            rec["wire_sha"] = sha.group(1)
-        if cid in bl:
-            rec["baseline"] = "/".join(bl[cid])
-            if bl[cid][0] != "PASS":
-                finding(
-                    "C9",
-                    "high",
-                    f"certified record {fn} pins case {cid}, which is {bl[cid][0]}/{bl[cid][1]} in the baseline",
-                )
-        else:
-            finding(
-                "C9",
-                "high",
-                f"certified record {fn} names case {cid}, which is not in the baseline "
-                "(filename->id demangling may be wrong, or the case is gone)",
-            )
-        out[fn] = rec
-    try:
-        out["provenance"] = certification.check_records(Path(ROOT), check_executable=False)
-    except (ValueError, OSError, subprocess.SubprocessError, TypeError, KeyError, IndexError) as error:
-        finding("C9", "high", "certificate provenance: " + str(error))
-    return out
-
-
-# ---------------------------------------------------------------------------
 # C10 — the latitude inventory's own counts
 # ---------------------------------------------------------------------------
 
@@ -1309,7 +1254,6 @@ def main():
     report["defs"] = check_cross_refs()
     report["interpretations"] = check_interpretations()
     report["untriaged"] = check_untriaged(bl, bugs)
-    report["certified"] = check_certified(bl)
     report["latitude"] = check_latitude_counts()
     report["choice_sites"] = check_choice_sites()
     report["version_pin"] = check_version_pin()

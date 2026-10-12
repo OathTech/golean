@@ -37,9 +37,9 @@
 # (GO111MODULE=off, GODEBUG=panicnil=0, repo-local GOCACHE, run from the
 # harness dir, -race for the race mode); sample classification mirrors
 # membership_go_observation for the ok/panic statuses. The enumerated set
-# is the row's certified record when one exists (tier=slow), else a
-# fresh `coverage-observations` run under the row's params — the same
-# call run_membership_case_rows makes.
+# is a fresh `coverage-observations` run under the row's params — the
+# same call run_membership_case_rows makes (no cached records since the
+# 2026-10-12 gate cull).
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
@@ -168,7 +168,7 @@ while IFS=$'\t' read -r id go_dir fn args status features reason lane why params
   # pre-rule gate order (5 plain then 5 race) that this instrument
   # replays for the drawsAtGate/distinctAtGate columns, so the memo's
   # "at the old gate budget" statistic stays reproducible.
-  width="" sites=8 obs_cap=64 samples=5 work=200000 statuses="$status" tier="" backedge="" iters="" engine="" members=""
+  width="" sites=8 obs_cap=64 samples=5 work=200000 statuses="$status" backedge="" iters="" engine="" members=""
   if [[ "$params" != "-" ]]; then
     IFS=',' read -r -a kvs <<< "$params"
     for kv in "${kvs[@]}"; do
@@ -177,7 +177,7 @@ while IFS=$'\t' read -r id go_dir fn args status features reason lane why params
         width) width="$value" ;; sites) sites="$value" ;; cap) obs_cap="$value" ;;
         samples) echo "membership-sampling: $id: samples= is RETIRED (2026-09-03 sampling rule — the gate's budget is K by run mode, scripts/diff-coverage MEMBERSHIP_DRAWS); this instrument has its own --draws; remove $kv from the row" >&2; exit 2 ;;
         work) work="$value" ;; members) members="$value" ;;
-        statuses) statuses="$value" ;; tier) tier="$value" ;; backedge) backedge="$value" ;;
+        statuses) statuses="$value" ;; backedge) backedge="$value" ;;
         iters) iters="$value" ;; engine) engine="$value" ;;
       esac
     done
@@ -189,32 +189,26 @@ while IFS=$'\t' read -r id go_dir fn args status features reason lane why params
   fi
   # --- enumerated set ---
   enum_source=""
-  cert_file="baselines/certified/${id//\//__}.certified.tsv"
-  if [[ "$tier" == "slow" && -f "$cert_file" ]]; then
-    grep -v '^#' "$cert_file" | grep . > "$row_dir/observations.txt"
-    enum_source="certified-record"
-  else
-    wire="$row_dir/wire.json"
-    fe_flags=()
-    [[ "$id" == "init/hidden-dep-order" ]] && fe_flags+=(--allow-hidden-dep-init-order)
-    if ! GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run ./tools/nativefrontend ${fe_flags[@]+"${fe_flags[@]}"} --dir "$go_dir" --out "$wire" >/dev/null 2>&1; then
-      printf '%s\t-\t%s\t-\t-\t-\t-\t-\t-\t-\t-\t-\tFRONTEND EXPORT FAILED\n' "$id" "$samples" >> "$SUMMARY"
-      continue
-    fi
-    enum_args=(coverage-observations --input "$wire" --function "$fn" --max-width "$width" --max-sites "$sites" --cap "$obs_cap" --work-cap "$work" --expect-status "${statuses//+/,}")
-    [[ -n "$backedge" ]] && enum_args+=(--backedge "$backedge")
-    [[ -n "$engine" ]] && enum_args+=(--engine "$engine")
-    [[ -n "$iters" ]] && enum_args+=(--allow-nonterm-iters "$iters")
-    if [[ "$args" != "-" ]]; then
-      IFS=',' read -r -a ints <<< "$args"
-      for v in "${ints[@]}"; do enum_args+=(--arg-int "$v"); done
-    fi
-    if ! "$GOLEAN_BIN" "${enum_args[@]}" > "$row_dir/observations.txt" 2> "$row_dir/enum-stats.txt"; then
-      note="ENUMERATION FAILED: $(head -c 200 "$row_dir/enum-stats.txt")"
-      : > "$row_dir/observations.txt"
-    fi
-    enum_source="fresh-enumeration"
+  wire="$row_dir/wire.json"
+  fe_flags=()
+  [[ "$id" == "init/hidden-dep-order" ]] && fe_flags+=(--allow-hidden-dep-init-order)
+  if ! GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run ./tools/nativefrontend ${fe_flags[@]+"${fe_flags[@]}"} --dir "$go_dir" --out "$wire" >/dev/null 2>&1; then
+    printf '%s\t-\t%s\t-\t-\t-\t-\t-\t-\t-\t-\t-\tFRONTEND EXPORT FAILED\n' "$id" "$samples" >> "$SUMMARY"
+    continue
   fi
+  enum_args=(coverage-observations --input "$wire" --function "$fn" --max-width "$width" --max-sites "$sites" --cap "$obs_cap" --work-cap "$work" --expect-status "${statuses//+/,}")
+  [[ -n "$backedge" ]] && enum_args+=(--backedge "$backedge")
+  [[ -n "$engine" ]] && enum_args+=(--engine "$engine")
+  [[ -n "$iters" ]] && enum_args+=(--allow-nonterm-iters "$iters")
+  if [[ "$args" != "-" ]]; then
+    IFS=',' read -r -a ints <<< "$args"
+    for v in "${ints[@]}"; do enum_args+=(--arg-int "$v"); done
+  fi
+  if ! "$GOLEAN_BIN" "${enum_args[@]}" > "$row_dir/observations.txt" 2> "$row_dir/enum-stats.txt"; then
+    note="ENUMERATION FAILED: $(head -c 200 "$row_dir/enum-stats.txt")"
+    : > "$row_dir/observations.txt"
+  fi
+  enum_source="fresh-enumeration"
   enumerated="$(grep -c . "$row_dir/observations.txt" || true)"
   # --- draws: samples plain, samples race (the gate's order), then the rest ---
   : > "$row_dir/samples-plain.txt"; : > "$row_dir/samples-race.txt"; : > "$row_dir/draws.txt"
