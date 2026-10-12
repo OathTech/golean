@@ -513,3 +513,42 @@ was done on the branch (fixes landed as the commit after the evidence triage):
   `judge_record` and `repin_guard` with the old gate, the scans, the
   de-indented differential lanes, the fresh-fixture method-identity read,
   the workflow, the line counts and the §9 accounting.
+
+## 11. Follow-ups (2026-10-12, [USER] «yes go ahead»; branch `followups-1012`)
+
+- **1a, the frontend built once per corpus run:** `go run ./tools/nativefrontend`
+  per row became one `go build` per run into the run's artifacts dir. Frontend
+  worker time 3926 calls → 234 s total (60 ms a call; the relink was ~1 s).
+- **1b, per-phase timing:** every subprocess of the runner is timed; the meta
+  carries `phase_<p>_seconds` / `_calls`, `timings.tsv` the per-row records.
+- **4, `Tests/` in the warning watch** after a COLD build measured it free:
+  163 jobs, 8 min 37 s under the 64 G cap, zero warnings in any file.
+- **5, `tools/reconcile-records` retired. 6, `HANDOFF.md` deleted, `TODO.md`
+  marked historical.**
+- **The merge gate at `06b57f49`** (clean tree, build lock held): PASS, **534 s
+  wall** (802 s at the cull's first gate, 580 s at its last); 3936/3936 and
+  394/394 no regression; every row's result, features and stage IDENTICAL to
+  the previous record (dde758e8), compared row by row.
+
+**The measurement (1b), worker wall summed over the 32 jobs, 63 183 records:**
+
+| phase | seconds | calls | share | what it is |
+|---|---|---|---|---|
+| oracle | 4618 | 11 524 | 61% | `go run` of the case program: once per strict row, up to K=32 draws per membership row |
+| obs-eq | 1046 | 25 026 | 14% | `golean observation-eq`, one process per comparison (42 ms each, mostly start-up) |
+| lean-variant | 559 | 10 360 | 7% | the strict lane's three invariance streams |
+| trace | 447 | 3 289 | 6% | the depth-guard tracer |
+| enum | 314 | 417 | 4% | membership / confluent / racy enumerations (the former slow row included) |
+| frontend | 234 | 3 926 | 3% | after 1a |
+| lean-default | 200 | 3 621 | 3% | the default-stream interpreter run |
+| lean-coupling, harness | 100 | 5 020 | 1% | |
+
+The strict lane's streams are 7%: **not worth weakening the invariance claim
+for.** The two levers that matter are the oracle (61%: `go run` relinks and
+runs the program for every draw; a per-row build with K executions is the
+same oracle, but the harness classifies `go run`'s `exit status N` stderr
+trailer, so the change is in the harness too) and the comparator (14%: a
+byte-identical pair is structurally equal by reflexivity, so a byte-equal
+fast path skips the process and leaves the structural comparator the judge
+of every differing pair). Both are runner changes on the trust path:
+proposed, not done ([AGENT]; the [USER]'s call).
