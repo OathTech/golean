@@ -83,7 +83,10 @@ push rule). Pushing the tag is a separate sign-off.
 - **The abort window** (punch-list item 29, from the sched-boundary review 2026-10-12): a goroutine's
   output beside main's abort is not a scheduling boundary (`atBoundary_of_abort`; «B3, deferred»), so the
   machine never interleaves a child's `print` between main's last output and its panic — pinned gc does,
-  dominantly (994 of 1000 runs at GOMAXPROCS=2 on the probe). A known admitted class, stated here pending
-  the [USER]'s ruling: name only, or widen (a pinned-statement question).
+  dominantly (994 of 1000 runs at GOMAXPROCS=2 on the probe). A known admitted class, NAMED as a stated limit and not widened: [USER] Mike 2026-10-12
+  «1,3-6 approved» (item 3 of the ask = this limit; the [AGENT] coordinator read «approved» as approving the
+  limit as written here, the ask having offered «name it, or widen»). Widening (a boundary at the abort) would
+  touch `atBoundary_of_abort` and the driver's terminal-priority classification — a pinned-statement question
+  left for a later ruling.
 - The ten limits of the 2026-10-03 offer (`docs/2026-10-03_offer-to-logic-team.md`) stand.
 
