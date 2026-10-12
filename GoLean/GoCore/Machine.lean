@@ -64,10 +64,25 @@ slices, `typeAssert`, `appendSlice`, `copySlice`) go through one generic
 operands are target addresses, checked as they arrive (preserving the
 interpreter's resolve-targets-first order and nil-target panic timing) —
 ending in a single `applyStmtOp` state-update step. `mapRange` gets a
-dedicated iteration frame whose pick-next step is the machine's
-nondeterministic step class (any in-range index is a legal step; the
-executable instantiates it from `Choices`), together with `appendSlice`'s
-capacity choice inside `applyStmtOp`. The multi-cell apply steps
+dedicated iteration frame whose pick-next step is ONE of the machine's
+nondeterministic step classes (any in-range index is a legal step; the
+executable instantiates it from `Choices`). The nondeterministic step
+classes are every pick `stepFn` draws from the choice tape — not two: the
+map-iteration pick; the capacity choices (`appendSlice`'s spill inside
+`applyStmtOp`, the `[]byte`/`[]rune` conversion cap at
+`applyStrictOpPick`); the unsequenced-operand picks (the `unseq`
+scheduler's next ready occurrence, the probe's deferred-or-raised panic);
+the select-clause pick (`applySelect`); the `[0, n)` draw (`randIntn`);
+TryLock's spurious failure (`applyTryLock`); the two panic-text picks (the
+nil-receiver text at `enterFramePick`, the repanic collapse at
+`abortConsult`); and, on the pool side (Multi.lean), the arrival-path
+select and parked-partner picks and the scheduling picks (the
+registry-boundary pick, the post-op and back-edge preemption points, the
+main-exit window). The census is `ChoiceSite` (State.lean), one
+constructor per site with its envelope statement in situ; the machine's
+own account of where the tape is consulted is `seqConsumption` below and
+`poolConsumption` (Multi.lean); `step_complete`'s docstring
+(MachineSound.lean) says the same. The multi-cell apply steps
 (`appendSlice`, `copySlice`) are the granularity-ledger entries from the
 design note §1: sequentially fine, re-audited before any concurrency
 claim mentions them (R4).
