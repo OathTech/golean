@@ -80,5 +80,10 @@ push rule). Pushing the tag is a separate sign-off.
   profile that excludes the shape and keeps the row as a known red.
 - **`uintptr` identity** (release-readiness item 26): refused by name in identity-bearing positions
   until the parked repair lands ([USER] 2026-10-12, D6: «refuse and repair asap»).
+- **The abort window** (punch-list item 29, from the sched-boundary review 2026-10-12): a goroutine's
+  output beside main's abort is not a scheduling boundary (`atBoundary_of_abort`; «B3, deferred»), so the
+  machine never interleaves a child's `print` between main's last output and its panic — pinned gc does,
+  dominantly (994 of 1000 runs at GOMAXPROCS=2 on the probe). A known admitted class, stated here pending
+  the [USER]'s ruling: name only, or widen (a pinned-statement question).
 - The ten limits of the 2026-10-03 offer (`docs/2026-10-03_offer-to-logic-team.md`) stand.
 

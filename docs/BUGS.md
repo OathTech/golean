@@ -7151,7 +7151,8 @@ amd64,linux-amd64,bare-linux}` (suffixes naming the target; `linux.go`
 with no underscore prefix is not a tag — the Go 1.4 rule) are born PASS
 and must not move. Until the pin moved here the pin was the review's
 probe record `docs/evidence/2026-09-11_project-review/probe-results.json`
-(cases `filename_windows`, `filename_ignored`, `filename_hidden`). NOT a
+(removed from main by the 2026-10-12 evidence triage; in history as `git show
+63c9ea65:docs/evidence/2026-09-11_project-review/probe-results.json`; cases `filename_windows`, `filename_ignored`, `filename_hidden`). NOT a
 runner row (recorded as a finding, not fixed here — trusted surface #2):
 an excluded file with INVALID syntax cannot be differentially tested,
 because the oracle harness generator (`tools/coverageharness`,
@@ -7723,7 +7724,9 @@ was retired in the 2026-10-12 gate cull; the merge gate samples at K=32.
 - Cases: builtins/e13-sibling-panic-order/idx-left-vs-min-operand, builtins/e13-sibling-panic-order/idx-left-vs-len-slice-expr, builtins/e13-sibling-panic-order/deref-left-vs-len-operand, builtins/e13-sibling-panic-order/ptr-field-left-vs-len-operand, builtins/e13-sibling-panic-order/div-left-vs-len-operand, builtins/e13-sibling-panic-order/shift-left-vs-len-operand, builtins/e13-sibling-panic-order/compound-load-vs-len-operand
 - Discovered: 2026-09-24 by the Stage E6a adversarial audit (`docs/2026-09-24_unseq-stage-e6a-audit.md` F1: fifteen
   call-free probe shapes, gc 20/20 on the built-in's operand's panic on every one; evidence
-  `docs/evidence/2026-09-24_unseq-stage-e6a-audit/{probe-results.txt,gc-draws.txt}`); pre-existing on main since the
+  `docs/evidence/2026-09-24_unseq-stage-e6a-audit/{probe-results.txt,gc-draws.txt}` — removed from main by the 2026-10-12
+  evidence triage, in history as `git show 63c9ea65:docs/evidence/2026-09-24_unseq-stage-e6a-audit/probe-results.txt` and
+  `…/gc-draws.txt`); pre-existing on main since the
   A6 amendment of BUG-032 (2026-08-31) made the inline `len` the realized shape for these operands
 
 WHAT: `s[i] + min(t[k], 1)`, `s[i] + len(t[k:])`, `*p + len(b[j])`, `q.x + len(b[j])`, `x/y + len(b[j])`,
@@ -7762,8 +7765,8 @@ seven Cases rows are PASS/membership on the candidate (`scripts/diff-one`: enume
 machine's canonical tape realizes the LEFT panic, gc the built-in's operand's) and RED-FIRST on main
 `3fb4a0d1`'s frontend + binary — as the born membership rows FAIL/membership («enumerated observation set is
 a singleton (1 member)»: main's machine offers ONE member), as strict twins of the same subjects
-FAIL/differential (Lean the left panic ≠ Go the built-in's operand's) — `docs/evidence/2026-09-24_unseq-
-stage-e6a/fix-round/`. The two assertion-left rows stay where E6a put them. NOT covered here and NOT a wrong
+FAIL/differential (Lean the left panic ≠ Go the built-in's operand's) — `docs/evidence/2026-09-24_unseq-stage-e6a/fix-round/` (removed from main by the 2026-10-12 evidence
+triage; in history: `git ls-tree 63c9ea65 docs/evidence/2026-09-24_unseq-stage-e6a/fix-round/`). The two assertion-left rows stay where E6a put them. NOT covered here and NOT a wrong
 answer on main: the GENERAL form (two unordered failing occurrences with NO E1 participant between them —
 `a[i] + b[j]`, `x/y + s[i]`, BUG-032's tuple `xs[ys[9]], b = zs[7], 2`), which stays on the legacy lexical
 path; gc realizes the lexical order on every general-form probe the audit ran EXCEPT BUG-032's tuple (gc
@@ -7878,7 +7881,8 @@ everywhere since E2).
   «every detected gap is rowed», [USER] Mike 2026-09-03, relayed. The fix lands with the lane's merge.)
 - Pinned-by: none (a transient tool failure under gate load, not a row state: seen ONCE — the FR-37 lane's gate run 1,
   `ci --slow` at `10270c5a`, the `crypto/hmac` row read `unknown`; NOT reproduced in 3+4 re-runs (four hand
-  re-derivations at the same tree byte-identical; gate run 2 ok) — `docs/evidence/2026-10-07_fr37/ci-slow-run1.tail.txt`)
+  re-derivations at the same tree byte-identical; gate run 2 ok) — `docs/evidence/2026-10-07_fr37/ci-slow-run1.tail.txt`, removed from main by the 2026-10-12 evidence triage; in
+  history as `git show 63c9ea65:docs/evidence/2026-10-07_fr37/ci-slow-run1.tail.txt`)
 - Discovered: 2026-10-07, FR-37 lane gate run 1; classified fail-open by the lane's Fable adversarial audit (apparatus
   finding, as relayed by the [AGENT] coordinator)
 

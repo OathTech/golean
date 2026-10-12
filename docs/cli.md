@@ -98,12 +98,12 @@ there, every `go run` sample must be a member of the printed set. On the default
 every cap fails loudly and never truncates: `--max-width` (default 16) caps each site's computed
 bound, `--max-sites` (default 8) caps the number of consumption sites per run, `--cap` (default
 64) caps the number of distinct observations, and `--work-cap` (default 200 000) caps exploration
-steps. **With `--engine dedup` only `--work-cap` is read:** `--cap`, `--fuel`, `--max-width` and
-`--max-sites` are accepted and silently ignored today (release-readiness item 27, from the
-2026-10-12 release-trust review F3; the inert width/sites were known from the 2026-09-20 stage-D
-audit) — a dedup certificate is about the whole state graph, not a budgeted exploration, so these
-flags have no meaning there. Until the CLI refuses them by name, do not read a dedup run's exit 0
-as evidence that an observation or fuel cap held.
+steps. **With `--engine dedup` only `--work-cap` and `--expect-status` are read:** a dedup
+certificate is about the whole state graph, not a budgeted exploration, so `--cap`, `--fuel`,
+`--max-width`, `--max-sites` and `--backedge` have no meaning there and are refused by name (exit 2)
+rather than accepted and ignored (release-readiness item 27, from the 2026-10-12 release-trust
+review F3; the inert width/sites were known from the 2026-09-20 stage-D audit). The corpus manifest
+and the runner refuse `width=`/`sites=`/`cap=`/`backedge=` on an `engine=dedup` row the same way.
 `--expect-status` declares the allowed status set; a member outside it fails the run.
 `--allow-nonterm-iters K` counts a branch that re-enters a loop more than K times as
 non-terminating rather than as a member. `--backedge` sets the enumeration mode at loop
