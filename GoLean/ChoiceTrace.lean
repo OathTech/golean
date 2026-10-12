@@ -1160,6 +1160,9 @@ private def parseArgs : List String → Args → Except String Args
       | none => .error s!"--arg-int: not an integer: {v}"
   | "--arg-bool" :: v :: rest, a => do
       parseArgs rest { a with args := a.args.push (.bool (← CLI.parseBoolLiteral v)) }
+  | "--seed" :: _, _ | "--arg-ref" :: _, _ | "--arg-nil" :: _, _ =>
+      -- Seeded-heap slice B (design §6, D6 — v1): the tracer's driver does not seed.
+      .error s!"choice-trace: --seed/--arg-ref/--arg-nil are not supported here in golean-seed-v1 (seeded runs are native-json-run only — design D6; the tracer's driver does not seed)\n{usage}"
   | "--fuel" :: v :: rest, a =>
       match v.toNat? with
       | some n => parseArgs rest { a with fuel := n }

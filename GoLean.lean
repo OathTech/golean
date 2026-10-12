@@ -39,5 +39,6 @@ import GoLean.GoCore.SeedPool
 import GoLean.GoCore.SetupStatement
 import GoLean.GoCore.SetupSound
 import GoLean.NativeToIR
+import GoLean.SeedFile
 import GoLean.CLI
 import GoLean.ChoiceTrace

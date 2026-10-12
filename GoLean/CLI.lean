@@ -3,6 +3,7 @@ import GoLean.EnumDedup
 import GoLean.NativeToIR
 import GoLean.StrictJson
 import GoLean.StrictJsonParse
+import GoLean.SeedFile
 import Lean.Data.Json
 
 namespace GoLean.CLI
@@ -18,16 +19,33 @@ order: `--arg-int <n>` and `--arg-bool <true|false>` interleave freely and
 bind the entry function's parameters POSITIONALLY in the order given
 (gc-verified's request, [USER] Mike 2026-10-07 «Agree», relayed). Each is
 checked against its parameter's type before any step runs
-(`entryArgValues`): a mismatch refuses by name. -/
+(`entryArgValues`): a mismatch refuses by name.
+
+The seeded-heap entry (slice B, 2026-10-12; design
+`docs/2026-10-09_seeded-heap-design.md` §6, [USER] Mike 2026-10-12 «Agree
+on the two strategic questions, let's do it», relayed) adds `--arg-ref
+k(.f|[i])*` and `--arg-nil`: a reference into the `--seed` file's cells
+and a nil pointer. Both exist ONLY with `--seed` on `native-json-run`
+(`entrySeedArgs`); without it they are a usage error, and the enumerators
+and the tracer refuse them by name (design D6, v1). -/
 inductive EntryArg where
   | int (value : Int)
   | bool (value : Bool)
-  deriving Repr, BEq
+  | ref (cell : Nat) (path : List GoCore.Machine.SeedPathElem)
+  | nil
+  deriving Repr
 
 /-- The flag that supplies an `EntryArg` (refusal texts name it). -/
 def EntryArg.flag : EntryArg → String
   | .int _ => "--arg-int"
   | .bool _ => "--arg-bool"
+  | .ref _ _ => "--arg-ref"
+  | .nil => "--arg-nil"
+
+/-- Whether an entry argument needs a seed (`--arg-ref` / `--arg-nil`). -/
+def EntryArg.needsSeed : EntryArg → Bool
+  | .ref _ _ | .nil => true
+  | _ => false
 
 /-- `--arg-bool`'s literal: exactly Go's spellings `true` / `false`.
 Anything else (`1`, `True`, `"true"`, the empty string) refuses BY NAME —
@@ -58,6 +76,71 @@ def entryParamUnderlying (types : GoCore.TypeEnv) : Nat → GoCore.Ty → Except
   | 0, .defined i => .error s!"parameter type index {i}: type-table descent exhausted"
   | _, t => .ok t
 
+/-- The entry function and the arity check of `entryArgValues`/`entrySeedArgs` (the unseeded
+text byte-identical to the pre-seed CLI's: the BUG-119 controls pin it). -/
+def entryFunc (program : GoCore.Program) (name : String) (args : Array EntryArg) (seeded : Bool) :
+    Except String GoCore.Func := do
+  let func ←
+    match GoCore.findFunctionIn? program.funcs ⟨name⟩ with
+    | some func => pure func
+    | none => throw s!"entry function not found: {name}"
+  if func.args.size != args.size then
+    let flags := if seeded then "--arg-int/--arg-bool/--arg-ref/--arg-nil" else "--arg-int/--arg-bool"
+    throw s!"entry function {name} takes {func.args.size} parameter(s), got {args.size} command-line argument(s) ({flags})"
+  return func
+
+/-- One entry argument at parameter `pos` (0-based; texts say `pos + 1`). `seed` is the decoded
+seed when `--seed` was given. The `--arg-int`/`--arg-bool` arms and texts are the pre-seed
+`entryArgValues`' verbatim. -/
+def entryArgCheck (program : GoCore.Program) (name : String) (func : GoCore.Func)
+    (seed : Option (Array GoCore.Machine.SeedCell)) (pos : Nat) (arg : EntryArg) :
+    Except String GoCore.Machine.SeedArg := do
+  let types := program.typeDefs
+  let some param := func.args[pos]? | throw s!"internal: parameter {pos + 1} missing"
+  let shown := GoCore.Ty.dynamicName types.nameOf? param.typ
+  -- Display only: the Go spelling from the carried name table; a
+  -- hand-built program without one shows the declaration index.
+  let pname := match func.locals[param.id]? with
+    | some l => l.name
+    | none => s!"#{param.id}"
+  let under ← entryParamUnderlying types types.size param.typ
+  match arg, under, seed with
+  | .int v, .int kind, _ =>
+      if kind.normalize v != v then
+        throw s!"--arg-int (argument {pos + 1}): {v} is out of range for parameter {pname} of type {shown} ({kind.name})"
+      return .scalar (.int v)
+  | .bool b, .bool, _ => return .scalar (.bool b)
+  -- A frontend-QUARANTINED parameter (`$stub` params of a quarantined
+  -- function, an opaque declaration) is not checked here: the value is
+  -- handed on and the machine refuses it as `unsupported`, naming the
+  -- quarantine cause (parameter normalization's `.unsupported` arm), so
+  -- the refusal keeps its class (the harness's frontend-export stage).
+  | .int v, .unsupported _, _ => return .scalar (.int v)
+  | .bool b, .unsupported _, _ => return .scalar (.bool b)
+  -- Seed arguments (slice B): only with `--seed` (native-json-run's parse refuses them without
+  -- it — a usage error; the enumerators and the tracer refuse the flags by name). This arm is the
+  -- belt: no path reaches it from a command line.
+  | .ref _ _, _, none | .nil, _, none =>
+      throw s!"{arg.flag} (argument {pos + 1}): a seed reference or nil needs --seed <file> (native-json-run only, golean-seed-v1)"
+  | .ref k path, .pointer target, some cells =>
+      let leafOrErr : Except Stop (Loc × GoCore.Ty) := do
+        let root ← GoCore.Machine.seedCellTy cells k
+        GoCore.Machine.seedPathLoc types (.base ⟨0⟩) root path
+      match leafOrErr with
+      | .error e =>
+          throw s!"--arg-ref (argument {pos + 1}): parameter {pname} has type {shown}; --arg-ref {GoCore.Machine.renderSeedPath k path}: {e.message}"
+      | .ok (_, leaf) =>
+          if GoCore.Ty.eqb leaf target then return .ref k path
+          else throw s!"--arg-ref (argument {pos + 1}): parameter {pname} has type {shown}; --arg-ref {GoCore.Machine.renderSeedPath k path} points at {GoCore.Ty.dynamicName types.nameOf? leaf}"
+  | .nil, .pointer _, some _ => return .nil
+  -- A quarantined parameter cannot take a seed reference: there is no declared pointer type to
+  -- resolve against, so the CLI refuses by name (the int/bool deferral above keeps the machine's
+  -- class only because the machine CAN receive a scalar there).
+  | .ref _ _, .unsupported reason, some _ | .nil, .unsupported reason, some _ =>
+      throw s!"{arg.flag} (argument {pos + 1}): parameter {pname} of entry function {name} is frontend-quarantined ({reason}) — a seed reference cannot be resolved at it"
+  | _, _, _ =>
+      throw s!"{arg.flag} (argument {pos + 1}): parameter {pname} of entry function {name} has type {shown}, which {arg.flag} cannot supply"
+
 /-- Check the command-line entry arguments against the entry function's
 parameter list and produce the machine's argument values. Fails closed,
 BY NAME, on: an unknown entry function; an arity mismatch; an
@@ -75,39 +158,27 @@ out-of-range literal wrapped silently: both are refused here, at the
 CLI, before any step. -/
 def entryArgValues (program : GoCore.Program) (name : String) (args : Array EntryArg) :
     Except String (Array GoValue) := do
-  let func ←
-    match GoCore.findFunctionIn? program.funcs ⟨name⟩ with
-    | some func => pure func
-    | none => throw s!"entry function not found: {name}"
-  if func.args.size != args.size then
-    throw s!"entry function {name} takes {func.args.size} parameter(s), got {args.size} command-line argument(s) (--arg-int/--arg-bool)"
-  let types := program.typeDefs
+  let func ← entryFunc program name args false
   let mut out : Array GoValue := #[]
   for h : pos in [0:args.size] do
-    let arg := args[pos]
-    let some param := func.args[pos]? | throw s!"internal: parameter {pos + 1} missing"
-    let shown := GoCore.Ty.dynamicName types.nameOf? param.typ
-    -- Display only: the Go spelling from the carried name table; a
-    -- hand-built program without one shows the declaration index.
-    let pname := match func.locals[param.id]? with
-      | some l => l.name
-      | none => s!"#{param.id}"
-    let under ← entryParamUnderlying types types.size param.typ
-    match arg, under with
-    | .int v, .int kind =>
-        if kind.normalize v != v then
-          throw s!"--arg-int (argument {pos + 1}): {v} is out of range for parameter {pname} of type {shown} ({kind.name})"
-        out := out.push (.int v)
-    | .bool b, .bool => out := out.push (.bool b)
-    -- A frontend-QUARANTINED parameter (`$stub` params of a quarantined
-    -- function, an opaque declaration) is not checked here: the value is
-    -- handed on and the machine refuses it as `unsupported`, naming the
-    -- quarantine cause (parameter normalization's `.unsupported` arm), so
-    -- the refusal keeps its class (the harness's frontend-export stage).
-    | .int v, .unsupported _ => out := out.push (.int v)
-    | .bool b, .unsupported _ => out := out.push (.bool b)
-    | _, _ =>
-        throw s!"{arg.flag} (argument {pos + 1}): parameter {pname} of entry function {name} has type {shown}, which {arg.flag} cannot supply"
+    match ← entryArgCheck program name func none pos args[pos] with
+    | .scalar v => out := out.push v
+    -- Unreachable: without a seed `entryArgCheck` refuses `--arg-ref`/`--arg-nil` by name.
+    | _ => throw s!"internal: argument {pos + 1}: a seed argument without --seed"
+  return out
+
+/-- The SEEDED twin of `entryArgValues` (seeded-heap slice B, design §6): the same checks and
+the same texts, byte for byte, for `--arg-int`/`--arg-bool` (handed to the core as
+`SeedArg.scalar`, which passes them unchecked — D5: this IS their check), plus `--arg-ref`
+(at a pointer parameter, pre-checked against the seed's DECLARED types by the core's own
+`seedPathLoc`; the core re-checks — the equation's premise is the core's) and `--arg-nil` (at a
+pointer parameter). The arity text names all four flags. -/
+def entrySeedArgs (program : GoCore.Program) (name : String) (seed : Array GoCore.Machine.SeedCell)
+    (args : Array EntryArg) : Except String (Array GoCore.Machine.SeedArg) := do
+  let func ← entryFunc program name args true
+  let mut out : Array GoCore.Machine.SeedArg := #[]
+  for h : pos in [0:args.size] do
+    out := out.push (← entryArgCheck program name func (some seed) pos args[pos])
   return out
 
 /-- The OS error's text on ONE line, WITHOUT the path: Lean's `IO.Error`
@@ -166,6 +237,9 @@ structure RunArgs where
   /-- The entry arguments in command-line order (`--arg-int` and
   `--arg-bool` interleaved as given). -/
   args : Array EntryArg := #[]
+  /-- `--seed <file.json>` (seeded-heap slice B, design §6): the `golean-seed-v1` file whose
+  cells are allocated after package init and before the entry's parameters. At most once. -/
+  seed : Option FilePath := none
   /-- Fuel counts MACHINE STEPS (reshape S3, 2026-07-23; previously
   while-back-edges + call entries only), so the default is retuned upward.
   No corpus case or script pins `--fuel`; the tracked baseline gates the
@@ -180,8 +254,10 @@ structure RunArgs where
 
 private def usage : String :=
   "usage:\n" ++
-  "  golean native-json-run --input <file> --function <name> [--arg-int <n> | --arg-bool <true|false> ...] [--fuel <n>] [--choices <n,n,...>]\n" ++
-  "      (entry arguments bind the parameters positionally, in command-line order; each is checked against its parameter type)\n" ++
+  "  golean native-json-run --input <file> --function <name> [--seed <file.json>]\n" ++
+  "      [--arg-int <n> | --arg-bool <true|false> | --arg-ref <k(.f|[i])*> | --arg-nil ...] [--fuel <n>] [--choices <n,n,...>]\n" ++
+  "      (entry arguments bind the parameters positionally, in command-line order; each is checked against its parameter type;\n" ++
+  "       --arg-ref and --arg-nil need --seed: a reference into the seed's cells, a nil pointer — golean-seed-v1, docs/cli.md)\n" ++
   "  golean observation-eq --left <json> --right <json>\n" ++
   "  golean coverage-observations --input <file> --function <name> [--arg-int <n> | --arg-bool <true|false> ...] [--fuel <n>] [--engine dedup]\n" ++
   "      [--max-width <B>] [--max-sites <D>] [--cap <N>] [--work-cap <W>] [--expect-status <ok|panic|ok,panic|race>]
@@ -223,6 +299,15 @@ private def parseRunArgs : List String → RunArgs → Except String RunArgs
       parseRunArgs rest { cfg with args := cfg.args.push (.int (← parseJsonInt "--arg-int" value)) }
   | "--arg-bool" :: value :: rest, cfg => do
       parseRunArgs rest { cfg with args := cfg.args.push (.bool (← parseBoolLiteral value)) }
+  | "--arg-ref" :: value :: rest, cfg => do
+      let (k, path) ← GoLean.SeedFile.parseArgRef value
+      parseRunArgs rest { cfg with args := cfg.args.push (.ref k path) }
+  | "--arg-nil" :: rest, cfg =>
+      parseRunArgs rest { cfg with args := cfg.args.push .nil }
+  | "--seed" :: path :: rest, cfg =>
+      match cfg.seed with
+      | some _ => .error s!"duplicate --seed (at most one seed file)\n{usage}"
+      | none => parseRunArgs rest { cfg with seed := some (FilePath.mk path) }
   | "--fuel" :: value :: rest, cfg => do
       parseRunArgs rest { cfg with fuel := (← parseJsonNat "--fuel" value) }
   | "--choices" :: value :: rest, cfg => do
@@ -278,10 +363,17 @@ private def canonFloatObsBits (kind : GoCore.FloatKind) (bits : Nat) : Nat :=
 
 /-- The observation rendering of a value. `nameOf` reads a declared type's
 key back from the program's type table (`TypeEnv.nameOf?`; C2 made
-`Ty.defined` an index) for the `dynamic` field of an interface box. -/
-private partial def goValueJson (nameOf : TypeIdx → Option TypeId) : GoValue → Json
-  | .unit => Json.mkObj [("tag", Json.str "unit")]
-  | .bool value => Json.mkObj [("tag", Json.str "bool"), ("value", Lean.toJson value)]
+`Ty.defined` an index) for the `dynamic` field of an interface box.
+`locR` renders every LOCATION the value carries (a pointer, a slice/map/
+chan base): the unseeded observation passes `locJson` in `Id` (raw ids,
+byte-identical to the pre-seed encoder — `goValueJson`); the seeded one
+(seeded-heap slice B, design §5/D7) renders a location seed-relative or
+refuses the whole observation (`seedLocJson`, in `Except`). ONE walk for
+both, so the seeded shape cannot drift from the unseeded one. -/
+private partial def goValueJsonWith {m : Type → Type} [Monad m] [Inhabited (m Json)]
+    (nameOf : TypeIdx → Option TypeId) (locR : Loc → m Json) : GoValue → m Json
+  | .unit => pure <| Json.mkObj [("tag", Json.str "unit")]
+  | .bool value => pure <| Json.mkObj [("tag", Json.str "bool"), ("value", Lean.toJson value)]
   -- Kind-carrying integer observation (grossmith hunt F15, spec-parity
   -- s1): the kind (and with it the width/signedness) is part of the
   -- observation, symmetrically with the Go harness's reflect kind — a
@@ -294,7 +386,7 @@ private partial def goValueJson (nameOf : TypeIdx → Option TypeId) : GoValue �
   -- no wire program can produce one at runtime (fail closed, never a
   -- silent default).
   | .int value kind =>
-      Json.mkObj [
+      pure <| Json.mkObj [
         ("tag", Json.str "int"),
         ("kind", Json.str kind.name),
         ("value", Lean.toJson value)
@@ -303,26 +395,27 @@ private partial def goValueJson (nameOf : TypeIdx → Option TypeId) : GoValue �
   -- modulo the NaN canonicalization above; Go's shortest-representation
   -- printing stays outside the trust surface.
   | .float bits kind =>
-      Json.mkObj [
+      pure <| Json.mkObj [
         ("tag", Json.str "float"),
         ("kind", Json.str kind.name),
         ("bits", Lean.toJson (canonFloatObsBits kind bits))
       ]
-  | .string value => Json.mkObj [("tag", Json.str "string"), ("bytes", Lean.toJson value.byteNats)]
-  | .addr loc => locJson loc
-  | .nil => Json.mkObj [("tag", Json.str "nil")]
+  | .string value => pure <| Json.mkObj [("tag", Json.str "string"), ("bytes", Lean.toJson value.byteNats)]
+  | .addr loc => locR loc
+  | .nil => pure <| Json.mkObj [("tag", Json.str "nil")]
   -- Func values are not observable in Go (not comparable, not printable),
   -- so the observation channel reports identity only; a case whose OUTPUT
   -- is a func value is outside the differential's comparable surface.
   | .funcVal fid _ =>
-      Json.mkObj [("tag", Json.str "func"), ("id", Json.str fid.key)]
-  | .interface dynamic value =>
-      Json.mkObj [
+      pure <| Json.mkObj [("tag", Json.str "func"), ("id", Json.str fid.key)]
+  | .interface dynamic value => do
+      let inner ← goValueJsonWith nameOf locR value
+      pure <| Json.mkObj [
         ("tag", Json.str "interface"),
         ("dynamic", Json.str (dynamic.dynamicName nameOf)),
-        ("value", goValueJson nameOf value)
+        ("value", inner)
       ]
-  | .struct typeId fields =>
+  | .struct typeId fields => do
       -- `reflect.Type.Name()` returns "" for any NON-DEFINED type
       -- (reflect/type.go); the canonical anonymous empty struct is the
       -- one unnamed struct TypeId the wire mints (`emptyStructName`,
@@ -330,45 +423,51 @@ private partial def goValueJson (nameOf : TypeIdx → Option TypeId) : GoValue �
       -- internal key "struct{}" leaked verbatim before (BUG-019,
       -- arc-final audit F7, 2026-08-06). Named empty structs are
       -- defined types and keep their names.
-      Json.mkObj [
+      let fs ← fields.mapM (fun (name, value) => do
+        let v ← goValueJsonWith nameOf locR value
+        pure <| Json.mkObj [("name", Json.str name), ("value", v)])
+      pure <| Json.mkObj [
         ("tag", Json.str "struct"),
         ("typeName", Json.str (if typeId.key == "struct{}" then "" else typeId.unqualified)),
-        ("fields", Json.arr (fields.map (fun (name, value) =>
-          Json.mkObj [("name", Json.str name), ("value", goValueJson nameOf value)])))
+        ("fields", Json.arr fs)
       ]
-  | .array values =>
-      Json.mkObj [
+  | .array values => do
+      let vs ← values.mapM (goValueJsonWith nameOf locR)
+      pure <| Json.mkObj [
         ("tag", Json.str "array"),
-        ("values", Json.arr (values.map (goValueJson nameOf)))
+        ("values", Json.arr vs)
       ]
-  | .slice value =>
-      Json.mkObj [
+  | .slice value => do
+      let base ← match value.base with
+        | some loc => locR loc
+        | none => pure Json.null
+      pure <| Json.mkObj [
         ("tag", Json.str "slice"),
-        ("base", match value.base with
-          | some loc => locJson loc
-          | none => Json.null),
+        ("base", base),
         ("offset", Lean.toJson value.offset),
         ("len", Lean.toJson value.len),
         ("cap", Lean.toJson value.cap)
       ]
-  | .map value =>
-      Json.mkObj [
+  | .map value => do
+      let base ← match value.base with
+        | some loc => locR loc
+        | none => pure Json.null
+      pure <| Json.mkObj [
         ("tag", Json.str "map"),
-        ("base", match value.base with
-          | some loc => locJson loc
-          | none => Json.null)
+        ("base", base)
       ]
   -- Channel observations mirror the map shape (reference identity). The
   -- Go harness FAILS CLOSED on a channel-typed result (reflect.Chan is
   -- an unsupported observation kind there), so a case whose OUTPUT is a
   -- raw channel is outside the differential's comparable surface — this
   -- arm keeps the machine side total and diagnosable.
-  | .chan value =>
-      Json.mkObj [
+  | .chan value => do
+      let base ← match value.base with
+        | some loc => locR loc
+        | none => pure Json.null
+      pure <| Json.mkObj [
         ("tag", Json.str "chan"),
-        ("base", match value.base with
-          | some loc => locJson loc
-          | none => Json.null)
+        ("base", base)
       ]
   -- Sync primitive state (spec-parity slice 2): a subject RETURNING a
   -- sync struct is copy-class misuse with no Go-side counterpart shape
@@ -376,7 +475,31 @@ private partial def goValueJson (nameOf : TypeIdx → Option TypeId) : GoValue �
   -- so the mismatch is a VISIBLE red, never a false pass. No corpus
   -- case observes one; the machine-internal repr is diagnostic only.
   | .syncData p =>
-      Json.mkObj [("tag", Json.str "syncData"), ("state", Json.str s!"{repr p}")]
+      pure <| Json.mkObj [("tag", Json.str "syncData"), ("state", Json.str s!"{repr p}")]
+
+/-- The UNSEEDED observation rendering of a value: raw location ids (`locJson`), exactly the
+pre-seed encoder's output. -/
+private def goValueJson (nameOf : TypeIdx → Option TypeId) (v : GoValue) : Json :=
+  Id.run (goValueJsonWith nameOf (fun l => pure (locJson l)) v)
+
+/-- The SEED-RELATIVE rendering of a location (design §5): `{"tag":"seedRef","cell":k,
+"path":[…]}` when the location lies inside the seed (`seedRelative? b n` — slice A's pure
+helper; `b` the seed's base, `n` its cell count), else the named refusal: a pointer that escapes
+the seed (into a parameter, a result, a global or a run-allocated cell) has no seed-relative
+spelling, and the WHOLE observation refuses — never a partial seed. `what` names the observed
+position (`result i` / `cell k`). -/
+private def seedLocJson (b n : Nat) (what : String) (l : Loc) : Except String Json :=
+  match GoCore.Machine.seedRelative? b n l with
+  | some (k, path) =>
+      .ok <| Json.mkObj [
+        ("tag", Json.str "seedRef"),
+        ("cell", Lean.toJson k),
+        ("path", Json.arr (path.toArray.map fun
+          | .field f => Json.str f
+          | .index i => Lean.toJson i))
+      ]
+  | none =>
+      .error s!"seed readout: {what} holds a pointer outside the seed (root address {(GoCore.Loc.rootPath l).1.id}: a parameter, result, global or run-allocated cell) — not expressible seed-relative"
 
 /-- The program OUTPUT field of every observation (stdlib slice 3,
 2026-09-04): the bytes `print`/`println` wrote to fd 2, folded in step
@@ -470,34 +593,92 @@ private def readoutObs (nameOf : TypeIdx → Option TypeId) (r : GoLean.GoCore.R
   | some stop => (stop.status, errorJson stop r.output)
   | none => ("ok", runJson nameOf r)
 
-private partial def decodeLocObservation (path : String) (json : Json) : Except String Unit := do
+/-- The SEEDED observation (seeded-heap slice B, design §5, D7): the readout's results and the
+seed cells' FINAL values, every location rendered seed-relative over `seedRelative? b n`
+(`seedLocJson`); the `ok` observation gains the key `seed` — one kind-carrying value per cell,
+in cell order. A location outside the seed anywhere (a result or a cell) refuses the WHOLE
+observation, `Stop.unsupported` naming the position (status `unsupported`); BUG-099's readout
+refusal applies first, exactly as unseeded. Unseeded runs never come here (`readoutObs`, no
+`seed` key, byte-identical output). Public for the eval pins. -/
+def seededObs (nameOf : TypeIdx → Option TypeId) (b : Nat) (sr : GoCore.Machine.SeededReadout) :
+    String × Json :=
+  let n := sr.seedFinal.size
+  let rendered : Except String (Array Json × Array Json) := do
+    let vs ← (List.range sr.readout.values.size).toArray.mapM fun i =>
+      match sr.readout.values[i]? with
+      | some v => goValueJsonWith nameOf (seedLocJson b n s!"result {i}") v
+      | none => .error s!"internal: result {i} missing"
+    let cs ← (List.range n).toArray.mapM fun k =>
+      match sr.seedFinal[k]? with
+      | some v => goValueJsonWith nameOf (seedLocJson b n s!"cell {k}") v
+      | none => .error s!"internal: seed cell {k} missing"
+    pure (vs, cs)
+  match readoutRefusal? sr.readout with
+  | some stop => (stop.status, errorJson stop sr.readout.output)
+  | none =>
+      match rendered with
+      | .error msg =>
+          let stop : Stop := .unsupported msg
+          (stop.status, errorJson stop sr.readout.output)
+      | .ok (vs, cs) =>
+          ("ok", Json.mkObj [
+            ("schema", Json.str observationSchema),
+            ("status", Json.str "ok"),
+            ("values", Json.arr vs),
+            ("seed", Json.arr cs),
+            ("output", outputJson sr.readout.output)
+          ])
+
+/-- The `seedRef` location (seeded-heap slice B, design §5): exact keys `cell`, `path`, `tag`;
+`cell` a nat BELOW the observation's seed size, `path` an array of field names (strings) and
+indices (nats). `seedN` is the observation's `seed` array size — `none` on an observation
+WITHOUT a `seed` key, where a `seedRef` refuses by name (it has nothing to be relative to). -/
+private def decodeSeedRef (seedN : Option Nat) (path : String) (obj : StrictJson.Obj) :
+    Except String Unit := do
+  let some n := seedN
+    | throw s!"{path}: a seedRef location in an observation without a `seed` key (nothing to be relative to)"
+  StrictJson.requireExactKeys path obj ["cell", "path", "tag"]
+  let cell ← StrictJson.nat s!"{path}.cell" (← StrictJson.field path obj "cell")
+  if cell ≥ n then
+    throw s!"{path}.cell: {cell} out of range for a seed of {n} cell(s)"
+  let elems ← StrictJson.array s!"{path}.path" (← StrictJson.field path obj "path")
+  let _ ← StrictJson.mapArrayIdx elems (fun i e =>
+    match e with
+    | .str _ => pure ()
+    | other => do
+        let _ ← StrictJson.nat s!"{path}.path[{i}]" other
+        pure ())
+  pure ()
+
+private partial def decodeLocObservation (seedN : Option Nat) (path : String) (json : Json) : Except String Unit := do
   let obj ← StrictJson.obj path json
   let tag ← StrictJson.string s!"{path}.tag" (← StrictJson.field path obj "tag")
   match tag with
+  | "seedRef" => decodeSeedRef seedN path obj
   | "addr" =>
       StrictJson.requireExactKeys path obj ["id", "tag"]
       let _ ← StrictJson.nat s!"{path}.id" (← StrictJson.field path obj "id")
       pure ()
   | "fieldAddr" =>
       StrictJson.requireExactKeys path obj ["base", "fieldName", "tag", "typeName"]
-      decodeLocObservation s!"{path}.base" (← StrictJson.field path obj "base")
+      decodeLocObservation seedN s!"{path}.base" (← StrictJson.field path obj "base")
       let _ ← StrictJson.string s!"{path}.typeName" (← StrictJson.field path obj "typeName")
       let _ ← StrictJson.string s!"{path}.fieldName" (← StrictJson.field path obj "fieldName")
       pure ()
   | "indexAddr" =>
       StrictJson.requireExactKeys path obj ["base", "index", "tag"]
-      decodeLocObservation s!"{path}.base" (← StrictJson.field path obj "base")
+      decodeLocObservation seedN s!"{path}.base" (← StrictJson.field path obj "base")
       let _ ← StrictJson.int s!"{path}.index" (← StrictJson.field path obj "index")
       pure ()
   | other =>
       throw s!"{path}.tag: unknown location tag {repr other}"
 
-private def decodeOptionalLoc (path : String) (json : Json) : Except String Unit :=
+private def decodeOptionalLoc (seedN : Option Nat) (path : String) (json : Json) : Except String Unit :=
   match json with
   | .null => pure ()
-  | other => decodeLocObservation path other
+  | other => decodeLocObservation seedN path other
 
-private partial def decodeGoValueObservation (path : String) (json : Json) : Except String Unit := do
+private partial def decodeGoValueObservation (seedN : Option Nat) (path : String) (json : Json) : Except String Unit := do
   let obj ← StrictJson.obj path json
   let tag ← StrictJson.string s!"{path}.tag" (← StrictJson.field path obj "tag")
   match tag with
@@ -564,9 +745,9 @@ private partial def decodeGoValueObservation (path : String) (json : Json) : Exc
   | "interface" =>
       StrictJson.requireExactKeys path obj ["dynamic", "tag", "value"]
       let _ ← StrictJson.string s!"{path}.dynamic" (← StrictJson.field path obj "dynamic")
-      decodeGoValueObservation s!"{path}.value" (← StrictJson.field path obj "value")
-  | "addr" | "fieldAddr" | "indexAddr" =>
-      decodeLocObservation path json
+      decodeGoValueObservation seedN s!"{path}.value" (← StrictJson.field path obj "value")
+  | "addr" | "fieldAddr" | "indexAddr" | "seedRef" =>
+      decodeLocObservation seedN path json
   | "struct" =>
       StrictJson.requireExactKeys path obj ["fields", "tag", "typeName"]
       let _ ← StrictJson.string s!"{path}.typeName" (← StrictJson.field path obj "typeName")
@@ -575,24 +756,24 @@ private partial def decodeGoValueObservation (path : String) (json : Json) : Exc
         let fieldObj ← StrictJson.obj s!"{path}.fields[{i}]" fieldJson
         StrictJson.requireExactKeys s!"{path}.fields[{i}]" fieldObj ["name", "value"]
         let _ ← StrictJson.string s!"{path}.fields[{i}].name" (← StrictJson.field s!"{path}.fields[{i}]" fieldObj "name")
-        decodeGoValueObservation s!"{path}.fields[{i}].value" (← StrictJson.field s!"{path}.fields[{i}]" fieldObj "value"))
+        decodeGoValueObservation seedN s!"{path}.fields[{i}].value" (← StrictJson.field s!"{path}.fields[{i}]" fieldObj "value"))
       pure ()
   | "array" =>
       StrictJson.requireExactKeys path obj ["tag", "values"]
       let values ← StrictJson.array s!"{path}.values" (← StrictJson.field path obj "values")
       let _ ← StrictJson.mapArrayIdx values (fun i value => do
-        decodeGoValueObservation s!"{path}.values[{i}]" value)
+        decodeGoValueObservation seedN s!"{path}.values[{i}]" value)
       pure ()
   | "slice" =>
       StrictJson.requireExactKeys path obj ["base", "cap", "len", "offset", "tag"]
-      decodeOptionalLoc s!"{path}.base" (← StrictJson.field path obj "base")
+      decodeOptionalLoc seedN s!"{path}.base" (← StrictJson.field path obj "base")
       let _ ← StrictJson.nat s!"{path}.offset" (← StrictJson.field path obj "offset")
       let _ ← StrictJson.nat s!"{path}.len" (← StrictJson.field path obj "len")
       let _ ← StrictJson.nat s!"{path}.cap" (← StrictJson.field path obj "cap")
       pure ()
   | "map" =>
       StrictJson.requireExactKeys path obj ["base", "tag"]
-      decodeOptionalLoc s!"{path}.base" (← StrictJson.field path obj "base")
+      decodeOptionalLoc seedN s!"{path}.base" (← StrictJson.field path obj "base")
   -- No `mapData`/`chanData` arms (A3): payloads are heap CELLS, not values;
   -- neither side of the differential can emit one, so the tags are unknown
   -- here and refuse below like any other.
@@ -620,11 +801,25 @@ def decodeObservation (path raw : String) : Except String Json := do
     | _ => throw s!"{path}.output: expected a string (the program's fd-2 bytes)"
   match status with
   | "ok" =>
-      StrictJson.requireExactKeys path obj ["output", "schema", "status", "values"]
+      -- Seeded-heap slice B (design §5): an `ok` observation carries EITHER the four keys
+      -- (unseeded) OR the four plus `seed` (a `--seed` run: the cells' final values, a
+      -- `seedRef` resolving into them). No other key set decodes.
+      let seedN ←
+        if !obj.contains "seed" then do
+          StrictJson.requireExactKeys path obj ["output", "schema", "status", "values"]
+          pure none
+        else do
+          StrictJson.requireExactKeys path obj ["output", "schema", "seed", "status", "values"]
+          let cells ← StrictJson.array s!"{path}.seed" (← StrictJson.field path obj "seed")
+          pure (some cells.size)
       checkOutput
       let values ← StrictJson.array s!"{path}.values" (← StrictJson.field path obj "values")
       let _ ← StrictJson.mapArrayIdx values (fun i value => do
-        decodeGoValueObservation s!"{path}.values[{i}]" value)
+        decodeGoValueObservation seedN s!"{path}.values[{i}]" value)
+      if let some _ := seedN then
+        let cells ← StrictJson.array s!"{path}.seed" (← StrictJson.field path obj "seed")
+        let _ ← StrictJson.mapArrayIdx cells (fun k cell => do
+          decodeGoValueObservation seedN s!"{path}.seed[{k}]" cell)
       return json
   -- "fatal" (spec-parity slice 2): gc's unrecoverable runtime-throw
   -- class (`Stop.fatal` — the sync misuse fatals), message-carrying
@@ -659,6 +854,57 @@ private def runObservationEq (args : List String) : IO UInt32 := do
             IO.eprintln s!"right: {right.compress}"
             return 1
 
+/-- `native-json-run --seed` (seeded-heap slice B, design §6): decode the seed file against the
+program's type table (`SeedFile.decodeSeedBytes` — the strict byte parse, the shape, the type
+spellings; refusals are `status:error`, exit 1, before any step), check the entry arguments
+(`entrySeedArgs`), run the seeded POOL entry `runProgramPoolSeededOutM` (slice A's
+`SeedPool.lean`, upstream of the proofs), and print the seeded observation (`seededObs`).
+
+The seed's base `b` (the post-init allocator bound, a RUN quantity — init may allocate, D1) is
+not part of `SeededReadout`; it is read from the seeded SETUP's slot list
+(`runProgramSetupSeededM`, the very call `runProgramPoolSeededOutM` makes first with the same
+arguments — a pure function, so the same `b`): slot 0 is `.base ⟨b⟩`. With an empty seed no
+location can be seed-relative and `b` is never consulted. A setup that fails here after the run
+succeeded, or a slot that is not a base address, is an internal error (exit 1), never a guess. -/
+private def runSeeded (program : GoCore.Program) (input : FilePath) (functionName : String)
+    (seedPath : FilePath) (cfg : RunArgs) : IO UInt32 := do
+  match ← readInputBytes seedPath with
+  | .error err =>
+      IO.println (cliErrorJson err).compress
+      return 1
+  | .ok bytes =>
+  match GoLean.SeedFile.decodeSeedBytes program.typeDefs bytes with
+  | .error err =>
+      IO.println (cliErrorJson s!"{seedPath}: {err}").compress
+      return 1
+  | .ok seed =>
+  match entrySeedArgs program functionName seed cfg.args with
+  | .error err =>
+      IO.println (cliErrorJson s!"{input}: {err}").compress
+      return 1
+  | .ok seedArgs =>
+  match GoCore.Machine.runProgramPoolSeededOutM cfg.fuel program functionName seed seedArgs cfg.choices with
+  | .error (err, out) =>
+      IO.println (errorJson err out).compress
+      return 1
+  | .ok sr =>
+      let base : Except String Nat :=
+        if seed.isEmpty then .ok 0 else
+        match GoCore.Machine.runProgramSetupSeededM cfg.fuel program functionName seed seedArgs cfg.choices with
+        | .ok (_, _, _, _, slots, _) =>
+            match slots[0]? with
+            | some (Loc.base a) => .ok a.id
+            | _ => .error "internal: seeded setup: slot 0 is not a base address"
+        | .error e => .error s!"internal: seeded setup failed on the re-read of the seed base after the run succeeded: {e.message}"
+      match base with
+      | .error msg =>
+          IO.println (errorJson (.internal msg) sr.readout.output).compress
+          return 1
+      | .ok b =>
+          let (status, obs) := seededObs program.typeDefs.nameOf? b sr
+          IO.println obs.compress
+          return (if status == "ok" then 0 else 1)
+
 private def runNativeJsonRun (args : List String) : IO UInt32 := do
   let cwd ← IO.currentDir
   match parseRunArgs args {} with
@@ -666,6 +912,11 @@ private def runNativeJsonRun (args : List String) : IO UInt32 := do
       IO.eprintln err
       return 2
   | .ok cfg =>
+      -- Seeded-heap slice B (design §3/§6): `--arg-ref`/`--arg-nil` name seed cells, so without
+      -- `--seed` they are a usage error (exit 2), before any file is read.
+      if cfg.seed.isNone && cfg.args.any EntryArg.needsSeed then
+        IO.eprintln s!"--arg-ref/--arg-nil need --seed <file.json> (a reference names a seed cell; golean-seed-v1)\n{usage}"
+        return 2
       match cfg.input, cfg.functionName with
       | some input, some functionName =>
           let input := absoluteFrom cwd input
@@ -704,6 +955,9 @@ private def runNativeJsonRun (args : List String) : IO UInt32 := do
                   -- driver on which `go` statements run.
                   -- Since stdlib slice 3 the whole-run result carries
                   -- the program OUTPUT on both paths (`RunResult`).
+                  match cfg.seed with
+                  | some seedPath => runSeeded program input functionName (absoluteFrom cwd seedPath) cfg
+                  | none =>
                   match entryArgValues program functionName cfg.args with
                   | .error err =>
                       IO.println (cliErrorJson s!"{input}: {err}").compress
@@ -988,6 +1242,10 @@ private def parseEnumArgs : List String → EnumArgs → Except String EnumArgs
       parseEnumArgs rest { cfg with workCap := (← parseJsonNat "--work-cap" value) }
   | "--allow-nonterm-iters" :: value :: rest, cfg => do
       parseEnumArgs rest { cfg with allowNontermIters := some (← parseJsonNat "--allow-nonterm-iters" value) }
+  | "--seed" :: _, _ | "--arg-ref" :: _, _ | "--arg-nil" :: _, _ =>
+      -- Seeded-heap slice B (design §6, D6 — v1): the enumerator's setup is a hand MIRROR of
+      -- `runProgramM`'s (`enumSetup`) and does not seed; mirroring the seeded setup is deferred.
+      .error s!"coverage-observations: --seed/--arg-ref/--arg-nil are not supported here in golean-seed-v1 (seeded runs are native-json-run only — design D6; the enumerator's setup mirror does not seed)\n{usage}"
   | "--allow-nonterm" :: _ :: _, _ =>
       -- RETIRED 2026-10-06 (docs/2026-10-06_spin-bounds.md): a per-branch
       -- budget in pool STEPS moves with every step-count refactor. Refused
