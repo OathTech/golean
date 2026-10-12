@@ -18,9 +18,13 @@ is the old file from its "Plan of record" line on, unchanged.
 > the copy shape every `CLAUDE.md` edit must be mirrored (`cp CLAUDE.md
 > AGENTS.md`) before commit or the gate goes red.
 
-**Plan of record: `docs/2026-09-05_master-plan.md` (+ §7 addendum);
-charter: `CLAUDE.md`.** The "Planning Docs" pointers below are historical
-operating documents, not current instructions.
+**Charter: `CLAUDE.md`. Plan of record ([AGENT] wording, 2026-10-12):
+the batched-window charter closed with the 2026-10-03 offer
+(`docs/2026-10-03_offer-to-logic-team.md`); the live plan is the
+release-readiness backlog (`docs/2026-10-12_release-readiness.md`) and the
+seeded-heap design (`docs/2026-10-09_seeded-heap-design.md`). Index of the
+living documents: `docs/README.md`.** The "Planning Docs" pointers below are
+historical operating documents, not current instructions.
 
 ## Project Context
 
