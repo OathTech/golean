@@ -2168,3 +2168,15 @@ interface questions (D2, D3, D6, D7, D9, D10 and the six draft disagreements) ar
 **Customer's confirmation (2026-10-12, gc-verified, relayed by the [USER]):** all six deviations and
 the v1 value set CONFIRMED; S0 not needed; slice A starts (`docs/2026-10-09_seeded-heap-design.md` §10).
 
+### Release readiness — the six decisions RULED (2026-10-12)
+
+[USER] Mike 2026-10-12, firsthand, on the release-readiness backlog's D1–D6
+(`docs/2026-10-12_release-readiness.md` §5): «D1: I think this should probably be refused, if it's easy to
+exclude. D2: agree as written. D3: agree, accept and state clearly. D4, so this is kind of fossil evidence
+from a previous era? Leave as is, low priority. D5: agree, but remember CLAUDE.md is a praxis / playbook
+doc, not a dump for decisions. D6: agree on both - refuse and repair asap.» So: BUG-061's shape is refused
+by name if a cheap exclusion exists, else the release names the profile; `docs/release.md` is the release
+definition; BUG-107 is a stated limit; the tag-only parked branch stays as is; the charter's «Pointers»
+line is updated to the living documents and nothing more; `uintptr` is refused by name in identity-bearing
+positions now and the parked repair is rebased and landed next.
+
