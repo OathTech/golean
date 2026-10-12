@@ -163,8 +163,9 @@ Optional lane columns (membership lane, arc slice 3,
   members= pin — no early stop) unexhibited=U`. The rule never decides a
   row's RESULT: membership PASS/FAIL is "every draw ∈ the enumerated
   set" (plus the enumeration/cardinality/coupling guards) and NEVER the
-  exhibition or draw count; the baseline stores result/id/stage only, so
-  the changed caption is not drift. Fail-closed as before: a draw that
+  exhibition or draw count; the baseline stores result/id/stage and a
+  FAIL row's cause key, never a PASS caption, so the changed caption is
+  not drift. Fail-closed as before: a draw that
   times out or is killed is NOT an observation — the row fails at
   `membership` naming the cause and the draw index (`draw i/K (mode) …
   did not decide`), never counting toward saturation; an undecided
@@ -580,8 +581,9 @@ checked against the ledger's FR ids by `go test ./tools/lowerdiag`).
 
 ### The tracked baseline and its stage column
 
-`baselines/native-full.tsv` (and `baselines/negative-full.tsv`) record
-one `result<TAB>id<TAB>stage` row per case; `scripts/coverage-baseline-diff`
+`baselines/native-full.tsv` records one `result<TAB>id<TAB>stage<TAB>cause`
+row per case (`baselines/negative-full.tsv`: `result<TAB>id<TAB>stage`,
+judged with `--no-cause`); `scripts/coverage-baseline-diff`
 requires every case a run actually ran to reproduce its row exactly
 ("same set = no regression"). ONE relaxation exists, per row and
 [USER]-ruled per row (ruling (a), 2026-09-03 — «(1) the guard - agree
@@ -610,6 +612,44 @@ guard runs `scripts/check-alternation-survival` — every alternation row
 of the previous baseline must still be one, unless a header comment
 `# alternation removed: <id> — <why>` names its removal. Fixtures:
 `scripts/test-lane-validation` Part A4.
+
+### The cause column (refusal-cause pinning, 2026-10-12)
+
+A FAIL row's stage alone let a crash, a timeout, a different refusal or
+(at `lean-observation`) a machine panic match a designed red at the same
+stage (`docs/2026-10-12_refusal-cause-pinning-design.md` §2 — it happened
+once, BUG-090). Since 2026-10-12 ([USER] «1,3-6 approved», D1-D6 of that
+note) the differential baseline's fourth column pins a normalized CAUSE
+KEY, derived from the run's detail by `scripts/coverage-cause` and
+compared by `scripts/coverage-baseline-diff` (a changed key at the same
+result/stage is drift, printed `CAUSE CHANGED`). The grammar (first rule
+wins; the script's header is authoritative): a runner non-verdict at any
+stage → `killed:N` / `timeout` / `undecided:N` / `undecided:decode`;
+`frontend-export` → the `tools/lowerdiag/causes.tsv` class
+(`FR-15/complex`) of the frontend's refusal or of a run-time quarantine
+stub's message, `crash:frontend` for any frontend exit but 1 (the runner
+records `native frontend (exit N): …`); `lean-observation` →
+`<status>:<id>` from `scripts/machine-causes.tsv`; every other stage, and
+every PASS row, `-`. An unclassified text keys as `fe?:<head>` or
+`<status>:?` — pinned all the same, and reported under `scripts/ci`'s
+speedbump heading (`scripts/coverage-cause --unclassified`) until a table
+row names it. On an alternation row the cause is a `|` set paired with the
+stage set member by member (`unsupported:select-select|-`). The column is
+REGENERATED from a recorded full run, never hand-edited:
+`scripts/coverage-cause --apply baselines/native-full.tsv
+artifacts/coverage/latest.tsv` keeps every row's result/id/stage (it
+refuses if the run disagrees — re-pin those rows first) and rewrites the
+key; alternation rows keep their hand-set paired cause. A record made
+before the runner wrote the frontend's exit code is refused (re-run
+`scripts/ci --diff`).
+
+The NEGATIVE lane has a GoLean leg on the same date (D3): a row passes only
+if gc rejects it with the expected substring AND the native frontend,
+built from the tree, exits 1 as a rejection — `type-check:`, a go/parser
+error on one of the row's files, or the file-selection boundary
+(BUG-108); otherwise it fails at `frontend-accepts` (exit 0: GoLean lowered
+a program gc rejects), `frontend-crash` or `frontend-reason`. The class is
+the PASS row's detail (`frontend=type-check|parse|file-selection`).
 
 Non-verdict exits of a comparator, oracle, driver or enumerator run are
 reported at the stage of the CHECK that could not complete — the stage
