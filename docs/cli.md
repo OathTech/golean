@@ -94,10 +94,16 @@ golean coverage-observations --input <wire> --function <name>
 This explores the whole choice tree of the run and prints every **distinct** observation, one
 JSON per line on stdout, sorted. A summary line goes to stderr
 (`coverage-observations: observations=… steps=… …`). The membership lane uses this command:
-there, every `go run` sample must be a member of the printed set. Every cap fails loudly and
-never truncates: `--max-width` (default 16) caps each site's computed bound, `--max-sites`
-(default 8) caps the number of consumption sites per run, `--cap` (default 64) caps the number
-of distinct observations, and `--work-cap` (default 200 000) caps exploration steps.
+there, every `go run` sample must be a member of the printed set. On the default (DFS) engine
+every cap fails loudly and never truncates: `--max-width` (default 16) caps each site's computed
+bound, `--max-sites` (default 8) caps the number of consumption sites per run, `--cap` (default
+64) caps the number of distinct observations, and `--work-cap` (default 200 000) caps exploration
+steps. **With `--engine dedup` only `--work-cap` is read:** `--cap`, `--fuel`, `--max-width` and
+`--max-sites` are accepted and silently ignored today (release-readiness item 27, from the
+2026-10-12 release-trust review F3; the inert width/sites were known from the 2026-09-20 stage-D
+audit) — a dedup certificate is about the whole state graph, not a budgeted exploration, so these
+flags have no meaning there. Until the CLI refuses them by name, do not read a dedup run's exit 0
+as evidence that an observation or fuel cap held.
 `--expect-status` declares the allowed status set; a member outside it fails the run.
 `--allow-nonterm-iters K` counts a branch that re-enters a loop more than K times as
 non-terminating rather than as a member. `--backedge` sets the enumeration mode at loop
