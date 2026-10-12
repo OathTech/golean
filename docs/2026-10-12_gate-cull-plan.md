@@ -445,9 +445,9 @@ Measured on this box (milner-oath, 32 cores, warm `.lake`, box default cap
   ./tools/nativefrontend` could be one build per run, and the strict lane's
   three invariance streams are four interpreter runs per case.
 
-Open for the [USER] (D10): the global rule «Artifacts: rebuild or push, never
-hoard» (2026-10-12) says gate tails and run dumps are not committed; this
-branch commits none (conclusions in commit messages and here). The project's
-`docs/architecture-rules.md` «Evidence on main» still describes committed
-evidence records under caps, and `docs/evidence/` holds 60+ such records: a
-conflict to rule on, not silently rewritten here.
+D10 — RULED ([USER] Mike 2026-10-12, verbatim: «the global rule is intended to
+mean any such records should be useful with a high bar for evidence»): the global
+«Artifacts: rebuild or push, never hoard» rule and `docs/architecture-rules.md`
+«Evidence on main» do not conflict; a committed record must clear a high bar of
+usefulness. This branch commits no gate tails (the conclusions are in the commit
+messages and above); the existing `docs/evidence/` records stand under that bar.
