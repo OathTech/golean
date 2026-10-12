@@ -215,3 +215,13 @@ written reason) plus refusal controls in `check-wire-boundary` (bad seed file, o
   `Array GoValue` — the seed-relative rendering with its refusal lives in the observation layer over the pure `seedRelative?`; (f) the
   prologue-isomorphism lemma declined (§8). Everything else — the API shape, the order, the two phases, the five proof obligations, the CLI
   flags, the additive observation key, the Go-prologue oracle — adopted as drafted.
+
+## 10. Rulings (2026-10-12)
+
+[USER] Mike 2026-10-12, firsthand («Agree on the two strategic questions, let's do it»), on the
+[AGENT] classification that of D1–D10 two are strategic, six are the customer's interface, the rest
+engineering: **GO** — the entry is built, three slices, with the trusted-surface #2 change (the
+harness's `--seed` mode) and the new entry joining #1 accepted; **D4 RULED** — no runtime `StateWf`
+re-assert after seeding, the theorem stands. D2, D3, D6, D7, D9, D10 and the six disagreements go to
+gc-verified for confirmation: `docs/2026-10-12_seeded-heap-note-to-gc-verified.md`. D1, D5 and the
+v1 refusals of the enumerator/tracer are engineering, [AGENT]. Slice A starts on their answer.

@@ -2155,3 +2155,13 @@ regression (394), eval tests 298 ok; the reconciler 0 HIGH (the 3 standing MEDIU
 Round 75 closed: BUG-115 fixed (map elements as multi-target and parenthesized assignment targets lower to the
 `mapElem` plan; 19 born rows, 9 FAIL→PASS), BUG-119 and BUG-120 fixed (enumerator entry-argument checks + `--arg-bool`;
 named refusals for unreadable input files, the path named once), BUG-122 open.
+
+### The seeded-heap entry (gc-verified a2) — the two strategic questions RULED (2026-10-12)
+
+[USER] Mike 2026-10-12, firsthand: «Agree on the two strategic questions, let's do it». (1) GO: the
+seeded entry is built (`docs/2026-10-09_seeded-heap-design.md`, three slices), including the change to
+trusted surface #2 (the observation harness's `--seed` mode) and the new driver entry joining #1.
+(2) D4: no runtime `StateWf` re-assert after seeding; the theorem `seedCells_wf` is the check. The
+interface questions (D2, D3, D6, D7, D9, D10 and the six draft disagreements) are the customer's:
+`docs/2026-10-12_seeded-heap-note-to-gc-verified.md`, relayed by the [USER]. Slice A waits on it.
+
