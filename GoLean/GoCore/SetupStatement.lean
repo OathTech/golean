@@ -1,5 +1,6 @@
 import GoLean.GoCore.StepFn
 import GoLean.GoCore.Seed
+import GoLean.GoCore.SeedPool
 import GoLean.GoCore.StateWf
 import GoLean.GoCore.ExecutionStatement
 
@@ -430,6 +431,14 @@ def runProgramSeededM_eq_stmt : Prop :=
                 loadMany pctx sF slots.toList >>= fun finals =>
                   pure { readout := { values := values.toArray }, seedFinal := finals.toArray })
 
+/-- **S6 on the pool: erasure.** With no cells and scalar arguments the seeded pool entry IS
+`runProgramPoolOutM` with an empty final seed (one `Except` equation, errors and output included). -/
+def runProgramPoolSeeded_empty_stmt : Prop :=
+  ∀ (fuel : Nat) (program : Program) (name : String) (args : Array GoValue) (choices : Choices),
+    runProgramPoolSeededOutM fuel program name #[] (args.map SeedArg.scalar) choices
+      = (fun r : Readout => ({ readout := r, seedFinal := #[] } : SeededReadout)) <$>
+          runProgramPoolOutM fuel program name args choices
+
 /-- **S6, erasure of the run**: with no cells and scalar arguments the seeded run IS `runProgramM`
 with an empty final seed. -/
 def runProgramSeededM_empty_stmt : Prop :=
@@ -487,21 +496,27 @@ example : seedCells seedCtxNode {} #[⟨.defined 2, .struct [("next", .ref 1 [])
 
 /-- The refusal catalogue (design §3), each BY NAME, each naming its cell. -/
 example : seedCells seedCtx0 {} #[⟨.int .int, .ref 5 []⟩]
-    = .error (.stuck "cell 0: ref at type int: not in golean-seed-v1 (a pointer type expected)") := rfl
+    = .error (.stuck "seed: cell 0: ref at type int — a pointer type expected") := rfl
 example : seedCells seedCtx0 {} #[⟨.pointer (.int .int), .ref 5 []⟩]
-    = .error (.stuck "cell 0: ref to cell 5 out of range (1 cells)") := rfl
+    = .error (.stuck "seed: cell 0: ref to cell 5 out of range (1 cells)") := rfl
 example : seedCells seedCtx0 {} #[⟨.int .int8, .int 300⟩]
-    = .error (.stuck "cell 0: int 300 out of range for int8") := rfl
+    = .error (.stuck "seed: cell 0: int 300 out of range for int8") := rfl
 example : seedCells seedCtx0 {} #[⟨.array 2 (.int .int), .array [.int 5]⟩]
-    = .error (.stuck "cell 0: expected array(2), got 1 element(s)") := rfl
+    = .error (.stuck "seed: cell 0: expected array(2), got 1 element(s)") := rfl
 example : seedCells seedCtxNode {} #[⟨.defined 2, .struct []⟩]
-    = .error (.stuck "cell 0: struct main.Node: missing field next") := rfl
+    = .error (.stuck "seed: cell 0: struct main.Node: missing field next") := rfl
 example : seedCells seedCtxNode {} #[⟨.defined 2, .struct [("next", .nil), ("next", .nil)]⟩]
-    = .error (.stuck "cell 0: struct main.Node: duplicate field next") := rfl
+    = .error (.stuck "seed: cell 0: struct main.Node: duplicate field next") := rfl
 example : seedCells seedCtxNode {} #[⟨.defined 2, .struct [("nxt", .nil)]⟩]
-    = .error (.stuck "cell 0: struct main.Node: unknown field nxt") := rfl
+    = .error (.stuck "seed: cell 0: struct main.Node: unknown field nxt") := rfl
+example : seedCells seedCtx0 {} #[⟨.array 2 .bool, .array [.bool true, .bool false]⟩,
+                                   ⟨.pointer (.int .int), .ref 0 [.index 1]⟩]
+    = .error (.stuck "seed: cell 1: ref 0[1] has type *bool, *int expected") := rfl
+example : seedCells ⟨{ funcs := #[], typeDefs := TypeEnv.reserved.push (⟨"main.B"⟩, .struct #[⟨"_", .int .int, false⟩]) }⟩ {}
+    #[⟨.defined 2, .struct [("_", .int 1)]⟩]
+    = .error (.stuck "seed: cell 0: struct main.B: a blank field (_) cannot be seeded (not in golean-seed-v1)") := rfl
 example : seedCells seedCtx0 {} #[⟨.string, .int 1⟩]
-    = .error (.stuck "cell 0: int at type string: not in golean-seed-v1 (an integer type expected)") := rfl
+    = .error (.stuck "seed: cell 0: int value at type string — an integer type expected") := rfl
 
 /-- Arguments: a reference at a pointer parameter, a scalar passed through unchecked. -/
 example : resolveSeedArgs seedCtx0.types 0 seedA
@@ -509,7 +524,7 @@ example : resolveSeedArgs seedCtx0.types 0 seedA
     #[.ref 0 [], .scalar (.int 3 .int)]
     = .ok #[.addr (.base ⟨0⟩), .int 3 .int] := rfl
 example : resolveSeedArgs seedCtx0.types 0 seedA #[{ id := 0, typ := .int .int }] #[.nil]
-    = .error (.stuck "argument 0: nil at non-pointer type int (v1: nil only at pointer types)") := rfl
+    = .error (.stuck "seed: argument 0: nil at non-pointer type int (v1: nil only at pointer types)") := rfl
 
 /-- The seed-relative readout: inside the seed with its path; outside; a negative index. -/
 example : seedRelative? 3 2 (.field (.base ⟨4⟩) ⟨"main.Node"⟩ "next") = some (1, [.field "next"]) := rfl

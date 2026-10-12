@@ -46,7 +46,7 @@ def requiredModules : List Name := [
     `GoLean.GoCore.ExecutionStatement, `GoLean.GoCore.Prefix, `GoLean.GoCore.BridgeSet,
     `GoLean.GoCore.PrefixFacts, `GoLean.GoCore.StepErrors, `GoLean.GoCore.Locals,
     `GoLean.GoCore.EquationsAttr, `GoLean.GoCore.Equations, `GoLean.GoCore.PoolProjection,
-    `GoLean.GoCore.SetupStatement, `GoLean.GoCore.SetupSound,
+    `GoLean.GoCore.SetupStatement, `GoLean.GoCore.SetupSound, `GoLean.GoCore.Seed, `GoLean.GoCore.SeedPool,
     `Tests.GoCoreContract, `Tests.PanicRendering, `Tests.StringPanicMembers,
     `Tests.GoCoreAudit]
 
@@ -161,7 +161,7 @@ def exports : List Name := [
     ``GoLean.GoCore.SetupSound.runProgramSetupSeeded_wf,
     ``GoLean.GoCore.SetupSound.runProgramSeededM_eq,
     ``GoLean.GoCore.SetupSound.runProgramSeededM_empty,
-    ``GoLean.GoCore.Machine.runProgramPoolSeeded_empty,
+    ``GoLean.GoCore.SetupSound.runProgramPoolSeeded_empty,
 
     -- Pool grind M1: the nine frozen statements, BridgeSet rows 503–511.
     ``GoLean.GoCore.PoolSound.raceUpdate_error,

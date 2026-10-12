@@ -22,8 +22,11 @@ then every cell's value is stored at its root (`storeLoc` normalizes at the decl
 and cycles between cells are plain stores. A `ref j path` at an expected `*T` is resolved against the
 DECLARED type of cell `j` walked along `path` (`seedPathLoc`): the leaf type must be `T` (`Ty.eqb`,
 positional `.defined` identity) and the location is built root-first — exactly the `Loc` the
-machine's own `&c.f[i]` evaluates to. Every reference is checked BEFORE any cell is written (the
-design's P3 found today's `bindParams` accepting a dangling address; the seeded entry closes that).
+machine's own `&c.f[i]` evaluates to. A refusal anywhere discards the WHOLE setup (an `Except`), so no
+partially seeded store is ever run; references and `nil` arguments are checked against the seed's
+declared types (the design's P3 found today's `bindParams` accepting a dangling address — closed here
+for `.ref`/`.nil`; a SCALAR argument passes unchecked by D5, the CLI's guard, which is why S5's
+bound-store statement carries the loc-free-scalar premise).
 
 v1 (D9): int, bool, struct, array, ref, nil. Anything else — a string or float leaf, a slice, map,
 channel, function, interface or sync type anywhere a value is resolved — is refused BY NAME as «not in
@@ -36,8 +39,9 @@ Refusals are the driver-input class (`Stop.stuck`, prefixed `seed: cell k:` / `s
 the `runProgramSetupM` lookup/arity precedent: a bad seed is neither Go behaviour nor a frontend bug.
 
 The statements S1–S6 are `SetupStatement.lean` (`SetupSound.lean` proves them; `BridgeSet.lean`
-RE-PIN 17 pins them, rows added only). The raw `Store.alloc`/`storeLoc` sites here are in
-`scripts/mem-callsites.tsv` (FRESH ALLOCATION / SETUP STORE, no access emitted: setup, not a step).
+RE-PIN 18 pins them, rows added only). The raw `Store.alloc`/`storeLoc` sites here are in
+`scripts/mem-callsites.tsv` (FRESH ALLOCATION: the seed cells are created at setup — zero-allocated,
+then filled — before any step runs; no access is emitted).
 -/
 
 namespace GoLean.GoCore.Machine
@@ -115,6 +119,10 @@ def seedCellTy (seed : Array SeedCell) (j : Nat) : Except Stop Ty :=
   | some c => .ok c.typ
   | none => stuck s!"ref to cell {j} out of range ({seed.size} cells)"
 
+/-- A seed path rendered as the design writes it: `0`, `0.next`, `1[2]`, `0.a[3].b`. -/
+def renderSeedPath (j : Nat) (path : List SeedPathElem) : String :=
+  toString j ++ String.join (path.map fun | .field f => s!".{f}" | .index i => s!"[{i}]")
+
 /-- Resolve a reference `ref j path` expected at pointer type `*target` (the pointee type `target`):
 the cell exists, the path is declared, the leaf type IS `target`. -/
 def resolveSeedRef (types : TypeEnv) (b : Nat) (seed : Array SeedCell) (target : Ty)
@@ -122,7 +130,7 @@ def resolveSeedRef (types : TypeEnv) (b : Nat) (seed : Array SeedCell) (target :
   let root ← seedCellTy seed j
   let (loc, leaf) ← seedPathLoc types (.base ⟨b + j⟩) root path
   if Ty.eqb leaf target then pure (.addr loc)
-  else stuck s!"ref {j} has type *{Ty.dynamicName types.nameOf? leaf}, *{Ty.dynamicName types.nameOf? target} expected"
+  else stuck s!"ref {renderSeedPath j path} has type *{Ty.dynamicName types.nameOf? leaf}, *{Ty.dynamicName types.nameOf? target} expected"
 
 /-- Reorder resolved struct fields into DECLARED order, requiring every declared field exactly once
 (no zero-fill, no duplicates; an unknown name was refused when it was resolved). -/
@@ -130,6 +138,9 @@ def seedStructOrder (name : TypeId) : List FieldDef → List (String × GoValue)
     Except Stop (List (String × GoValue))
   | [], _ => .ok []
   | d :: ds, given =>
+      if d.name == "_" then
+        stuck s!"struct {name.key}: a blank field (_) cannot be seeded (not in golean-seed-v1)"
+      else
       match given.filter (·.1 == d.name) with
       | [(_n, v)] => do
           let rest ← seedStructOrder name ds given
@@ -149,12 +160,12 @@ def resolveSeedValue (types : TypeEnv) (b : Nat) (seed : Array SeedCell) (ty : T
       | .ok (.plain (.int kind)) =>
           if seedIntFits kind v then .ok (.int v kind)
           else stuck s!"int {v} out of range for {kind.name}"
-      | .ok _ => stuck s!"int at type {Ty.dynamicName types.nameOf? ty}: not in golean-seed-v1 (an integer type expected)"
+      | .ok _ => stuck s!"int value at type {Ty.dynamicName types.nameOf? ty} — an integer type expected"
   | .bool x =>
       match TypeEnv.resolve types types.size ty with
       | .error e => .error e
       | .ok (.plain .bool) => .ok (.bool x)
-      | .ok _ => stuck s!"bool at type {Ty.dynamicName types.nameOf? ty}: not in golean-seed-v1 (bool expected)"
+      | .ok _ => stuck s!"bool value at type {Ty.dynamicName types.nameOf? ty} — bool expected"
   | .struct fields =>
       match TypeEnv.resolve types types.size ty with
       | .error e => .error e
@@ -162,7 +173,7 @@ def resolveSeedValue (types : TypeEnv) (b : Nat) (seed : Array SeedCell) (ty : T
           let given ← resolveSeedFields types b seed name decl fields
           let ordered ← seedStructOrder name decl.toList given
           pure (.struct name ordered.toArray)
-      | .ok _ => stuck s!"struct value at type {Ty.dynamicName types.nameOf? ty}: not in golean-seed-v1 (a declared struct type expected)"
+      | .ok _ => stuck s!"struct value at type {Ty.dynamicName types.nameOf? ty} — a declared struct type expected"
   | .array elems =>
       match TypeEnv.resolve types types.size ty with
       | .error e => .error e
@@ -171,12 +182,12 @@ def resolveSeedValue (types : TypeEnv) (b : Nat) (seed : Array SeedCell) (ty : T
             stuck s!"expected array({n}), got {elems.length} element(s)"
           else
             (resolveSeedList types b seed e elems).map (fun vs => .array vs.toArray)
-      | .ok _ => stuck s!"array value at type {Ty.dynamicName types.nameOf? ty}: not in golean-seed-v1 (an array type expected)"
+      | .ok _ => stuck s!"array value at type {Ty.dynamicName types.nameOf? ty} — an array type expected"
   | .ref j path =>
       match TypeEnv.resolve types types.size ty with
       | .error e => .error e
       | .ok (.plain (.pointer target)) => resolveSeedRef types b seed target j path
-      | .ok _ => stuck s!"ref at type {Ty.dynamicName types.nameOf? ty}: not in golean-seed-v1 (a pointer type expected)"
+      | .ok _ => stuck s!"ref at type {Ty.dynamicName types.nameOf? ty} — a pointer type expected"
   | .nil =>
       match TypeEnv.resolve types types.size ty with
       | .error e => .error e
@@ -215,14 +226,19 @@ def resolveSeedArg (types : TypeEnv) (b : Nat) (seed : Array SeedCell) (ty : Ty)
   | .ref j path => resolveSeedValue types b seed ty (.ref j path)
   | .nil => resolveSeedValue types b seed ty .nil
 
-/-- Mark a refusal with the argument position it belongs to (`stuck` only, the `markInitPhase` shape). -/
+/-- Mark a refusal with the argument position it belongs to (the `markInitPhase` shape: the three
+diagnostic classes; `panic`/`fuelOut` carry no text). -/
 def markSeedArg (i : Nat) : Stop → Stop
-  | .stuck msg => .stuck s!"argument {i}: {msg}"
+  | .stuck msg => .stuck s!"seed: argument {i}: {msg}"
+  | .unsupported msg => .unsupported s!"seed: argument {i}: {msg}"
+  | .internal msg => .internal s!"seed: argument {i}: {msg}"
   | e => e
 
 /-- Mark a refusal with the cell it belongs to. -/
 def markSeedCell (k : Nat) : Stop → Stop
-  | .stuck msg => .stuck s!"cell {k}: {msg}"
+  | .stuck msg => .stuck s!"seed: cell {k}: {msg}"
+  | .unsupported msg => .unsupported s!"seed: cell {k}: {msg}"
+  | .internal msg => .internal s!"seed: cell {k}: {msg}"
   | e => e
 
 /-- The arguments against the parameter list, positionally (arity is checked by the entry before). -/
@@ -250,7 +266,7 @@ address is checked against `.base ⟨b + k⟩` (the `seedGlobals` mold; provably
 def seedAllocFrom (b : Nat) : Store → Nat → List SeedCell → Except Stop Store
   | s, _, [] => .ok s
   | s, k, c :: rest => do
-      let z ← defaultValue ctx c.typ
+      let z ← (defaultValue ctx c.typ).mapError (markSeedCell k)
       let (loc, s') ← Store.alloc ctx s z c.typ
       if loc != .base ⟨b + k⟩ then
         throw (.internal s!"seed: cell {k} allocated at {repr loc}, expected base {b + k}")

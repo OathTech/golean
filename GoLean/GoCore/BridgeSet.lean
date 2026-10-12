@@ -69,21 +69,6 @@ walks as list laws — `Cont.rebuild` (cons/nil), `pushDefer` («map at the firs
 converse, plus the per-head cases), `seqCont`, `panicPassthrough`, `recoverResult` over `[]` and a
 glue head, frame exit at `.next` and at an empty frame, and the sup's cons law.
 
-RE-PIN 17 — the SEEDED-HEAP ENTRY, slice A (gc-verified's a2; [AGENT worker, lane
-`core/seeded-heap-a-1012`], 2026-10-12; [USER] Mike 2026-10-12 «Agree on the two strategic questions,
-let's do it» — GO and D4 (no runtime `StateWf` re-assert); gc-verified CONFIRMED the six deviations and
-the v1 value set the same day, relayed; design `docs/2026-10-09_seeded-heap-design.md` §4): rows 1–590
-BYTE-IDENTICAL; rows 591–601 ADDED — the ten `_stmt`s of `SetupStatement.lean` proved in
-`SetupSound.lean`, written out, and the pool erasure of `SeedPool.lean`: S1 `runProgramSetupSeeded_init`
-(G-R1's sibling over the seeded entry, no `StateWf` premise); S2 `seedCells_cell` (cell `k` at
-`.base ⟨b + k⟩`, its value resolved then normalized at the declared type), `seedCells_frame` (the cells
-below `b` untouched), `seedCells_locs` (the slot list); S3 `seedCells_heap_size`; S4
-`runProgramSetupSeeded_empty` (the empty seed with scalar arguments IS `runProgramSetupM`, one `Except`
-equation); S5 `seedCells_wf` (seeding preserves `StateWf`) and `runProgramSetupSeeded_wf` (the bound
-store, under loc-free scalar arguments — the [AGENT] refinement of D5); S6 `runProgramSeededM_eq` (the
-seeded run, unfolded), `runProgramSeededM_empty` and `runProgramPoolSeeded_empty` (the two drivers'
-erasures). G-R1–G-R4 and rows 397, 399–402 are UNCHANGED — the seeded entry is ADDITIVE.
-
 The set is RE-PINNED per window row; every change to this file is a changelog line
 (`docs/changelog/61958f2e-WINDOW.md`), so the file's diff between two pins IS the
 interface diff.
@@ -257,6 +242,21 @@ the record `PickRecord.ofPick` — `[]` at a one-member list, the no-pop instanc
 instance, its refusal), and the envelope's facts (every member and every slot is `≥ len` — the spec floor; bytes
 slot 0 = len and runes slot 0 = roundupsize(4n)/4 — the default tape; the literal singleton). The site records
 exactly like the others: `replay_coverage` (row 48), `stepFn_picks_none` / `_some` (rows 62–63) hold unchanged.
+
+RE-PIN 18 — the SEEDED-HEAP ENTRY, slice A (gc-verified's a2; [AGENT worker, lane
+`core/seeded-heap-a-1012`], 2026-10-12; [USER] Mike 2026-10-12 «Agree on the two strategic questions,
+let's do it» — GO and D4 (no runtime `StateWf` re-assert); gc-verified CONFIRMED the six deviations and
+the v1 value set the same day, relayed; design `docs/2026-10-09_seeded-heap-design.md` §4): rows 1–590
+BYTE-IDENTICAL; rows 591–601 ADDED — the ten `_stmt`s of `SetupStatement.lean` proved in
+`SetupSound.lean`, written out, and the pool erasure of `SeedPool.lean`: S1 `runProgramSetupSeeded_init`
+(G-R1's sibling over the seeded entry, no `StateWf` premise); S2 `seedCells_cell` (cell `k` at
+`.base ⟨b + k⟩`, its value resolved then normalized at the declared type), `seedCells_frame` (the cells
+below `b` untouched), `seedCells_locs` (the slot list); S3 `seedCells_heap_size`; S4
+`runProgramSetupSeeded_empty` (the empty seed with scalar arguments IS `runProgramSetupM`, one `Except`
+equation); S5 `seedCells_wf` (seeding preserves `StateWf`) and `runProgramSetupSeeded_wf` (the bound
+store, under loc-free scalar arguments — the [AGENT] refinement of D5); S6 `runProgramSeededM_eq` (the
+seeded run, unfolded), `runProgramSeededM_empty` and `runProgramPoolSeeded_empty` (the two drivers'
+erasures). G-R1–G-R4 and rows 397, 399–402 are UNCHANGED — the seeded entry is ADDITIVE.
 -/
 
 namespace GoLean.GoCore.BridgeSet
@@ -4551,13 +4551,13 @@ example :
           runProgramM fuel program name args choices :=
   @GoLean.GoCore.SetupSound.runProgramSeededM_empty
 
--- 601. `SeedPool.lean` — `runProgramPoolSeeded_empty_stmt`, written out (S6: erasure of the pool run,
+-- 601. `SetupSound.lean` — `runProgramPoolSeeded_empty_stmt`, written out (S6: erasure of the pool run,
 -- output included)
 example :
   ∀ (fuel : Nat) (program : Program) (name : String) (args : Array GoValue) (choices : Choices),
     runProgramPoolSeededOutM fuel program name #[] (args.map SeedArg.scalar) choices
       = (fun r : Readout => ({ readout := r, seedFinal := #[] } : SeededReadout)) <$>
           runProgramPoolOutM fuel program name args choices :=
-  @GoLean.GoCore.Machine.runProgramPoolSeeded_empty
+  @GoLean.GoCore.SetupSound.runProgramPoolSeeded_empty
 
 end GoLean.GoCore.BridgeSet

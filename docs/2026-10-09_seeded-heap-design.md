@@ -246,10 +246,19 @@ missing its string field) — the same refusal, no second walk. One statement re
 `runProgramSetupSeeded_wf` carries the premise «every scalar argument is loc-free» (D5 passes scalars
 unchecked; the CLI's are ints and bools). Also: the resolver RANGE-CHECKS ints at their kind (the
 normalizer would wrap); refusal texts render types through `Ty.dynamicName`; `seedLocs` is the `List`
-form so the controls pin by `rfl`. Controls (`#eval` first): the P3 shapes over a hand table (a cycle
-between two `Node` cells, `&c0.next`, `&c0[1]`, seed-relative resolution over a non-empty store), the
-refusal catalogue by name, the S4/S6 instance on the G-R control program. **Slice B (CLI + observation)
-starts from here**: the seed-file decoder maps the §1 grammar onto `SeedCell`/`SeedValue` (type spellings
-resolved to `Ty` through `TypeEnv.lookupName?`), `EntryArg` gains `.ref`/`.nil` → `SeedArg`, the flags of
-§6 call `runProgramPoolSeededOutM`, `goValueJson` gains the seed mode over `seedRelative?` (§5).
+form so the controls pin by `rfl`. Controls (`#eval` first, 21): the P3 shapes over a hand table (a
+cycle between two `Node` cells, `&c0.next`, `&c0[1]`, seed-relative resolution over a non-empty store),
+the refusal catalogue by name (the `seed: cell k:` / `seed: argument i:` prefix on all three diagnostic
+classes; a type mismatch names the path, `ref 0.next has type *Node, *int expected`; a struct with a
+blank field `_` is refused by name — Go literals cannot set one), the S4/S6 instance on the G-R control
+program. The pre-merge audit (Fable, 2026-10-12) found no blocker; its HIGH (the prefix promised to
+gc-verified had been stripped by a bad edit) and MEDIUM (a duplicate RE-PIN number — this is RE-PIN 18)
+and the LOWs (phase-1 refusals now cell-marked; the pool driver module upstream of the proofs; the
+docstring's «checked BEFORE any cell is written» corrected to «a refusal discards the whole setup») were
+fixed before the merge ask. **Slice B (CLI + observation) starts from here**: the seed-file decoder maps
+the §1 grammar onto `SeedCell`/`SeedValue` — type spellings resolve to `Ty` by `TypeId.unqualified` over
+the table with ambiguity refusing (D2; `TypeEnv.lookupName?` matches the full key and is NOT that scan —
+slice B writes its own); `EntryArg` gains `.ref`/`.nil` → `SeedArg`; the flags of §6 call
+`runProgramPoolSeededOutM` (`SeedPool.lean`, upstream of the proofs); `goValueJson` gains the seed mode
+over `seedRelative?` (§5).
 

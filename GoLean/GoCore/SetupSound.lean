@@ -500,17 +500,17 @@ theorem seedAllocFrom_shape {ctx : ProgramCtx} :
   | c :: rest, b, k, s, s', h, hsz => by
       unfold seedAllocFrom at h
       cases hd : defaultValue ctx c.typ with
-      | error e => simp [hd, Bind.bind, Except.bind] at h
+      | error e => simp [hd, Except.mapError, Bind.bind, Except.bind] at h
       | ok z =>
         cases ha : Store.alloc ctx s z c.typ with
-        | error e => simp [hd, ha, Bind.bind, Except.bind] at h
+        | error e => simp [hd, ha, Except.mapError, Bind.bind, Except.bind] at h
         | ok ls =>
           obtain ⟨l, s₁⟩ := ls
           obtain ⟨z', _, hl, hs₁⟩ := alloc_inv ha
           have hlk : l = Loc.base ⟨b + k⟩ := by rw [hl, hsz]
           subst hlk
-          simp only [hd, ha, Bind.bind, Except.bind, bne_self_eq_false, Bool.false_eq_true,
-            ↓reduceIte] at h
+          simp only [hd, ha, Except.mapError, Bind.bind, Except.bind, bne_self_eq_false,
+            Bool.false_eq_true, ↓reduceIte] at h
           have hsz₁ : s₁.heap.size = b + (k + 1) := by rw [hs₁, Array.size_push, hsz, Nat.add_assoc]
           obtain ⟨h1, h2, h3⟩ := seedAllocFrom_shape h hsz₁
           refine ⟨by rw [h1]; simp [List.length_cons]; omega, ?_, ?_⟩
@@ -670,17 +670,17 @@ theorem seedAllocFrom_wf {ctx : ProgramCtx} :
   | c :: rest, b, k, s, s', hw, h => by
       unfold seedAllocFrom at h
       cases hd : defaultValue ctx c.typ with
-      | error e => simp [hd, Bind.bind, Except.bind] at h
+      | error e => simp [hd, Except.mapError, Bind.bind, Except.bind] at h
       | ok z =>
         cases ha : Store.alloc ctx s z c.typ with
-        | error e => simp [hd, ha, Bind.bind, Except.bind] at h
+        | error e => simp [hd, ha, Except.mapError, Bind.bind, Except.bind] at h
         | ok ls =>
           obtain ⟨l, s₁⟩ := ls
           have hz : GoValue.locSup z ≤ s.nextAddr := by
             rw [defaultValue_locSup hd]
             exact Nat.zero_le _
           have hw₁ := (alloc_wf hw hz ha).1
-          simp only [hd, ha, Bind.bind, Except.bind] at h
+          simp only [hd, ha, Except.mapError, Bind.bind, Except.bind] at h
           split at h
           · exact absurd h (by simp)
           · exact seedAllocFrom_wf hw₁ h
@@ -738,6 +738,8 @@ theorem seedStructOrder_mem :
       simp
   | name, d :: ds, given, ordered, h => by
       unfold seedStructOrder at h
+      split at h
+      · exact absurd h (by simp [stuck])
       split at h
       · rename_i n v heq
         simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
@@ -1063,5 +1065,27 @@ theorem runProgramSeededM_empty : runProgramSeededM_empty_stmt := by
       cases hl : loadMany pctx sF resultLocs with
       | error e => simp [hl]
       | ok values => simp [hl, loadMany, pure, Except.pure]
+
+/-! ### S6 on the pool -/
+
+theorem runProgramPoolSeeded_empty : runProgramPoolSeeded_empty_stmt := by
+  intro fuel program name args choices
+  unfold runProgramPoolSeededOutM runProgramPoolOutM
+  rw [runProgramSetupSeeded_empty]
+  cases hs : runProgramSetupM fuel program name args choices with
+  | error e => rfl
+  | ok r =>
+    obtain ⟨pctx, c₀, s₀, resultLocs, choices₁⟩ := r
+    dsimp only [Functor.map, Except.map]
+    cases hx : execProgLoopOut pctx fuel ⟨#[Thread.running c₀ none], s₀, 0⟩ {} choices₁ GoString.empty with
+    | mk out res =>
+      cases res with
+      | error e => rfl
+      | ok r' =>
+        obtain ⟨sF, ch⟩ := r'
+        dsimp only
+        cases hl : loadMany pctx sF resultLocs with
+        | error e => rfl
+        | ok vs => rfl
 
 end GoLean.GoCore.SetupSound
