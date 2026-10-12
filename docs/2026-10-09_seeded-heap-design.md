@@ -262,3 +262,20 @@ slice B writes its own); `EntryArg` gains `.ref`/`.nil` → `SeedArg`; the flags
 `runProgramPoolSeededOutM` (`SeedPool.lean`, upstream of the proofs); `goValueJson` gains the seed mode
 over `seedRelative?` (§5).
 
+**Slice B landed on the lane (2026-10-12, [AGENT worker, lane `cli/seeded-heap-b-1012`]).** No core edit. The
+decoder is `GoLean/SeedFile.lean` (total, fuel-bounded by the parse's nesting bound); `EntryArg` gains
+`.ref`/`.nil`, the per-argument check is factored (`entryFunc`/`entryArgCheck`) so `entryArgValues`' texts stay
+byte-identical and `entrySeedArgs` adds the seed arms; `goValueJson` is one walk with a location renderer
+(`goValueJsonWith`: raw ids for unseeded runs, `seedLocJson` over `seedRelative?` for seeded ones); `seededObs`
+adds the `seed` key. Engineering choices inside §1/§5/§6, [AGENT]: (i) `SeededReadout` does not carry the seed
+base `b`, so the CLI reads it from `runProgramSetupSeededM`'s slot 0 — the same pure call the pool entry makes
+first (init runs twice on a seeded run; a `base` field in `SeededReadout` would be a core change, not made); (ii)
+under seed mode the seed-relative rule covers EVERY location (slice/map/chan bases too), not only `.addr` — an
+in-run allocation refuses rather than leaking a raw id; (iii) the number rule is enforced on the TOKEN (a
+lexical pre-scan), since the parsed `JsonNumber` of `1e2` equals that of `100`; (iv) an object with a `ref` or
+`nil` key IS that form (§1), so a struct whose only field is named `ref`/`nil` is not expressible in v1; (v)
+`byte`/`rune` refuse with a hint (`uint8`/`int32`) — §1's grammar does not list them; (vi) a declared type
+spelled like a builtin makes the builtin spelling ambiguous (D2's rule applied); (vii) a `seedRef` decodes only
+in an observation carrying `seed`, with `cell` below its length; (viii) `--arg-ref`/`--arg-nil` at a
+frontend-quarantined parameter refuse at the CLI (no pointer type to resolve against). Slice C (harness
+`--seed`, manifest/diff-coverage tokens, the first seeded rows, the re-pin) starts from here.

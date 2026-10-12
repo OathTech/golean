@@ -41,8 +41,9 @@ subcommand exits 2. In every subcommand, a malformed or unknown flag, or a missi
 ### 2.1 `native-json-run` — run one function
 
 ```
-golean native-json-run --input <wire> --function <name>
-    [--arg-int <n> | --arg-bool <true|false> ...] [--fuel <n>] [--choices <n,n,...>]
+golean native-json-run --input <wire> --function <name> [--seed <file.json>]
+    [--arg-int <n> | --arg-bool <true|false> | --arg-ref <k(.f|[i])*> | --arg-nil ...]
+    [--fuel <n>] [--choices <n,n,...>]
 ```
 
 This decodes the wire, seeds the package-level variables, runs the package initializer, and then
@@ -57,6 +58,19 @@ runs `<name>` on the goroutine pool (`GoLean.GoCore.Machine.runProgramPoolOutM`)
   is never wrapped), or an `--arg-bool` is passed for a non-`bool` parameter. A malformed
   literal is a usage error (exit 2). One case is not checked here: a parameter of a
   frontend-quarantined function is handed to the machine, which refuses it as `unsupported`.
+- `--seed <file.json>` (at most once; a second `--seed` is a usage error) runs the entry over a
+  **seeded heap**: the cells of a `golean-seed-v1` file (§2.1.1) are allocated after the package
+  initializer and before the entry's parameters, and the run is
+  `GoLean.GoCore.Machine.runProgramPoolSeededOutM` (`GoLean/GoCore/SeedPool.lean`). `--arg-ref
+  k(.f|[i])*` passes a pointer to cell `k` or to a component of it (`0`, `0.next`, `1[2]`,
+  `0.a[3].b`), and `--arg-nil` passes a nil pointer. Both are checked against a **pointer**
+  parameter before any step runs: the reference's target type, walked along its path through the
+  cell's declared type, must be the parameter's pointee type. A mismatch, an unknown field, an
+  out-of-range index or cell, an `--arg-ref`/`--arg-nil` at a non-pointer parameter, and an
+  `--arg-int`/`--arg-bool` at a pointer parameter all refuse by name with status `error`. A
+  malformed `--arg-ref`, or `--arg-ref`/`--arg-nil` without `--seed`, is a usage error (exit 2).
+  The observation gains a `seed` key, and every pointer in it is written relative to the seed
+  (§4). Without `--seed` nothing changes: the same driver and byte-identical output.
 - `--fuel` is the step budget, counted in machine steps (default 10 000 000). Running out gives
   status `fuel-out`.
 - `--choices` is the choice tape (§5, and the caveats in §6.1). It defaults to empty, which
@@ -66,7 +80,55 @@ Exit codes: **0** if the status is `ok`, **1** for every other status (including
 **2** for a usage error. Before any step runs, these failures produce a `status:error` JSON on
 stdout with exit 1: an unreadable input (`<path>: cannot read input: <OS error>`), a JSON parse
 error (the strict parser refuses duplicate keys, unpaired surrogates and invalid UTF-8), a
-decoder refusal, and an entry-argument refusal.
+decoder refusal, and an entry-argument refusal; with `--seed`, also an unreadable seed file and
+a seed-file refusal (§2.1.1).
+
+#### 2.1.1 The seed file: `golean-seed-v1`
+
+```
+{"schema":"golean-seed-v1","cells":[{"type":<TypeSpelling>,"value":<SeedJson>}, …]}
+SeedJson     ::= <integer> | true | false | {<field>: SeedJson, …} | [SeedJson, …]
+               | {"ref":{"cell":<nat>,"path":[PathElem, …]}} | {"nil":true}
+PathElem     ::= "<field>" | <nat>
+TypeSpelling ::= bool | int | int8 | … | uint64 | uint | [<nat>]T | *T | <Ident>
+```
+
+Example: two `Node` cells that point at each other (a cycle), then a `*int` cell pointing at
+element 1 of an array field:
+
+```json
+{"schema":"golean-seed-v1","cells":[
+  {"type":"Node","value":{"next":{"ref":{"cell":1,"path":[]}},"val":2}},
+  {"type":"Node","value":{"next":{"ref":{"cell":0,"path":[]}},"val":3}},
+  {"type":"Pair","value":{"a":[1,9,3],"b":true}},
+  {"type":"*int","value":{"ref":{"cell":2,"path":["a",1]}}}]}
+```
+
+The CLI decodes the file's **shape** (`GoLean/SeedFile.lean`). The machine's resolver decides
+the **typing**, once, at setup (`GoLean/GoCore/Seed.lean`). Both refuse by name.
+
+- **At the CLI** (status `error`, exit 1, before any step): the file goes through the strict
+  byte parser (duplicate keys, invalid UTF-8 and unpaired surrogates refuse). Every object needs
+  exactly its keys. The schema must be the literal `golean-seed-v1`. A number with a fraction or
+  an exponent refuses, even `1e2`. `null` and strings are not values. `{"nil": x}` needs
+  `x = true`. A `ref` or `nil` object may carry nothing else, so a struct whose only field is
+  named `ref` or `nil` cannot be written in v1. A type spelling outside the grammar refuses as
+  «not in golean-seed-v1», naming its class: `uintptr`, floats, complex, `string`, `byte`/`rune`
+  (spell them `uint8`/`int32`), `[]T`, `map`, `chan`, `func`, `interface`/`any`/`error`, an
+  anonymous `struct{…}`, `sync.*`, and any package-qualified name. An `<Ident>` is a declared
+  type's **unqualified** Go name, as the observation spells it (`Node` for `main.Node`). It
+  refuses if no declared type has that name, and it also refuses if more than one does (two local
+  types `T` in different functions, say): it never picks one.
+- **In the machine** (status `stuck`, message `seed: cell k: …` or `seed: argument i: …`): an
+  int outside its kind's range (it is never wrapped), a struct missing a declared field or naming
+  an unknown or duplicate one (every field is required and nothing is zero-filled), a blank `_`
+  field (Go literals cannot set one), an array of the wrong length, a `ref` to a missing cell or
+  along a bad path, a `ref` whose target type is not the pointer's element type, `nil` at a
+  non-pointer type, and a value at any type outside v1 (a struct with a `string` field cannot be
+  seeded).
+
+All cells are allocated before any is filled, so sharing and cycles are ordinary. Sharing is
+when two pointers name one cell; a cycle is when cells point at each other.
 
 ### 2.2 `observation-eq` — the comparator
 
@@ -110,7 +172,9 @@ non-terminating rather than as a member. `--backedge` sets the enumeration mode 
 preemption points; if it is undeclared, a back-edge consult of bound ≥ 2 fails. With
 `--engine dedup`, the state-graph engine runs and the result is checked by the verified
 certificate checker (`Machine.checkCert`). It refuses, by name, programs with a `$pkginit`
-phase, and it refuses `--allow-nonterm-iters`. The old flag `--allow-nonterm` is retired and
+phase, and it refuses `--allow-nonterm-iters`. `--seed`, `--arg-ref` and `--arg-nil` are refused
+by name (exit 2): seeded runs are `native-json-run` only in v1, and the same holds for
+`choice-trace`. The old flag `--allow-nonterm` is retired and
 refused by name. Exit codes: **0** if the set was printed; **1** for a refusal, a setup failure
 or a tripped cap (the message on stderr starts `coverage-observations:`); **2** for a usage
 error.
@@ -222,7 +286,8 @@ is the contract both sides of the differential meet, is `CLI.decodeObservation`.
 ```
 
 - `status = "ok"`: the keys are exactly `output, schema, status, values`. `values` holds the
-  entry function's results in order.
+  entry function's results in order. A `--seed` run adds one key, `seed`: the final value of each
+  seed cell, in cell order, rendered like `values`. No other key set decodes.
 - Any other status: the keys are exactly `message, output, schema, status`.
 - `output` is the bytes the program wrote with `print`/`println` (fd 2), folded in step order,
   and it is present on every status. Output that is not valid UTF-8 is emitted as an object,
@@ -261,8 +326,26 @@ A refusal never counts as a pass.
 | `slice` | `base`, `offset`, `len`, `cap` | `base` is a location or `null` |
 | `map`, `chan` | `base` | a location or `null` (reference identity) |
 | `addr` / `fieldAddr` / `indexAddr` | `id` / `base, typeName, fieldName` / `base, index` | a location |
+| `seedRef` | `cell`, `path` | a location relative to the seed, in a `--seed` observation only (below) |
 | `func` | `id` | the encoder emits it, but the decoder does **not** accept it (func values are not comparable in Go), so a row whose result is a func value is outside the comparable surface |
 | `syncData` | `state` | diagnostic only; the decoder refuses it |
+
+**Seeded observations.** With `--seed`, every location in `values` and `seed`, whether a
+pointer or the base of a slice, map or channel, is written relative to the seed as
+`{"tag":"seedRef","cell":k,"path":[…]}`. The path is root-first: field names as strings,
+indices as nats. A location outside the seed (a parameter, a result, a global or a cell
+allocated by the run) has no such spelling. The **whole** observation then refuses with status
+`unsupported`, `seed readout: result i holds a pointer outside the seed …` (or `cell k`); it is
+never reported partially. The decoder accepts `seedRef` only inside an observation that has a
+`seed` key, with `cell` below the seed's length and exactly the keys `cell, path, tag`. Without
+`--seed` the observation is unchanged. Here is `next(&c0)` over the cycle example above, first
+in the raw-id shape the seed mode replaces (not producible for this entry, which needs a
+pointer argument) and then as the seeded run prints it:
+
+```json
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"id":1,"tag":"addr"}]}
+{"output":"","schema":"golean-observation-v1","seed":[{"fields":[{"name":"next","value":{"cell":1,"path":[],"tag":"seedRef"}},{"name":"val","value":{"kind":"int","tag":"int","value":2}}],"tag":"struct","typeName":"Node"},{"fields":[{"name":"next","value":{"cell":0,"path":[],"tag":"seedRef"}},{"name":"val","value":{"kind":"int","tag":"int","value":3}}],"tag":"struct","typeName":"Node"},…],"status":"ok","values":[{"cell":1,"path":[],"tag":"seedRef"}]}
+```
 
 Locations carry the machine's **raw allocation ids** (stated limit 5 of the 2026-10-03 offer).
 Two runs agree on them only if they allocate in the same order, so the differential's comparable
