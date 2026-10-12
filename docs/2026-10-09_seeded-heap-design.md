@@ -225,3 +225,15 @@ harness's `--seed` mode) and the new entry joining #1 accepted; **D4 RULED** —
 re-assert after seeding, the theorem stands. D2, D3, D6, D7, D9, D10 and the six disagreements go to
 gc-verified for confirmation: `docs/2026-10-12_seeded-heap-note-to-gc-verified.md`. D1, D5 and the
 v1 refusals of the enumerator/tracer are engineering, [AGENT]. Slice A starts on their answer.
+
+**gc-verified's answer (2026-10-12, relayed by the [USER] Mike, cite as relayed): CONFIRMED — all six
+deviations (a)–(f) and the v1 value set.** Their reasoning, as relayed: their M-mem-0 statement draft
+had already reconciled with this note on 2026-10-09 (its §9.2); (a) nothing in their statement package
+or checker consumes `StateWf`, neither G-R1 nor S1 carries that premise, so the optional S0 row is NOT
+needed now; (d) their statement reads raw `GoValue` cells, never JSON, and their harness reads only
+`status` and `values`, the `seed` key appearing only under `--seed`, so the existing lanes are
+unaffected; (b), (c), (e), (f) and the value set are adopted on the draft or strictly inside what they
+need. Downstream on their side when slice A lands: a GoLean re-pin (a pins ruling), then the
+`SeededSetup` instance on their `mem0/statement-draft`, closing that draft's Q2 (source-side
+inhabitation). **Slice A starts** (lane `core/seeded-heap-a-1012`).
+

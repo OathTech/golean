@@ -2165,3 +2165,6 @@ trusted surface #2 (the observation harness's `--seed` mode) and the new driver 
 interface questions (D2, D3, D6, D7, D9, D10 and the six draft disagreements) are the customer's:
 `docs/2026-10-12_seeded-heap-note-to-gc-verified.md`, relayed by the [USER]. Slice A waits on it.
 
+**Customer's confirmation (2026-10-12, gc-verified, relayed by the [USER]):** all six deviations and
+the v1 value set CONFIRMED; S0 not needed; slice A starts (`docs/2026-10-09_seeded-heap-design.md` §10).
+
