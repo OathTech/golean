@@ -204,13 +204,16 @@ run_bump "pool spec freeze + staged discharge (scripts/check-pool-spec)" python3
 
 # ── GATE: the build of every target. Warning-free, because a GoLean/ warning
 # replays into the runner's stdout and corrupts the JSON observation channel
-# (the 2026-07-23 phantom-drift incident).
+# (the 2026-07-23 phantom-drift incident). Tests/ is in the watch too (audit
+# item 5, 2026-10-12): a `sorry` in a test module is a warning, and the cold
+# build of 2026-10-12 (163 jobs, 64G cap, 8 min 37 s) had zero warnings
+# anywhere, so the wider watch costs nothing today.
 step "lake build (every library and executable; warning-free)"
 core_out="$(scripts/capped lake build 2>&1)"; core_rc=$?
 echo "$core_out" | tail -3 | sed 's/^/  /'
-core_warns="$(echo "$core_out" | grep -E '^warning: (GoLean/|GoLean\.lean|Main\.lean)' || true)"
+core_warns="$(echo "$core_out" | grep -E '^warning: (GoLean/|GoLean\.lean|Main\.lean|Tests/)' || true)"
 if [ "$core_rc" -ne 0 ]; then bad "lake build (exit $core_rc)"
-elif [ -n "$core_warns" ]; then echo "$core_warns" | head -10; bad "lake build has GoLean/ warnings (they corrupt the runner JSON channel)"
+elif [ -n "$core_warns" ]; then echo "$core_warns" | head -10; bad "lake build has GoLean/ or Tests/ warnings (a GoLean/ warning corrupts the runner JSON channel; a Tests/ one is a sorry or a dead declaration)"
 else ok "lake build (every target, warning-free)"; fi
 
 # Every Tests/ module must be named by a lakefile.toml glob, or the build above
