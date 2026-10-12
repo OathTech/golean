@@ -50,13 +50,35 @@ type oracleRun struct {
 	crash, ack     []byte
 }
 
-func goRunOracle(t *testing.T, dir string) oracleRun {
+// goRunOracle runs a generated oracle package with the crash channel files
+// in place, under the runner's environment plus extraEnv (a multi-package
+// case needs the runner's GOPATH=<out>/gopath; scripts/diff-coverage
+// run_go_oracle).
+func goRunOracle(t *testing.T, dir string, extraEnv ...string) oracleRun {
 	t.Helper()
 	for _, name := range []string{"oracle.crash", "oracle.registered"} {
 		if err := os.WriteFile(filepath.Join(dir, name), nil, 0o600); err != nil {
 			t.Fatal(err)
 		}
 	}
+	r := oracleRun{}
+	r.stdout, r.stderr, r.exit = goRunDir(t, dir, extraEnv...)
+	var rerr error
+	if r.crash, rerr = os.ReadFile(filepath.Join(dir, "oracle.crash")); rerr != nil {
+		t.Fatal(rerr)
+	}
+	if r.ack, rerr = os.ReadFile(filepath.Join(dir, "oracle.registered")); rerr != nil {
+		t.Fatal(rerr)
+	}
+	return r
+}
+
+// goRunDir execs the pinned `go run .` in dir with the runner's environment
+// (GO111MODULE=off, GOFLAGS cleared, the pinned GODEBUG/GOTRACEBACK, the
+// repo's GOCACHE convention) plus extraEnv, and returns the captured
+// streams and exit status. A `go` that cannot start is a failure.
+func goRunDir(t *testing.T, dir string, extraEnv ...string) (stdout, stderr []byte, exit int) {
+	t.Helper()
 	cache := os.Getenv("GOCACHE")
 	if cache == "" {
 		abs, err := filepath.Abs(filepath.Join("..", "..", "artifacts", "go-build-cache"))
@@ -71,23 +93,16 @@ func goRunOracle(t *testing.T, dir string) oracleRun {
 	cmd := exec.Command("go", "run", ".")
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(), "GO111MODULE=off", "GOFLAGS=", "GODEBUG=panicnil=0", "GOTRACEBACK=system", "GOCACHE="+cache)
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout, cmd.Stderr = &stdout, &stderr
+	cmd.Env = append(cmd.Env, extraEnv...)
+	var out, errb bytes.Buffer
+	cmd.Stdout, cmd.Stderr = &out, &errb
 	err := cmd.Run()
 	if err != nil {
 		if _, ok := err.(*exec.ExitError); !ok {
 			t.Fatalf("go run could not start in %s: %v", dir, err)
 		}
 	}
-	r := oracleRun{stdout: stdout.Bytes(), stderr: stderr.Bytes(), exit: cmd.ProcessState.ExitCode()}
-	var rerr error
-	if r.crash, rerr = os.ReadFile(filepath.Join(dir, "oracle.crash")); rerr != nil {
-		t.Fatal(rerr)
-	}
-	if r.ack, rerr = os.ReadFile(filepath.Join(dir, "oracle.registered")); rerr != nil {
-		t.Fatal(rerr)
-	}
-	return r
+	return out.Bytes(), errb.Bytes(), cmd.ProcessState.ExitCode()
 }
 
 // observedBytes returns what the observer reads from stderr: the whole

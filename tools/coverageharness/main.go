@@ -210,7 +210,7 @@ func run(cfg config) error {
 			decls = append(decls, decl)
 		}
 		file.Decls = decls
-		pruneUnusedImports(file)
+		blankUnusedImports(file)
 		parsed = append(parsed, parsedFile{path: inputFile, file: file})
 	}
 	if subject == nil {
@@ -370,7 +370,23 @@ func parseArgs(raw string) ([]string, error) {
 	return parts, nil
 }
 
-func pruneUnusedImports(file *ast.File) {
+// blankUnusedImports rewrites every import whose bound name the file no
+// longer references as a BLANK import (`_ "path"`). Removing the original
+// `main` above leaves such imports behind, and Go refuses an «imported and
+// not used» package; a blank import satisfies the compiler while KEEPING
+// the package in the program, so its initialization — every `init`, every
+// package-level variable initializer — still runs: Go initializes every
+// imported package whether or not the surviving code refers to it (spec
+// «Program initialization»). The earlier rule DELETED the import, and with
+// it the dependency's initialization: a subject reading state that an
+// imported package's `init` had set observed the zero value in the oracle
+// and the right value in GoLean — the oracle generator had changed the
+// program (release-trust review 2026-10-12 F2, relayed by the [USER];
+// witness: TestBlankedImportKeepsInitialization). Nothing else changes:
+// the import groups, their specs, comments and line layout are preserved,
+// so trace line numbers in the kept files stay those of the input. Blank
+// and dot imports are kept as they are.
+func blankUnusedImports(file *ast.File) {
 	used := map[string]bool{}
 	ast.Inspect(file, func(n ast.Node) bool {
 		switch n := n.(type) {
@@ -382,28 +398,22 @@ func pruneUnusedImports(file *ast.File) {
 		return true
 	})
 
-	decls := file.Decls[:0]
 	for _, decl := range file.Decls {
 		gen, ok := decl.(*ast.GenDecl)
 		if !ok || gen.Tok != token.IMPORT {
-			decls = append(decls, decl)
 			continue
 		}
-
-		specs := gen.Specs[:0]
 		for _, spec := range gen.Specs {
 			importSpec := spec.(*ast.ImportSpec)
 			name := importName(importSpec)
 			if name == "_" || name == "." || used[name] {
-				specs = append(specs, spec)
+				continue
 			}
-		}
-		if len(specs) > 0 {
-			gen.Specs = specs
-			decls = append(decls, gen)
+			// The blank name sits at the path's position so the printer
+			// keeps the spec on its original line.
+			importSpec.Name = &ast.Ident{NamePos: importSpec.Path.Pos(), Name: "_"}
 		}
 	}
-	file.Decls = decls
 }
 
 func importName(spec *ast.ImportSpec) string {
@@ -426,9 +436,10 @@ func importName(spec *ast.ImportSpec) string {
 // (3) The name is cut at the first byte that cannot occur in an
 // identifier, which also covers the `gopkg.in/yaml.v3` form (`yaml`).
 // Go's actual rule is the imported package's clause; this is a guess,
-// and a wrong guess stays FAIL-NOISY: a pruned import that is used, or a
-// kept import that is unused, is a compile error at the oracle's go-run
-// stage (audit F4, docs/2026-10-01_intn-pick-audit.md).
+// and a wrong guess stays FAIL-NOISY: an import blanked while it is used
+// (its real name is no longer bound), or a kept import that is unused, is
+// a compile error at the oracle's go-run stage (audit F4,
+// docs/2026-10-01_intn-pick-audit.md).
 func assumedImportName(importPath string) string {
 	base := path.Base(importPath)
 	if isMajorVersionElem(base) {

@@ -36,22 +36,32 @@ func TestImportNameAssumedName(t *testing.T) {
 	}
 }
 
-// pruneUnusedImports keeps an unaliased math/rand/v2 that is used as
-// `rand` (the pre-fix behaviour pruned it as the unused name `v2`).
-func TestPruneKeepsUnaliasedMajorVersionImport(t *testing.T) {
-	spec := &ast.ImportSpec{Path: &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote("math/rand/v2")}}
+// blankUnusedImports keeps an unaliased math/rand/v2 that is used as
+// `rand` unaliased (the pre-fix behaviour pruned it as the unused name
+// `v2`), and rewrites an import the file no longer refers to as a BLANK
+// import rather than deleting it (release-trust review 2026-10-12 F2: the
+// deleted import took the package's initialization with it).
+func TestBlankUnusedImportsKeepsUsedAndBlanksUnused(t *testing.T) {
+	rand := &ast.ImportSpec{Path: &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote("math/rand/v2")}}
+	unused := &ast.ImportSpec{Path: &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote("example.com/side")}}
 	file := &ast.File{
 		Name: ast.NewIdent("main"),
 		Decls: []ast.Decl{
-			&ast.GenDecl{Tok: token.IMPORT, Specs: []ast.Spec{spec}},
+			&ast.GenDecl{Tok: token.IMPORT, Specs: []ast.Spec{rand, unused}},
 			&ast.FuncDecl{Name: ast.NewIdent("f"), Type: &ast.FuncType{Params: &ast.FieldList{}},
 				Body: &ast.BlockStmt{List: []ast.Stmt{&ast.ExprStmt{X: &ast.CallExpr{
 					Fun: &ast.SelectorExpr{X: ast.NewIdent("rand"), Sel: ast.NewIdent("IntN")}}}}}},
 		},
 	}
-	pruneUnusedImports(file)
+	blankUnusedImports(file)
 	gen, ok := file.Decls[0].(*ast.GenDecl)
-	if !ok || gen.Tok != token.IMPORT || len(gen.Specs) != 1 {
-		t.Fatalf("unaliased math/rand/v2 used as rand was pruned: decls=%#v", file.Decls)
+	if !ok || gen.Tok != token.IMPORT || len(gen.Specs) != 2 {
+		t.Fatalf("the import group was not kept whole: decls=%#v", file.Decls)
+	}
+	if rand.Name != nil {
+		t.Fatalf("unaliased math/rand/v2 used as rand was renamed to %q", rand.Name.Name)
+	}
+	if unused.Name == nil || unused.Name.Name != "_" {
+		t.Fatalf("the unreferenced import was not blanked: name=%v", unused.Name)
 	}
 }
