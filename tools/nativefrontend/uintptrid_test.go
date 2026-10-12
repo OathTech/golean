@@ -13,11 +13,11 @@ package main
 // the entries of `uintptrRefusingShapes` (34, the six probes among them)
 // plus the separately pinned refusing shapes (3: the generic stencil at
 // uintptr, the package-level initializer, the opaque `*atomic.Uintptr`) =
-// 37 refusing shapes; the controls are `uintptrWidthOnlyShapes` (17: 12
-// width-only, 5 nominal) plus the separately pinned lowering shapes (7: the
+// 37 refusing shapes; the controls are `uintptrWidthOnlyShapes` (18: 12
+// width-only, 6 nominal) plus the separately pinned lowering shapes (7: the
 // uint64 stencil, the width-only generic stencils incl. a method stencil,
 // the stdlib generics, `*sync.Map`, the `*log.Logger` embedding, the
-// bodyless declaration, the blank package-level box) = 24 lowering shapes.
+// bodyless declaration, the blank package-level box) = 25 lowering shapes.
 
 import (
 	"strings"
@@ -453,11 +453,19 @@ func subject() bool { var err error = E(1); _, ok := err.(F); return ok }
 type U uintptr
 func subject() bool { u := U(1); var x any = &u; _, ok := x.(*uint64); return ok }
 `,
+	// An INSTANTIATED named type is nominal too (last round LOW-1: the
+	// `TypeArgs` arm dropped): `B[uintptr]` and `B[uint64]` are distinct
+	// TypeIds; a collapse through a method mentioning T is the method-set
+	// scan's (a method-less B here).
+	"generic-nominal": `package main
+type B[T any] struct{ v T }
+func subject() bool { var x any = B[uintptr]{1}; _, ok := x.(B[uint64]); return ok }
+`,
 }
 
 func TestUintptrIdentityWidthOnlyLowers(t *testing.T) {
-	if n := len(uintptrWidthOnlyShapes); n != 17 {
-		t.Fatalf("the control table has %d entries; the records cite 17 — update the count derivation in the file header, FR-38 and BUG-124 together", n)
+	if n := len(uintptrWidthOnlyShapes); n != 18 {
+		t.Fatalf("the control table has %d entries; the records cite 18 — update the count derivation in the file header, FR-38 and BUG-124 together", n)
 	}
 	for name, src := range uintptrWidthOnlyShapes {
 		t.Run(name, func(t *testing.T) {

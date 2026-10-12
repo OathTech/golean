@@ -149,16 +149,24 @@ func definedNominalU() int {
 	return n
 }
 
-// S is a named struct with a uintptr field: nominal.
+// S and S2 are two named structs of the same shape: nominal, distinct.
 type S struct{ p uintptr }
 
-// definedNominalS: a boxed S asserts to S, compares equal to an equal S and
-// unequal to a different one; a boxed *S asserts to *S. gc: 1+10+100+1000 = 1111.
+type S2 struct{ p uintptr }
+
+// definedNominalS: a boxed S asserts to S and NOT to the same-shaped S2 (the
+// nominal-vs-structural witness, last round NIT-1: an unnamed `struct{p
+// uint64}` target is frontier-refused, so S2 is the available one), compares
+// equal to an equal S and unequal to a different one; a boxed *S asserts to
+// *S. gc: 1+10+100+1000+10000 = 11111.
 func definedNominalS() int {
 	n := 0
 	var x any = S{p: 3}
 	if v, ok := x.(S); ok && v.p == 3 {
 		n += 1
+	}
+	if _, ok := x.(S2); !ok {
+		n += 10000
 	}
 	if x == any(S{p: 3}) {
 		n += 10
@@ -203,8 +211,41 @@ func definedNominalE() int {
 	return n
 }
 
+// G is a method-less generic struct: each instantiation is its own nominal
+// type on the machine (distinct TypeIds), so the refusal does not scan type
+// ARGUMENTS (last round LOW-1); a collapse through a method mentioning T
+// is the method-set scan's business (B above, whose Get() T is in the set).
+type G[T any] struct{ v T }
+
+// genericNominal: a boxed G[uintptr] is not a G[uint64] (assertion,
+// equality, type switch) and is a G[uintptr]. gc: 1+10+100+1000+10000 = 11111.
+func genericNominal() int {
+	n := 0
+	var x any = G[uintptr]{v: 1}
+	if _, ok := x.(G[uint64]); !ok {
+		n += 1
+	}
+	if g, ok := x.(G[uintptr]); ok && g.v == 1 {
+		n += 10
+	}
+	if x == any(G[uintptr]{v: 1}) {
+		n += 100
+	}
+	if x != any(G[uint64]{v: 1}) {
+		n += 1000
+	}
+	switch x.(type) {
+	case G[uint64]:
+		n += 50000
+	case G[uintptr]:
+		n += 10000
+	}
+	return n
+}
+
 func main() {
 	println(uintptrAssert(), uintptrEqual(), uintptrSwitch(), uintptrMapKey(),
 		uintptrSliceAssert(), uintptrPointerAssert(), widthOnly(),
-		genericWidthOnly(), definedNominalU(), definedNominalS(), definedNominalE())
+		genericWidthOnly(), definedNominalU(), definedNominalS(), definedNominalE(),
+		genericNominal())
 }

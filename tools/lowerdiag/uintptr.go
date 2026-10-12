@@ -17,8 +17,16 @@ package main
 // so a source-through unit's UNEXPORTED method mentioning uintptr is not
 // judged: the measured direction, an under-approximation); an unnamed
 // composite is structural; a named interface is its requirements. Generic
-// TEMPLATES are not judged (the frontend scans each stencil under its
-// instantiation; a template is quarantined by design).
+// FUNCTION templates are not judged (`d.IsGeneric`, set from the
+// declaration's own type parameters; the frontend scans each stencil under
+// its instantiation and a template is quarantined by design). A generic
+// METHOD template (`func (b B[T]) Box() any { var a any = b.v; … }`) IS
+// judged — static.go sets IsGeneric from `fd.Type.TypeParams` only, not the
+// receiver's — and cannot false-fire (a `*types.TypeParam` reads false in
+// `mentions`); where a stencil of it refuses, the static verdict stays
+// `lowers(static)`: the same under-approximation, stated rather than
+// re-classifying generic-receiver methods tool-wide (last round NIT-2,
+// 2026-10-12, [AGENT]).
 
 import (
 	"fmt"
@@ -87,13 +95,9 @@ func (s *uintptrScan) mentions(t types.Type, seen map[*types.Named]bool) bool {
 				return true
 			}
 		}
-		if targs := ty.TypeArgs(); targs != nil {
-			for i := 0; i < targs.Len(); i++ {
-				if s.mentions(targs.At(i), seen) {
-					return true
-				}
-			}
-		}
+		// Type arguments are not scanned: an instantiated named type is
+		// nominal on the machine (last round LOW-1; the frontend's arm says
+		// why), its methods' collapse caught by the method-set scan above.
 		return false
 	case *types.Pointer:
 		return s.mentions(ty.Elem(), seen)

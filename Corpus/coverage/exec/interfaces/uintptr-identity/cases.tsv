@@ -9,7 +9,9 @@
 # Fix round 2026-10-12 PASS controls: generic-width-only (MEDIUM-1: width-only generic code at uintptr — user stencils incl. a
 # method stencil and a defined type, slices.Max / slices.Clone — lowers; the template's result tuple is substituted in the scan),
 # defined-nominal-{u,s,e} (LOW-1: a NAMED concrete type over uintptr is nominal on the machine — boxes, asserts, compares and
-# switches as in gc; the rule enters a named type's METHOD SET only, never its underlying structure).
+# switches as in gc; the rule enters a named type's METHOD SET only, never its underlying structure). Last round 2026-10-12:
+# defined-nominal-s re-scored 11111 with the same-shaped S2 as the nominal-vs-structural witness (NIT-1); generic-nominal born
+# (LOW-1: an instantiated named type is nominal too — the rule does not scan type arguments; 11111 = gc).
 assert	uintptrAssert	-	ok	-	interfaces,type_assertions,comma_ok,identity,ints,widths
 equal	uintptrEqual	-	ok	-	interfaces,equality,comparisons,identity,ints,widths
 switch	uintptrSwitch	-	ok	-	interfaces,type_switch,identity,ints,widths
@@ -21,3 +23,4 @@ generic-width-only	genericWidthOnly	-	ok	-	generics,ints,widths,slices,stdlib
 defined-nominal-u	definedNominalU	-	ok	-	defined_type,interfaces,type_assertions,type_switch,equality,identity,ints,widths,pointers
 defined-nominal-s	definedNominalS	-	ok	-	defined_type,structs,interfaces,type_assertions,equality,identity,ints,widths,pointers
 defined-nominal-e	definedNominalE	-	ok	-	defined_type,interfaces,type_assertions,equality,identity,ints,widths
+generic-nominal	genericNominal	-	ok	-	generics,defined_type,interfaces,type_assertions,type_switch,equality,identity,ints,widths

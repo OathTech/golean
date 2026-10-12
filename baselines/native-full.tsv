@@ -1,12 +1,24 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3941 (3708 PASS / 233 FAIL)
+# cases: 3953 (3714 PASS / 239 FAIL)
+# re-pinned: 2026-10-12 [AGENT] coordinator, train 3 (staging branch train3/stage-1012 off the train-2 stage 2e9ac4f0) — the
+#   uintptr lane's three re-pins below were measured off the runtime lane's tip and combine with train 2's 3941: + 7 + 4 + 1 = 3953;
+#   PASS 3708 + 1 + 4 + 1 = 3714; FAIL 233 + 6 = 239. No row is touched by two lanes; verified by the train's scripts/ci --diff.
+# re-pinned: 2026-10-12 [AGENT], lane fix/uintptr-refuse-1012 LAST ROUND (the re-audit's cosmetic LOW-1 / NIT-1, relayed by the
+#   [AGENT] coordinator; verdict «shippable as the release's answer for item 26 until the repair lands»; same ruling [USER] Mike
+#   2026-10-12 «D6: agree on both - refuse and repair asap.»). WHY: (LOW-1) the refusal scanned a named type's type ARGUMENTS —
+#   a red that was never a wrong answer (an instantiated named type is nominal: distinct TypeIds; its methods' collapse is the
+#   method-set scan's) — dropped; BORN ROW +1 PASS control interfaces/uintptr-identity/generic-nominal (gc 11111 = the machine).
+#   (NIT-1) defined-nominal-s re-scored 1111 → 11111 with a same-shaped second struct S2 as the nominal-vs-structural witness
+#   (its result stays PASS; no row change). NO PASS→non-PASS flip; no lane move; no removal. Counts: 3950 + 1 = 3951; PASS
+#   3711 + 1 = 3712; FAIL 239 (the data rows, awk-tallied). Pinned from the lane's direct runs and CONFIRMED by the lane's
+#   scripts/ci --diff at the last-round tip (the gate run recorded in the lane report).
 # re-pinned: 2026-10-12 [AGENT], lane fix/uintptr-refuse-1012 FIX ROUND (the pre-merge review's MEDIUM-1 / LOW-1, relayed by the
 #   [AGENT] coordinator; same ruling [USER] Mike 2026-10-12 «D6: agree on both - refuse and repair asap.»). WHY: the refusal was
 #   over-reaching on two width-only shapes — (MEDIUM-1) generic code instantiated at uintptr (the template's result tuple read
 #   as an interface; now substituted in the scan) and (LOW-1) NAMED concrete types over uintptr (nominal on the machine — the
 #   wire's `defined` def, the decoder's `.defined idx`; the rule now enters a named type's METHOD SET only). BORN ROWS +4 PASS
 #   controls interfaces/uintptr-identity/{generic-width-only, defined-nominal-u, defined-nominal-s, defined-nominal-e} (gc
-#   40 / 111101 / 1111 / 1111 = the machine). NO PASS→non-PASS flip; the six red-by-design rows unchanged; no lane move; no
+#   40 / 111101 / 1111 (re-scored 11111 at the last round, NIT-1) / 1111 = the machine). NO PASS→non-PASS flip; the six red-by-design rows unchanged; no lane move; no
 #   removal. Counts: 3946 + 4 = 3950; PASS 3707 + 4 = 3711; FAIL 239 (the data rows, awk-tallied). Pinned from the lane's direct
 #   runs and CONFIRMED by the lane's scripts/ci --diff at the fix-round tip (the gate run recorded in the lane report).
 # re-pinned: 2026-10-12 [AGENT], lane fix/uintptr-refuse-1012 (stacked on fix/release-runtime-1012 @ 4365c313, off main d92b95fd) —
@@ -3856,6 +3868,7 @@ PASS	interfaces/uintptr-identity/defined-nominal-e	-
 PASS	interfaces/uintptr-identity/defined-nominal-s	-
 PASS	interfaces/uintptr-identity/defined-nominal-u	-
 FAIL	interfaces/uintptr-identity/equal	frontend-export
+PASS	interfaces/uintptr-identity/generic-nominal	-
 PASS	interfaces/uintptr-identity/generic-width-only	-
 FAIL	interfaces/uintptr-identity/map-key	frontend-export
 FAIL	interfaces/uintptr-identity/pointer-assert	frontend-export

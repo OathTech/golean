@@ -86,8 +86,8 @@ func (e *emitter) refuseUintptrIdentity(construct string, at ast.Node) error {
 // the machine would COLLAPSE it: structurally through unnamed pointers,
 // slices, arrays, channels, maps, struct fields, signatures (params and
 // results) and interface requirements; for a NAMED concrete type through
-// its full method set and type arguments only (its underlying structure is
-// nominal on the machine — see the `*types.Named` arm). `seen` breaks
+// its full method set only (its underlying structure and its type
+// arguments are nominal on the machine — see the `*types.Named` arm). `seen` breaks
 // recursive named types (`type N struct{ next *N }`). A type parameter is
 // never reached from a stencil body (`goTypeOf` substitutes; an
 // unsubstituted one is the stencil's own `substErr`); a constraint union
@@ -153,13 +153,13 @@ func (e *emitter) mentionsUintptr(t types.Type, seen map[*types.Named]bool) bool
 				return true
 			}
 		}
-		if targs := ty.TypeArgs(); targs != nil {
-			for i := 0; i < targs.Len(); i++ {
-				if e.mentionsUintptr(targs.At(i), seen) {
-					return true
-				}
-			}
-		}
+		// Type ARGUMENTS are not scanned (last round LOW-1, 2026-10-12):
+		// an instantiated named type is nominal too — `B[uintptr]` and
+		// `B[uint64]` are distinct `renderTypeKey` TypeIds, `.defined idx`
+		// each — and a collapse through its methods is already caught by
+		// the substituted method-set scan above (`B[uintptr].Get() uintptr`
+		// is in NewMethodSet). The first cut's loop was a red that was
+		// never a wrong answer.
 		return false
 	case *types.Pointer:
 		return e.mentionsUintptr(ty.Elem(), seen)

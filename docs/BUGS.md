@@ -8233,12 +8233,14 @@ by name pending the typed-uintptr-identity repair (release-readiness item 26, BU
 `uintptr-identity`, with a static twin in `tools/lowerdiag/uintptr.go` (calibrated against the wire on
 `testdata/calib/uintptr_fr38.go`). Unit pins `tools/nativefrontend/uintptrid_test.go` — COUNT DERIVATION, the one the
 header, FR-38 and this entry share: 34 refusing table shapes (the six probes among them) + 3 separately pinned (the
-generic stencil at uintptr, the package-level initializer, the opaque `*atomic.Uintptr`) = 37 refusing; 17 control
-table shapes (12 width-only, 5 nominal) + 7 separately pinned lowering shapes (the uint64 stencil, the width-only
+generic stencil at uintptr, the package-level initializer, the opaque `*atomic.Uintptr`) = 37 refusing; 18 control
+table shapes (12 width-only, 6 nominal) + 7 separately pinned lowering shapes (the uint64 stencil, the width-only
 generic stencils incl. a method stencil, the stdlib generics, `*sync.Map`, the `*log.Logger` embedding, the bodyless
-declaration, the blank package-level box) = 24 lowering; a sibling's own refusal not masked. Corpus: the six rows
+declaration, the blank package-level box) = 25 lowering; a sibling's own refusal not masked. Corpus: the six rows
 above (FAIL/frontend-export, red by design) and the PASS controls `interfaces/uintptr-identity/{width-only (172),
-generic-width-only (40), defined-nominal-u (111101), defined-nominal-s (1111), defined-nominal-e (1111)}`. The lane's
+generic-width-only (40), defined-nominal-u (111101), defined-nominal-s (11111, with the same-shaped `S2` as the
+nominal-vs-structural witness), defined-nominal-e (1111), generic-nominal (11111: an instantiated named type is nominal
+too — type arguments are not scanned)}`. The lane's
 `scripts/ci --diff` flipped NO existing row (no corpus program boxed a uintptr-mentioning value into an interface; the
 five files that mention `uintptr` use it width-only).
 
@@ -8250,6 +8252,11 @@ source named type's underlying structure although the machine is nominal there: 
 calibration fixture; NIT-2 — the emitFuncDecl hook now follows the emitter's own bodyless arm (the typed-nil guard
 kept as an invariant); NIT-3 — the package-level blank box is judged like the local form (the H-11 dry run quarantines
 it; `$pkginit` carries no box); RENUMBER — BUG-123 → BUG-124 (the channel-length boundary's entry lands first).
+LAST ROUND 2026-10-12 (the re-audit, «shippable as the release's answer for item 26 until the repair lands»): LOW-1 — the
+`TypeArgs` arm dropped in both the frontend and the static twin (a red that was never a wrong answer), `generic-nominal`
+born; NIT-1 — `defined-nominal-s` re-scored with `S2`; NIT-2 — a generic METHOD template is judged by the static twin
+(it cannot false-fire; stated in `tools/lowerdiag/uintptr.go`, not re-classified). Recorded, no action: a closure with a
+parameter inside a stencil exports but the decoder refuses by name (B6 c4) — identical at uint64, pre-existing, fail-closed.
 
 FIX PLAN (the REPAIR half of D6, its own lane after this one): rebase `typed-uintptr-identity` onto main under its
 standing hard stop (handoff decision 2: the latitude row R1 and w7 J-8 records amended, third-lane review, a REAL full
