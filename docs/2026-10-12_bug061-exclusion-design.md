@@ -70,6 +70,34 @@ Two parts, both in `staticinit.go`, the emitted schedule unchanged:
    for precision, gc-measured: `_ = Arr[0]` (an index is not effect-free for
    the blank discard) and `I(T{}).M()` (devirtualized through a type assertion
    the inlined-call fold refuses to move).
+
+   **Second fix round** (the re-audit of `d70a67b0`; three more WORK-where-gc-
+   folds classes). (i) The static-`if` rule counted the reader's `_ = cond`
+   statement from the ORIGINAL condition, but `writer.staticBool` rewrites the
+   written condition in place (`false && g()` is written as `false`, a literal
+   the reader does not keep): `if false && g() { return 1 }; return 2` folds.
+   Option taken, [AGENT] per the coordinator's standing instruction («prefer the
+   COARSER rule that errs toward MAYBE-STATIC … unless the exact mirror is a
+   few lines AND the oracle pins both directions»): the COARSE rule — the
+   `_ = cond` statement is never counted. Dropping a statement can only make a
+   body look more like a single return, so the loss is precision alone, on
+   shapes where gc keeps the rewritten non-literal condition (`g() && false`,
+   `g() || true`): pinned both ways (`CallFG`, `CallTG`, `CallTFG` fold;
+   `CallGF`, `CallGT` are work and listed conservative; `CallFOG` is work and
+   classifies WORK because the condition stays undecided). The exact mirror
+   was a few lines too; coarse was chosen because the exact rule's benefit is
+   confined to those two contrived shapes. (ii) `isSideEffect` has NO effect
+   for `make` of a chan or map with no size or a constant zero (`var _ =
+   make(chan int)` is discarded): mirrored. (iii) The effect walk descended
+   into TYPE positions (`(*T)(p)`, `[]*T{…}`), claiming dereferences gc has no
+   node for: type positions are skipped. The table grew to 101 shapes; the
+   conservative entries (gc work, classified MAYBE-STATIC, each with its
+   reason in `staticinit_test.go`): `CallGF`, `CallGT` (the coarse rule),
+   `CallBN` (bare named return), `CallNoI` (`//go:noinline` not read),
+   `CopyInl` (staticcopy has no OINLCALL case), `CallClo` (a closure capturing
+   a parameter), `SlAny` (an interface element implicitly converted), `_4`
+   (a blank method value). The oracle reads the compile ARCHIVE, where a
+   deps-only record survives (the linker drops it from a binary).
 2. **Enumerate** every pruning of the uncertain packages (cap 12 → 4096 walks;
    beyond it refuse by name), recompute the node set and the two-pass walk,
    and REFUSE iff some pruning orders the packages WITH work differently from
@@ -104,8 +132,9 @@ the fix round's tip (the same 28 roots + the twin: the witness alone refuses,
 the twin wire byte-identical). Unit tests (`staticinit_test.go`): the witness
 refuses with the named text; init-body, map-literal, multi-statement-call,
 arithmetic, constant and empty controls lower; an uncertain package imported
-only by main or a node through its imports lowers; the 79-shape table against
-the recorded gc verdicts (§2); the node fact unchanged.
+only by main or a node through its imports lowers; the 101-shape table against
+the recorded gc verdicts (§2; 8 conservative, 0 soundness misses); the node
+fact unchanged.
 
 ## 4. Still owed
 

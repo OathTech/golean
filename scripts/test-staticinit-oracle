@@ -9,6 +9,11 @@
 #   scripts/test-staticinit-oracle            diff recorded vs fresh (exit 1 on drift)
 #   scripts/test-staticinit-oracle --record   overwrite the recorded table
 #
+# The oracle reads each shape's COMPILE ARCHIVE (`go build -o x.a`, then
+# `go tool nm -size`): on a LINKED binary the linker drops a record that
+# only carries deps, so «absent» would not mean «no record» there (the
+# second review's d01_depsonly note); the archive keeps every record.
+#
 # [AGENT] 2026-10-12, lane fix/bug061-refuse-1012 fix round (the review's
 # HIGH: the classifier's expectations must be gc's own, recorded).
 set -uo pipefail

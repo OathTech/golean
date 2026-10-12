@@ -94,6 +94,18 @@ record) into `testdata/staticinit-oracle.tsv`, which the unit test
 asserts against — no folded shape classified WORK, every scheduled shape
 WORK (79/79, no conservative exception). Corpus impact unchanged: the
 witness alone refuses, the twin wire byte-identical.
+SECOND FIX ROUND (same day; the re-audit of `d70a67b0`): three more
+classes — the reader's `_ = cond` statement was counted from the
+ORIGINAL condition where the writer rewrites it (`if false && g()`
+folds), every `make` was an effect (`var _ = make(chan int)` is
+discarded), and type positions were walked as dereferences (`(*T)(p)`).
+The static-`if` rule is now the COARSE one ([AGENT], per the
+coordinator's standing instruction): the `_ = cond` statement is never
+counted, a precision loss on `g() && false` / `g() || true` pinned as
+conservative; `make` of a chan/map with a zero or absent size is
+effect-free; type positions are skipped. Table 101 shapes, 8
+conservative entries with reasons, 0 soundness misses; corpus impact
+still the witness alone, twin byte-identical.
 
 gc schedules a PRUNED set of packages: `MakeTask`
 (`cmd/compile/internal/pkginit/init.go`) emits a `..inittask` record

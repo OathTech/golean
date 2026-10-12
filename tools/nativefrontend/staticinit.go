@@ -58,8 +58,14 @@ package main
 //     uintptr <-> unsafe.Pointer included) and staticAssignInlinedCall
 //     (the DCL/AS2/GOTO single-return shape; side-effecting arguments,
 //     such as the type assertion a devirtualized interface call puts on
-//     its receiver, refuse the fold); tryStaticInit (the blank discard,
-//     isSideEffect's list; tuples);
+//     its receiver, refuse the fold); tryStaticInit (the blank discard:
+//     mayHaveSideEffects claims an effect only for shapes isSideEffect's
+//     switch does not list as effect-free — calls other than conversions
+//     and len/cap/new/real/imag/complex, `make` of a slice or of a
+//     chan/map with a non-zero or non-constant size, receives, index,
+//     slice, dereference and pointer-field expressions, type assertions,
+//     division by a non-constant or zero divisor — and never for a TYPE
+//     position; an unclaimed effect only adds MAYBE-STATIC; tuples);
 //   - noder/writer.go: stmts omits every statement after a TERMINATING
 //     one unless a label follows (terminates: return, goto, builtin
 //     panic, a static-condition `if` with a terminating live branch, a
@@ -68,7 +74,12 @@ package main
 //     declarations;
 //   - noder/reader.go: explicit blocks flatten, constant-false `for`s
 //     become their init, static-condition `if`s become their init +
-//     live branch (one statement if that is one, else a block);
+//     live branch (one statement if that is one, else a block) — the
+//     `_ = cond` statement the reader keeps for a static but
+//     non-literal condition is deliberately NOT counted (the COARSE
+//     rule, second fix round: a shape gc folds is never WORK; `g() &&
+//     false` / `g() || true`, where gc keeps work, classify
+//     MAYBE-STATIC and are pinned as conservative);
 //   - typecheck/expr.go: `[]rune("lit")` is rewritten to a slice
 //     literal (stringtoruneslit) before staticinit sees it;
 //   - sched.go OCONVIFACE unwraps every nested conversion to an
@@ -77,11 +88,15 @@ package main
 //     that stays interface-typed and is not).
 //
 // The first bullet was the 2026-10-12 lane's reading; the rest were
-// added at its fix round (the pre-merge review's BLOCKER-1/2: the body
+// added at its fix rounds (the pre-merge review's BLOCKER-1/2: the body
 // rules and the two folds were missing, so `if true { return 1 };
 // return 2`, `const c = 7; return c`, `[]rune("abc")` and `any(I(T{}))`
-// were WORK where gc folds — four silent wrong orders). THE TEST'S
-// STANDARD IS gc's OWN VERDICT, RECORDED: testdata/staticinit-shapes.go
+// were WORK where gc folds — four silent wrong orders; the second
+// review: the `_ = cond` statement was counted from the ORIGINAL
+// condition where the writer rewrites it, so `if false && g()` was
+// WORK; every `make` was an effect, so `var _ = make(chan int)` was
+// WORK; type positions were walked, so `(*T)(p)` was a dereference —
+// three more). THE TEST'S STANDARD IS gc's OWN VERDICT, RECORDED: testdata/staticinit-shapes.go
 // is the shape table, scripts/test-staticinit-oracle (tools/
 // staticinitoracle) builds each shape with the pinned toolchain and
 // reads its ..inittask record, testdata/staticinit-oracle.tsv is the
@@ -546,19 +561,30 @@ func (l *loader) isStaticLoc(u *sourcePkg, e ast.Expr) bool {
 // mayHaveSideEffects UNDER-approximates staticinit.AnySideEffects for the
 // blank-discard rule (`var _ = e` is dropped iff e has no side effects):
 // an effect is claimed only for shapes isSideEffect's switch does not
-// list as effect-free — calls (other than conversions and the
-// len/cap/new/real/imag/complex builtins), receives, element and slice
+// list as effect-free — calls (other than conversions, the
+// len/cap/new/real/imag/complex builtins, and `make` of a chan or map
+// with no size or a constant zero one), receives, element and slice
 // expressions (OINDEX/OINDEXMAP/OSLICE*: a bounds fault), field reads
 // through a pointer (ODOTPTR) and dereferences (ODEREF: a nil fault),
-// type assertions, and division by a non-constant or zero divisor.
+// type assertions, and division by a non-constant or zero divisor; a
+// TYPE position (`(*T)(p)`, `[]*T{…}`) is no IR node and is skipped.
 // Claiming an effect gc does not see would keep a WORK verdict gc
 // discards — the unsafe direction — so anything unlisted here is
-// effect-free for this rule (a missed effect only adds MAYBE-STATIC).
+// effect-free for this rule (a missed effect only adds MAYBE-STATIC:
+// OMETHVALUE is such a miss, pinned conservative as `_ = St.M`).
 func (l *loader) mayHaveSideEffects(u *sourcePkg, e ast.Expr) bool {
 	found := false
 	ast.Inspect(e, func(n ast.Node) bool {
 		if found {
 			return false
+		}
+		if te, ok := n.(ast.Expr); ok {
+			// A TYPE position — a conversion's `(*T)`, a literal's `[]*T`,
+			// an instantiation's `[int]` — is no IR node at all: never a
+			// dereference or an index (second fix round, the review's HIGH).
+			if tv, ok := u.info.Types[te]; ok && tv.IsType() {
+				return false
+			}
 		}
 		switch x := n.(type) {
 		case *ast.CallExpr:
@@ -570,6 +596,13 @@ func (l *loader) mayHaveSideEffects(u *sourcePkg, e ast.Expr) bool {
 					switch identOf(x.Fun).Name {
 					case "len", "cap", "new", "real", "imag", "complex":
 						return true // isSideEffect: false
+					case "make":
+						// OMAKECHAN/OMAKEMAP with a constant-zero (or absent)
+						// size are effect-free (isSideEffect); OMAKESLICE
+						// never is (second fix round, the review's BLOCKER-2).
+						if l.makeIsEffectFree(u, x) {
+							return true
+						}
 					}
 				}
 			}
@@ -601,6 +634,26 @@ func (l *loader) mayHaveSideEffects(u *sourcePkg, e ast.Expr) bool {
 		return true
 	})
 	return found
+}
+
+// makeIsEffectFree mirrors isSideEffect's OMAKECHAN/OMAKEMAP arm: a chan
+// or map made with no size, or a constant size of zero, has no effect;
+// anything else (a slice, a non-zero or non-constant size) does.
+func (l *loader) makeIsEffectFree(u *sourcePkg, call *ast.CallExpr) bool {
+	tv, ok := u.info.Types[call]
+	if !ok {
+		return false
+	}
+	switch tv.Type.Underlying().(type) {
+	case *types.Chan, *types.Map:
+	default:
+		return false
+	}
+	if len(call.Args) < 2 {
+		return true
+	}
+	size, ok := u.info.Types[call.Args[1]]
+	return ok && size.Value != nil && constant.Sign(size.Value) == 0
 }
 
 // bodyIsSingleReturn reports whether the function body the inliner would
@@ -695,12 +748,19 @@ func (l *loader) readerStmts(info *types.Info, s ast.Stmt) []ast.Stmt {
 		if sb == 0 {
 			return []ast.Stmt{s}
 		}
+		// A static condition that is not a literal after the writer's
+		// in-place rewrite (`*ep = e.X` / `*ep = e.Y`, writer.staticBool)
+		// is kept by the reader as `_ = cond` ahead of the live branch
+		// (reader.ifStmt). That statement is deliberately NOT counted
+		// here — the COARSE rule ([AGENT] 2026-10-12, second fix round,
+		// per the coordinator's standing instruction: prefer the rule
+		// that errs toward MAYBE-STATIC over an exact mirror). Dropping
+		// a statement can only make a body look more like a single
+		// return, so the loss is precision alone: `if g() && false` and
+		// `if g() || true` keep work under gc and classify MAYBE-STATIC
+		// here (pinned both ways in the oracle table: CallGF, CallGT,
+		// CallFOG are work; CallFG, CallTG, CallTFG fold).
 		var parts []ast.Stmt
-		if tv, ok := info.Types[st.Cond]; !ok || tv.Value == nil {
-			// A static but non-literal condition is kept for its side
-			// effects (`_ = cond`) ahead of the live branch.
-			parts = append(parts, &ast.ExprStmt{X: st.Cond})
-		}
 		if st.Init != nil {
 			parts = append(parts, l.readerStmts(info, st.Init)...)
 		}
@@ -748,11 +808,16 @@ func (l *loader) terminates(info *types.Info, s ast.Stmt) bool {
 	return false
 }
 
-// staticBool is writer.staticBool: +1/-1 for a condition the writer
-// decides statically, 0 otherwise. A constant decides; `!x` reads as x
-// (the writer's own rule, reachable only for a non-constant x where it
-// is 0 anyway); `&&` is decided by a false left side or, with a true
-// left side, by the right; `||` dually.
+// staticBool is writer.staticBool's value: +1/-1 for a condition the
+// writer decides statically, 0 otherwise. A constant decides; `!x`
+// returns staticBool(x) UNNEGATED — the writer's own `case syntax.Not`,
+// mirrored as written; it cannot yield a non-zero result in practice,
+// because a non-constant `!x` that is not 0 would need x to be a
+// decided `&&`/`||`, and `!(a && b)` carries a ParenExpr, which is not
+// an Operation in the syntax package; `&&` is decided by a false left
+// side or, with a true left side, by the right; `||` dually. The
+// writer's in-place rewrite of the condition is not mirrored (see the
+// IfStmt arm of readerStmts).
 func (l *loader) staticBool(info *types.Info, e ast.Expr) int {
 	if tv, ok := info.Types[e]; ok {
 		if b, isBool := constantBoolValue(tv); isBool {

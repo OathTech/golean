@@ -114,8 +114,19 @@ func TestBug061InitializerClassifier(t *testing.T) {
 	other := readTestdataFile(t, "staticinit-other.go")
 	oracle := readStaticinitOracle(t)
 	// Shapes gc schedules that the classifier calls MAYBE-STATIC on
-	// purpose: each entry is a precision loss accepted for a reason.
-	conservative := map[string]string{}
+	// purpose: each entry is a precision loss accepted for a reason (the
+	// second fix round of 2026-10-12 pinned them; «zero conservative» at
+	// the first round was a coverage artifact of the smaller table).
+	conservative := map[string]string{
+		"CallGF":  "the COARSE static-if rule never counts the reader's `_ = cond` statement; gc keeps it for `g() && false` (writer.staticBool leaves the rewritten condition non-literal)",
+		"CallGT":  "the COARSE static-if rule, as CallGF: gc keeps `_ = cond` for `g() || true`",
+		"CallBN":  "a bare `return` with a named result is left on the conservative side (the inlined body declares the result variable: not the DCL/AS2/GOTO shape)",
+		"CallNoI": "pragmas are not read: a //go:noinline callee is never inlined, so its single return never folds",
+		"CopyInl": "staticcopy has no case for a source variable initialized by an inlined call (OINLCALL), so a copy of `one()`'s result is work; the same-package copy rule does not look at the source's own initializer",
+		"CallClo": "staticAssignInlinedCall refuses a body whose return closes over a parameter (hasClosure); the body test sees a single return",
+		"SlAny":   "an interface-typed element implicitly converted to another interface type is an OCONVIFACE of an interface value (work); the composite-literal rule classifies the element expression, not the implicit conversion",
+		"_4":      "a blank method value: OMETHVALUE is an effect for the discard rule (isSideEffect's default) that mayHaveSideEffects does not claim, so the blank falls to MAYBE-STATIC",
+	}
 
 	dir := writeDir(t, map[string]string{
 		"main.go":          "package main\n\nimport _ \"shapes\"\n\nfunc main() {}\n",

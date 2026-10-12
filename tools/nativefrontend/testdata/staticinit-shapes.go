@@ -109,6 +109,52 @@ func panicOnly() int   { panic("x") }
 func twoStmts() int    { _ = 1; return 1 }
 func pair() (int, int) { return 1, 2 }
 
+// g is a bool the writer cannot decide (writer.staticBool: 0).
+func g() bool { return true }
+
+func condFalseAndG() int {
+	if false && g() {
+		return 1
+	}
+	return 2
+}
+func condTrueOrG() int {
+	if true || g() {
+		return 1
+	}
+	return 2
+}
+func condTrueAndFalseAndG() int {
+	if true && false && g() {
+		return 1
+	}
+	return 2
+}
+func condGAndFalse() int {
+	if g() && false {
+		return 1
+	}
+	return 2
+}
+func condGOrTrue() int {
+	if g() || true {
+		return 1
+	}
+	return 2
+}
+func condFalseOrG() int {
+	if false || g() {
+		return 1
+	}
+	return 2
+}
+func bareNamed() (x int) { return }
+
+//go:noinline
+func noInline() int { return 1 }
+
+func mkClosure(x int) func() int { return func() int { return x } }
+
 var (
 	C       = 5               // base
 	Str     = "s"             // base
@@ -119,6 +165,7 @@ var (
 	Bytes   = []byte("abc")   // base
 	IG    I = T{}             // base
 	FVar    = one             // base
+	InlV    = one()           // base
 
 	Nest = []T{{x: 1}, {x: 2}}
 	M    = map[int]int{1: 2}
@@ -189,10 +236,32 @@ var (
 	Mk              = make([]int, 3)
 	Len             = len(Sl)
 	UP              = uintptr(unsafe.Pointer(&C))
+	SlAny           = []any{IG}
+
+	CallFG  = condFalseAndG()
+	CallTG  = condTrueOrG()
+	CallTFG = condTrueAndFalseAndG()
+	CallGF  = condGAndFalse()
+	CallGT  = condGOrTrue()
+	CallFOG = condFalseOrG()
+	CallBN  = bareNamed()
+	CallNoI = noInline()
+	CopyInl = InlV
+	CallClo = mkClosure(1)
 
 	_   = Arr[0]
 	_   = two()
 	_ I = T{}
+	_   = St.M
+	_   = func() int { return 1 }
+	_   = func() int { return 1 }()
+	_   = make(chan int)
+	_   = make(map[int]int)
+	_   = make(chan int, 0)
+	_   = make(chan int, 2)
+	_   = make([]int, 0)
+	_   = (*T)(PtrG) == nil
+	_   = len([]*T{PtrG})
 
 	A2, B2 = pair()
 )

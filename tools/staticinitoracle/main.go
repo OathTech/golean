@@ -9,7 +9,11 @@
 // the record exists only because an import bears one), means gc folded
 // every initializer (verdict `none`); a longer record carries the
 // package's own init function (verdict `work`). The bases alone must be
-// `none`, else the oracle refuses to record. Output: a TSV `key<TAB>verdict`
+// `none`, else the oracle refuses to record. The record is read from the
+// COMPILE ARCHIVE: the linker drops a deps-only record from a linked
+// binary, so `go tool nm` on a binary cannot tell «no record» from
+// «record with no function» (the reviewer's d01_depsonly probe); the
+// archive keeps every record the compiler emitted. Output: a TSV `key<TAB>verdict`
 // with a header naming the toolchain, read by staticinit_test.go and
 // diffed by scripts/test-staticinit-oracle (a self-test, not a gate).
 //
@@ -84,7 +88,15 @@ func record(shapesPath, otherPath string) (string, error) {
 			continue
 		}
 		if !isGen || gd.Tok != token.VAR {
-			preamble = append(preamble, string(src[fset.Position(d.Pos()).Offset:fset.Position(d.End()).Offset]))
+			// With its doc comment: a `//go:noinline` pragma is part of
+			// the shape.
+			start := d.Pos()
+			if fd, ok := d.(*ast.FuncDecl); ok && fd.Doc != nil {
+				start = fd.Doc.Pos()
+			} else if isGen && gd.Doc != nil {
+				start = gd.Doc.Pos()
+			}
+			preamble = append(preamble, string(src[fset.Position(start).Offset:fset.Position(d.End()).Offset]))
 			continue
 		}
 		for _, spec := range gd.Specs {
