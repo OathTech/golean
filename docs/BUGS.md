@@ -77,6 +77,24 @@ after which the row flips PASS and the guard retires. Lowerdiag cause
 `staticinit-uncertain-order`; unit tests `staticinit_test.go`. The
 mechanism below is unchanged.
 
+FIX ROUND (2026-10-12, same lane; the pre-merge adversarial review,
+relayed by the [AGENT] coordinator): four WORK arms were shapes gc
+folds — the writer omits statements after a terminating one and writes
+nothing for const/type declarations (`if true { return 1 }; return 2`,
+`const c = 7; return c`, `return 1; panic("x")` fold), `[]rune("lit")`
+is a slice literal after `stringtoruneslit`, and `any(I(T{}))` is static
+after the OCONVIFACE unwrap — each a silent wrong order the guard missed.
+Fixed in `staticinit.go` (the body test now mirrors the writer's
+`terminates`/`declStmt` and the reader's shaping; the conversion arm the
+two folds; `uintptr(unsafe.Pointer(&X))` is a NOP too), and THE TEST'S
+STANDARD IS NOW gc's RECORDED VERDICT: `testdata/staticinit-shapes.go`
+(79 shapes) built shape by shape by `scripts/test-staticinit-oracle`
+(`tools/staticinitoracle`, `go tool nm -size` on the `..inittask`
+record) into `testdata/staticinit-oracle.tsv`, which the unit test
+asserts against — no folded shape classified WORK, every scheduled shape
+WORK (79/79, no conservative exception). Corpus impact unchanged: the
+witness alone refuses, the twin wire byte-identical.
+
 gc schedules a PRUNED set of packages: `MakeTask`
 (`cmd/compile/internal/pkginit/init.go`) emits a `..inittask` record
 only for a package with residual initialization work or an

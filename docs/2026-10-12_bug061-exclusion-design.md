@@ -35,11 +35,41 @@ Two parts, both in `staticinit.go`, the emitted schedule unchanged:
    `StaticAssign` has no case and inlining cannot rescue (map literals,
    arithmetic, indexing, field reads, method values, receives, non-NOP
    conversions, builtins, calls through interfaces or func values, calls whose
-   body is not a single return, foreign-package and string-typed copies), else
-   MAYBE-STATIC. Each WORK arm cites its gc reading; the classifier errs toward
+   body — as gc's writer and reader shape it — is not a single return,
+   foreign-package and string-typed copies), else MAYBE-STATIC. Each WORK arm
+   cites its gc reading (the header of `staticinit.go` lists them: `StaticAssign`,
+   `staticAssignInlinedCall`, `tryStaticInit`; the writer's `terminates`
+   dead-code omission and its silent const/type declarations; the reader's
+   block, loop and static-`if` shaping; `stringtoruneslit`; the OCONVIFACE
+   unwrap of nested interface conversions). The classifier errs toward
    MAYBE-STATIC (an error there adds a refusal, never a silent order). A
    package is UNCERTAIN iff it has no init body, no WORK initializer and at
    least one MAYBE-STATIC one.
+
+   **The standard is gc's own verdict, recorded** (the fix round of 2026-10-12,
+   after the pre-merge review found four WORK arms gc folds — BLOCKER-1: the
+   writer's dead-code and declaration rules, so `if true { return 1 }; return 2`
+   and `const c = 7; return c` fold; BLOCKER-2: `[]rune("lit")` and
+   `any(I(T{}))` fold — and HIGH: the unit table was the classifier's own
+   expectations). `tools/nativefrontend/testdata/staticinit-shapes.go` is the
+   shape table (79 shapes); `scripts/test-staticinit-oracle`
+   (`tools/staticinitoracle`) builds each shape with the pinned toolchain as
+   bases + one spec in GOPATH mode and reads the package's `..inittask` record
+   with `go tool nm -size` (none, or the 8-byte header alone = folded; longer =
+   work); `testdata/staticinit-oracle.tsv` is the record; `staticinit_test.go`
+   asserts no `none` shape is WORK (soundness) and every `work` shape is WORK
+   unless listed conservative with its reason (precision) — at the fix round's
+   tip, 79/79 with an empty conservative list. The self-test is run by hand
+   when the shapes or the oracle change (the charter: not a gate). Shapes the
+   fix round moved WORK → MAYBE-STATIC: `CallC`, `CallCE`, `CallCN`, `CallCA`,
+   `CallDA`, `CallTR`, `CallNI`, `CallCD`, `CallTD`, `CallCTD` (body rules),
+   `Runes`, `RunesN`, `RunesS` (`stringtoruneslit`), `ConvAnyNested` (nested
+   OCONVIFACE), `UP = uintptr(unsafe.Pointer(&C))` (both OCONVNOP — the
+   review's NIT, fixed rather than recorded as a gap; unreachable today while
+   FR-22 refuses user `unsafe.Pointer` initializers); moved MAYBE-STATIC → WORK
+   for precision, gc-measured: `_ = Arr[0]` (an index is not effect-free for
+   the blank discard) and `I(T{}).M()` (devirtualized through a type assertion
+   the inlined-call fold refuses to move).
 2. **Enumerate** every pruning of the uncertain packages (cap 12 → 4096 walks;
    beyond it refuse by name), recompute the node set and the two-pass walk,
    and REFUSE iff some pruning orders the packages WITH work differently from
@@ -69,12 +99,13 @@ after:
 | blunt «any uncertain package» (measured with a throwaway patched copy) | `multipkg/errors-new` (`liberr`), `multipkg/wire-codec` (`wirepb`), the witness, the raft twin (`quorum`, `raft`, `tracker`) | 33 PASSing rows (3 + 29 + 1) plus the twin pin — rejected |
 
 No PASS → non-PASS flip; 3939 = 3706 PASS / 233 FAIL unchanged (the branch's
-figure after the runtime lane's three born rows). Unit tests
-(`staticinit_test.go`): the witness refuses with the named text; init-body,
-map-literal, multi-statement-call, arithmetic, constant and empty controls
-lower; an uncertain package imported only by main or a node through its
-imports lowers; 52 classifier shapes pinned arm by arm plus the blank and
-tuple rules; the node fact unchanged.
+figure after the runtime lane's three born rows). Re-measured identically at
+the fix round's tip (the same 28 roots + the twin: the witness alone refuses,
+the twin wire byte-identical). Unit tests (`staticinit_test.go`): the witness
+refuses with the named text; init-body, map-literal, multi-statement-call,
+arithmetic, constant and empty controls lower; an uncertain package imported
+only by main or a node through its imports lowers; the 79-shape table against
+the recorded gc verdicts (§2); the node fact unchanged.
 
 ## 4. Still owed
 

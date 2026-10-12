@@ -8,6 +8,9 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -94,116 +97,30 @@ func TestBug061InsensitiveUncertainPackagesLower(t *testing.T) {
 	})
 }
 
-// The classifier, shape by shape. Every WORK expectation here is a
-// claim that gc's StaticAssign has no static path for the shape; every
-// MAYBE-STATIC one that it may.
+// The classifier, shape by shape, against gc's RECORDED verdicts
+// (testdata/staticinit-oracle.tsv, written by scripts/test-staticinit-oracle
+// over testdata/staticinit-shapes.go — one package per shape, `go build`,
+// the ..inittask record read by `go tool nm -size`). Two assertions:
+//
+//   - SOUNDNESS: a shape gc folds (`none`) is never classified WORK — the
+//     class of error the fix round of 2026-10-12 closed (the review's
+//     BLOCKER-1/2: gc's dead-code and declaration rules, []rune literals,
+//     nested interface conversions);
+//   - PRECISION: a shape gc schedules (`work`) is classified WORK unless it
+//     is listed below as deliberately conservative, with its reason.
 func TestBug061InitializerClassifier(t *testing.T) {
-	shapes := `package shapes
+	withStdlibRoots(t) // errors.New lowers through the pinned stdlib source
+	shapes := readTestdataFile(t, "staticinit-shapes.go")
+	other := readTestdataFile(t, "staticinit-other.go")
+	oracle := readStaticinitOracle(t)
+	// Shapes gc schedules that the classifier calls MAYBE-STATIC on
+	// purpose: each entry is a precision loss accepted for a reason.
+	conservative := map[string]string{}
 
-import (
-	"errors"
-	"other"
-)
-
-type T struct {
-	x int
-	p *int
-}
-type T2 struct{ m map[int]int }
-type I interface{ M() int }
-type MyInt int
-
-func (T) M() int { return 1 }
-
-func one() int   { return 1 }
-func two() int   { x := 1; return x }
-func ptr() *T    { return &T{} }
-func blk() int   { { return 3 } }
-func cond() int  { if true { return 1 }; return 2 }
-func pair() (int, int) { return 1, 2 }
-
-var (
-	C    = 5
-	Str  = "s"
-	Arr  = [3]int{1, 2, 3}
-	Sl   = []string{"a"}
-	St   = T{x: 1}
-	Nest = []T{{x: 1}, {x: 2}}
-	M    = map[int]int{1: 2}
-	PM   = &map[int]int{}
-	StM  = T2{m: map[int]int{}}
-	PtrG = &T{}
-
-	Addr  = &C
-	AddrF = &St.x
-	AddrI = &Arr[1]
-	AddrP = &PtrG.x
-	Copy  = Arr
-	SCopy = Str
-	FCopy = other.V
-	FV    = one
-	FFV   = other.F
-	Lit   = func() int { return 1 }
-	ME    = T.M
-	MV    = St.M
-	Fld   = St.x
-	Idx   = Arr[0]
-	Bin   = C + Arr[0]
-	Neg   = -Arr[0]
-
-	Call1  = one()
-	Call2  = two()
-	CallP  = ptr()
-	CallB  = blk()
-	CallC  = cond()
-	CallE  = errors.New("x")
-	IG     I = T{}
-	CallI  = IG.M()
-	CallIC = I(T{}).M()
-	FVar   = one
-	CallFV = FVar()
-
-	Conv    = MyInt(Arr[0])
-	ConvC   = MyInt(C)
-	ConvI   I = St
-	ConvIW  = I(IG)
-	ConvNil = (*T)(nil)
-	Bytes   = []byte("abc")
-	BytesV  = []byte(Str)
-	Runes   = []rune("abc")
-	S2      = string(Bytes)
-	F2I     = float64(Arr[0])
-	New     = new(int)
-	Mk      = make([]int, 3)
-	Len     = len(Sl)
-
-	_ = Arr[0]
-	_ = two()
-	_ I = T{}
-)
-`
-	want := map[string]initializerKind{
-		"C": initConstant, "Str": initConstant,
-		"Arr": initMaybeStatic, "Sl": initMaybeStatic, "St": initMaybeStatic, "Nest": initMaybeStatic,
-		"M": initWork, "PM": initWork, "StM": initWork, "PtrG": initMaybeStatic,
-		"Addr": initMaybeStatic, "AddrF": initMaybeStatic, "AddrI": initMaybeStatic, "AddrP": initWork,
-		"Copy": initMaybeStatic, "SCopy": initWork, "FCopy": initWork,
-		"FV": initMaybeStatic, "FFV": initMaybeStatic, "Lit": initMaybeStatic, "ME": initMaybeStatic,
-		"MV": initWork, "Fld": initWork, "Idx": initWork, "Bin": initWork, "Neg": initWork,
-		"Call1": initMaybeStatic, "Call2": initWork, "CallP": initMaybeStatic, "CallB": initMaybeStatic,
-		"CallC": initWork, "CallE": initMaybeStatic, "IG": initMaybeStatic, "CallI": initWork,
-		"CallIC": initMaybeStatic, "FVar": initMaybeStatic, "CallFV": initWork,
-		"Conv": initWork, "ConvC": initMaybeStatic, "ConvI": initMaybeStatic, "ConvIW": initWork,
-		"ConvNil": initMaybeStatic, "Bytes": initMaybeStatic, "BytesV": initWork, "Runes": initWork,
-		"S2": initWork, "F2I": initWork, "New": initWork, "Mk": initWork, "Len": initWork,
-	}
-	wantBlank := []initializerKind{initMaybeStatic, initWork, initMaybeStatic}
-
-	withStdlibRoots(t) // the errors.New shape needs the pinned stdlib source
 	dir := writeDir(t, map[string]string{
 		"main.go":          "package main\n\nimport _ \"shapes\"\n\nfunc main() {}\n",
 		"shapes/shapes.go": shapes,
-		"other/other.go":   "package other\n\nvar V = 1\n\nfunc F() int { return 1 }\n",
+		"other/other.go":   other,
 	})
 	fset := token.NewFileSet()
 	files, err := selectPackageFiles(fset, dir)
@@ -219,7 +136,7 @@ var (
 		t.Fatal("shapes unit not loaded")
 	}
 	seen := map[string]bool{}
-	var blanks []initializerKind
+	blanks := 0
 	for _, f := range u.files {
 		for _, d := range f.Decls {
 			gd, ok := d.(*ast.GenDecl)
@@ -228,40 +145,63 @@ var (
 			}
 			for _, s := range gd.Specs {
 				vs := s.(*ast.ValueSpec)
-				for i, v := range vs.Values {
-					name := vs.Names[i].Name
-					kind := l.initializerKind(u, v, name == "_")
-					if name == "_" {
-						blanks = append(blanks, kind)
-						continue
+				names := []string{}
+				for _, n := range vs.Names {
+					if n.Name == "_" {
+						blanks++
+						names = append(names, "_"+strconv.Itoa(blanks))
+					} else {
+						names = append(names, n.Name)
 					}
-					seen[name] = true
-					if w, ok := want[name]; !ok {
-						t.Errorf("%s: no expectation (got %v)", name, kind)
-					} else if kind != w {
-						t.Errorf("%s = %s: got %v, want %v", name, exprSourceText(fset, v), kind, w)
+				}
+				key := strings.Join(names, ",")
+				var kind initializerKind
+				var text string
+				if len(vs.Names) != len(vs.Values) {
+					kind = initWork // the tuple rule (sourceInitWork): certain work
+					text = key + " = " + exprSourceText(fset, vs.Values[0])
+				} else {
+					kind = l.initializerKind(u, vs.Values[0], vs.Names[0].Name == "_")
+					text = "var " + vs.Names[0].Name + " = " + exprSourceText(fset, vs.Values[0])
+				}
+				seen[key] = true
+				verdict, recorded := oracle[key]
+				if !recorded {
+					t.Errorf("%s: not in the recorded oracle — run scripts/test-staticinit-oracle --record", key)
+					continue
+				}
+				switch verdict {
+				case "none":
+					if kind == initWork {
+						t.Errorf("SOUNDNESS %s (%s): gc folds it, the classifier says WORK — a silent wrong order (BUG-061's class)", key, text)
 					}
+				case "work":
+					if kind != initWork {
+						if why, ok := conservative[key]; ok {
+							t.Logf("conservative %s (%s): %v where gc has work — %s", key, text, kind, why)
+						} else {
+							t.Errorf("PRECISION %s (%s): gc has work, the classifier says %v (list it as conservative with its reason if intended)", key, text, kind)
+						}
+					}
+				default:
+					t.Errorf("%s: unrecognized oracle verdict %q", key, verdict)
 				}
 			}
 		}
 	}
-	for name := range want {
-		if !seen[name] {
-			t.Errorf("%s: expectation never exercised", name)
+	for key := range oracle {
+		if !seen[key] {
+			t.Errorf("oracle row %s has no shape in the loaded package", key)
 		}
 	}
-	if len(blanks) != len(wantBlank) {
-		t.Fatalf("blank initializers: got %d, want %d", len(blanks), len(wantBlank))
-	}
-	for i := range blanks {
-		if blanks[i] != wantBlank[i] {
-			t.Errorf("blank initializer %d: got %v, want %v", i, blanks[i], wantBlank[i])
+	t.Logf("%d shapes checked against the recorded gc verdicts (%d conservative)", len(seen), len(conservative))
+	for key := range conservative {
+		if !seen[key] {
+			t.Errorf("conservative entry %s names no shape", key)
 		}
 	}
-	// The package-level verdict: `pair()` into two names is certain work
-	// on its own (OAS2FUNC), so a package holding only that is CERTAIN.
-	certain, maybe := l.sourceInitWork(u)
-	if !certain {
+	// The package-level verdict: a tuple spec makes the package CERTAIN.
+	if certain, maybe := l.sourceInitWork(u); !certain {
 		t.Errorf("shapes has WORK initializers: certain must be true (maybe sites: %d)", len(maybe))
 	}
 	tupleDir := writeDir(t, map[string]string{
@@ -280,6 +220,35 @@ var (
 	if certain, maybe := l2.sourceInitWork(l2.locals["tup"]); !certain || len(maybe) != 0 {
 		t.Errorf("`var A, B = pair()` must be certain work: certain=%v maybe=%d", certain, len(maybe))
 	}
+}
+
+func readTestdataFile(t *testing.T, name string) string {
+	t.Helper()
+	b, err := os.ReadFile(filepath.Join("testdata", name))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(b)
+}
+
+// readStaticinitOracle reads the recorded gc verdicts: key -> none|work.
+func readStaticinitOracle(t *testing.T) map[string]string {
+	t.Helper()
+	out := map[string]string{}
+	for _, line := range strings.Split(readTestdataFile(t, "staticinit-oracle.tsv"), "\n") {
+		if line == "" || strings.HasPrefix(line, "#") || line == "key\tverdict" {
+			continue
+		}
+		cols := strings.Split(line, "\t")
+		if len(cols) != 2 {
+			t.Fatalf("staticinit-oracle.tsv: malformed line %q", line)
+		}
+		out[cols[0]] = cols[1]
+	}
+	if len(out) == 0 {
+		t.Fatal("staticinit-oracle.tsv: no rows — run scripts/test-staticinit-oracle --record")
+	}
+	return out
 }
 
 func (k initializerKind) String() string {

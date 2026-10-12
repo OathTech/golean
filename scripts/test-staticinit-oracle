@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# test-staticinit-oracle — a SELF-TEST (not a gate; run by hand when the
+# shapes or the oracle change): regenerate gc's verdict per shape of the
+# BUG-061 classifier table (tools/nativefrontend/testdata/staticinit-shapes.go)
+# with tools/staticinitoracle and diff it against the recorded
+# tools/nativefrontend/testdata/staticinit-oracle.tsv, which
+# staticinit_test.go reads as the classifier's expectations.
+#
+#   scripts/test-staticinit-oracle            diff recorded vs fresh (exit 1 on drift)
+#   scripts/test-staticinit-oracle --record   overwrite the recorded table
+#
+# [AGENT] 2026-10-12, lane fix/bug061-refuse-1012 fix round (the review's
+# HIGH: the classifier's expectations must be gc's own, recorded).
+set -uo pipefail
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+SHAPES=tools/nativefrontend/testdata/staticinit-shapes.go
+OTHER=tools/nativefrontend/testdata/staticinit-other.go
+TSV=tools/nativefrontend/testdata/staticinit-oracle.tsv
+tmp="$(mktemp -d "${TMPDIR:-/tmp}/staticinit-oracle.XXXXXX")" || exit 2
+trap 'rm -rf "$tmp"' EXIT
+if ! GO111MODULE=off go run ./tools/staticinitoracle --shapes "$SHAPES" --other "$OTHER" --out "$tmp/fresh.tsv"; then
+  echo "test-staticinit-oracle: FAIL — the oracle could not record (fail closed)" >&2
+  exit 2
+fi
+if [ "${1:-}" = "--record" ]; then
+  cp "$tmp/fresh.tsv" "$TSV"
+  echo "test-staticinit-oracle: recorded $TSV ($(grep -vc '^#\|^key' "$TSV") shapes)"
+  exit 0
+fi
+[ -f "$TSV" ] || { echo "test-staticinit-oracle: FAIL — no recorded table at $TSV (run with --record)" >&2; exit 1; }
+if diff -u "$TSV" "$tmp/fresh.tsv"; then
+  echo "test-staticinit-oracle: ok — recorded verdicts = fresh gc verdicts ($(grep -vc '^#\|^key' "$TSV") shapes)"
+else
+  echo "test-staticinit-oracle: FAIL — the recorded table differs from gc's fresh verdicts (above); re-record with --record and re-run go test ./tools/nativefrontend" >&2
+  exit 1
+fi

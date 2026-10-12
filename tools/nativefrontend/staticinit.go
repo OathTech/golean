@@ -48,15 +48,47 @@ package main
 //     before. Only the sensitive shape refuses.
 //
 // THE DIRECTION, honestly. The classifier errs toward MAYBE-STATIC:
-// WORK is claimed only where gc's code is read to have no static path
-// (deps/go/src/cmd/compile/internal/staticinit/sched.go, StaticAssign +
-// staticAssignInlinedCall; ir.StaticValue follows PAUTO names only, so
-// no package-level receiver is devirtualized; the reader flattens
-// explicit blocks and drops constant-false loops before the inliner
-// sees a body). Over-classifying as MAYBE-STATIC can only add a refusal
-// (never a silent wrong order); under-classifying would reintroduce the
-// bug, so every WORK arm cites its gc case. The enumeration is exact
-// for the classification it is given.
+// WORK is claimed only where gc's code is read to have no static path.
+// Over-classifying as MAYBE-STATIC can only add a refusal (never a
+// silent wrong order); under-classifying would reintroduce the bug, so
+// every WORK arm cites its gc case, all at the go1.26.5 pin
+// (deps/go/src/cmd/compile/internal/...):
+//
+//   - staticinit/sched.go StaticAssign (the case list; OCONVNOP stripped,
+//     uintptr <-> unsafe.Pointer included) and staticAssignInlinedCall
+//     (the DCL/AS2/GOTO single-return shape; side-effecting arguments,
+//     such as the type assertion a devirtualized interface call puts on
+//     its receiver, refuse the fold); tryStaticInit (the blank discard,
+//     isSideEffect's list; tuples);
+//   - noder/writer.go: stmts omits every statement after a TERMINATING
+//     one unless a label follows (terminates: return, goto, builtin
+//     panic, a static-condition `if` with a terminating live branch, a
+//     block ending in one; staticBool: constants and short-circuit
+//     `&&`/`||`); declStmt writes nothing for const and type
+//     declarations;
+//   - noder/reader.go: explicit blocks flatten, constant-false `for`s
+//     become their init, static-condition `if`s become their init +
+//     live branch (one statement if that is one, else a block);
+//   - typecheck/expr.go: `[]rune("lit")` is rewritten to a slice
+//     literal (stringtoruneslit) before staticinit sees it;
+//   - sched.go OCONVIFACE unwraps every nested conversion to an
+//     interface before testing the operand (`any(I(T{}))` is static; a
+//     conversion OF nil to an interface, `error(nil)`, is an OCONVNOP
+//     that stays interface-typed and is not).
+//
+// The first bullet was the 2026-10-12 lane's reading; the rest were
+// added at its fix round (the pre-merge review's BLOCKER-1/2: the body
+// rules and the two folds were missing, so `if true { return 1 };
+// return 2`, `const c = 7; return c`, `[]rune("abc")` and `any(I(T{}))`
+// were WORK where gc folds — four silent wrong orders). THE TEST'S
+// STANDARD IS gc's OWN VERDICT, RECORDED: testdata/staticinit-shapes.go
+// is the shape table, scripts/test-staticinit-oracle (tools/
+// staticinitoracle) builds each shape with the pinned toolchain and
+// reads its ..inittask record, testdata/staticinit-oracle.tsv is the
+// record, and staticinit_test.go asserts that no `none` shape is WORK
+// (soundness) and every `work` shape is WORK unless listed conservative
+// with a reason (precision). The enumeration is exact for the
+// classification it is given.
 
 import (
 	"fmt"
@@ -352,14 +384,14 @@ func (l *loader) callInitKind(u *sourcePkg, call *ast.CallExpr, tv types.TypeAnd
 			switch sel.Kind() {
 			case types.MethodVal:
 				if _, isIface := sel.Recv().Underlying().(*types.Interface); isIface {
-					// OCALLINTER. ir.StaticValue follows PAUTO names only, so
-					// a package-level receiver is never devirtualized — but a
-					// receiver that is itself a conversion to the interface
-					// (`I(T{}).M()`) is (devirtualize.StaticCall sees the
-					// OCONVIFACE), and the devirtualized call may inline.
-					if l.isConversionToInterface(u, ast.Unparen(f.X)) {
-						return initMaybeStatic
-					}
+					// OCALLINTER: work. A package-level receiver is never
+					// devirtualized (ir.StaticValue follows PAUTO names only);
+					// a receiver that is a conversion of a concrete value
+					// (`I(T{}).M()`) is devirtualized through a type assertion
+					// on the receiver (devirtualize.StaticCall), and that
+					// assertion is a side-effecting argument
+					// staticAssignInlinedCall refuses to move. Measured: the
+					// oracle's CallI and CallIC rows are both `work`.
 					return initWork
 				}
 				fn, _ = sel.Obj().(*types.Func)
@@ -402,26 +434,51 @@ func (l *loader) callInitKind(u *sourcePkg, call *ast.CallExpr, tv types.TypeAnd
 }
 
 // conversionInitKind classifies T(x) for a type T. StaticAssign strips
-// OCONVNOP, folds OSTR2BYTES of a literal and OCONVIFACE of a static
-// operand, and has no case for the value-changing conversions.
+// OCONVNOP (including uintptr <-> unsafe.Pointer), folds OSTR2BYTES of a
+// literal, sees OSTR2RUNES of a literal already rewritten into a slice
+// literal by the typechecker (typecheck/expr.go stringtoruneslit), folds
+// OCONVIFACE of a static operand after unwrapping every nested interface
+// conversion (sched.go OCONVIFACE), and has no case for the
+// value-changing conversions. The fix round of 2026-10-12 added the
+// []rune literal and the nested-interface rules (the review's BLOCKER-2).
 func (l *loader) conversionInitKind(u *sourcePkg, call *ast.CallExpr, to types.Type) initializerKind {
 	if len(call.Args) != 1 {
 		return initMaybeStatic // not a shape go/types accepts; stay conservative
 	}
-	arg := call.Args[0]
+	arg := ast.Unparen(call.Args[0])
 	argTV, ok := u.info.Types[arg]
 	if !ok {
 		return initMaybeStatic
 	}
-	if _, isNil := u.info.Uses[identOf(arg)].(*types.Nil); isNil || (argTV.IsNil()) {
-		return initMaybeStatic // (*T)(nil), I(nil): ONIL
+	if argTV.IsNil() {
+		return initMaybeStatic // (*T)(nil), I(nil), any(nil): ONIL after the OCONVNOP strip
 	}
 	if _, toIface := to.Underlying().(*types.Interface); toIface {
-		// OCONVIFACE: an interface-typed operand is static only when nil
-		// (`return val.Op() == ir.ONIL`); a concrete operand is static iff
-		// the operand is.
+		// OCONVIFACE: unwrap the nested conversions to interface types first
+		// (`any(I(T{}))` is static); the innermost operand decides. A
+		// conversion OF nil to an interface (`error(nil)`) is an OCONVNOP
+		// that stays interface-typed and non-ONIL: work, as measured.
+		for {
+			inner, ok := arg.(*ast.CallExpr)
+			if !ok || len(inner.Args) != 1 {
+				break
+			}
+			ft, ok := u.info.Types[inner.Fun]
+			if !ok || !ft.IsType() {
+				break
+			}
+			if _, innerIface := ft.Type.Underlying().(*types.Interface); !innerIface {
+				break
+			}
+			at, ok := u.info.Types[ast.Unparen(inner.Args[0])]
+			if !ok || at.IsNil() {
+				break
+			}
+			arg = ast.Unparen(inner.Args[0])
+			argTV = at
+		}
 		if _, fromIface := argTV.Type.Underlying().(*types.Interface); fromIface {
-			return initWork
+			return initWork // `return val.Op() == ir.ONIL`: an interface value is not static
 		}
 		if l.exprInitKind(u, arg) == initWork {
 			return initWork
@@ -431,11 +488,11 @@ func (l *loader) conversionInitKind(u *sourcePkg, call *ast.CallExpr, to types.T
 	from := argTV.Type.Underlying()
 	toU := to.Underlying()
 	if isStringType(from) {
-		if argTV.Value != nil && isByteSlice(toU) {
-			return initMaybeStatic // OSTR2BYTES of a literal
+		if argTV.Value != nil && (isByteSlice(toU) || isRuneSlice(toU)) {
+			return initMaybeStatic // OSTR2BYTES of a literal; OSTR2RUNES of a literal is a slice literal
 		}
 		if isByteSlice(toU) || isRuneSlice(toU) {
-			return initWork // OSTR2BYTES of a variable / OSTR2RUNES: no static path
+			return initWork // OSTR2BYTES/OSTR2RUNES of a variable: no static path
 		}
 	}
 	if isStringType(toU) && (isByteSlice(from) || isRuneSlice(from) || isIntegerType(from)) {
@@ -443,6 +500,9 @@ func (l *loader) conversionInitKind(u *sourcePkg, call *ast.CallExpr, to types.T
 	}
 	if fb, ok := from.(*types.Basic); ok {
 		if tb, ok := toU.(*types.Basic); ok && fb.Kind() != tb.Kind() {
+			if isPtrSized(fb) && isPtrSized(tb) {
+				return l.exprInitKind(u, arg) // uintptr <-> unsafe.Pointer: OCONVNOP
+			}
 			return initWork // OCONV between distinct basic kinds: no case
 		}
 	}
@@ -451,27 +511,8 @@ func (l *loader) conversionInitKind(u *sourcePkg, call *ast.CallExpr, to types.T
 	return l.exprInitKind(u, arg)
 }
 
-// isConversionToInterface reports whether e is `I(x)` for an interface
-// type I and a non-interface x — the receiver shape devirtualize.StaticCall
-// rewrites.
-func (l *loader) isConversionToInterface(u *sourcePkg, e ast.Expr) bool {
-	call, ok := e.(*ast.CallExpr)
-	if !ok || len(call.Args) != 1 {
-		return false
-	}
-	funTV, ok := u.info.Types[call.Fun]
-	if !ok || !funTV.IsType() {
-		return false
-	}
-	if _, toIface := funTV.Type.Underlying().(*types.Interface); !toIface {
-		return false
-	}
-	argTV, ok := u.info.Types[call.Args[0]]
-	if !ok {
-		return false
-	}
-	_, fromIface := argTV.Type.Underlying().(*types.Interface)
-	return !fromIface
+func isPtrSized(b *types.Basic) bool {
+	return b.Kind() == types.Uintptr || b.Kind() == types.UnsafePointer
 }
 
 // isStaticLoc mirrors staticinit.StaticLoc: a package-level name, a
@@ -502,10 +543,17 @@ func (l *loader) isStaticLoc(u *sourcePkg, e ast.Expr) bool {
 	return false
 }
 
-// mayHaveSideEffects is the conservative twin of staticinit.AnySideEffects
-// for the blank-discard rule: a call that is not a conversion or a
-// side-effect-free builtin, or a receive, may have effects. Everything
-// else in isSideEffect's no-effect list is syntax-only.
+// mayHaveSideEffects UNDER-approximates staticinit.AnySideEffects for the
+// blank-discard rule (`var _ = e` is dropped iff e has no side effects):
+// an effect is claimed only for shapes isSideEffect's switch does not
+// list as effect-free — calls (other than conversions and the
+// len/cap/new/real/imag/complex builtins), receives, element and slice
+// expressions (OINDEX/OINDEXMAP/OSLICE*: a bounds fault), field reads
+// through a pointer (ODOTPTR) and dereferences (ODEREF: a nil fault),
+// type assertions, and division by a non-constant or zero divisor.
+// Claiming an effect gc does not see would keep a WORK verdict gc
+// discards — the unsafe direction — so anything unlisted here is
+// effect-free for this rule (a missed effect only adds MAYBE-STATIC).
 func (l *loader) mayHaveSideEffects(u *sourcePkg, e ast.Expr) bool {
 	found := false
 	ast.Inspect(e, func(n ast.Node) bool {
@@ -532,6 +580,21 @@ func (l *loader) mayHaveSideEffects(u *sourcePkg, e ast.Expr) bool {
 				found = true
 				return false
 			}
+		case *ast.BinaryExpr:
+			if x.Op == token.QUO || x.Op == token.REM {
+				if tv, ok := u.info.Types[x.Y]; !ok || tv.Value == nil || constant.Sign(tv.Value) == 0 {
+					found = true
+					return false
+				}
+			}
+		case *ast.IndexExpr, *ast.SliceExpr, *ast.StarExpr, *ast.TypeAssertExpr:
+			found = true
+			return false
+		case *ast.SelectorExpr:
+			if sel, ok := u.info.Selections[x]; ok && sel.Kind() == types.FieldVal && sel.Indirect() {
+				found = true
+				return false
+			}
 		case *ast.FuncLit:
 			return false // a body is not evaluated
 		}
@@ -542,88 +605,191 @@ func (l *loader) mayHaveSideEffects(u *sourcePkg, e ast.Expr) bool {
 
 // bodyIsSingleReturn reports whether the function body the inliner would
 // see is exactly one `return <one value>` — staticAssignInlinedCall's
-// DCL/AS2/GOTO shape. The reader flattens explicit blocks, drops empty
-// statements and constant-false `for`s (keeping their init), and folds
-// a constant-condition `if` into its live branch; the count here does
-// the same, erring toward "single" (toward MAYBE-STATIC).
+// DCL/AS2/GOTO shape. The body is shaped as gc's writer and reader shape
+// it (deps/go/src/cmd/compile/internal/noder, go1.26.5):
+//
+//   - writer.stmts omits every statement after a TERMINATING one unless a
+//     label follows (terminates: return, goto, a builtin panic call, an
+//     `if` whose static condition selects a terminating branch, a block
+//     whose last non-empty statement terminates);
+//   - writer.declStmt writes NOTHING for const and type declarations;
+//   - reader.stmt1 flattens explicit blocks, drops empty statements,
+//     turns a constant-false `for` into its init, and an `if` with a
+//     static condition (writer.staticBool: a constant, or a short-circuit
+//     `&&`/`||` decided by its left side) into its init + live branch —
+//     one statement if that is one (reader.block), else a block node.
+//
+// The fix round of 2026-10-12 added the first two rules (the review's
+// BLOCKER-1: `if true { return 1 }; return 2`, `const c = 7; return c`,
+// `return 1; panic("x")` are folded by gc). Any shape not mirrored here
+// errs toward WORK, so each rule above is the reading of the cited code,
+// and the oracle (scripts/test-staticinit-oracle) checks the whole table
+// against gc.
 func (l *loader) bodyIsSingleReturn(decl *ast.FuncDecl) bool {
-	var live []ast.Stmt
-	var flatten func(list []ast.Stmt)
-	flatten = func(list []ast.Stmt) {
-		for _, s := range list {
-			switch st := s.(type) {
-			case *ast.EmptyStmt:
-			case *ast.BlockStmt:
-				flatten(st.List)
-			case *ast.ForStmt:
-				if st.Cond != nil && l.constBool(decl, st.Cond) == constFalse {
-					if st.Init != nil {
-						flatten([]ast.Stmt{st.Init})
-					}
-					continue
-				}
-				live = append(live, st)
-			case *ast.IfStmt:
-				switch l.constBool(decl, st.Cond) {
-				case constTrue:
-					if st.Init != nil {
-						flatten([]ast.Stmt{st.Init})
-					}
-					flatten(st.Body.List)
-				case constFalse:
-					if st.Init != nil {
-						flatten([]ast.Stmt{st.Init})
-					}
-					if st.Else != nil {
-						flatten([]ast.Stmt{st.Else})
-					}
-				default:
-					live = append(live, st)
-				}
-			default:
-				live = append(live, st)
-			}
-		}
+	info := l.infoOfDecl(decl)
+	if info == nil {
+		return true // no type information: stay on the conservative side
 	}
-	flatten(decl.Body.List)
+	live := l.liveStmts(info, decl.Body.List)
 	if len(live) != 1 {
 		return false
 	}
 	ret, ok := live[0].(*ast.ReturnStmt)
-	if !ok {
-		return false
-	}
 	// One result is the shape; a bare `return` with named results is
 	// left to the conservative side.
-	return len(ret.Results) <= 1
+	return ok && len(ret.Results) <= 1
 }
 
-type constBoolean int
-
-const (
-	constUnknown constBoolean = iota
-	constTrue
-	constFalse
-)
-
-// constBool reads a condition's constant value from whichever unit
-// declares the function.
-func (l *loader) constBool(decl *ast.FuncDecl, cond ast.Expr) constBoolean {
-	info := l.infoOfDecl(decl)
-	if info == nil {
-		return constUnknown
-	}
-	tv, ok := info.Types[cond]
-	if !ok || tv.Value == nil {
-		return constUnknown
-	}
-	if b, ok := constantBoolValue(tv); ok {
-		if b {
-			return constTrue
+// liveStmts is writer.stmts + the reader's shaping over one statement
+// list: statements after a terminating one are omitted unless a label
+// follows them (issue #65593's rule), every kept statement is shaped by
+// readerStmts.
+func (l *loader) liveStmts(info *types.Info, list []ast.Stmt) []ast.Stmt {
+	var out []ast.Stmt
+	lastLabel := -1
+	for i, s := range list {
+		if _, ok := s.(*ast.LabeledStmt); ok {
+			lastLabel = i
 		}
-		return constFalse
 	}
-	return constUnknown
+	dead := false
+	for i, s := range list {
+		if dead && i > lastLabel {
+			if _, ok := s.(*ast.LabeledStmt); !ok {
+				continue
+			}
+		}
+		out = append(out, l.readerStmts(info, s)...)
+		dead = l.terminates(info, s)
+	}
+	return out
+}
+
+// readerStmts is one statement as the reader rebuilds it (reader.stmt1,
+// forStmt, ifStmt): zero, one or several statements. A synthesized
+// BlockStmt stands for an OBLOCK node — one statement that is not a
+// return.
+func (l *loader) readerStmts(info *types.Info, s ast.Stmt) []ast.Stmt {
+	switch st := s.(type) {
+	case *ast.EmptyStmt:
+		return nil
+	case *ast.DeclStmt:
+		if gd, ok := st.Decl.(*ast.GenDecl); ok && (gd.Tok == token.CONST || gd.Tok == token.TYPE) {
+			return nil // writer.declStmt: nothing written
+		}
+		return []ast.Stmt{s} // a var declaration is an assignment
+	case *ast.BlockStmt:
+		return l.liveStmts(info, st.List) // stmtBlock: appended in place
+	case *ast.LabeledStmt:
+		return append([]ast.Stmt{s}, l.readerStmts(info, st.Stmt)...)
+	case *ast.ForStmt:
+		if st.Cond != nil && l.staticBool(info, st.Cond) < 0 {
+			if st.Init != nil {
+				return l.readerStmts(info, st.Init) // "for init; false; post {}" is init
+			}
+			return nil
+		}
+		return []ast.Stmt{s}
+	case *ast.IfStmt:
+		sb := l.staticBool(info, st.Cond)
+		if sb == 0 {
+			return []ast.Stmt{s}
+		}
+		var parts []ast.Stmt
+		if tv, ok := info.Types[st.Cond]; !ok || tv.Value == nil {
+			// A static but non-literal condition is kept for its side
+			// effects (`_ = cond`) ahead of the live branch.
+			parts = append(parts, &ast.ExprStmt{X: st.Cond})
+		}
+		if st.Init != nil {
+			parts = append(parts, l.readerStmts(info, st.Init)...)
+		}
+		if sb > 0 {
+			parts = append(parts, l.liveStmts(info, st.Body.List)...)
+		} else if st.Else != nil {
+			parts = append(parts, l.readerStmts(info, st.Else)...)
+		}
+		switch len(parts) {
+		case 0:
+			return nil // reader.block of nothing: nil, skipped
+		case 1:
+			return parts // reader.block unwraps a singleton
+		}
+		return []ast.Stmt{&ast.BlockStmt{List: parts}} // an OBLOCK node
+	}
+	return []ast.Stmt{s}
+}
+
+// terminates is writer.terminates: whether s terminates normal control
+// flow, so that the statements after it are dead.
+func (l *loader) terminates(info *types.Info, s ast.Stmt) bool {
+	switch st := s.(type) {
+	case *ast.BranchStmt:
+		return st.Tok == token.GOTO
+	case *ast.ReturnStmt:
+		return true
+	case *ast.ExprStmt:
+		if call, ok := ast.Unparen(st.X).(*ast.CallExpr); ok {
+			if id, ok := ast.Unparen(call.Fun).(*ast.Ident); ok && id.Name == "panic" {
+				_, isBuiltin := info.Uses[id].(*types.Builtin)
+				return isBuiltin
+			}
+		}
+	case *ast.IfStmt:
+		cond := l.staticBool(info, st.Cond)
+		return (cond < 0 || l.terminates(info, st.Body)) && (cond > 0 || st.Else != nil && l.terminates(info, st.Else))
+	case *ast.BlockStmt:
+		for i := len(st.List) - 1; i >= 0; i-- {
+			if _, empty := st.List[i].(*ast.EmptyStmt); !empty {
+				return l.terminates(info, st.List[i])
+			}
+		}
+	}
+	return false
+}
+
+// staticBool is writer.staticBool: +1/-1 for a condition the writer
+// decides statically, 0 otherwise. A constant decides; `!x` reads as x
+// (the writer's own rule, reachable only for a non-constant x where it
+// is 0 anyway); `&&` is decided by a false left side or, with a true
+// left side, by the right; `||` dually.
+func (l *loader) staticBool(info *types.Info, e ast.Expr) int {
+	if tv, ok := info.Types[e]; ok {
+		if b, isBool := constantBoolValue(tv); isBool {
+			if b {
+				return 1
+			}
+			return -1
+		}
+	}
+	switch x := e.(type) {
+	case *ast.UnaryExpr:
+		if x.Op == token.NOT {
+			return l.staticBool(info, x.X)
+		}
+	case *ast.BinaryExpr:
+		switch x.Op {
+		case token.LAND:
+			xv := l.staticBool(info, x.X)
+			if xv < 0 {
+				return xv
+			}
+			yv := l.staticBool(info, x.Y)
+			if xv > 0 || yv < 0 {
+				return yv
+			}
+		case token.LOR:
+			xv := l.staticBool(info, x.X)
+			if xv > 0 {
+				return xv
+			}
+			yv := l.staticBool(info, x.Y)
+			if xv < 0 || yv > 0 {
+				return yv
+			}
+		}
+	}
+	return 0
 }
 
 // funcDeclOf finds the declaration of fn among every source unit of the
