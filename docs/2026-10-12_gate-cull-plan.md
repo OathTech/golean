@@ -402,7 +402,7 @@ each commit is one lane and auditable alone — [AGENT] choice under D9).
 | 24 | GATE, slim — kept rather than deleted (deviation from §2): the fixture-producing Go tests plus the Lean strict-decoder read are a real cross-boundary test `lake build` does not run; the poison compile and dispatch audit gone | `scripts/check-method-identity` |
 | 25 | GATE under `--diff`; its separate axiom audit gone | `scripts/check-unseq-scheduler` |
 | 27 | GATE, slim: build + client run + enrollment + regex guard + import whitelist; the twelve mutants gone | `scripts/check-equations` |
-| 31, 32, 33 | GATE, two `go test` invocations in one step | `scripts/ci` |
+| 31, 32, 33 | GATE, two `go test` invocations in one step (deviation from §2: row 32, the lowerdiag tables, blocks inside the go-test step rather than reporting as a speedbump — stricter, and cheaper than a third invocation) | `scripts/ci` |
 | 34 | GATE, unchanged | `scripts/ci` |
 | 35, 37 | GATE under `--diff`, every row fresh; the former `tier=slow` row is an ordinary `engine=dedup` membership row | lane 1 |
 | 38 | SPEEDBUMP under `--diff` | `scripts/ci` |
@@ -435,8 +435,9 @@ Measured on this box (milner-oath, 32 cores, warm `.lake`, box default cap
   PASS, 802 s wall**, every gate step and every speedbump ok; differential
   3936/3936 no regression (3705 PASS / 231 FAIL, the r75 figures), negative
   394/394 no regression, 32 jobs, K=32. The former `tier=slow` row
-  `imported-goose/channel/google-search` enumerated fresh — 6 observations,
-  6.28 M dedup steps, `members=6` met — inside the shared 300 s budget: no
+  `imported-goose/channel/google-search` enumerated fresh — enumerated=6 (= the
+  `members=6` pin), 4 of 6 exhibited within K=32, 6.28 M dedup steps — inside
+  the shared 300 s budget: no
   timeout, no cache, no certificate. Of the 802 s, roughly 90 s is the fast
   tier, ~540 s the differential corpus, ~30 s the negative corpus, ~100 s the
   unseq scheduler and the rest the baselines and regenerations; the corpus is
@@ -467,3 +468,43 @@ and `SIZE-ALLOWLIST.tsv` retired (the bar is the rule, not a byte cap);
 restated. Not done here (judgment per probe, a separate lane): promoting
 probes that pin semantics into `Corpus/` cases, and a second pass over the
 reproducible outputs still inside the kept records.
+
+## 10. The pre-merge audit (2026-10-12, Fable reviewer, read-only) and its dispositions
+
+The [USER] asked for a Fable agent to review every commit. Findings, with what
+was done on the branch (fixes landed as the commit after the evidence triage):
+
+- **BLOCKER 1 — `Main.lean` shelled out to the deleted `tools/certification.py`
+  at elaboration time** (the `compiledBuildInputs%` macro and the
+  `--build-provenance` arm). Every green run had replayed a cached
+  `Main.olean`; a cold build would have gone red naming the macro. FIXED:
+  macro, definition and arm deleted; the binary rebuilt; the fast tier and
+  the `--diff` gate re-run at the final tip.
+- **BLOCKER 2 — a tracked `deps` symlink** (the worktree link of plan §9,
+  swept in by lane 4's `git add -A`; `.gitignore` ignored only the directory
+  form). A fast-forward into a checkout with a real `deps/` would have
+  replaced it silently. FIXED: untracked; `.gitignore` now `/deps`.
+- **MEDIUM 3 — nothing enforced that every declared Lake target is in
+  `defaultTargets`**, so a new library could rot unbuilt while the Tests/
+  ownership check passed. FIXED: the same step now also requires every
+  `name = "…"` of the lakefile to be a default target, by name.
+- **LOW 4 — the engine-isolation clause absorbed a grep error as clean.**
+  FIXED: per-file rc capture, rc ≥ 2 fails closed.
+- **LOW 5 — the warning filter excludes `Tests/`**, and the cull removed the
+  only sorry/axiom checks two test modules had. DECLINED for now: `Tests/`
+  is not the charter's trust surface, and the reviewer's zero-cost claim
+  rests on Lake replaying zero warnings on a no-op build, which this box
+  cannot confirm without a cold rebuild of the test libraries; a cold build
+  that shows Tests warning-free can add `Tests/` to the regex.
+- **LOW 6 — stale pointers** in `docs/coverage-suite-structure.md` (K=80,
+  `--slow`, step 5a) and one corpus comment. FIXED.
+- **LOW 7 — wording** «`members=6` met». FIXED above (the record says
+  enumerated=6, 4 of 6 exhibited within K=32).
+- **NIT 8** (charter omits the unseq-scheduler step under `--diff`) FIXED;
+  **NIT 9** (lowerdiag blocks, not a speedbump) recorded as a deviation
+  above; **NIT 10** (`--rehash` dropped; `GOLEAN_ALLOW_NO_DIFF` under
+  `--diff`) pre-existing, no fail-open path, left.
+- **Cuts the reviewer would restore: none.** Verified line-equivalence of
+  `judge_record` and `repin_guard` with the old gate, the scans, the
+  de-indented differential lanes, the fresh-fixture method-identity read,
+  the workflow, the line counts and the §9 accounting.

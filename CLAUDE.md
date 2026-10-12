@@ -169,7 +169,8 @@ Everything else is untrusted tooling.
   baseline diff of the last recorded corpus runs with the forward re-pin
   guard. `scripts/ci --diff` before any merge to `main`: the same plus a
   FRESH run of the differential and negative corpus against the tracked
-  baselines (`baselines/`), every row, no cached tier. Always under the
+  baselines (`baselines/`), every row, no cached tier, plus the unseq
+  scheduler's whole-tape-space check. Always under the
   box-wide `capped` (`capped scripts/ci`; the box default cap; a COLD full
   build is the measured `capped -m 64G -- scripts/ci` case; `scripts/capped`
   is a shim onto the box tool; `docs/operational-lessons.md`). Baseline

@@ -146,10 +146,9 @@ Optional lane columns (membership lane, arc slice 3,
   `members=` pin — but never before TWO draws (one plain, one `-race`)
   have been taken ([USER] ruling 2026-09-03, relayed: «(d) this is a 'spirit of the ruling' vs. 'letter of the ruling' case - we should do option A which seems like the spirit of the ruling» —
   option A, the two-draw floor; such rows caption `draws=2 (floor; …)`),
-  otherwise at the budget K; K is set by RUN MODE, not a
-  knob — **K=32 on the gate path** (`scripts/ci --diff` / a default
-  `scripts/diff-coverage` run) and **K=80 under `scripts/ci --slow`**
-  (`GOLEAN_SLOW=1`) — and is printed in the run header and recorded as
+  otherwise at the budget **K=32** (not a knob; the former `--slow`
+  mode's K=80 went with the cached tier in the 2026-10-12 gate cull),
+  printed in the run header and recorded as
   `membership_draws` in `latest.meta.tsv`. Rows WITHOUT a `members=` pin
   have no early stop and draw the full K (the run log names the row as
   unpinned). The PASS detail reports the budget spent beside the
@@ -168,12 +167,10 @@ Optional lane columns (membership lane, arc slice 3,
   soundness alarm exactly as before, checked on EVERY draw. Fixtures:
   `scripts/test-lane-validation --with-go` S1-S4 (red-first record and
   the before/after exhibition table:
-  `docs/evidence/2026-09-03_sampling-budget/`). A merge train whose
-  landed branches touched `tools/nativefrontend/wire.go` or
-  `GoLean/NativeToIR.lean` runs `scripts/ci --slow` at the merged tip
-  to refresh `tier=slow` certification before being declared landed
-  (`CLAUDE.md` merge protocol step 5a; `docs/operational-lessons.md`
-  "A cached certification is owed a re-run…").
+  `docs/evidence/2026-09-03_sampling-budget/`). The cached `tier=slow`
+  certification and merge-protocol step 5a were retired in the
+  2026-10-12 gate cull: every enumerating row runs fresh on every
+  `--diff` (`docs/2026-10-12_gate-cull-plan.md` §3.1).
 - Fail-closed both ways: `lane=membership` requires the `nondet` feature
   tag and a `why`; a `nondet`-tagged case requires `lane=membership`; a
   membership case whose enumerated set is a singleton fails ("belongs in

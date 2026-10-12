@@ -179,9 +179,13 @@ if [ -n "$meta_hatch" ]; then printf '%s' "$meta_hatch"; bad "escape-hatch scan:
 if [ -n "$nat_hatch" ]; then printf '%s' "$nat_hatch"; bad "escape-hatch scan: a native-decision spelling (same class as native_decide)"; scan_bad=1; fi
 if [ -n "$part_hatch" ]; then printf '%s' "$part_hatch"; bad "escape-hatch scan: partial declaration in GoLean/GoCore/ (the semantic core uses structural/well-founded recursion)"; scan_bad=1; fi
 if [ -f GoLean/EnumDedup.lean ]; then
-  eng_hits="$( { find GoLean/GoCore -name '*.lean' -not -path '*/.lake/*'; echo GoLean/GoCore.lean; } \
-               | xargs grep -nE "${IMPORT_RE}GoLean\.EnumDedup([^A-Za-z].*)?\$" 2>/dev/null || true)"
-  if [ -n "$eng_hits" ]; then echo "$eng_hits"; bad "escape-hatch scan: the semantic core imports the untrusted dedup engine (CLI-only by design)"; scan_bad=1; fi
+  eng_bad=0
+  while IFS= read -r -d '' ef; do
+    eng_hits="$(grep -nE "${IMPORT_RE}GoLean\.EnumDedup([^A-Za-z].*)?\$" "$ef")"; eng_rc=$?
+    if [ "$eng_rc" -ge 2 ]; then echo "  engine-isolation scan ERRORED on $ef (rc=$eng_rc) — failing closed" >&2; eng_bad=1
+    elif [ "$eng_rc" -eq 0 ]; then printf '%s\n' "$eng_hits" | sed "s|^|$ef:|"; eng_bad=1; fi
+  done < <( { find GoLean/GoCore -name '*.lean' -not -path '*/.lake/*' -print0; printf 'GoLean/GoCore.lean\0'; } )
+  if [ "$eng_bad" -ne 0 ]; then bad "escape-hatch scan: the semantic core imports the untrusted dedup engine, or the scan could not run (CLI-only by design)"; scan_bad=1; fi
 else
   bad "escape-hatch scan: GoLean/EnumDedup.lean missing (deleted or renamed without re-pointing this clause?)"; scan_bad=1
 fi
@@ -211,7 +215,7 @@ else ok "lake build (every target, warning-free)"; fi
 
 # Every Tests/ module must be named by a lakefile.toml glob, or the build above
 # skipped it silently (D2: this set check replaces the receipt registry).
-step "every Tests/*.lean is owned by a lakefile library"
+step "lakefile ownership (every Tests/*.lean in a glob; every declared target a default target)"
 tests_unowned=""
 for tf in Tests/*.lean; do
   tm="Tests.$(basename "$tf" .lean)"
@@ -219,6 +223,16 @@ for tf in Tests/*.lean; do
 done
 if [ -z "$tests_unowned" ]; then ok "Tests/ library ownership (every module named by a lakefile glob)"
 else echo "  not in any lakefile.toml glob:$tests_unowned" >&2; bad "Tests/ library ownership (unowned:$tests_unowned — add to a lakefile.toml glob)"; fi
+# ...and every library and executable the lakefile declares is a default
+# target, or the build above skipped it silently (audit 2026-10-12, item 3).
+lf_targets="$(tr -d '\n' < lakefile.toml | sed -n 's/.*defaultTargets = \[\([^]]*\)\].*/\1/p')"
+lf_missing=""
+for nm in $(grep -E '^name = "' lakefile.toml | sed -E 's/^name = "([^"]+)"/\1/'); do
+  case "$lf_targets" in *"\"$nm\""*) ;; *) lf_missing="$lf_missing $nm" ;; esac
+done
+if [ -z "$lf_targets" ]; then bad "lakefile targets (defaultTargets could not be read — the build's target set is unverifiable)"
+elif [ -z "$lf_missing" ]; then ok "lakefile targets (every declared library and executable is a default target)"
+else echo "  declared but not in defaultTargets:$lf_missing" >&2; bad "lakefile targets (not built by the default build:$lf_missing — add to defaultTargets)"; fi
 
 # ── GATE: the machine check of totality — a harness imports every GoLean/
 # module and audits every declaration (classical trio only; required core

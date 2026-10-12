@@ -17,7 +17,7 @@
 # `go run ./tools/nativefrontend`; nothing reads a prebuilt binary.
 /nativefrontend
 /tools/nativefrontend/nativefrontend
-/deps/
+/deps
 /side/
 # Scratch working notes and probe files. Referred to as gitignored scratch
 # since 2026-08-07 (docs/2026-08-07_grossmith-campaign.md) — actually
