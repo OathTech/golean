@@ -660,7 +660,7 @@ needs a `docs/BUGS.md` `- Cases:` line, like a PASS→non-PASS flip
 (`scripts/check-cause-regressions`, run by `scripts/ci`'s re-pin guard).
 A re-pin that REMOVES a row — PASS or FAIL, e.g. with its retired fixture —
 must name it in the new baseline's header: `# removed: <id> — <why>`
-(`scripts/check-row-removals`, the same guard; the `# alternation removed:`
+(`scripts/check-row-removals`, the same guard; a `# alternation removed:` line satisfies it too — one line retires an alternation row; the `# alternation removed:`
 convention). A removed PASS row still needs its `BUGS.md` Cases line as
 well (the flip rule is unchanged).
 

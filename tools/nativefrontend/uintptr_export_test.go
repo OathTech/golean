@@ -11,7 +11,7 @@ package main
 // review's six R1 probe shapes and the method-set shapes EXPORT with a body
 // (no per-declaration quarantine). The frontend cannot evaluate them; gc's
 // answers are the corpus's (Corpus/coverage/exec/interfaces/uintptr-identity/,
-// twelve PASS rows on BUG-124's Cases line).
+// eleven PASS rows on BUG-124's Cases line).
 
 import "testing"
 

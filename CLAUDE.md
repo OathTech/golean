@@ -128,8 +128,12 @@ paragraph replaced the 2026-09-04 consumer-interface pointer with
    `GoLean/NativeToIR.lean`), validated by the differential corpus
    against `go run`.
 2. The differential apparatus: the coverage runners, the tracked
-   baselines (`baselines/`), the oracle pin (go1.26.5 exactly), and
-   the re-pin guards. The oracle toolchain is never floated; pin
+   baselines (`baselines/`) and the scripts that derive and compare
+   them (`scripts/coverage-baseline-diff`, `scripts/coverage-cause` with
+   its tables `tools/lowerdiag/causes.tsv` and `scripts/machine-causes.tsv`),
+   the oracle pin (go1.26.5 exactly), and the re-pin guards (incl.
+   `scripts/check-alternation-survival`, `scripts/check-cause-regressions`,
+   `scripts/check-row-removals`). The oracle toolchain is never floated; pin
    moves are deliberate, with a full run and a written reason.
 
 Everything else is untrusted tooling.
@@ -170,8 +174,13 @@ Everything else is untrusted tooling.
   method-identity, frontend-pin, declaration and equation checks, and the
   baseline diff of the last recorded corpus runs with the forward re-pin
   guard. `scripts/ci --diff` before any merge to `main`: the same plus a
-  FRESH run of the differential and negative corpus against the tracked
-  baselines (`baselines/`), every row, no cached tier, plus the unseq
+  FRESH run of the differential corpus and of the negative corpus (gc
+  rejects each program AND the native frontend refuses it as a rejection:
+  type-check, parse or file selection) against the tracked baselines
+  (`baselines/`; the differential baseline pins each FAIL row's refusal
+  cause, and a re-pin that moves a cause into a crash/non-verdict key or
+  removes a row needs a `BUGS.md` Cases: line or a `# removed:` header
+  line), every row, no cached tier, plus the unseq
   scheduler's whole-tape-space check. Always under the
   box-wide `capped` (`capped scripts/ci`; the box default cap; a COLD full
   build is the measured `capped -m 64G -- scripts/ci` case; `scripts/capped`

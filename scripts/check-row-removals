@@ -30,7 +30,7 @@ rc=0
 out="$(printf '===OLD===\n%s\n===NEW===\n%s\n' "$old" "$new" | awk -F'\t' '
   /^===OLD===$/ { sec = 1; next }
   /^===NEW===$/ { sec = 2; next }
-  sec == 2 && /^# removed: / { id = substr($0, 12); sub(/[ \t].*$/, "", id); if (id != "") named[id] = $0; next }
+  sec == 2 && /^# (alternation )?removed: / { id = $0; sub(/^# (alternation )?removed: /, "", id); sub(/[ \t].*$/, "", id); if (id != "") named[id] = $0; next }
   /^#/ || $1 == "result" || NF < 2 { next }
   sec == 1 { oldrow[$2] = $1 "/" $3 }
   sec == 2 { newrow[$2] = 1 }
