@@ -1151,7 +1151,15 @@ func (e *emitter) quarantineUnlowerableGlobals() error {
 			deferNoopMark := e.deferNoopEmitted
 			tmpSeqMark := e.tmpSeq
 			monoMark := e.markMono()
-			_, err := e.emitStmtList([]ast.Stmt{as})
+			// uintptr IDENTITY (uintptrid.go; release-readiness item 26,
+			// BUG-123): an initializer that boxes a uintptr-mentioning
+			// value into an interface (`var g any = uintptr(1)`) is this
+			// declaration's named refusal, judged here like any other
+			// lowering failure (H-11 quarantine or whole-export refusal).
+			err := e.checkUintptrIdentity(as, nil)
+			if err == nil {
+				_, err = e.emitStmtList([]ast.Stmt{as})
+			}
 			// ALWAYS roll back — success or failure, the dry run must
 			// leave no trace (the real emission happens in
 			// synthesizePkgInit, after the function bodies, exactly
@@ -1824,6 +1832,12 @@ func (e *emitter) synthesizePkgInit() (map[string]any, error) {
 			if !ok {
 				return nil, unsup("package-level initializer with no declaration site")
 			}
+			// uintptr IDENTITY (uintptrid.go): the dry run above
+			// quarantined every boxing initializer; this second gate
+			// keeps the real emission fail-closed if that ever changes.
+			if err := e.checkUintptrIdentity(as, nil); err != nil {
+				return nil, err
+			}
 			stmts = append(stmts, as)
 		}
 		perUnit[i] = stmts
@@ -2185,6 +2199,14 @@ func (e *emitter) emitFuncDecl(d *ast.FuncDecl) (map[string]any, error) {
 	defer restoreLocals()
 	// Named-result shadow renaming (resultshadow.go): rebuilt per body.
 	if err := e.resultShadowScan(d.Body); err != nil {
+		return nil, err
+	}
+	// uintptr IDENTITY (uintptrid.go; release-readiness item 26, BUG-123):
+	// refuse by name, before emission, every position of this body — a
+	// stencil body under its instantiation — where a uintptr-mentioning
+	// type is boxed into an interface or named as an assertion / type-
+	// switch target. The per-declaration quarantine carries the refusal.
+	if err := e.checkUintptrIdentity(d.Body, sig.Results()); err != nil {
 		return nil, err
 	}
 	params, err := e.emitParams(sig.Params())

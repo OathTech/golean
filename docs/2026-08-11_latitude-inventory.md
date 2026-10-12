@@ -2227,7 +2227,12 @@ row so the axis stops being invisible, nothing more.
 - Also entangled: which programs COMPILE (constant overflow at int
   boundaries — the negative lane inherits the pin via go/types on the
   host), and `uintptr` (frontend maps to uint64; observations of it
-  refused).
+  refused; since 2026-10-12 its runtime type IDENTITY — boxing into an
+  interface, assertion / type-switch targets — is refused by name at
+  the frontend too, `tools/nativefrontend/uintptrid.go`, BUG-123 /
+  ledger FR-38, pending the parked `typed-uintptr-identity` repair
+  ([USER] 2026-10-12 D6 «refuse and repair asap»); the width pin here
+  is untouched).
 - PLAUSIBLE ENVELOPE: {32, 64} as a machine parameter.
 - EVIDENCE: GC (amd64 = 64-bit only). XIMPL is the evidence class that
   BEARS here more than anywhere sequential: a 32-bit gc / tinygo lane
