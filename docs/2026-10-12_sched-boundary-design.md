@@ -198,7 +198,43 @@ at bound 1 and pops nothing, so their trees are unchanged):
 | `builtins/print/refused/race-with-output` (racy; main prints beside a racing child) | FAIL at `go-observation` by design | the print consult adds branches before the detector's refusal | result unchanged (red by name before enumeration) |
 | the two new rows | — | §7's witness table (the corpus wires certify the same sets) | born PASS |
 
-**The gate** (`capped scripts/ci`, then `capped scripts/ci --diff` under the box lock at the
-final tip): recorded in the lane's final commit message and report — the `--diff` summary
-line, the wall, the per-row movement (captions of the membership rows that gained consults),
-and the `engine=dedup` rows' times against the 300 s budget.
+**The merge gate** — `capped scripts/ci --diff` under the box-wide lock (taken 07:10:19Z after
+1,260 s of waiting behind two other lanes and the train), at `c0e5ca4a` (`git_dirty false`,
+`go_toolchain go1.26.5`, `go_drift_actual false`, `membership_draws 32`, 32 jobs):
+
+    differential coverage summary: cases=3938 pass=3707 fail=231 export_status=0
+    differential baseline diff FULL (3938/3938, no regression); negative FULL (394/394)
+    RESULT: PASS — CI total wall seconds: 659 — captured exit 0
+
+Every gate line and every speedbump ok (no RED). The baseline matches the run exactly: the two
+born rows PASS, no flip, no stage move; the re-pin guard reports the baseline unchanged at the
+tip (the rows were pinned before the run and the run confirmed them). The wall (659 s) sits
+inside the last records' 534–913 s; the enumeration phase summed 485.4 s of worker time over
+419 calls.
+
+The two born rows at the gate (the membership caption, never the result):
+
+| row | enumerated | gc draws (plain/`-race` alternating, K=32) | caption |
+|---|---|---|---|
+| `goroutines/sched-dependent/len-peer-send` | `{0, 1, 11}` (46,192 steps, 95 leaves) | 32 draws: `0` ×31, **`1` ×1 (a `-race` draw — the member the machine could not reach before)**; `11` unexhibited | `exhibited=2 draws=32 (pin members=3 NOT reached — 2 distinct drawn) unexhibited=1` |
+| `builtins/print/goroutine-gap` | `{ABC, ACB, BAC}` (46,040 steps, 155 leaves) | 12 draws: `ACB` ×9, **`ABC` ×2**, **`BAC` ×1** (both under `-race`) — the pin reached | `exhibited=3 draws=12 (stopped at the members=3 pin) unexhibited=0` |
+
+Every draw ∈ the certified set (the lane's PASS rule); gc exhibited the formerly missing
+members at the gate itself on both rows.
+
+**Enumeration cost at the gate, against main's last record** (`artifacts/coverage/membership/
+<id>/enum-stats.txt`, both runs):
+
+| row | main `d92b95fd` | lane `c0e5ca4a` | factor |
+|---|---|---|---|
+| `imported-goose/channel/google-search` (dedup, the former slow row) | 5,908,017 nodes / 6,279,747 edges, `checkCert` | **identical** | ×1.0 — standalone re-timed on the lane binary: 119 s wall (exit 0), inside the 300 s `LEAN_ENUM_TIMEOUT_SECONDS` |
+| `goroutines/sched-dependent/first-come` (dedup) | 46,744 nodes / 54,453 edges | identical | ×1.0 |
+| `race/litmus/sb-chan` (dedup) | 55,952 nodes / 63,563 edges | identical | ×1.0 |
+| `sync/rwmutex-order/acquisition` (dedup) | 47,002 nodes / 54,797 edges | identical | ×1.0 |
+| `builtins/print/goroutine-interleaving` (DFS) | 237,133 steps + 74,103 probes, 26,065 leaves, depth 18 | 1,888,928 + 620,541, 217,983 leaves, depth 20 | ×8.1 work (the raised `work=4000000`; 35 s standalone) |
+| `goroutines/sched-dependent/len-handoff` (DFS) | 28,336 + 4,371, 1,458 leaves, depth 14 | 54,361 + 8,493, 2,832 leaves, depth 15 | ×1.9 |
+
+The four `engine=dedup` rows are unchanged to the node: none of their subjects prints or reads
+`len(ch)`, so the widened predicate never fires on their graphs. The cost lands exactly where
+§4 predicted — on rows whose goroutines print or read a channel's length beside live peers —
+and only one row's cap moved.
