@@ -934,7 +934,13 @@ run_case_rows() {
     report_fail "$id" "$features" "frontend-export" "$native_cause — no wire produced; captured output: $native_export"
     return 0
   elif [[ "$native_rc" -ne 0 ]]; then
-    report_fail "$id" "$features" "frontend-export" "native frontend: $native_export"
+    # The EXIT CODE is recorded (refusal-cause pinning, release-readiness
+    # item 8, docs/2026-10-12_refusal-cause-pinning-design.md §4 step 1):
+    # the frontend's only deliberate exit is 1 (a named refusal,
+    # tools/nativefrontend/main.go); a Go panic/fatal exits 2. Without the
+    # code a crash and a refusal read alike at this stage, and
+    # scripts/coverage-cause keys them apart from it.
+    report_fail "$id" "$features" "frontend-export" "native frontend (exit $native_rc): $native_export"
     return 0
   fi
   # A successful export can still carry frontend stderr (the E7 allow's
@@ -1800,7 +1806,8 @@ run_membership_case_rows() {
     report_fail "$id" "$features" "frontend-export" "$mem_native_cause — no wire produced; captured output: $native_export"
     return 0
   elif [[ "$mem_native_rc" -ne 0 ]]; then
-    report_fail "$id" "$features" "frontend-export" "native frontend: $native_export"
+    # Exit code recorded — same reason as the strict lane above.
+    report_fail "$id" "$features" "frontend-export" "native frontend (exit $mem_native_rc): $native_export"
     return 0
   fi
   # Same as the strict lane: surface the E7 allow's WARNING (and any
