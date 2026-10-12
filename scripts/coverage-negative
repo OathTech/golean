@@ -77,6 +77,22 @@ fi
 
 mkdir -p artifacts "$OUT" "$GO_BUILD_CACHE"
 
+# THE FRONTEND LEG (refusal-cause pinning, release-readiness item 8 / D3 —
+# [USER] Mike 2026-10-12 «1,3-6 approved», relayed: «a row passes only if
+# the native frontend exits 1 at type-check, parse or file selection»;
+# docs/2026-10-12_refusal-cause-pinning-design.md §3). gc's rejection
+# alone tested the oracle, never GoLean: this is the check that the
+# trusted frontend does not LOWER a program gc rejects. The frontend is
+# built here from the tree under test (never a stale binary from another
+# run); a build failure is an infrastructure refusal (exit 2, nothing
+# published), never a skipped leg.
+FRONTEND_BIN="$BUILD_OUT/nativefrontend"
+if ! fe_build="$(env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go build -o "$FRONTEND_BIN" ./tools/nativefrontend 2>&1)"; then
+  printf '%s\n' "$fe_build" >&2
+  echo "coverage-negative: tools/nativefrontend does not build — the frontend leg cannot run; refusing (nothing published)" >&2
+  exit 2
+fi
+
 # ATOMIC PUBLISH (exec-lane pattern): rows accumulate in a same-dir
 # tmp pair and land at the published paths in one mv each, only after
 # the whole run classified. A killed run leaves nothing readable.
@@ -175,9 +191,48 @@ report_negative_fail() {
 report_negative_pass() {
   local id="$1"
   local features="$2"
-  printf 'PASS\t%s\t%s\n' "$id" "$features"
-  printf 'PASS\t%s\t%s\t-\t-\n' "$id" "$features" >> "$RESULTS_TMP"
+  local detail="$3"
+  printf 'PASS\t%s\t%s\t%s\n' "$id" "$features" "$detail"
+  printf 'PASS\t%s\t%s\t-\t%s\n' "$id" "$features" "$detail" >> "$RESULTS_TMP"
   pass_count=$((pass_count + 1))
+}
+
+# The frontend leg's verdict on one gc-rejected row. Sets fe_stage (empty =
+# the row passes) and fe_detail. The frontend's only deliberate exit is 1
+# (tools/nativefrontend/main.go: `nativefrontend: <error>`); its first
+# line is classed:
+#   type-check      `nativefrontend: type-check: …` (go/types, load.go)
+#   parse           `nativefrontend: <go_dir>/<file>.go:L:C: …` (go/parser
+#                   via fileselect.go — gc's syntax errors)
+#   file-selection  `nativefrontend: native frontend unsupported: file
+#                   selection …` (the BUG-108 boundary, fileselect.go)
+# Anything else FAILS under its own stage: frontend-accepts (exit 0 — it
+# lowered a program gc rejects), frontend-crash (a timeout, a signal, a Go
+# panic's exit 2 or any other code), frontend-reason (exit 1 for another
+# reason — e.g. a coverage refusal that would start LOWERING the program
+# once its feature lands).
+FE_PARSE_RE='^nativefrontend: ([^:]+)\.go:[0-9]+:[0-9]+: '
+frontend_leg() {
+  local go_dir="$1" out rc=0 first
+  out="$(run_with_timeout "$GO_TIMEOUT_SECONDS" "$FRONTEND_BIN" --dir "$go_dir" --out "$BUILD_OUT/wire.json" 2>&1)" || rc=$?
+  rm -f "$BUILD_OUT/wire.json"
+  first="${out%%$'\n'*}"
+  fe_stage=""
+  case "$rc" in
+    0)   fe_stage="frontend-accepts"; fe_detail="the native frontend LOWERED a program gc rejects (exit 0): $out"; return ;;
+    1)   ;;
+    124) fe_stage="frontend-crash"; fe_detail="native frontend TIMED OUT after ${GO_TIMEOUT_SECONDS}s (GO_TIMEOUT_SECONDS): $out"; return ;;
+    *)   fe_stage="frontend-crash"; fe_detail="native frontend (exit $rc) — not its refusal exit 1: $out"; return ;;
+  esac
+  if [[ "$first" == "nativefrontend: type-check: "* ]]; then
+    fe_detail="frontend=type-check"
+  elif [[ "$first" == "nativefrontend: native frontend unsupported: file selection "* ]]; then
+    fe_detail="frontend=file-selection"
+  elif [[ "$first" =~ $FE_PARSE_RE ]] && [[ "${BASH_REMATCH[1]}" == "$go_dir"/* ]]; then
+    fe_detail="frontend=parse"
+  else
+    fe_stage="frontend-reason"; fe_detail="the native frontend refused (exit 1) but not as a rejection (type-check / parse / file selection): $out"
+  fi
 }
 
 while IFS=$'\t' read -r id go_dir expected_substring features extra || [[ -n "${id:-}" ]]; do
@@ -205,10 +260,15 @@ while IFS=$'\t' read -r id go_dir expected_substring features extra || [[ -n "${
     continue
   fi
 
-  if [[ "$output" == *"$expected_substring"* ]]; then
-    report_negative_pass "$id" "$features"
-  else
+  if [[ "$output" != *"$expected_substring"* ]]; then
     report_negative_fail "$id" "$features" "go-compile" "expected substring '$expected_substring' in '$output'"
+    continue
+  fi
+  frontend_leg "$go_dir"
+  if [[ -n "$fe_stage" ]]; then
+    report_negative_fail "$id" "$features" "$fe_stage" "$fe_detail"
+  else
+    report_negative_pass "$id" "$features" "$fe_detail"
   fi
 done < "$MANIFEST"
 

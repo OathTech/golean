@@ -3,7 +3,15 @@
 # manifest_cases: 394  pass: 394  fail: 0
 # Columns: result<TAB>id<TAB>stage (sorted by id); detail omitted (churns).
 # Regression = any flip/stage change vs this file (scripts/coverage-baseline-diff
-# --baseline baselines/negative-full.tsv artifacts/coverage/negative-latest.tsv).
+# --no-cause --baseline baselines/negative-full.tsv artifacts/coverage/negative-latest.tsv;
+# --no-cause since 2026-10-12: this file keeps result,id,stage — the cause column is the differential baseline's).
+# THE FRONTEND LEG (2026-10-12 [AGENT], lane apparatus/refusal-cause-1012 — release-readiness item 8 / D3 of
+#   docs/2026-10-12_refusal-cause-pinning-design.md; [USER] Mike 2026-10-12 «1,3-6 approved», relayed): a row PASSes
+#   only if gc rejects it with the expected substring AND the native frontend, built from the tree under test, exits 1
+#   as a REJECTION — type-check, parse or file selection; otherwise FAIL at frontend-accepts (exit 0: it lowered a
+#   program gc rejects), frontend-crash (a timeout, a signal, exit 2 or any other code) or frontend-reason (exit 1
+#   for another reason). The 2026-08-31 correction above («invokes no GoLean tool») is SUPERSEDED from this date.
+#   HEADER ONLY: no row moves — all 394 PASS under the leg (356 type-check, 37 parse, 1 file-selection; measured).
 # Re-pin reason (2026-09-02, bug082-maphint lane, [AGENT] inside the BUG-082 fix
 # mandate): 4 NEW ids, no other change — maps/make-map-{float,string,
 # negative-const,overflow-const}-hint pin that a non-integer or non-
