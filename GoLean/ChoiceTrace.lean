@@ -851,7 +851,12 @@ def traceProgram (ep : CLI.EnumProgram) (fuel : Nat) (stream : List Nat) :
         | .inl r => pure r
         | .inr out => return out
   let a₁ := { a₁ with phase := "pool" }
-  match bindParams ep.ctx [] σ₁ ep.func.args.toList ep.args.toList with
+  -- Seeded (slice C): the seed is placed after init, before the bind — `CLI.EnumProgram.entryStore`,
+  -- the core's `seedCells`/`resolveSeedArgs` (unseeded: `(σ₁, ep.args)`, nothing changes).
+  match ep.entryStore σ₁ with
+  | .error e => return { status := e.status, acc := a₁ }
+  | .ok (σE, argVals) =>
+  match bindParams ep.ctx [] σE ep.func.args.toList argVals.toList with
   | .error e => return { status := e.status, acc := a₁ }
   | .ok (env, s₂) =>
     match allocDecls ep.ctx env s₂ ep.func.results.toList with
@@ -972,8 +977,16 @@ def traceStream (program : Program) (functionName : String) (args : Array GoValu
     | .ok (st, j, leftover) => (st, j.compress,
         (some (if leftover.isEmpty then (none : Option Nat) else some (stream.length - leftover.length)) : Option (Option Nat)))
     | .error (e, out) => (e.status, (CLI.observationOfRunOut program.typeDefs.nameOf? (.error (e, out))).compress, none)
-  let realObs := (CLI.observationOfRunOut program.typeDefs.nameOf?
-    (runProgramPoolOutM fuel program functionName args stream)).compress
+  -- The real engine: unseeded `runProgramPoolOutM`; seeded (slice C) the seeded pool entry
+  -- `runProgramPoolSeededOutM` — its READOUT rendered with raw location ids, the enumerator
+  -- driver's own rendering, so the two drivers compare on one shape (the seed-relative rendering
+  -- is `native-json-run`'s observation layer, not a driver property).
+  let real : RunResult :=
+    match ep.seeded? with
+    | none => runProgramPoolOutM fuel program functionName args stream
+    | some (seed, sargs) =>
+        (runProgramPoolSeededOutM fuel program functionName seed sargs stream).map (·.readout)
+  let realObs := (CLI.observationOfRunOut program.typeDefs.nameOf? real).compress
   let mut agree : List String := []
   if enumStatus != out.status then
     agree := agree ++ [s!"status: tracer {out.status} vs enumerator {enumStatus}"]
@@ -1125,7 +1138,9 @@ def runBatch (manifestPath outPath : String) (dumpPath : Option String) (fuel : 
 
 private def usage : String :=
   "usage:\n" ++
-  "  golean choice-trace --input <wire.json> --function <name> [--arg-int <n> | --arg-bool <true|false> ...] [--fuel <n>]\n" ++
+  "  golean choice-trace --input <wire.json> --function <name> [--seed <file.json>]\n" ++
+  "      [--arg-int <n> | --arg-bool <true|false> | --arg-ref <k(.f|[i])*> | --arg-nil ...] [--fuel <n>]\n" ++
+  "      (--seed: a golean-seed-v1 file placed after init, as native-json-run --seed; --arg-ref/--arg-nil need it)\n" ++
   "      [--stream <spec>]...      spec: default | n,n,... | rand:<seed>:<len>   (default: the empty stream)\n" ++
   "      [--trace]                 also print every consumption (idx phase site bound streamValue pick violations)\n" ++
   "  golean choice-trace --batch <manifest.tsv> --out <results.tsv> [--dump <consumptions.tsv>] [--fuel <n>] [--skip <k>] [--take <n>]\n" ++
@@ -1138,6 +1153,8 @@ structure Args where
   /-- Entry arguments in command-line order, checked by
   `CLI.entryArgValues` (BUG-119). -/
   args : Array CLI.EntryArg := #[]
+  /-- `--seed <file>` (seeded-heap slice C): the seeded trace, single-case mode only. -/
+  seed : Option String := none
   fuel : Nat := 10000000
   streams : List String := []
   trace : Bool := false
@@ -1160,9 +1177,18 @@ private def parseArgs : List String → Args → Except String Args
       | none => .error s!"--arg-int: not an integer: {v}"
   | "--arg-bool" :: v :: rest, a => do
       parseArgs rest { a with args := a.args.push (.bool (← CLI.parseBoolLiteral v)) }
-  | "--seed" :: _, _ | "--arg-ref" :: _, _ | "--arg-nil" :: _, _ =>
-      -- Seeded-heap slice B (design §6, D6 — v1): the tracer's driver does not seed.
-      .error s!"choice-trace: --seed/--arg-ref/--arg-nil are not supported here in golean-seed-v1 (seeded runs are native-json-run only — design D6; the tracer's driver does not seed)\n{usage}"
+  -- Seeded-heap slice C (2026-10-12): the tracer SEEDS (single-case mode), so a seeded strict row's
+  -- depth guard runs — the v1 refusal of slice B is lifted for the tracer only (engineering,
+  -- [AGENT]: the 2026-10-12 ruling «D1, D5 and the v1 refusals of the enumerator/tracer are
+  -- engineering, [AGENT]», relayed). `coverage-observations` still refuses (D6).
+  | "--seed" :: p :: rest, a =>
+      match a.seed with
+      | some _ => .error s!"duplicate --seed (at most one seed file)\n{usage}"
+      | none => parseArgs rest { a with seed := some p }
+  | "--arg-ref" :: v :: rest, a => do
+      let (k, path) ← GoLean.SeedFile.parseArgRef v
+      parseArgs rest { a with args := a.args.push (.ref k path) }
+  | "--arg-nil" :: rest, a => parseArgs rest { a with args := a.args.push .nil }
   | "--fuel" :: v :: rest, a =>
       match v.toNat? with
       | some n => parseArgs rest { a with fuel := n }
@@ -1191,6 +1217,14 @@ def main (argv : List String) : IO UInt32 := do
     if a.help then
       IO.println usage
       return 0
+    -- Seed flags: single-case mode only (the batch manifest has no seed column), and
+    -- `--arg-ref`/`--arg-nil` need `--seed` (native-json-run's usage rule).
+    if a.batch.isSome && (a.seed.isSome || a.args.any CLI.EntryArg.needsSeed) then
+      IO.eprintln s!"choice-trace: --seed/--arg-ref/--arg-nil are single-case only (the --batch manifest has no seed column)\n{usage}"
+      return 2
+    if a.seed.isNone && a.args.any CLI.EntryArg.needsSeed then
+      IO.eprintln s!"choice-trace: --arg-ref/--arg-nil need --seed <file.json> (a reference names a seed cell; golean-seed-v1)\n{usage}"
+      return 2
     match a.batch with
     | some manifest =>
         match a.out with
@@ -1213,13 +1247,31 @@ def main (argv : List String) : IO UInt32 := do
               IO.eprintln s!"choice-trace: {e}"
               return 1
           | .ok program =>
-            -- BUG-119: `native-json-run`'s entry-argument check, by name.
-            match CLI.entryArgValues program fn a.args with
+            -- Seeded (slice C): the seed file through native-json-run's decoder and the
+            -- arguments through its seeded check (`entrySeedArgs`), by name.
+            let setup : IO (Except String (Array GoValue × Except Stop CLI.EnumProgram)) := do
+              match a.seed with
+              | none =>
+                  -- BUG-119: `native-json-run`'s entry-argument check, by name.
+                  match CLI.entryArgValues program fn a.args with
+                  | .error e => return .error s!"{input}: {e}"
+                  | .ok entryArgs => return .ok (entryArgs, CLI.enumSetup program fn entryArgs)
+              | some seedPath =>
+                  match ← CLI.readInputBytes seedPath with
+                  | .error e => return .error e
+                  | .ok bytes =>
+                  match GoLean.SeedFile.decodeSeedBytes program.typeDefs bytes with
+                  | .error e => return .error s!"{seedPath}: {e}"
+                  | .ok seed =>
+                  match CLI.entrySeedArgs program fn seed a.args with
+                  | .error e => return .error s!"{input}: {e}"
+                  | .ok sargs => return .ok (#[], CLI.enumSetup program fn #[] (some (seed, sargs)))
+            match ← setup with
             | .error e =>
-                IO.eprintln s!"choice-trace: {input}: {e}"
+                IO.eprintln s!"choice-trace: {e}"
                 return 1
-            | .ok entryArgs =>
-            match CLI.enumSetup program fn entryArgs with
+            | .ok (entryArgs, epE) =>
+            match epE with
             | .error e =>
                 IO.eprintln s!"choice-trace: setup failed: {e.status}: {e.message}"
                 return 1

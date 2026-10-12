@@ -26,8 +26,10 @@ The seeded-heap entry (slice B, 2026-10-12; design
 on the two strategic questions, let's do it», relayed) adds `--arg-ref
 k(.f|[i])*` and `--arg-nil`: a reference into the `--seed` file's cells
 and a nil pointer. Both exist ONLY with `--seed` on `native-json-run`
-(`entrySeedArgs`); without it they are a usage error, and the enumerators
-and the tracer refuse them by name (design D6, v1). -/
+(`entrySeedArgs`); without it they are a usage error, and the enumerator
+refuses them by name (design D6, v1). Since slice C (2026-10-12) `choice-trace`
+takes them too (single-case mode — the strict lane's depth guard traces a
+seeded row; `EnumProgram.seeded?`). -/
 inductive EntryArg where
   | int (value : Int)
   | bool (value : Bool)
@@ -263,7 +265,8 @@ private def usage : String :=
   "      [--max-width <B>] [--max-sites <D>] [--cap <N>] [--work-cap <W>] [--expect-status <ok|panic|ok,panic|race>]
       [--allow-nonterm-iters <per-branch-loop-re-entries>] [--backedge <full|k>]\n" ++
   "      (--engine dedup reads only --work-cap and --expect-status; --fuel, --max-width, --max-sites, --cap and --backedge are refused there by name)\n" ++
-  "  golean choice-trace --input <file> --function <name> [--arg-int <n> | --arg-bool <true|false> ...] [--fuel <n>] [--stream <spec>]... [--trace]\n" ++
+  "  golean choice-trace --input <file> --function <name> [--seed <file.json>] [--arg-int <n> | --arg-bool <true|false> | --arg-ref <k(.f|[i])*> | --arg-nil ...]\n" ++
+  "      [--fuel <n>] [--stream <spec>]... [--trace]\n" ++
   "  golean choice-trace --batch <manifest.tsv> --out <results.tsv> [--dump <file>] [--fuel <n>] [--skip <k>] [--take <n>]\n" ++
   "      (the labelled-consumption tracer; `golean choice-trace --help` for the stream specs and the manifest format)\n"
 
@@ -1306,9 +1309,34 @@ structure EnumProgram where
   initBody? : Option GoCore.Stmt
   func : GoCore.Func
   args : Array GoValue
+  /-- The SEED of a traced seeded run (seeded-heap slice C, 2026-10-12): the cells and the entry
+  arguments `native-json-run --seed` takes, placed after init by `EnumProgram.entryStore` — the
+  core's own `seedCells` then `resolveSeedArgs` at `b = σ₁.heap.size`, `runProgramSetupSeededM`'s
+  two calls in its order. `none` (every unseeded program) leaves `args` the entry's values and
+  every path byte-identical. Only the TRACER builds a seeded program (`choice-trace --seed`, for
+  the strict lane's depth guard); `explore` and `dedupSeed` refuse one by name (the enumerator
+  does not seed in v1, design D6 — the tracer's v1 refusal was engineering, [AGENT], and is
+  lifted here: the ruling of 2026-10-12 «D1, D5 and the v1 refusals of the enumerator/tracer are
+  engineering, [AGENT]», relayed). -/
+  seeded? : Option (Array GoCore.Machine.SeedCell × Array GoCore.Machine.SeedArg) := none
+
+/-- The subject's entry store and argument values over the post-init store `σ₁`: unseeded,
+`(σ₁, ep.args)` exactly; seeded, `runProgramSetupSeededM`'s `seedCells` then `resolveSeedArgs`
+(at `b = σ₁.heap.size`), the same calls in the same order — the slot list is not needed here (the
+tracer does not read the seed back). -/
+def EnumProgram.entryStore (ep : EnumProgram) (σ₁ : GoCore.Store) :
+    Except Stop (GoCore.Store × Array GoValue) :=
+  match ep.seeded? with
+  | none => .ok (σ₁, ep.args)
+  | some (seed, sargs) => do
+      let (sS, _) ← GoCore.Machine.seedCells ep.ctx σ₁ seed
+      let vals ← GoCore.Machine.resolveSeedArgs ep.ctx.types σ₁.heap.size seed ep.func.args sargs
+      pure (sS, vals)
 
 def enumSetup (program : GoCore.Program) (name : String)
-    (args : Array GoValue) : Except Stop EnumProgram := do
+    (args : Array GoValue)
+    (seeded? : Option (Array GoCore.Machine.SeedCell × Array GoCore.Machine.SeedArg) := none) :
+    Except Stop EnumProgram := do
   -- Pre-init step ORDER (find → arity → seed → init-shape) is shared
   -- verbatim with `runProgramM` (audit response 2026-08-05, C6:
   -- divergent orders gave divergent fail-closed errors on the
@@ -1318,8 +1346,12 @@ def enumSetup (program : GoCore.Program) (name : String)
     match GoCore.findFunctionIn? program.funcs ⟨name⟩ with
     | some func => pure func
     | none => throw (.stuck s!"GoCore function not found: {name}")
-  if func.args.size != args.size then
-    throw (.stuck s!"expected {func.args.size} argument(s), got {args.size}")
+  -- Seeded (slice C): the arity is the seed arguments' — `runProgramSetupSeededM`'s check.
+  let arity := match seeded? with
+    | some (_, sargs) => sargs.size
+    | none => args.size
+  if func.args.size != arity then
+    throw (.stuck s!"expected {func.args.size} argument(s), got {arity}")
   -- Mirror of `runProgramSetupM`'s reserved-prefix check (C2 §2; audit
   -- fix R2): the same text, the same position, so the drivers agree.
   if program.typeDefs.hasReservedPrefix then pure () else
@@ -1342,7 +1374,7 @@ def enumSetup (program : GoCore.Program) (name : String)
         if initF.args.size != 0 || initF.results.size != 0 then
           throw (.stuck s!"malformed {GoCore.pkgInitFuncId.key}: expected no parameters and no results")
         else pure (some initF.body)
-  return { ctx, σ₀, initBody?, func, args }
+  return { ctx, σ₀, initBody?, func, args, seeded? }
 
 /-- A pool step is a LOOP RE-ENTRY iff the goroutine it stepped
 (`StepEvent.who`) was, BEFORE the step, running with its boundary flag
@@ -1528,7 +1560,10 @@ def enumRunProgram (ep : EnumProgram) (runFuel : Nat)
         | .error e => throw (GoCore.Machine.markInitPhase e, GoString.empty)
         | .ok (.inl r) => pure r
         | .ok (.inr (msg, leftover)) => return ("panic", errorJson (.panic msg), leftover)
-  let (env, s₂) ← noOut (GoCore.Machine.bindParams ep.ctx [] σ₁ ep.func.args.toList ep.args.toList)
+  -- Seeded (slice C): the seed is placed here, after init, before the bind (`entryStore`;
+  -- unseeded it is `(σ₁, ep.args)` and nothing changes).
+  let (σE, argVals) ← noOut (ep.entryStore σ₁)
+  let (env, s₂) ← noOut (GoCore.Machine.bindParams ep.ctx [] σE ep.func.args.toList argVals.toList)
   let (frameEnv, s₃) ← noOut (GoCore.Machine.allocDecls ep.ctx env s₂ ep.func.results.toList)
   let resultLocs ← noOut (GoCore.Machine.pinResultLocs frameEnv ep.func.results.toList)
   -- The subject runs on the POOL (slice 4), mirroring `runProgramPoolM`:
@@ -2062,6 +2097,10 @@ def explore (ep : EnumProgram) (runFuel width sites cap workCap : Nat)
     (allowNontermIters : Option Nat := none)
     (backedgeMode : Option (Option Nat) := none) :
     Except String EnumOutcome := do
+  -- Seeded-heap slice C: the enumerator does not seed (design D6, v1); a seeded program here
+  -- is a wiring defect, refused by name rather than explored unseeded.
+  if ep.seeded?.isSome then
+    throw "internal: explore was handed a SEEDED program — the enumerator does not seed in golean-seed-v1 (D6); only choice-trace runs seeded programs"
   -- `--allow-nonterm-iters K` is the PER-BRANCH budget, counted in loop
   -- re-entries (stage D §5d, re-expressed 2026-10-06): divergent branches
   -- are pruned-and-counted at their (K+1)-th re-entry. The run fuel stays
@@ -2089,6 +2128,8 @@ tests' certified-set checks (`Tests/UnseqHarness.lean`) share, so a test's
 (route α); the three entry failures fold into one `Stop`. -/
 def dedupSeed (ep : EnumProgram) :
     Except Stop (List Loc × GoCore.Machine.MultiConfig × GoCore.Machine.RaceState) := do
+  if ep.seeded?.isSome then
+    throw (.internal "dedupSeed was handed a SEEDED program — the dedup engine does not seed in golean-seed-v1 (D6)")
   let (env, s₂) ← GoCore.Machine.bindParams ep.ctx [] ep.σ₀ ep.func.args.toList ep.args.toList
   let (frameEnv, s₃) ← GoCore.Machine.allocDecls ep.ctx env s₂ ep.func.results.toList
   let resultLocs ← GoCore.Machine.pinResultLocs frameEnv ep.func.results.toList

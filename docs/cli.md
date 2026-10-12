@@ -176,8 +176,8 @@ preemption points; if it is undeclared, a back-edge consult of bound ≥ 2 fails
 `--engine dedup`, the state-graph engine runs and the result is checked by the verified
 certificate checker (`Machine.checkCert`). It refuses, by name, programs with a `$pkginit`
 phase, and it refuses `--allow-nonterm-iters`. `--seed`, `--arg-ref` and `--arg-nil` are refused
-by name (exit 2): seeded runs are `native-json-run` only in v1, and the same holds for
-`choice-trace`. The old flag `--allow-nonterm` is retired and
+by name (exit 2): the enumerator does not seed in v1 (seeded corpus rows are strict-lane only).
+`choice-trace` does seed (§2.4). The old flag `--allow-nonterm` is retired and
 refused by name. Exit codes: **0** if the set was printed; **1** for a refusal, a setup failure
 or a tripped cap (the message on stderr starts `coverage-observations:`); **2** for a usage
 error.
@@ -185,7 +185,8 @@ error.
 ### 2.4 `choice-trace` — the labelled-consumption tracer
 
 ```
-golean choice-trace --input <wire> --function <name> [--arg-int <n> | --arg-bool <b> ...]
+golean choice-trace --input <wire> --function <name> [--seed <file.json>]
+    [--arg-int <n> | --arg-bool <b> | --arg-ref <k(.f|[i])*> | --arg-nil ...]
     [--fuel <n>] [--stream <spec>]... [--trace]
 golean choice-trace --batch <manifest.tsv> --out <results.tsv> [--dump <file>]
     [--fuel <n>] [--skip <k>] [--take <n>]
@@ -199,7 +200,13 @@ exhaustedAt wideAfterExhaustion perSite maxBound violations firstViolation alarm
 obsHash driverAgreement`). With `--trace`, every consumption is also printed on stderr. In
 batch mode it reads a manifest (`id \t wire \t function \t args(csv|-) \t streams(;-separated)`)
 and appends results to `--out`, resuming past ids already present. `golean choice-trace --help`
-prints the full usage. Exit codes: **0** if no violation, alarm or driver disagreement was
+prints the full usage. `--seed`, `--arg-ref` and `--arg-nil` work as for `native-json-run`
+(§2.1, §2.1.1): the seed is placed after the package initializer, so a seeded corpus row's depth
+guard traces the seeded run itself. Its driver-agreement check then compares the tracer and the
+enumerator driver (both seeded the same way) against the seeded pool entry
+`runProgramPoolSeededOutM`, on the raw-id rendering of the results. The seed flags are refused in
+batch mode (the manifest has no seed column), and `--arg-ref`/`--arg-nil` without `--seed` are a
+usage error (exit 2). Exit codes: **0** if no violation, alarm or driver disagreement was
 found; **1** otherwise, or on a refusal; **2** for a usage error. Known defect: a failed
 *write* of the batch results or dump file escapes as the runtime's uncaught-exception message,
 which is fail-closed but not in the subcommand's own refusal shape (BUG-122).
