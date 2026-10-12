@@ -2121,6 +2121,31 @@ PASS → FAIL membership; 3936 run, no other drift; negative 394 no regression).
 INSTALLED; `check-records` PASS; `release-check` EXIT=1 «Recertification required since pre-merge tip» — the
 trigger for this run, recorded. Tail: `docs/evidence/2026-10-11_train-capped-1011/ci-slow.tail.txt`.
 
+**The fresh-clone trial on milner-oath — RULED (2026-10-11)** ([USER] Mike, verbatim, relayed by the [AGENT]
+recovery worker): «Fix the issue, land fixes on main. Then let me know when you're ready for me to push»; on the
+dependency table's «no public URL» rows for covmap and grossmith: «wrong, both of these are publicly available»; on
+the gate paging on a tty: «The capped scripts/ci ends by opening an editor. Why?»; on the certificate binding the
+interpreter (Python 3.14.4 there vs 3.12.3 here): «Why do we need to couple on this exact python version? The repo
+is supposed to be rebuildable by people with a reasonable setup», «Can you fix this so that anyone who downloads
+the repo gets a reasonable experience?», «We're actually trying to build software people will use»; on gating
+before the list was complete: «You probably shouldn't rerun the gate if we haven't pinned down all the issues?»;
+and for the restart: «an early priority for this project's restart is a gate cull to conform to the gate cruft
+rules» (the global `~/.claude/CLAUDE.md` «Gates and speedbumps»). Landed by train fresh-clone-1011 (below);
+design amendment in `docs/2026-09-09_certificate-provenance-design.md` (2026-10-11); the restart note in
+`docs/2026-10-11_recovery-and-migration-plan.md` §7.
+
+**Merge train fresh-clone-1011 — the 5a record** ([AGENT] recovery worker, 2026-10-12). Pre-merge main `27559ce5`
+→ `refs/snapshots/fresh-clone-1011/main`; lane tip `7b70a597` fast-forwarded; `capped scripts/build-certified`
+EXIT=0 (binary `5f093779…` → `e74942a5…`: `tools/certification.py` is a compiled build input); `release-check`
+EXIT=2 «certification inputs schema 'golean-certification-inputs-v1' is not the current '…-v2': the input inventory
+changed; re-certify» (the new named cause). `capped scripts/ci --slow` at the box default EXIT=1, 1034 s,
+`RESULT: FAIL` on EXACTLY the 5a pair (provenance; `imported-goose/channel/google-search` PASS → FAIL membership;
+3936 run, no other drift; negative 394 no regression). Candidate: `schema`, `claim`, `observations_sha256`
+IDENTICAL; `inputs` v1 → v2 (the `python` key gone), `files` differ in the lane's five edits, `build/files` in
+`tools/certification.py`; receipt gains `python` 3.12.3 (provenance only). INSTALLED — the first v2 record;
+`check-records` PASS; `release-check` EXIT=1 «Recertification required since pre-merge tip» — the trigger,
+recorded. Tail: `docs/evidence/2026-10-11_train-fresh-clone-1011/ci-slow.tail.txt`.
+
 **Green run at the 5a records commit `6ed398af`** ([AGENT] train worker, 2026-10-08). `GOLEAN_MEM_MAX=48G
 scripts/capped scripts/ci --diff` (start load 6.3/11.6/18.7) EXIT=0, 990 s, `RESULT: PASS`: baseline diff FULL
 3936/3936 (3705 / 231, no regression), certificate provenance ok, package-correct method identity ok, wire boundary ok,

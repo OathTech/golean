@@ -100,7 +100,7 @@
         "lakefile.toml": "1727c4488dc0c8cea4ab65af54375227380d36dccd41e232c1f5cbb2068f868d",
         "lean-toolchain": "2bdc48adfa58d0017e538a0ad117c5d73d35deec879978f909406a80c8037273",
         "scripts/build-certified": "c9e01ba9ea4254fc72c059b1741a042cbaad9861bbd6fe703fe36377442fec7f",
-        "tools/certification.py": "8a0a0094cff572399bfcc95983ed49409d033bd2e1fdd5939a108563d2309ba2"
+        "tools/certification.py": "16cad906ee43451136b2de07a92fe25fe3a642ea28dcbc0837fc3484c09dd95d"
       },
       "schema": "golean-build-inputs-v1",
       "toolchain": {
@@ -125,7 +125,7 @@
       "scripts/check-core-audit": "8aedefd0aab9b395e06af4a536cb378b970effde9d053aa96fab61b0d8230fff",
       "scripts/check-coverage": "0bfe8772b509c157fd59fc5cc8f5e3be1830b1f72afcf0cd986cf45ef8d653b3",
       "scripts/check-declarations": "83a8e12fec127d15e63561edbdc69aeb5de4cd3cb02b7aa6f0745c9b2c7cebe7",
-      "scripts/check-equations": "248ba9109565001ac924d37ff276ab0437e26c4022583e0d54461e356818eac2",
+      "scripts/check-equations": "f055592d26fcfa54bb51721fb8f9d686788968b80205aaf3b142fcd10b299f45",
       "scripts/check-evidence-size": "cf66dab4fd42f362e6610ff07fbf467d68e7ca5c7ce84880823e9f5e158af140",
       "scripts/check-frontend-pins": "e5fe99d7e43db16c2c1777cd790066ea86ca36baf89ff132878988d45ae85bad",
       "scripts/check-imported-goose": "5e20ea57f3a2ea0671877ae5f7688397d7a936947a5dbe9217469c8406a6f566",
@@ -139,7 +139,7 @@
       "scripts/check-wire-boundary": "aad79d5294da38ba29f70b3da4e0412e8326f344297e13a81efe451a6e6b4ef7",
       "scripts/choice-trace-corpus": "688b85b3f844577eb83375e86a35277a89cfeffffa550088e4b50907360b1f42",
       "scripts/choice-trace-summarize": "46561488888eabefd42b1cfadb8779ca86e580a022c6288b14a6c2c91cafe40a",
-      "scripts/ci": "1d62f41710a1259df6357da41e0ae2d0b936806ab445a07b8aedabf2c8fd9eff",
+      "scripts/ci": "3e6b9fbc6f9948e511d1e44e4f38b666518bef24b4c2b3b645b1e193e8fa9192",
       "scripts/ci-libraries.json": "237d1b95877e5ae5d6c54a8c8b70c8a4168931683a2f728388884b2988bfb0e9",
       "scripts/coverage": "cce5231de7ee527c4398df030b4a721d53c2696585e21fff495ef3d06dca8121",
       "scripts/coverage-baseline-diff": "222df888409ad9439d6de60d0257bad6bab5a30cb0b99916e5299b7f6d60ac6f",
@@ -165,7 +165,7 @@
       "scripts/oracle-386-static": "c43f1fce1e1c7f5457851466c809ab1bd12f4b9f674a329b091e354903e1b6d9",
       "scripts/oracle-version-sweep": "c213862fb39c274732453fe8338d295a524768b8e2b3d12fde265482706a1f65",
       "scripts/semantic-edges-challenge-smoke": "d2e1939a4402475a5dcd6d6f9e085e6ddb15127436c6d26277756c91d171a543",
-      "scripts/setup-deps": "999d13a79477c6b265349df8ba7cfe528484977e2d30236f88b98cf050e53a4c",
+      "scripts/setup-deps": "15537739529a4ae321beb7f706bcb6f2aaab6e1fad8aae99cd0c95527eff17e3",
       "scripts/test-check-agents-alias": "2d50669a59c29fc326a619cd93059d9cbe863d1e9ed43a6365f39c9ada054d9d",
       "scripts/test-check-evidence-size": "3e2801e29ed0f58dddbe91507db6828702a94428890e0b8bc1cd6ea3672fdefa",
       "scripts/test-gen-inittask-table": "0086aca0237a05d87797eabca296035b3ffa175282380832e4a69f9c23d3f57c",
@@ -174,7 +174,7 @@
       "scripts/typed-gate-scratch.sh": "00b99b356f38adf52d51151405a661f21251587550a38076e5dd46718c7a8694",
       "tools/admission-check.py": "9270c69e7e88a7d2295f07889262a8716ea9a1a00836447d479b35cda4bc7ecd",
       "tools/cedarcensus/main.go": "7a3008bef691db5acfa5537251b1be3ba5caba4cda179014d2f2bf058dbce730",
-      "tools/certification.py": "8a0a0094cff572399bfcc95983ed49409d033bd2e1fdd5939a108563d2309ba2",
+      "tools/certification.py": "16cad906ee43451136b2de07a92fe25fe3a642ea28dcbc0837fc3484c09dd95d",
       "tools/check-admission-artifact.lean": "a5bd3b837928d7617af5e0d56c8de6318d4412c83d65a6fd0d9965e775d27aca",
       "tools/check-declaration-wire.lean": "3cea0675ade20e6212a8b590d6328302cd269969d08d8c6a6a42eca2cb863c5a",
       "tools/ci_libraries.py": "731cd72d3469ffb245a2571289edf3cf030780ae81eae928c52673c48972ed0e",
@@ -307,18 +307,17 @@
       "tools/raftsubject/twin-ticks-main.go": "ae7f0eb4d5bc6dba6b1cbb797ad0b45ee39a067c31dd99ec15514ad4286438ce",
       "tools/reconcile-records": "35661603acd2e10ca3d21ab6298a14eb6b36735cb37f48d23dd4291a078c3f92",
       "tools/stdlibfuzz/fieldsgen/main.go": "c8ce5038866601e78e0dcacf2244b56088fcc331f263f7462405b75742988353",
-      "tools/test_certification.py": "1bc85d9249b3fb7cf24ea468997819e6729fc6947b59e2069eeafb85149922b9",
+      "tools/test_certification.py": "e0e1ecbce9698bed1393552433627a04bf0b9ef771f3e18f591e883454bb5bee",
       "tools/test_ci_libraries.py": "36f64cd0204f316e4f4019c093902f813a48b43915561945dbacd122d3f1150f",
       "tools/test_typed_audit.py": "3e4073547c275b34fc7951bf431d5cd07dcbeb427b516c71d6f56bc9b16c0a73",
       "tools/typed_audit.py": "e2ffc36fcb5f48fb2b5132764ed85ba9f1d1ac94392f3948cea317d418abcc8e"
     },
     "oracle": "go version go1.26.5 linux/amd64",
-    "python": "3.12.3",
-    "schema": "golean-certification-inputs-v1"
+    "schema": "golean-certification-inputs-v2"
   },
   "observations_sha256": "e40ba07d11827b48aa8c9246bd84d6c21849159983d46c47b793b5759cfbbfd8",
   "receipt": {
-    "binary_sha256": "5f093779b832e4c694710ce1d3564420a2feb372131986d0013009cedd289681",
+    "binary_sha256": "e74942a501eab8bc33da72aaccf2e5823e346c656cef46a65f911017c5388d05",
     "captured_exit": 0,
     "certifier": "tools/certification.py",
     "command": [
@@ -341,12 +340,13 @@
       "--engine",
       "dedup"
     ],
-    "finished_utc": "2026-10-11T15:49:24.026522+00:00",
+    "finished_utc": "2026-10-11T23:57:42.949471+00:00",
     "git_dirty": false,
-    "source_commit": "890d1933f7af4745609140e5bcfaef8ef3515b9b",
-    "started_utc": "2026-10-11T15:46:52.193251+00:00",
+    "python": "3.12.3",
+    "source_commit": "7b70a597edab4072d7a293dcf3e0b7289676f5d4",
+    "started_utc": "2026-10-11T23:55:13.135111+00:00",
     "stats_sha256": "80614849ba8583af41ce62fc0a0cefdc7a5b6f22fbb482784a125e8bd19f3283",
-    "wall_seconds": 148.735
+    "wall_seconds": 146.922
   },
   "schema": "golean-certification-v1"
 }

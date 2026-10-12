@@ -609,6 +609,22 @@ python3 tools/certification.py release-check --base <origin/main at the push>
   or the environment drifted). No worktree is recreated; a lane makes its
   own from its branch.
 
+**Restart priority on milner-oath — a gate cull ([USER] Mike 2026-10-11,
+verbatim: «an early priority for this project's restart is a gate cull to
+conform to the gate cruft rules»).** The rule is the global `~/.claude/CLAUDE.md`
+section «Gates and speedbumps (avoid gate cruft)»: only the trust surface gets
+blocking gates, kept small and named in the project's working-practices doc;
+everything else is a cheap speedbump at claim points; over-elaborate gating is
+cut, not reclassified. Starting point: `scripts/ci` runs 38 named steps and
+`scripts/` holds 25 `check-*`/`test-*` scripts (2026-10-12). First deliverable
+of the cull: the classification — which steps guard the trust surface
+(`CLAUDE.md` «The trusted surface»: the interpreter + lowering, validated by
+the differential; the differential apparatus and its pins) and block, and
+which are speedbumps — written into `CLAUDE.md` «The gates», then the cuts. The
+fresh-clone trial's own findings are a first measure of the tax: a fresh clone
+today needs three gate cycles of roughly 45 minutes each to land five small
+fixes, because every script is a certified input.
+
 **Phase C — retire here ([USER] sign-off, D4 phase D).** After phase B is
 green: the worktrees, `artifacts/`, `deps/`, `.lake/` and the primary
 checkout itself go with the box. Nothing on it is needed once `origin`
