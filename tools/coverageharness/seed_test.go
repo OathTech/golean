@@ -36,6 +36,8 @@ func TestSeedFileRefusals(t *testing.T) {
 		{"reserved", cell("_goleanX", "1"), "reserved for the harness"},
 		{"frac", cell("int", "1.5"), "number 1.5: a fraction or exponent is not allowed"},
 		{"expo", cell("int", "1e2"), "number 1e2: a fraction or exponent is not allowed"},
+		{"neg-zero", cell("uint8", "-0"), "number -0: a negative zero is not a golean-seed-v1 integer"},
+		{"neg-zero-signed", cell("[2]int", "[1,-0]"), "number -0: a negative zero is not a golean-seed-v1 integer"},
 		{"null", cell("*int", "null"), "null is not a seed value"},
 		{"str", cell("int", `"x"`), "a string is not a seed value"},
 		{"nil-false", cell("*int", `{"nil":false}`), "seed.cells[0].value.nil: expected true"},
@@ -122,6 +124,28 @@ func useB(b *B) int { return b.x }
 
 func take(n Node) int { return n.val }
 
+// P and PA: a NAMED pointer type and an ALIAS of one (review MEDIUM-1): a
+// ref/nil argument binds at both, as on the machine.
+type P *int
+
+type PA = *int
+
+func viaNamed(p P) int {
+	if p == nil {
+		return -1
+	}
+	*p = *p + 1
+	return *p
+}
+
+func viaAlias(p PA) int {
+	if p == nil {
+		return -2
+	}
+	*p = *p * 2
+	return *p
+}
+
 func main() {}
 `
 
@@ -158,7 +182,10 @@ func TestSeededOracleRuns(t *testing.T) {
 	if testing.Short() {
 		t.Skip("execs go run")
 	}
-	for _, tc := range []struct{ name, subject, args, seed string; want []string }{
+	for _, tc := range []struct {
+		name, subject, args, seed string
+		want                      []string
+	}{
 		{"seedRef result", "next", "ref:0", cycleSeed, []string{`"status":"ok"`, `"values":[{"cell":1,"path":[],"tag":"seedRef"}]`,
 			`{"name":"next","value":{"cell":0,"path":[],"tag":"seedRef"}}`}},
 		{"seedRef into an array field", "elem", "ref:0", `{"schema":"golean-seed-v1","cells":[{"type":"Pair","value":{"a":[1,9,3],"b":true}}]}`,
@@ -190,7 +217,21 @@ func TestSeededOracleRuns(t *testing.T) {
 		{"path through a pointer", "inc", "ref:0", `{"schema":"golean-seed-v1","cells":[{"type":"int","value":1},{"type":"*int","value":{"ref":{"cell":2,"path":["val"]}}},{"type":"*Node","value":{"nil":true}}]}`,
 			[]string{`path .val on non-struct *main.Node`}},
 		{"argument type mismatch", "inc", "ref:0", cycleSeed,
-			[]string{`"status":"error"`, `seed: argument 1: parameter has type *int; ref:0 points at *main.Node`}},
+			[]string{`"status":"error"`, `seed: argument 1: ref:0: parameter has type *int; the reference points at main.Node`}},
+		{"ref at a named pointer type", "viaNamed", "ref:0", `{"schema":"golean-seed-v1","cells":[{"type":"int","value":5}]}`,
+			[]string{`"status":"ok"`, `"values":[{"kind":"int","tag":"int","value":6}]`, `"seed":[{"kind":"int","tag":"int","value":6}]`}},
+		{"nil at a named pointer type", "viaNamed", "nil", `{"schema":"golean-seed-v1","cells":[]}`,
+			[]string{`"status":"ok"`, `"values":[{"kind":"int","tag":"int","value":-1}]`}},
+		{"ref at an alias of a pointer type", "viaAlias", "ref:0", `{"schema":"golean-seed-v1","cells":[{"type":"int","value":5}]}`,
+			[]string{`"status":"ok"`, `"values":[{"kind":"int","tag":"int","value":10}]`, `"seed":[{"kind":"int","tag":"int","value":10}]`}},
+		{"nil at an alias of a pointer type", "viaAlias", "nil", `{"schema":"golean-seed-v1","cells":[]}`,
+			[]string{`"status":"ok"`, `"values":[{"kind":"int","tag":"int","value":-2}]`}},
+		{"nil at a non-pointer parameter", "take", "nil", cycleSeed,
+			[]string{`"status":"error"`, `seed: argument 1: nil: parameter has type main.Node (kind struct) — a seed reference or nil only at a pointer parameter`}},
+		{"ref at a non-pointer parameter", "take", "ref:0", cycleSeed,
+			[]string{`"status":"error"`, `seed: argument 1: ref:0: parameter has type main.Node (kind struct) — a seed reference or nil only at a pointer parameter`}},
+		{"ref at a named pointer type, wrong pointee", "viaNamed", "ref:0", cycleSeed,
+			[]string{`"status":"error"`, `seed: argument 1: ref:0: parameter has type main.P; the reference points at main.Node`}},
 	} {
 		out, err := seededOracle(t, tc.subject, tc.args, tc.seed)
 		if err != nil {
@@ -207,8 +248,6 @@ func TestSeededOracleRuns(t *testing.T) {
 
 func TestSeededGenerationRefusals(t *testing.T) {
 	for _, tc := range []struct{ name, subject, args, want string }{
-		{"nil at a non-pointer parameter", "take", "nil", "nil only at a pointer parameter"},
-		{"ref at a non-pointer parameter", "take", "ref:0", "a seed reference only at a pointer parameter"},
 		{"int at a pointer parameter", "inc", "5", "an integer cannot supply it"},
 		{"arity", "inc", "ref:0,ref:0", "expects 1 argument(s), got 2"},
 		{"bad token", "inc", "ref:0x", "malformed reference"},

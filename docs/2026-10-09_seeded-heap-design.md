@@ -332,11 +332,29 @@ rendering; `explore` and the dedup seed refuse a seeded program by name, and `co
 the row would be red by design — the machine's refusal is `scripts/check-wire-boundary`'s `seed-escape` (slice B), the Go twin's is
 `tools/coverageharness/seed_test.go` (`escaping result`, `escaping cell`); (v) the Go side refuses EVERY `\u` surrogate escape (Go's
 decoder would turn an unpaired one into U+FFFD silently; GoLean accepts a paired one — the harness refuses it, fail closed); (vi) a
-`ref:`/`nil` argument needs a parameter SPELLED `*T` on the Go side (a named pointer type refuses there); (vii) a seeded `ok` subject
+`ref:`/`nil` argument's parameter is judged a pointer BY REFLECT at run time (its kind), so a named pointer type (`type P *int`) or an
+alias of one binds as on the machine, the reference converted to the parameter type (fix round, below); (vii) a seeded `ok` subject
 may return nothing (its cells are observable; an unseeded one still must return a value); (viii) the unseeded generator output is
 byte-identical (the template's three insertions are empty), checked over all 3953 unseeded rows. **What v1 does not cover** (named
 refusals on one or both sides, never a silent pass): the enumerating lanes (no seeded membership/confluent/racy rows); string, float,
 slice, map, channel, function and interface values in cells; a slice/map/chan observation based in the seed (the machine renders its
-base seed-relative, the Go twin refuses the kind); a pointer to a zero-size type in an observation; structs with a field named `ref` or
-`nil`; function-local types in a seed (ambiguous or unnamable from `main`); named pointer parameter types; variadic subjects; paired
-surrogate escapes; and the init-twice cost of a seeded run (the `base` debt above).
+base seed-relative, the Go twin refuses the kind); a pointer to a zero-size type in an observation (ONE-SIDED, red: the machine
+renders it `seedRef`, the Go twin refuses with status `error`); structs with a field named `ref` or `nil`; function-local types in a
+seed (ambiguous or unnamable from `main`) and types declared in a case-local PACKAGE (GoLean's `declaredCandidates` resolves them by
+unqualified name; the harness pastes `new(T)` into `main`, a compile error at `go run` — red); variadic subjects; paired surrogate
+escapes; the token `-0` (refused on both sides at every kind); and the init-twice cost of a seeded run (the `base` debt above).
+
+**Slice C fix round (2026-10-12, [AGENT worker, same lane]; the pre-merge adversarial review found no BLOCKER/HIGH, relayed by the
+[AGENT] coordinator).** MEDIUM-1 (the coordinator's call: keep the product wide, fix the oracle): the Go twin decided a `ref:`/`nil`
+parameter's pointer-ness by its SPELLING, so a named pointer type or an alias — accepted by the machine — was refused at generation;
+it now decides by reflect at run time (`_goleanSeedArg`: the kind must be `Pointer`, a ref's target type must be the element type, the
+pointer is `Convert`ed to the parameter type, nil is `reflect.Zero`), and the non-pointer refusals moved from generation to run time
+(status `error`, `seed: argument i: …`); row `seeded/named-ptr/arg` (BORN PASS) pins it, `seed_test.go` adds the alias. (An integer at
+a pointer parameter still refuses by spelling at generation, or as a compile error for a named pointer type — loud.) LOW-1: `seed=` was
+validated textually and `-f` follows symlinks; both `scripts/coverage-manifest` and `scripts/diff-coverage` now refuse a symlinked
+seed file by name (`-L`) AND compare `realpath` of the file against the case directory's (a symlinked DIRECTORY component on the path
+is refused as «resolves outside the case directory»); NIT-2: a directory is «not a regular file». NIT-1: `-0` was refused by the Go
+twin at an unsigned kind and accepted by the machine; the kind is resolved only in the core (whose `SeedValue.int` carries an `Int`,
+the sign of zero lost), so a kind-specific refusal would need a core change — instead BOTH decoders refuse the TOKEN `-0` at every
+kind, by name (`SeedFile.badNumberTok`, eval pins `SEED-C`). LOW-2: `gofmt`. NIT-3/NIT-5 recorded in the list above; NIT-4 (the
+seeded tracer's agreement is on the readout) is stated in `docs/cli.md` §2.4.

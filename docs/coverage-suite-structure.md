@@ -385,8 +385,8 @@ stream; the variant-stream refusal reported at `lean-observation`;
 A strict row may run its subject over a **seeded heap**: `params` declares
 `seed=<file>`, a `golean-seed-v1` file (`docs/cli.md` §2.1.1) given relative to
 the case directory (plain path characters, no absolute path, no `.`/`..`
-component; the file must exist — the manifest and the runner both refuse
-otherwise, by name), and `args` takes the seeded tokens above. Design:
+component; a REGULAR file, not a symlink, whose resolved path lies inside the
+case directory — the manifest and the runner both refuse otherwise, by name), and `args` takes the seeded tokens above. Design:
 `docs/2026-10-09_seeded-heap-design.md` §7. Both twins read the same file:
 
 - the machine: `native-json-run --seed <file>` with the tokens mapped in order to
@@ -400,7 +400,9 @@ otherwise, by name), and `args` takes the seeded tokens above. Design:
   (`new(T)`, the file's type spelling pasted), fills them in cell order by
   reflect with the resolver's typing (ints range-checked at their kind, every
   declared struct field required and no other, a blank field refused, arrays
-  of the exact length, `nil` only at a pointer, a `ref`'s target type equal to
+  of the exact length, `nil` only at a pointer — a `ref:`/`nil` ARGUMENT's
+  parameter judged a pointer by its reflect kind, so a named pointer type or an
+  alias binds as on the machine — a `ref`'s target type equal to
   the pointer's element type), binds the arguments, calls the subject, and
   observes in GoLean's seeded shape: a pointer into a cell is
   `{"tag":"seedRef","cell":k,"path":[…]}` (matched by address AND element type

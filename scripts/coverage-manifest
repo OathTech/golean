@@ -299,8 +299,27 @@ strict_params_ok() {
           echo "coverage-manifest: $cases_file: seed=<file> must be a plain path relative to the case directory (no absolute path, no . or .. component): $kv" >&2
           return 1
         fi
-        if [[ ! -f "$go_dir/$value" ]]; then
-          echo "coverage-manifest: $cases_file: seed file $go_dir/$value does not exist: $kv" >&2
+        # The file must be a REGULAR file INSIDE the case directory (review
+        # LOW-1/NIT-2, 2026-10-12): `-f` follows symlinks, so a symlink is
+        # refused by name (`-L`), and the resolved path must lie under the
+        # resolved case dir (a symlinked DIRECTORY component on the path).
+        local seed_path="$go_dir/$value" seed_real case_real
+        if [[ -L "$seed_path" ]]; then
+          echo "coverage-manifest: $cases_file: seed file $seed_path is a symlink — a seed file must be a regular file inside the case directory: $kv" >&2
+          return 1
+        elif [[ ! -e "$seed_path" ]]; then
+          echo "coverage-manifest: $cases_file: seed file $seed_path does not exist: $kv" >&2
+          return 1
+        elif [[ ! -f "$seed_path" ]]; then
+          echo "coverage-manifest: $cases_file: seed file $seed_path is not a regular file: $kv" >&2
+          return 1
+        fi
+        seed_real="$(realpath -e -- "$seed_path")" && case_real="$(realpath -e -- "$go_dir")" || {
+          echo "coverage-manifest: $cases_file: seed file $seed_path: realpath failed: $kv" >&2
+          return 1
+        }
+        if [[ "$seed_real" != "$case_real"/* ]]; then
+          echo "coverage-manifest: $cases_file: seed file $seed_path resolves outside the case directory ($seed_real): $kv" >&2
           return 1
         fi
         ;;

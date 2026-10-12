@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+arg	viaNamed	ref:0	ok	-	seeded,pointers,defined_type	strict	-	seed=seed-five.json

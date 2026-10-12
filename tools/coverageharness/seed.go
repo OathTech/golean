@@ -160,6 +160,11 @@ func readFrom(dec *json.Decoder, tok json.Token) (*jv, error) {
 		if strings.ContainsAny(string(t), ".eE") {
 			return nil, fmt.Errorf("number %s: a fraction or exponent is not allowed in %s (integers only)", t, seedSchemaName)
 		}
+		if string(t) == "-0" {
+			// Review NIT-1: GoLean's decoder refuses the token (the sign of
+			// zero is lost in its parse; refused at every kind) — the same here.
+			return nil, fmt.Errorf("number -0: a negative zero is not a golean-seed-v1 integer (write 0; the sign would be lost, and an unsigned kind refuses a sign)")
+		}
 		return &jv{kind: 'n', num: string(t)}, nil
 	case string:
 		return &jv{kind: 's', str: t}, nil
@@ -542,22 +547,17 @@ func seededMain(subject string, paramTypes []string, variadic bool, resultCount 
 				return "", fmt.Errorf("argument %d (%s): parameter has pointer type %s — an integer cannot supply it", i+1, a.token, pt)
 			}
 			argExprs[i] = fmt.Sprintf("%s(%s)", pt, a.lit)
-		case 'n':
-			if !pointer {
-				return "", fmt.Errorf("argument %d (nil): parameter has type %s — nil only at a pointer parameter (*T) in golean-seed-v1", i+1, pt)
-			}
-			fmt.Fprintf(&b, "\tvar %s %s = nil\n", name, pt)
-		case 'r':
-			if !pointer {
-				return "", fmt.Errorf("argument %d (%s): parameter has type %s — a seed reference only at a pointer parameter (*T)", i+1, a.token, pt)
-			}
+		case 'n', 'r':
+			// Pointer-ness is decided at RUN TIME by reflect over the
+			// parameter's declared type (review MEDIUM-1, 2026-10-12): a
+			// named pointer type (`type P *int`) or an alias (`type P =
+			// *int`) is a pointer parameter, as on the machine (the
+			// parameter's underlying type); the spelling is not consulted.
 			fmt.Fprintf(&b, "\tvar %s %s\n", name, pt)
-			fmt.Fprintf(&b, "\t{\n\t\t_goleanRef, _goleanErr := _goleanSeedRef(%d, %s, %q)\n", a.cell, goPathLiteral(a.path), fmt.Sprintf("argument %d: %s", i+1, a.token))
+			fmt.Fprintf(&b, "\t{\n\t\t_goleanV, _goleanErr := _goleanSeedArg(_golean_reflect.TypeOf(&%s).Elem(), %t, %d, %s, %q)\n",
+				name, a.kind == 'n', a.cell, goPathLiteral(a.path), fmt.Sprintf("argument %d: %s", i+1, a.token))
 			fmt.Fprintf(&b, "\t\tif _goleanErr != nil {\n\t\t\t_goleanPrintError(_goleanErr.Error())\n\t\t\treturn\n\t\t}\n")
-			fmt.Fprintf(&b, "\t\t_goleanP, _goleanOk := _goleanRef.(%s)\n", pt)
-			fmt.Fprintf(&b, "\t\tif !_goleanOk {\n\t\t\t_goleanPrintError(_golean_fmt.Sprintf(%q, _goleanRef))\n\t\t\treturn\n\t\t}\n",
-				fmt.Sprintf("seed: argument %d: parameter has type %s; %s points at %%T", i+1, pt, a.token))
-			fmt.Fprintf(&b, "\t\t%s = _goleanP\n\t}\n", name)
+			fmt.Fprintf(&b, "\t\t%s = _goleanV.Interface().(%s)\n\t}\n", name, pt)
 		}
 	}
 	names := make([]string, resultCount)
@@ -698,13 +698,25 @@ func _goleanSeedTarget(where string, j int, path []any) (_golean_reflect.Value, 
 	return v, nil
 }
 
-// _goleanSeedRef: a pointer (as any, *T dynamic type) to cell j's sub-object.
-func _goleanSeedRef(j int, path []any, where string) (any, error) {
-	t, err := _goleanSeedTarget(where, j, path)
-	if err != nil {
-		return nil, err
+// _goleanSeedArg: the value of a ref/nil argument at the parameter type t —
+// refused unless t is a POINTER kind (a named pointer type or an alias of
+// one included: the machine reads the parameter's underlying type); a ref's
+// target type must be t's element type, and the pointer is converted to t.
+func _goleanSeedArg(t _golean_reflect.Type, nilArg bool, j int, path []any, where string) (_golean_reflect.Value, error) {
+	if t.Kind() != _golean_reflect.Pointer {
+		return _golean_reflect.Value{}, _golean_fmt.Errorf("seed: %s: parameter has type %s (kind %s) — a seed reference or nil only at a pointer parameter", where, t, t.Kind())
 	}
-	return _golean_reflect.NewAt(t.Type(), _golean_unsafe.Pointer(t.UnsafeAddr())).Interface(), nil
+	if nilArg {
+		return _golean_reflect.Zero(t), nil
+	}
+	target, err := _goleanSeedTarget(where, j, path)
+	if err != nil {
+		return _golean_reflect.Value{}, err
+	}
+	if target.Type() != t.Elem() {
+		return _golean_reflect.Value{}, _golean_fmt.Errorf("seed: %s: parameter has type %s; the reference points at %s", where, t, target.Type())
+	}
+	return _golean_reflect.NewAt(target.Type(), _golean_unsafe.Pointer(target.UnsafeAddr())).Convert(t), nil
 }
 
 func _goleanSeedPathOf(raw []any) ([]any, bool) {

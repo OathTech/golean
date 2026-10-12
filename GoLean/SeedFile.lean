@@ -59,11 +59,17 @@ def seedSchema : String := "golean-seed-v1"
 
 /-! ## The lexical number pre-scan -/
 
-/-- The first JSON number token OUTSIDE strings that carries a fraction or an exponent
-(`.`, `e`, `E`), if any. A char-by-char state machine: `inStr`/`esc` track string state, `tok`
+/-- A number token the seed grammar refuses: a fraction or an exponent (`.`, `e`, `E`), or the
+NEGATIVE ZERO `-0` (review NIT-1, 2026-10-12: the parsed value is `0` and the sign is lost, so the
+token is judged — refused at every kind, since the kind is resolved only in the core; the Go twin
+refuses the same token). -/
+def badNumberTok (t : String) : Bool :=
+  t.any (fun c => c == '.' || c == 'e' || c == 'E') || t == "-0"
+
+/-- The first JSON number token OUTSIDE strings that `badNumberTok` refuses, if any. A char-by-char state machine: `inStr`/`esc` track string state, `tok`
 the number token being read (`none` outside one). Structural on the char list. -/
 def badNumberToken : List Char → (inStr esc : Bool) → Option String → Option String
-  | [], _, _, tok => tok.bind (fun t => if t.any (fun c => c == '.' || c == 'e' || c == 'E') then some t else none)
+  | [], _, _, tok => tok.bind (fun t => if badNumberTok t then some t else none)
   | c :: cs, inStr, esc, tok =>
       if inStr then
         if esc then badNumberToken cs true false none
@@ -75,7 +81,7 @@ def badNumberToken : List Char → (inStr esc : Bool) → Option String → Opti
         | some t =>
             if c.isDigit || c == '.' || c == 'e' || c == 'E' || c == '+' || c == '-' then
               badNumberToken cs false false (some (t.push c))
-            else if t.any (fun d => d == '.' || d == 'e' || d == 'E') then some t
+            else if badNumberTok t then some t
             else badNumberToken (c :: cs) false false none
         | none =>
             if c == '"' then badNumberToken cs true false none
@@ -306,6 +312,8 @@ def decodeSeedBytes (types : TypeEnv) (bytes : ByteArray) : Except String (Array
   -- The parse succeeded, so the bytes ARE UTF-8; the pre-scan reads the same text.
   let some text := String.fromUTF8? bytes | throw "JSON input is not valid UTF-8"
   if let some tok := badNumberToken text.toList false false none then
+    if tok == "-0" then
+      throw s!"number -0: a negative zero is not a golean-seed-v1 integer (write 0; the sign would be lost, and an unsigned kind refuses a sign)"
     throw s!"number {tok}: a fraction or exponent is not allowed in golean-seed-v1 (integers only)"
   decodeSeedJson types json
 

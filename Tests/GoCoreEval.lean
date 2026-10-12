@@ -2742,6 +2742,14 @@ private def seedFacts : IO Bool := do
   passed := passed && (← expectStrEq "SEED-B: an exponent number refuses by TOKEN (1e2 parses as 100)"
     (seedDecodeErr "{\"schema\":\"golean-seed-v1\",\"cells\":[{\"type\":\"int\",\"value\":1e2}]}")
     "number 1e2: a fraction or exponent is not allowed in golean-seed-v1 (integers only)")
+  passed := passed && (← expectStrEq "SEED-C: a negative zero refuses by TOKEN at an unsigned kind (review NIT-1; the Go twin refuses it too)"
+    (seedDecodeErr "{\"schema\":\"golean-seed-v1\",\"cells\":[{\"type\":\"uint8\",\"value\":-0}]}")
+    "number -0: a negative zero is not a golean-seed-v1 integer (write 0; the sign would be lost, and an unsigned kind refuses a sign)")
+  passed := passed && (← expectStrEq "SEED-C: -0 refuses at a signed kind too (the kind is the core's; the token is judged), while -1 and 0 decode"
+    (match seedDecode "{\"schema\":\"golean-seed-v1\",\"cells\":[{\"type\":\"[2]int\",\"value\":[-1,0]}]}", seedDecodeErr "{\"schema\":\"golean-seed-v1\",\"cells\":[{\"type\":\"[2]int\",\"value\":[1,-0]}]}" with
+      | .ok _, e => e
+      | .error e, _ => s!"unexpected refusal: {e}")
+    "number -0: a negative zero is not a golean-seed-v1 integer (write 0; the sign would be lost, and an unsigned kind refuses a sign)")
   passed := passed && (← expectStrEq "SEED-B: a digit inside a string is not a number token"
     (seedDecodeErr "{\"schema\":\"golean-seed-v1\",\"cells\":[{\"type\":\"[1]int\",\"value\":[{\"nil\":true}]}],\"x\":\"1.5e3\"}")
     "seed: expected exactly keys [\"cells\", \"schema\"], got [\"cells\", \"schema\", \"x\"]")

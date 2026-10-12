@@ -245,6 +245,25 @@ expect_reject "seed file missing" \
 expect_reject "seed path escaping the case dir" \
   '-\trangeFirstKey\t-\tok\t-\tmaps\tstrict\t-\tseed=seeds/../s.json' \
   "must be a plain path relative to the case directory"
+# Review LOW-1/NIT-2 (2026-10-12): symlinks (absolute and relative), a
+# symlinked directory component, a directory.
+printf '%s\n' '{"schema":"golean-seed-v1","cells":[]}' > "$TMP/outside.json"
+ln -s /etc/hostname "$CASE_DIR/link-abs.json"
+ln -s ../../../outside.json "$CASE_DIR/link-rel.json"
+ln -s "$TMP" "$CASE_DIR/linkdir"
+mkdir -p "$CASE_DIR/adir"
+expect_reject "seed= an absolute symlink" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tstrict\t-\tseed=link-abs.json' \
+  "is a symlink"
+expect_reject "seed= a relative symlink out of the case dir" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tstrict\t-\tseed=link-rel.json' \
+  "is a symlink"
+expect_reject "seed= through a symlinked directory" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tstrict\t-\tseed=linkdir/outside.json' \
+  "resolves outside the case directory"
+expect_reject "seed= a directory" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tstrict\t-\tseed=adir' \
+  "is not a regular file"
 expect_reject "seed= declared twice" \
   '-\trangeFirstKey\t-\tok\t-\tmaps\tstrict\t-\tseed=seeds/s.json,seed=seeds/s.json' \
   "duplicate strict-lane param key"
@@ -615,6 +634,14 @@ if [ "$WITH_GO" -eq 1 ]; then
     run_d SD1 "$(printf 'lane-sd1\t%s\tpipelineBufferedStage\tref:0\tok\t%s\t-\tstrict\t-\t-' "$PIPE_DIR" "$PIPE_FEATS")" \
       "FAIL*manifest*needs seed=<file>*" \
       "harness re-validation refuses a ref: token without seed="
+    # SD2 (review LOW-1): a symlinked seed file that bypasses the manifest
+    # is refused by the runner, by name.
+    printf '%s\n' '{"schema":"golean-seed-v1","cells":[]}' > "$TMP/sd2-outside.json"
+    SD2_DIR="$TMP/sd2case"; mkdir -p "$SD2_DIR"; cp "$PIPE_DIR"/*.go "$SD2_DIR"/
+    ln -s "$TMP/sd2-outside.json" "$SD2_DIR/seed-link.json"
+    run_d SD2 "$(printf 'lane-sd2\t%s\tpipelineBufferedStage\t-\tok\t%s\t-\tstrict\t-\tseed=seed-link.json' "$SD2_DIR" "$PIPE_FEATS")" \
+      "FAIL*manifest*is a symlink*" \
+      "harness re-validation refuses a symlinked seed file"
 
     FAKEBIN_G5="$TMP/fakebin-xargs-no-r"
     mkdir -p "$FAKEBIN_G5"

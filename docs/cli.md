@@ -110,7 +110,7 @@ the **typing**, once, at setup (`GoLean/GoCore/Seed.lean`). Both refuse by name.
 - **At the CLI** (status `error`, exit 1, before any step): the file goes through the strict
   byte parser (duplicate keys, invalid UTF-8 and unpaired surrogates refuse). Every object needs
   exactly its keys. The schema must be the literal `golean-seed-v1`. A number with a fraction or
-  an exponent refuses, even `1e2`. `null` and strings are not values. `{"nil": x}` needs
+  an exponent refuses, even `1e2`, and so does the token `-0` (its sign would be lost). `null` and strings are not values. `{"nil": x}` needs
   `x = true`. A `ref` or `nil` object may carry nothing else, so **any** struct with a field
   named `ref` or `nil` cannot be written in v1; the refusal says so. A type spelling outside the grammar refuses as
   «not in golean-seed-v1», naming its class: `uintptr`, floats, complex, `string`, `byte`/`rune`

@@ -1,5 +1,11 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3965 (3726 PASS / 239 FAIL)
+# cases: 3966 (3727 PASS / 239 FAIL)
+# re-pinned: 2026-10-12 [AGENT], lane cli/seeded-heap-c-1012 FIX ROUND (the pre-merge adversarial review: no BLOCKER/HIGH; MEDIUM-1
+#   taken on the [AGENT] coordinator's call «keep the product wide, fix the oracle», relayed). WHY: the Go twin refused a ref:/nil
+#   argument at a NAMED pointer parameter type (pointer-ness by spelling) that the machine accepts; it now decides by reflect. BORN ROW
+#   +1 PASS seeded/named-ptr/arg (viaNamed(p P), type P *int, seed [5] -> 6, seed [6] on both sides). No other row moves; no flip; the
+#   unseeded harness byte-identical (all 3953 unseeded rows, generator at 2f6f6581 vs the tip). Counts: 3965 + 1 = 3966; PASS 3726 + 1
+#   = 3727; FAIL 239. Measured by capped scripts/ci --diff at the fix round's tip.
 # re-pinned: 2026-10-12 [AGENT], lane cli/seeded-heap-c-1012 (stacked on train4/stage-1012 2f6f6581) — the SEEDED-HEAP ENTRY, slice C
 #   (differential; design docs/2026-10-09_seeded-heap-design.md §7; [USER] Mike 2026-10-12 «Agree on the two strategic questions, let's
 #   do it», relayed — GO, with the trusted-surface #2 change of tools/coverageharness accepted). WHY: corpus rows may now run their
@@ -5233,6 +5239,7 @@ PASS	seeded/init-control/global-plus-cell	-
 PASS	seeded/list/nil-terminated	-
 PASS	seeded/list/nil-arg	-
 PASS	seeded/list/nil-deref	-
+PASS	seeded/named-ptr/arg	-
 PASS	seeded/swap-void	-
 PASS	slices/append-nil	-
 PASS	slices/append-overlap	-
