@@ -1,2 +1,7 @@
 # id	subject	args	expected_status	expected_reason	features
--	goroutineInterleaving	-	ok	-	builtins,print,goroutines,channels,nondet	membership	two children each print one line; the L1 scheduling latitude orders the two statements (each atomic under gc's printlock): admitted set {"a\nb\n", "b\na\n"} (members=2) — the consumption sites are the L1 picks over at most 3 runnable goroutines (the buffered done channel never blocks a sender) — width 4 >= 3	width=4,sites=64,members=2,work=2000000
+# 2026-10-12 lane core/sched-boundary-1012 [AGENT]: work 2000000 -> 4000000. The print apply is a registry
+# boundary since this lane (BUG-123; docs/2026-10-12_sched-boundary-design.md), so each child's println
+# consults L1 beside up to two runnable peers: the DFS tree grew past the old cap (measured on the lane
+# binary: 1,888,928 steps + 620,541 probes = 2.51 M work, 217,983 leaves, depth 20, 35 s on a loaded box;
+# set unchanged {ab, ba}). A budget raise, not a set change.
+-	goroutineInterleaving	-	ok	-	builtins,print,goroutines,channels,nondet	membership	two children each print one line; the L1 scheduling latitude orders the two statements (each atomic under gc's printlock): admitted set {"a\nb\n", "b\na\n"} (members=2) — the consumption sites are the L1 picks over at most 3 runnable goroutines (the buffered done channel never blocks a sender) — width 4 >= 3	width=4,sites=64,members=2,work=4000000

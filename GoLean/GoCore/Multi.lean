@@ -458,9 +458,9 @@ def Config.atBoundary (c : Config) : Bool :=
   -- and two operations observe shared state without being registry ops.
   -- (1) `len(ch)` — the `lengthOf` apply on a CHANNEL operand — reads the
   -- cell's buffer count, which a peer's send/receive changes with no
-  -- synchronization required (spec#Channel_types, spec#Length_and_
-  -- capacity; the memory model orders a send before the completion of
-  -- the RECEIVE only). It emits no access footprint (gc's `chanlen` is
+  -- synchronization required (spec#Channel_types,
+  -- spec#Length_and_capacity; the memory model orders a send before the
+  -- completion of the RECEIVE only). It emits no access footprint (gc's `chanlen` is
   -- uninstrumented — inventory U2 — so the race detector is silent by
   -- design: NPDRF obstruction 5's «empty recorded footprint» hazard,
   -- realized). Without this arm two reads in one registry-free segment

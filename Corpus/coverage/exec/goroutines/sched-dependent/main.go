@@ -113,8 +113,8 @@ func schedDelay(n int) int {
 // send in flight (the Codex release-trust review's F1 witness,
 // 2026-10-12, relayed by the [USER]; BUG-123). `len(ch)` reads the
 // buffer count — shared state the peer's send changes with no
-// synchronization required (spec#Channel_types, spec#Length_and_
-// capacity) and no footprint the race detector sees (gc's `chanlen` is
+// synchronization required (spec#Channel_types,
+// spec#Length_and_capacity) and no footprint the race detector sees (gc's `chanlen` is
 // uninstrumented; inventory U2) — so the send may land before the
 // first read (11), between the two (1) or after both (0). On `main`
 // before this lane the read opened no scheduling boundary and the
