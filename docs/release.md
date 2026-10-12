@@ -78,8 +78,6 @@ push rule). Pushing the tag is a separate sign-off.
   into the data section; the model schedules them): [USER] 2026-10-12 (D1): «refused, if it's easy
   to exclude» — the refusal by name is a lane; if no cheap exclusion exists, the release names the
   profile that excludes the shape and keeps the row as a known red.
-- **`uintptr` identity** (release-readiness item 26): refused by name in identity-bearing positions
-  until the parked repair lands ([USER] 2026-10-12, D6: «refuse and repair asap»).
 - **The abort window** (punch-list item 29, from the sched-boundary review 2026-10-12): a goroutine's
   output beside main's abort is not a scheduling boundary (`atBoundary_of_abort`; «B3, deferred»), so the
   machine never interleaves a child's `print` between main's last output and its panic — pinned gc does,

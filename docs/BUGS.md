@@ -8256,16 +8256,16 @@ new consults the default stream's slot 0 is the lowest-index runnable goroutine,
 beside a runnable main now yields to main where it used to continue — strict rows are stream-invariant by their own
 check, so no result depends on it.
 
-## BUG-124 — `uintptr` and `uint64` are ONE runtime type identity (the decoder maps `uintptr` to `.uint64`): comma-ok assertions, interface equality, type switches, `map[any]` key counts and slice/pointer assertions over a boxed uintptr answer WRONGLY with status ok — GUARDED by name at the frontend since 2026-10-12 pending the parked repair [decoder + semantic core; wrong answer (observed ∉ modeled); KNOWN since the typed-consumer sprint's held L5 (`docs/2026-09-05_typed-consumer-sprint-handoff.md` decision 2, the parked `typed-uintptr-identity` branch) and absent from the release punch list until the release-trust review's R1 (`docs/2026-10-12_release-trust-review.md`); rowed and guarded by lane `fix/uintptr-refuse-1012`, release-readiness item 26]
+## BUG-124 — `uintptr` and `uint64` were ONE runtime type identity (the decoder mapped `uintptr` to `.uint64`): comma-ok assertions, interface equality, type switches, `map[any]` key counts and slice/pointer assertions over a boxed uintptr answered WRONGLY with status ok — FIXED 2026-10-12 by a DISTINCT `IntKind.uintptr` (lane `core/uintptr-repair-impl-1012`, the REPAIR half), after the same day's GUARD by name at the frontend (the REFUSE half, retired by the repair) [decoder + semantic core; wrong answer (observed ∉ modeled); KNOWN since the typed-consumer sprint's held L5 (`docs/2026-09-05_typed-consumer-sprint-handoff.md` decision 2, the parked `typed-uintptr-identity` branch) and absent from the release punch list until the release-trust review's R1 (`docs/2026-10-12_release-trust-review.md`); rowed and guarded by lane `fix/uintptr-refuse-1012`, release-readiness item 26]
 
-- Status: open
-- Pinned-by: none (the six rows FAIL at `frontend-export` BY DESIGN — the frontend refuses the identity-bearing
-  position by name, so the wrong answer can no longer be observed through a lowered program; a differential pin would
-  assert the wrong direction. The re-pin guard reads this Cases line: the six ids are born-FAIL rows explained here,
-  and `Expect: FAIL` makes `scripts/check-bugs.sh` trip if the refusal ever stops firing. The repair lane flips them
-  PASS and moves this entry to Status: fixed.)
-- Expect: FAIL
-- Cases: interfaces/uintptr-identity/assert, interfaces/uintptr-identity/equal, interfaces/uintptr-identity/switch, interfaces/uintptr-identity/map-key, interfaces/uintptr-identity/slice-assert, interfaces/uintptr-identity/pointer-assert
+- Status: fixed ([AGENT] lane worker, lane `core/uintptr-repair-impl-1012`, 2026-10-12 — the REPAIR half, under
+  [USER] Mike 2026-10-12, verbatim: «D6: agree on both - refuse and repair asap.» and, for the repair's shape, [USER]
+  Mike 2026-10-12, verbatim: «1,3-6 approved» — item 4 of that ask = the design note's D1–D5, all as recommended
+  (`docs/2026-10-12_uintptr-repair-design.md`: I1 a distinct `IntKind.uintptr`, W1 width `intBits`, O1 both
+  observation seams keep refusing, D3 rows + `--diff` only, D4 the R1/J-8 amendments, D5 the five born rows); both
+  rulings relayed by the [AGENT] coordinator)
+- Pinned-by: differential
+- Cases: interfaces/uintptr-identity/assert, interfaces/uintptr-identity/equal, interfaces/uintptr-identity/switch, interfaces/uintptr-identity/map-key, interfaces/uintptr-identity/slice-assert, interfaces/uintptr-identity/pointer-assert, interfaces/uintptr-identity/method-param, interfaces/uintptr-identity/method-result, interfaces/uintptr-identity/array-assert, interfaces/uintptr-identity/wrap, interfaces/uintptr-identity/assert-panic
 - Discovered: the sprint's held L5 item (2026-09-05; the staged "BUG-107" that never reached main — this entry takes
   the next free number, as the handoff said it would); re-measured 2026-10-12 by the Codex release-trust review (R1,
   six fresh probes, all `status: ok` with the wrong boolean or int); ruled [USER] Mike 2026-10-12, verbatim: «D6:
@@ -8356,6 +8356,38 @@ run — merge protocol 5a fires), give `uintptr` its own machine identity, then 
 flip the six rows PASS (`Expect: FAIL` and the `Pinned-by: none` reason go with it) and mark this entry fixed. Fix
 criterion: the six rows PASS against go1.26.5 with the gc values above; `width-only` still PASSes; the unit suite's
 refusing shapes become lowering shapes with the gc answers.
+
+FIX (the REPAIR half, lane `core/uintptr-repair-impl-1012`, 2026-10-12; the design note `docs/2026-10-12_uintptr-repair-design.md`
+is the spec, its D1–D5 ruled as recommended — [USER] Mike 2026-10-12 «1,3-6 approved», item 4, relayed): the parked branch
+was the site-by-site GUIDE, not a rebase (its width arm `8 * p.wordBytes` and its un-refused seams were not taken). Commit A,
+the core: `GoLean/GoCore/Value.lean` gains the constructor `IntKind.uintptr` with `name` «uintptr», `bitsAt` = `p.intBits`
+(W1 — `Platform.lean`'s docstring already read «Width of `int`/`uint` (and `uintptr`)»; go/types sizes `Int`, `Uint` and
+`Uintptr` by the one `WordSize`, `deps/go/src/go/types/sizes.go` `Sizeof`'s catch-all) and `signed` false; the decoder's one
+arm `GoLean/NativeToIR.lean` `intKindOfName` «uintptr» → `.uintptr`; the two atomics kind sets widened IN LOCKSTEP
+(`GoLean/GoCore/Machine.lean` `atomicKindOk` and `NativeToIR.lean` `asAtomicOp?` — the five `atomics/ops/*-uintptr` /
+`atomics/typed/uintptr` rows are the witness). Every identity site in the WHAT table is fixed by `Ty.eqb`'s structural
+equality (`.int k₁, .int k₂ => k₁ == k₂`) with NO edit: `typeAssertValue`, `valueEq`'s box-vs-box arm, `mapEntryIndex?`,
+`satisfiesMethodSig`; the names (`Ty.dynamicName`, `goTypeNameForMessage`) spell `uintptr`. Proofs: the probe build
+measured ZERO text edits — `Ops.lean` `tySizeAlignTy_align_pow2`'s `cases kind` leaf closes the new `(p.intBits / 8)`
+goal by its existing `exact hp.1` alternative, `StateEqb.lean` `IntKind.beq_sound`'s 13×13 split by `rfl` /
+`Bool.noConfusion`; no pinned statement text moved (BridgeSet, the equation set, the frozen pool surface), no wire change
+(`golean-native-v3` always spelled `{"int":"uintptr"}`). The observation seams KEEP refusing a returned `uintptr` by name
+on both sides (D2 = O1: `GoLean/CLI.lean`'s decoder, `tools/coverageharness/main.go`'s observer; `Tests/GoCoreEval.lean`
+pins that the machine's own `{"kind":"uintptr"}` encoding is refused by its own decoder). Eval pins for the six shapes at
+the value level plus the width (`bits? = some 64`, unsigned, `^uintptr(0)+1 = 0`). Commit B, the retirement in ONE commit
+with the row flips (the lowerdiag calibration test ties the static judge to the wire): `tools/nativefrontend/uintptrid.go`
+(714 lines), its unit suite (581), `tools/lowerdiag/uintptr.go` (522), the three `emit.go` hooks, the `static.go` hook,
+the `causes.tsv` row, the calibration fixture and its two test-table entries deleted; a 90-line export regression
+(`tools/nativefrontend/uintptr_export_test.go`: the six probe shapes and the method-set shapes EXPORT with a body). Rows:
+the six probes FLIP FAIL/frontend-export → PASS with gc's `false false 1 2 false false` (the ALLOWED direction, this Cases
+line; `Expect: FAIL` dropped in the same commit — `scripts/check-bugs.sh` rule 5); BORN 5 PASS `method-param` (8),
+`method-result` (false) — the method-set identity site the six probes did not exercise —, `array-assert` (2), `wrap`
+(true), `assert-panic` (panic `interface conversion: interface {} is uintptr, not uint64`); the six controls unchanged; 0
+PASS→non-PASS. Records: FR-38 retired in the ledger (kept as the record, §8aw), `docs/release.md` §4's uintptr limit
+removed, latitude R1 amended in place (the identity was never latitude; the width still is), w7 J-8 superseded by a dated
+line, the changelog row (the logic repository's two exhaustive `IntKind` matches need one arm each at its next re-pin).
+Fix criterion met: the six rows PASS against go1.26.5 with the gc values above; `width-only` and the five atomics rows
+still PASS; the fresh `scripts/ci --diff` at the lane's tip is the measurement (its commit message records the run).
 
 ## BUG-125 — the native frontend LOWERS a `package main` with no `func main`, a program gc rejects («function main is undeclared in the main package») [frontend boundary; over-acceptance, no wrong answer observed; found by the negative corpus's new frontend leg, lane `apparatus/refusal-cause-1012` fix round (review MEDIUM-1), 2026-10-12]
 

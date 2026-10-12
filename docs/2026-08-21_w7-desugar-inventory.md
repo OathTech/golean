@@ -2738,6 +2738,9 @@ code that fixed it**. A future edit to `:910-918` re-arms it.
 **J-8 · `uintptr` widened to 64, `byte`→`uint8`, `rune`→`int32` — S** ·
 `NativeToIR.lean:62`. `byte`/`rune` are spec-mandated aliases and correct;
 **`uintptr` is a gc-pin of latitude R1** — record it there rather than "fix" it.
+Superseded 2026-10-12 for identity (BUG-124, `docs/2026-10-12_uintptr-repair-design.md`):
+the width remains R1's pin; the kind is distinct (`IntKind.uintptr`) — the collapse to
+`uint64` was never a pin of anything Go permits.
 
 **J-9 · five silent-drop `| none => pure ()` sites in index-guarded loops — S** ·
 `:734` (a **select clause** dropped), `:800`, `:821`, `:1011` (a **return result

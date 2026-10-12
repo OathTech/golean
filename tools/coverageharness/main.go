@@ -619,17 +619,19 @@ func _goleanReflectValue(value _golean_reflect.Value) (any, error) {
 	// invisible to the value-only shape. The defined-type name is NOT
 	// emitted (the machine value carries an IntKind only; defined-type
 	// identity over ints is observable only through interface boxes, on
-	// both sides alike). Uintptr FAILS CLOSED below: the frontend maps
-	// uintptr to uint64 (NativeToIR intKindOfName), so the machine side
-	// can never answer "uintptr" and the observation could never compare
-	// equal — refuse loudly rather than alias the kind away (the exact
-	// F15 defect class).
+	// both sides alike). Uintptr FAILS CLOSED below: golean-observation-v1's
+	// integer kind set is the ten concrete kinds (docs/cli.md), and the
+	// Lean decoder refuses "uintptr" by the same name — both seams kept
+	// refusing at BUG-124's repair (2026-10-12; the machine now carries the
+	// kind distinctly, so the refusal is the SEAM's choice, [USER] 2026-10-12
+	// D2 = O1 of docs/2026-10-12_uintptr-repair-design.md), never aliased
+	// into uint64 (the exact F15 defect class).
 	case _golean_reflect.Int, _golean_reflect.Int8, _golean_reflect.Int16, _golean_reflect.Int32, _golean_reflect.Int64:
 		return map[string]any{"tag": "int", "kind": value.Kind().String(), "value": value.Int()}, nil
 	case _golean_reflect.Uint, _golean_reflect.Uint8, _golean_reflect.Uint16, _golean_reflect.Uint32, _golean_reflect.Uint64:
 		return map[string]any{"tag": "int", "kind": value.Kind().String(), "value": value.Uint()}, nil
 	case _golean_reflect.Uintptr:
-		return nil, _golean_fmt.Errorf("unsupported Go observation kind uintptr (the frontend maps uintptr to uint64; a kind-visible channel must not alias them)")
+		return nil, _golean_fmt.Errorf("unsupported Go observation kind uintptr (not in golean-observation-v1's kind set — refused by name at the observation seam, never aliased into uint64)")
 	case _golean_reflect.Float64:
 		// BIT-pattern observation (floats design note S5/S7): bit-exact
 		// modulo NaN canonicalization — NaN payload/sign are platform- and

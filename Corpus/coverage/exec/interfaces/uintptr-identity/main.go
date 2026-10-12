@@ -1,28 +1,31 @@
-// BUG-124 / FR-38 — `uintptr`'s runtime type IDENTITY (lane
-// fix/uintptr-refuse-1012, 2026-10-12; release-readiness punch list item 26,
-// [USER] Mike 2026-10-12 «D6: agree on both - refuse and repair asap.» — the
-// REFUSE half). The decoder realizes `uintptr` as `uint64`
-// (GoLean/NativeToIR.lean intKindOfName), so the two types are ONE identity
-// at runtime and every identity-bearing use answered WRONGLY with status ok
-// before the refusal: gc go1.26.5 prints `false false 1 2 false false` for
-// the six subjects below (spec#Numeric_types: uintptr is a distinct type),
-// the machine printed `true true 64 1 true true` (the release-trust
-// review's R1 probes, docs/2026-10-12_release-trust-review.md — its
-// reproduction block, re-run at the lane base 4365c313, is the red-first).
-// Since the lane, each of the six REFUSES BY NAME at the frontend
-// (tools/nativefrontend/uintptrid.go) at its boxing or target position —
-// FAIL/frontend-export RED BY DESIGN on BUG-124's Cases line (Expect: FAIL),
-// retired by the parked `typed-uintptr-identity` repair when it lands. The
-// PASS controls: `widthOnly` — arithmetic, a conversion to uint64 and back,
-// a pointer to uintptr passed to a non-interface parameter, a []uintptr and
-// a map[uintptr] — width-only uses, correct at 64 bits (latitude inventory
-// §11 item 6) and never boxed; `genericWidthOnly` (fix round MEDIUM-1) —
-// width-only generic code instantiated at uintptr, user stencils and
-// source-through stdlib generics; `definedNominalU/S/E` (fix round LOW-1) —
-// NAMED concrete types over uintptr are nominal on the machine (the wire's
-// `defined` def, the decoder's `.defined idx`): they box, assert, compare
-// and switch exactly as in gc, so the refusal does not enter a named
-// type's underlying structure (its METHOD SET only).
+// BUG-124 / FR-38 — `uintptr`'s runtime type IDENTITY (release-readiness
+// punch list item 26; [USER] Mike 2026-10-12 «D6: agree on both - refuse and
+// repair asap.»). spec#Numeric_types makes `uintptr` a distinct type. Before
+// 2026-10-12 the decoder realized it as `uint64` (GoLean/NativeToIR.lean
+// intKindOfName), so the two types were ONE identity at runtime and the six
+// identity-bearing subjects below answered WRONGLY with status ok: gc
+// go1.26.5 prints `false false 1 2 false false`, the machine printed
+// `true true 64 1 true true` (the release-trust review's R1 probes,
+// docs/2026-10-12_release-trust-review.md). The REFUSE half (lane
+// fix/uintptr-refuse-1012) made each a by-name frontend refusal the same
+// day; the REPAIR half (lane core/uintptr-repair-impl-1012; its shape [USER]
+// Mike 2026-10-12 «1,3-6 approved», item 4 = docs/2026-10-12_uintptr-repair-
+// design.md D1–D5) gives the machine a DISTINCT `IntKind.uintptr` of width
+// `intBits`, so every subject PASSes with gc's values through `Ty.eqb`'s
+// structural equality and the guard is retired. Born at the repair:
+// `uintptrMethodParam` / `uintptrMethodResult` (the method-set identity
+// site: `M(uintptr)` is not `M(uint64)`), `uintptrArrayAssert` (`[1]uintptr`
+// is not `[1]uint64`), `uintptrWrap` (width unchanged: 64 bits, unsigned),
+// `uintptrAssertPanic` (the non-comma-ok assertion's panic text names the
+// kind). The PASS controls, unchanged from the refuse lane: `widthOnly` —
+// arithmetic, a conversion to uint64 and back, a pointer to uintptr passed
+// to a non-interface parameter, a []uintptr and a map[uintptr] — width-only
+// uses, correct at 64 bits (latitude inventory R1 / §11 item 6);
+// `genericWidthOnly` — width-only generic code instantiated at uintptr, user
+// stencils and source-through stdlib generics; `definedNominalU/S/E` and
+// `genericNominal` — NAMED types over uintptr are nominal on the machine
+// (the wire's `defined` def, the decoder's `.defined idx`): they box,
+// assert, compare and switch exactly as in gc.
 package main
 
 import "slices"
@@ -243,9 +246,81 @@ func genericNominal() int {
 	return n
 }
 
+// --- born at the repair 2026-10-12 (ported from 5f185fb3's ints/uintptr-identity; assert-panic new) ---
+
+// PointerMethod's method set mentions uintptr in a PARAMETER: it satisfies
+// PointerRequirement and NOT UintMethod (spec#Method_sets, spec#Type_identity:
+// M(uintptr) and M(uint64) are different signatures).
+type PointerMethod struct{}
+
+func (PointerMethod) M(x uintptr) {}
+
+type UintMethod interface{ M(uint64) }
+
+type PointerRequirement interface{ M(uintptr) }
+
+// uintptrMethodParam: the method-set identity site (satisfiesMethodSig
+// compares the parameter lists). gc: 8.
+func uintptrMethodParam() int {
+	out := 0
+	var v any = PointerMethod{}
+	if _, ok := v.(UintMethod); ok {
+		out += 1
+	}
+	if _, ok := v.(PointerRequirement); ok {
+		out += 8
+	}
+	return out
+}
+
+// PointerResult's method set mentions uintptr in a RESULT.
+type PointerResult struct{}
+
+func (PointerResult) M() uintptr { return 7 }
+
+type UintResult interface{ M() uint64 }
+
+// uintptrMethodResult: M() uintptr does not satisfy M() uint64. gc: false.
+func uintptrMethodResult() bool {
+	var v any = PointerResult{}
+	_, ok := v.(UintResult)
+	return ok
+}
+
+// uintptrArrayAssert: the element's identity through an ARRAY type —
+// [1]uintptr is not [1]uint64 and is [1]uintptr. gc: 2.
+func uintptrArrayAssert() int {
+	out := 0
+	var a any = [1]uintptr{7}
+	if _, ok := a.([1]uint64); ok {
+		out += 1
+	}
+	if v, ok := a.([1]uintptr); ok && v[0] == 7 {
+		out += 2
+	}
+	return out
+}
+
+// uintptrWrap: the width is unchanged by the identity — 64 bits, unsigned
+// (^uintptr(0)+1 wraps to 0, the top bit is set, the round trip through
+// uint64 is the identity). gc: true.
+func uintptrWrap() bool {
+	x := ^uintptr(0)
+	return x+1 == 0 && x>>63 == 1 && uintptr(uint64(x)) == x
+}
+
+// uintptrAssertPanic: the non-comma-ok assertion panics with the kind's
+// NAME in the text — gc `interface conversion: interface {} is uintptr, not
+// uint64` (the collapsed machine would have returned 1 with status ok).
+func uintptrAssertPanic() uint64 {
+	var x any = uintptr(1)
+	return x.(uint64)
+}
+
 func main() {
 	println(uintptrAssert(), uintptrEqual(), uintptrSwitch(), uintptrMapKey(),
 		uintptrSliceAssert(), uintptrPointerAssert(), widthOnly(),
 		genericWidthOnly(), definedNominalU(), definedNominalS(), definedNominalE(),
-		genericNominal())
+		genericNominal(), uintptrMethodParam(), uintptrMethodResult(),
+		uintptrArrayAssert(), uintptrWrap())
 }

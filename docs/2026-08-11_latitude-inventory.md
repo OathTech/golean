@@ -2226,13 +2226,18 @@ row so the axis stops being invisible, nothing more.
   2026-08-31 at `IntKind.bits?` (fidelity fix round).
 - Also entangled: which programs COMPILE (constant overflow at int
   boundaries — the negative lane inherits the pin via go/types on the
-  host), and `uintptr` (frontend maps to uint64; observations of it
-  refused; since 2026-10-12 its runtime type IDENTITY — boxing into an
-  interface, assertion / type-switch targets — is refused by name at
-  the frontend too, `tools/nativefrontend/uintptrid.go`, BUG-124 /
-  ledger FR-38, pending the parked `typed-uintptr-identity` repair
-  ([USER] 2026-10-12 D6 «refuse and repair asap»); the width pin here
-  is untouched).
+  host), and `uintptr` — a DISTINCT integer kind since 2026-10-12
+  (`IntKind.uintptr`, `GoLean/GoCore/Value.lean`; BUG-124 fixed, ledger
+  FR-38 retired; [USER] 2026-10-12 D6 «refuse and repair asap», the
+  repair's shape «1,3-6 approved», item 4 = the design note's D1–D5,
+  `docs/2026-10-12_uintptr-repair-design.md`), whose WIDTH reads this pin
+  (`IntKind.bitsAt`: `p.intBits`, as go/types sizes `Int`/`Uint`/`Uintptr`
+  by the one `WordSize`); the identity was never latitude —
+  spec#Numeric_types makes it a distinct type — only the width is;
+  observations of it stay refused at both seams by name (D2 = O1;
+  `golean-observation-v1`'s kind set is ten). Amended in place 2026-10-12
+  (D4); until then this clause recorded the collapse to uint64 and the
+  by-name frontend refusal of the identity (the REFUSE half).
 - PLAUSIBLE ENVELOPE: {32, 64} as a machine parameter.
 - EVIDENCE: GC (amd64 = 64-bit only). XIMPL is the evidence class that
   BEARS here more than anywhere sequential: a 32-bit gc / tinygo lane

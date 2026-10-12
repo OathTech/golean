@@ -778,16 +778,6 @@ func TestFloatBitsPrimitiveIsSupplied(t *testing.T) {
 		"dotArgsIndex":  {cause: "stdlib-var-unmodeled", key: "os.Args"},
 		"dotArgsAssign": {cause: "stdlib-var-unmodeled", key: "os.Args"},
 		"dotArgsAddr":   {cause: "stdlib-var-unmodeled", key: "os.Args"},
-		// FR-38 / BUG-124 (2026-10-12, fix round LOW-2): uintptr identity —
-		// the static twin of the frontend's refusal (uintptr_fr38.go), keyed
-		// by the construct phrase the dynamic row keys on.
-		"uidAssert":    {cause: "uintptr-identity", key: "variable declaration boxes uintptr into any"},
-		"uidEqual":     {cause: "uintptr-identity", key: "conversion boxes uintptr into any"},
-		"uidMapKey":    {cause: "uintptr-identity", key: "map literal key boxes uintptr into any"},
-		"uidTarget":    {cause: "uintptr-identity", key: "type assertion to uintptr"},
-		"uidMethodSet": {cause: "uintptr-identity", key: "variable declaration boxes main.uidT into any"},
-		"uidWidth":     {},
-		"uidNominal":   {},
 	}
 	for name, w := range cases {
 		d := decls[name]
@@ -1146,9 +1136,7 @@ func TestCalibrationAgainstWire(t *testing.T) {
 		"dotIntn": false, "dotPerm": true, "dotIntnValue": true, "dotIntnDefer": true, "dotSprintf": true,
 		// defer/go of a non-source stdlib member; sync method values (2026-10-05)
 		"sprintf": false, "atomicCall": false, "atomicDefer": true, "atomicGo": true, "fmtCall": false, "fmtDefer": true, "fmtGo": true,
-		"syncMV": false, "syncMVWg": false, "syncMVPromoted": false, "syncMVUnmodeled": true, "syncMExpr": true,
-		// FR-38 / BUG-124 (2026-10-12): uintptr identity — five refuse by name, the width-only and nominal shapes lower
-		"uidAssert": true, "uidEqual": true, "uidMapKey": true, "uidTarget": true, "uidMethodSet": true, "uidWidth": false, "uidNominal": false}
+		"syncMV": false, "syncMVWg": false, "syncMVPromoted": false, "syncMVUnmodeled": true, "syncMExpr": true}
 	if wireQ["errors.Is"] == "" {
 		t.Errorf("wire: the library function errors.Is should be quarantined (library-refusals.tsv row); got lowered")
 	}

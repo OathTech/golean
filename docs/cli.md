@@ -327,7 +327,7 @@ A refusal never counts as a pass.
 |---|---|---|
 | `unit`, `nil` | `tag` | |
 | `bool` | `value` | |
-| `int` | `kind`, `value` | `kind` is one of the ten concrete integer kinds, and `value` is range-checked per kind (`uintptr` is lowered as `uint64`) |
+| `int` | `kind`, `value` | `kind` is one of the ten concrete integer kinds, and `value` is range-checked per kind (`uintptr` — a distinct kind on the machine since 2026-10-12, BUG-124 — is refused at this seam by name on both sides; the Go observer refuses `reflect.Uintptr` first) |
 | `float` | `kind`, `bits` | the IEEE bit pattern; every NaN is canonicalized to the quiet NaN; signed zero is kept |
 | `string` | `bytes` | an array of byte values |
 | `interface` | `dynamic`, `value` | `dynamic` is the dynamic type's name, unqualified, as `reflect.Type.Name()` gives it |
