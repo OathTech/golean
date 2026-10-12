@@ -93,8 +93,9 @@ func TestRawStdoutRefusals(t *testing.T) {
 	}
 }
 
-// Release-readiness item 22 (2026-10-12): a func-valued result — bare, nil,
-// in a struct field, boxed in an interface — is refused BY NAME by the
+// Release-readiness item 22 (2026-10-12): a func-typed result — bare, nil,
+// of a declared func type, in a struct field or array, boxed in an interface
+// (a declared func type's nil included) — is refused BY NAME by the
 // generated observer (the machine's readout refuses the same values,
 // GoLean/CLI.lean funcObserved?), and an int result beside it still answers
 // (the positive control). Runs the pinned `go run`; a missing go fails.
@@ -113,6 +114,13 @@ func retBoxed() Box             { return Box{F: add1, N: 3} }
 func retAny() any               { return add1 }
 func retInt() int               { return add1(6) }
 
+type Fn func(int) int
+
+func retNamedFuncNilBare() Fn            { return nil }
+func retNamedFuncNilBoxed() any          { var f Fn; return f }
+func retNilFuncInStruct() Box            { return Box{N: 3} }
+func retNilFuncInArray() [2]func(int) int { return [2]func(int) int{} }
+
 func main() {}
 `
 
@@ -127,6 +135,10 @@ func TestFuncObservationRefusedByName(t *testing.T) {
 		{"retNilFunc", "unsupported Go observation kind func (a Go func value has no observable identity"},
 		{"retBoxed", "unsupported Go observation kind func (a Go func value has no observable identity"},
 		{"retAny", "unsupported Go observation kind func (a Go func value has no observable identity"},
+		{"retNamedFuncNilBare", "unsupported Go observation kind func (a Go func value has no observable identity"},
+		{"retNamedFuncNilBoxed", "unsupported Go observation kind func (a Go func value has no observable identity"},
+		{"retNilFuncInStruct", "unsupported Go observation kind func (a Go func value has no observable identity"},
+		{"retNilFuncInArray", "unsupported Go observation kind func (a Go func value has no observable identity"},
 		{"retInt", `"status":"ok","values":[{"kind":"int","tag":"int","value":7}]`},
 	} {
 		dir := filepath.Join(root, tc.subject)

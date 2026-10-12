@@ -976,7 +976,7 @@ def traceStream (program : Program) (functionName : String) (args : Array GoValu
     match CLI.enumRunProgram ep fuel stream with
     | .ok (st, j, leftover) => (st, j.compress,
         (some (if leftover.isEmpty then (none : Option Nat) else some (stream.length - leftover.length)) : Option (Option Nat)))
-    | .error (e, out) => (e.status, (CLI.observationOfRunOut program.typeDefs.nameOf? (.error (e, out))).compress, none)
+    | .error (e, out) => (e.status, (CLI.observationOfRunOut (CLI.ObsCtx.ofFunc program.typeDefs ep.func) (.error (e, out))).compress, none)
   -- The real engine: unseeded `runProgramPoolOutM`; seeded (slice C) the seeded pool entry
   -- `runProgramPoolSeededOutM` — its READOUT rendered with raw location ids, the enumerator
   -- driver's own rendering, so the two drivers compare on one shape (the seed-relative rendering
@@ -986,7 +986,14 @@ def traceStream (program : Program) (functionName : String) (args : Array GoValu
     | none => runProgramPoolOutM fuel program functionName args stream
     | some (seed, sargs) =>
         (runProgramPoolSeededOutM fuel program functionName seed sargs stream).map (·.readout)
-  let realObs := (CLI.observationOfRunOut program.typeDefs.nameOf? real).compress
+  let realObs := (CLI.observationOfRunOut (CLI.ObsCtx.ofFunc program.typeDefs ep.func) real).compress
+  -- The tracer's own loop classifies main's exit as `ok`; the READOUT seam may still refuse it
+  -- (BUG-099's synthetic type, a func-typed result — release-readiness item 22). The status is
+  -- the readout's word then, exactly as `native-json-run` and the enumerator print it, so a
+  -- refused readout is never traced as `ok`.
+  let out := match out.status, real with
+    | "ok", .ok r => { out with status := CLI.readoutStatus (CLI.ObsCtx.ofFunc program.typeDefs ep.func) r }
+    | _, _ => out
   let mut agree : List String := []
   if enumStatus != out.status then
     agree := agree ++ [s!"status: tracer {out.status} vs enumerator {enumStatus}"]

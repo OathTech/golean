@@ -575,66 +575,161 @@ panic print (Machine.lean) and the method set (BUG-009/BUG-053). The
 search walks what an observation RENDERS with a dynamic type — interface
 boxes, through struct fields and array elements; slice/map/chan bases
 render as identities and carry none. -/
-private partial def runtimeErrorObserved? : GoValue → Option String
-  | .interface (.defined idx) v =>
+private def runtimeErrorObserved? (v : GoValue) : Option String :=
+  match v with
+  | .interface (.defined idx) inner =>
       if idx == GoCore.runtimeErrorTypeIdx then some "an interface box"
-      else (runtimeErrorObserved? v).map (fun w => s!"a boxed value: {w}")
-  | .interface _ v => runtimeErrorObserved? v
+      else (runtimeErrorObserved? inner).map (fun w => s!"a boxed value: {w}")
+  | .interface _ inner => runtimeErrorObserved? inner
   | .struct typeId fields =>
-      fields.findSome? (fun (name, v) =>
-        (runtimeErrorObserved? v).map (fun w => s!"field {name} of {typeId.unqualified}: {w}"))
+      fields.attach.toList.findSome? (fun ⟨(name, fv), _⟩ =>
+        (runtimeErrorObserved? fv).map (fun w => s!"field {name} of {typeId.unqualified}: {w}"))
   | .array vs =>
-      vs.findSome? (fun v => (runtimeErrorObserved? v).map (fun w => s!"an array element: {w}"))
+      vs.attach.toList.findSome? (fun ⟨ev, _⟩ =>
+        (runtimeErrorObserved? ev).map (fun w => s!"an array element: {w}"))
   | _ => none
+termination_by v
+decreasing_by
+  all_goals simp_wf
+  all_goals first
+    | omega
+    | (have := Array.sizeOf_lt_of_mem ‹_ ∈ _›
+       try simp only [Prod.mk.sizeOf_spec] at this
+       omega)
 
-/-- A FUNC VALUE in what an observation renders (release-readiness item 22, 2026-10-12; [USER]
-Mike «22: fix it», relayed; the refusal is [AGENT]'s decision): a Go func value has no
-observable identity — not comparable (only to nil), no stable address, a closure's captures
-invisible — and the Go observer refuses `reflect.Func` by name (`tools/coverageharness`). So the
-machine refuses it by name too, at the same seam, rather than spelling a `func` tag its own
-decoder refuses (the former shape: emitted, never decodable). The walk is
-`runtimeErrorObserved?`'s: interface boxes (a box whose dynamic type is a func type refuses even
-when the func is nil — Go's observer reaches `reflect.Func` through `Elem()` there too), struct
-fields, array elements; slice/map/chan bases render as identities and carry none. Not caught: a
-NIL func at a non-interface position renders `{"tag":"nil"}` — the readout carries no static
-type to tell it from a nil pointer — and the Go observer refuses that row (`reflect.Func`, as it
-refuses `reflect.Ptr`), so the row is red at the oracle, never a pass. -/
-private partial def funcObserved? : GoValue → Option String
-  | .funcVal fid _ => some s!"a func value ({fid.key})"
-  | .interface (.funcType ..) _ => some "an interface box whose dynamic type is a func type"
-  | .interface _ v => (funcObserved? v).map (fun w => s!"a boxed value: {w}")
+/-- A FUNC-TYPED position in a TYPE (release-readiness item 22, 2026-10-12; [USER] Mike «22: fix
+it», relayed; the refusal is [AGENT]'s decision, the static half from the pre-merge review's
+MEDIUM-1/2): the positions the Go observer's `reflect` walk reaches by STATIC kind — the type
+itself, array elements, the fields of a declared struct, a declared type's underlying type
+(`.defined` resolved through the table, `TypeEnv.resolve`'s descent, `bound`-structural) — where
+`reflect.Func` refuses, nil or not. Pointer, slice, map and chan types are leaves (their
+values render as identities and the Go observer refuses those kinds itself); an interface type
+is a leaf (its DYNAMIC type is checked on the value, `funcObserved?`). `.error` = the type
+cannot be resolved (an unknown index, a chain longer than the table: unreachable on an
+accepted program) — the caller refuses by name, never skips. -/
+private def funcTypeIn? (types : GoCore.TypeEnv) (bound : Nat) (ty : GoCore.Ty) : Except String (Option String) :=
+  match ty with
+  | .funcType .. => .ok (some "a func type")
+  | .array _ e => do
+      return (← funcTypeIn? types bound e).map (fun w => s!"an array element of {w}")
+  | .defined i =>
+      match bound with
+      | 0 => .error s!"type index {i}: the defined-type chain exceeds the table size"
+      | bound + 1 =>
+          match types[i]? with
+          | none => .error s!"unknown type index {i} (no entry in the type table)"
+          | some (name, .struct fields) =>
+              fields.toList.findSomeM? (fun f => do
+                return (← funcTypeIn? types bound f.typ).map
+                  (fun w => s!"field {f.name} of {name.unqualified}, {w}"))
+          | some (name, .defined u) => do
+              return (← funcTypeIn? types bound u).map
+                (fun w => s!"{name.unqualified}, declared over {w}")
+          | some (_, .interfaceDef _) => .ok none
+          | some (_, .opaqueDecl _) => .ok none
+  | _ => .ok none
+termination_by (bound, ty)
+
+/-- A FUNC VALUE in what an observation renders (item 22; see `funcTypeIn?`): a Go func value
+has no observable identity — not comparable (only to nil), no stable address, a closure's
+captures invisible — and the Go observer refuses `reflect.Func` by name
+(`tools/coverageharness`). So the machine refuses it by name too, at the same seam, rather than
+spelling a `func` tag its own decoder refuses (the former shape: emitted under `ok`, never
+decodable). The value walk is `runtimeErrorObserved?`'s — interface boxes, struct fields, array
+elements — and at an interface box it checks the DYNAMIC type statically (`funcTypeIn?`), so a
+boxed nil func of a declared func type (`any(Fn(nil))`) or a boxed struct with a nil func field
+refuses exactly as Go's `Elem()` walk does. Every NON-interface position is covered by the
+declared result type (`readoutRefusal?` runs `funcTypeIn?` on it first), so a nil func there
+refuses too. -/
+private def funcObserved? (types : GoCore.TypeEnv) (v : GoValue) : Except String (Option String) :=
+  match v with
+  | .funcVal fid _ => .ok (some s!"a func value ({fid.key})")
+  | .interface dyn inner => do
+      match ← funcTypeIn? types (types.size + 1) dyn with
+      | some w => return some s!"an interface box of {w}"
+      | none => return (← funcObserved? types inner).map (fun w => s!"a boxed value: {w}")
   | .struct typeId fields =>
-      fields.findSome? (fun (name, v) =>
-        (funcObserved? v).map (fun w => s!"field {name} of {typeId.unqualified}: {w}"))
+      fields.attach.toList.findSomeM? (fun ⟨(name, fv), _⟩ => do
+        return (← funcObserved? types fv).map (fun w => s!"field {name} of {typeId.unqualified}: {w}"))
   | .array vs =>
-      vs.findSome? (fun v => (funcObserved? v).map (fun w => s!"an array element: {w}"))
-  | _ => none
+      vs.attach.toList.findSomeM? (fun ⟨ev, _⟩ => do
+        return (← funcObserved? types ev).map (fun w => s!"an array element: {w}"))
+  | _ => .ok none
+termination_by v
+decreasing_by
+  all_goals simp_wf
+  all_goals first
+    | omega
+    | (have := Array.sizeOf_lt_of_mem ‹_ ∈ _›
+       try simp only [Prod.mk.sizeOf_spec] at this
+       omega)
 
-/-- The named func refusal for an observed position (`result i` / `seed cell k`). -/
-private def funcRefusal (what w : String) : Stop :=
-  .unsupported s!"observation of {what} holds {w}: a Go func value has no observable identity (not comparable, no stable address; the Go observer refuses reflect.Func) — not in golean-observation-v1, refused by name at the observation seam"
+/-- The named func refusal; `clause` names the position and what it has/holds. -/
+private def funcRefusal (clause : String) : Stop :=
+  .unsupported s!"observation of {clause}: a Go func value has no observable identity (not comparable, no stable address; the Go observer refuses reflect.Func, nil or not) — not in golean-observation-v1, refused by name at the observation seam"
+
+/-- What a readout seam knows besides the values (item 22): the program's type table (interface
+boxes render their dynamic type's key through it; `funcTypeIn?` resolves declared types in it)
+and the entry function's DECLARED result types, one per readout value. Every seam has the entry
+in scope (`native-json-run`, `--seed`, the enumerators, the tracer). -/
+structure ObsCtx where
+  types : GoCore.TypeEnv
+  resultTys : Array GoCore.Ty
+
+/-- The observation context of an entry function. -/
+def ObsCtx.ofFunc (types : GoCore.TypeEnv) (f : GoCore.Func) : ObsCtx :=
+  ⟨types, f.results.map (·.typ)⟩
+
+/-- The observation context of an entry looked up by name; an unknown entry declares no result
+types, so a readout with any value refuses by name in `readoutRefusal?` (the count check). -/
+def ObsCtx.ofEntry (program : GoCore.Program) (functionName : String) : ObsCtx :=
+  match GoCore.findFunctionIn? program.funcs ⟨functionName⟩ with
+  | some f => ObsCtx.ofFunc program.typeDefs f
+  | none => ⟨program.typeDefs, #[]⟩
 
 /-- The readout's refusal, if any: BUG-099's synthetic type observed in a result (the first such
-result, by position), else a func value observed in a result (item 22, `funcObserved?`). -/
-private def readoutRefusal? (r : GoLean.GoCore.Readout) : Option Stop :=
+result, by position); else, per result in order, a func-typed DECLARED position (`funcTypeIn?`,
+nil or not) or a func value / func-typed interface box in the value (`funcObserved?`) — item 22.
+The value count must equal the declared result count; a mismatch, or a type the table cannot
+resolve, refuses by name (`internal`) rather than skipping the check. -/
+private def readoutRefusal? (oc : ObsCtx) (r : GoLean.GoCore.Readout) : Option Stop :=
+  if oc.resultTys.size != r.values.size then
+    some (.internal s!"observation: the readout has {r.values.size} result value(s) but the entry declares {oc.resultTys.size} result type(s) — the func-type check cannot be applied (refused by name, never skipped)")
+  else
   let bug099 := ((List.range r.values.size).findSome? (fun i =>
       r.values[i]? >>= fun v => (runtimeErrorObserved? v).map (fun w => (i, w)))).map
     (fun (i, w) =>
       .unsupported s!"observation of result {i} names the dynamic type of a recovered runtime error ({w}), which the machine models as one synthetic id ({GoCore.runtimeErrorTypeId.key}, reserved table index {GoCore.runtimeErrorTypeIdx}) where gc has a concrete runtime type per fault (runtime.boundsError / runtime.errorString / *runtime.TypeAssertionError / …) with a struct payload — no gc-correct observation exists; BUG-099, refused by name")
-  bug099 <|> ((List.range r.values.size).findSome? (fun i =>
-      r.values[i]? >>= fun v => (funcObserved? v).map (funcRefusal s!"result {i}")))
+  let funcAt (i : Nat) : Option Stop :=
+    match r.values[i]?, oc.resultTys[i]? with
+    | some v, some ty =>
+        match funcTypeIn? oc.types (oc.types.size + 1) ty with
+        | .error e => some (.internal s!"observation of result {i}: its declared type cannot be resolved ({e})")
+        | .ok (some w) => some (funcRefusal s!"result {i}, which has {w}")
+        | .ok none =>
+            match funcObserved? oc.types v with
+            | .error e => some (.internal s!"observation of result {i}: a boxed dynamic type cannot be resolved ({e})")
+            | .ok (some w) => some (funcRefusal s!"result {i}, which holds {w}")
+            | .ok none => none
+    | _, _ => some (.internal s!"observation: result {i} missing")
+  bug099 <|> (List.range r.values.size).findSome? funcAt
 
 /-- The observation AND its status word for a readout, from one place: `ok`
 with `runJson`, or the readout's refusal (`readoutRefusal?`: BUG-099's, or a
-func value — item 22; status `unsupported`) with the run's output prefix. Every seam that renders a readout goes through this, so the
+func-typed position — item 22; status `unsupported`) with the run's output prefix. Every seam that renders a readout goes through this, so the
 status word beside an observation (the enumerators' leaf labels,
 `coverage-observations`' status discipline, `native-json-run`'s exit code)
 never says `ok` over a refusal. -/
-private def readoutObs (nameOf : TypeIdx → Option TypeId) (r : GoLean.GoCore.Readout) :
+private def readoutObs (oc : ObsCtx) (r : GoLean.GoCore.Readout) :
     String × Json :=
-  match readoutRefusal? r with
+  match readoutRefusal? oc r with
   | some stop => (stop.status, errorJson stop r.output)
-  | none => ("ok", runJson nameOf r)
+  | none => ("ok", runJson oc.types.nameOf? r)
+
+/-- The status word `readoutObs` gives a readout (`ok`, or its refusal's status) — public for the
+tracer, whose own loop classifies main's exit before the readout is rendered. -/
+def readoutStatus (oc : ObsCtx) (r : GoLean.GoCore.Readout) : String :=
+  (readoutObs oc r).1
 
 /-- The SEEDED observation (seeded-heap slice B, design §5, D7): the readout's results and the
 seed cells' FINAL values, every location rendered seed-relative over `seedRelative? b n` with
@@ -646,8 +741,9 @@ position (status `unsupported`); BUG-099's readout refusal applies first, exactl
 Unseeded runs never come here (`readoutObs`, no `seed` key, byte-identical output). Public for
 the eval pins. Recorded (review NIT, 2026-10-12): the rendering is computed before the BUG-099
 check is consulted — pure, and only the refusal path discards it. -/
-def seededObs (nameOf : TypeIdx → Option TypeId) (sr : GoCore.Machine.SeededReadout) :
+def seededObs (oc : ObsCtx) (sr : GoCore.Machine.SeededReadout) :
     String × Json :=
+  let nameOf := oc.types.nameOf?
   let b := sr.base
   let n := sr.seedFinal.size
   let rendered : Except String (Array Json × Array Json) := do
@@ -660,11 +756,17 @@ def seededObs (nameOf : TypeIdx → Option TypeId) (sr : GoCore.Machine.SeededRe
       | some v => goValueJsonWith nameOf (seedLocJson b n s!"cell {k}") v
       | none => .error s!"internal: seed cell {k} missing"
     pure (vs, cs)
-  -- The seed cells' final values are observed too: a func stored into a seed cell refuses by
-  -- name like a func result (item 22), after the readout's own refusal.
+  -- The seed cells' final values are observed too: a func value in a seed cell refuses by name
+  -- like a func result (item 22), after the readout's own refusal. A GUARD only: no
+  -- golean-seed-v1 file can place a func-typed position today (a func spelling refuses, a
+  -- func-typed struct field refuses as a missing field, an `any` field takes `nil` only at
+  -- pointer types), so no seed reaches it through the CLI; the eval pin drives it directly.
   let cellFunc := (List.range n).findSome? (fun k =>
-    sr.seedFinal[k]? >>= fun v => (funcObserved? v).map (funcRefusal s!"seed cell {k}"))
-  match readoutRefusal? sr.readout <|> cellFunc with
+    sr.seedFinal[k]? >>= fun v =>
+      match funcObserved? oc.types v with
+      | .error e => some (.internal s!"observation of seed cell {k}: a boxed dynamic type cannot be resolved ({e})")
+      | .ok w => w.map (fun w => funcRefusal s!"seed cell {k}, which holds {w}"))
+  match readoutRefusal? oc sr.readout <|> cellFunc with
   | some stop => (stop.status, errorJson stop sr.readout.output)
   | none =>
       match rendered with
@@ -945,7 +1047,7 @@ private def runSeeded (program : GoCore.Program) (input : FilePath) (functionNam
       IO.println (errorJson err out).compress
       return 1
   | .ok sr =>
-      let (status, obs) := seededObs program.typeDefs.nameOf? sr
+      let (status, obs) := seededObs (ObsCtx.ofEntry program functionName) sr
       IO.println obs.compress
       return (if status == "ok" then 0 else 1)
 
@@ -1011,7 +1113,7 @@ private def runNativeJsonRun (args : List String) : IO UInt32 := do
                   | .ok result =>
                       -- BUG-099: a readout that would observe the synthetic
                       -- runtime-error type is a refusal (exit 1), never `ok`.
-                      let (status, obs) := readoutObs program.typeDefs.nameOf? result
+                      let (status, obs) := readoutObs (ObsCtx.ofEntry program functionName) result
                       IO.println obs.compress
                       return (if status == "ok" then 0 else 1)
                   | .error (err, out) =>
@@ -1470,7 +1572,7 @@ mirrors (audit F5). The per-branch budget (2026-10-06): `itersCap` =
 the loop re-entries taken so far (`loopReentry`); the (K+1)-th re-entry
 throws `.fuelOut` with the output so far — the declared nonterm class —
 while step-fuel exhaustion under a cap is `stepFuelStop`'s named stop. -/
-def enumPoolRun (pctx : GoCore.ProgramCtx) (resultLocs : List Loc)
+def enumPoolRun (pctx : GoCore.ProgramCtx) (resultLocs : List Loc) (resultTys : Array GoCore.Ty)
     (itersCap : Option Nat) :
     Nat → Nat → GoCore.Machine.MultiConfig → GoCore.Machine.RaceState →
     GoCore.Choices → GoString →
@@ -1493,14 +1595,14 @@ def enumPoolRun (pctx : GoCore.ProgramCtx) (resultLocs : List Loc)
                 (match GoCore.Machine.runnableIdxs pctx m.shared m.threads with
                 | [] => do
                     let vals ← (GoCore.Machine.loadMany pctx σf resultLocs).mapError (·, acc)
-                    let (st, obs) := readoutObs pctx.types.nameOf? { values := vals.toArray, output := acc }
+                    let (st, obs) := readoutObs ⟨pctx.types, resultTys⟩ { values := vals.toArray, output := acc }
                     return (st, obs, choices)
                 | _ :: _ =>
                     let (pick, choices₁) :=
                       GoCore.Choices.consumeAt .l5ExitWindow 2 choices
                     if pick == 0 then do
                       let vals ← (GoCore.Machine.loadMany pctx σf resultLocs).mapError (·, acc)
-                      let (st, obs) := readoutObs pctx.types.nameOf? { values := vals.toArray, output := acc }
+                      let (st, obs) := readoutObs ⟨pctx.types, resultTys⟩ { values := vals.toArray, output := acc }
                       return (st, obs, choices₁)
                     else
                       match fuel with
@@ -1516,7 +1618,7 @@ def enumPoolRun (pctx : GoCore.ProgramCtx) (resultLocs : List Loc)
                           | .error e => throw (e, acc)
                           | .ok r' =>
                               if itersCap.any (iters' > ·) then throw (.fuelOut, acc')
-                              else enumPoolRun pctx resultLocs itersCap fuel iters' m' r' choices' acc')
+                              else enumPoolRun pctx resultLocs resultTys itersCap fuel iters' m' r' choices' acc')
             | none =>
                 if (GoCore.Machine.runnableIdxs pctx m.shared m.threads).isEmpty then
                   throw (.deadlock, acc)
@@ -1534,7 +1636,7 @@ def enumPoolRun (pctx : GoCore.ProgramCtx) (resultLocs : List Loc)
                       | .error e => throw (e, acc)
                       | .ok r' =>
                           if itersCap.any (iters' > ·) then throw (.fuelOut, acc')
-                          else enumPoolRun pctx resultLocs itersCap fuel iters' m' r' choices' acc'
+                          else enumPoolRun pctx resultLocs resultTys itersCap fuel iters' m' r' choices' acc'
 
 /-- The `$pkginit` phase of an enumeration run (init slice):
 `runConfig`-mirroring terminal handling, but returning the FINAL STATE
@@ -1601,7 +1703,7 @@ def enumRunProgram (ep : EnumProgram) (runFuel : Nat)
   -- The subject runs on the POOL (slice 4), mirroring `runProgramPoolM`:
   -- a fresh one-thread pool over the initialized state, race detector
   -- armed from empty.
-  enumPoolRun ep.ctx resultLocs itersCap runFuel 0
+  enumPoolRun ep.ctx resultLocs (ep.func.results.map (·.typ)) itersCap runFuel 0
     ⟨#[.running (.exec ep.func.body frameEnv (.frame [] [] [] [] .stop ep.func.id)) none], s₃, 0⟩ {}
     choices₁ GoString.empty
 
@@ -1609,18 +1711,18 @@ def enumRunProgram (ep : EnumProgram) (runFuel : Nat)
 so the driver-agreement eval tests compare the two drivers on the SAME
 canonical JSON (audit F5). Since stdlib slice 3 the whole-run result is a
 `RunResult` (the stop carries its output prefix). -/
-def observationOfRunOut (nameOf : TypeIdx → Option TypeId) :
+def observationOfRunOut (oc : ObsCtx) :
     GoCore.Machine.RunResult → Json
-  | .ok result => (readoutObs nameOf result).2
+  | .ok result => (readoutObs oc result).2
   | .error (err, out) => errorJson err out
 
 /-- The `Except Stop Readout` form (the sequential drivers, which have no
 output channel — their stops carry an EMPTY prefix). `nameOf` is the
 program's `typeDefs.nameOf?` (interface boxes render their dynamic type's
 key through it). -/
-def observationOfRun (nameOf : TypeIdx → Option TypeId)
+def observationOfRun (oc : ObsCtx)
     (r : Except Stop GoCore.Readout) : Json :=
-  observationOfRunOut nameOf (r.mapError (·, GoString.empty))
+  observationOfRunOut oc (r.mapError (·, GoString.empty))
 
 /-- The member VOCABULARY the enumeration lanes emit (audit fix F5,
 2026-09-04): normal readouts, unrecovered panics and the race refusal.
@@ -1783,12 +1885,12 @@ without `--expect-status`: the DFS recorded it as a leaf, the dedup path
 listed it beside `certified=checkCert` — would certify a set the machine
 cannot stand behind (the runtime lane's adversarial review, 2026-10-12,
 MEDIUM). `readoutObs` stays the one rendering seam. -/
-private def readoutMember (nameOf : TypeIdx → Option TypeId) (r : GoLean.GoCore.Readout)
+private def readoutMember (oc : ObsCtx) (r : GoLean.GoCore.Readout)
     (site : String) : Except String Json :=
-  match readoutRefusal? r with
+  match readoutRefusal? oc r with
   | some stop =>
       .error s!"result readout refused {site} — cannot certify the observation set: {renderStop stop}"
-  | none => .ok (readoutObs nameOf r).2
+  | none => .ok (readoutObs oc r).2
 
 /-- Record one terminal leaf: status discipline (audit F1; SET-valued
 since the arc-final audit F8 — see `EnumArgs.expectStatus`), observation
@@ -1920,7 +2022,7 @@ partial def poolDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
               | .error e =>
                   .error s!"result readout failed at a terminal: {renderStop e}"
               | .ok vals => do
-                  let obs ← readoutMember ctx.ep.ctx.types.nameOf? { values := vals.toArray, output := acc }
+                  let obs ← readoutMember (ObsCtx.ofFunc ctx.ep.ctx.types ctx.ep.func) { values := vals.toArray, output := acc }
                     s!"at a terminal under pick assignment {p.reverse}"
                   recordLeaf ctx o p "ok" obs p.length
           (match GoCore.Machine.runnableIdxs ctx.ep.ctx m.shared m.threads with
@@ -2219,12 +2321,12 @@ def runDedupObservations (ep : EnumProgram) (cfg : EnumArgs) : IO UInt32 := do
       -- never a member, never a status word beside `certified=checkCert`.
       for t in cert.members do
         if let .ok vs := t.1 then
-          if let .error why := readoutMember ep.ctx.types.nameOf? { values := vs.toArray } "on a certified member" then
+          if let .error why := readoutMember (ObsCtx.ofFunc ep.ctx.types ep.func) { values := vs.toArray } "on a certified member" then
             IO.eprintln s!"coverage-observations: {why}"
             return 1
       let obsOf : GoCore.Machine.Obs → String × Json := fun o =>
         match o with
-        | .ok vs => readoutObs ep.ctx.types.nameOf? { values := vs.toArray }
+        | .ok vs => readoutObs (ObsCtx.ofFunc ep.ctx.types ep.func) { values := vs.toArray }
         | .terminal t => (t.status, errorJson (.terminal t))
       let statusOf : GoCore.Machine.Obs → String := fun o => (obsOf o).1
       let obsJson : GoCore.Machine.Obs → Json := fun o => (obsOf o).2

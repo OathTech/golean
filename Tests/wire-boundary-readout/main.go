@@ -14,7 +14,8 @@ package main
 // return a func value bare, in a struct field and boxed in an interface —
 // each refused BY NAME at the readout (`funcObserved?`) on `native-json-run`
 // and on the enumerator, and by the Go observer (`reflect.Func`); the
-// observation never spells a `func` tag.
+// observation never spells a `func` tag. The nil shapes below refuse the
+// same way, on both sides.
 
 func boom() {
 	var s []int
@@ -40,8 +41,20 @@ func retFunc() func(int) int { return add1 }
 func retBoxed() Box          { return Box{F: add1, N: 3} }
 func retAny() any            { return add1 }
 
+// The NIL shapes (the pre-merge review's MEDIUM-1/2): refused by the
+// declared result type (`funcTypeIn?`), or at an interface box by its
+// dynamic type, exactly where Go's reflect refuses by static kind.
+type Fn func(int) int
+
+func retNilFunc() func(int) int           { return nil }
+func retNamedFuncNilBare() Fn             { return nil }
+func retNamedFuncNilBoxed() any           { var f Fn; return f }
+func retNilFuncInStruct() Box             { return Box{N: 3} }
+func retNilFuncInArray() [2]func(int) int { return [2]func(int) int{} }
+
 func main() {
 	println(plain())
 	_ = recoveredAsAny()
 	println(retFunc()(1), retBoxed().N, retAny() != nil)
+	println(retNilFunc() == nil, retNamedFuncNilBare() == nil, retNamedFuncNilBoxed() != nil, retNilFuncInStruct().N, retNilFuncInArray()[0] == nil)
 }

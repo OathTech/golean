@@ -1910,7 +1910,7 @@ private def expectDriverAgreement (name : String) (program : GoCore.Program)
       return false
   | .ok out =>
       for s in streams do
-        let obs := CLI.observationOfRun program.typeDefs.nameOf?
+        let obs := CLI.observationOfRun (CLI.ObsCtx.ofEntry program fname)
           (GoCore.Machine.runProgramM 1000000 program fname #[] s)
         if !out.observations.contains obs then
           IO.eprintln s!"FAIL: {name}: driver observation under stream {s} is not in the enumerated set: {obs.compress}"
@@ -1933,7 +1933,7 @@ private def expectPoolDriverAgreement (name : String) (program : GoCore.Program)
       return false
   | .ok out =>
       for s in streams do
-        let obs := CLI.observationOfRun program.typeDefs.nameOf?
+        let obs := CLI.observationOfRun (CLI.ObsCtx.ofEntry program fname)
           (GoCore.Machine.runProgramPoolM 1000000 program fname #[] s)
         if !out.observations.contains obs then
           IO.eprintln s!"FAIL: {name}: pool driver observation under stream {s} is not in the enumerated set: {obs.compress}"
@@ -2795,7 +2795,7 @@ private def seedFacts : IO Bool := do
   passed := passed && (← expectStrEq "SEED-B: inc over a seeded int cell — result and final cell"
     (match GoCore.Machine.runProgramPoolSeededOutM 1000 seedIncProgram "F"
         #[{ typ := .int .int, value := .int 41 }] #[.ref 0 []] with
-     | .ok sr => (CLI.seededObs (fun _ => none) sr).2.compress
+     | .ok sr => (CLI.seededObs (CLI.ObsCtx.ofEntry seedIncProgram "F") sr).2.compress
      | .error (e, _) => s!"stopped: {e.message}")
     "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"seed\":[{\"kind\":\"int\",\"tag\":\"int\",\"value\":42}],\"status\":\"ok\",\"values\":[{\"kind\":\"int\",\"tag\":\"int\",\"value\":42}]}")
   -- RE-PIN 19 (2026-10-12): the readout CARRIES the seed's base, on both drivers, equal to the
@@ -2830,12 +2830,12 @@ private def seedFacts : IO Bool := do
   -- refuses the WHOLE observation, naming the position.
   let synth (vals : Array GoValue) : GoCore.Machine.SeededReadout :=
     { readout := { values := vals }, base := 4, seedFinal := #[.int 1 .int, .addr (.index (.base ⟨4⟩) 2)] }
-  let inside := CLI.seededObs (fun _ => none) (synth #[.addr (.field (.base ⟨5⟩) ⟨"main.Node"⟩ "next")])
+  let inside := CLI.seededObs ⟨#[], #[.pointer (.int .int)]⟩ (synth #[.addr (.field (.base ⟨5⟩) ⟨"main.Node"⟩ "next")])
   passed := passed && (← expectStrEq "SEED-B: seed-relative observation (seedRef in a result and in a cell)"
     inside.2.compress
     "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"seed\":[{\"kind\":\"int\",\"tag\":\"int\",\"value\":1},{\"cell\":0,\"path\":[2],\"tag\":\"seedRef\"}],\"status\":\"ok\",\"values\":[{\"cell\":1,\"path\":[\"next\"],\"tag\":\"seedRef\"}]}")
   passed := passed && (← expectStrEq "SEED-B: an escaping pointer refuses the whole observation (unsupported)"
-    (CLI.seededObs (fun _ => none) (synth #[.addr (.base ⟨2⟩)])).2.compress
+    (CLI.seededObs ⟨#[], #[.pointer (.int .int)]⟩ (synth #[.addr (.base ⟨2⟩)])).2.compress
     "{\"message\":\"seed readout: result 0 holds a pointer outside the seed (root address 2: a parameter, result, global or run-allocated cell) — not expressible seed-relative\",\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"unsupported\"}")
   -- The decoder: a seeded observation round-trips; a seedRef needs a `seed` key and a cell
   -- inside it; the unseeded key set is unchanged.
@@ -2855,7 +2855,7 @@ private def seedFacts : IO Bool := do
       "{\"message\":\"x\",\"output\":\"\",\"schema\":\"golean-observation-v1\",\"seed\":[],\"status\":\"panic\"}").isOk)
   -- Unseeded output is byte-identical: a raw `addr` id, no `seed` key.
   passed := passed && (← expectStrEq "SEED-B: the unseeded observation keeps raw addr ids and no seed key"
-    (CLI.observationOfRun (fun _ => none) (.ok { values := #[.addr (.base ⟨3⟩)] })).compress
+    (CLI.observationOfRun ⟨#[], #[.pointer (.int .int)]⟩ (.ok { values := #[.addr (.base ⟨3⟩)] })).compress
     "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"id\":3,\"tag\":\"addr\"}]}")
   pure passed
 
@@ -2879,32 +2879,56 @@ private def observationShapeFacts : IO Bool := do
   passed := passed && (← expectTrue "ITEM-22 (a): the former key-less error shape still refuses (the exact-keys rule is unchanged)"
     !(CLI.decodeObservation "left"
       "{\"message\":\"x\",\"schema\":\"golean-observation-v1\",\"status\":\"error\"}").isOk)
-  let funcObs (v : GoValue) : String :=
-    (CLI.observationOfRun (fun _ => none) (.ok { values := #[.int 7 .int, v] })).compress
-  let funcRefused (v : GoValue) (w : String) : Bool :=
-    let enc := funcObs v
+  -- A type table declaring `Fn` (over `func()`) and `Box` (`F Fn; N int`). Result 0 is
+  -- an int, result 1 the position under test with its DECLARED type `ty` (the pre-merge
+  -- review's MEDIUM-1/2: the static walk refuses a func-typed declared position, nil or not;
+  -- the value walk checks an interface box's DYNAMIC type).
+  let fnTy : GoCore.Ty := .funcType [] [] false
+  -- After the two reserved entries (index 1 is BUG-099's synthetic runtime-error id): Fn = 2, Box = 3.
+  let tbl : GoCore.TypeEnv := GoCore.TypeEnv.reserved ++ #[(⟨"main.Fn"⟩, .defined fnTy),
+    (⟨"main.Box"⟩, .struct #[{ name := "F", typ := .defined 2 }, { name := "N", typ := .int .int }])]
+  let anyTy : GoCore.Ty := .interface ⟨"any"⟩
+  let funcObs (ty : GoCore.Ty) (v : GoValue) : String :=
+    (CLI.observationOfRun ⟨tbl, #[.int .int, ty]⟩ (.ok { values := #[.int 7 .int, v] })).compress
+  let funcRefused (ty : GoCore.Ty) (v : GoValue) (w : String) : Bool :=
+    let enc := funcObs ty v
     (enc.splitOn "\"status\":\"unsupported\"").length == 2 &&
-      (enc.splitOn s!"observation of result 1 holds {w}: a Go func value has no observable identity").length == 2 &&
+      (enc.splitOn s!"observation of result 1, which {w}: a Go func value has no observable identity").length == 2 &&
       (enc.splitOn "\"tag\":\"func\"").length == 1 && (CLI.decodeObservation "left" enc).isOk
-  passed := passed && (← expectTrue "ITEM-22 (b): a func result refuses by name (unsupported; no func tag; decodable)"
-    (funcRefused (.funcVal ⟨"add1"⟩ []) "a func value (add1)"))
-  passed := passed && (← expectTrue "ITEM-22 (b): a func in a struct field refuses by name"
-    (funcRefused (.struct ⟨"main.Box"⟩ #[("F", .funcVal ⟨"add1"⟩ []), ("N", .int 3 .int)])
-      "field F of Box: a func value (add1)"))
-  passed := passed && (← expectTrue "ITEM-22 (b): a func in an array element refuses by name"
-    (funcRefused (.array #[.funcVal ⟨"f$lit0"⟩ [.int 1 .int]]) "an array element: a func value (f$lit0)"))
-  passed := passed && (← expectTrue "ITEM-22 (b): an interface box of a func type refuses by name, even holding nil"
-    (funcRefused (.interface (.funcType [] [] false) .nil) "an interface box whose dynamic type is a func type"))
+  passed := passed && (← expectTrue "ITEM-22 (b): a func-typed result refuses by its declared type (non-nil)"
+    (funcRefused fnTy (.funcVal ⟨"add1"⟩ []) "has a func type"))
+  passed := passed && (← expectTrue "ITEM-22 (b): a NIL func-typed result refuses by its declared type"
+    (funcRefused fnTy .nil "has a func type"))
+  passed := passed && (← expectTrue "ITEM-22 (b): a nil result of a DECLARED func type refuses (Fn, resolved through the table)"
+    (funcRefused (.defined 2) .nil "has Fn, declared over a func type"))
+  passed := passed && (← expectTrue "ITEM-22 (b): a struct with a nil func field refuses by its declared type"
+    (funcRefused (.defined 3) (.struct ⟨"main.Box"⟩ #[("F", .nil), ("N", .int 3 .int)])
+      "has field F of Box, Fn, declared over a func type"))
+  passed := passed && (← expectTrue "ITEM-22 (b): an array of nil funcs refuses by its declared type"
+    (funcRefused (.array 2 fnTy) (.array #[.nil, .nil]) "has an array element of a func type"))
+  passed := passed && (← expectTrue "ITEM-22 (b): an interface box of a literal func type refuses by its dynamic type"
+    (funcRefused anyTy (.interface fnTy (.funcVal ⟨"add1"⟩ [])) "holds an interface box of a func type"))
+  passed := passed && (← expectTrue "ITEM-22 (b): a boxed NIL of a declared func type refuses (MEDIUM-1: any(Fn(nil)))"
+    (funcRefused anyTy (.interface (.defined 2) .nil) "holds an interface box of Fn, declared over a func type"))
+  passed := passed && (← expectTrue "ITEM-22 (b): a boxed struct with a nil func field refuses by the box's dynamic type"
+    (funcRefused anyTy (.interface (.defined 3) (.struct ⟨"main.Box"⟩ #[("F", .nil), ("N", .int 3 .int)]))
+      "holds an interface box of field F of Box, Fn, declared over a func type"))
+  passed := passed && (← expectTrue "ITEM-22 (b): the value walk alone (a func value under a non-func declared type) still refuses"
+    (funcRefused anyTy (.funcVal ⟨"f$lit0"⟩ [.int 1 .int]) "holds a func value (f$lit0)"))
+  passed := passed && (← expectTrue "ITEM-22 (b): a value/declared-type count mismatch refuses by name (internal), never skips the check"
+    (let enc := (CLI.observationOfRun ⟨tbl, #[.int .int]⟩ (.ok { values := #[.int 7 .int, .nil] })).compress
+     (enc.splitOn "\"status\":\"error\"").length == 2 &&
+       (enc.splitOn "the func-type check cannot be applied").length == 2))
   passed := passed && (← expectStrEq "ITEM-22 (b): positive control — a func-free result still answers ok"
-    (funcObs (.bool true))
+    (funcObs .bool (.bool true))
     "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"kind\":\"int\",\"tag\":\"int\",\"value\":7},{\"tag\":\"bool\",\"value\":true}]}")
   -- Release-readiness item 22 (2026-10-12; [USER] Mike «22: fix it», relayed): a func value
   -- stored into a seed CELL refuses the whole seeded observation by name, like a func result.
   passed := passed && (← expectTrue "ITEM-22: a func value in a seed cell refuses the seeded observation by name (unsupported, no func tag, decodable)"
-    (let o := CLI.seededObs (fun _ => none)
+    (let o := CLI.seededObs ⟨#[], #[.int .int]⟩
         { readout := { values := #[.int 1 .int] }, base := 4, seedFinal := #[.funcVal ⟨"add1"⟩ []] }
      let enc := o.2.compress
-     o.1 == "unsupported" && (enc.splitOn "observation of seed cell 0 holds a func value (add1)").length == 2 &&
+     o.1 == "unsupported" && (enc.splitOn "observation of seed cell 0, which holds a func value (add1)").length == 2 &&
        (enc.splitOn "\"tag\":\"func\"").length == 1 && (CLI.decodeObservation "left" enc).isOk))
   pure passed
 
@@ -3359,11 +3383,11 @@ def main : IO UInt32 := do
   -- channel rendered IDENTICAL (this assertion is red against the old
   -- encoder; verified red-first before the encoder change landed).
   passed := passed && (← expectTrue "F15: observation channel distinguishes right-value wrong-kind (red under the value-only channel)"
-    (CLI.observationOfRun (fun _ => none) (.ok { values := #[.int 6 .int] })
-      != CLI.observationOfRun (fun _ => none) (.ok { values := #[.int 6 .uint8] })))
+    (CLI.observationOfRun ⟨#[], #[.int .int]⟩ (.ok { values := #[.int 6 .int] })
+      != CLI.observationOfRun ⟨#[], #[.int .uint8]⟩ (.ok { values := #[.int 6 .uint8] })))
   -- The wire shape itself, pinned verbatim (both encoders must emit it).
   passed := passed && (← expectStrEq "F15: kind-carrying int observation shape"
-    (CLI.observationOfRun (fun _ => none) (.ok { values := #[.int 6 .uint8] })).compress
+    (CLI.observationOfRun ⟨#[], #[.int .uint8]⟩ (.ok { values := #[.int 6 .uint8] })).compress
     "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"kind\":\"uint8\",\"tag\":\"int\",\"value\":6}]}")
   -- Fail-closed decode discipline for the new fields (the float arm's
   -- mold): unknown kinds and out-of-range values refuse; the machine
@@ -3377,12 +3401,12 @@ def main : IO UInt32 := do
   -- refusing», relayed; `docs/2026-10-12_uintptr-repair-design.md` §2.4).
   passed := passed && (← expectTrue "F15: decode accepts the machine encoder's kind-carrying output"
     (CLI.decodeObservation "left"
-      (CLI.observationOfRun (fun _ => none) (.ok { values := #[.int (-5) .int8, .int 255 .uint8] })).compress).isOk)
+      (CLI.observationOfRun ⟨#[], #[.int .int8, .int .uint8]⟩ (.ok { values := #[.int (-5) .int8, .int 255 .uint8] })).compress).isOk)
   passed := passed && (← expectTrue "F15 / BUG-124 D2: decode refuses the integer kind uintptr by name (the seam's refusal, not the frontend's)"
     !(CLI.decodeObservation "left"
       "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"kind\":\"uintptr\",\"value\":1}]}").isOk)
   passed := passed && (← expectTrue "BUG-124 D2 (O1): the machine's own encoding of a uintptr result is refused by its own decoder (a returned uintptr stays unobservable)"
-    (let enc := (CLI.observationOfRun (fun _ => none) (.ok { values := #[.int 7 .uintptr] })).compress
+    (let enc := (CLI.observationOfRun ⟨#[], #[.int .uintptr]⟩ (.ok { values := #[.int 7 .uintptr] })).compress
      (enc.splitOn "\"kind\":\"uintptr\"").length == 2 && !(CLI.decodeObservation "left" enc).isOk))
   -- BUG-124 FIXED (2026-10-12, lane core/uintptr-repair-impl-1012; [USER]
   -- Mike 2026-10-12 «D6: agree on both - refuse and repair asap» and
