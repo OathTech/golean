@@ -36,6 +36,10 @@ type config struct {
 	crashReport     string
 	crashRegistered string
 	copyOracle      string
+	// seed: the SEEDED mode (seeded-heap slice C, seed.go) — the
+	// golean-seed-v1 file the generated main builds before the call; --args
+	// then takes <int> | ref:k(.f|[i])* | nil tokens.
+	seed string
 }
 
 func main() {
@@ -54,6 +58,7 @@ func main() {
 	flag.StringVar(&cfg.crashReport, "crash-report", "", "same-run owned runtime crash report file (paired with --crash-registered)")
 	flag.StringVar(&cfg.crashRegistered, "crash-registered", "", "same-run hook acknowledgement file (paired with --crash-report)")
 	flag.StringVar(&cfg.copyOracle, "copy-oracle", "", "copy Go package to fresh --out and instrument only that oracle copy's main entry")
+	flag.StringVar(&cfg.seed, "seed", "", "SEEDED MODE: a golean-seed-v1 file; the generated main allocates and fills its cells, --args takes <int> | ref:k(.f|[i])* | nil, and the observation gains the seed key (seed.go)")
 	flag.Parse()
 
 	modePath, modes := "", 0
@@ -65,6 +70,10 @@ func main() {
 	}
 	if modes > 1 {
 		fmt.Fprintln(os.Stderr, "only one file-reading mode may be selected")
+		os.Exit(2)
+	}
+	if cfg.seed != "" && (modes != 0 || cfg.copyOracle != "") {
+		fmt.Fprintln(os.Stderr, "--seed is a generation-mode flag; it cannot be combined with a file-reading mode or --copy-oracle")
 		os.Exit(2)
 	}
 	if cfg.copyOracle != "" {
@@ -153,9 +162,29 @@ func run(cfg config) error {
 	if cfg.input == "" || cfg.out == "" || cfg.subject == "" {
 		return fmt.Errorf("--input, --out, and --subject are required")
 	}
-	argValues, err := parseArgs(cfg.args)
-	if err != nil {
-		return err
+	var argValues []string
+	var seedArgs []seedArg
+	var seedRaw []byte
+	var seedCells []seedCellSpec
+	var err error
+	if cfg.seed == "" {
+		argValues, err = parseArgs(cfg.args)
+		if err != nil {
+			return err
+		}
+	} else {
+		seedArgs, err = parseSeedArgs(cfg.args)
+		if err != nil {
+			return fmt.Errorf("seeded mode: %v", err)
+		}
+		seedRaw, err = os.ReadFile(cfg.seed)
+		if err != nil {
+			return fmt.Errorf("seeded mode: cannot read the seed file: %v", err)
+		}
+		seedCells, err = parseSeedFile(seedRaw)
+		if err != nil {
+			return fmt.Errorf("seeded mode: %s: %v", cfg.seed, err)
+		}
 	}
 
 	// "deadlock" (channels arc slice 1): the subject blocks every goroutine
@@ -217,7 +246,12 @@ func run(cfg config) error {
 		return fmt.Errorf("subject function %q not found in %s", cfg.subject, inputDir)
 	}
 
-	harness, err := harnessSource(fset, subject, cfg.subject, argValues, cfg.status)
+	var harness []byte
+	if cfg.seed == "" {
+		harness, err = harnessSource(fset, subject, cfg.subject, argValues, cfg.status)
+	} else {
+		harness, err = seededHarnessSource(fset, subject, cfg.subject, seedArgs, seedCells, seedRaw, cfg.status)
+	}
 	if err != nil {
 		return err
 	}
@@ -531,7 +565,30 @@ func harnessSource(fset *token.FileSet, fn *ast.FuncDecl, subject string, argVal
 		fmt.Fprintf(&call, "\t_goleanPrintOk(_goleanValues)\n")
 	}
 
-	source := fmt.Sprintf(`package main
+	return format.Source([]byte(harnessTemplate("", "", "", call.String())))
+}
+
+// seededHarnessSource: the SEEDED harness (seed.go) — the same template and
+// encoder, plus the seed imports, the pointer arm, the seed runtime and the
+// seeded main body.
+func seededHarnessSource(fset *token.FileSet, fn *ast.FuncDecl, subject string, args []seedArg, cells []seedCellSpec, raw []byte, expectedStatus string) ([]byte, error) {
+	paramTypes, variadic, err := functionParamTypes(fset, fn.Type)
+	if err != nil {
+		return nil, err
+	}
+	body, err := seededMain(subject, paramTypes, variadic, functionResultCount(fn.Type), cells, args, expectedStatus)
+	if err != nil {
+		return nil, err
+	}
+	return format.Source([]byte(harnessTemplate(seedImports, seedPointerArm, seedRuntimeDecls(raw), body)))
+}
+
+// harnessTemplate: the generated harness file. The three insertions are
+// EMPTY for an unseeded harness, which is then byte-identical to the
+// pre-seed generator's output (each %s sits where "" leaves the text as it
+// was).
+func harnessTemplate(extraImports, pointerArm, extraDecls, mainBody string) string {
+	return fmt.Sprintf(`package main
 
 import (
 	_golean_json "encoding/json"
@@ -539,7 +596,7 @@ import (
 	_golean_math "math"
 	_golean_os "os"
 	_golean_reflect "reflect"
-)
+%s)
 
 // _goleanObservationValue takes a POINTER to the observed result so the
 // result's static type survives: reflect.ValueOf(x) on an interface-typed
@@ -641,7 +698,7 @@ func _goleanReflectValue(value _golean_reflect.Value) (any, error) {
 			fields = append(fields, map[string]any{"name": typ.Field(i).Name, "value": fieldValue})
 		}
 		return map[string]any{"tag": "struct", "typeName": typ.Name(), "fields": fields}, nil
-	default:
+%s	default:
 		return nil, _golean_fmt.Errorf("unsupported Go observation kind %%s", value.Kind())
 	}
 }
@@ -661,11 +718,11 @@ func _goleanPrintError(message string) {
 	}
 }
 
+%s
 func main() {
 	_goleanSetupCrash()
 %s}
-`, call.String())
-	return format.Source([]byte(source))
+`, extraImports, pointerArm, extraDecls, mainBody)
 }
 
 func functionParamTypes(fset *token.FileSet, fn *ast.FuncType) ([]string, bool, error) {
