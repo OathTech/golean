@@ -98,32 +98,14 @@ step() { printf '\n\033[1m── %s\033[0m\n' "$1"; }
 ok()   { RESULTS+=("  ok   $1"); }
 bad()  { RESULTS+=("  FAIL $1"); fail=1; }
 
-# [USER] 2026-09-08: every Tests module has a library, and every library
-# has an executed named CI build. Receipts are fresh to this invocation.
 CI_STARTED_SECONDS=$SECONDS
-library_run="$(python3 tools/ci_libraries.py init)"; library_init_rc=$?
-finish_library_run() {
+finish_ci() {
   local rc=$?
   trap - EXIT
-  if [[ $library_init_rc = 0 ]]; then
-    python3 tools/ci_libraries.py close "$library_run" "$rc" || rc=1
-  fi
   printf 'CI total wall seconds: %s\n' "$((SECONDS - CI_STARTED_SECONDS))"
   exit "$rc"
 }
-trap finish_library_run EXIT
-library_step() {
-  [[ $library_init_rc = 0 ]] || { echo 'Library coverage initialization failed' >&2; return 1; }
-  local name=$1
-  shift
-  python3 tools/ci_libraries.py run "$library_run" "$name" "$@"
-}
-step "Tests/library ownership, executed-build and audit scratch self-tests"
-if [[ $library_init_rc = 0 ]] && python3 tools/ci_libraries.py selftests; then
-  ok "Tests/library ownership (no exceptions; executed builds checked at exit)"
-else
-  bad "Tests/library ownership or coverage self-tests"
-fi
+trap finish_ci EXIT
 
 # 0b. BUILD PARALLELISM, SCALED TO THE MEMORY CAP (examples phase-2 slice 0,
 #     lever 1, 2026-08-14). Lean's task-scheduler pool size (LEAN_NUM_THREADS)
@@ -523,7 +505,7 @@ fi
 step "core build (lake build; must be WARNING-free — GoLean/ module warnings
 # replay into the runner's stdout and corrupt the JSON observation channel,
 # the recorded ops failure mode that produced mass phantom drift 2026-07-23)"
-core_out="$(library_step core scripts/capped lake build 2>&1)"
+core_out="$(scripts/capped lake build 2>&1)"
 core_rc=$?
 echo "$core_out" | tail -3
 # Root modules included in the warning watch (split audit A8, 2026-08-31):
@@ -538,6 +520,22 @@ else
   ok "core build (warning-free)"
 fi
 
+# Every Tests/ module is named by a lakefile.toml glob, so the default build
+# above built it (gate cull 2026-10-12, D2: this one set check replaces the
+# executed-build receipt registry). Lake skips an unowned module silently.
+step "every Tests/*.lean is owned by a lakefile library (so the default build built it)"
+tests_unowned=""
+for tf in Tests/*.lean; do
+  tm="Tests.$(basename "$tf" .lean)"
+  grep -q "\"$tm\"" lakefile.toml || tests_unowned="$tests_unowned $tm"
+done
+if [ -z "$tests_unowned" ]; then
+  ok "Tests/ library ownership (every module named by a lakefile glob)"
+else
+  echo "  not in any lakefile.toml glob:$tests_unowned" >&2
+  bad "Tests/ library ownership (unowned module(s):$tests_unowned — add to a lakefile.toml glob)"
+fi
+
 # The core totality audit (2026-09-16, docs/2026-09-16_typed-profiles-parked.md
 # §3): re-homed from the parked `semantic interface` step when the typed-profile
 # family was parked. The charter's «no sorry, no native_decide, no axioms
@@ -548,23 +546,16 @@ fi
 # panic members, the contract regressions) must exist; the abort-text helpers
 # stay constructive; compiled poisons are rejected by name.
 step "core totality audit (every GoLean/ module post-import: classical trio only, required core theorems, compiled poison controls)"
-if library_step core-audit bash scripts/check-core-audit; then
+if bash scripts/check-core-audit; then
   ok "core totality audit (every GoLean/ module; required core theorems; poison controls)"
 else
   bad "core totality audit (scripts/check-core-audit)"
 fi
 
-step "admission checker proofs and post-import audit"
-if library_step admission bash scripts/check-admission --lean-only; then
-  ok "admission checker proofs and post-import audit"
-else
-  bad "admission checker proofs and post-import audit"
-fi
-
 # I1/L1b: fresh Go declarations through the strict byte decoder, an enforced
 # fixture pin, malformed-input controls and compiling dependency-audit poisons.
 step "declaration boundary (Go identity, strict JSON, fixture pin, dependency audit)"
-if library_step declarations bash scripts/check-declarations; then
+if bash scripts/check-declarations; then
   ok "declaration boundary"
 else
   bad "declaration boundary (scripts/check-declarations)"
@@ -588,7 +579,7 @@ else
 fi
 
 step "package-correct method identity (fresh wire, strict decoder, audit controls)"
-if library_step method-identity bash scripts/check-method-identity; then
+if bash scripts/check-method-identity; then
   ok "package-correct method identity"
 else
   bad "package-correct method identity"
@@ -601,7 +592,7 @@ fi
 # consume nothing; the mechanism theorem's step lemmas under the post-import
 # axiom audit.
 step "unseq scheduler (Stage B): reference sets over all tapes, named refusals, replay, theorem audit"
-if library_step unseq-scheduler bash scripts/check-unseq-scheduler; then
+if bash scripts/check-unseq-scheduler; then
   ok "unseq scheduler (Stage B)"
 else
   bad "unseq scheduler (Stage B) (scripts/check-unseq-scheduler)"
@@ -615,7 +606,7 @@ fi
 # one-edit mutant refused BY NAME, both in-process and through the real CLI; the
 # fixtures byte-identical to their generator's output.
 step "unseq wire (Stage C): exact reference sets over hand-built wires, decoder mutants by name, fixture re-derivation"
-if library_step unseq-wire bash scripts/check-unseq-wire; then
+if bash scripts/check-unseq-wire; then
   ok "unseq wire (Stage C)"
 else
   bad "unseq wire (Stage C) (scripts/check-unseq-wire)"
@@ -628,7 +619,7 @@ fi
 # `stepFn` (the no-unfold guard); two fail-closed self-tests (an unfolding mutant trips the guard,
 # a pin-deleted mutant fails the enrollment check by name).
 step "semantic equations (packet D): equation lemmas, the toy client, exhaustive enrollment, no-unfold guard, self-tests"
-if library_step equations bash scripts/check-equations; then
+if bash scripts/check-equations; then
   ok "semantic equations (scripts/check-equations)"
 else
   bad "semantic equations (scripts/check-equations)"
@@ -749,7 +740,7 @@ fi
 
 # 4. Interpreter unit tests.
 step "interpreter eval tests (gocore-eval-tests)"
-evout="$(library_step eval lake exe gocore-eval-tests 2>&1)"; evrc=$?
+evout="$(scripts/capped lake exe gocore-eval-tests 2>&1)"; evrc=$?
 evok="$(printf '%s\n' "$evout" | grep -c '^ok:')"
 evbad="$(printf '%s\n' "$evout" | grep -icE '^(not ok|fail)')"
 echo "  ok:$evok  fail:$evbad  exit:$evrc"
@@ -1243,13 +1234,6 @@ if [ -x tools/reconcile-records ]; then
 else
   echo "  tools/reconcile-records missing or not executable"
   RESULTS+=("  note reconciler ABSENT (tools/reconcile-records missing) — report-only step, findings unavailable")
-fi
-
-step "executed library coverage (all named build receipts from this CI invocation)"
-if [[ $library_init_rc = 0 ]] && python3 tools/ci_libraries.py verify "$library_run"; then
-  ok "executed library coverage (all declared libraries; all Tests modules)"
-else
-  bad "executed library coverage (a named step is absent, stale or failed)"
 fi
 
 # Summary

@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
-# Semantics-owned admission check; no Iris dependency. CI runs --lean-only;
-# the full opt-in check also re-emits the fixture and compares it with Go.
+# Semantics-owned admission check; no Iris dependency. Not a ci step since the
+# 2026-10-12 gate cull (AdmissionTests builds in the default lake build; the
+# poison/elaboration controls went, D3): --lean-only is the inventory
+# preflight plus the build; the full opt-in check also re-emits the fixture
+# and compares it with Go.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
@@ -11,8 +14,6 @@ case "${1:-}" in
 esac
 python3 tools/admission-check.py preflight
 scripts/capped lake build AdmissionTests
-scripts/capped lake env python3 tools/admission-check.py elaborate
-scripts/capped lake env python3 tools/admission-check.py audit
 if [[ $# = 0 ]]; then
   scripts/capped lake build
   scripts/capped lake env python3 tools/admission-check.py artifact

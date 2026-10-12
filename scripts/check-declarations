@@ -7,14 +7,10 @@ cd "$ROOT"
 # (including subprocess scratch) belong to this checkout.
 export TMPDIR="$ROOT/.tmp"
 mkdir -p "$TMPDIR"
-modules=(GoLean/GoCore/Declaration GoLean/DeclarationUnicode GoLean/StrictJsonParse GoLean/NativeDeclaration Tests/DeclarationWire Tests/StrictJsonParse Tests/DeclarationUnicode Tests/DeclarationAudit)
+modules=(GoLean/GoCore/Declaration GoLean/DeclarationUnicode GoLean/StrictJsonParse GoLean/NativeDeclaration Tests/DeclarationWire Tests/StrictJsonParse Tests/DeclarationUnicode)
 for module in "${modules[@]}"; do sha256sum "$module.lean"; done
-sha256sum tools/nativefrontend/declaration.go tools/nativefrontend/declaration_fixture_test.go tools/check-declaration-wire.lean tools/declaration-audit.py tools/declaration-unicode/main.go
+sha256sum tools/nativefrontend/declaration.go tools/nativefrontend/declaration_fixture_test.go tools/check-declaration-wire.lean tools/declaration-unicode/main.go
 scripts/capped lake build DeclarationTests
-for module in "${modules[@]}"; do
-  scripts/capped lake env lean --setup ".lake/build/ir/$module.setup.json" \
-    -o ".lake/build/lib/lean/$module.olean" "$module.lean"
-done
 scripts/capped lake env lean --run Tests/StrictJsonParse.lean
 scratch_root="${TMPDIR:-$ROOT/.tmp}"
 mkdir -p "$scratch_root"
@@ -49,5 +45,4 @@ if check_fixture "$scratch_dir/corrupt" > "$scratch_dir/corrupt.log" 2>&1; then
 fi
 echo 'Declaration fixture negative control: changed bytes rejected'
 scripts/capped lake env lean --run tools/check-declaration-wire.lean "$fixture"
-scripts/capped lake env python3 tools/declaration-audit.py
 printf 'Declaration gate: PASS; fresh fixture retained at %s\n' "$fixture"

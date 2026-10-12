@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
-# [AGENT] Fresh executable member wire, strict decoder and compiled audit controls.
+# [AGENT] Package-correct method identity: a fresh executable member wire,
+# produced by the frontend's own tests, read by the strict decoder in Lean
+# (Tests/MethodIdentity.lean). The compiled poison controls and the dispatch
+# audit were removed in the 2026-10-12 gate cull (D3); the four Go tests also
+# run inside `go test ./tools/nativefrontend` — here they produce the fixture
+# the Lean side reads.
 set -Eeuo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
@@ -19,7 +24,6 @@ if passed != expected:
     raise SystemExit(f'method identity Go tests: required exactly {expected}; passed {passed}')
 print('Method identity Go tests: all four named tests passed')
 PYTEST
+[[ -s "$gate_scratch/methods.json" ]] || { echo 'check-method-identity: the Go tests wrote no fixture' >&2; exit 1; }
 scripts/capped lake env lean --run Tests/MethodIdentity.lean "$gate_scratch/methods.json"
-scripts/capped lake env python3 tools/method-identity-audit.py
-scripts/capped python3 tools/method-identity-dispatch.py
 printf '%s\n' 'Method identity gate: PASS'

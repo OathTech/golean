@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Admission inventory, post-import audit controls, and native artifact link.
+"""Admission inventory and native artifact link (the post-import audit controls
+were removed in the 2026-10-12 gate cull, D3).
 
 Lean invocations run under scripts/capped (the shim onto the box-wide
 `capped`). Scratch is worktree-local under .tmp/: a PASSING run keeps only
@@ -20,7 +21,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 MODULES = ["GoLean.GoCore.AdmissionIndices", "GoLean.GoCore.AdmissionPolicy",
            "GoLean.GoCore.Admission", "Tests.GoCoreAdmissionFixture",
-           "Tests.GoCoreAdmission", "Tests.GoCoreAdmissionAudit"]
+           "Tests.GoCoreAdmission"]
 SOURCES = [m.replace(".", "/") + ".lean" for m in MODULES]
 
 
@@ -67,51 +68,7 @@ def preflight():
         if re.search(r"\b(sorry|native_decide|axiom|partial)\b", text):
             raise SystemExit(f"Admission source escape-hatch token in {name}")
         print(hashlib.sha256((ROOT / name).read_bytes()).hexdigest(), name)
-    print("Admission inventory: six complete modules", flush=True)
-
-
-def audit():
-    directory = scratch("audit")
-    harness = directory / "AuditAll.lean"
-    harness.write_text("import Tests.GoCoreAdmissionAudit\n#eval GoLeanAdmissionAudit.run\n")
-    log = run([str(ROOT / "scripts/capped"), "lean", str(harness)])
-    (directory / "audit.log").write_text(log)
-    mutations = [
-        ("audit_private", "Tests.GoCoreAdmissionAudit", "admissionAuditHole",
-         "\nprivate axiom admissionAuditHole : False\n"),
-        ("core_private", "GoLean.GoCore.Admission", "admissionCoreHole",
-         "\nprivate axiom admissionCoreHole : False\n"),
-        ("test_trailing", "Tests.GoCoreAdmission", "sorryAx",
-         "\nprivate theorem admissionTrailingHole : False := by sorry\n"),
-    ]
-    for label, module, marker, poison in mutations:
-        fixture = directory / label
-        # Lean chooses a package root before resolving its child modules.
-        # Copy that root's complete compiled tree; partial overlays fail to
-        # import siblings. Copies are independent, never writable symlinks.
-        package = module.split(".")[0]
-        shutil.copytree(ROOT / ".lake/build/lib/lean" / package, fixture / package)
-        source = fixture / (module.replace(".", "/") + ".lean")
-        source.parent.mkdir(parents=True, exist_ok=True)
-        source.write_text((ROOT / (module.replace(".", "/") + ".lean")).read_text() + poison)
-        env = os.environ.copy()
-        env["LEAN_PATH"] = str(fixture) + os.pathsep + env.get("LEAN_PATH", "")
-        compiled = run([str(ROOT / "scripts/capped"), "lean", "-o",
-                        str(source.with_suffix(".olean")), str(source)], env=env, cwd=fixture)
-        (fixture / "compile.log").write_text(compiled)
-        rejected = run([str(ROOT / "scripts/capped"), "lean", str(harness)],
-                       env=env, expect=1)
-        (fixture / "audit.log").write_text(rejected)
-        if "forbidden axiom" not in rejected or marker not in rejected:
-            raise SystemExit(f"Admission gate: poison {label} did not fail for {marker}")
-        print(f"Admission negative audit: {label} compiled then rejected ({marker})", flush=True)
-    keep_last(directory, "audit")
-
-
-def elaborate():
-    for source in SOURCES:
-        run([str(ROOT / "scripts/capped"), "lean", str(ROOT / source)])
-        print(f"Admission fresh elaboration: {source}", flush=True)
+    print("Admission inventory: five complete modules", flush=True)
 
 
 def artifact():
@@ -129,6 +86,6 @@ def artifact():
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2 or sys.argv[1] not in {"preflight", "elaborate", "audit", "artifact"}:
-        raise SystemExit("usage: admission-check.py preflight|elaborate|audit|artifact")
-    {"preflight": preflight, "elaborate": elaborate, "audit": audit, "artifact": artifact}[sys.argv[1]]()
+    if len(sys.argv) != 2 or sys.argv[1] not in {"preflight", "artifact"}:
+        raise SystemExit("usage: admission-check.py preflight|artifact")
+    {"preflight": preflight, "artifact": artifact}[sys.argv[1]]()

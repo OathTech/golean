@@ -4,8 +4,8 @@
 # reference witness (docs/evidence/2026-09-16_eval-order-v2-spike/outcomes.txt)
 # enumerated over ALL tapes by the existing enumerator/driver path and compared
 # EXACTLY with the reference sets; refusals by name; replay tapes; singleton
-# non-consumption; the mechanism theorem's step lemmas under the post-import
-# axiom audit (classical trio only, no sorry/native_decide).
+# non-consumption. (The separate post-import axiom audit was removed in the
+# 2026-10-12 gate cull, D3: the core totality audit covers every GoLean/ module.)
 set -Eeuo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
@@ -14,7 +14,4 @@ cd "$ROOT"
 scripts/capped lake build UnseqSchedulerTests
 scripts/capped lake env lean --run Tests/UnseqScheduler.lean | tee "$gate_scratch/tests.log"
 grep -q '^Unseq scheduler (Stage B): PASS' "$gate_scratch/tests.log"
-printf 'import Tests.UnseqSchedulerAudit\n#eval Tests.UnseqSchedulerAudit.run\n' > "$gate_scratch/Audit.lean"
-scripts/capped lake env lean "$gate_scratch/Audit.lean" | tee "$gate_scratch/audit.log"
-grep -q 'Unseq scheduler audit:' "$gate_scratch/audit.log"
 printf '%s\n' 'Unseq scheduler gate: PASS'

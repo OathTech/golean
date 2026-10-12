@@ -1,6 +1,13 @@
 name = "GoLean"
 version = "0.1.0"
-defaultTargets = ["golean"]
+# Every library and executable is a default target (gate cull 2026-10-12,
+# docs/2026-10-12_gate-cull-plan.md §3.2, [USER]-ruled D2): one `lake build`
+# builds everything, which is how «every Tests module has an executed build»
+# is kept without a receipt registry. scripts/ci checks that every
+# Tests/*.lean is named by a glob below.
+defaultTargets = ["golean", "gocore-eval-tests", "GoLean", "TestsData", "EvalTests",
+  "AdmissionTests", "DeclarationTests", "MethodIdentityTests", "UnseqSchedulerTests",
+  "UnseqWireTests", "GoCoreAuditTests", "EquationTests"]
 
 [[lean_lib]]
 name = "GoLean"
@@ -26,24 +33,24 @@ globs = ["Tests.GoCoreEval"]
 
 [[lean_lib]]
 name = "AdmissionTests"
-globs = ["Tests.GoCoreAdmissionFixture", "Tests.GoCoreAdmission", "Tests.GoCoreAdmissionAudit"]
+globs = ["Tests.GoCoreAdmissionFixture", "Tests.GoCoreAdmission"]
 
 [[lean_lib]]
 # Separate I1 declaration schema; no production lowering or Iris dependency.
 name = "DeclarationTests"
-globs = ["Tests.DeclarationWire", "Tests.StrictJsonParse", "Tests.DeclarationUnicode", "Tests.DeclarationAudit"]
+globs = ["Tests.DeclarationWire", "Tests.StrictJsonParse", "Tests.DeclarationUnicode"]
 
 [[lean_lib]]
-# Shared I1/executable member identity, decoder and post-import audit.
+# Shared I1/executable member identity and decoder.
 name = "MethodIdentityTests"
-globs = ["Tests.MethodIdentity", "Tests.MethodIdentityAudit"]
+globs = ["Tests.MethodIdentity"]
 
 [[lean_lib]]
 # The `unseq` scheduler on hand-built graphs (evaluation-order model v2.1
-# Stage B): the reference sets over all tapes, refusals by name, replay,
-# and the mechanism theorem's post-import audit.
+# Stage B): the reference sets over all tapes, refusals by name, replay.
+# (The theorems' axiom audit is the core totality audit's, over every GoLean/ module.)
 name = "UnseqSchedulerTests"
-globs = ["Tests.UnseqHarness", "Tests.UnseqScheduler", "Tests.UnseqSchedulerAudit"]
+globs = ["Tests.UnseqHarness", "Tests.UnseqScheduler"]
 
 [[lean_lib]]
 # Stage C of the evaluation-order model v2.1: hand-built `unseq` WIRES through the
