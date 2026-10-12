@@ -2332,9 +2332,10 @@ macro "anyV_entry " hpick:ident ch:term:max : tactic =>
 
 set_option linter.unusedSimpArgs false in
 /-- Every relation step is realized by the executable under some choice
-stream (deterministic rules under any stream; the two nondeterministic
-step classes — `mapIterNext`'s pick and `stmtOpApply`'s capacity choice —
-under the stream that encodes the rule's choice). -/
+stream (deterministic rules under any stream; a nondeterministic step
+class — every pick `stepFn` draws from the choice tape: the map-iteration
+pick, the capacity choices, the unsequenced-operand picks, and the rest of
+the `ChoiceSite` census — under the stream that encodes the rule's choice). -/
 theorem step_complete {c : Config} {s : Store} {c' : Config} {s' : Store} {tr : StepLabel}
     (h : Step ctx c s c' s' tr) :
     ∃ ch ch' : Choices, stepFn ctx s c ch = .ok (c', s', ch', tr) := by

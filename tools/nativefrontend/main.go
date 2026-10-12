@@ -1,7 +1,8 @@
 // Command nativefrontend is the native Go frontend for GoLean: it parses and
 // type-checks a Go package with the standard library (go/parser + go/types)
-// and emits the native wire schema (golean-native-v2) that
-// GoLean/NativeJson.lean decodes and GoLean/NativeToIR.lean lowers into GoCore.
+// and emits the native wire schema (golean-native-v3) that
+// GoLean/NativeToIR.lean decodes and lowers into GoCore (the strict byte
+// parse in front of it is GoLean/StrictJsonParse.lean, BUG-110).
 // Stdlib only; no external dependencies. Runs under GO111MODULE=off.
 package main
 
