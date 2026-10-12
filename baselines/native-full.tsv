@@ -1,5 +1,16 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3936 (3705 PASS / 231 FAIL)
+# cases: 3938 (3707 PASS / 231 FAIL)
+# re-pinned: 2026-10-12 [AGENT], lane core/sched-boundary-1012 (off main d92b95fd) — BUG-123 FIXED: the channel-length read and the
+#   print apply are registry boundaries (`Config.atBoundary`, Multi.lean). The Codex release-trust review's F1/R2 (relayed by the
+#   [USER] 2026-10-12; punch-list items 23/24) under the standing rule [USER] 2026-10-07 «semantic widenings must match real Go»
+#   (relayed); design docs/2026-10-12_sched-boundary-design.md. WHY: two `len(ch)` reads (or two prints) in one registry-free segment
+#   could never be separated by a peer's send (print) on the machine — gc separates them (go1.26.5: 0/1/11 at 9861/72/67 of 10,000
+#   under -race where the machine certified {0, 11}; ABC/ACB/BAC at 107/891/2 of 1,000 where it certified {ACB, BAC}). BORN ROWS: +2
+#   membership — goroutines/sched-dependent/len-peer-send (certified {0, 1, 11}, members=3) and builtins/print/goroutine-gap
+#   (certified {ABC, ACB, BAC}, members=3), both the review's witnesses; on main d92b95fd the same rows certify the narrower sets
+#   (the lane's base-tip reproduction, BUG-123's Discovered line) and would be observed∉modeled on any draw of the missing members.
+#   No pinned statement's text changed; no proof changed; no flip. 3936 + 2 = 3938 (3707 PASS / 231 FAIL). Enumeration cost and
+#   the --diff wall: the design note §7 (measured on this lane's gate run).
 # re-pinned: 2026-10-08 [AGENT], lane fix/bug115-map-multiassign-1008 (off main 6a90ba8d) — BUG-115 / triage F6 / mini-slice A3 FIXED
 #   ([USER] Mike 2026-10-08 «While things are calm, can we fix some bugs?», relayed by the [AGENT] coordinator). WHY: the LEGACY
 #   multi-target emitter quarantined a map element as an `=` target by name («map element as assignment target outside a single
@@ -2307,6 +2318,7 @@ PASS	builtins/min-max-vs-call-order/max-value	-
 PASS	builtins/min-max-vs-call-order/min-arg-panic	-
 PASS	builtins/min-max-vs-call-order/min-value	-
 PASS	builtins/print/bool	-
+PASS	builtins/print/goroutine-gap	membership
 PASS	builtins/print/goroutine-interleaving	membership
 PASS	builtins/print/goroutine-ordered	-
 FAIL	builtins/print/in-init	lean-observation
@@ -3387,6 +3399,7 @@ PASS	goroutines/rendezvous-hb/recv-hb	confluent
 PASS	goroutines/rendezvous-hb/send-hb	confluent
 PASS	goroutines/sched-dependent/first-come	membership
 PASS	goroutines/sched-dependent/len-handoff	membership
+PASS	goroutines/sched-dependent/len-peer-send	membership
 PASS	goroutines/sched-dependent/select-default-handshake	membership
 PASS	goroutines/sched-dependent/waiter-pick	membership
 PASS	goroutines/select-arrival-multi	membership

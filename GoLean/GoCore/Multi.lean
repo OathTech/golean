@@ -21,7 +21,10 @@ Design points (docs/2026-08-06_channels-arc-design.md):
 * **D2(a) — the scheduler consumption rule, WIDENED at W3.2 stage C
   (B1, G1 ruling 2026-08-20).** Context switches happen at registry
   ops (`Config.atBoundary`: channel-op/select/sync apply positions,
-  spawn positions, goroutine exit, parked-blocked configs) AND at
+  spawn positions, goroutine exit, parked-blocked configs; since
+  2026-10-12 also the two OBSERVABLE operations outside the registry —
+  the channel-length read and the `print` apply — because a peer may
+  act between them in real Go: the arms' own comment) AND at
   registry-op COMPLETIONS — the goroutine's boundary FLAG (`Thread`,
   C5; formerly the `.opDone` marker, generalizing BUG-040's post-spawn
   `.spawned`: every completing chan/sync/select op, pairing issuer, wake,
@@ -415,8 +418,11 @@ def runnableIdxs (s : Store) (threads : Array Thread) : List Nat :=
 scheduler may switch goroutines — exactly the synchronization-op
 registry (channel send/recv/close apply, select apply and the
 no-operand select entry, `go` spawn positions, goroutine exit/abort)
-plus the parked shapes (whose next step is their wake). Between
-boundaries the running goroutine's steps are private to it. -/
+plus the parked shapes (whose next step is their wake), the loop
+back-edges (stage D), and — since 2026-10-12 — the two OBSERVABLE
+operations outside the registry (the channel-length read and the
+`print`/`println` apply; the arms below say why). Between boundaries
+the running goroutine's steps are private to it. -/
 def Config.atBoundary (c : Config) : Bool :=
   c.isTerminal || match c with
   | .retV _ (.chanStK _ _ [] _ _) => true
@@ -443,6 +449,44 @@ def Config.atBoundary (c : Config) : Bool :=
   -- the SC order of the atomics IS the L1 order of their steps; the op
   -- consumes nothing (`applyAtomicOp`'s envelope statement).
   | .retV _ (.atomicStK _ _ [] _ _) => true
+  -- THE OBSERVABLE OPERATIONS outside the registry (2026-10-12, lane
+  -- `core/sched-boundary-1012`; the Codex release-trust review's F1/R2
+  -- relayed by the [USER] the same day; design note
+  -- `docs/2026-10-12_sched-boundary-design.md`; under the standing rule
+  -- [USER] 2026-10-07 «semantic widenings must match real Go», relayed):
+  -- a scheduling point is wherever a peer's action could be OBSERVED,
+  -- and two operations observe shared state without being registry ops.
+  -- (1) `len(ch)` — the `lengthOf` apply on a CHANNEL operand — reads the
+  -- cell's buffer count, which a peer's send/receive changes with no
+  -- synchronization required (spec#Channel_types, spec#Length_and_
+  -- capacity; the memory model orders a send before the completion of
+  -- the RECEIVE only). It emits no access footprint (gc's `chanlen` is
+  -- uninstrumented — inventory U2 — so the race detector is silent by
+  -- design: NPDRF obstruction 5's «empty recorded footprint» hazard,
+  -- realized). Without this arm two reads in one registry-free segment
+  -- could never see a peer's send between them; gc does (go1.26.5,
+  -- GOMAXPROCS=2, `-race`: `0`/`1`/`11` at 9861/72/67 of 10,000 on the
+  -- review's witness, where the machine certified `{0, 11}`). `cap(ch)`
+  -- is NOT a boundary: a channel's capacity never changes, so no peer
+  -- can be observed through it. `len` of a map is an instrumented read
+  -- (a concurrent write is a detected race); of a slice/array/string a
+  -- private value read.
+  -- (2) the `print`/`println` apply writes fd 2 — the observable itself.
+  -- gc's `printlock` makes ONE statement atomic and lets any goroutine
+  -- write between statements (ledger FR-30, closed by this arm: the
+  -- parent's `A … C` with a child's `B`, gc `ABC`/`ACB`/`BAC` where the
+  -- machine admitted `{ACB, BAC}`).
+  -- Both are PRE-boundaries at the apply position (the `applyPos`
+  -- shapes), consulting `Config.boundarySite`'s default `l1Sched`
+  -- (goroutine-order menu; a sole runnable pops nothing — G-U); neither
+  -- completes a registry op, so neither sets the post-op flag. A
+  -- pre-boundary at every observable operation is enough: any
+  -- cross-goroutine order of observable events is realized by a
+  -- schedule that switches exactly before each. No new choice site —
+  -- the members added are the L1 envelope at two more positions, which
+  -- is exactly what gc exhibits.
+  | .retV (.chan _) (.strictK (.lengthOf _) _ [] _ _) => true
+  | .retV _ (.stmtOpK (.print _) _ _ [] _ _) => true
   -- Loop BACK-EDGES (W3.2 stage D, B2 — G1 ruling 2026-08-20; THE
   -- ENVELOPE STATEMENT of `ChoiceSite.backEdge`): the loop re-entry
   -- shapes are scheduling points, so a goroutine inside a

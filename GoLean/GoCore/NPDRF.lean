@@ -117,7 +117,15 @@ starts honest):
    shared cell with an empty recorded footprint would be treated as a
    both-mover it is not). The reduction's honesty therefore rides on
    the module's emission discipline (every access through an emitting
-   operation), not on sharing alone.
+   operation), not on sharing alone. REALIZED 2026-10-12 (the Codex
+   release-trust review's F1, relayed by the [USER]): the channel-length
+   read is exactly such a step — an empty footprint over a cell a
+   peer's send changes — and the coarse relation could not observe the
+   send between two reads where gc does; closed on the SCHEDULING side
+   by making the read (and the `print` apply, FR-30) a registry
+   boundary (`Config.atBoundary`, Multi.lean; design note
+   `docs/2026-10-12_sched-boundary-design.md`). The footprint record
+   stays as written: the detector is silent on `len(ch)` by design (U2).
 6. **The proved movers are CROSS-ROOT only; same-root disjoint PATHS
    are unproved (S3 audit).** Both lemmas below are gated on
    `Loc.rootBase m ≠ Loc.rootBase l` — whole-cell disjointness — while

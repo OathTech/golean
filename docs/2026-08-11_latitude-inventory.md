@@ -539,7 +539,13 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
   implementation site. Scope ledger, code-verified: U1 CLOSED 2026-08-19
   (the (L) surgery's pick loads the live cell — map-range now has a
   per-iteration read footprint), U2 (len/cap on channels
-  uninstrumented both sides; len on MAPS recorded), U3 CLOSED
+  uninstrumented both sides; len on MAPS recorded — the DETECTOR record;
+  the SCHEDULING side of the same read was a hole until 2026-10-12: a
+  channel-length read opened no registry boundary, so two reads in one
+  registry-free segment could never observe a peer's send between them
+  where gc does — closed by making the `len(ch)` apply a boundary,
+  `Config.atBoundary`, lane `core/sched-boundary-1012`, BUG-123,
+  `docs/2026-10-12_sched-boundary-design.md`), U3 CLOSED
   (BUG-045/046 chan-object accesses), U4 (sync-object internal
   accesses unmodeled — misuse-only), U5 (release merge-vs-overwrite:
   ours is memory-model-exact merge, TSan over-reports — TSan-red/

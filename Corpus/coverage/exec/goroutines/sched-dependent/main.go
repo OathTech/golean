@@ -96,9 +96,46 @@ func schedWaiterPick() int {
 	return a*10 + b // 12 or 21, by schedule + waiter pick
 }
 
+// A pure, registry-free delay: a finite recursion the machine steps
+// through without any scheduling point (no loop back-edge, no registry
+// op). It makes gc exhibit the peer's send between the two reads below
+// at a useful rate; the machine's set does not depend on it.
+//
+//go:noinline
+func schedDelay(n int) int {
+	if n == 0 {
+		return 0
+	}
+	return n + schedDelay(n-1)
+}
+
+// TWO channel-length reads around a pure delay, with a peer's buffered
+// send in flight (the Codex release-trust review's F1 witness,
+// 2026-10-12, relayed by the [USER]; BUG-123). `len(ch)` reads the
+// buffer count — shared state the peer's send changes with no
+// synchronization required (spec#Channel_types, spec#Length_and_
+// capacity) and no footprint the race detector sees (gc's `chanlen` is
+// uninstrumented; inventory U2) — so the send may land before the
+// first read (11), between the two (1) or after both (0). On `main`
+// before this lane the read opened no scheduling boundary and the
+// machine certified exactly {0, 11}; gc go1.26.5 (GOMAXPROCS=2, -race,
+// 10,000 calls) realized 0/1/11 at 9861/72/67. The channel-length
+// apply is a registry boundary since this lane: certified set
+// {0, 1, 11}.
+func schedLenPeerSend() int {
+	ch := make(chan int, 1)
+	go func() { ch <- 1 }()
+	a := len(ch)
+	_ = schedDelay(100)
+	b := len(ch)
+	<-ch
+	return 10*a + b // 0, 1 or 11, by schedule
+}
+
 func main() {
 	schedFirstCome()
 	schedSelectDefaultHandshake()
 	schedLenHandoff()
 	schedWaiterPick()
+	schedLenPeerSend()
 }

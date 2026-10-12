@@ -151,7 +151,35 @@ the 300 s `LEAN_ENUM_TIMEOUT_SECONDS` budget.
 - No new choice site; no change to `schedSlots`, `Config.boundarySite`, the post-op flag
   rule, or any pinned statement's text.
 
-## 7. Results (filled at the gate)
+## 7. Results
 
-(See the commits on the lane and the final report; this section is completed after the
-rebuild and the `--diff` run.)
+**Rebuild** (`capped lake build`, the box under a load average of ~90 from other agents'
+builds): every module rebuilt with NO proof change — `PoolErrorFacts` 142 s, `PoolSound` 31 s,
+`BridgeSet` 11 s (the pinned `example` statements elaborate unchanged); `golean:exe` linked.
+`python3 scripts/check-pool-spec`: `ok [frozen] both files and 48 statements match`;
+`git diff main -- GoLean/GoCore/BridgeSet.lean GoLean/GoCore/PoolStep.lean
+GoLean/GoCore/PoolStatement.lean docs/specs/pool-relation/` is EMPTY. The §3 prediction held:
+four shape-insensitive proofs, nothing to re-prove.
+
+**The two witnesses, same binary before/after** (`coverage-observations`, width 2, sites 32,
+`--expect-status ok`):
+
+| witness | engine | base tip `d92b95fd` | lane tip |
+|---|---|---|---|
+| `len(c)` | DFS | `{0, 11}` — 18,368 steps, 99 probes, 34 leaves, depth 8 | `{0, 1, 11}` — 46,192 steps, 282 probes, 95 leaves, depth 10 (×2.5 steps) |
+| `len(c)` | dedup | `{0, 11}` — 18,121 nodes / 18,129 edges, `certified=checkCert` | `{0, 1, 11}` — 31,756 nodes / 31,779 edges, 24 dedup hits, `certified=checkCert` (×1.75 nodes) |
+| prints | DFS | `{ACB, BAC}` — 13,641 steps, 78 probes, 27 leaves, depth 7 | `{ABC, ACB, BAC}` — 46,040 steps, 462 probes, 155 leaves, depth 10 (×3.4 steps) |
+
+Every member gc exhibited in §1 is now certified, and nothing else is: the sets are exactly
+`{0, 1, 11}` and `{ABC, ACB, BAC}` — the three placements of the peer's one observable
+event relative to the two observed ones. Dedup's certificate (`checkCert`) covers the
+widened graph: the checker re-runs `stepMulti` per edge through the widened predicate.
+
+**Static checks at the working tree**: `scripts/coverage-manifest` accepts both rows;
+`scripts/check-bugs.sh` ok (123 bugs; BUG-123's two Cases PASS in the edited baseline;
+backlog unchanged: coverage 10/10, latitude 4/4, wrong-answer 0/0).
+
+**The gate** (`capped scripts/ci`, then `capped scripts/ci --diff` under the box lock at the
+final tip): recorded in the lane's final commit message and report — the `--diff` summary
+line, the wall, the per-row movement (captions of the membership rows that gained consults),
+and the `engine=dedup` rows' times against the 300 s budget.

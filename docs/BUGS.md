@@ -8052,3 +8052,48 @@ FIX PLAN (NOT scheduled; [AGENT]): route the writes through a catching helper be
 `readInputText` that refuses `<path>: cannot write output: <OS error>` (exit 1, the path named once), and a control in
 `scripts/check-wire-boundary` (`--out` / `--dump` under a missing directory). Fix criterion: both repro commands print
 the subcommand's named refusal, exit 1, no `uncaught exception`.
+
+## BUG-123 — two `len(ch)` reads in one registry-free segment could never observe a peer's send between them (and a goroutine's consecutive prints could never be interleaved by a peer's print): the channel-length read and the `print` apply opened NO scheduling boundary, so the pool's relation was narrower than gc on race-free programs [semantic core; wrong answer (observed ∉ modeled, no refusal); the Codex release-trust review's F1 and R2 (`docs/2026-10-12_release-trust-review.md`), relayed by the [USER] 2026-10-12; FIXED the same day, lane `core/sched-boundary-1012`]
+
+- Status: fixed ([AGENT] lane worker, lane `core/sched-boundary-1012`, 2026-10-12, under the [USER]'s 2026-10-12
+  backlog authority «starting with the ones that require no input from me» and the standing rule [USER] 2026-10-07
+  «semantic widenings must match real Go», relayed — every added member is gc-witnessed; design
+  `docs/2026-10-12_sched-boundary-design.md`)
+- Pinned-by: differential
+- Cases: goroutines/sched-dependent/len-peer-send, builtins/print/goroutine-gap
+- Discovered: 2026-10-12 by the review (F1: a NEW counterexample; R2: the FR-30 class recorded 2026-09-05 as silently
+  admitted, re-witnessed). Reproduced on the lane at the base tip `d92b95fd` with the review's two witnesses
+  (pinned gc go1.26.5, GOMAXPROCS=2): `len(c)` witness — machine DFS `{0, 11}` (18,368 steps) and dedup `{0, 11}`
+  (18,121 nodes, `certified=checkCert`), gc plain 9999/1/0 and `-race` 9861/72/67 for 0/1/11 over 10,000 calls, no
+  race diagnostic; print witness — machine DFS `{ACB, BAC}`, gc plain ACB 993 / ABC 7 and `-race` ACB 891 / ABC
+  107 / BAC 2 over 1,000 calls.
+
+WHAT: `Config.atBoundary` (`GoLean/GoCore/Multi.lean`) decides where the pool's scheduler may switch goroutines —
+registry ops, spawn, exit, the parked shapes, the post-op flag, loop back-edges; between boundaries a goroutine's
+steps are «private to it». Two operations are not private: the channel arm of `lengthOf` (`Machine.lean`) reads the
+channel cell's buffer count — shared state a peer's send or receive changes with no synchronization required
+(spec#Channel_types, spec#Length_and_capacity; the memory model orders a send before the completion of the
+RECEIVE only) and with no access footprint (gc's `chanlen` is uninstrumented, latitude inventory U2; `NPDRF.lean`
+obstruction 5 names exactly this «empty recorded footprint» hazard) — and the `print`/`println` apply writes fd 2,
+the observable (gc's `printlock` serializes one STATEMENT; ledger FR-30). With no boundary at either, a peer's send
+could not land between two reads and a peer's print could not land between two prints: the model's scheduling
+relation admitted fewer runs than gc realizes, with no refusal — a silent wrong answer surviving projection to a
+returned integer (the `len` case) or to the byte output (the print case).
+
+FIX (this lane; design note §2–§3): two SHAPE arms of `Config.atBoundary` — the `len` apply on a channel operand
+(`.retV (.chan _) (.strictK (.lengthOf _) _ [] _ _)`) and the print apply (`.retV _ (.stmtOpK (.print _) _ _ [] _ _)`)
+— consulting the existing L1 site (goroutine-order menu; a sole runnable pops nothing, so sequential conservation
+is untouched); neither sets the post-op flag (neither completes a registry op); a pre-boundary at every observable
+operation realizes every cross-goroutine order of observable events. NOT boundaries, by argument: `cap(ch)` (a
+channel's capacity never changes), `len` of a map (an instrumented read — a concurrent write is a detected race),
+`len`/`cap` of a slice/array/string (private value reads), pure computation (the witnesses' `delay` recursion). No
+new choice site, no change to `schedSlots`/`Config.boundarySite`/the post-op rule; no pinned statement's text
+changed (`stepML_switch_boundary` names `t.atBoundary` by name; the frozen pool surface does not define it); every
+proof that unfolds the predicate is shape-insensitive and went through unchanged. The two rows above are the
+witnesses as membership rows pinned to the widened sets `{0, 1, 11}` and `{ABC, ACB, BAC}` (members=3 each); gc's
+extra members are rare per draw (≈ 0.7 % each for `len`, ≈ 10 % / 0.2 % for the prints under `-race`), so the
+`members=` pin is usually not reached at the gate budget — a caption, never the result. FR-30 is CLOSED by the
+print arm (`docs/language-coverage-ledger.md`). Canonical-stream consequence recorded in the design note §2: at the
+new consults the default stream's slot 0 is the lowest-index runnable goroutine, so a child at a print or `len(ch)`
+beside a runnable main now yields to main where it used to continue — strict rows are stream-invariant by their own
+check, so no result depends on it.
