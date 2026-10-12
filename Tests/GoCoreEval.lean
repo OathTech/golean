@@ -3784,6 +3784,49 @@ def main : IO UInt32 := do
     (match decodeMsg (arrWire (GoLean.NativeToIR.arrayLenBudget + 1)) with
      | .error msg => (msg.splitOn "materialization budget").length > 1 && (msg.splitOn "BUG-078").length > 1
      | .ok _ => false))
+  -- BUG-078 residual (3) (2026-10-12): the NESTED bound — the type's
+  -- footprint through nesting, defined entries and struct fields against
+  -- `arrayFootprintBudget` (1<<24). Every dimension here is inside
+  -- `arrayLenBudget`; only the product is over.
+  let u8 : String := "{\"kind\":\"int\",\"int\":\"uint8\"}"
+  let arrTy (len : Nat) (elem : String) : String :=
+    "{\"kind\":\"array\",\"len\":" ++ toString len ++ ",\"elem\":" ++ elem ++ "}"
+  let nestedWire (types : String) (globalTy : String) : String :=
+    "{\"schema\":\"golean-native-v3\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"types\":[" ++ types ++ "],\"methods\":[],\"methodSets\":[],\"promotions\":[]," ++
+    "\"globals\":[{\"name\":\"main.big\",\"type\":" ++ globalTy ++ "}]}"
+  let refusesNested (w : String) (needles : List String) : Bool :=
+    match decodeMsg w with
+    | .error msg => needles.all (fun n => (msg.splitOn n).length > 1)
+    | .ok _ => false
+  passed := passed && (← expectTrue "BUG-078 (3): decode admits a nested array type AT the footprint budget (4096 x 4096 = 1<<24)"
+    (decodeMsg (nestedWire "" (arrTy 4096 (arrTy 4096 u8)))).isOk)
+  passed := passed && (← expectTrue "BUG-078 (3): decode REFUSES a nested array type one row past the footprint budget (4096 x 4097), naming the shape, the product, the budget and BUG-078"
+    (refusesNested (nestedWire "" (arrTy 4096 (arrTy 4097 u8)))
+      ["nested materialization budget", "BUG-078", "[4096][4097]uint8", toString (4096 * 4097), toString GoLean.NativeToIR.arrayFootprintBudget]))
+  passed := passed && (← expectTrue "BUG-078 (3): the residual's own shape [1024][1024][128]byte (2^27) refuses by name"
+    (refusesNested (nestedWire "" (arrTy 1024 (arrTy 1024 (arrTy 128 u8))))
+      ["nested materialization budget", "[1024][1024][128]uint8", toString (1024 * 1024 * 128)]))
+  -- Through the TABLE: `type Row [4096]uint8` then `[4097]Row` — the
+  -- array arm resolves the defined element's footprint from its slot.
+  let rowDef : String :=
+    "{\"name\":\"main.Row\",\"display\":\"main.Row\",\"pkg\":\"main\",\"def\":{\"kind\":\"defined\",\"target\":" ++ arrTy 4096 u8 ++ "}}"
+  let rowRef : String := "{\"kind\":\"named\",\"name\":\"main.Row\"}"
+  passed := passed && (← expectTrue "BUG-078 (3): [4096]Row over `type Row [4096]uint8` (exactly 1<<24) decodes"
+    (decodeMsg (nestedWire rowDef (arrTy 4096 rowRef))).isOk)
+  passed := passed && (← expectTrue "BUG-078 (3): [4097]Row over `type Row [4096]uint8` refuses by name, the defined element resolved through its table slot"
+    (refusesNested (nestedWire rowDef (arrTy 4097 rowRef))
+      ["nested materialization budget", "[4097]defined#2", toString (4097 * 4096)]))
+  -- A STRUCT whose fields SUM past the budget with no single array over
+  -- it refuses at its TypeDef, by the entry's key.
+  let sumStruct (n2 : Nat) : String :=
+    "{\"name\":\"main.S\",\"display\":\"main.S\",\"pkg\":\"main\",\"def\":{\"kind\":\"struct\",\"fields\":[" ++
+    "{\"name\":\"a\",\"type\":" ++ arrTy 4096 (arrTy 2048 u8) ++ ",\"embedded\":false}," ++
+    "{\"name\":\"b\",\"type\":" ++ arrTy 4096 (arrTy n2 u8) ++ ",\"embedded\":false}]}}"
+  passed := passed && (← expectTrue "BUG-078 (3): a struct of two [4096][2048]uint8 fields (sum exactly 1<<24) decodes"
+    (decodeMsg (nestedWire (sumStruct 2048) u8)).isOk)
+  passed := passed && (← expectTrue "BUG-078 (3): a struct whose fields sum one row past the budget refuses at its TypeDef, naming the type"
+    (refusesNested (nestedWire (sumStruct 2049) u8)
+      ["type main.S (program.types[0])", "nested materialization budget", toString (4096 * 2048 + 4096 * 2049), "BUG-078"]))
   -- The class pin proper: main.T has a TypeDef on the wire (the OLD
   -- guard's presence key) but NO method-set record — satisfaction must
   -- refuse `unsupported`, proving the guard keys on the RECORD.

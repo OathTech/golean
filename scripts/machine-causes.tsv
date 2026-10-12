@@ -25,3 +25,4 @@ slice-cap-budget	unsupported	sliceCapBudget
 array-materialization-budget	error	elements exceeds the interpreter's materialization budget
 nil-slice-base	stuck	expected array or slice value for slice expression, got GoLean.GoValue.nil
 race	race	data race detected
+array-footprint-budget	error	nested materialization budget

@@ -64,6 +64,16 @@ machine-reserved entries — BEFORE any body decodes). -/
 private structure LowerCtx where
   nGlobals : Nat
   typeIdx : Std.HashMap String TypeIdx
+  /-- The type table's MATERIALIZATION FOOTPRINTS (BUG-078 residual (3),
+  2026-10-12): entry `i`'s scalar element count per value (`tyFootprint?`),
+  one slot per table entry (reserved + declared) from the start, filled in
+  table order as each TypeDef decodes — `none` is an entry not yet computed,
+  i.e. one AHEAD of the entry being decoded (a forward reference or a cycle,
+  which the well-foundedness clause refuses by name once the table is in).
+  Complete (every slot `some`, asserted) before any global, function or
+  method decodes, so the array arm's product check resolves every `.defined`
+  element type it meets there. -/
+  tyFootprint : Array (Option Nat) := #[]
   /-- B6 (2026-09-30): the enclosing function's WIRE name table — the frontend's
   source entries, indexed by the `local` indices its nodes carry; the decoder's
   `$`-temporaries are interned after them (`LowerSt`). Empty outside a function. -/
@@ -437,8 +447,135 @@ re-normalizes through the nesting), so oversized NESTED values can
 still reach the wall clock — an honest kill, never a wrong answer.
 Raising the budget is a deliberate re-measure on the literal/store
 paths, not a tweak; the owed linear normalize (BUG-078 residual (1),
-TODO.md) is what lifts it. -/
+TODO.md) is what lifts it.
+
+RE-MEASURED 2026-10-12 (lane `core/bug078-nested-budget-1012`, main's
+binary at c266ce6b, single runs under `capped`): the normalize went
+LINEAR at C1 S1 (2026-09-18, `normalizeListWith`'s accumulator form),
+so all three flat paths now read 0.11 s at 1<<16 — this per-dimension
+bound is CONSERVATIVE today. It is kept as it stands: raising it is the
+separate deliberate re-measure the paragraph above demands (and would
+move the `arrays/materialization-budget/over-budget` pin). The bound
+that binds NESTED shapes is the product budget `arrayFootprintBudget`
+below, derived from the same day's sweep. -/
 def arrayLenBudget : Nat := 1 <<< 16
+
+/-- The array-type NESTED materialization budget (BUG-078 residual (3),
+closed by refusal 2026-10-12 — [USER] Mike, release-readiness item 30,
+«30: can we fail-close until we fix?», relayed by the [AGENT]
+coordinator): the largest FOOTPRINT the decoder admits for one array
+type, in scalar elements — the product of its length and its element
+type's footprint, THROUGH nested arrays, defined types and struct
+fields (`tyFootprint?`): the number of leaf values one value of the
+type materializes. `arrayLenBudget` bounds one dimension; this bounds
+the whole; both are checked at the array arm, and a struct TypeDef's
+sum of fields is checked when its entry decodes.
+
+Derivation (measured 2026-10-12 on main's binary at c266ce6b, the
+`.tmp/probes` programs, single runs under `capped -m 16G`, wall clock
+incl. ≈0.1 s process start; the gate's per-case wall is
+`LEAN_TIMEOUT_SECONDS` = 60 s since 2026-10-07 ([USER] «Agree 1 / 2»,
+relayed; 30 s before). The cost is ≈ LINEAR in the product on every
+path (the quadratic term is gone since C1 S1), so the shape does not
+matter, only the product — `[64][64][64]byte{}` (2^18) 0.21 s, a
+`[512][512]byte` field in a struct (2^18) 0.21 s, `[1024]S` with
+`S{a [1024]byte}` (2^20) 0.21 s. The 2-D sweep, ELEMENT STORE into a
+default value (`var a [m][n]byte; a[0][0] = 1`) / LITERAL
+(`a := [m][n]byte{}; a[0][0] = 1`):
+
+* 2^20 `[1024][1024]byte`: 0.21 s / 0.41 s;
+* 2^22 `[2048][2048]byte`: 0.61 s / 1.11 s;
+* 2^23 `[4096][2048]byte`: 1.11 s / 2.11 s;
+* 2^24 `[4096][4096]byte`: 2.01 s / 4.11 s  ← the budget;
+* 2^25 `[8192][4096]byte`: 4.41 s / 7.31 s;
+* 2^26 `[8192][8192]byte`: 7.91 s / 16.6 s;
+* 2^27 `[1024][1024][128]byte` (residual (3)'s own shape): store
+  19.4 s, DEFAULT VALUE alone 20.0 s (1.1 s on 2026-09-01: the default
+  is no longer a shared replicate), literal 53.4 s, a GLOBAL of the type
+  with one store 34.3 s — the smallest sweep product past the 30 s
+  figure on the literal and global paths, inside the 60 s wall;
+* 2^28 `[16384][16384]byte` store: 35.0 s — the store path's crossing.
+
+The same product costs the same through a STRUCT or a DEFINED type: a
+store into the second of two `[4096][2048]byte` fields (2^24 in sum,
+2^23 each) 2.01 s — the store normalizes the whole struct, so the SUM is
+the bound a struct needs — and `type Grid [4096]Row; type Row
+[4096]byte` (2^24) 2.01 s.
+
+1<<24 (16 777 216) keeps the worst path (the literal) at 4.1 s and the
+store at 2.0 s — BUG-078's own margin rule (≈5 s, >5× under the 30 s
+figure; 14× under today's 60 s wall) — and one doubling past it (7.3 s
+literal) breaks the rule. (The sweep's box load was not recorded; a
+later back-to-back check at a 1-minute load of 62 read the 2^24 store
+at 3.5–3.9 s on main's and on this binary alike — the margin is there
+to absorb exactly that.) It is 256× the per-dimension bound and far
+above every corpus type (the largest array type is 128 elements). Past
+it the decoder REFUSES BY NAME at the array arm (the product, the
+budget, BUG-078), never a wall-clock kill. What it does NOT bound:
+`make`'s runtime length — `sliceCapBudget` (Machine.lean) bounds the
+element COUNT, so `make([][1024]byte, 1<<20)` (2^30 leaves, count in
+budget) is still an honest kill (recorded, BUG-078 residual (2b)). -/
+def arrayFootprintBudget : Nat := 1 <<< 24
+
+/-- The MATERIALIZATION FOOTPRINT of a type, in scalar elements: the leaf
+values one value of the type holds — `[n]T` is `n` times `T`'s, a
+`.defined` entry's is its table slot (`LowerCtx.tyFootprint`), everything
+else (scalars, pointers, slices, maps, channels, funcs, interfaces, sync
+primitives, unsupported) is one leaf: those are the LEAVES of every
+type-directed recursion (`Ty.deps`) and their values never contain the
+pointee. `some n` when every entry it descends into has been computed,
+`none` when one is ahead of the entry being decoded (a forward reference
+or a cycle — the well-foundedness clause refuses that wire by name; the
+caller skips the check for this node, never admits by default). An index
+OUTSIDE the table is an internal inconsistency (the name → index map
+only mints in-range indices) and fails closed. Structural on the type. -/
+private def tyFootprint? (fp : Array (Option Nat)) : Ty → Except String (Option Nat)
+  | .array n elem => do
+      match ← tyFootprint? fp elem with
+      | some f => pure (some (n * f))
+      | none => pure none
+  | .defined idx =>
+      match fp[idx]? with
+      | some f => pure f
+      | none => throw s!"native lowering: type table entry {idx} has no footprint slot (index outside the {fp.size}-entry table; internal inconsistency, fail closed)"
+  | _ => pure (some 1)
+
+/-- A TypeDef entry's footprint (`tyFootprint?`'s table layer): a struct
+is the SUM of its fields (at least one leaf — `[n]struct{}` still
+materializes `n` values); a defined type is its underlying's; an
+interface declaration or an opaque marker is one leaf (an interface
+value is a box, an opaque type's uses refuse before any value exists). -/
+private def typeDefFootprint? (fp : Array (Option Nat)) : TypeDef → Except String (Option Nat)
+  | .struct fields => do
+      let mut total : Nat := 0
+      for f in fields do
+        match ← tyFootprint? fp f.typ with
+        | some n => total := total + n
+        | none => return none
+      pure (some (max 1 total))
+  | .defined underlying => tyFootprint? fp underlying
+  | .interfaceDef _ => pure (some 1)
+  | .opaqueDecl _ => pure (some 1)
+
+/-- The Go-like spelling of an array type's NESTING for the budget
+refusal texts (`[1024][1024][128]uint8`; a declared element type by its
+table index, `defined#7` — the entry's key is in the refusal that names
+the entry): the refusal names the type, not only its path. -/
+private def arrayShapeSpelling : Ty → String
+  | .array n elem => s!"[{n}]{arrayShapeSpelling elem}"
+  | .bool => "bool"
+  | .string => "string"
+  | .int kind => kind.name
+  | .float kind => kind.name
+  | .pointer _ => "*T"
+  | .slice _ => "[]T"
+  | .map _ _ => "map[K]V"
+  | .chan _ _ => "chan T"
+  | .funcType _ _ _ => "func"
+  | .interface id => id.key
+  | .defined idx => s!"defined#{idx}"
+  | .unsupported feature => s!"unsupported({feature})"
+  | .sync _ => "sync.T"
 
 partial def decodeTy (path : String) (json : Json) : LowerM Ty := do
   let obj ← StrictJson.obj path json
@@ -477,7 +614,28 @@ partial def decodeTy (path : String) (json : Json) : LowerM Ty := do
       -- the delta stays a visible machine-refuses/gc-succeeds red.
       if len > arrayLenBudget then
         fail s!"array type of {len} elements exceeds the interpreter's materialization budget ({arrayLenBudget} elements; BUG-078 idealization boundary) at {path}"
-      pure (.array len (← decodeTy s!"{path}.elem" (← StrictJson.field path obj "elem")))
+      let ty : Ty := .array len (← decodeTy s!"{path}.elem" (← StrictJson.field path obj "elem"))
+      -- The NESTED bound (BUG-078 residual (3), 2026-10-12): the type's
+      -- whole footprint — this length times the element type's, through
+      -- nested arrays, defined entries and struct fields — against
+      -- `arrayFootprintBudget` (its docstring: the cost is linear in the
+      -- product, so `[1024][1024][128]byte`, 2^27 leaves, every dimension
+      -- in budget, stores in 19 s and initializes in 53 s). Every array
+      -- type on the wire is built HERE (the one `.array` constructor in
+      -- the decoder), inline nesting is checked innermost first, and a
+      -- declared element type is resolved through the table's footprints
+      -- (complete before any global or body decodes; inside the table
+      -- itself an element entry still ahead yields `none` — the
+      -- well-foundedness clause refuses that wire by name below). A
+      -- struct whose FIELDS sum past the budget without any one array
+      -- doing so is caught at its TypeDef (`typeDefFootprint?`).
+      match tyFootprint? (← read).tyFootprint ty with
+      | .error e => throw e
+      | .ok (some footprint) =>
+          if footprint > arrayFootprintBudget then
+            fail s!"array type {arrayShapeSpelling ty} of {footprint} scalar elements through its nesting exceeds the interpreter's nested materialization budget ({arrayFootprintBudget} elements, arrayFootprintBudget; BUG-078 residual (3), refused by name) at {path}"
+      | .ok none => pure ()
+      pure ty
   | "chan" =>
       let dir ← StrictJson.string s!"{path}.dir" (← StrictJson.field path obj "dir")
       let elem ← decodeTy s!"{path}.elem" (← StrictJson.field path obj "elem")
@@ -3814,29 +3972,44 @@ partial def decodeProgram (json : Json) : Except String Program := do
     if typeIdx.contains name then
       throw s!"native lowering: duplicate TypeId {name} at program.types[{k}] (two declarations would alias in the type table)"
     typeIdx := typeIdx.insert name (k + TypeEnv.reserved.size)
-  let ctx0 : LowerCtx := { nGlobals := 0, typeIdx }
-  let globals ←
-    match obj.get? "globals" with
-    | none => pure #[]
-    | some gj => do
-        let arr ← StrictJson.array "program.globals" gj
-        arr.mapIdxM (fun i g => do
-          let gobj ← StrictJson.obj s!"program.globals[{i}]" g
-          let _ ← (checkAllowedKeys s!"program.globals[{i}]" gobj ["name", "type"]) |> (runLower · ctx0)
-          let name ← StrictJson.string s!"program.globals[{i}].name"
-            (← StrictJson.field s!"program.globals[{i}]" gobj "name")
-          let typ ← (decodeTy s!"program.globals[{i}].type"
-            (← StrictJson.field s!"program.globals[{i}]" gobj "type")) |> (runLower · ctx0)
-          pure ({ name, typ } : GlobalDef))
-  let mut seenGlobals : Std.HashSet String := {}
-  for g in globals do
-    if seenGlobals.contains g.name then
-      throw s!"native lowering: duplicate global {g.name} in program"
-    seenGlobals := seenGlobals.insert g.name
-  let ctx : LowerCtx := { nGlobals := globals.size, typeIdx }
-  let funcsJson ← StrictJson.array "program.funcs" (← StrictJson.field "program" obj "funcs")
-  let funcs ← funcsJson.mapIdxM (fun i f => runLower (decodeFunc s!"program.funcs[{i}]" f) ctx)
-  let declaredEntries ← typesJson.mapIdxM (fun i t => runLower (decodeTypeDef s!"program.types[{i}]" t) ctx)
+  -- THE TYPE TABLE DECODES FIRST (BUG-078 residual (3), 2026-10-12;
+  -- before this the globals and the bodies decoded ahead of it — a
+  -- TypeDef body needs only the name → index map, nothing a global or a
+  -- body contributes). Each entry's materialization FOOTPRINT
+  -- (`typeDefFootprint?`) is computed as it decodes and checked against
+  -- `arrayFootprintBudget` — a struct whose fields SUM past the budget
+  -- refuses here, by the entry's name — and recorded in the slot the
+  -- array arm resolves `.defined` element types through. Slots are
+  -- allotted for the whole table up front (reserved + declared) so an
+  -- index outside the table is distinguishable from an entry still
+  -- ahead: the former is an internal inconsistency (fail closed, in
+  -- `tyFootprint?`), the latter a forward reference or a cycle that the
+  -- well-foundedness clause below refuses by name — its footprint stays
+  -- `none` and its check is skipped, never admitted by default; the
+  -- completeness assert after the clause closes the loop.
+  let nEntries := TypeEnv.reserved.size + typesJson.size
+  let mut footprints : Array (Option Nat) := Array.replicate nEntries none
+  for (e, k) in TypeEnv.reserved.toList.zipIdx do
+    match typeDefFootprint? footprints e.2 with
+    | .error msg => throw msg
+    | .ok (some n) =>
+        if h : k < footprints.size then footprints := footprints.set k (some n) h
+        else throw s!"native lowering: reserved type entry {k} has no footprint slot (internal inconsistency; fail closed)"
+    | .ok none => throw s!"native lowering: reserved type entry {k} depends on an entry ahead of it (internal inconsistency; fail closed)"
+  let mut declaredEntries : Array ((TypeId × TypeDef) × TypeDisplay) := #[]
+  for (t, k) in typesJson.toList.zipIdx do
+    let ctxT : LowerCtx := { nGlobals := 0, typeIdx, tyFootprint := footprints }
+    let entry ← runLower (decodeTypeDef s!"program.types[{k}]" t) ctxT
+    let idx := k + TypeEnv.reserved.size
+    match typeDefFootprint? footprints entry.1.2 with
+    | .error msg => throw msg
+    | .ok (some n) =>
+        if n > arrayFootprintBudget then
+          throw s!"native lowering: type {entry.1.1.key} (program.types[{k}]) of {n} scalar elements across its fields and nesting exceeds the interpreter's nested materialization budget ({arrayFootprintBudget} elements, arrayFootprintBudget; BUG-078 residual (3), refused by name)"
+        if h : idx < footprints.size then footprints := footprints.set idx (some n) h
+        else throw s!"native lowering: type table entry {idx} has no footprint slot (internal inconsistency; fail closed)"
+    | .ok none => pure ()
+    declaredEntries := declaredEntries.push entry
   let declaredDefs := declaredEntries.map (·.1)
   -- The machine-reserved prefix leads (the canonical empty struct —
   -- `map[K]struct{}` sets — and the runtime-error payload type).
@@ -3869,6 +4042,35 @@ partial def decodeProgram (json : Json) : Except String Program := do
         let nm := fun k => match typeDefs.nameOf? k with | some n => n.key | none => "?"
         throw s!"native lowering: program.types is not dependency-ordered — table entry {i} ({nm i}) depends on entry {j} ({nm j}) with {j} ≥ {i} (a forward reference or a cycle; indices count the two machine-reserved entries)"
     | none => throw "native lowering: program.types failed the well-foundedness decision but no violating edge was found (internal inconsistency; fail closed)"
+  -- The footprint slots are COMPLETE on a well-founded table (every
+  -- dependency sat behind its entry, so every entry's footprint was
+  -- computed); asserted, so the array arm below never meets a `none`
+  -- it could only skip (fail closed, never admit by default).
+  for (f, i) in footprints.toList.zipIdx do
+    if f.isNone then
+      throw s!"native lowering: type table entry {i} has no footprint after the well-foundedness decision (internal inconsistency; fail closed)"
+  let ctx0 : LowerCtx := { nGlobals := 0, typeIdx, tyFootprint := footprints }
+  let globals ←
+    match obj.get? "globals" with
+    | none => pure #[]
+    | some gj => do
+        let arr ← StrictJson.array "program.globals" gj
+        arr.mapIdxM (fun i g => do
+          let gobj ← StrictJson.obj s!"program.globals[{i}]" g
+          let _ ← (checkAllowedKeys s!"program.globals[{i}]" gobj ["name", "type"]) |> (runLower · ctx0)
+          let name ← StrictJson.string s!"program.globals[{i}].name"
+            (← StrictJson.field s!"program.globals[{i}]" gobj "name")
+          let typ ← (decodeTy s!"program.globals[{i}].type"
+            (← StrictJson.field s!"program.globals[{i}]" gobj "type")) |> (runLower · ctx0)
+          pure ({ name, typ } : GlobalDef))
+  let mut seenGlobals : Std.HashSet String := {}
+  for g in globals do
+    if seenGlobals.contains g.name then
+      throw s!"native lowering: duplicate global {g.name} in program"
+    seenGlobals := seenGlobals.insert g.name
+  let ctx : LowerCtx := { nGlobals := globals.size, typeIdx, tyFootprint := footprints }
+  let funcsJson ← StrictJson.array "program.funcs" (← StrictJson.field "program" obj "funcs")
+  let funcs ← funcsJson.mapIdxM (fun i f => runLower (decodeFunc s!"program.funcs[{i}]" f) ctx)
   let methodsJson ← StrictJson.array "program.methods" (← StrictJson.field "program" obj "methods")
   let methodPairs ← methodsJson.mapIdxM (fun i m => runLower (decodeMethod s!"program.methods[{i}]" m) ctx)
   -- Method bodies are executable functions (looked up by FuncId on call);
