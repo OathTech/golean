@@ -1,3 +1,7 @@
+> **IMPLEMENTED** ([AGENT] 2026-10-12): the choice tape this note proposes is implemented and its statements are
+> pinned — `ChoiceSite`/`Choices.consumeAt` (`GoLean/GoCore/State.lean`), summarised in `docs/semantics-overview.md` §6.
+> The note's own status line and site list below are historical.
+
 # Nondeterminism as an Explicit Choice Oracle
 
 Design direction (2026-07-18, user steer). Status: **agreed direction, not yet

@@ -1,3 +1,6 @@
+> **HISTORICAL** ([AGENT] 2026-10-12): kept for its design rationale, not maintained. The living
+> description of the semantics is `docs/semantics-overview.md`; the index of living docs is `docs/README.md`.
+
 # GoCore Semantics Design
 
 GoCore is the deep embedding we use for execution, differential testing, and

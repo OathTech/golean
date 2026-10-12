@@ -1,8 +1,11 @@
+> **HISTORICAL** ([AGENT] 2026-10-12): kept for its design rationale, not maintained. The living
+> description of the semantics is `docs/semantics-overview.md`; the index of living docs is `docs/README.md`.
+
 > **SPLIT BANNER (2026-08-31):** this document predates the repo split
 > (`docs/2026-08-31_repo-split-plan.md`) and still describes the
 > whole pre-split pipeline including the proof/reasoning layers, which
 > now live on branch `park/reasoning-2026-08-31`. Read it for the
-> semantics-side content; a semantics-scoped rewrite is owed (TODO.md).
+> semantics-side content only.
 
 # Roadmap
 
