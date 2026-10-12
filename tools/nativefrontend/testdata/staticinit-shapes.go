@@ -210,6 +210,10 @@ func initIfTrueCall() {
 		g()
 	}
 }
+func initForGAndFalse() {
+	for g() && false {
+	}
+}
 
 var (
 	C              = 5               // base

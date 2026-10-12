@@ -23,11 +23,14 @@ OTHER=tools/nativefrontend/testdata/staticinit-other.go
 TSV=tools/nativefrontend/testdata/staticinit-oracle.tsv
 tmp="$(mktemp -d "${TMPDIR:-/tmp}/staticinit-oracle.XXXXXX")" || exit 2
 trap 'rm -rf "$tmp"' EXIT
-if ! GO111MODULE=off go run ./tools/staticinitoracle --shapes "$SHAPES" --other "$OTHER" --out "$tmp/fresh.tsv"; then
-  echo "test-staticinit-oracle: FAIL — the oracle could not record (fail closed)" >&2
-  exit 2
-fi
+record_fresh() {
+  if ! GO111MODULE=off go run ./tools/staticinitoracle --shapes "$SHAPES" --other "$OTHER" --out "$tmp/fresh.tsv"; then
+    echo "test-staticinit-oracle: FAIL — the oracle could not record (fail closed)" >&2
+    exit 2
+  fi
+}
 if [ "${1:-}" = "--record" ]; then
+  record_fresh
   cp "$tmp/fresh.tsv" "$TSV"
   echo "test-staticinit-oracle: recorded $TSV ($(grep -vc '^#\|^key' "$TSV") shapes)"
   exit 0
@@ -35,12 +38,15 @@ fi
 [ -f "$TSV" ] || { echo "test-staticinit-oracle: FAIL — no recorded table at $TSV (run with --record)" >&2; exit 1; }
 # A pin move cannot pass with a stale table: the record names its toolchain,
 # and it must be the live (= pinned, scripts/ci checks that) `go version`.
+# Checked BEFORE the build, so a stale table is refused by name at once
+# rather than after a full re-record.
 recorded="$(grep -o 'go version go[^ ]*' "$TSV" | head -1 | awk '{print $3}')"
 live="$(go version | awk '{print $3}')"
 if [ -z "$recorded" ] || [ "$recorded" != "$live" ]; then
   echo "test-staticinit-oracle: FAIL — the recorded table was made with '${recorded:-<none>}' but the live toolchain is '$live': STALE across a pin move; re-record with --record (the BUG-061 WORK side rests on these verdicts)" >&2
   exit 1
 fi
+record_fresh
 if diff -u "$TSV" "$tmp/fresh.tsv"; then
   echo "test-staticinit-oracle: ok — recorded verdicts = fresh gc verdicts ($(grep -vc '^#\|^key' "$TSV") shapes)"
 else

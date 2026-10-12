@@ -111,8 +111,9 @@ Two parts, both in `staticinit.go`, the emitted schedule unchanged:
    generic instantiation in value position (`id[int]`, an `*ast.IndexExpr` of
    function type) is an ONAME, no effect. The table has an `init<Key>` form
    (a parameterless function the oracle builds renamed to `init`, alone with
-   the bases) and is 124 shapes; the conservative list is 14: the eight above
-   plus `initIfGAndFalse` (the coarse rule in an init body), `CallFGF` (the
+   the bases) and is 125 shapes; the conservative list is 15: the eight above
+   plus `initIfGAndFalse` (the coarse rule in an init body), `initForGAndFalse`
+   (its `for` twin, the fourth pass's LOW), `CallFGF` (the
    coarse rule applied to `for`: the writer keeps an always-false loop whose
    rewritten condition is not a literal), `CallPOT` (`(g() || false) || true`),
    `CallGFE` (`if g() && false {…} else {…}`), `SlCh` (a zero-value package
@@ -162,9 +163,10 @@ the fix round's tip (the same 28 roots + the twin: the witness alone refuses,
 the twin wire byte-identical). Unit tests (`staticinit_test.go`): the witness
 refuses with the named text; init-body, map-literal, multi-statement-call,
 arithmetic, constant and empty controls lower; an uncertain package imported
-only by main or a node through its imports lowers; the 124-shape table against
-the recorded gc verdicts (§2; 14 conservative, 0 soundness misses); the node
-fact unchanged.
+only by main or a node through its imports lowers; the 125-shape table against
+the recorded gc verdicts (§2; 15 conservative, 0 soundness misses); the node
+fact unchanged. The fourth pass (186 shapes probed, zero WORK-where-gc-folds
+in either arm) ruled: ship it as the release's by-name refusal for BUG-061.
 
 ## 4. Still owed
 

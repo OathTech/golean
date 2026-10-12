@@ -16,6 +16,7 @@ initIfGAndFalse	work
 initReturn	work
 initDeadAfterReturn	work
 initIfTrueCall	work
+initForGAndFalse	work
 C	none
 Str	none
 Arr	none

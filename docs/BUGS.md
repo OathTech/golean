@@ -115,12 +115,16 @@ body with the same `liveStmts`; the safe direction is the OPPOSITE of
 the single-return arm's: non-empty after the coarse rule ⇒ certain
 (dropping only empties further), emptied ⇒ a MAYBE-STATIC site, only a
 syntactically empty body is no work. A generic instantiation in value
-position (`id[int]`) is no longer an effect. Table 124 shapes (an
-`init<Key>` form for init bodies), 14 conservative entries with
-reasons, 0 soundness misses; corpus impact unchanged.
+position (`id[int]`) is no longer an effect. Table 125 shapes (an
+`init<Key>` form for init bodies; the fourth pass added the init-body
+twin of CallFGF, `initForGAndFalse`), 15 conservative entries with
+reasons, 0 soundness misses; corpus impact unchanged. The fourth pass
+(186 shapes probed, zero WORK-where-gc-folds in either arm) ruled:
+ship it as the release's by-name refusal for BUG-061 rather than naming
+the profile.
 RESIDUAL RISK, stated: the WORK side of the classifier rests on a
 reading of go1.26.5's `staticinit` and `noder` plus the recorded
-124-shape table and the reviews' probe sets; a gc shape nobody thought
+125-shape table and the reviews' probe sets; a gc shape nobody thought
 of could still be WORK-where-gc-folds, and an ORACLE PIN MOVE (a new
 staticinit fold in a later Go) silently widens that exposure until the
 table is re-recorded — so the record names its toolchain, the frontend

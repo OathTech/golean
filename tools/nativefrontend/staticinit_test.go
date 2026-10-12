@@ -133,6 +133,8 @@ func TestBug061InitializerClassifier(t *testing.T) {
 		"CallGFE":         "`if g() && false {…} else {…}`: the COARSE rule, as CallGF, with an else branch",
 		"SlCh":            "a composite-literal element that is a zero-value package variable: staticcopy fails on rn.Defn == nil; the same-package copy rule does not look at the source's own initializer (as CopyInl)",
 		"_16":             "a called closure literal in a blank initializer: the call is classified MAYBE-STATIC on the inliner's account without examining the closure's body, which here calls a multi-statement function",
+		// Fourth pass.
+		"initForGAndFalse": "the COARSE rule applied to `for` in an init body (CallFGF's twin): the writer keeps an always-false loop whose rewritten condition is not a literal, so gc has work; here the loop is dropped and the emptied body is the MAYBE-STATIC slot",
 	}
 
 	dir := writeDir(t, map[string]string{
