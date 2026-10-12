@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -88,5 +90,56 @@ func TestRawStdoutRefusals(t *testing.T) {
 	}
 	if _, err := outputLiteral([]byte{0xff}); err == nil {
 		t.Fatal("invalid UTF-8 silently replaced")
+	}
+}
+
+// Release-readiness item 22 (2026-10-12): a func-valued result — bare, nil,
+// in a struct field, boxed in an interface — is refused BY NAME by the
+// generated observer (the machine's readout refuses the same values,
+// GoLean/CLI.lean funcObserved?), and an int result beside it still answers
+// (the positive control). Runs the pinned `go run`; a missing go fails.
+const funcObsFixture = `package main
+
+func add1(n int) int { return n + 1 }
+
+type Box struct {
+	F func(int) int
+	N int
+}
+
+func retFunc() func(int) int    { return add1 }
+func retNilFunc() func(int) int { return nil }
+func retBoxed() Box             { return Box{F: add1, N: 3} }
+func retAny() any               { return add1 }
+func retInt() int               { return add1(6) }
+
+func main() {}
+`
+
+func TestFuncObservationRefusedByName(t *testing.T) {
+	root := t.TempDir()
+	input := filepath.Join(root, "main.go")
+	if err := os.WriteFile(input, []byte(funcObsFixture), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct{ subject, want string }{
+		{"retFunc", "unsupported Go observation kind func (a Go func value has no observable identity"},
+		{"retNilFunc", "unsupported Go observation kind func (a Go func value has no observable identity"},
+		{"retBoxed", "unsupported Go observation kind func (a Go func value has no observable identity"},
+		{"retAny", "unsupported Go observation kind func (a Go func value has no observable identity"},
+		{"retInt", `"status":"ok","values":[{"kind":"int","tag":"int","value":7}]`},
+	} {
+		dir := filepath.Join(root, tc.subject)
+		if err := run(config{input: input, out: dir, subject: tc.subject, args: "-", status: "ok"}); err != nil {
+			t.Fatalf("%s: harness generation: %v", tc.subject, err)
+		}
+		r := goRunOracle(t, dir)
+		var obs map[string]any
+		if r.exit != 0 || json.Unmarshal(r.stdout, &obs) != nil || !strings.Contains(string(r.stdout), tc.want) {
+			t.Fatalf("%s: want exit 0 and an observation containing %q, got exit %d: %s", tc.subject, tc.want, r.exit, r.stdout)
+		}
+		if tc.subject != "retInt" && obs["status"] != "error" {
+			t.Fatalf("%s: a func observation must be the observer's status:error refusal: %s", tc.subject, r.stdout)
+		}
 	}
 }

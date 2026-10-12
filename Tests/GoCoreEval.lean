@@ -2859,11 +2859,61 @@ private def seedFacts : IO Bool := do
     "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"id\":3,\"tag\":\"addr\"}]}")
   pure passed
 
-/-- `stepLabelControls` then `seedFacts` (both always run). -/
+/-- Release-readiness item 22's observation-shape pins (2026-10-12): their own do-block (`main`'s
+is at the compiler's limit). -/
+private def observationShapeFacts : IO Bool := do
+  let mut passed := true
+  -- Release-readiness item 22 (2026-10-12; [USER] Mike «22: fix it», relayed; the decisions
+  -- [AGENT]). (a) The CLI-level `status:error` observation carries `output` (empty: no step ran)
+  -- and decodes under the unchanged exact-keys rule for `error` (`message, output, schema,
+  -- status`); the former key-less shape still refuses. (b) A func value is refused BY NAME at
+  -- the readout (status `unsupported`), bare, in a struct field, in an array, and as an interface
+  -- box of a func type even when the func is nil — the observation never spells a `func` tag
+  -- (the decoder has none; the Go observer refuses `reflect.Func`). Each measured red against
+  -- main's binary at c266ce6b (key-less error shape; `{"tag":"func"}` under status `ok`).
+  passed := passed && (← expectStrEq "ITEM-22 (a): the CLI-level error observation's exact shape (output key present, empty)"
+    (CLI.cliErrorJson "x.json: cannot read input").compress
+    "{\"message\":\"x.json: cannot read input\",\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"error\"}")
+  passed := passed && (← expectTrue "ITEM-22 (a): the CLI-level error observation decodes (observation-eq's decoder)"
+    (CLI.decodeObservation "left" (CLI.cliErrorJson "x.json: cannot read input").compress).isOk)
+  passed := passed && (← expectTrue "ITEM-22 (a): the former key-less error shape still refuses (the exact-keys rule is unchanged)"
+    !(CLI.decodeObservation "left"
+      "{\"message\":\"x\",\"schema\":\"golean-observation-v1\",\"status\":\"error\"}").isOk)
+  let funcObs (v : GoValue) : String :=
+    (CLI.observationOfRun (fun _ => none) (.ok { values := #[.int 7 .int, v] })).compress
+  let funcRefused (v : GoValue) (w : String) : Bool :=
+    let enc := funcObs v
+    (enc.splitOn "\"status\":\"unsupported\"").length == 2 &&
+      (enc.splitOn s!"observation of result 1 holds {w}: a Go func value has no observable identity").length == 2 &&
+      (enc.splitOn "\"tag\":\"func\"").length == 1 && (CLI.decodeObservation "left" enc).isOk
+  passed := passed && (← expectTrue "ITEM-22 (b): a func result refuses by name (unsupported; no func tag; decodable)"
+    (funcRefused (.funcVal ⟨"add1"⟩ []) "a func value (add1)"))
+  passed := passed && (← expectTrue "ITEM-22 (b): a func in a struct field refuses by name"
+    (funcRefused (.struct ⟨"main.Box"⟩ #[("F", .funcVal ⟨"add1"⟩ []), ("N", .int 3 .int)])
+      "field F of Box: a func value (add1)"))
+  passed := passed && (← expectTrue "ITEM-22 (b): a func in an array element refuses by name"
+    (funcRefused (.array #[.funcVal ⟨"f$lit0"⟩ [.int 1 .int]]) "an array element: a func value (f$lit0)"))
+  passed := passed && (← expectTrue "ITEM-22 (b): an interface box of a func type refuses by name, even holding nil"
+    (funcRefused (.interface (.funcType [] [] false) .nil) "an interface box whose dynamic type is a func type"))
+  passed := passed && (← expectStrEq "ITEM-22 (b): positive control — a func-free result still answers ok"
+    (funcObs (.bool true))
+    "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"kind\":\"int\",\"tag\":\"int\",\"value\":7},{\"tag\":\"bool\",\"value\":true}]}")
+  -- Release-readiness item 22 (2026-10-12; [USER] Mike «22: fix it», relayed): a func value
+  -- stored into a seed CELL refuses the whole seeded observation by name, like a func result.
+  passed := passed && (← expectTrue "ITEM-22: a func value in a seed cell refuses the seeded observation by name (unsupported, no func tag, decodable)"
+    (let o := CLI.seededObs (fun _ => none)
+        { readout := { values := #[.int 1 .int] }, base := 4, seedFinal := #[.funcVal ⟨"add1"⟩ []] }
+     let enc := o.2.compress
+     o.1 == "unsupported" && (enc.splitOn "observation of seed cell 0 holds a func value (add1)").length == 2 &&
+       (enc.splitOn "\"tag\":\"func\"").length == 1 && (CLI.decodeObservation "left" enc).isOk))
+  pure passed
+
+/-- `stepLabelControls`, `seedFacts`, then `observationShapeFacts` (all always run). -/
 private def stepLabelAndSeedControls : IO Bool := do
   let a ← stepLabelControls
   let b ← seedFacts
-  pure (a && b)
+  let c ← observationShapeFacts
+  pure (a && b && c)
 
 set_option maxRecDepth 4096 in
 def main : IO UInt32 := do

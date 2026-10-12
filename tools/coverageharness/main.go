@@ -605,6 +605,8 @@ func _goleanObservationValue(ptr any) (any, error) {
 	return _goleanReflectValue(_golean_reflect.ValueOf(ptr).Elem())
 }
 
+const _goleanFuncRefusal = "unsupported Go observation kind func (a Go func value has no observable identity — not in golean-observation-v1, refused by name at the observation seam)"
+
 func _goleanReflectValue(value _golean_reflect.Value) (any, error) {
 	if !value.IsValid() {
 		return map[string]any{"tag": "nil"}, nil
@@ -632,6 +634,14 @@ func _goleanReflectValue(value _golean_reflect.Value) (any, error) {
 		return map[string]any{"tag": "int", "kind": value.Kind().String(), "value": value.Uint()}, nil
 	case _golean_reflect.Uintptr:
 		return nil, _golean_fmt.Errorf("unsupported Go observation kind uintptr (not in golean-observation-v1's kind set — refused by name at the observation seam, never aliased into uint64)")
+	// A func value has no observable identity (not comparable except to
+	// nil, no stable address, a closure's captures invisible), so it is
+	// refused BY NAME — nil or not — exactly as the machine's readout
+	// refuses one (GoLean/CLI.lean funcObserved?; release-readiness item
+	// 22, 2026-10-12). Before, the default arm refused it unnamed while
+	// the machine spelled a func tag its own decoder refused.
+	case _golean_reflect.Func:
+		return nil, _golean_fmt.Errorf("%%s", _goleanFuncRefusal)
 	case _golean_reflect.Float64:
 		// BIT-pattern observation (floats design note S5/S7): bit-exact
 		// modulo NaN canonicalization — NaN payload/sign are platform- and
@@ -675,6 +685,11 @@ func _goleanReflectValue(value _golean_reflect.Value) (any, error) {
 			return map[string]any{"tag": "nil"}, nil
 		}
 		inner := value.Elem()
+		// Before the naming check: a boxed func (named type or not) is the
+		// func refusal, not an unnamed-type one.
+		if inner.Kind() == _golean_reflect.Func {
+			return nil, _golean_fmt.Errorf("%%s", _goleanFuncRefusal)
+		}
 		name := inner.Type().Name()
 		if name == "" {
 			// An UNNAMED dynamic type (*T, []T, map[K]V, func(...)):

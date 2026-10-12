@@ -406,9 +406,12 @@ private partial def goValueJsonWith {m : Type → Type} [Monad m] [Inhabited (m 
   | .string value => pure <| Json.mkObj [("tag", Json.str "string"), ("bytes", Lean.toJson value.byteNats)]
   | .addr loc => locR loc
   | .nil => pure <| Json.mkObj [("tag", Json.str "nil")]
-  -- Func values are not observable in Go (not comparable, not printable),
-  -- so the observation channel reports identity only; a case whose OUTPUT
-  -- is a func value is outside the differential's comparable surface.
+  -- Func values have NO observation (release-readiness item 22, 2026-10-12):
+  -- every seam that renders a readout refuses one by name first
+  -- (`readoutRefusal?` / `funcObserved?`, below), so this arm is never
+  -- printed in an observation. It stays a VISIBLE non-decodable marker
+  -- (the decoder has no `func` tag), never a plausible value, should a
+  -- future seam bypass the refusal.
   | .funcVal fid _ =>
       pure <| Json.mkObj [("tag", Json.str "func"), ("id", Json.str fid.key)]
   | .interface dynamic value => do
@@ -543,11 +546,19 @@ private def errorJson (error : Stop) (output : GoString := GoString.empty) : Jso
     ("output", outputJson output)
   ]
 
-private def cliErrorJson (message : String) : Json :=
+/-- A CLI-level `status:error` observation (an unreadable file, a parse/decode refusal, a bad entry
+argument or seed file — every one BEFORE any step runs). Since release-readiness item 22
+(2026-10-12; [USER] Mike «22: fix it», relayed) it carries `output` like every other status: the
+empty string, which is exactly what the program wrote (it never ran). Before, the key was absent,
+so the strict decoder — `error` admits exactly `message, output, schema, status` — refused the
+CLI's own output, and `observation-eq` could not decode it. Additive: `golean-observation-v1`
+keeps its name; the decoder is unchanged. Public for the eval pins. -/
+def cliErrorJson (message : String) : Json :=
   Json.mkObj [
     ("schema", Json.str observationSchema),
     ("status", Json.str "error"),
-    ("message", Json.str message)
+    ("message", Json.str message),
+    ("output", outputJson GoString.empty)
   ]
 
 /-- BUG-099 at the OBSERVATION seam (release-readiness item 1, 2026-10-12):
@@ -576,17 +587,46 @@ private partial def runtimeErrorObserved? : GoValue → Option String
       vs.findSome? (fun v => (runtimeErrorObserved? v).map (fun w => s!"an array element: {w}"))
   | _ => none
 
-/-- The readout's refusal, if any result value observes BUG-099's synthetic
-type (the first such result, by position). -/
+/-- A FUNC VALUE in what an observation renders (release-readiness item 22, 2026-10-12; [USER]
+Mike «22: fix it», relayed; the refusal is [AGENT]'s decision): a Go func value has no
+observable identity — not comparable (only to nil), no stable address, a closure's captures
+invisible — and the Go observer refuses `reflect.Func` by name (`tools/coverageharness`). So the
+machine refuses it by name too, at the same seam, rather than spelling a `func` tag its own
+decoder refuses (the former shape: emitted, never decodable). The walk is
+`runtimeErrorObserved?`'s: interface boxes (a box whose dynamic type is a func type refuses even
+when the func is nil — Go's observer reaches `reflect.Func` through `Elem()` there too), struct
+fields, array elements; slice/map/chan bases render as identities and carry none. Not caught: a
+NIL func at a non-interface position renders `{"tag":"nil"}` — the readout carries no static
+type to tell it from a nil pointer — and the Go observer refuses that row (`reflect.Func`, as it
+refuses `reflect.Ptr`), so the row is red at the oracle, never a pass. -/
+private partial def funcObserved? : GoValue → Option String
+  | .funcVal fid _ => some s!"a func value ({fid.key})"
+  | .interface (.funcType ..) _ => some "an interface box whose dynamic type is a func type"
+  | .interface _ v => (funcObserved? v).map (fun w => s!"a boxed value: {w}")
+  | .struct typeId fields =>
+      fields.findSome? (fun (name, v) =>
+        (funcObserved? v).map (fun w => s!"field {name} of {typeId.unqualified}: {w}"))
+  | .array vs =>
+      vs.findSome? (fun v => (funcObserved? v).map (fun w => s!"an array element: {w}"))
+  | _ => none
+
+/-- The named func refusal for an observed position (`result i` / `seed cell k`). -/
+private def funcRefusal (what w : String) : Stop :=
+  .unsupported s!"observation of {what} holds {w}: a Go func value has no observable identity (not comparable, no stable address; the Go observer refuses reflect.Func) — not in golean-observation-v1, refused by name at the observation seam"
+
+/-- The readout's refusal, if any: BUG-099's synthetic type observed in a result (the first such
+result, by position), else a func value observed in a result (item 22, `funcObserved?`). -/
 private def readoutRefusal? (r : GoLean.GoCore.Readout) : Option Stop :=
-  ((List.range r.values.size).findSome? (fun i =>
+  let bug099 := ((List.range r.values.size).findSome? (fun i =>
       r.values[i]? >>= fun v => (runtimeErrorObserved? v).map (fun w => (i, w)))).map
     (fun (i, w) =>
       .unsupported s!"observation of result {i} names the dynamic type of a recovered runtime error ({w}), which the machine models as one synthetic id ({GoCore.runtimeErrorTypeId.key}, reserved table index {GoCore.runtimeErrorTypeIdx}) where gc has a concrete runtime type per fault (runtime.boundsError / runtime.errorString / *runtime.TypeAssertionError / …) with a struct payload — no gc-correct observation exists; BUG-099, refused by name")
+  bug099 <|> ((List.range r.values.size).findSome? (fun i =>
+      r.values[i]? >>= fun v => (funcObserved? v).map (funcRefusal s!"result {i}")))
 
 /-- The observation AND its status word for a readout, from one place: `ok`
-with `runJson`, or BUG-099's refusal (status `unsupported`) with the run's
-output prefix. Every seam that renders a readout goes through this, so the
+with `runJson`, or the readout's refusal (`readoutRefusal?`: BUG-099's, or a
+func value — item 22; status `unsupported`) with the run's output prefix. Every seam that renders a readout goes through this, so the
 status word beside an observation (the enumerators' leaf labels,
 `coverage-observations`' status discipline, `native-json-run`'s exit code)
 never says `ok` over a refusal. -/
@@ -620,7 +660,11 @@ def seededObs (nameOf : TypeIdx → Option TypeId) (sr : GoCore.Machine.SeededRe
       | some v => goValueJsonWith nameOf (seedLocJson b n s!"cell {k}") v
       | none => .error s!"internal: seed cell {k} missing"
     pure (vs, cs)
-  match readoutRefusal? sr.readout with
+  -- The seed cells' final values are observed too: a func stored into a seed cell refuses by
+  -- name like a func result (item 22), after the readout's own refusal.
+  let cellFunc := (List.range n).findSome? (fun k =>
+    sr.seedFinal[k]? >>= fun v => (funcObserved? v).map (funcRefusal s!"seed cell {k}"))
+  match readoutRefusal? sr.readout <|> cellFunc with
   | some stop => (stop.status, errorJson stop sr.readout.output)
   | none =>
       match rendered with
