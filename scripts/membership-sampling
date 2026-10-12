@@ -182,6 +182,19 @@ while IFS=$'\t' read -r id go_dir fn args status features reason lane why params
       esac
     done
   fi
+  # Item 27 (2026-10-12): an engine=dedup row may not carry the DFS caps —
+  # inert under the whole-graph certificate — refused by name, never dropped
+  # (the dedup-caps lane's review, LOW-1: this instrument absorbed them).
+  if [[ -n "$engine" ]]; then
+    inert=""
+    for k in width sites cap backedge; do
+      case ",$params," in *",$k="*) inert="${inert:+$inert,}$k=" ;; esac
+    done
+    if [[ -n "$inert" ]]; then
+      printf '%s\t-\t%s\t-\t-\t-\t-\t-\t-\t-\t-\t-\tREFUSED: engine=dedup reads only work= (plus members=/statuses=): %s inert under the whole-graph certificate — remove it (release-readiness item 27)\n' "$id" "$samples" "$inert" >> "$SUMMARY"
+      continue
+    fi
+  fi
   # --- harness build ---
   if ! hout="$("$HARNESS_BIN" --input "$go_dir/main.go" --out "$row_dir/harness" --subject "$fn" --expected-status "$status" --args "$args" 2>&1)"; then
     printf '%s\t-\t%s\t-\t-\t-\t-\t-\t-\t-\t-\t-\tHARNESS FAILED: %s\n' "$id" "$samples" "$(echo "$hout" | head -1)" >> "$SUMMARY"

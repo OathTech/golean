@@ -324,7 +324,18 @@ run_row() {
       [[ -z "$width" ]] && missing="width="
       [[ -z "$sites" ]] && missing="${missing:+$missing,}sites="
     fi
-    if [[ -n "$missing" ]]; then
+    # Item 27: with engine=dedup the DFS caps are inert — refused by name,
+    # never dropped (the dedup-caps lane's review, LOW-1).
+    local inert="" k
+    if [[ -n "$engine" ]]; then
+      for k in width sites cap backedge; do
+        case ",$plist," in *",$k="*) inert="${inert:+$inert,}$k=" ;; esac
+      done
+    fi
+    if [[ -n "$inert" ]]; then
+      m_verdict="REFUSED:inert-params-under-dedup-$inert"
+      detail="${detail:+$detail; }params '$params' carry $inert with engine=dedup — inert under the whole-graph certificate, refused by name (release-readiness item 27); remove them in cases.tsv"
+    elif [[ -n "$missing" ]]; then
       m_verdict="REFUSED:params-omit-$missing"
       detail="${detail:+$detail; }params '$params' omit $missing — the runner will not invent an enumeration bound; declare it in cases.tsv (lane $lane)"
     else

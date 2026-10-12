@@ -1844,16 +1844,8 @@ def runDedupObservations (ep : EnumProgram) (cfg : EnumArgs) : IO UInt32 := do
   if ep.initBody?.isSome then
     IO.eprintln "coverage-observations: --engine dedup does not support a $pkginit phase (refused fail-closed; use the DFS engine)"
     return 1
-  -- Release-readiness item 27 (review F3, 2026-10-12): the certificate is
-  -- about the WHOLE state graph, not a budgeted exploration — the DFS's
-  -- per-site width, site count, observation cap, run fuel and back-edge
-  -- mode have no reading here (`buildCert` takes the work budget only).
-  -- Before the fix these flags parsed and changed nothing; a silent no-op
-  -- is refused by name instead (exit 2: a usage error, like --max-width 0).
-  let inert := cfg.given.filter dedupInertFlags.contains
-  if !inert.isEmpty then
-    IO.eprintln s!"coverage-observations: --engine dedup reads only --work-cap (the state-graph work budget) and --expect-status: {", ".intercalate inert} given — inapplicable to the whole-graph certificate (not a budgeted exploration), refused by name rather than ignored (release-readiness item 27)"
-    return 2
+  -- Release-readiness item 27: the DFS flags this path never reads are
+  -- refused by name in `runCoverageObservations`, before any input is read.
   -- Refuse, never ignore: nonterm accounting under dedup is an open
   -- ruling (M-9) — a certificate is silent about divergent branches,
   -- so accepting the flag here would answer M-9 silently (launch
@@ -1925,6 +1917,19 @@ private def runCoverageObservations (args : List String) : IO UInt32 := do
           if cfg.maxWidth < 1 then
             IO.eprintln "coverage-observations: --max-width must be >= 1 (an empty pick alphabet explores nothing)"
             return 2
+          -- Release-readiness item 27 (review F3, 2026-10-12): under --engine
+          -- dedup the DFS's budget flags have no reading — the certificate is
+          -- about the WHOLE state graph (`EnumDedup.buildCert` takes the work
+          -- budget only), so `--fuel`, `--max-width`, `--max-sites`, `--cap`
+          -- and `--backedge` would parse and change nothing. A silent no-op is
+          -- refused by name HERE, before any input is read: a usage error
+          -- (exit 2, like --max-width 0), not a late refusal after setup (the
+          -- lane's review, LOW-2).
+          if cfg.engine.isSome then
+            let inert := (cfg.given.filter dedupInertFlags.contains).eraseDups
+            if !inert.isEmpty then
+              IO.eprintln s!"coverage-observations: --engine dedup reads only --work-cap (the state-graph work budget) and --expect-status: {", ".intercalate inert} given — inapplicable to the whole-graph certificate (not a budgeted exploration), refused by name rather than ignored (release-readiness item 27)"
+              return 2
           let input := absoluteFrom cwd input
           -- BUG-110: strict byte parse (see runNativeJsonRun). BUG-120: a
           -- missing/unreadable wire refuses by name.

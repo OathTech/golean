@@ -877,7 +877,7 @@ run_case_rows() {
   confluent_member=""
   confluent_detail=""
   if [[ "$lane" == "confluent" ]]; then
-    local width sites obs_cap work members statuses backedge iters engine
+    local width sites obs_cap work members statuses backedge iters engine given
     parse_lane_params || return 0
     local conf_dir="$OUT/membership/$id"
     mkdir -p "$conf_dir"
@@ -1005,7 +1005,7 @@ run_case_rows() {
   # approximation (the old adversarial-stream loop is subsumed: every
   # stream's path is in the enumerated tree).
   if [[ "$lane" == "racy" ]]; then
-    local width sites obs_cap work members statuses backedge iters engine
+    local width sites obs_cap work members statuses backedge iters engine given
     parse_lane_params || return 0
     local racy_dir="$OUT/membership/$id"
     mkdir -p "$racy_dir"
@@ -1618,7 +1618,7 @@ member_status_allowed() {
 }
 
 run_membership_case_rows() {
-  local width sites obs_cap work members statuses backedge iters engine
+  local width sites obs_cap work members statuses backedge iters engine given
   parse_lane_params || return 0
 
   local mem_dir="$OUT/membership/$id"
