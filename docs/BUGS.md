@@ -34,11 +34,48 @@ listed id to be FAIL, so a designed refusal that stops firing trips the gate
 
 ---
 
-## BUG-061 — the pruning rule under-approximates `staticinit`, so a package gc folded into the data section is still scheduled
+## BUG-061 — the pruning rule under-approximates `staticinit`, so a package gc folded into the data section is still scheduled [GUARDED BY NAME 2026-10-12: the order-sensitive shape refuses at the frontend; the staticinit model is still owed]
 
 - Status: open
 - Pinned-by: differential
 - Cases: multipkg/init-order-staticinit/seq
+
+**GUARDED BY NAME at the frontend (2026-10-12, [AGENT] lane
+`fix/bug061-refuse-1012`; release-readiness item 1 / §5 D1, [USER] Mike
+2026-10-12 verbatim «D1: I think this should probably be refused, if it's
+easy to exclude.», relayed by the [AGENT] coordinator).** The loader
+(`tools/nativefrontend/staticinit.go`) now sorts every non-constant
+package-level initializer of a source package into the shapes
+`StaticAssign` certainly leaves as work (map literals, arithmetic,
+indexing, field reads, receives, non-NOP conversions, calls through
+interfaces or func values, calls whose body is not a single return —
+each arm citing its gc case) and the shapes it MAY fold (array/slice/
+struct literals of static elements, `&global`, same-package copies, func
+values, `[]byte("lit")`, conversions to interface, single-return calls
+such as `errors.New`). A package is UNCERTAIN when its only work is of the
+second kind. The guard enumerates every pruning of the uncertain packages
+(cap 12, refuses beyond) and the export refuses iff some pruning orders
+the packages WITH work differently from the emitted schedule: «the
+program initialization order is not decided by the frontend's pruning
+rule (BUG-061): package(s) zq have no certain initialization work — the
+initializer(s) var A = [3]int{1, 2, 3} at …/zq/zq.go:11:5 are non-constant
+but of a shape cmd/compile/internal/staticinit may fold into the data
+section … scheduled [lb la main], pruned [la lb main] — refused by name».
+The EMITTED schedule is unchanged (an uncertain package stays a node, as
+before), so every program that lowered before lowers identically except
+the sensitive shape. Measured over the corpus's 28 multi-package roots and
+the raft twin assembly: the Cases row alone moves, FAIL/differential →
+FAIL/frontend-export (a stage move, no result flip; no other row moves;
+the twin wire is byte-identical). The blunt alternative — refuse any
+uncertain package — would have refused 33 PASSing rows
+(`multipkg/errors-new` ×3, `multipkg/wire-codec` ×29, the witness) and
+the raft twin (`quorum`, `raft`, `tracker` are all uncertain:
+`errors.New`, array literals, `&T{}`); rejected in
+`docs/2026-10-12_bug061-exclusion-design.md`. Still owed: the staticinit
+model itself (L-011's decision at a point where gc is not single-valued),
+after which the row flips PASS and the guard retires. Lowerdiag cause
+`staticinit-uncertain-order`; unit tests `staticinit_test.go`. The
+mechanism below is unchanged.
 
 gc schedules a PRUNED set of packages: `MakeTask`
 (`cmd/compile/internal/pkginit/init.go`) emits a `..inittask` record

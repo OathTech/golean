@@ -1,9 +1,18 @@
 package main
 
 // Multi-package guardrail, PINNED RED (raft W1.1 delta-review fix
-// round, 2026-08-18; BUG-061, ledger L-0xx `spec-ambiguity`). The
+// round, 2026-08-18; BUG-061, ledger L-011 `spec-ambiguity`). The
 // representative of the frontend's KNOWN residual on gc's pruning
 // rule.
+//
+// RED AT THE FRONTEND since 2026-10-12 (FAIL/frontend-export, no longer
+// FAIL/differential): the BUG-061 guard (tools/nativefrontend/
+// staticinit.go; [USER] ruling D1 «refused, if it's easy to exclude»)
+// refuses this export by name — zq's only initializer is of a shape
+// staticinit may fold, and the order of la and lb depends on whether it
+// does. The expected column still records the oracle's truth (12); the
+// residual below is unchanged and still owed, now visible as a refusal
+// instead of a wrong order.
 //
 // The frontend decides "does this package have residual initialization
 // work?" syntactically: a `func init()` with a non-empty body, or a

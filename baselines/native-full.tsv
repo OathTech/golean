@@ -1,5 +1,16 @@
 # GoLean native-frontend full-corpus differential baseline
 # cases: 3953 (3714 PASS / 239 FAIL)
+# re-pinned: 2026-10-12 [AGENT], lane fix/bug061-refuse-1012 (off fix/release-runtime-1012 4365c313, itself off main) — BUG-061 GUARDED BY
+#   NAME (release-readiness item 1 / §5 D1; [USER] Mike 2026-10-12 verbatim «D1: I think this should probably be refused, if it's easy to
+#   exclude.», relayed by the [AGENT] coordinator). WHY: the frontend's pruning rule calls every non-constant package-level initializer
+#   work, so a package gc's staticinit folds into the data section (zq's `var A = [3]int{1, 2, 3}`) stayed a node and held its importer
+#   la behind lb — a silently wrong order (Lean 21, Go 12, both ok). tools/nativefrontend/staticinit.go now classifies the shapes
+#   staticinit may fold, enumerates every pruning of the packages whose only work is of that kind, and REFUSES the export iff some
+#   pruning reorders the packages with work; the emitted schedule is unchanged. ONE row moves, FAIL/differential -> FAIL/frontend-export:
+#   multipkg/init-order-staticinit/seq (BUG-061's Cases line; a stage move, no result flip). No other row moves (measured over the 28
+#   multi-package corpus roots + the raft twin assembly: the twin wire byte-identical; the blunt rule «refuse any uncertain package»
+#   would have refused 33 PASSing rows and the twin — rejected, docs/2026-10-12_bug061-exclusion-design.md). No born row, no
+#   PASS->non-PASS flip: 3939 = 3706 PASS / 233 FAIL unchanged. Measured by capped scripts/ci --diff at the lane's tip.
 # re-pinned: 2026-10-12 [AGENT] coordinator, train 3 (staging branch train3/stage-1012 off the train-2 stage 2e9ac4f0) — the
 #   uintptr lane's three re-pins below were measured off the runtime lane's tip and combine with train 2's 3941: + 7 + 4 + 1 = 3953;
 #   PASS 3708 + 1 + 4 + 1 = 3714; FAIL 233 + 6 = 239. No row is touched by two lanes; verified by the train's scripts/ci --diff.
@@ -4161,7 +4172,7 @@ PASS	multipkg/init-order	-
 PASS	multipkg/init-order-pruned-stdlib/seq	-
 PASS	multipkg/init-order-pruned/dynamic	-
 PASS	multipkg/init-order-pruned/static	-
-FAIL	multipkg/init-order-staticinit/seq	differential
+FAIL	multipkg/init-order-staticinit/seq	frontend-export
 PASS	multipkg/init-order-stdlib/marks	-
 PASS	multipkg/init-order-stdlib/seq	-
 PASS	multipkg/init-order-tiebreak/seq	-

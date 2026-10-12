@@ -1,2 +1,7 @@
 # id	subject	args	expected_status	expected_reason	features
+# RED (frontend-export) BY DESIGN since 2026-10-12: the BUG-061 guard
+# refuses this export by name (see main.go). The expected column records
+# the oracle's truth (go run @ go1.26.5 → 12); the frontend refuses the
+# order-sensitive staticinit shape instead of realizing the order gc does
+# not (21). Before the guard this row was FAIL/differential.
 seq	staticinitSeq	-	ok	-	multipackage,imports,init,globals,evaluation_order

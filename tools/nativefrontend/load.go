@@ -104,6 +104,13 @@ type loader struct {
 	// allowed-library import and reused; nil until then. The rev check
 	// of the source root runs at the same moment (stdlibsource.go).
 	libPin map[string]string
+	// The main unit, registered by loadProgram so the BUG-061 classifier
+	// (staticinit.go) can index every source body of the program.
+	mainUnit *sourcePkg
+	// Declaration index for the classifier's callee-body test, built on
+	// first use after type-checking (staticinit.go funcDeclOf).
+	funcDecls map[*types.Func]*ast.FuncDecl
+	declInfo  map[*ast.FuncDecl]*types.Info
 }
 
 func newLoader(fset *token.FileSet, rootDir string) *loader {
@@ -337,38 +344,18 @@ func (l *loader) localImportsOf(files []*ast.File) []string {
 // would be unsafe (it deletes a real edge), and the rule cannot do it
 // through the `fns` half: a constant initializer generates no code and
 // an empty init body is dropped by gc too.
-func sourceHasInitWork(u *sourcePkg) bool {
-	for _, f := range u.files {
-		for _, decl := range f.Decls {
-			switch d := decl.(type) {
-			case *ast.FuncDecl:
-				if d.Recv == nil && d.Name.Name == "init" && d.Body != nil && len(d.Body.List) > 0 {
-					return true
-				}
-			case *ast.GenDecl:
-				if d.Tok != token.VAR {
-					continue
-				}
-				for _, spec := range d.Specs {
-					vs, ok := spec.(*ast.ValueSpec)
-					if !ok {
-						continue
-					}
-					for _, value := range vs.Values {
-						// No recorded constant value => the
-						// initializer runs at initialization time.
-						// An expression go/types never typed (it
-						// should not exist after a clean Check) is
-						// treated as work: fail towards a node.
-						if tv, typed := u.info.Types[value]; !typed || tv.Value == nil {
-							return true
-						}
-					}
-				}
-			}
-		}
-	}
-	return false
+//
+// Since 2026-10-12 (the BUG-061 guard, [USER] ruling D1 «refused, if
+// it's easy to exclude») the rule is computed by sourceInitWork
+// (staticinit.go), which ALSO sorts the non-constant initializers into
+// the shapes staticinit certainly leaves as work and the shapes it may
+// fold. The node fact here is unchanged — "constant or nothing" prunes,
+// anything else is a node; the second sort feeds only the refusal that
+// fires when the uncertainty would change the order of the packages
+// with work.
+func (l *loader) sourceHasInitWork(u *sourcePkg) bool {
+	certain, maybe := l.sourceInitWork(u)
+	return certain || len(maybe) > 0
 }
 
 // initGraph is the program's initialization graph, in the LINKER
@@ -380,6 +367,10 @@ type initGraph struct {
 	src  map[string]*sourcePkg // prefix -> source unit, for source packages
 	node map[string]bool       // prefix -> is a node of gc's schedule
 	work map[string]bool       // prefix -> has residual init work of its own
+	// prefix -> the MAYBE-STATIC initializers of a source package whose
+	// work is otherwise nil: the frontend counts it as work, gc may not
+	// (BUG-061, staticinit.go). Empty for every certain package.
+	uncertain map[string][]initSite
 }
 
 // specInitOrder returns ALL the source units in the order the program
@@ -435,26 +426,48 @@ func (l *loader) specInitOrder(units []*sourcePkg, mainUnit *sourcePkg) ([]*sour
 		return keys[i]+initTaskSuffix < keys[j]+initTaskSuffix
 	})
 
+	walk, err := walkInitSchedule(keys, g, g.node)
+	if err != nil {
+		return nil, err
+	}
+	// BUG-061 guard (staticinit.go): the walk above is emitted only if
+	// no admissible pruning of the uncertain packages reorders the
+	// packages with work.
+	if err := l.checkStaticinitSensitivity(g, keys, walk); err != nil {
+		return nil, err
+	}
 	out := make([]*sourcePkg, 0, len(units))
+	for _, p := range walk {
+		if u, isSrc := g.src[p]; isSrc {
+			out = append(out, u)
+		}
+	}
+	return out, nil
+}
+
+// walkInitSchedule runs the two-pass walk over keys (sorted by schedule
+// key) for the given node set and returns every prefix in the order it
+// is initialized. Pass 1 drains the PRUNED packages, pass 2 runs gc's
+// schedule over the nodes. Pass 1 is closed under its own dependencies
+// — a pruned package has no inittask-bearing import, so everything it
+// imports is pruned too — which is also why the readiness test can stay
+// "every import done" in both passes: by the time pass 2 starts, every
+// pruned package is already done, so the only undone imports it can see
+// are the node edges gc actually walks.
+func walkInitSchedule(keys []string, g *initGraph, node map[string]bool) ([]string, error) {
+	out := make([]string, 0, len(keys))
 	done := map[string]bool{}
-	// Pass 1 drains the PRUNED packages, pass 2 runs gc's schedule
-	// over the nodes. Pass 1 is closed under its own dependencies — a
-	// pruned package has no inittask-bearing import, so everything it
-	// imports is pruned too — which is also why the readiness test can
-	// stay "every import done" in both passes: by the time pass 2
-	// starts, every pruned package is already done, so the only
-	// undone imports it can see are the node edges gc actually walks.
 	for _, nodePass := range []bool{false, true} {
 		remaining := 0
 		for _, p := range keys {
-			if g.node[p] == nodePass {
+			if node[p] == nodePass {
 				remaining++
 			}
 		}
 		for remaining > 0 {
 			progressed := false
 			for _, p := range keys {
-				if done[p] || g.node[p] != nodePass {
+				if done[p] || node[p] != nodePass {
 					continue
 				}
 				ready := true
@@ -470,15 +483,13 @@ func (l *loader) specInitOrder(units []*sourcePkg, mainUnit *sourcePkg) ([]*sour
 				done[p] = true
 				remaining--
 				progressed = true
-				if u, isSrc := g.src[p]; isSrc {
-					out = append(out, u)
-				}
+				out = append(out, p)
 				break // restart from the lexicographic front
 			}
 			if !progressed {
 				blocked := []string{}
 				for _, p := range keys {
-					if !done[p] && g.node[p] == nodePass {
+					if !done[p] && node[p] == nodePass {
 						blocked = append(blocked, p)
 					}
 				}
@@ -489,14 +500,51 @@ func (l *loader) specInitOrder(units []*sourcePkg, mainUnit *sourcePkg) ([]*sour
 	return out, nil
 }
 
+// solveInitNodes computes the node set for a work assignment: a
+// non-source package's node fact IS its table fact (work == node for
+// those rows); a source package is a node iff it has work of its own
+// or imports a node, to fixpoint. Only the SOURCE packages need
+// solving — a stdlib package can never import a source one.
+func solveInitNodes(g *initGraph, work map[string]bool) map[string]bool {
+	node := map[string]bool{}
+	for p := range g.deps {
+		if _, isSrc := g.src[p]; !isSrc {
+			node[p] = work[p]
+		}
+	}
+	for changed := true; changed; {
+		changed = false
+		for prefix := range g.src {
+			if node[prefix] {
+				continue
+			}
+			isNode := work[prefix]
+			if !isNode {
+				for _, dep := range g.deps[prefix] {
+					if node[dep] {
+						isNode = true
+						break
+					}
+				}
+			}
+			if isNode {
+				node[prefix] = true
+				changed = true
+			}
+		}
+	}
+	return node
+}
+
 // buildInitGraph closes over the program's imports and decides, for
 // every package reached, whether gc schedules it.
 func (l *loader) buildInitGraph(units []*sourcePkg, mainUnit *sourcePkg) (*initGraph, error) {
 	g := &initGraph{
-		deps: map[string][]string{},
-		src:  map[string]*sourcePkg{},
-		node: map[string]bool{},
-		work: map[string]bool{},
+		deps:      map[string][]string{},
+		src:       map[string]*sourcePkg{},
+		node:      map[string]bool{},
+		work:      map[string]bool{},
+		uncertain: map[string][]initSite{},
 	}
 	// THE WORKLIST CARRIES LINKER SYMBOL PREFIXES, NEVER IMPORT PATHS
 	// (BUG-064). Source imports are converted by pathToPrefix exactly
@@ -543,8 +591,17 @@ func (l *loader) buildInitGraph(units []*sourcePkg, mainUnit *sourcePkg) (*initG
 				return nil, err
 			}
 			g.work[prefix] = entry.node
+		} else if u == mainUnit {
+			g.work[prefix] = true
 		} else {
-			g.work[prefix] = u == mainUnit || sourceHasInitWork(u)
+			// The node fact is sourceHasInitWork's, unchanged; the
+			// MAYBE-STATIC sites of a package with no certain work are
+			// what the BUG-061 guard enumerates over (staticinit.go).
+			certain, maybe := l.sourceInitWork(u)
+			g.work[prefix] = certain || len(maybe) > 0
+			if !certain && len(maybe) > 0 {
+				g.uncertain[prefix] = maybe
+			}
 		}
 	}
 	// Close over the non-source packages, taking their node facts and
@@ -577,30 +634,9 @@ func (l *loader) buildInitGraph(units []*sourcePkg, mainUnit *sourcePkg) (*initG
 		}
 	}
 	// Node set to fixpoint: a package is a node iff it has work of its
-	// own or imports a node. Only the SOURCE packages need solving —
-	// the table already gives the closed answer for the rest, and a
-	// stdlib package can never import a source one.
-	for changed := true; changed; {
-		changed = false
-		for prefix := range g.src {
-			if g.node[prefix] {
-				continue
-			}
-			isNode := g.work[prefix]
-			if !isNode {
-				for _, dep := range g.deps[prefix] {
-					if g.node[dep] {
-						isNode = true
-						break
-					}
-				}
-			}
-			if isNode {
-				g.node[prefix] = true
-				changed = true
-			}
-		}
-	}
+	// own or imports a node (solveInitNodes; the table already gives the
+	// closed answer for the non-source rows).
+	g.node = solveInitNodes(g, g.work)
 	return g, nil
 }
 
@@ -635,11 +671,17 @@ func (c *chainedImporter) Import(path string) (*types.Package, error) {
 // lexicographically first uninitialized package whose imports are all
 // initialized; main — everything's importer — lands last).
 func loadProgram(fset *token.FileSet, rootDir string, mainFiles []*ast.File) ([]*sourcePkg, error) {
+	return newLoader(fset, rootDir).loadProgram(mainFiles)
+}
+
+// loadProgram is the method form of the function above, on a fresh
+// loader; tests that need the loader afterwards (the BUG-061
+// classifier's unit tests) call it directly.
+func (l *loader) loadProgram(mainFiles []*ast.File) ([]*sourcePkg, error) {
 	if len(mainFiles) == 0 {
-		return nil, fmt.Errorf("no Go files in %s", rootDir)
+		return nil, fmt.Errorf("no Go files in %s", l.rootDir)
 	}
 	mainName := mainFiles[0].Name.Name
-	l := newLoader(fset, rootDir)
 	if err := l.discover(mainName, mainFiles); err != nil {
 		return nil, err
 	}
@@ -648,6 +690,7 @@ func loadProgram(fset *token.FileSet, rootDir string, mainFiles []*ast.File) ([]
 	}
 
 	mainUnit := &sourcePkg{path: mainName, files: mainFiles}
+	l.mainUnit = mainUnit
 	l.locals[mainName] = mainUnit // for edge computation only; removed below
 	for _, unit := range l.locals {
 		unit.localImports = l.localImportsOf(unit.files)
@@ -715,7 +758,7 @@ func loadProgram(fset *token.FileSet, rootDir string, mainFiles []*ast.File) ([]
 	for _, unit := range order {
 		unit.info = newTypesInfo()
 		conf := types.Config{Importer: imp, GoVersion: lang}
-		pkg, err := conf.Check(unit.path, fset, unit.files, unit.info)
+		pkg, err := conf.Check(unit.path, l.fset, unit.files, unit.info)
 		if err != nil {
 			return nil, fmt.Errorf("type-check: %w", err)
 		}
