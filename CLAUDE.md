@@ -220,11 +220,15 @@ Everything else is untrusted tooling.
 
 ## Pointers
 
-The plan of record for the current phase: the batched-window charter
-`docs/2026-09-23_batched-window-charter.md` and its execution table
-`docs/2026-09-24_window-plan.md` · The earlier whole roadmap (dated,
-indexed by package; §7 = the review's dispositions):
-`docs/2026-09-05_master-plan.md` · The independent project
+The plan of record: the release-readiness backlog
+`docs/2026-10-12_release-readiness.md` (each item carries its status)
+and the seeded-heap design `docs/2026-10-09_seeded-heap-design.md`;
+the batched-window charter `docs/2026-09-23_batched-window-charter.md`
+and its window plan closed with the 2026-10-03 offer · The index of
+living documents: `docs/README.md` · The semantics overview:
+`docs/semantics-overview.md` · The CLI, wire and observation formats:
+`docs/cli.md` · The earlier whole roadmap (dated, indexed by package;
+§7 = the review's dispositions): `docs/2026-09-05_master-plan.md` · The independent project
 gate audit (2026-09-05, verdict + F1–F13 + Gates A–D):
 `docs/2026-09-05_project-gate-audit.md` ·
 The split plan (this era's opening decision):
