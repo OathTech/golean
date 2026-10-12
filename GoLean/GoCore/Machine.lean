@@ -1544,6 +1544,44 @@ def intElems : List GoValue → Except Stop (List (Int × IntKind))
   | .int v kind :: rest => do return (v, kind) :: (← intElems rest)
   | other :: _ => stuck s!"sortSlice expected int element, got {repr other}"
 
+/-- The slice-backing MATERIALIZATION budget, in elements (`make`'s CAP
+request; release-readiness punch list item 9, 2026-10-12 — BUG-090's row
+`strings/trimspace-repeat/repeat-bound-refused` was dying as a native
+stack overflow, exit 134, not a refusal). The value-level twin of the
+decoder's `arrayLenBudget` (BUG-078): past it the machine REFUSES BY
+NAME at the request (`.unsupported`, the text below), before any backing
+is built. A modeled-resource bound, not Go behaviour: gc allocates such a
+slice fine, so a program over the budget is a standing machine-refuses /
+gc-succeeds red, never a wrong answer and never an abort.
+
+MEASURED PATH (milner-oath, main's binary at d92b95fd, single runs under
+`capped`, the probe programs inline): the whole-backing ELEMENT-WISE READ —
+`Mem.loadElems` (Ops.lean), structural on the count and non-tail
+recursive, one native stack frame per element, reached by `string(b)`,
+the append SPILL (the overlay's `Builder.grow` spells `MakeNoZero(n)` as
+`append([]byte(nil), make([]byte, n)...)`), `copy`'s source run and every
+other multi-element read:
+* `len(string(make([]byte, 1<<22)))`: 3.0 s, ok; at `1<<23`: 6.5 s, ok;
+  at `1<<24`: «Stack overflow detected. Aborting.», exit 134 at 6.2 s;
+* `strings.Builder.Grow(1<<24)` + one `WriteString`: exit 134 at 8.8 s —
+  the row's own path (Repeat requests its whole output up front); at
+  `1<<23`: 10.9 s, ok; the bare spill `append([]byte(nil), make([]byte,
+  1<<23)...)`: 9.6 s, ok (`make([]byte, 1<<23)` alone: 3.2 s);
+* at `1<<24` the single-element operations over the same backing all pass
+  (`make` alone 3.7 s, a reslice, one element store, a 16-byte append,
+  a 16-byte `copy`): the abort is the recursion depth, not the size.
+So `1<<23` (8 388 608) keeps the deepest measured read inside the native
+stack with a 2× margin and the whole-backing paths at ≈6.5–11 s, under the
+gate's 30 s row wall (`LEAN_TIMEOUT_SECONDS`); it exceeds every `make` the
+corpus and the raft subject request (the largest is this row's). What it
+does NOT bound, recorded as BUG-090's residual: a backing that GROWS past
+it by appends (two in-budget slices appended into one) still reaches the
+same recursion on its next whole read — an honest abort, never a wrong
+answer; the lift is a tail-recursive `loadElems`/`storeElems` (a proof-
+bearing pair: `loadElems_locSup`, `storeElems_pres`, `_tame`, `_noPanic`),
+not a larger number. -/
+def sliceCapBudget : Nat := 1 <<< 23
+
 /-- The choices-FREE core of `applyStmtOp`: every wide-op arm except
 `appendSlice` (whose spill path consumes a capacity choice; its arm HERE
 is an unreachable fail-closed `.internal` — real dispatch happens in the
@@ -1607,6 +1645,13 @@ def applyStmtOpCore.plan (s : Store) (op : StmtOp)
           panic "runtime error: makeslice: cap out of range"
       let len := lenValue.toNat
       let cap := capValue.toNat
+      -- The materialization budget (`sliceCapBudget`, its docstring the
+      -- derivation): AFTER gc's own `makeslice` panics (a request gc
+      -- itself rejects keeps gc's panic text), BEFORE any backing is
+      -- built. A refusal that names the request, the budget, and the
+      -- path the budget bounds.
+      if cap > sliceCapBudget then
+        unsupported s!"make([]T, len {len}, cap {cap}): a slice backing of {cap} elements exceeds the interpreter's materialization budget ({sliceCapBudget} elements, sliceCapBudget — the element-wise whole-backing read `Mem.loadElems` overflows the native stack past it; BUG-090 cost boundary, refused by name)"
       let backing ← buildDefaultArrayValue ctx cap elem
       -- S3: the target's nil check precedes the allocation (a pure reorder —
       -- before S3 the allocation came first and the panic rolled it back).

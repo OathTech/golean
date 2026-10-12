@@ -1086,24 +1086,38 @@ def runBatch (manifestPath outPath : String) (dumpPath : Option String) (fuel : 
         | id :: _ => if id == "id" || id == "" then none else some id
         | [] => none)
     else do
-      IO.FS.writeFile outPath (tsvHeader ++ "\n")
-      pure []
+      -- BUG-122 (2026-10-12): every WRITE refuses by name too — the two
+      -- headers and the per-case appends below — `<path>: cannot write
+      -- output: <OS error>`, a per-case failure attributed to its case.
+      match ← CLI.writeOutputText outPath (tsvHeader ++ "\n") with
+      | .error err => return .error err
+      | .ok () => pure []
   -- The per-consumption dump (B8-prep) is NOT resumable: it is rewritten
   -- from scratch on every batch run (a partial dump would silently pair
   -- with a resumed results file).
-  if let some dp := dumpPath then IO.FS.writeFile dp (dumpHeader ++ "\n")
+  if let some dp := dumpPath then
+    match ← CLI.writeOutputText dp (dumpHeader ++ "\n") with
+    | .error err => return .error err
+    | .ok () => pure ()
   let mut n := 0
   for line in lines do
     match parseCaseLine line with
     | .ok spec => if done.contains spec.id then continue
     | .error _ => pure ()
     match parseCaseLine line with
-    | .error e => IO.FS.withFile outPath .append fun h => h.putStrLn ("\t".intercalate ["?", "-", "ERROR", "-", "-", "-", "-", "-", "-", "0", e, "0", "-", "-", "-"])
+    | .error e =>
+        match ← CLI.appendOutputLines outPath ["\t".intercalate ["?", "-", "ERROR", "-", "-", "-", "-", "-", "-", "0", e, "0", "-", "-", "-"]] with
+        | .error err => return .error s!"manifest line {n + 1} (unparsable): {err}"
+        | .ok () => pure ()
     | .ok spec =>
         let (out, dump) ← runCase spec fuel
-        IO.FS.withFile outPath .append fun h => for l in out do h.putStrLn l
+        match ← CLI.appendOutputLines outPath out with
+        | .error err => return .error s!"case {spec.id}: {err}"
+        | .ok () => pure ()
         if let some dp := dumpPath then
-          IO.FS.withFile dp .append fun h => for l in dump do h.putStrLn l
+          match ← CLI.appendOutputLines dp dump with
+          | .error err => return .error s!"case {spec.id}: {err}"
+          | .ok () => pure ()
     n := n + 1
   return .ok n
 

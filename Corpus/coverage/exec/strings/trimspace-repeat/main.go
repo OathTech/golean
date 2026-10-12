@@ -63,15 +63,18 @@ func repeatOverflow() string {
 	return strings.Repeat("ab", 1<<62) // panics: strings: Repeat output length overflow
 }
 
-// repeatBoundRefused: RED BY DESIGN — the golean-bound refusal
-// (t1-fidelity-fixes 2026-08-31). Output length 16*(2^20+1) is a hair
-// past the shim's modeled bound (1<<24 bytes): below upstream's
-// overflow (gc allocates it fine → 16777232), but the quadratic
-// loop-concatenation shim could never realize it within machine
-// resources — pre-fix that region presented as fuel-out or capped-OOM
-// infra death; now it is an up-front goleanShimUnsupported refusal
-// NAMING ITS CAUSE. The row pins the message. NOT called from main
-// (gc would happily allocate the 16 MiB there for nothing).
+// repeatBoundRefused: RED BY DESIGN — the machine's materialization
+// budget refusal (BUG-090; re-based 2026-10-12). Output length
+// 16*(2^20+1) = 16777232 is below upstream's overflow (gc allocates it
+// fine → 16777232), but the source-through Repeat asks Builder.Grow for
+// the whole output at once, and a `make` whose cap exceeds
+// sliceCapBudget (1<<23 elements, GoLean/GoCore/Machine.lean) refuses
+// BY NAME before any backing is built. History: the 2026-08-31 shim
+// refused at its own 1<<24 bound; stdlib-source-2 (2026-09-03) retired
+// the shim, after which this row died as a native stack overflow (exit
+// 134) in the 16 Mi-element whole-backing read — the crash the
+// 2026-10-12 budget replaced. NOT called from main (gc would happily
+// allocate the 16 MiB there for nothing).
 func repeatBoundRefused() int {
 	return len(strings.Repeat("0123456789abcdef", 1<<20+1)) // gc: 16777232
 }

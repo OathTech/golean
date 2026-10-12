@@ -5372,7 +5372,11 @@ theorem applyStmtOpCore_wf {σ : Store} {op : StmtOp}
       -- allocation: both panic branches are errors, never `.ok`.
       split at hplan
       · split at hplan <;> simp [Bind.bind, Except.bind] at hplan
-      · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hplan
+      · -- The materialization budget (`sliceCapBudget`, BUG-090) precedes
+        -- the allocation too: its refusal branch is an error, never `.ok`.
+        split at hplan
+        · simp [Bind.bind, Except.bind] at hplan
+        simp only [pure_bind, bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hplan
         obtain ⟨backing, hbacking, loc, hloc, rfl⟩ := hplan
         have hb0 := buildDefaultArrayValue_locSup hbacking
         have hlocb := valueAsLoc_locSup hloc
@@ -5394,7 +5398,11 @@ theorem applyStmtOpCore_wf {σ : Store} {op : StmtOp}
       obtain ⟨lenValue, hlenV, capValue, hcapV, elemSize, hsz, hplan⟩ := hplan
       split at hplan
       · split at hplan <;> simp [Bind.bind, Except.bind] at hplan
-      · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hplan
+      · -- The materialization budget (`sliceCapBudget`, BUG-090) precedes
+        -- the allocation too: its refusal branch is an error, never `.ok`.
+        split at hplan
+        · simp [Bind.bind, Except.bind] at hplan
+        simp only [pure_bind, bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hplan
         obtain ⟨backing, hbacking, loc, hloc, rfl⟩ := hplan
         have hb0 := buildDefaultArrayValue_locSup hbacking
         have hlocb := valueAsLoc_locSup hloc

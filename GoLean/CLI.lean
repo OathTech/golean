@@ -138,6 +138,28 @@ def readInputText (input : FilePath) : IO (Except String String) := do
   catch err =>
     return .error s!"{input}: cannot read input: {oneLine (toString err)}"
 
+/-- Write a subcommand's output file whole (a results or dump HEADER),
+CATCHING the OS error: an unwritable path — a missing directory, a
+permission failure, a full disk — is a refusal that names the path and the
+OS cause, `<path>: cannot write output: <OS error>` (BUG-122, 2026-10-12;
+release-readiness item 9), never an IO exception escaping `main` as the
+runtime's uncaught-exception message. The write side of `readInputText`. -/
+def writeOutputText (path : FilePath) (text : String) : IO (Except String Unit) := do
+  try
+    IO.FS.writeFile path text
+    return .ok ()
+  catch err =>
+    return .error s!"{path}: cannot write output: {oneLine (toString err)}"
+
+/-- Append lines to a subcommand's output file (a batch's per-case records),
+the same catch as `writeOutputText` (BUG-122). -/
+def appendOutputLines (path : FilePath) (lines : List String) : IO (Except String Unit) := do
+  try
+    IO.FS.withFile path .append fun h => for l in lines do h.putStrLn l
+    return .ok ()
+  catch err =>
+    return .error s!"{path}: cannot write output: {oneLine (toString err)}"
+
 structure RunArgs where
   input : Option FilePath := none
   functionName : Option String := none

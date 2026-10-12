@@ -5758,11 +5758,14 @@ no corpus row exercises that path at this tip.
   cost to the in-place `append` path alone; the auditor's `make([]byte,
   4)`-in-a-loop probe showed allocation COUNT is the driver)
 - Pinned-by: none (a performance bound, not a fidelity divergence: no
-  row's observable is wrong; the row below exceeds the budget and refuses
-  at `lean-observation` with the runner's named timeout — a FAIL-BY-DESIGN
-  budget pin listed on the Cases line per the BUG-078 precedent, RECORD 8:
-  check-bugs verifies EXISTENCE only for none-entries and counts a listed
-  row as explained, so the row leaves baselines/untriaged-ids)
+  row's observable is wrong; the row below exceeds the machine's
+  materialization budget and refuses at `lean-observation` BY NAME —
+  `sliceCapBudget`, Machine.lean, since 2026-10-12; see the CORRECTED
+  paragraph at the end of this entry for what the row did before — a
+  FAIL-BY-DESIGN budget pin listed on the Cases line per the BUG-078
+  precedent, RECORD 8: check-bugs verifies EXISTENCE only for
+  none-entries and counts a listed row as explained, so the row leaves
+  baselines/untriaged-ids)
 - Cases: strings/trimspace-repeat/repeat-bound-refused
 - Discovered: 2026-09-03, lane `stdlib-source-2` (the real
   `strings.Repeat`/`Builder` bodies made multi-KB byte buffers reachable
@@ -5901,6 +5904,31 @@ column — those are the S1 paragraph's numbers above, measured 2026-09-18 on a 
 the S3 evidence label. The AFTER side, the ratio and the closing claim were S3's throughout and are unchanged.)
 A confirmation re-run of the same plan on the committed tree's gate-built binary `ab355547…` (quiet box, load 0.97 → 0.99; `bench-after2.json`, the third column of `bench-compare.md`) repeats these within run-to-run jitter — `alloc_new` 32k 0.865 s, the (h) phase 0.93×, `scalar(80000)` −5.4 % — except two single ratio steps that fall over the charter's lines by the letter: `alloc_new` 4k→16k ×4.49 (≤ 4.4 asked; ×4.34 on the first run) and `append_grow` 250→500 ×2.29 (≤ 2.2 asked; a 5.9 ms base at the ±1 ms noise floor; ×1.93 on the first run) — reported as misses on those steps, not re-fitted. Both mechanisms A (S1) and B (S3) are closed. Corpus
 consequences: the pinned row `strings/trimspace-repeat/repeat-bound-refused` did NOT flip and cannot: its own `cases.tsv` comment says it is RED BY DESIGN — outputs past the Repeat shim's modeled `1<<24` bound refuse by name (`goleanShimStringsRepeatBound`), independent of the machine's speed — so this entry's «runner-budget red (BUG-073)» description of it is STALE (corrected here, the row untouched: `Corpus/**` is a corpus lane's). Under `scripts/check-bugs.sh`'s symmetric rule a `Status: fixed` needs its `Cases:` row to PASS, so the status STAYS `open` although both mechanisms are closed; closing it is a corpus-lane follow-up: replace the pin by a performance witness that main's binary fails at budget and S3's passes (e.g. the 32k-allocation loop of `alloc_new`, 14 s → 0.8 s), re-size `stdlib-source/builder-fuzz` toward the asked 100k, and re-run the gotest lane's `fixedbugs/issue24419.go` (MACHINE-REFUSED at 30 s before) — owed, listed in the S3 handoff §6.
+
+**CORRECTED (2026-10-12, [AGENT] lane `fix/release-runtime-1012`; release-readiness punch list item 9, [USER] Mike
+2026-10-12 «starting with the ones that require no input from me», relayed).** The S3 paragraph's claim that the row
+`strings/trimspace-repeat/repeat-bound-refused` refuses by name through a helper `goleanShimStringsRepeatBound` was
+FALSE at the time it was written: that helper belonged to the retired `strings.Repeat` SHIM, gone since the
+stdlib-source-2 landing (2026-09-03) made `Repeat` source-through (`stdlib-source/builder-overlay/main.go` records the
+retirement: «the retired shim's golean-invented 1<<24 bound is gone»); the helper existed nowhere in `GoLean/`, `tools/`
+or `scripts/`, and the row's `cases.tsv` comment cited it too. What the row actually did (`artifacts/coverage/latest.tsv`
+at main `d92b95fd`): `Lean run KILLED (exit 134 — died on signal 6; did not decide) … Stack overflow detected.
+Aborting.` — a process ABORT, not a refusal (the «fail-closed stop that is a crash» the review named). MECHANISM,
+measured: Go 1.26's `Repeat` calls `Builder.Grow(n)` with the whole output length (16 777 232), the overlay spells
+`bytealg.MakeNoZero(n)` as `append([]byte(nil), make([]byte, n)...)` (`tools/nativefrontend/stdlib-overlay.tsv`), and
+that spill READS the 16 Mi-element backing through `Mem.loadElems` (Ops.lean) — structural on the count and non-tail
+recursive, one native stack frame per element: `string(make([]byte, 1<<23))` passes (6.5 s), `1<<24` aborts (exit 134);
+every single-element operation over a 16 Mi backing passes. FIX: `sliceCapBudget = 1<<23` (Machine.lean, docstring =
+the derivation on the measured path) — a `make` whose CAP exceeds it refuses `.unsupported` BY NAME, after gc's own
+`makeslice` panics and before any backing is built: «make([]T, len L, cap C): a slice backing of C elements exceeds the
+interpreter's materialization budget (8388608 elements, sliceCapBudget — the element-wise whole-backing read
+`Mem.loadElems` overflows the native stack past it; BUG-090 cost boundary, refused by name)». The row's result is
+unchanged in the baseline's terms (FAIL/lean-observation) — its detail is now that refusal, in ~0.3 s instead of a 3 s
+abort. RESIDUAL (recorded, not fixed): the budget bounds the REQUEST, not every whole-backing read — a backing that
+grows past it by appends (two in-budget slices appended into one) reaches the same recursion on its next whole read
+(an honest abort, never a wrong answer); the lift is a tail-recursive `loadElems`/`storeElems` (proof-bearing:
+`loadElems_locSup`, `storeElems_pres`, `_tame`, `_noPanic`), owed with this entry's other corpus consequences. The
+`cases.tsv` comment and the subject's source comment now describe this mechanism.
 
 ## BUG-091 — the native frontend's quarantine-reason text for multi-label `goto` shapes is EXPORT-NONDETERMINISTIC: `emit.go` ranges a Go MAP to name the offending label, so the wire bytes of one program differ run to run [frontend export nondeterminism; fail-closed but non-reproducible refusal text]
 
@@ -8029,11 +8057,22 @@ real Go», [USER] Mike 2026-10-07, relayed): model the shared-backing member (an
 regime, read-only by construction), or keep the fresh-allocation pin and record the deviation as an R15-style
 version-tracked red row. Fix criterion: a corpus row over the program above PASSES with gc's `true` in the modeled set.
 
-## BUG-122 — a failed WRITE of `golean choice-trace --batch`'s results file or its `--dump` file escapes as the runtime's UNCAUGHT IO exception instead of the subcommand's named refusal [CLI; tool interface; PREDATES lane `fix/bug119-120-1008` (outside BUG-120's read-side scope); found by the lane's Opus adversarial audit (informational note), 2026-10-08]
+## BUG-122 — a failed WRITE of `golean choice-trace --batch`'s results file or its `--dump` file escapes as the runtime's UNCAUGHT IO exception instead of the subcommand's named refusal [CLI; tool interface; PREDATES lane `fix/bug119-120-1008` (outside BUG-120's read-side scope); found by the lane's Opus adversarial audit (informational note), 2026-10-08; FIXED 2026-10-12, lane `fix/release-runtime-1012` (release-readiness item 9)]
 
-- Status: open
+- Status: fixed (2026-10-12, lane `fix/release-runtime-1012`, the commit «CLI + machine: two "fail-closed" stops that
+  were crashes» — release-readiness punch list item 9; [USER] Mike 2026-10-12 «starting with the ones that require no
+  input from me», relayed by the [AGENT] coordinator)
 - Pinned-by: none (no corpus row runs `choice-trace --batch` against an unwritable output; the repro is in
-  `docs/evidence/2026-10-08_train-r75/repros.txt`, item 2)
+  `docs/evidence/2026-10-08_train-r75/repros.txt`, item 2; the standing controls are the two `unwritable-output`
+  controls of `scripts/check-wire-boundary` — the results path and the dump path under a missing directory, each
+  refused `choice-trace: <path>: cannot write output: <OS error>`, exit 1, no `uncaught`)
+
+FIXED [AGENT] 2026-10-12: exactly the fix plan below — `CLI.writeOutputText` / `CLI.appendOutputLines`
+(`GoLean/CLI.lean`, beside `readInputText`) catch the OS error and refuse `<path>: cannot write output: <OS error>`
+(the path named once, Lean's `file:` line dropped by the same `oneLine`); `runBatch` routes the two headers and every
+per-case append through them, a per-case failure attributed `case <id>: …` (an unparsable manifest line's ERROR record
+`manifest line <n> (unparsable): …`), returned as the subcommand's `.error` → `choice-trace: …`, exit 1. Fix criterion
+met: both repro commands print the named refusal, exit 1, no `uncaught exception` (the two controls above run them).
 - Discovered: 2026-10-08, the bug119-120 lane's Opus adversarial audit (verdict MERGE-CLEAN; an informational note,
   not a blocking finding), as relayed by the [AGENT] coordinator; rowed by the [AGENT] train worker r75 — «every
   detected gap is rowed», [USER] Mike 2026-09-03, relayed.

@@ -37,7 +37,8 @@
 # Plus the ENTRY-ARGUMENT controls (`--arg-int`/`--arg-bool`, 2026-10-07; the section at the end; fixture
 # Tests/wire-boundary-argbool/main.go): mixed positional calls answer, mistyped/out-of-range/wrong-arity/malformed
 # arguments refuse by name. Since BUG-119 (2026-10-08) the same refusals on `coverage-observations` and
-# `choice-trace`; since BUG-120 a missing input file refuses by name on every file-reading subcommand.
+# `choice-trace`; since BUG-120 a missing input file refuses by name on every file-reading subcommand; since BUG-122
+# (2026-10-12) an unwritable `--out` / `--dump` of `choice-trace --batch` refuses by name too (the two controls at the end).
 #
 # Fixture: Tests/wire-boundary/main.go (the review's discard-call probe).
 # Fail closed: a missing binary, a failed emit, a control that runs where
@@ -736,4 +737,21 @@ if [[ $rc -ne 0 ]] || ! grep -q $'^missing-wire\t-\tERROR\t.*cannot read input' 
   echo "check-wire-boundary: FAIL [choice-trace batch missing-wire] — expected the case's ERROR line naming the cause (exit $rc): $out $(cat "$gate_scratch/batch-out.tsv" 2>/dev/null)" >&2; exit 1
 fi
 echo "ok [choice-trace batch missing-wire] the case's ERROR line names the cause"
-echo 'Wire boundary gate: PASS (11 byte-level controls + 56 unseq-node controls + 13 promotion-record controls + 16 B6 numeric-locals controls + 5 rand-intn controls + 4 type-key controls + 10 entry-argument controls + 12 enumerator entry-argument controls + 5 missing-input controls through the real CLI)'
+# BUG-122 (2026-10-12, release-readiness item 9): an UNWRITABLE results or dump file of `choice-trace --batch` is the
+# subcommand's named refusal — `choice-trace: <path>: cannot write output: <OS error>`, exit 1 — never the runtime's
+# uncaught IO exception. Here: the results path, then the dump path, each under a directory that does not exist; the
+# manifest is readable and its one case (the first fixture's `probe`) runnable, so only the write can fail.
+printf 'probe\t%s\tprobe\t-\tdefault\n' "$gate_scratch/program.json" > "$gate_scratch/batch-w.tsv"
+nodir="$gate_scratch/no-such-dir"
+[[ ! -e "$nodir" ]] || { echo "check-wire-boundary: FAIL [unwritable-output] — $nodir exists" >&2; exit 1; }
+rc=0; out="$("$GOLEAN" choice-trace --batch "$gate_scratch/batch-w.tsv" --out "$nodir/out.tsv" 2>&1)" || rc=$?
+if [[ $rc -ne 1 || "$out" != *"choice-trace: $nodir/out.tsv: cannot write output"* || "$out" == *'uncaught'* ]]; then
+  echo "check-wire-boundary: FAIL [choice-trace unwritable-out] — expected exit 1 and a refusal naming the results path (exit $rc): $out" >&2; exit 1
+fi
+echo "ok [choice-trace unwritable-out] refused (exit 1), naming the results path"
+rc=0; out="$("$GOLEAN" choice-trace --batch "$gate_scratch/batch-w.tsv" --out "$gate_scratch/batch-w-out.tsv" --dump "$nodir/dump.tsv" 2>&1)" || rc=$?
+if [[ $rc -ne 1 || "$out" != *"choice-trace: $nodir/dump.tsv: cannot write output"* || "$out" == *'uncaught'* ]]; then
+  echo "check-wire-boundary: FAIL [choice-trace unwritable-dump] — expected exit 1 and a refusal naming the dump path (exit $rc): $out" >&2; exit 1
+fi
+echo "ok [choice-trace unwritable-dump] refused (exit 1), naming the dump path"
+echo 'Wire boundary gate: PASS (11 byte-level controls + 56 unseq-node controls + 13 promotion-record controls + 16 B6 numeric-locals controls + 5 rand-intn controls + 4 type-key controls + 10 entry-argument controls + 12 enumerator entry-argument controls + 5 missing-input controls + 2 unwritable-output controls through the real CLI)'
