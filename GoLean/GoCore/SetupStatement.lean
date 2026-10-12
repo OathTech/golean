@@ -338,7 +338,8 @@ end Controls
 `docs/2026-10-09_seeded-heap-design.md` §4, [USER] Mike 2026-10-12 (GO; D4: no runtime `StateWf`
 re-assert — S5 is the check). Names are the owed BridgeSet rows (RE-PIN 17). ADDITIVE: every earlier
 statement is unchanged. `b := s₁.heap.size` is the post-init allocator bound, `n := seed.size`; the
-seed's slot `k` is `.base ⟨b + k⟩ = entrySlot s₁ k`. -/
+seed's slot `k` is `.base ⟨b + k⟩ = entrySlot s₁ k`. RE-PIN 19 (2026-10-12) re-pinned the three S6
+statements only: `SeededReadout` carries `base` (= `b`), read off the setup's slots by `seedBase`. -/
 
 /-- **S1, the seeded setup equation** (G-R1's sibling, the same premise shape, NO `StateWf` premise —
 D4): under the ten premises, the seeded entry IS the entry configuration over the store after
@@ -419,6 +420,8 @@ def runProgramSetupSeeded_wf_stmt : Prop :=
     StateWf ctx s₃
 
 /-- **S6, the seeded run**: the definition, unfolded (the `runProgramM` shape): the seeded setup,
+the seed's base read off its slot list (`seedBase` — RE-PIN 19: the readout carries `base`, the
+post-init bound the cells were placed from, so a consumer of the readout needs no second setup),
 the run, the results, the final seed cells. -/
 def runProgramSeededM_eq_stmt : Prop :=
   ∀ (fuel : Nat) (program : Program) (name : String) (seed : Array SeedCell) (args : Array SeedArg)
@@ -426,25 +429,28 @@ def runProgramSeededM_eq_stmt : Prop :=
     runProgramSeededM fuel program name seed args choices
       = (runProgramSetupSeededM fuel program name seed args choices >>=
           fun (pctx, c₀, s₃, resultLocs, slots, choices₁) =>
-            runConfig pctx fuel s₃ c₀ choices₁ >>= fun (sF, _) =>
-              loadMany pctx sF resultLocs >>= fun values =>
-                loadMany pctx sF slots.toList >>= fun finals =>
-                  pure { readout := { values := values.toArray }, seedFinal := finals.toArray })
+            seedBase slots >>= fun base =>
+              runConfig pctx fuel s₃ c₀ choices₁ >>= fun (sF, _) =>
+                loadMany pctx sF resultLocs >>= fun values =>
+                  loadMany pctx sF slots.toList >>= fun finals =>
+                    pure { readout := { values := values.toArray }, base := base,
+                           seedFinal := finals.toArray })
 
 /-- **S6 on the pool: erasure.** With no cells and scalar arguments the seeded pool entry IS
-`runProgramPoolOutM` with an empty final seed (one `Except` equation, errors and output included). -/
+`runProgramPoolOutM` with base 0 (no slot — `seedBase #[]`) and an empty final seed (one `Except`
+equation, errors and output included). -/
 def runProgramPoolSeeded_empty_stmt : Prop :=
   ∀ (fuel : Nat) (program : Program) (name : String) (args : Array GoValue) (choices : Choices),
     runProgramPoolSeededOutM fuel program name #[] (args.map SeedArg.scalar) choices
-      = (fun r : Readout => ({ readout := r, seedFinal := #[] } : SeededReadout)) <$>
+      = (fun r : Readout => ({ readout := r, base := 0, seedFinal := #[] } : SeededReadout)) <$>
           runProgramPoolOutM fuel program name args choices
 
 /-- **S6, erasure of the run**: with no cells and scalar arguments the seeded run IS `runProgramM`
-with an empty final seed. -/
+with base 0 and an empty final seed. -/
 def runProgramSeededM_empty_stmt : Prop :=
   ∀ (fuel : Nat) (program : Program) (name : String) (args : Array GoValue) (choices : Choices),
     runProgramSeededM fuel program name #[] (args.map SeedArg.scalar) choices
-      = (fun r : Readout => ({ readout := r, seedFinal := #[] } : SeededReadout)) <$>
+      = (fun r : Readout => ({ readout := r, base := 0, seedFinal := #[] } : SeededReadout)) <$>
           runProgramM fuel program name args choices
 
 /-! ## Controls for the seeded entry (`#eval` first — the probe's results are what the `rfl`s pin) -/
@@ -532,10 +538,24 @@ example : seedRelative? 3 2 (.base ⟨5⟩) = none := rfl
 example : seedRelative? 3 2 (.index (.base ⟨3⟩) (-1)) = none := rfl
 
 set_option maxRecDepth 8192 in
-/-- S4/S6 at the control program: the empty seed with no arguments IS the ordinary run, with an empty
-final seed (the instance of `runProgramSeededM_empty_stmt` by evaluation). -/
+/-- S4/S6 at the control program: the empty seed with no arguments IS the ordinary run, with base 0
+and an empty final seed (the instance of `runProgramSeededM_empty_stmt` by evaluation). -/
 example : runProgramSeededM 12 initControl "F" #[] #[]
-    = .ok { readout := { values := #[.int 7 .int] }, seedFinal := #[] } := rfl
+    = .ok { readout := { values := #[.int 7 .int] }, base := 0, seedFinal := #[] } := rfl
+
+/-- The base off a slot list (RE-PIN 19): the empty seed's is 0; otherwise slot 0's address; a
+non-base slot (impossible by S2) refuses by name. -/
+example : seedBase #[] = .ok 0 := rfl
+example : seedBase #[.base ⟨3⟩, .base ⟨4⟩] = .ok 3 := rfl
+example : seedBase #[.index (.base ⟨3⟩) 0]
+    = .error (.internal "seed: slot 0 is not a base address") := rfl
+
+set_option maxRecDepth 8192 in
+/-- S6 at the control program with ONE seed cell and no arguments: the cell lands at base 1 — after
+the one global, which the initializer writes before the seed is placed — and the readout carries
+that base beside the cell's final value (the run reads the global, never the cell). -/
+example : runProgramSeededM 12 initControl "F" #[⟨.int .int, .int 41⟩] #[]
+    = .ok { readout := { values := #[.int 7 .int] }, base := 1, seedFinal := #[.int 41 .int] } := rfl
 
 /-- The arity refusal is the ordinary entry's, byte for byte (the shared prefix S4 relies on). -/
 example : runProgramSetupSeededM 12 initControl "F" #[] #[.nil]

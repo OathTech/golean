@@ -15,15 +15,19 @@ namespace GoLean.GoCore.Machine
 
 open GoLean
 
-/-- The seeded whole-PROGRAM pool entry: the seeded setup, the subject on the pool, the results
-and the final seed cells read from the shared state at main's exit; the output folded before a
-`Stop` travels with it, as in `runProgramPoolOutM`. -/
+/-- The seeded whole-PROGRAM pool entry: the seeded setup, the seed's base read off its slots
+(`seedBase`; RE-PIN 19), the subject on the pool, the results and the final seed cells read from
+the shared state at main's exit; the output folded before a `Stop` travels with it, as in
+`runProgramPoolOutM`. -/
 def runProgramPoolSeededOutM (fuel : Nat) (program : Program) (name : String)
     (seed : Array SeedCell) (args : Array SeedArg) (choices : Choices := []) :
     Except (Stop × GoString) SeededReadout :=
   match runProgramSetupSeededM fuel program name seed args choices with
   | .error e => .error (e, GoString.empty)
   | .ok (pctx, c₀, s₀, resultLocs, slots, choices₁) =>
+      match seedBase slots with
+      | .error e => .error (e, GoString.empty)
+      | .ok base =>
       match execProgLoopOut pctx fuel ⟨#[Thread.running c₀ none], s₀, 0⟩ {} choices₁ GoString.empty with
       | (out, .error e) => .error (e, out)
       | (out, .ok (sF, _)) =>
@@ -32,6 +36,8 @@ def runProgramPoolSeededOutM (fuel : Nat) (program : Program) (name : String)
           | .ok vs =>
               match loadMany pctx sF slots.toList with
               | .error e => .error (e, out)
-              | .ok fs => .ok { readout := { values := vs.toArray, output := out }, seedFinal := fs.toArray }
+              | .ok fs =>
+                  .ok { readout := { values := vs.toArray, output := out }, base := base,
+                        seedFinal := fs.toArray }
 
 end GoLean.GoCore.Machine

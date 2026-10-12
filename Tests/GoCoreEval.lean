@@ -2698,6 +2698,27 @@ private def seedIncProgram : GoCore.Program := {
       .assign (.var (vid "z")) (.deref (.var (vid "p")) (.int .int))] }],
   typeDefs := GoCore.TypeEnv.reserved }
 
+/-- `$pkginit` writing the one global, `g = 7` — the `SEED-BASE` pins' initializer, so the post-init
+allocator bound (the seed's base) is 1, not 0. -/
+private def seedBaseInit : GoCore.Func :=
+  { id := GoCore.pkgInitFuncId, args := #[], results := #[],
+    body := .assign (.addr (.global 0)) (.intLit 7 .int) }
+
+/-- `seedIncProgram` with one global `g` and `seedBaseInit`. -/
+private def seedIncInitProgram : GoCore.Program :=
+  { seedIncProgram with
+    funcs := seedIncProgram.funcs.push seedBaseInit,
+    globals := #[{ name := "g", typ := .int }] }
+
+/-- The same global and initializer with a no-argument subject `F() (z int) { z = g }` — the
+empty-seed `SEED-BASE` pin (an empty seed can bind no reference, and `inc` dereferences). -/
+private def seedBaseNoArgProgram : GoCore.Program :=
+  { seedIncInitProgram with
+    funcs := #[
+      { id := ⟨"F"⟩, args := #[], results := #[{ id := vid "z", typ := .int .int }],
+        body := .assign (.var (vid "z")) (.deref (.global 0) (.int .int)) },
+      seedBaseInit] }
+
 private def seedFacts : IO Bool := do
   let mut passed := true
   -- The decoder: the cycle between two Node cells decodes onto slice A's types (fields as given,
@@ -2774,20 +2795,47 @@ private def seedFacts : IO Bool := do
   passed := passed && (← expectStrEq "SEED-B: inc over a seeded int cell — result and final cell"
     (match GoCore.Machine.runProgramPoolSeededOutM 1000 seedIncProgram "F"
         #[{ typ := .int .int, value := .int 41 }] #[.ref 0 []] with
-     | .ok sr => (CLI.seededObs (fun _ => none) 0 sr).2.compress
+     | .ok sr => (CLI.seededObs (fun _ => none) sr).2.compress
      | .error (e, _) => s!"stopped: {e.message}")
     "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"seed\":[{\"kind\":\"int\",\"tag\":\"int\",\"value\":42}],\"status\":\"ok\",\"values\":[{\"kind\":\"int\",\"tag\":\"int\",\"value\":42}]}")
+  -- RE-PIN 19 (2026-10-12): the readout CARRIES the seed's base, on both drivers, equal to the
+  -- setup's slot 0 — 0 on `seedIncProgram` (no globals, no init: the seed is the first
+  -- allocation), 1 on its twin with one global and an initializer (the post-init bound), and 0
+  -- for the empty seed (no slot). Before the re-pin the CLI re-ran the setup to learn it.
+  let seedOne : Array GoCore.Machine.SeedCell := #[{ typ := .int .int, value := .int 41 }]
+  let baseReport (program : GoCore.Program) (seed : Array GoCore.Machine.SeedCell)
+      (args : Array GoCore.Machine.SeedArg) : String :=
+    let slot0 := match GoCore.Machine.runProgramSetupSeededM 1000 program "F" seed args with
+      | .ok (_, _, _, _, slots, _) =>
+          match slots[0]? with
+          | some (Loc.base a) => s!"slot0 {a.id}"
+          | some _ => "slot0 not-a-base"
+          | none => "slot0 none"
+      | .error e => s!"setup stopped: {e.message}"
+    let pool := match GoCore.Machine.runProgramPoolSeededOutM 1000 program "F" seed args with
+      | .ok sr => s!"pool {sr.base}"
+      | .error (e, _) => s!"pool stopped: {e.message}"
+    let seq := match GoCore.Machine.runProgramSeededM 1000 program "F" seed args with
+      | .ok sr => s!"seq {sr.base}"
+      | .error e => s!"seq stopped: {e.message}"
+    s!"{slot0}; {pool}; {seq}"
+  passed := passed && (← expectStrEq "SEED-BASE: the readout's base is the setup's slot 0 — 0 with no globals and no init"
+    (baseReport seedIncProgram seedOne #[.ref 0 []]) "slot0 0; pool 0; seq 0")
+  passed := passed && (← expectStrEq "SEED-BASE: the readout's base is the setup's slot 0 — 1 after one global and its initializer"
+    (baseReport seedIncInitProgram seedOne #[.ref 0 []]) "slot0 1; pool 1; seq 1")
+  passed := passed && (← expectStrEq "SEED-BASE: the empty seed has no slot and base 0 (the erasure statements' literal)"
+    (baseReport seedBaseNoArgProgram #[] #[]) "slot0 none; pool 0; seq 0")
   -- The seed-relative rendering over a synthetic readout: b = 4, two cells; a field pointer into
   -- cell 1 and an index pointer into cell 0 render as `seedRef`; a pointer below the seed
   -- refuses the WHOLE observation, naming the position.
   let synth (vals : Array GoValue) : GoCore.Machine.SeededReadout :=
-    { readout := { values := vals }, seedFinal := #[.int 1 .int, .addr (.index (.base ⟨4⟩) 2)] }
-  let inside := CLI.seededObs (fun _ => none) 4 (synth #[.addr (.field (.base ⟨5⟩) ⟨"main.Node"⟩ "next")])
+    { readout := { values := vals }, base := 4, seedFinal := #[.int 1 .int, .addr (.index (.base ⟨4⟩) 2)] }
+  let inside := CLI.seededObs (fun _ => none) (synth #[.addr (.field (.base ⟨5⟩) ⟨"main.Node"⟩ "next")])
   passed := passed && (← expectStrEq "SEED-B: seed-relative observation (seedRef in a result and in a cell)"
     inside.2.compress
     "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"seed\":[{\"kind\":\"int\",\"tag\":\"int\",\"value\":1},{\"cell\":0,\"path\":[2],\"tag\":\"seedRef\"}],\"status\":\"ok\",\"values\":[{\"cell\":1,\"path\":[\"next\"],\"tag\":\"seedRef\"}]}")
   passed := passed && (← expectStrEq "SEED-B: an escaping pointer refuses the whole observation (unsupported)"
-    (CLI.seededObs (fun _ => none) 4 (synth #[.addr (.base ⟨2⟩)])).2.compress
+    (CLI.seededObs (fun _ => none) (synth #[.addr (.base ⟨2⟩)])).2.compress
     "{\"message\":\"seed readout: result 0 holds a pointer outside the seed (root address 2: a parameter, result, global or run-allocated cell) — not expressible seed-relative\",\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"unsupported\"}")
   -- The decoder: a seeded observation round-trips; a seedRef needs a `seed` key and a cell
   -- inside it; the unseeded key set is unchanged.

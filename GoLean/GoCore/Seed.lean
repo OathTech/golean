@@ -39,7 +39,8 @@ Refusals are the driver-input class (`Stop.stuck`, prefixed `seed: cell k:` / `s
 the `runProgramSetupM` lookup/arity precedent: a bad seed is neither Go behaviour nor a frontend bug.
 
 The statements S1–S6 are `SetupStatement.lean` (`SetupSound.lean` proves them; `BridgeSet.lean`
-RE-PIN 18 pins them, rows added only). The raw `Store.alloc`/`storeLoc` sites here are in
+RE-PIN 18 pins them, rows added only; RE-PIN 19 re-pins the three S6 rows for the readout's
+`base`, below). The raw `Store.alloc`/`storeLoc` sites here are in
 `scripts/mem-callsites.tsv` (FRESH ALLOCATION: the seed cells are created at setup — zero-allocated,
 then filled — before any step runs; no access is emitted).
 -/
@@ -327,31 +328,56 @@ def runProgramSetupSeededM (fuel : Nat) (program : Program) (name : String)
   let c₀ : Config := .exec func.body frameEnv (.frame [] [] [] [] .stop func.id)
   return (pctx, c₀, s₃, resultLocs, slots, choices₁)
 
-/-- The seeded readout: the ordinary readout plus the seed cells' FINAL values (raw machine
-values — the seed-relative rendering and its refusal live in the observation layer, over
-`seedRelative?`; design §5, deviation (e)). -/
+/-- The seeded readout: the ordinary readout, the seed's BASE `b` (the post-init allocator bound
+the cells were placed from — cell `k` is `.base ⟨base + k⟩`, so `seedFinal[k]` is the final
+content of that cell), and the seed cells' FINAL values (raw machine values — the seed-relative
+rendering and its refusal live in the observation layer, over `seedRelative? base seedFinal.size`;
+design §5, deviation (e)).
+
+`base` was added by RE-PIN 19 ([AGENT worker, lane `core/seeded-base-repin-1012`], 2026-10-12;
+[USER] Mike 2026-10-12 «1,3-6 approved», item 6 — «carrying the seed base in the core readout …
+changes BridgeSet rows 599 to 601, a customer-visible re-pin to notice to the logic team»,
+relayed by the [AGENT] coordinator): without it the CLI re-ran `runProgramSetupSeededM` after
+the run to learn `b` from slot 0 — package init twice per seeded run (slice B's debt, review
+LOW-2). `b` is a RUN quantity (init may allocate), known only inside the setup; it travels as a
+`Nat` rather than the slot list because that list IS `seedLocs b n` (S2 `seedCells_locs`), one
+number spelled `n` times, and the renderer consumes the number. -/
 structure SeededReadout where
   readout : Readout
+  base : Nat
   seedFinal : Array GoValue
   deriving Repr, BEq
 
-/-- The seeded run on the sequential driver: the seeded setup, `runConfig`, the results, the
-final seed cells. -/
+/-- The seed's base from the setup's slot list (the setup returns the slots, S1; its tuple is
+pinned, so the base is read off it): slot 0 is `.base ⟨b⟩` (`seedCells_locs`), and an EMPTY seed
+has no slot and nothing to be relative to — its base is 0, the canonical don't-care
+(`seedRelative? b 0 l = none` at every `b`; the erasure statements spell it). A slot that is not
+a base address cannot arise (S2) and is refused by name rather than guessed. -/
+def seedBase (slots : Array Loc) : Except Stop Nat :=
+  match slots[0]? with
+  | none => .ok 0
+  | some (Loc.base a) => .ok a.id
+  | some _ => .error (.internal "seed: slot 0 is not a base address")
+
+/-- The seeded run on the sequential driver: the seeded setup, the base read off its slots,
+`runConfig`, the results, the final seed cells. -/
 def runProgramSeededM (fuel : Nat) (program : Program) (name : String)
     (seed : Array SeedCell) (args : Array SeedArg) (choices : Choices := []) :
     Except Stop SeededReadout := do
   let (pctx, c₀, s₃, resultLocs, slots, choices₁) ←
     runProgramSetupSeededM fuel program name seed args choices
+  let base ← seedBase slots
   let (sF, _) ← runConfig pctx fuel s₃ c₀ choices₁
   let values ← loadMany pctx sF resultLocs
   let finals ← loadMany pctx sF slots.toList
-  return { readout := { values := values.toArray }, seedFinal := finals.toArray }
+  return { readout := { values := values.toArray }, base := base, seedFinal := finals.toArray }
 
 /-! ## Seed-relative rendering -/
 
-/-- A location INSIDE the seed (`b ≤ root < b + n`), as the cell index and the path from its root
-(`.field _ f ↦ .field f`, `.index i ↦ .index i`; a negative index is not a seed path). `none` for
-a location outside the seed — the observation layer refuses the whole observation by name there. -/
+/-- A location INSIDE the seed (`b ≤ root < b + n`; `b` is the readout's `base`, `n` its
+`seedFinal.size`), as the cell index and the path from its root (`.field _ f ↦ .field f`,
+`.index i ↦ .index i`; a negative index is not a seed path). `none` for a location outside the
+seed — the observation layer refuses the whole observation by name there. -/
 def seedRelative? (b n : Nat) (l : Loc) : Option (Nat × List SeedPathElem) :=
   let (a, path) := Loc.rootPath l
   if b ≤ a.id && a.id < b + n then

@@ -269,7 +269,8 @@ byte-identical and `entrySeedArgs` adds the seed arms; `goValueJson` is one walk
 (`goValueJsonWith`: raw ids for unseeded runs, `seedLocJson` over `seedRelative?` for seeded ones); `seededObs`
 adds the `seed` key. Engineering choices inside §1/§5/§6, [AGENT]: (i) `SeededReadout` does not carry the seed
 base `b`, so the CLI reads it from `runProgramSetupSeededM`'s slot 0 — the same pure call the pool entry makes
-first (init runs twice on a seeded run; a `base` field in `SeededReadout` would be a core change, not made); (ii)
+first (init runs twice on a seeded run; a `base` field in `SeededReadout` would be a core change, not made — LANDED
+after slice C as RE-PIN 19, the paragraph at the end); (ii)
 under seed mode the seed-relative rule covers EVERY location (slice/map/chan bases too), not only `.addr` — an
 in-run allocation refuses rather than leaking a raw id; (iii) the number rule is enforced on the TOKEN (a
 lexical pre-scan), since the parsed `JsonNumber` of `1e2` equals that of `100`; (iv) an object with a `ref` or
@@ -289,7 +290,8 @@ two erasure statements (rows 600–601) spell the `{ readout := …, seedFinal :
 RE-PIN with CHANGED rows, not rows added only — it needs its own written reason and the logic team's notice.
 
 **Slice C landed on the lane (2026-10-12, [AGENT worker, lane `cli/seeded-heap-c-1012`], stacked on `train4/stage-1012`).** No core
-edit; the `SeededReadout.base` re-pin above stays OPEN (slice C did not need it: the CLI's second setup call is untouched). Delivered:
+edit; the `SeededReadout.base` re-pin above stays OPEN (slice C did not need it: the CLI's second setup call is untouched — it
+landed after slice C, RE-PIN 19, the paragraph at the end). Delivered:
 **the Go twin** `tools/coverageharness --seed <file> --args <tokens>` (`tools/coverageharness/seed.go`; trusted surface #2): at
 GENERATION the file's bytes, envelope, value shapes and type spellings are checked and refused by the classes `GoLean/SeedFile.lean`
 refuses (strict UTF-8, duplicate keys, number tokens with a fraction or exponent, the `ref`/`nil` forms and their v1 limit, every type
@@ -342,7 +344,8 @@ base seed-relative, the Go twin refuses the kind); a pointer to a zero-size type
 renders it `seedRef`, the Go twin refuses with status `error`); structs with a field named `ref` or `nil`; function-local types in a
 seed (ambiguous or unnamable from `main`) and types declared in a case-local PACKAGE (GoLean's `declaredCandidates` resolves them by
 unqualified name; the harness pastes `new(T)` into `main`, a compile error at `go run` — red); variadic subjects; paired surrogate
-escapes; the token `-0` (refused on both sides at every kind); and the init-twice cost of a seeded run (the `base` debt above).
+escapes; the token `-0` (refused on both sides at every kind); and the init-twice cost of a seeded run (the `base` debt above —
+retired by RE-PIN 19, the paragraph at the end).
 
 **Slice C fix round (2026-10-12, [AGENT worker, same lane]; the pre-merge adversarial review found no BLOCKER/HIGH, relayed by the
 [AGENT] coordinator).** MEDIUM-1 (the coordinator's call: keep the product wide, fix the oracle): the Go twin decided a `ref:`/`nil`
@@ -358,3 +361,22 @@ twin at an unsigned kind and accepted by the machine; the kind is resolved only 
 the sign of zero lost), so a kind-specific refusal would need a core change — instead BOTH decoders refuse the TOKEN `-0` at every
 kind, by name (`SeedFile.badNumberTok`, eval pins `SEED-C`). LOW-2: `gofmt`. NIT-3/NIT-5 recorded in the list above; NIT-4 (the
 seeded tracer's agreement is on the readout) is stated in `docs/cli.md` §2.4.
+
+**The `base` re-pin landed (2026-10-12, [AGENT worker, lane `core/seeded-base-repin-1012`]; [USER] Mike 2026-10-12 «1,3-6
+approved», item 6 of that ask — «carrying the seed base in the core readout … changes BridgeSet rows 599 to 601, a
+customer-visible re-pin to notice to the logic team», relayed by the [AGENT] coordinator).** `SeededReadout` gains `base : Nat`
+(the post-init bound `b`; `seedFinal[k]` is the final content of `.base ⟨base + k⟩`), set by `runProgramSeededM` and
+`runProgramPoolSeededOutM` from the setup's slot list through the new `seedBase : Array Loc → Except Stop Nat` (slot 0's
+address; 0 for the empty seed, which has no slot and nothing to be relative to; a non-base slot — impossible by S2
+`seedCells_locs` — refuses by name, `.internal`, rather than guessing). Engineering choices, [AGENT]: (i) a `Nat`, not the slot
+list — the list IS `seedLocs b n` (S2), one number spelled `n` times, and `seedRelative?` consumes the number; (ii) derived in
+the run from the slots, not returned by the setup — `runProgramSetupSeededM`'s tuple is pinned by S1/S4 (rows 591, 596), which
+stay byte-identical. BridgeSet RE-PIN 19: rows 599–601 re-pinned (S6's literal gains `base := base` after the bind
+`seedBase slots >>= fun base =>`; the two erasures spell `base := 0`), no row added, rows 1–598 byte-identical; the proofs'
+one new fact is `seedBase_nil : seedBase #[] = .ok 0` (`rfl`). The CLI's second `runProgramSetupSeededM` call is REMOVED
+(`runSeeded` reads `sr.base`; `seededObs` takes the readout alone) — package init runs once per seeded run; the seeded
+observation is byte-identical (the `Tests/wire-boundary-seed` controls before/after); the tracer never recomputed `b` (its
+`entryStore` places the seed once) and is untouched. Pins: `SEED-BASE` in `Tests/GoCoreEval.lean` (the readout's base equals
+the setup's slot 0 on both drivers — 0 with no init, 1 after a global's initializer, 0 for the empty seed) and the
+`SetupStatement.lean` controls (`seedBase` on three slot lists; a one-cell seeded run of the init control at base 1). The
+consumer notice is changelog row `seeded-base-1012` (`docs/changelog/20d3946d-WINDOW.md`).

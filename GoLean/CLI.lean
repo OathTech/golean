@@ -597,16 +597,18 @@ private def readoutObs (nameOf : TypeIdx → Option TypeId) (r : GoLean.GoCore.R
   | none => ("ok", runJson nameOf r)
 
 /-- The SEEDED observation (seeded-heap slice B, design §5, D7): the readout's results and the
-seed cells' FINAL values, every location rendered seed-relative over `seedRelative? b n`
-(`seedLocJson`); the `ok` observation gains the key `seed` — one kind-carrying value per cell,
-in cell order. A location outside the seed anywhere (a result or a cell) refuses the WHOLE
-observation, `Stop.unsupported` naming the position (status `unsupported`); BUG-099's readout
-refusal applies first, exactly as unseeded. Unseeded runs never come here (`readoutObs`, no
-`seed` key, byte-identical output). Public for the eval pins. Recorded (review NIT,
-2026-10-12): the rendering is computed before the BUG-099 check is consulted — pure, and only
-the refusal path discards it. -/
-def seededObs (nameOf : TypeIdx → Option TypeId) (b : Nat) (sr : GoCore.Machine.SeededReadout) :
+seed cells' FINAL values, every location rendered seed-relative over `seedRelative? b n` with
+`b` the readout's own `base` and `n` its cell count (`seedLocJson`; the base rides the readout
+since RE-PIN 19 — before, it was re-read from a second setup call); the `ok` observation gains
+the key `seed` — one kind-carrying value per cell, in cell order. A location outside the seed
+anywhere (a result or a cell) refuses the WHOLE observation, `Stop.unsupported` naming the
+position (status `unsupported`); BUG-099's readout refusal applies first, exactly as unseeded.
+Unseeded runs never come here (`readoutObs`, no `seed` key, byte-identical output). Public for
+the eval pins. Recorded (review NIT, 2026-10-12): the rendering is computed before the BUG-099
+check is consulted — pure, and only the refusal path discards it. -/
+def seededObs (nameOf : TypeIdx → Option TypeId) (sr : GoCore.Machine.SeededReadout) :
     String × Json :=
+  let b := sr.base
   let n := sr.seedFinal.size
   let rendered : Except String (Array Json × Array Json) := do
     let vs ← (List.range sr.readout.values.size).toArray.mapM fun i =>
@@ -873,11 +875,10 @@ spellings; refusals are `status:error`, exit 1, before any step), check the entr
 `SeedPool.lean`, upstream of the proofs), and print the seeded observation (`seededObs`).
 
 The seed's base `b` (the post-init allocator bound, a RUN quantity — init may allocate, D1) is
-not part of `SeededReadout`; it is read from the seeded SETUP's slot list
-(`runProgramSetupSeededM`, the very call `runProgramPoolSeededOutM` makes first with the same
-arguments — a pure function, so the same `b`): slot 0 is `.base ⟨b⟩`. With an empty seed no
-location can be seed-relative and `b` is never consulted. A setup that fails here after the run
-succeeded, or a slot that is not a base address, is an internal error (exit 1), never a guess. -/
+the readout's `base` (RE-PIN 19, 2026-10-12): the core reads it off the setup's slot list once,
+inside the run. Before the re-pin this driver re-ran `runProgramSetupSeededM` after the run to
+read slot 0 — package init twice per seeded run (slice B's recorded debt, review LOW-2). With an
+empty seed no location can be seed-relative and `b` is never consulted. -/
 private def runSeeded (program : GoCore.Program) (input : FilePath) (functionName : String)
     (seedPath : FilePath) (cfg : RunArgs) : IO UInt32 := do
   match ← readInputBytes seedPath with
@@ -900,27 +901,9 @@ private def runSeeded (program : GoCore.Program) (input : FilePath) (functionNam
       IO.println (errorJson err out).compress
       return 1
   | .ok sr =>
-      let base : Except String Nat :=
-        if seed.isEmpty then .ok 0 else
-        -- DEBT (review LOW-2, 2026-10-12): this second call re-runs package init (pure and
-        -- inert — the same `b`, tape and fuel-out — but twice the init work). The clean fix is a
-        -- `base : Nat` field on `SeededReadout`: a CORE change that alters BridgeSet rows 599–601
-        -- (S6's `{ readout := …, seedFinal := … }` literal and the two erasure statements), so a
-        -- RE-PIN with changed rows — carried by slice C (design note, slice C paragraph).
-        match GoCore.Machine.runProgramSetupSeededM cfg.fuel program functionName seed seedArgs cfg.choices with
-        | .ok (_, _, _, _, slots, _) =>
-            match slots[0]? with
-            | some (Loc.base a) => .ok a.id
-            | _ => .error "internal: seeded setup: slot 0 is not a base address"
-        | .error e => .error s!"internal: seeded setup failed on the re-read of the seed base after the run succeeded: {e.message}"
-      match base with
-      | .error msg =>
-          IO.println (errorJson (.internal msg) sr.readout.output).compress
-          return 1
-      | .ok b =>
-          let (status, obs) := seededObs program.typeDefs.nameOf? b sr
-          IO.println obs.compress
-          return (if status == "ok" then 0 else 1)
+      let (status, obs) := seededObs program.typeDefs.nameOf? sr
+      IO.println obs.compress
+      return (if status == "ok" then 0 else 1)
 
 private def runNativeJsonRun (args : List String) : IO UInt32 := do
   let cwd ← IO.currentDir

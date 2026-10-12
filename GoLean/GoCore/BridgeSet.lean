@@ -257,6 +257,25 @@ equation); S5 `seedCells_wf` (seeding preserves `StateWf`) and `runProgramSetupS
 store, under loc-free scalar arguments — the [AGENT] refinement of D5); S6 `runProgramSeededM_eq` (the
 seeded run, unfolded), `runProgramSeededM_empty` and `runProgramPoolSeeded_empty` (the two drivers'
 erasures). G-R1–G-R4 and rows 397, 399–402 are UNCHANGED — the seeded entry is ADDITIVE.
+
+RE-PIN 19 — the seeded readout carries the seed's BASE ([AGENT worker, lane
+`core/seeded-base-repin-1012`], 2026-10-12; [USER] Mike 2026-10-12 «1,3-6 approved», item 6 of that
+ask — «carrying the seed base in the core readout … changes BridgeSet rows 599 to 601, a
+customer-visible re-pin to notice to the logic team», relayed by the [AGENT] coordinator; the debt
+recorded at slice B, review LOW-2, `docs/2026-10-09_seeded-heap-design.md`): rows 1–598
+BYTE-IDENTICAL; rows 599–601 RE-PINNED, no row added. WHAT: `SeededReadout` gains `base : Nat` (the
+post-init allocator bound `b` the cells were placed from, `seedFinal[k]` being the final content of
+`.base ⟨base + k⟩`), read off the setup's slot list by the new `seedBase : Array Loc → Except Stop
+Nat` (slot 0's address; 0 for the empty seed, which has no slot and nothing to be relative to; a
+non-base slot — impossible by S2 `seedCells_locs` — refuses by name). The setup's tuple (S1, S4) is
+unchanged: `b` is a run quantity known inside the setup, and the slot list is `seedLocs b n`, so the
+readout carries the one number the renderer consumes. WHY: without it the CLI learned `b` by a
+SECOND `runProgramSetupSeededM` call after the run — package init executed twice per seeded run.
+CUSTOMER IMPACT: row 599 (`runProgramSeededM_eq`) gains the bind `seedBase slots >>= fun base =>`
+after the setup and the literal field `base := base`; rows 600–601 (the two erasures) spell
+`{ readout := r, base := 0, seedFinal := #[] }` where they spelt `{ readout := r, seedFinal := #[] }`.
+The observation format is unchanged (the base is internal to the rendering); the pool spec
+(`scripts/check-pool-spec`) does not mention the seeded entry.
 -/
 
 namespace GoLean.GoCore.BridgeSet
@@ -4530,33 +4549,37 @@ example :
     StateWf ctx s₃ :=
   @GoLean.GoCore.SetupSound.runProgramSetupSeeded_wf
 
--- 599. `SetupSound.lean` — `runProgramSeededM_eq_stmt`, written out (S6: the seeded run, unfolded)
+-- 599. `SetupSound.lean` — `runProgramSeededM_eq_stmt`, written out (S6: the seeded run, unfolded) —
+-- RE-PINNED (RE-PIN 19): the base read off the slots (`seedBase`) and the readout's `base` field
 example :
   ∀ (fuel : Nat) (program : Program) (name : String) (seed : Array SeedCell) (args : Array SeedArg)
     (choices : Choices),
     runProgramSeededM fuel program name seed args choices
       = (runProgramSetupSeededM fuel program name seed args choices >>=
           fun (pctx, c₀, s₃, resultLocs, slots, choices₁) =>
-            runConfig pctx fuel s₃ c₀ choices₁ >>= fun (sF, _) =>
-              loadMany pctx sF resultLocs >>= fun values =>
-                loadMany pctx sF slots.toList >>= fun finals =>
-                  pure { readout := { values := values.toArray }, seedFinal := finals.toArray }) :=
+            seedBase slots >>= fun base =>
+              runConfig pctx fuel s₃ c₀ choices₁ >>= fun (sF, _) =>
+                loadMany pctx sF resultLocs >>= fun values =>
+                  loadMany pctx sF slots.toList >>= fun finals =>
+                    pure { readout := { values := values.toArray }, base := base,
+                           seedFinal := finals.toArray }) :=
   @GoLean.GoCore.SetupSound.runProgramSeededM_eq
 
 -- 600. `SetupSound.lean` — `runProgramSeededM_empty_stmt`, written out (S6: erasure of the sequential run)
+-- — RE-PINNED (RE-PIN 19): the empty seed's base is 0
 example :
   ∀ (fuel : Nat) (program : Program) (name : String) (args : Array GoValue) (choices : Choices),
     runProgramSeededM fuel program name #[] (args.map SeedArg.scalar) choices
-      = (fun r : Readout => ({ readout := r, seedFinal := #[] } : SeededReadout)) <$>
+      = (fun r : Readout => ({ readout := r, base := 0, seedFinal := #[] } : SeededReadout)) <$>
           runProgramM fuel program name args choices :=
   @GoLean.GoCore.SetupSound.runProgramSeededM_empty
 
 -- 601. `SetupSound.lean` — `runProgramPoolSeeded_empty_stmt`, written out (S6: erasure of the pool run,
--- output included)
+-- output included) — RE-PINNED (RE-PIN 19): the empty seed's base is 0
 example :
   ∀ (fuel : Nat) (program : Program) (name : String) (args : Array GoValue) (choices : Choices),
     runProgramPoolSeededOutM fuel program name #[] (args.map SeedArg.scalar) choices
-      = (fun r : Readout => ({ readout := r, seedFinal := #[] } : SeededReadout)) <$>
+      = (fun r : Readout => ({ readout := r, base := 0, seedFinal := #[] } : SeededReadout)) <$>
           runProgramPoolOutM fuel program name args choices :=
   @GoLean.GoCore.SetupSound.runProgramPoolSeeded_empty
 

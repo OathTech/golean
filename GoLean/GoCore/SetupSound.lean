@@ -1045,7 +1045,14 @@ theorem runProgramSetupSeeded_empty : runProgramSetupSeeded_empty_stmt := by
       · simp only [if_neg hres]
         rfl
 
-/-! ### S6 -/
+/-! ### S6
+
+RE-PIN 19 (2026-10-12): the readout carries `base`, read off the setup's slots by `seedBase`; the
+empty seed's slot list is `#[]`, whose base is 0 by computation (`seedBase_nil`) — the one fact the
+two erasure proofs need beyond their original shape. -/
+
+/-- The empty seed has no slot and base 0 (the erasure statements' literal). -/
+theorem seedBase_nil : seedBase #[] = .ok 0 := rfl
 
 theorem runProgramSeededM_eq : runProgramSeededM_eq_stmt := fun _ _ _ _ _ _ => rfl
 
@@ -1057,7 +1064,7 @@ theorem runProgramSeededM_empty : runProgramSeededM_empty_stmt := by
   | error e => simp [Functor.map, Except.map, Bind.bind, Except.bind]
   | ok r =>
     obtain ⟨pctx, c₀, s₃, resultLocs, choices₁⟩ := r
-    simp only [Functor.map, Except.map, Bind.bind, Except.bind]
+    simp only [Functor.map, Except.map, Bind.bind, Except.bind, seedBase_nil]
     cases hr : runConfig pctx fuel s₃ c₀ choices₁ with
     | error e => simp
     | ok r' =>
@@ -1077,6 +1084,7 @@ theorem runProgramPoolSeeded_empty : runProgramPoolSeeded_empty_stmt := by
   | ok r =>
     obtain ⟨pctx, c₀, s₀, resultLocs, choices₁⟩ := r
     dsimp only [Functor.map, Except.map]
+    rw [seedBase_nil]
     cases hx : execProgLoopOut pctx fuel ⟨#[Thread.running c₀ none], s₀, 0⟩ {} choices₁ GoString.empty with
     | mk out res =>
       cases res with
