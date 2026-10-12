@@ -409,7 +409,7 @@ each commit is one lane and auditable alone — [AGENT] choice under D9).
 | 39, 40 | GATE, one shared `judge_record` | `scripts/ci` |
 | 41 | GATE, forward flips + alternation survival (kept as a call in the guard: it compares two versions of a baseline, the guard's job, not `coverage-baseline-diff`'s) | `scripts/ci` |
 | 41b | CUT (the reverse report) | — |
-| 42 | out of the gate; rule C9 deleted with the certificates; runs by hand | `tools/reconcile-records` |
+| 42 | out of the gate; rule C9 deleted with the certificates; then RETIRED whole (follow-up 5, 2026-10-12: its remaining findings were off-pin Go versions in dated records and frontier-table citations — records nobody maintains under the artifacts rule) | — |
 
 Deleted files: `tools/certification.py`, `tools/test_certification.py`,
 `scripts/build-certified`, `scripts/check-certification`, `baselines/certified/`,

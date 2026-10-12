@@ -544,8 +544,8 @@ stage word `scripts/diff-coverage` emits, at least two distinct; the
 comment block immediately above the row carries a `# reason:` line naming
 the oracle mechanism. The other consumers of the stage column treat an
 alternation as fidelity-bearing iff EVERY member is a fidelity stage
-(`scripts/check-bugs.sh` (6) and `tools/reconcile-records` C1 flag a mix
-loudly; the row never drops out of a count). Durability: a `# reason:`
+(`scripts/check-bugs.sh` (6) flags a mix loudly; the row never drops out
+of a count). Durability: a `# reason:`
 block over a non-alternation row is REFUSED, and `scripts/ci`'s re-pin
 guard runs `scripts/check-alternation-survival` — every alternation row
 of the previous baseline must still be one, unless a header comment
