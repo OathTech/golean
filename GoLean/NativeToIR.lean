@@ -1007,12 +1007,29 @@ private def optString (obj : StrictJson.Obj) (key : String) : Option String :=
   | some (.str s) => some s
   | _ => none
 
-/-- The declared type carried on a wire expression node (fallback `int`). -/
+/-- The declared type carried on a wire expression node — REQUIRED where a
+consumer asks for it (the range collection temporary `$rcoll`, the blank-
+assignment discard temporaries `$blank<i>`), and NEVER reconstructed. The
+frontend puts `type` on every single-valued expression node (`emitExpr`,
+tools/nativefrontend/emit.go — a `typeOf` failure there is the
+declaration's refusal, not an omitted key); only a multi-valued call node
+(a tuple type, which no wire type spells) carries none, and no consumer
+of THIS function reads one — those temporaries are typed from the call's
+`resultTypes` vector (BUG-110). So an absent key here is a forged or
+mutated wire, or a frontend that dropped a lowering failure: refused by
+name (release-readiness punch list item 2, 2026-10-12; the `| none =>
+pure (.int .int)` fallback it replaces declared the temporary `int`
+whatever value it held — the BUG-043/BUG-110 defect class, feeding the
+declared-type invariant a lie). -/
 private def exprTypeOf (path : String) (json : Json) : LowerM Ty := do
   let obj ← StrictJson.obj path json
   match obj.get? "type" with
   | some t => decodeTy s!"{path}.type" t
-  | none => pure (.int .int)
+  | none =>
+      let kind := match obj.get? "expr" with
+        | some (.str k) => k
+        | _ => "<untagged>"
+      fail s!"expression node `{kind}` at {path} carries no `type` (a temporary typed from this node cannot be declared; the type is never reconstructed — fail closed)"
 
 /-! ## Statements -/
 

@@ -5365,7 +5365,26 @@ func (e *emitter) emitExpr(x ast.Expr) (any, error) {
 	m, ok := node.(map[string]any)
 	if ok {
 		if _, has := m["type"]; !has {
-			if ty, terr := e.typeOf(x); terr == nil {
+			// Every SINGLE-VALUED expression node carries its go/types
+			// type: the decoder's `exprTypeOf` consumers (the range
+			// collection temporary, the blank-assignment discard
+			// temporaries) declare a temporary from it and REFUSE on its
+			// absence (release-readiness punch list item 2, 2026-10-12).
+			// A `typeOf` failure is this declaration's lowering failure
+			// and is RETURNED — the per-declaration quarantine names it —
+			// never swallowed by omitting the key (before: the key was
+			// dropped silently and the decoder declared the temporary
+			// `int`, whatever value it held). The two shapes without a
+			// single type — a multi-valued or no-result CALL (a tuple no
+			// wire type spells; its consumers read `resultTypes`, BUG-110)
+			// and the bare `nil` literal (the decoder's `nil` arm takes an
+			// optional type) — are omitted BY NAME (`noSingleWireType`),
+			// not by a swallowed error.
+			if _, typeless := e.noSingleWireType(x); !typeless {
+				ty, terr := e.typeOf(x)
+				if terr != nil {
+					return nil, terr
+				}
 				m["type"] = ty
 			}
 		}

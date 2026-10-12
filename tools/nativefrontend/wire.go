@@ -918,6 +918,33 @@ func (e *emitter) emitInstantiatedNamed(ty *types.Named) (any, error) {
 	return map[string]any{"kind": "named", "name": key}, nil
 }
 
+// noSingleWireType names the TWO expression shapes that carry no single
+// `type` on the wire BY CONSTRUCTION, so `emitExpr` omits the key for them by
+// name and demands a type everywhere else (release-readiness item 2,
+// 2026-10-12): a TUPLE-typed expression — a multi-valued or no-result call,
+// whose consumers read the call node's `resultTypes` vector (BUG-110) — and
+// the bare `nil` literal (go/types `untyped nil`): the decoder's `nil` arm
+// takes an OPTIONAL type (the conversion form `T(nil)` carries its target,
+// BUG-077; the assignment form is typeless), and no `exprTypeOf` consumer
+// can meet it (`_ = nil` and `for range nil` are compile errors). The whole-
+// corpus export comparison that derived this list (1386 packages, old vs new
+// frontend) found exactly these: every other difference was a `nil`.
+func (e *emitter) noSingleWireType(expr ast.Expr) (why string, ok bool) {
+	tv, found := e.info.Types[expr]
+	if !found {
+		return "", false
+	}
+	switch t := tv.Type.(type) {
+	case *types.Tuple:
+		return "tuple-typed call", true
+	case *types.Basic:
+		if t.Kind() == types.UntypedNil {
+			return "untyped nil literal", true
+		}
+	}
+	return "", false
+}
+
 // typeOf returns the emitted wire type of an expression from go/types.
 func (e *emitter) typeOf(expr ast.Expr) (any, error) {
 	tv, ok := e.info.Types[expr]
