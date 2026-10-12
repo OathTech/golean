@@ -1152,7 +1152,7 @@ func (e *emitter) quarantineUnlowerableGlobals() error {
 			tmpSeqMark := e.tmpSeq
 			monoMark := e.markMono()
 			// uintptr IDENTITY (uintptrid.go; release-readiness item 26,
-			// BUG-123): an initializer that boxes a uintptr-mentioning
+			// BUG-124): an initializer that boxes a uintptr-mentioning
 			// value into an interface (`var g any = uintptr(1)`) is this
 			// declaration's named refusal, judged here like any other
 			// lowering failure (H-11 quarantine or whole-export refusal).
@@ -2201,14 +2201,6 @@ func (e *emitter) emitFuncDecl(d *ast.FuncDecl) (map[string]any, error) {
 	if err := e.resultShadowScan(d.Body); err != nil {
 		return nil, err
 	}
-	// uintptr IDENTITY (uintptrid.go; release-readiness item 26, BUG-123):
-	// refuse by name, before emission, every position of this body — a
-	// stencil body under its instantiation — where a uintptr-mentioning
-	// type is boxed into an interface or named as an assertion / type-
-	// switch target. The per-declaration quarantine carries the refusal.
-	if err := e.checkUintptrIdentity(d.Body, sig.Results()); err != nil {
-		return nil, err
-	}
 	params, err := e.emitParams(sig.Params())
 	if err != nil {
 		return nil, err
@@ -2285,6 +2277,17 @@ func (e *emitter) emitFuncDecl(d *ast.FuncDecl) (map[string]any, error) {
 				e.curUnit.path, d.Name.Name, directive)
 		}
 		return nil, unsup("bodyless function %s", d.Name.Name)
+	}
+	// uintptr IDENTITY (uintptrid.go; release-readiness item 26, BUG-124):
+	// refuse by name, before body emission, every position of this body —
+	// a stencil body under its instantiation; the template's result tuple
+	// is substituted in the scan — where a uintptr-mentioning type is boxed
+	// into an interface or named as an assertion / type-switch target. The
+	// per-declaration quarantine carries the refusal. Placed AFTER the
+	// emitter's own bodyless arm above (fix round NIT-2) so the scan only
+	// ever sees a real body.
+	if err := e.checkUintptrIdentity(d.Body, sig.Results()); err != nil {
+		return nil, err
 	}
 	savedBranch, savedGoto := e.branchLabels, e.gotoLabels
 	savedSeg, savedPC, savedLoop := e.gotoSeg, e.gotoPC, e.gotoLoop

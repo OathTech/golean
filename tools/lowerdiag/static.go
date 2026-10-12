@@ -541,6 +541,13 @@ func (a *analyzer) funcDecl(fd *ast.FuncDecl) {
 		return true
 	})
 	a.body(d, fd.Body, fd)
+	// FR-38 / BUG-124 (fix round LOW-2, 2026-10-12): uintptr identity —
+	// boxing of a uintptr-mentioning type into an interface, assertion /
+	// type-switch targets mentioning it (uintptr.go, the static twin of
+	// tools/nativefrontend/uintptrid.go). Templates are not judged.
+	if obj, ok := a.info.Defs[fd.Name].(*types.Func); ok {
+		a.uintptrIdentity(d, fd.Body, obj.Type().(*types.Signature).Results())
+	}
 }
 
 func (a *analyzer) genDecl(gd *ast.GenDecl, enclosing *declReport) {

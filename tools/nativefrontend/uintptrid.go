@@ -2,7 +2,7 @@ package main
 
 // uintptrid.go — `uintptr`'s runtime type IDENTITY is unmodeled, and is
 // refused BY NAME at the positions where it would be observed
-// (release-readiness punch list item 26, BUG-123; [USER] Mike 2026-10-12,
+// (release-readiness punch list item 26, BUG-124; [USER] Mike 2026-10-12,
 // verbatim: «D6: agree on both - refuse and repair asap.» — this file is the
 // REFUSE half; the repair is the parked `typed-uintptr-identity` work).
 //
@@ -30,16 +30,24 @@ package main
 // `switch` case against an interface tag). The two refusal rules:
 //
 //   (a) BOXING: a value whose static type MENTIONS `uintptr` — the type
-//       itself; a pointer/slice/array/map/chan/struct/func type mentioning
-//       it; a defined type over it; a named type whose METHOD SET mentions
-//       it (the decoder compares interface requirements by wire types, so
-//       `P() uintptr` and `P() uint64` collapse too); a modeled/opaque
-//       stdlib type through its method set only (`mentionsUintptr`) —
-//       converted to an interface type (not a type parameter after
-//       substitution; a stencil body is scanned under its instantiation,
-//       `goTypeOf`).
+//       itself; an UNNAMED pointer/slice/array/map/chan/struct/func type
+//       over it (structural identity, collapsed); a named interface whose
+//       requirements mention it; a NAMED concrete type only through its
+//       full METHOD SET (`P() uintptr` against a requirement `P() uint64`
+//       collapses; the decoder compares requirements by wire types) — a
+//       named type's underlying structure is NOT entered, because the
+//       machine keeps a named type NOMINAL (`.defined idx`): `type U
+//       uintptr` / `type S struct{p uintptr}` box and assert correctly;
+//       an opaque stdlib type counts its EXPORTED methods only
+//       (`mentionsUintptr`) — converted to an interface type (not a type
+//       parameter: a stencil body is scanned under its instantiation,
+//       `goTypeOf`, the result tuple substituted in `ret`).
 //   (b) TARGET: a type assertion or type-switch case whose target type
 //       mentions `uintptr` (it compares identities against a dynamic type).
+//
+// A blank package-level `var _ any = uintptr(1)` and the local form both
+// refuse (the discarded box reaches no comparison; the rule is kept uniform
+// rather than special-cased — fix round NIT-3).
 //
 // The dispatch tables are NOT a third entry point: method tables key on the
 // receiver's NAMED type and generic instantiations on `renderTypeKey`
@@ -65,7 +73,7 @@ import (
 )
 
 // uintptrIdentityItem is the pointer every refusal of this file carries.
-const uintptrIdentityItem = "release-readiness item 26, BUG-123"
+const uintptrIdentityItem = "release-readiness item 26, BUG-124"
 
 // refuseUintptrIdentity builds the named refusal for one construct at one
 // position. The text is the cause table's `uintptr-identity` pattern.
@@ -74,28 +82,25 @@ func (e *emitter) refuseUintptrIdentity(construct string, at ast.Node) error {
 		construct, e.fset.Position(at.Pos()), uintptrIdentityItem)
 }
 
-// mentionsUintptr reports whether t structurally mentions the basic type
-// `uintptr`: through pointers, slices, arrays, channels, maps, struct
-// fields, signatures (params and results), interface method signatures,
-// a named type's underlying type, type arguments and METHOD SET. `seen`
-// breaks recursive named types (`type N struct{ next *N }`). A type
-// parameter is never reached from a stencil body (`goTypeOf` substitutes;
-// an unsubstituted one is the stencil's own `substErr`); a constraint
-// union is not a runtime type.
+// mentionsUintptr reports whether t mentions the basic type `uintptr` where
+// the machine would COLLAPSE it: structurally through unnamed pointers,
+// slices, arrays, channels, maps, struct fields, signatures (params and
+// results) and interface requirements; for a NAMED concrete type through
+// its full method set and type arguments only (its underlying structure is
+// nominal on the machine — see the `*types.Named` arm). `seen` breaks
+// recursive named types (`type N struct{ next *N }`). A type parameter is
+// never reached from a stencil body (`goTypeOf` substitutes; an
+// unsubstituted one is the stencil's own `substErr`); a constraint union
+// is not a runtime type.
 //
-// A named type declared OUTSIDE the source packages (a modeled or opaque
-// stdlib type — `sync.Map`, `sync.Mutex`, `atomic.Uintptr`, …) is entered
-// through its METHOD SET and type arguments only, never its real
-// underlying structure: the machine materializes the frontend's MODEL of
-// such a type (importedmodel.go, the sync tables), not go/types' fields
-// (`sync.Map`'s hash seed is a `uintptr` the wire never carries), and its
-// identity is nominal. Its EXPORTED method signatures ARE on the wire
-// (interface requirements compare them), so `atomic.Uintptr`'s `Load()
-// uintptr` counts; its unexported ones are nameable by no requirement
-// outside their package and do not. Source packages (main, case-local
-// imports, source-through stdlib units) are lowered by structure and are
-// entered in full, unexported methods included (a same-package interface
-// can require them).
+// A method counts iff it is EXPORTED or declared in a SOURCE package (main,
+// case-local imports, source-through stdlib units — a same-package
+// interface can require an unexported one). An exported method of a
+// modeled/opaque stdlib type (`atomic.Uintptr`'s `Load() uintptr`) IS on the
+// wire (interface requirements compare it) and counts; an unexported one
+// of a non-source package (`log.Logger`'s `output(pc uintptr, …)`, whether
+// reached on `*log.Logger` itself or promoted into a source struct that
+// embeds it) is nameable by no requirement in lowered code and does not.
 func (e *emitter) mentionsUintptr(t types.Type, seen map[*types.Named]bool) bool {
 	if seen == nil {
 		seen = map[*types.Named]bool{}
@@ -112,20 +117,36 @@ func (e *emitter) mentionsUintptr(t types.Type, seen map[*types.Named]bool) bool
 			return false
 		}
 		seen[ty] = true
-		obj := ty.Obj()
-		opaque := obj != nil && obj.Pkg() != nil && !e.isSourcePackage(obj.Pkg())
-		if !opaque && e.mentionsUintptr(ty.Underlying(), seen) {
-			return true
+		if _, isIface := ty.Underlying().(*types.Interface); isIface {
+			// A named interface's identity IS its method set (an
+			// assertion to it compares requirements): structural.
+			return e.mentionsUintptr(ty.Underlying(), seen)
 		}
-		for i := 0; i < ty.NumMethods(); i++ {
-			m := ty.Method(i)
-			if opaque && !m.Exported() {
-				// A foreign package's UNEXPORTED method (`log.Logger`'s
-				// `output(pc uintptr, …)`, reached from the raft subject's
-				// `DefaultLogger` through its embedded `*log.Logger`) is
-				// nameable by no interface requirement outside that
-				// package — unexported names are package-scoped — so it
-				// takes part in no satisfiable identity comparison.
+		// A named concrete type is NOMINAL on the machine: the wire carries
+		// `{"def":{"kind":"defined",…}}` and the decoder resolves `named` to
+		// `.defined idx` (NativeToIR.lean), so `type U uintptr` and `type S
+		// struct{p uintptr}` compare by name, not by the collapsed
+		// underlying — `any(U(1)).(uint64)` is false on the machine as in
+		// gc. Its underlying structure is therefore NOT entered (fix round
+		// LOW-1, 2026-10-12); what the decoder does collapse is its METHOD
+		// SET — `P() uintptr` against a requirement `P() uint64` — so the
+		// FULL method set of *T (value and pointer receivers, promoted
+		// through embedding: `type Out struct{ T }`) is scanned.
+		ms := types.NewMethodSet(types.NewPointer(ty))
+		for i := 0; i < ms.Len(); i++ {
+			m, ok := ms.At(i).Obj().(*types.Func)
+			if !ok {
+				continue
+			}
+			if !m.Exported() && !e.isSourcePackage(m.Pkg()) {
+				// An UNEXPORTED method declared in a NON-SOURCE package
+				// (`log.Logger`'s `output(pc uintptr, …)`, in the raft
+				// subject's `DefaultLogger` method set through its
+				// embedded `*log.Logger`) is nameable by no interface
+				// requirement in lowered code — unexported names are
+				// package-scoped — so it takes part in no satisfiable
+				// identity comparison. Judged PER METHOD (the promoted
+				// methods of a source type come from their own package).
 				continue
 			}
 			if e.mentionsUintptr(m.Type(), seen) {
@@ -206,9 +227,11 @@ func (e *emitter) checkUintptrIdentity(body ast.Node, results *types.Tuple) erro
 	if blk, ok := body.(*ast.BlockStmt); ok && blk == nil {
 		// A BODYLESS declaration (an assembly-backed library function such
 		// as internal/bytealg's, reached through a source-through unit):
-		// nothing to scan. A typed nil inside the interface is not `== nil`
-		// — the first cut crashed ast.Inspect on exactly this (the
-		// stdlib-source/frontier package, lane gate 2026-10-12).
+		// nothing to scan. The emitFuncDecl hook now sits AFTER the
+		// emitter's own `d.Body == nil` refusal (fix round NIT-2), so this
+		// is an invariant guard, kept because a typed nil inside the
+		// interface is not `== nil` — the first cut crashed ast.Inspect on
+		// exactly this (the stdlib-source/frontier package, 2026-10-12).
 		return nil
 	}
 	s := &uintptrIdentityScan{e: e}
@@ -380,9 +403,13 @@ func (s *uintptrIdentityScan) assign(x *ast.AssignStmt) {
 	}
 	if len(x.Lhs) == len(x.Rhs) {
 		for i, l := range x.Lhs {
-			if isBlankIdent(l) {
-				continue
-			}
+			// A blank target is judged by its recorded type: nil for a
+			// plain `_ = v` (no object, no conversion), the DECLARED type
+			// for a package-level `var _ any = uintptr(1)`, which reaches
+			// here as the synthesized `$pkginit` assignment to the
+			// original declaring ident (fix round NIT-3, 2026-10-12: the
+			// first cut skipped blank targets and let that form through
+			// while the local `var _ any = …` refused).
 			s.box(s.typeOf(l), x.Rhs[i], "assignment")
 		}
 		return
@@ -435,9 +462,16 @@ func (s *uintptrIdentityScan) ret(x *ast.ReturnStmt) {
 	if res == nil {
 		return
 	}
+	// The declaration's result tuple is the TEMPLATE's (`sig.Results()`,
+	// emitFuncDecl): under a stencil it is substituted here, like every
+	// source type, else `T` in `func id[T any](x T) T` reads as an
+	// interface (a type parameter's underlying is its constraint) and
+	// width-only generic code at T = uintptr would refuse (fix round
+	// MEDIUM-1, 2026-10-12: `id(uintptr(7))`, `slices.Max([]uintptr{…})`).
+	resultAt := func(i int) types.Type { return s.e.applySubst(res.At(i).Type()) }
 	if len(x.Results) == res.Len() {
 		for i, r := range x.Results {
-			s.box(res.At(i).Type(), r, "return")
+			s.box(resultAt(i), r, "return")
 		}
 		return
 	}
@@ -446,7 +480,7 @@ func (s *uintptrIdentityScan) ret(x *ast.ReturnStmt) {
 	}
 	comps := s.components(x.Results[0])
 	for i := 0; i < res.Len() && i < len(comps); i++ {
-		s.boxType(res.At(i).Type(), comps[i], x.Results[0], "multi-value return")
+		s.boxType(resultAt(i), comps[i], x.Results[0], "multi-value return")
 	}
 }
 

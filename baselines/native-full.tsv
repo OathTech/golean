@@ -1,14 +1,23 @@
 # GoLean native-frontend full-corpus differential baseline
 # cases: 3941 (3708 PASS / 233 FAIL)
+# re-pinned: 2026-10-12 [AGENT], lane fix/uintptr-refuse-1012 FIX ROUND (the pre-merge review's MEDIUM-1 / LOW-1, relayed by the
+#   [AGENT] coordinator; same ruling [USER] Mike 2026-10-12 «D6: agree on both - refuse and repair asap.»). WHY: the refusal was
+#   over-reaching on two width-only shapes — (MEDIUM-1) generic code instantiated at uintptr (the template's result tuple read
+#   as an interface; now substituted in the scan) and (LOW-1) NAMED concrete types over uintptr (nominal on the machine — the
+#   wire's `defined` def, the decoder's `.defined idx`; the rule now enters a named type's METHOD SET only). BORN ROWS +4 PASS
+#   controls interfaces/uintptr-identity/{generic-width-only, defined-nominal-u, defined-nominal-s, defined-nominal-e} (gc
+#   40 / 111101 / 1111 / 1111 = the machine). NO PASS→non-PASS flip; the six red-by-design rows unchanged; no lane move; no
+#   removal. Counts: 3946 + 4 = 3950; PASS 3707 + 4 = 3711; FAIL 239 (the data rows, awk-tallied). Pinned from the lane's direct
+#   runs and CONFIRMED by the lane's scripts/ci --diff at the fix-round tip (the gate run recorded in the lane report).
 # re-pinned: 2026-10-12 [AGENT], lane fix/uintptr-refuse-1012 (stacked on fix/release-runtime-1012 @ 4365c313, off main d92b95fd) —
 #   release-readiness punch list item 26, the REFUSE half ([USER] Mike 2026-10-12, verbatim: «D6: agree on both - refuse and repair
 #   asap.», relayed by the [AGENT] coordinator; docs/2026-10-12_release-readiness.md). WHY: `uintptr`'s runtime type IDENTITY is
 #   unmodeled — the decoder maps it to uint64 (NativeToIR.lean intKindOfName), so comma-ok assertions, interface equality, type
 #   switches, map[any] key counts and slice/pointer assertions over a boxed uintptr answered WRONGLY with status ok (the release-trust
-#   review's six R1 probes; BUG-123, ledger FR-38). The frontend now REFUSES BY NAME at every identity-bearing position
+#   review's six R1 probes; BUG-124, ledger FR-38). The frontend now REFUSES BY NAME at every identity-bearing position
 #   (tools/nativefrontend/uintptrid.go: boxing of a uintptr-mentioning type into an interface; assertion / type-switch targets
 #   mentioning it); width-only uses lower unchanged. BORN ROWS +7 interfaces/uintptr-identity/*: the six probe shapes
-#   {assert, equal, switch, map-key, slice-assert, pointer-assert} FAIL/frontend-export RED BY DESIGN on BUG-123's Cases line
+#   {assert, equal, switch, map-key, slice-assert, pointer-assert} FAIL/frontend-export RED BY DESIGN on BUG-124's Cases line
 #   (Expect: FAIL — a PASS means the guard stopped firing); width-only the PASS control (172). NO PASS→non-PASS flip (no existing
 #   row boxes a uintptr-mentioning value; the five files mentioning uintptr are width-only); no lane move; no removal. Counts:
 #   3939 + 7 = 3946; PASS 3706 + 1 = 3707; FAIL 233 + 6 = 239 (the data rows, awk-tallied). Pinned from the lane's direct runs
@@ -3843,7 +3852,11 @@ PASS	interfaces/typed-nil-map	-
 PASS	interfaces/typed-nil-pointer-compare	-
 PASS	interfaces/typed-nil-slice	-
 FAIL	interfaces/uintptr-identity/assert	frontend-export
+PASS	interfaces/uintptr-identity/defined-nominal-e	-
+PASS	interfaces/uintptr-identity/defined-nominal-s	-
+PASS	interfaces/uintptr-identity/defined-nominal-u	-
 FAIL	interfaces/uintptr-identity/equal	frontend-export
+PASS	interfaces/uintptr-identity/generic-width-only	-
 FAIL	interfaces/uintptr-identity/map-key	frontend-export
 FAIL	interfaces/uintptr-identity/pointer-assert	frontend-export
 FAIL	interfaces/uintptr-identity/slice-assert	frontend-export

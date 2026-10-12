@@ -8164,7 +8164,7 @@ new consults the default stream's slot 0 is the lowest-index runnable goroutine,
 beside a runnable main now yields to main where it used to continue — strict rows are stream-invariant by their own
 check, so no result depends on it.
 
-## BUG-123 — `uintptr` and `uint64` are ONE runtime type identity (the decoder maps `uintptr` to `.uint64`): comma-ok assertions, interface equality, type switches, `map[any]` key counts and slice/pointer assertions over a boxed uintptr answer WRONGLY with status ok — GUARDED by name at the frontend since 2026-10-12 pending the parked repair [decoder + semantic core; wrong answer (observed ∉ modeled); KNOWN since the typed-consumer sprint's held L5 (`docs/2026-09-05_typed-consumer-sprint-handoff.md` decision 2, the parked `typed-uintptr-identity` branch) and absent from the release punch list until the release-trust review's R1 (`docs/2026-10-12_release-trust-review.md`); rowed and guarded by lane `fix/uintptr-refuse-1012`, release-readiness item 26]
+## BUG-124 — `uintptr` and `uint64` are ONE runtime type identity (the decoder maps `uintptr` to `.uint64`): comma-ok assertions, interface equality, type switches, `map[any]` key counts and slice/pointer assertions over a boxed uintptr answer WRONGLY with status ok — GUARDED by name at the frontend since 2026-10-12 pending the parked repair [decoder + semantic core; wrong answer (observed ∉ modeled); KNOWN since the typed-consumer sprint's held L5 (`docs/2026-09-05_typed-consumer-sprint-handoff.md` decision 2, the parked `typed-uintptr-identity` branch) and absent from the release punch list until the release-trust review's R1 (`docs/2026-10-12_release-trust-review.md`); rowed and guarded by lane `fix/uintptr-refuse-1012`, release-readiness item 26]
 
 - Status: open
 - Pinned-by: none (the six rows FAIL at `frontend-export` BY DESIGN — the frontend refuses the identity-bearing
@@ -8210,24 +8210,46 @@ GUARD (this lane, 2026-10-12; FR-38 in `docs/language-coverage-ledger.md`): `too
 `checkUintptrIdentity` — a per-body pre-pass (every function, method and stencil body under its instantiation, called
 from `emit.go` `emitFuncDecl`; every `$pkginit` initializer in the H-11 dry run) that refuses BY NAME, through the
 standing per-declaration quarantine, at exactly the identity-bearing positions: (a) a value whose static type MENTIONS
-`uintptr` (itself; pointer/slice/array/map/chan/struct/func types over it; a defined type over it; a source named
-type whose method set mentions it; a modeled stdlib type through its method set only — `sync.Map`'s hidden hash seed
-is not on the wire, `atomic.Uintptr`'s `Load() uintptr` is a requirement the decoder would collapse) converted to an
-interface type, explicitly (`any(x)`) or at any implicit assignability position (assignment, `var` initializer,
-call argument incl. variadic and multi-value, return, composite-literal field/element/key, send, `map[I]` index key,
-`panic`, `append` element, the assignment form of `range`, interface `==`/`!=`, `switch` case against an interface
-tag); (b) a type assertion or type-switch case whose TARGET mentions `uintptr`. The rule is complete because every
-runtime identity comparison takes an interface value and every interface value holding a uintptr-mentioning dynamic
-type is produced by (a) — the dispatch tables are no third entry (method tables key on the receiver's NAMED type,
-stencils on `renderTypeKey`, which spells `uintptr`; only the decoder's IntKind collapses). Text: «uintptr identity is
-unmodeled (lowered as uint64): <construct> at <pos> — refused by name pending the typed-uintptr-identity repair
-(release-readiness item 26, BUG-123)»; `tools/lowerdiag/causes.tsv` `uintptr-identity`. Unit pins
-`tools/nativefrontend/uintptrid_test.go`: the six probes and 28 more refusing shapes, a generic stencil scanned under
-its instantiation (the `uint64` stencil lowers), a package-level initializer, the opaque-type rule, 11 width-only
-controls, and a sibling's own refusal not masked. Corpus: the six rows above (FAIL/frontend-export, red by design)
-and `interfaces/uintptr-identity/width-only` (PASS, 172). The lane's `scripts/ci --diff` flipped NO existing row
-(no corpus program boxed a uintptr-mentioning value into an interface; the five files that mention `uintptr` use it
-width-only).
+`uintptr` where the machine would COLLAPSE it — the basic type itself; an UNNAMED pointer/slice/array/map/chan/struct/
+func type over it (structural identity); a named interface whose requirements mention it; a NAMED concrete type only
+through its FULL method set (value and pointer receivers, promoted through embedding: `P() uintptr` against a
+requirement `P() uint64` collapses, the decoder comparing requirements by wire types) — a named type's underlying
+structure is NOT entered, because the machine keeps a named type NOMINAL (the wire's `defined` def, the decoder's
+`.defined idx`): `type U uintptr`, `type S struct{p uintptr}`, `type E uintptr` as an error box, assert, compare and
+switch exactly as in gc (the `defined-nominal-*` rows); a method counts iff exported or declared in a source package
+(`atomic.Uintptr`'s `Load() uintptr` counts; `log.Logger`'s unexported `output(pc uintptr, …)`, on `*log.Logger` or
+promoted into a struct embedding it, is nameable by no requirement in lowered code and does not; `sync.Map`'s hidden
+hash seed is not on the wire) — converted to an interface type, explicitly (`any(x)`) or at any implicit
+assignability position (assignment, `var` initializer incl. the package-level blank form, call argument incl.
+variadic and multi-value, return, composite-literal field/element/key, send, `map[I]` index key, `panic`, `append`
+element, the assignment form of `range`, interface `==`/`!=`, `switch` case against an interface tag); (b) a type
+assertion or type-switch case whose TARGET mentions `uintptr`. A stencil body is scanned under its instantiation, the
+template's result tuple substituted, so width-only generic code at uintptr (`id(uintptr(7))`, `slices.Max([]uintptr{…})`,
+a method stencil) lowers. The rule is complete because every runtime identity comparison takes an interface value and
+every interface value holding a uintptr-mentioning dynamic type is produced by (a) — the dispatch tables are no third
+entry (method tables key on the receiver's NAMED type, stencils on `renderTypeKey`, which spells `uintptr`; only the
+decoder's IntKind collapses). Text: «uintptr identity is unmodeled (lowered as uint64): <construct> at <pos> — refused
+by name pending the typed-uintptr-identity repair (release-readiness item 26, BUG-124)»; `tools/lowerdiag/causes.tsv`
+`uintptr-identity`, with a static twin in `tools/lowerdiag/uintptr.go` (calibrated against the wire on
+`testdata/calib/uintptr_fr38.go`). Unit pins `tools/nativefrontend/uintptrid_test.go` — COUNT DERIVATION, the one the
+header, FR-38 and this entry share: 34 refusing table shapes (the six probes among them) + 3 separately pinned (the
+generic stencil at uintptr, the package-level initializer, the opaque `*atomic.Uintptr`) = 37 refusing; 17 control
+table shapes (12 width-only, 5 nominal) + 7 separately pinned lowering shapes (the uint64 stencil, the width-only
+generic stencils incl. a method stencil, the stdlib generics, `*sync.Map`, the `*log.Logger` embedding, the bodyless
+declaration, the blank package-level box) = 24 lowering; a sibling's own refusal not masked. Corpus: the six rows
+above (FAIL/frontend-export, red by design) and the PASS controls `interfaces/uintptr-identity/{width-only (172),
+generic-width-only (40), defined-nominal-u (111101), defined-nominal-s (1111), defined-nominal-e (1111)}`. The lane's
+`scripts/ci --diff` flipped NO existing row (no corpus program boxed a uintptr-mentioning value into an interface; the
+five files that mention `uintptr` use it width-only).
+
+FIX ROUND 2026-10-12 ([AGENT] lane worker, on the pre-merge review's findings as relayed by the [AGENT] coordinator):
+MEDIUM-1 — generic code at uintptr was over-refused (the template's unsubstituted result tuple read as an interface):
+substituted in the scan, pinned by `generic-width-only` and the stencil unit tests; LOW-1 — the refusal entered a
+source named type's underlying structure although the machine is nominal there: trimmed to the method set, pinned by
+`defined-nominal-{u,s,e}` on the machine; LOW-2 — the static judge had no rule: `tools/lowerdiag/uintptr.go` + the
+calibration fixture; NIT-2 — the emitFuncDecl hook now follows the emitter's own bodyless arm (the typed-nil guard
+kept as an invariant); NIT-3 — the package-level blank box is judged like the local form (the H-11 dry run quarantines
+it; `$pkginit` carries no box); RENUMBER — BUG-123 → BUG-124 (the channel-length boundary's entry lands first).
 
 FIX PLAN (the REPAIR half of D6, its own lane after this one): rebase `typed-uintptr-identity` onto main under its
 standing hard stop (handoff decision 2: the latitude row R1 and w7 J-8 records amended, third-lane review, a REAL full

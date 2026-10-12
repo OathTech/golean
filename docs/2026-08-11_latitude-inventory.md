@@ -2229,7 +2229,7 @@ row so the axis stops being invisible, nothing more.
   host), and `uintptr` (frontend maps to uint64; observations of it
   refused; since 2026-10-12 its runtime type IDENTITY — boxing into an
   interface, assertion / type-switch targets — is refused by name at
-  the frontend too, `tools/nativefrontend/uintptrid.go`, BUG-123 /
+  the frontend too, `tools/nativefrontend/uintptrid.go`, BUG-124 /
   ledger FR-38, pending the parked `typed-uintptr-identity` repair
   ([USER] 2026-10-12 D6 «refuse and repair asap»); the width pin here
   is untouched).
