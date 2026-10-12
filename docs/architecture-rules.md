@@ -113,32 +113,28 @@ lane `HANDOFF.md` + design-note pattern it describes.
 
 ## Evidence on main
 
-[USER] ruling (Mike, 2026-09-07, relayed by the [AGENT] coordinator — cite
-as relayed): «The evidence blob should not land, and generally we should
-not dump big evidence bundles on main (they can't be easily hosted on GH
-for one). … We'll want to decompose and land in sane chunks that can be
-reviewed. And where appropriate fix some of the issues, eg. the choice
-tape stuff».
+[USER] rulings: 2026-09-07 (Mike, relayed): «The evidence blob should not
+land, and generally we should not dump big evidence bundles on main»;
+2026-10-12 (Mike, firsthand): the global «Artifacts: rebuild or push, never
+hoard» rule «is intended to mean any such records should be useful with a
+high bar for evidence», and the triage of `docs/evidence/` under that bar
+(`docs/2026-10-12_gate-cull-plan.md` §9, D10).
 
-- `docs/evidence/` holds RECORDS, not copies: gate tails, transcripts,
-  small probe outputs, and the commit SHA the run was at
-  (`docs/evidence/README.md`). Caps, checked by
-  `scripts/check-evidence-size` (a `scripts/ci` speedbump, report-only; the caps are
-  PROPOSED [AGENT] 2026-09-07 and defined once at the top of that
-  script): no tracked evidence file over 256 KiB; no top-level
-  `docs/evidence/<dir>/` over 4 MiB; no archive extension (`.tar .tgz
-  .gz .zip .xz .zst .7z`); no evidence blob byte-identical to a tracked
-  file outside `docs/evidence/`.
-- Pre-existing offenders on main are frozen in
-  `docs/evidence/SIZE-ALLOWLIST.tsv` (rule, path, reason, date). The
-  list may only SHRINK: the checker refuses entries dated after the
-  freeze and entries that no longer match an offender.
-- Bulky evidence (full-run result tables, wire dumps, source trees,
-  archives) stays on an ARCHIVE BRANCH — `archive/evidence-<date>_<slug>`,
-  listed in `docs/ARCHIVE.md` — and main keeps the directory's README
-  plus a `MANIFEST.tsv` (`sha256`, `bytes`, `origin-commit`, `path`, one
-  row per file left on the branch), so the record stays auditable
-  without the bytes.
+- A record is committed under `docs/evidence/` only if the commit message's
+  conclusion cannot stand without it: the capture of a non-reproducible
+  event (a flake, a timeout class, a runner death), or a probe source whose
+  oracle output pins a claim a reader must be able to re-run. Everything
+  reproducible from the tree at a commit — gate tails, train stamps, audit
+  transcripts, run dumps, wire dumps — is not committed: its conclusion goes
+  in the commit message or the dated doc, and the bytes are rebuilt when
+  needed.
+- A probe that pins semantics belongs in `Corpus/` as a case, not here; a
+  test fixture belongs beside its test (`testdata/`), not here.
+- No size gate: the bar above is the rule (`scripts/check-evidence-size` and
+  `SIZE-ALLOWLIST.tsv` were retired 2026-10-12). A bulky record that must
+  exist goes on an archive branch listed in `docs/ARCHIVE.md`.
+- Records deleted in the 2026-10-12 triage are in history:
+  `git show 63c9ea65:docs/evidence/<dir>/README.md`.
 
 ## Sandbox And Scratch Files
 

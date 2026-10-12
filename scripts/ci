@@ -193,7 +193,6 @@ run_bump "bugs index = baseline (scripts/check-bugs.sh)" ./scripts/check-bugs.sh
 run_bump "feature tags, no dead tag (scripts/check-coverage)" ./scripts/check-coverage
 run_bump "spec anchors resolve at the pin (scripts/check-spec-anchors)" ./scripts/check-spec-anchors
 run_bump "stdlib admission register = frontend tables (scripts/check-stdlib-register)" ./scripts/check-stdlib-register
-run_bump "evidence-on-main size caps (scripts/check-evidence-size)" ./scripts/check-evidence-size
 run_bump "AGENTS.md is the alias of CLAUDE.md (scripts/check-agents-alias)" ./scripts/check-agents-alias
 run_bump "imported-goose verbatim at the pin (scripts/check-imported-goose)" ./scripts/check-imported-goose
 run_bump "memory-module raw call sites = inventory (scripts/check-mem-callsites)" bash scripts/check-mem-callsites

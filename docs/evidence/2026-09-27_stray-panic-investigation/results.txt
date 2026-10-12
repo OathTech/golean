@@ -1,8 +1,0 @@
-# [AGENT stray-panic investigator] 2026-09-27; main 7d2a62e5; go1.26.5 linux/amd64
-# frontend: GO111MODULE=off go build -o .tmp/nf ./tools/nativefrontend; .tmp/nf --dir <probe> --out probe.json  (wire-ok)
-# machine:  scripts/capped .lake/build/bin/golean native-json-run --input probe.json --function F   (binary as found, read-only)
-go run main.go      : 100 200 300 6
-machine F()         : {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":100},{"kind":"int","tag":"int","value":200},{"kind":"int","tag":"int","value":300},{"kind":"int","tag":"int","value":6}]}
-# verdict: agree. Every real-program analogue (a[i] on a [0]int, &a[i] stored in a var then *p,
-# q.xs[i] through a pointer, &a[i] in a range body) takes a toResult-converted apply
-# (the strict index/deref applies, StepFn.lean:611/621) and unwinds; defers run and recover catches.

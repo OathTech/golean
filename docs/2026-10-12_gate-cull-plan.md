@@ -451,3 +451,19 @@ mean any such records should be useful with a high bar for evidence»): the glob
 «Evidence on main» do not conflict; a committed record must clear a high bar of
 usefulness. This branch commits no gate tails (the conclusions are in the commit
 messages and above); the existing `docs/evidence/` records stand under that bar.
+
+**Triage applied** ([USER] Mike 2026-10-12: «agree with the remediation plan -
+go ahead when ready»; the assessment: a tenth of the records cleared the bar),
+branch `evidence/triage-1012` off the cull branch, pre-triage tip `63c9ea65`:
+deleted whole 106 of 179 directories (15 train stamps, 31 audit/review
+transcripts whose findings are in their dated docs, the rest cited by no
+living doc, code or commit message); 2 reduced to their README; in the 71
+kept records 165 gate tails and 11 dumps over 256 KiB deleted; the two
+`fr25_test.go` fixtures moved to `tools/nativefrontend/testdata/fr25/` (a
+test read evidence at runtime — a fixture, not a record). After: 73
+directories, 1205 files, 6.2 MB. `scripts/check-evidence-size`, its self-test
+and `SIZE-ALLOWLIST.tsv` retired (the bar is the rule, not a byte cap);
+`docs/architecture-rules.md` «Evidence on main» and `docs/evidence/README.md`
+restated. Not done here (judgment per probe, a separate lane): promoting
+probes that pin semantics into `Corpus/` cases, and a second pass over the
+reproducible outputs still inside the kept records.

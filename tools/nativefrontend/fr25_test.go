@@ -249,7 +249,7 @@ func TestWireIntegrityRefusesDanglingNamed(t *testing.T) {
 // The copies under m1-red-first/ are the permanent record; the assertion
 // must refuse them by name.
 func TestWireIntegrityRedFirstOnPreM1Wires(t *testing.T) {
-	files, _ := filepath.Glob("../../docs/evidence/2026-09-04_fr24-fr25/m1-red-first/*.pre.wire.json")
+	files, _ := filepath.Glob("testdata/fr25/*.pre.wire.json")
 	if len(files) != 2 {
 		t.Fatalf("expected the two pre-M1 wires, found %v", files)
 	}

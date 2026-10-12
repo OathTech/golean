@@ -1,2 +1,0 @@
-result	id	features	stage	detail
-PASS	admission/constant	admission,boolean	-	wide=0 exhausted=none depth=fixed

@@ -176,7 +176,7 @@ Everything else is untrusted tooling.
   re-pins only with a full run and a written reason; PASS→non-PASS flips
   must be on a `BUGS.md` Cases: line.
 - **Speedbumps report.** The same run prints the consistency checks (bugs
-  index, feature tags, spec anchors, stdlib register, evidence size, the
+  index, feature tags, spec anchors, stdlib register, the
   `AGENTS.md` alias, imported-goose verbatim, memory call sites, the
   pool-spec freeze; under `--diff` also the derived-artifact regeneration)
   under their own heading. A red one never fails the gate; it is read at

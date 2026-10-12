@@ -1,2 +1,0 @@
-error: Tests/GoCoreAudit.lean:82:6: Unknown constant `GoLean.GoCore.ExecutionStatement.noRefusal_step`
-EXIT=1
