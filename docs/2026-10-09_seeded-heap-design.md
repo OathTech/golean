@@ -127,7 +127,7 @@ and `runProgramSetupSeeded_wf_stmt : StateWf ⟨program⟩ s₁ → … = .ok (�
 → StateWf ctx s₁` (induction over `runInitConfig` with `stepFn_preserves_wf`; the init config is `MachineWf` from `seedGlobals_wf`, env `[]`,
 loc-free text — half a session; it also makes a re-asserted check provably never fire).
 **S6, the run and the readout:** `runProgramSeededM fuel program name seed args choices : Except Stop SeededReadout`, `structure SeededReadout
-where readout : Readout; seedFinal : Array GoValue` := the seeded setup, `runConfig`, `loadMany` of the results, `loadMany pctx sF seedLocs`
+where readout : Readout; seedFinal : Array GoValue` [RE-PIN 19, 2026-10-12, train 6: `base : Nat` between `readout` and `seedFinal`, read by `seedBase` from the setup's slot 0 (0 for the empty seed); the erasure literal is `{ readout := r, base := 0, seedFinal := #[] }`; the «base re-pin landed» paragraph at the end; a helper `seedBase_seedLocs : 0 < n → seedBase (seedLocs b n) = .ok b` is owed to the next core lane] := the seeded setup, `runConfig`, `loadMany` of the results, `loadMany pctx sF seedLocs`
 (the raw final cells). `runProgramSeededM_eq_stmt` is the definition unfolded (the `runProgramM` shape); `runProgramSeededM_empty_stmt :
 runProgramSeededM … #[] (args.map .scalar) ch = (fun r => ⟨r, #[]⟩) <$> runProgramM … args ch`. The pool twin `runProgramPoolSeededOutM`
 (`runProgramPoolOutM`'s wiring over the seeded setup — the CLI's driver) carries the same erasure statement. For the logic team: ADDITIVE —
