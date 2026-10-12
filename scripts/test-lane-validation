@@ -541,6 +541,8 @@ if [ "$WITH_GO" -eq 1 ]; then
     # subject: goroutines/pipeline's buffered-stage — 29 wide picks under
     # the default stream, 21 served after the 8-entry stream is exhausted
     # (memo §2.3), state graph closes under engine=dedup in ~4 s.
+    # (Item 27, 2026-10-12: the row declares only work= — width=/sites=/backedge= are
+    # inert under engine=dedup and refused by name.)
     PIPE_DIR="Corpus/coverage/exec/goroutines/pipeline"
     PIPE_FEATS="goroutines,channels,range,close"
     run_d() {  # name manifest-row expected-glob description
@@ -558,7 +560,7 @@ if [ "$WITH_GO" -eq 1 ]; then
     run_d D1 "$(printf 'lane-d1\t%s\tpipelineBufferedStage\t-\tok\t%s\t-\tstrict\t-\t-' "$PIPE_DIR" "$PIPE_FEATS")" \
       "FAIL*nondet*strict row: *wide pick(s) served after stream*was exhausted at consumption*route to confluent, or declare depth*" \
       "depth guard refuses a strict row whose adversarial streams are exhausted, naming the cause"
-    run_d D2 "$(printf 'lane-d2\t%s\tpipelineBufferedStage\t-\tok\t%s\t-\tconfluent\twhy\twidth=4,sites=64,work=500000,engine=dedup,backedge=full' "$PIPE_DIR" "$PIPE_FEATS")" \
+    run_d D2 "$(printf 'lane-d2\t%s\tpipelineBufferedStage\t-\tok\t%s\t-\tconfluent\twhy\twork=500000,engine=dedup' "$PIPE_DIR" "$PIPE_FEATS")" \
       "PASS*confluent*|set|=1 certified*" \
       "the same row routed to confluent is certified (|set|=1)"
     run_d D3 "$(printf 'lane-d3\t%s\tpipelineBufferedStage\t-\tok\t%s\t-\tstrict\t-\tdepth=128' "$PIPE_DIR" "$PIPE_FEATS")" \
