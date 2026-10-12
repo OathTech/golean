@@ -302,8 +302,15 @@ is the contract both sides of the differential meet, is `CLI.decodeObservation`.
 - `output` is the bytes the program wrote with `print`/`println` (fd 2), folded in step order,
   and it is present on every status. Output that is not valid UTF-8 is emitted as an object,
   which the decoder refuses by name rather than comparing it lossily.
-- A **CLI-level** `error` (unreadable file, parse or decode failure, bad entry arguments) has
-  no `output` key. It is not an observation of a run, and `observation-eq` will not decode it.
+- A **CLI-level** `error` (unreadable file, parse or decode failure, bad entry arguments, a seed
+  file refusal) is shaped like every other non-`ok` status, with `output` the empty string: no
+  step ran, so the program wrote nothing. It decodes, and `observation-eq` compares it. (Since
+  2026-10-12, release-readiness item 22; before, it had no `output` key and the decoder refused
+  it. The change is additive, so the schema name stays `golean-observation-v1`; the decoder's
+  exact-keys rule for `error` did not change.)
+- The Go observer (`tools/coverageharness`) refuses a result it cannot observe as `status:error`
+  naming the cause. It cannot see its own fd 2, so the runner (`scripts/diff-coverage`) splices
+  `output` in before decoding; the compared Go observation therefore has the same key set.
 
 **Statuses** (`Stop.status`, `GoLean/GoCore/Value.lean`):
 
@@ -337,7 +344,7 @@ A refusal never counts as a pass.
 | `map`, `chan` | `base` | a location or `null` (reference identity) |
 | `addr` / `fieldAddr` / `indexAddr` | `id` / `base, typeName, fieldName` / `base, index` | a location |
 | `seedRef` | `cell`, `path` | a location relative to the seed, in a `--seed` observation only (below) |
-| `func` | `id` | the encoder emits it, but the decoder does **not** accept it (func values are not comparable in Go), so a row whose result is a func value is outside the comparable surface |
+| `func` | (none) | **never emitted**, and the decoder has no such tag. A func value has no observable identity (Go func values are not comparable, have no stable address, and a closure's captures are invisible). A result holding one, whether bare, in a struct field or array element, or in an interface box of a func type (even a nil func), is refused by name at the readout: status `unsupported`, `observation of result i holds … a Go func value has no observable identity …`. A seeded run applies the same rule to a seed cell (`seed cell k`), and the enumerators refuse the same way. The Go observer refuses `reflect.Func` by name. One residual: a **nil** func at a non-interface position renders as `nil`, because the readout carries no static type to tell it from a nil pointer. The Go observer refuses that result, so the row fails at the oracle; it can never pass |
 | `syncData` | `state` | diagnostic only; the decoder refuses it |
 
 **Seeded observations.** With `--seed`, every location in `values` and `seed`, whether a
