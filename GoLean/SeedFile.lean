@@ -33,12 +33,19 @@ once»). What IS decided here, by name, before any machine step:
   spelling ambiguous and it refuses too;
 * the value shape (§1 `SeedJson`): integers, `true`/`false`, objects as struct values keyed by
   field name, arrays, `{"ref":{"cell":<nat>,"path":[…]}}`, `{"nil":true}`. An object carrying a
-  `ref` or `nil` key IS that form and must carry nothing else — so a struct whose ONLY field is
-  named `ref` or `nil` (lower-case) is not expressible in v1 (stated limit of the §1 grammar).
+  `ref` or `nil` key IS that form and must carry nothing else — so ANY struct with a field named
+  `ref` or `nil` (lower-case) is not expressible in v1 (stated limit of the §1 grammar; the
+  refusal names it).
   `null` and strings are not seed values.
 
 Recursion is FUEL-bounded by the parse's own nesting bound (`wireNestingDepth`), so every
 function here is total; exhaustion refuses by name and is unreachable on a parsed file.
+
+Recorded, not changed (the slice B pre-merge review's NITs, 2026-10-12): `isIdent` is ASCII-only,
+so a declared type with a Unicode name refuses «not in the grammar» (fails closed); the D2
+ambiguity text names the internal keys (`main.T·1`), as other refusals do; `declaredCandidates`
+matches non-`main` declared types by their unqualified name too — which spelling the Go twin's
+prologue pastes for them is slice C's concern.
 -/
 
 namespace GoLean.SeedFile
@@ -136,41 +143,72 @@ def parseDecimalNat? (s : String) : Option Nat :=
   else if s.length > 1 && s.front == '0' then none
   else s.toNat?
 
-/-- Parse a type spelling (§1). `fuel` bounds the nesting (the spelling's length suffices). -/
-def parseTypeSpelling (types : TypeEnv) : Nat → String → Except String Ty
-  | 0, s => .error s!"type spelling {s}: nesting exceeds the spelling's length (internal bound)"
+/-- Go KEYWORDS that head a type literal: never a declared type's name, so a bare one is that
+class's refusal rather than an `<Ident>` lookup. -/
+def typeKeywordClass? : String → Option String
+  | "chan" => some "a channel type"
+  | "func" => some "a function type"
+  | "interface" => some "an interface type"
+  | "struct" => some "an anonymous struct type"
+  | "map" => some "a map type"
+  | _ => none
+
+/-- The class of a NON-identifier spelling outside v1 (a type literal), if any. Tested only
+after the `<Ident>` branch has declined, so a declared type named `channel`, `funcTable`,
+`structure` or `interfaceSet` is never mistaken for a literal (review MEDIUM-1). -/
+def typeLiteralClass? (s : String) : Option String :=
+  if s.startsWith "map[" then some "a map type"
+  else if s.startsWith "chan " || s.startsWith "chan<-" || s.startsWith "<-chan" then some "a channel type"
+  else if s.startsWith "func(" || s.startsWith "func (" then some "a function type"
+  else if s.startsWith "interface{" || s.startsWith "interface {" then some "an interface type"
+  else if s.startsWith "struct{" || s.startsWith "struct {" then some "an anonymous struct type"
+  else if s.startsWith "sync." then some "a sync type"
+  else none
+
+/-- Parse a type spelling (§1). `outer` is the WHOLE spelling as written in the file — every
+refusal names it (a refusal inside `*T` or `[3]T` names `*T`/`[3]T`, never the bare remainder);
+`fuel` bounds the nesting (the spelling's length suffices).
+
+Order (review MEDIUM-1 / NIT-2): `*T`, `[]T` (refused), `[n]T`; then an IDENTIFIER — a keyword
+(`chan`, `func`, …) is its class's refusal; a builtin spelling (in v1 or outside it, `int` or
+`float64`) that a declared type also spells is the D2 ambiguity; a builtin in v1 resolves; one
+outside v1 is refused naming its class; anything else is an `<Ident>` resolved over the table;
+then the non-identifier type literals and qualified names, each refused by class; anything else
+is outside the grammar. -/
+def parseTypeSpelling (types : TypeEnv) (outer : String) : Nat → String → Except String Ty
+  | 0, _ => .error s!"type spelling {outer}: nesting exceeds the spelling's length (internal bound)"
   | fuel + 1, s =>
       if s.startsWith "*" then
-        (parseTypeSpelling types fuel (s.drop 1).toString).map Ty.pointer
-      else if s.startsWith "[]" then .error (notInV1 s "a slice type")
+        (parseTypeSpelling types outer fuel (s.drop 1).toString).map Ty.pointer
+      else if s.startsWith "[]" then .error (notInV1 outer "a slice type")
       else if s.startsWith "[" then
         match (s.drop 1).toString.splitOn "]" with
         | len :: rest@(_ :: _) =>
             match parseDecimalNat? len with
-            | some n => (parseTypeSpelling types fuel ("]".intercalate rest)).map (Ty.array n)
-            | none => .error s!"type spelling {s}: array length {len} is not a decimal nat (no sign, no leading zeros, no constant expression)"
-        | _ => .error s!"type spelling {s}: unterminated array length"
-      else if s.startsWith "map[" then .error (notInV1 s "a map type")
-      else if s.startsWith "chan" || s.startsWith "<-chan" then .error (notInV1 s "a channel type")
-      else if s.startsWith "func" then .error (notInV1 s "a function type")
-      else if s.startsWith "interface" then .error (notInV1 s "an interface type")
-      else if s.startsWith "struct" then .error (notInV1 s "an anonymous struct type")
-      else if s.startsWith "sync." then .error (notInV1 s "a sync type")
-      else
-        match outsideBuiltin? s with
-        | some what => .error (notInV1 s what)
+            | some n => (parseTypeSpelling types outer fuel ("]".intercalate rest)).map (Ty.array n)
+            | none => .error s!"type spelling {outer}: array length {len} is not a decimal nat (no sign, no leading zeros, no constant expression)"
+        | _ => .error s!"type spelling {outer}: unterminated array length"
+      else if isIdent s then
+        match typeKeywordClass? s with
+        | some what => .error (notInV1 outer what)
         | none =>
-          if builtinSpellings.contains s then
-            if !(declaredCandidates types s).isEmpty then
-              .error s!"type {s}: ambiguous — the builtin {s} and a declared type spelled {s}; golean-seed-v1 refuses, never picks (D2)"
-            else if s == "bool" then .ok .bool
-            else match intKindOfSpelling? s with
-              | some k => .ok (.int k)
-              | none => .error s!"type spelling {s}: internal: builtin without a kind"
-          else if (s.splitOn ".").length > 1 && (s.splitOn ".").all isIdent then
-            .error (notInV1 s "a package-qualified type (write the declared type's unqualified Go name)")
-          else if isIdent s then resolveIdent types s
-          else .error s!"type spelling {s}: not in the golean-seed-v1 type grammar (bool | int | int8 | … | uint64 | [<nat>]T | *T | <Ident>)"
+          let builtin := builtinSpellings.contains s || (outsideBuiltin? s).isSome
+          if builtin && !(declaredCandidates types s).isEmpty then
+            .error s!"type {s}: ambiguous — the builtin {s} and a declared type spelled {s}; golean-seed-v1 refuses, never picks (D2)"
+          else if s == "bool" then .ok .bool
+          else match intKindOfSpelling? s with
+            | some k => .ok (.int k)
+            | none =>
+              match outsideBuiltin? s with
+              | some what => .error (notInV1 outer what)
+              | none => resolveIdent types s
+      else
+        match typeLiteralClass? s with
+        | some what => .error (notInV1 outer what)
+        | none =>
+          if (s.splitOn ".").length > 1 && (s.splitOn ".").all isIdent then
+            .error (notInV1 outer "a package-qualified type (write the declared type's unqualified Go name)")
+          else .error s!"type spelling {outer}: not in the golean-seed-v1 type grammar (bool | int | int8 | … | uint64 | [<nat>]T | *T | <Ident>)"
 
 /-! ## Values -/
 
@@ -188,9 +226,16 @@ def decodePathElem (path : String) : Json → Except String SeedPathElem
       | none => .error s!"{path}: not an integer index"
   | _ => .error s!"{path}: a path element is a field name (string) or an index (nat)"
 
+/-- The v1 limit the `ref`/`nil` forms impose (§1's grammar; review LOW-1): ANY struct with a
+field named `ref` or `nil` cannot be written as a seed value. -/
+def refNilLimit : String :=
+  "a struct with a field named ref or nil is not expressible in golean-seed-v1"
+
 /-- A reference body `{"cell":<nat>,"path":[…]}` (exact keys). -/
 def decodeRefBody (path : String) (json : Json) : Except String SeedValue := do
-  let obj ← StrictJson.obj path json
+  let obj ← match json with
+    | .obj o => pure o
+    | _ => throw s!"{path}: expected {"{"}\"cell\":<nat>,\"path\":[…]} — {refNilLimit}"
   StrictJson.requireExactKeys path obj ["cell", "path"]
   let cell ← match ← StrictJson.field path obj "cell" with
     | .num n =>
@@ -218,14 +263,17 @@ def decodeSeedValue : Nat → String → Json → Except String SeedValue
           let vs ← StrictJson.mapArrayIdx xs (fun i x => decodeSeedValue fuel s!"{path}[{i}]" x)
           return .array vs.toList
       | .obj kvs => do
-          if kvs.contains "ref" then
-            StrictJson.requireExactKeys path kvs ["ref"]
-            decodeRefBody s!"{path}.ref" (← StrictJson.field path kvs "ref")
-          else if kvs.contains "nil" then
-            StrictJson.requireExactKeys path kvs ["nil"]
-            match ← StrictJson.field path kvs "nil" with
-            | .bool true => return .nil
-            | _ => throw s!"{path}.nil: expected true (a nil pointer is {"{"}\"nil\":true})"
+          if kvs.contains "ref" || kvs.contains "nil" then
+            -- An object with a `ref` or `nil` key IS that form (§1): anything else beside it is
+            -- the v1 limit, named (review LOW-1), never a generic exact-keys text.
+            if !(StrictJson.exactKeys kvs ["ref"] || StrictJson.exactKeys kvs ["nil"]) then
+              throw s!"{path}: an object with a `ref` or `nil` key is the reference / nil form and carries nothing else (got keys {repr (StrictJson.keys kvs)}) — {refNilLimit}"
+            if kvs.contains "ref" then
+              decodeRefBody s!"{path}.ref" (← StrictJson.field path kvs "ref")
+            else
+              match ← StrictJson.field path kvs "nil" with
+              | .bool true => return .nil
+              | _ => throw s!"{path}.nil: expected true (a nil pointer is {"{"}\"nil\":true}) — {refNilLimit}"
           else
             let fs ← kvs.toList.mapM (fun (k, v) => do
               let w ← decodeSeedValue fuel s!"{path}.{k}" v
@@ -247,7 +295,7 @@ def decodeSeedJson (types : TypeEnv) (json : Json) : Except String (Array SeedCe
     let cobj ← StrictJson.obj path cj
     StrictJson.requireExactKeys path cobj ["type", "value"]
     let spelling ← StrictJson.string s!"{path}.type" (← StrictJson.field path cobj "type")
-    let typ ← (parseTypeSpelling types (spelling.length + 1) spelling).mapError (s!"{path}.type: " ++ ·)
+    let typ ← (parseTypeSpelling types spelling (spelling.length + 1) spelling).mapError (s!"{path}.type: " ++ ·)
     let value ← decodeSeedValue (StrictJson.wireNestingDepth + 1) s!"{path}.value" (← StrictJson.field path cobj "value")
     pure ({ typ, value } : SeedCell))
 

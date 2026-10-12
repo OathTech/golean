@@ -2721,7 +2721,24 @@ private def seedFacts : IO Bool := do
     "seed.cells[0].type: type Nope: no declared type of that name in the program")
   passed := passed && (← expectStrEq "SEED-B: a string type spelling is not in v1"
     (seedDecodeErr "{\"schema\":\"golean-seed-v1\",\"cells\":[{\"type\":\"[2]string\",\"value\":1}]}")
-    "seed.cells[0].type: type spelling string: string is not in golean-seed-v1")
+    "seed.cells[0].type: type spelling [2]string: string is not in golean-seed-v1")
+  passed := passed && (← expectStrEq "SEED-B: a refusal inside *T names the whole spelling (review NIT-1)"
+    (seedDecodeErr "{\"schema\":\"golean-seed-v1\",\"cells\":[{\"type\":\"*\",\"value\":1}]}")
+    "seed.cells[0].type: type spelling *: not in the golean-seed-v1 type grammar (bool | int | int8 | … | uint64 | [<nat>]T | *T | <Ident>)")
+  passed := passed && (← expectStrEq "SEED-B: a declared type spelled like an out-of-v1 builtin is the D2 ambiguity (review NIT-2)"
+    (match SeedFile.parseTypeSpelling (seedEvalTypes.push (⟨"main.float64"⟩, .struct #[])) "float64" 8 "float64" with
+     | .ok _ => "<resolved>" | .error e => e)
+    "type float64: ambiguous — the builtin float64 and a declared type spelled float64; golean-seed-v1 refuses, never picks (D2)")
+  passed := passed && (← expectStrEq "SEED-B: a declared type named like a keyword prefix resolves as an Ident (review MEDIUM-1)"
+    (match SeedFile.parseTypeSpelling (seedEvalTypes.push (⟨"main.channel"⟩, .struct #[])) "*channel" 9 "*channel" with
+     | .ok t => toString (repr t) | .error e => e)
+    (toString (repr (GoCore.Ty.pointer (.defined 5)))))
+  passed := passed && (← expectStrEq "SEED-B: a bare type keyword is its class's refusal"
+    (seedDecodeErr "{\"schema\":\"golean-seed-v1\",\"cells\":[{\"type\":\"chan int\",\"value\":1}]}")
+    "seed.cells[0].type: type spelling chan int: a channel type is not in golean-seed-v1")
+  passed := passed && (← expectStrEq "SEED-B: any struct with a field named ref refuses naming the v1 limit (review LOW-1)"
+    (seedDecodeErr "{\"schema\":\"golean-seed-v1\",\"cells\":[{\"type\":\"Node\",\"value\":{\"val\":1,\"ref\":2}}]}")
+    "seed.cells[0].value: an object with a `ref` or `nil` key is the reference / nil form and carries nothing else (got keys [\"ref\", \"val\"]) — a struct with a field named ref or nil is not expressible in golean-seed-v1")
   passed := passed && (← expectStrEq "SEED-B: an exponent number refuses by TOKEN (1e2 parses as 100)"
     (seedDecodeErr "{\"schema\":\"golean-seed-v1\",\"cells\":[{\"type\":\"int\",\"value\":1e2}]}")
     "number 1e2: a fraction or exponent is not allowed in golean-seed-v1 (integers only)")
@@ -2730,7 +2747,7 @@ private def seedFacts : IO Bool := do
     "seed: expected exactly keys [\"cells\", \"schema\"], got [\"cells\", \"schema\", \"x\"]")
   passed := passed && (← expectStrEq "SEED-B: {\"nil\": false} refuses"
     (seedDecodeErr "{\"schema\":\"golean-seed-v1\",\"cells\":[{\"type\":\"*int\",\"value\":{\"nil\":false}}]}")
-    "seed.cells[0].value.nil: expected true (a nil pointer is {\"nil\":true})")
+    "seed.cells[0].value.nil: expected true (a nil pointer is {\"nil\":true}) — a struct with a field named ref or nil is not expressible in golean-seed-v1")
   passed := passed && (← expectStrEq "SEED-B: a ref with an extra key refuses"
     (seedDecodeErr "{\"schema\":\"golean-seed-v1\",\"cells\":[{\"type\":\"*int\",\"value\":{\"ref\":{\"cell\":0,\"path\":[],\"x\":1}}}]}")
     "seed.cells[0].value.ref: expected exactly keys [\"cell\", \"path\"], got [\"cell\", \"path\", \"x\"]")

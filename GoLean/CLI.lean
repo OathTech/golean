@@ -599,7 +599,9 @@ seed cells' FINAL values, every location rendered seed-relative over `seedRelati
 in cell order. A location outside the seed anywhere (a result or a cell) refuses the WHOLE
 observation, `Stop.unsupported` naming the position (status `unsupported`); BUG-099's readout
 refusal applies first, exactly as unseeded. Unseeded runs never come here (`readoutObs`, no
-`seed` key, byte-identical output). Public for the eval pins. -/
+`seed` key, byte-identical output). Public for the eval pins. Recorded (review NIT,
+2026-10-12): the rendering is computed before the BUG-099 check is consulted — pure, and only
+the refusal path discards it. -/
 def seededObs (nameOf : TypeIdx → Option TypeId) (b : Nat) (sr : GoCore.Machine.SeededReadout) :
     String × Json :=
   let n := sr.seedFinal.size
@@ -803,7 +805,9 @@ def decodeObservation (path raw : String) : Except String Json := do
   | "ok" =>
       -- Seeded-heap slice B (design §5): an `ok` observation carries EITHER the four keys
       -- (unseeded) OR the four plus `seed` (a `--seed` run: the cells' final values, a
-      -- `seedRef` resolving into them). No other key set decodes.
+      -- `seedRef` resolving into them). No other key set decodes. Recorded (review NIT,
+      -- 2026-10-12): a raw `addr` inside a seed-carrying observation still decodes (lenient — the
+      -- seeded encoder never emits one; a Go twin that did would compare unequal, not pass).
       let seedN ←
         if !obj.contains "seed" then do
           StrictJson.requireExactKeys path obj ["output", "schema", "status", "values"]
@@ -890,6 +894,11 @@ private def runSeeded (program : GoCore.Program) (input : FilePath) (functionNam
   | .ok sr =>
       let base : Except String Nat :=
         if seed.isEmpty then .ok 0 else
+        -- DEBT (review LOW-2, 2026-10-12): this second call re-runs package init (pure and
+        -- inert — the same `b`, tape and fuel-out — but twice the init work). The clean fix is a
+        -- `base : Nat` field on `SeededReadout`: a CORE change that alters BridgeSet rows 599–601
+        -- (S6's `{ readout := …, seedFinal := … }` literal and the two erasure statements), so a
+        -- RE-PIN with changed rows — carried by slice C (design note, slice C paragraph).
         match GoCore.Machine.runProgramSetupSeededM cfg.fuel program functionName seed seedArgs cfg.choices with
         | .ok (_, _, _, _, slots, _) =>
             match slots[0]? with

@@ -826,6 +826,8 @@ seedfile five   '{"schema":"golean-seed-v1","cells":[{"type":"int","value":5}]}'
 seedfile two    '{"schema":"golean-seed-v1","cells":[{"type":"int","value":5},{"type":"int","value":7}]}'
 seedfile cyc    '{"schema":"golean-seed-v1","cells":[{"type":"Node","value":{"next":{"ref":{"cell":1,"path":[]}},"val":2}},{"type":"Node","value":{"val":3,"next":{"ref":{"cell":0,"path":[]}}}}]}'
 seedfile pair   '{"schema":"golean-seed-v1","cells":[{"type":"Pair","value":{"a":[1,9,3],"b":true}},{"type":"*int","value":{"ref":{"cell":0,"path":["a",1]}}}]}'
+seedfile chanid '{"schema":"golean-seed-v1","cells":[{"type":"channel","value":{"n":6}}]}'
+seedfile refld  '{"schema":"golean-seed-v1","cells":[{"type":"channel","value":{"n":6,"ref":1}}]}'
 seedfile float  '{"schema":"golean-seed-v1","cells":[{"type":"float64","value":1}]}'
 seedfile ambig  '{"schema":"golean-seed-v1","cells":[{"type":"T","value":1}]}'
 seedfile undecl '{"schema":"golean-seed-v1","cells":[{"type":"Nope","value":1}]}'
@@ -886,6 +888,8 @@ expect_seed seed-ptr-result --function next --seed "$sd/cyc.json" --arg-ref 0 --
   '"values":[{"cell":1,"path":[],"tag":"seedRef"}]'
 expect_seed seed-elem-path  --function inc --seed "$sd/pair.json" --arg-ref '0.a[1]' -- \
   '"values":[{"kind":"int","tag":"int","value":10}]' '{"cell":0,"path":["a",1],"tag":"seedRef"}'
+expect_seed seed-keyword-prefix --function useChannel --seed "$sd/chanid.json" --arg-ref 0 -- \
+  '"values":[{"kind":"int","tag":"int","value":7}]' '"typeName":"channel"'
 expect_seed seed-nil-arg    --function isNil --seed "$sd/cyc.json" --arg-nil -- '"values":[{"tag":"bool","value":true}]'
 obs="$(run_seed --function next --seed "$sd/cyc.json" --arg-ref 0)"
 "$GOLEAN" observation-eq --left "$obs" --right "$obs" || {
@@ -901,6 +905,8 @@ expect_seed_refusal seed-num-frac     1 --function inc --seed "$sd/frac.json" --
 expect_seed_refusal seed-num-expo     1 --function inc --seed "$sd/expo.json" --arg-ref 0 -- 'number 1e2' 'integers only'
 expect_seed_refusal seed-extra-key    1 --function inc --seed "$sd/extra.json" --arg-ref 0 -- 'seed.cells[0]: expected exactly keys'
 expect_seed_refusal seed-dup-key      1 --function inc --seed "$sd/dupkey.json" --arg-ref 0 -- 'JSON parse error' 'duplicate JSON object key'
+expect_seed_refusal seed-ref-field    1 --function useChannel --seed "$sd/refld.json" --arg-ref 0 -- \
+  'a struct with a field named ref or nil is not expressible in golean-seed-v1'
 expect_seed_refusal seed-schema       1 --function inc --seed "$sd/schema.json" --arg-ref 0 -- 'seed.schema: expected'
 expect_seed_refusal seed-nil-false    1 --function inc --seed "$sd/nilf.json" --arg-ref 0 -- 'value.nil: expected true'
 expect_seed_refusal seed-bad-path     1 --function sum3 --seed "$sd/path.json" --arg-ref 0 -- \
@@ -929,4 +935,4 @@ for sub in coverage-observations choice-trace; do
   fi
   echo "ok [$sub seed] refused (exit 2): the seed flags are native-json-run only (D6, v1)"
 done
-echo 'Wire boundary gate: PASS (11 byte-level controls + 56 unseq-node controls + 13 promotion-record controls + 16 B6 numeric-locals controls + 5 rand-intn controls + 4 type-key controls + 10 entry-argument controls + 12 enumerator entry-argument controls + 5 missing-input controls + 2 unwritable-output controls + 7 dedup-flag controls + 4 readout-refusal controls + 32 seeded-entry controls through the real CLI)'
+echo 'Wire boundary gate: PASS (11 byte-level controls + 56 unseq-node controls + 13 promotion-record controls + 16 B6 numeric-locals controls + 5 rand-intn controls + 4 type-key controls + 10 entry-argument controls + 12 enumerator entry-argument controls + 5 missing-input controls + 2 unwritable-output controls + 7 dedup-flag controls + 4 readout-refusal controls + 34 seeded-entry controls through the real CLI)'

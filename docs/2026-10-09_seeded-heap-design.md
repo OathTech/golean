@@ -273,9 +273,17 @@ first (init runs twice on a seeded run; a `base` field in `SeededReadout` would 
 under seed mode the seed-relative rule covers EVERY location (slice/map/chan bases too), not only `.addr` — an
 in-run allocation refuses rather than leaking a raw id; (iii) the number rule is enforced on the TOKEN (a
 lexical pre-scan), since the parsed `JsonNumber` of `1e2` equals that of `100`; (iv) an object with a `ref` or
-`nil` key IS that form (§1), so a struct whose only field is named `ref`/`nil` is not expressible in v1; (v)
+`nil` key IS that form (§1), so ANY struct with a field named `ref`/`nil` is not expressible in v1 (the
+refusal names this limit — review LOW-1); (v)
 `byte`/`rune` refuse with a hint (`uint8`/`int32`) — §1's grammar does not list them; (vi) a declared type
-spelled like a builtin makes the builtin spelling ambiguous (D2's rule applied); (vii) a `seedRef` decodes only
+spelled like a builtin (in v1 or outside it) makes the builtin spelling ambiguous (D2's rule applied); type
+literals are recognised only after the `<Ident>` branch, so `channel`/`funcTable` resolve as declared types
+(review MEDIUM-1); (vii) a `seedRef` decodes only
 in an observation carrying `seed`, with `cell` below its length; (viii) `--arg-ref`/`--arg-nil` at a
 frontend-quarantined parameter refuse at the CLI (no pointer type to resolve against). Slice C (harness
-`--seed`, manifest/diff-coverage tokens, the first seeded rows, the re-pin) starts from here.
+`--seed`, manifest/diff-coverage tokens, the first seeded rows, the re-pin) starts from here. **Slice C also
+carries a CORE RE-PIN** (slice B pre-merge review LOW-2, 2026-10-12): `SeededReadout` gains `base : Nat`
+(the post-init bound `b`), retiring the CLI's second `runProgramSetupSeededM` call (init twice per seeded
+run; pure and inert, measured unmeasurable). S6 `runProgramSeededM_eq_stmt` (BridgeSet row 599) and the
+two erasure statements (rows 600–601) spell the `{ readout := …, seedFinal := … }` literal, so this is a
+RE-PIN with CHANGED rows, not rows added only — it needs its own written reason and the logic team's notice.

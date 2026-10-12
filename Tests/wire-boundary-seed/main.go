@@ -23,6 +23,12 @@ type Pair struct {
 	b bool
 }
 
+// channel's name starts like the keyword `chan`: an ordinary declared type (an
+// <Ident>), never refused as a channel type (review MEDIUM-1).
+type channel struct {
+	n int
+}
+
 type B struct {
 	_ int
 	x int
@@ -56,6 +62,10 @@ func retLocal(p *int) *int {
 	return &x
 }
 
+func useChannel(c *channel) int {
+	return c.n + 1
+}
+
 func useB(b *B) int {
 	return b.x
 }
@@ -84,5 +94,5 @@ func main() {
 	println(sum3(&n0), next(&n0) == &n1, isNil(nil))
 	var pr Pair
 	pr.a[1] = 9
-	println(inc(&pr.a[1]), *retLocal(&c0), useB(&B{x: 4}), local1(), local2())
+	println(inc(&pr.a[1]), *retLocal(&c0), useB(&B{x: 4}), local1(), local2(), useChannel(&channel{n: 6}))
 }
