@@ -179,6 +179,25 @@ widened graph: the checker re-runs `stepMulti` per edge through the widened pred
 `scripts/check-bugs.sh` ok (123 bugs; BUG-123's two Cases PASS in the edited baseline;
 backlog unchanged: coverage 10/10, latitude 4/4, wrong-answer 0/0).
 
+**The fast tier** (`capped scripts/ci` at `f7ab2bc9`, 62 s): every gate line ok — lake build
+warning-free, core totality audit, eval tests (298), semantic equations, frontend pins,
+re-pin guard (0 flips) — except the two «NO recorded run» baseline-diff lines a fresh
+worktree carries until its first `--diff`. One speedbump RED, fixed in the next commit: two
+`spec#Length_and_capacity` citations I had wrapped across a comment line (named by
+`check-spec-anchors`; rejoined, 1072 citations resolve).
+
+**Corpus cost, pre-checked before the lock** (the scan: every non-strict row whose subject
+prints or reads `len(`, 107 rows, all but five single-goroutine — a sole runnable consults
+at bound 1 and pops nothing, so their trees are unchanged):
+
+| row | before | lane binary | disposition |
+|---|---|---|---|
+| `builtins/print/goroutine-interleaving` (two printing children, width 4, members=2) | inside `work=2000000` | **2.51 M work** (1,888,928 steps + 620,541 probes, 217,983 leaves, depth 20), 35 s, set `{ab, ba}` unchanged | `work=` raised to 4,000,000 with a dated reason (commit `b3637c18`) — the one cap the change breaks |
+| `goroutines/sched-dependent/len-handoff` (one `len(ch)`, width 2, sites 24) | — | 54,361 steps, 2,832 leaves, depth 15, set `{100, 110}` unchanged | no change |
+| `goroutines/buffered-wake/len-after-join` (confluent, width 4, sites 20) | — | 8,507 steps, 217 leaves, depth 14, one member | no change |
+| `builtins/print/refused/race-with-output` (racy; main prints beside a racing child) | FAIL at `go-observation` by design | the print consult adds branches before the detector's refusal | result unchanged (red by name before enumeration) |
+| the two new rows | — | §7's witness table (the corpus wires certify the same sets) | born PASS |
+
 **The gate** (`capped scripts/ci`, then `capped scripts/ci --diff` under the box lock at the
 final tip): recorded in the lane's final commit message and report — the `--diff` summary
 line, the wall, the per-row movement (captions of the membership rows that gained consults),
