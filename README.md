@@ -80,7 +80,9 @@ the plan of record above; kept for their design rationale):
 - `docs/archive/differential-testing.md`: differential testing plan and generator notes.
 - `docs/agent-sandbox.md`: scratch directory and temp-cache conventions for
   sandboxed agent sessions.
-- `TODO.md`: tactical backlog.
+- `TODO.md`: the tactical backlog as of 2026-09-15 — HISTORICAL, not
+  maintained since 2026-10-12; open items are carried in the plan of record
+  and `docs/BUGS.md`.
 
 Useful commands:
 

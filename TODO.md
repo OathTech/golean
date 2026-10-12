@@ -1,6 +1,12 @@
 # TODO
 
-Tactical backlog for the SEMANTICS product.
+**HISTORICAL as of 2026-10-12** ([AGENT], gate-cull follow-up 6; last edited
+2026-09-15): this backlog is not maintained. The plan of record is
+`docs/2026-09-23_batched-window-charter.md` with `docs/2026-09-24_window-plan.md`;
+open fidelity items live in `docs/BUGS.md`. An item below that turns out to be
+live is carried into the plan with a note, not revived here.
+
+Tactical backlog for the SEMANTICS product (as of 2026-09-15).
 
 **Where the pre-split TODO went ([AGENT] ruling, recorded here per the
 audit):** the pre-split TODO.md (907 lines) is preserved verbatim on
