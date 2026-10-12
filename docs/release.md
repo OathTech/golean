@@ -1,6 +1,6 @@
-# What a release is (PROPOSED, PENDING [USER] D2)
+# What a release is (RULED 2026-10-12)
 
-**Status: PROPOSED [AGENT], PENDING [USER] decision D2** of the release-readiness backlog
+**Status: RULED** — [USER] Mike 2026-10-12 «D2: agree as written» on the [AGENT] proposal of the release-readiness backlog
 (`docs/2026-10-12_release-readiness.md` §0, §5). Nothing here is ruled until the [USER] says so; until then no
 `release/*` tag exists and `lakefile.toml`'s `version` stays where it is (a release is the [USER]'s act). Drafted by
 the records lane `docs/release-records-1012`, 2026-10-12, from the review's §0 proposal: the 2026-10-03 re-pin offer to
@@ -67,3 +67,18 @@ push rule). Pushing the tag is a separate sign-off.
    documents, which must be its parent or have only records commits between them.)
 5. On [USER] sign-off: `git tag -a release/<date> <commit>`; optionally bump `lakefile.toml` `version` in the record
    commit if the [USER] asks for it. Push only on a separate sign-off.
+
+## 4. Stated limits the first release carries (the rulings so far)
+
+- **Pre-`main` aborts are outside the differential's observation scope** (BUG-107, five rows refusing
+  by name): a package initializer that panics or deadlocks before `main` cannot be authenticated as a
+  gc abort because the harness registers its crash channel from `main`. [USER] Mike 2026-10-12
+  (D3): «accept and state clearly».
+- **Static-initialization-dependent programs** (BUG-061: gc folds some package-level initializations
+  into the data section; the model schedules them): [USER] 2026-10-12 (D1): «refused, if it's easy
+  to exclude» — the refusal by name is a lane; if no cheap exclusion exists, the release names the
+  profile that excludes the shape and keeps the row as a known red.
+- **`uintptr` identity** (release-readiness item 26): refused by name in identity-bearing positions
+  until the parked repair lands ([USER] 2026-10-12, D6: «refuse and repair asap»).
+- The ten limits of the 2026-10-03 offer (`docs/2026-10-03_offer-to-logic-team.md`) stand.
+

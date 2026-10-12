@@ -6943,7 +6943,7 @@ standing pin of this limit. Until ruled, (iii) holds.
 - Pinned-by: differential
 - Cases: init/init-panic, noodler/initpanic/panic, noodler/initpanic/var-panic, noodler/initpanic/deadlock, init/quarantined-var-panicking/sibling
 
-**PENDING [USER] since 2026-09-07; re-posed in the release-readiness backlog D3** (`docs/2026-10-12_release-readiness.md` §5; note 2026-10-12, [AGENT] records lane).
+**RULED 2026-10-12 ([USER] Mike, D3: «agree, accept and state clearly»): pre-`main` aborts are OUTSIDE the differential's observation scope — a stated limit of the release (`docs/release.md` §4); the five rows stay refusals by name.** (Posed 2026-09-07; re-posed in the release-readiness backlog D3 (`docs/2026-10-12_release-readiness.md` §5; note 2026-10-12, [AGENT] records lane).
 
 MERGE-TRAIN NOTE ([AGENT] L4 worker, 2026-09-07): numbered against main's
 top BUG-104 at cut time. The landing plan (§4 D1) SUGGESTED reserving 107 for
