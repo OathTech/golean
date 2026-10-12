@@ -2,8 +2,41 @@
 
 Main is the SEMANTICS product only (the repo split, 2026-08-31 —
 `docs/2026-08-31_repo-split-plan.md`). The branches below carry
-everything else this repo has produced; they are refs in THIS repo
-and resolve locally.
+everything else this repo has produced. **They are NOT local branches
+in a fresh clone** (the 2026-10-11 migration to this box cloned the
+pushed set): what resolves where is the table below; use the
+`origin/<name>` spelling (or `git switch <name>`, which creates a local
+tracking branch) for a branch, the tag name for a tag.
+
+**What resolves where** (verified 2026-10-12 on the `milner-oath` clone of
+`OathTech/golean` with `git branch -r`, `git tag`, `git show-ref`,
+`git for-each-ref refs/snapshots`; [AGENT] records lane
+`docs/release-records-1012`, release-readiness item 12; origin itself not
+re-queried — no network from the sandbox — so «on origin» means «fetched
+with the clone», the tags read from the clone's `packed-refs`):
+
+| name below | local branch | `origin/*` remote-tracking ref | tag | resolves to |
+|---|---|---|---|---|
+| `park/reasoning-2026-08-31` | no | yes | — | `7440bf70` |
+| `raft-proof-campaign` | no | yes | — | `17197113` |
+| `typed-consumer-sprint` | no | yes | — | `7edc298f` |
+| `typed-uintptr-identity` (the HELD L5 source) | no | yes | — | `5f185fb3` |
+| `park/typed-profiles-2026-09-16` | no | **NO — not on origin** | `typed-profiles/last-main-2026-09-16` (annotated, in the clone) | `62fc8073` via the tag only |
+| `archive/callspec-era` | no | yes | — | `20cda772` |
+| `archive/fixed-trajectory-era` | no | yes | — | `c4986b29` |
+| `snapshot/typed-sprint-before-uintptr-20260906` | no | no | — | does NOT resolve (same tip as `origin/typed-consumer-sprint`, `7edc298f`) |
+| `refs/snapshots/*` (e.g. `pre-repo-split-main`) | — | — | — | EMPTY on this clone (`pre-repo-split-main` = `7440bf70` = `origin/park/reasoning-2026-08-31`) |
+| (the offer) | — | — | `logic-offer/2026-10-03` | `20d3946d` |
+
+Also on origin, not indexed below (older lane branches, kept as found):
+`campaign-arc4d`, `campaign-ce`, `campaign-wave-a` (2026-08-26),
+`channel-logic`, `channel-logic-s4` (2026-08-11; cited by
+`docs/2026-08-04_nondeterminism-doctrine.md`), `design-pass` (2026-08-28).
+
+**PENDING [USER] (release-readiness backlog D4):** push
+`park/typed-profiles-2026-09-16` to origin, or leave it tag-only (the tag
+already names the same commit; nothing is lost either way). Until ruled,
+revive from the tag.
 
 For a source-checked survey of the reasoning branches, newer Iris spikes,
 uncommitted worktree material and stashes, see
@@ -57,7 +90,7 @@ independent Verdi and etcd-proof packages.
   part of this archive (its source is branch `typed-uintptr-identity`
   @ `5f185fb3`; plan §2.5, HELD). [AGENT] `landing-plan-0907`,
   2026-09-07.
-- **`park/typed-profiles-2026-09-16`** = tag **`typed-profiles/last-main-2026-09-16`**
+- **`park/typed-profiles-2026-09-16`** (NOT on origin — the tag is the only ref on this clone; D4 above) = tag **`typed-profiles/last-main-2026-09-16`**
   = main `62fc80731f0045c170634690bda1c26d1880f185` (2026-09-16) — the
   typed-admission profile family at its LAST main state before parking:
   `GoLean/GoCore/Boolean*.lean` + `Recovery*.lean` (56 modules, 8,197
@@ -87,7 +120,9 @@ independent Verdi and etcd-proof packages.
 - **`archive/fixed-trajectory-era`** — the killed enumeration-era
   corpus (2026-08-27 W0 reset).
 - Snapshot refs under `refs/snapshots/` — pre-operation safety
-  copies (`pre-repo-split-main` = `7440bf70`).
+  copies (`pre-repo-split-main` = `7440bf70`). Local-only by nature:
+  none is on this clone (table above); `7440bf70` survives as
+  `origin/park/reasoning-2026-08-31`.
 
 Older pipeline-history notes for the SEMANTICS product live in
 `docs/archive/` (a directory, unrelated to these branches).
