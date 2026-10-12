@@ -1,5 +1,11 @@
 # F8 certificate provenance — work charter
 
+> **WITHDRAWN 2026-10-12** ([USER] Mike, gate cull D1, `docs/2026-10-12_gate-cull-plan.md` §3.1):
+> the apparatus this document specifies certified a CACHE (one `tier=slow` corpus row)
+> and not a trust property; it was deleted with the tier, `--slow`, merge-protocol step 5a
+> and `release-check`. Every enumerating row now runs fresh on every `--diff`. Kept as a record.
+
+
 [USER] 2026-09-09, firsthand authorization: “Great, can you write a charter
 for this work and then execute on it”. This approves the F8 proposal at
 `f1b1a1da:docs/2026-09-09_next-increment-certificate-provenance.md`, including

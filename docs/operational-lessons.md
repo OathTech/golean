@@ -568,3 +568,19 @@ load 30/40/46) passed. A budget change is a [USER] decision. Train r72
 the derived tracer budget `LEAN_TRACE_TIMEOUT_SECONDS` (8 ×) moves
 240 → 480 s with it. map-20k measures 4.7–9.6 s alone, so 60 s still
 catches a hang.
+
+## A long gate is itself the defect (2026-10-12)
+
+The gate cull (`docs/2026-10-12_gate-cull-plan.md`, [USER]-ruled D1–D9): of
+44 classified rows only 17 guarded the trust surface; the rest were self-tests
+of checkers, compiled poison/mutant controls, a cache certificate and a receipt
+registry. Recorded cost before the cull: 850–1034 s per warm `--diff`, of
+which ~430 s was the post-build control steps plus the certificate check; one
+mutant self-test cost 3912 s cold. The certificate apparatus (§«A cached
+certification is owed a re-run…» above) certified a cache for ONE row whose
+fresh enumeration takes ~94–160 s single-core: deleting the cache deleted the
+need for the proof. Lessons: a cache on the trust path needs a validity proof
+that grows until every edit invalidates it — run the thing instead; a check
+that tests a CHECKER (poison, mutant, receipt, self-test) adds no evidence
+about the product and belongs in a hand-run `scripts/test-*`; and the global
+rule now says it outright — a slow gate is a reason to examine and trim.

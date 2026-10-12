@@ -30,9 +30,10 @@ capped scripts/ci --diff           # the gate plus the differential corpus; reco
 
 The first `scripts/ci` without `--diff` reports two «NO recorded run» failures: it
 has not seen the corpus yet. That is the fail-closed design, not an error in your
-setup; `--diff` records the runs. Everything the gate checks is pinned in the
-repository (sources, scripts, the toolchain and oracle versions), so a clone on
-another machine with the same pins is fresh, not stale.
+setup; `--diff` records the runs. The gate has two tiers (`scripts/ci` before a
+commit, `scripts/ci --diff` before a merge) plus report-only speedbumps; the
+standing rule is `CLAUDE.md` «The gates». Nothing is bound to a machine: the
+sources, scripts, toolchain and oracle versions are pinned in the repository.
 
 The [2026-09-11 whole-project review](docs/2026-09-11_project-review.md)
 assesses executable coverage, semantic fidelity, relational and Iris customer

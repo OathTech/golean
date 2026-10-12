@@ -379,3 +379,63 @@ whole, `scripts/diff-coverage` (parallelism, tiers, cache path), `lakefile.toml`
 the committed gate tails of 2026-10-01..11, `docs/2026-09-05_project-gate-audit.md`
 F8/F13, `docs/operational-lessons.md` §«A cached certification…», and the
 migration plan §4, §7, §9.
+
+## 9. Accounting — as landed (2026-10-12, [USER] «Yes, agree on all - do it»)
+
+Branch `cull/gate-1012`, one commit per lane (the §6 lanes as commits on one
+branch rather than four branches: the [USER] cannot sign off merges mid-flight;
+each commit is one lane and auditable alone — [AGENT] choice under D9).
+
+| §2 row | as landed | where |
+|---|---|---|
+| 1, 43 | CUT; replaced by `defaultTargets` = every target + the Tests/ ownership set check | lane 2: `lakefile.toml`, `scripts/ci` |
+| 3 | GATE, unchanged | `scripts/ci` |
+| 4, 5, 6, 16 | GATE, one scan step; gained a `partial`-declaration check over `GoLean/GoCore/` (charter rule, previously only in the admission preflight) | `scripts/ci` |
+| 7, 8, 9, 10, 12, 13, 15, 17, 28 | SPEEDBUMP, report-only, both tiers, before the build; the self-tests inside 12 and 13 no longer run; 28 keeps its sub-second python self-tests (no flag, not worth surgery) | `scripts/ci` |
+| 11, 14, 30, 36 | CUT from the gate; the five `scripts/test-*` stay as hand-run tools | `scripts/test-*` |
+| 18 | GATE, plain `lake build` of every target, warning-free | `scripts/ci` |
+| 19 | CUT with the apparatus; `--slow` refused by name | lane 1 |
+| 20 | GATE; the five poison compiles gone | `tools/core-audit.py`, `scripts/check-core-audit` |
+| 21 | out of ci (its library builds in the default build; the preflight's tokens are the ci scan's); `check-admission` stays as the opt-in full check without the poison modes | `scripts/check-admission`, `tools/admission-check.py` |
+| 22 | GATE, slim: no hand re-elaboration, no poison audit | `scripts/check-declarations` |
+| 23, 26, 29 | GATE, unchanged | `scripts/ci` |
+| 24 | GATE, slim — kept rather than deleted (deviation from §2): the fixture-producing Go tests plus the Lean strict-decoder read are a real cross-boundary test `lake build` does not run; the poison compile and dispatch audit gone | `scripts/check-method-identity` |
+| 25 | GATE under `--diff`; its separate axiom audit gone | `scripts/check-unseq-scheduler` |
+| 27 | GATE, slim: build + client run + enrollment + regex guard + import whitelist; the twelve mutants gone | `scripts/check-equations` |
+| 31, 32, 33 | GATE, two `go test` invocations in one step | `scripts/ci` |
+| 34 | GATE, unchanged | `scripts/ci` |
+| 35, 37 | GATE under `--diff`, every row fresh; the former `tier=slow` row is an ordinary `engine=dedup` membership row | lane 1 |
+| 38 | SPEEDBUMP under `--diff` | `scripts/ci` |
+| 39, 40 | GATE, one shared `judge_record` | `scripts/ci` |
+| 41 | GATE, forward flips + alternation survival (kept as a call in the guard: it compares two versions of a baseline, the guard's job, not `coverage-baseline-diff`'s) | `scripts/ci` |
+| 41b | CUT (the reverse report) | — |
+| 42 | out of the gate; rule C9 deleted with the certificates; runs by hand | `tools/reconcile-records` |
+
+Deleted files: `tools/certification.py`, `tools/test_certification.py`,
+`scripts/build-certified`, `scripts/check-certification`, `baselines/certified/`,
+`tools/ci_libraries.py`, `tools/test_ci_libraries.py`, `scripts/ci-libraries.json`,
+`tools/typed_audit.py`, `tools/test_typed_audit.py`, `tools/method-identity-audit.py`,
+`tools/method-identity-dispatch.py`, `tools/declaration-audit.py`,
+`Tests/{MethodIdentity,Declaration,GoCoreAdmission,UnseqScheduler}Audit.lean`.
+`scripts/ci`: 1286 → 413 lines. Charter: «The gates» replaced, step 5a deleted
+(lane 4). Workflow: nightly and dispatch run `--diff`.
+
+Operational note for worktrees: `deps/` is gitignored and lives in the primary
+checkout; a lane worktree needs it (`ln -s <primary>/deps deps` or
+`scripts/setup-deps`), or six checks refuse by name (the frontend's stdlib root,
+spec anchors, imported-goose verbatim, the stdlib register, two `go test`s).
+
+Measured on this box (milner-oath, 32 cores, warm `.lake`, box default cap
+32 G → 4 Lean threads), captured exit codes, no tails committed:
+
+- fast tier: 47 s wall; RESULT: FAIL on exactly the two «NO recorded run»
+  baseline steps (this box had no corpus record yet), every other gate step
+  and every speedbump ok.
+- `--diff`: see the lane-4 close commit (filled in after the run).
+
+Open for the [USER] (D10): the global rule «Artifacts: rebuild or push, never
+hoard» (2026-10-12) says gate tails and run dumps are not committed; this
+branch commits none (conclusions in commit messages and here). The project's
+`docs/architecture-rules.md` «Evidence on main» still describes committed
+evidence records under caps, and `docs/evidence/` holds 60+ such records: a
+conflict to rule on, not silently rewritten here.

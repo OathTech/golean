@@ -4,7 +4,7 @@
 looking for `AGENTS.md` find the working charter; edit `CLAUDE.md` only —
 the architecture rules formerly in `AGENTS.md` are
 `docs/architecture-rules.md`. ([USER] 2026-09-07, relayed; the alias
-shape is gate-checked by `scripts/check-agents-alias`.)
+shape is checked by `scripts/check-agents-alias`, a `scripts/ci` speedbump.)
 
 This file is the charter: what we build, what is trusted, and the
 gates. It is deliberately short; details live in the pointed-to
@@ -161,49 +161,44 @@ Everything else is untrusted tooling.
 
 ## The gates
 
-- `scripts/ci` before any commit that touches runtime code —
-  always under the box-wide `capped` (`capped scripts/ci`; never bare
-  lake/lean; the box default cap, raised per job only when the job
-  needs it — a COLD full build is the measured case, `capped -m 64G --
-  scripts/ci`; `scripts/capped` is a shim onto the box tool;
-  see `docs/operational-lessons.md`). Runtime changes add the
-  differential (`--diff`); baseline re-pins only with a full run
-  and a written reason (PASS→non-PASS flips must be on a BUGS.md
-  Cases: line). The gate also runs `scripts/check-evidence-size`:
-  bulky or duplicated evidence under `docs/evidence/` fails closed
-  (caps and the archive-branch convention:
-  `docs/architecture-rules.md`, "Evidence on main"), and
-  `scripts/check-agents-alias`: `AGENTS.md` must be the alias of this
-  file (note at the top).
-- The pre-merge adversarial audit: the ask is unconditional; scope
-  and waiver are the user's.
+- **Gates block.** `scripts/ci` before any commit that touches runtime
+  code: the oracle pin, the escape-hatch scan, the `lake build` of every
+  target (warning-free), the core totality audit, the eval tests, the
+  frontend and harness `go test`s, the unseq-wire, wire-boundary,
+  method-identity, frontend-pin, declaration and equation checks, and the
+  baseline diff of the last recorded corpus runs with the forward re-pin
+  guard. `scripts/ci --diff` before any merge to `main`: the same plus a
+  FRESH run of the differential and negative corpus against the tracked
+  baselines (`baselines/`), every row, no cached tier. Always under the
+  box-wide `capped` (`capped scripts/ci`; the box default cap; a COLD full
+  build is the measured `capped -m 64G -- scripts/ci` case; `scripts/capped`
+  is a shim onto the box tool; `docs/operational-lessons.md`). Baseline
+  re-pins only with a full run and a written reason; PASS→non-PASS flips
+  must be on a `BUGS.md` Cases: line.
+- **Speedbumps report.** The same run prints the consistency checks (bugs
+  index, feature tags, spec anchors, stdlib register, evidence size, the
+  `AGENTS.md` alias, imported-goose verbatim, memory call sites, the
+  pool-spec freeze; under `--diff` also the derived-artifact regeneration)
+  under their own heading. A red one never fails the gate; it is read at
+  the merge ask and fixed or waived there, by name.
+- **Self-tests are not gates.** `scripts/test-*` run by hand when the
+  script they test changes.
+- The pre-merge adversarial audit: the ask is unconditional; scope and
+  waiver are the user's.
+- The classification behind this section and every removed step:
+  `docs/2026-10-12_gate-cull-plan.md` ([USER]-ruled 2026-10-12, D1–D9).
 
 ## The merge protocol (exact, every time)
 
 1. All work on branches off `main`, in worktrees
    (`.claude/worktrees/<lane>`, one writer per worktree; primary
    checkout parked on `main`).
-2. Arc complete → gate green.
+2. Arc complete → `scripts/ci --diff` green (speedbump reds named in
+   the ask).
 3. The audit ask — never skipped; the user may trim or waive.
 4. Pause; merge only on explicit at-that-moment sign-off.
 5. `git checkout main && git merge --ff-only <branch>` (if refused:
    rebase, re-gate, re-ask).
-5a. Before merging, the train records the pre-merge main tip as
-    `refs/snapshots/<round>/main`. At the merged tip, build with
-    `scripts/build-certified`, then run `python3 tools/certification.py
-    release-check --base refs/snapshots/<round>/main`. If the shared
-    inventory or claim changed — even if the branch refreshed its own
-    record — the train runs `scripts/ci --slow`, installs the reviewed
-    candidate (`certification-candidate.json`, under the run's output
-    dir) as `baselines/certified/<case>.certified.json`, commits it as
-    the round's 5a records commit, and re-runs the gate green (a
-    candidate is not a record); a changed certified set is a finding,
-    not a re-pin. This covers the semantic sources, frontend,
-    observer/checker, apparatus and build/toolchain inputs, rather than
-    two wire files ([USER] 2026-09-09 approved the F8 brief (charter:
-    docs/2026-09-09_certificate-provenance-charter.md); this wording
-    [AGENT], ratified at this landing's merge sign-off; protocol:
-    docs/2026-09-09_certificate-provenance-design.md).
 6. End parked on `main`, clean, green. Push is a separate sign-off.
 
 ## Working practices

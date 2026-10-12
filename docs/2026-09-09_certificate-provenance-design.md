@@ -1,5 +1,11 @@
 # F8: dependency-bound certification
 
+> **WITHDRAWN 2026-10-12** ([USER] Mike, gate cull D1, `docs/2026-10-12_gate-cull-plan.md` §3.1):
+> the apparatus this document specifies certified a CACHE (one `tier=slow` corpus row)
+> and not a trust property; it was deleted with the tier, `--slow`, merge-protocol step 5a
+> and `release-check`. Every enumerating row now runs fresh on every `--diff`. Kept as a record.
+
+
 [AGENT] 2026-09-09. Implements the approved
 [charter](2026-09-09_certificate-provenance-charter.md). This changes the
 evidence required to reuse a slow observation set, not the Go semantics.

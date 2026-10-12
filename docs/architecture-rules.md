@@ -122,8 +122,8 @@ tape stuff».
 
 - `docs/evidence/` holds RECORDS, not copies: gate tails, transcripts,
   small probe outputs, and the commit SHA the run was at
-  (`docs/evidence/README.md`). Caps, gate-enforced by
-  `scripts/check-evidence-size` (a `scripts/ci` step; the caps are
+  (`docs/evidence/README.md`). Caps, checked by
+  `scripts/check-evidence-size` (a `scripts/ci` speedbump, report-only; the caps are
   PROPOSED [AGENT] 2026-09-07 and defined once at the top of that
   script): no tracked evidence file over 256 KiB; no top-level
   `docs/evidence/<dir>/` over 4 MiB; no archive extension (`.tar .tgz
