@@ -5,4 +5,4 @@
 # LEAN_ENUM_TIMEOUT_SECONDS (300 s). Measured 2026-08-14: 39,976,295 steps,
 # 94 s single-core on the dev box; 2026-08-21 POR slice: ~157 s dev-box
 # (docs/2026-08-21_w32-por-design.md). A timeout here is a budget finding.
--	goleanGoogle	-	ok	-	imported_goose,channels,goroutines,nondet	membership	the three worker sends commit into the cap-3 buffer in scheduler order (L1): the arrival-order code ranges over the 6 permutations of {1,2,3} (members=6); width 4 covers the up-to-4-runnable scheduler bound; no append spill (the results slice is pre-capped at 3); sites raised for the 4-thread tree	width=4,sites=48,work=60000000,members=6,engine=dedup
+-	goleanGoogle	-	ok	-	imported_goose,channels,goroutines,nondet	membership	the three worker sends commit into the cap-3 buffer in scheduler order (L1): the arrival-order code ranges over the 6 permutations of {1,2,3} (members=6); no append spill (the results slice is pre-capped at 3)	work=60000000,members=6,engine=dedup

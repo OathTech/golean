@@ -5365,8 +5365,11 @@ func (e *emitter) emitExpr(x ast.Expr) (any, error) {
 	m, ok := node.(map[string]any)
 	if ok {
 		if _, has := m["type"]; !has {
-			// Every SINGLE-VALUED expression node carries its go/types
-			// type: the decoder's `exprTypeOf` consumers (the range
+			// Every SINGLE-VALUED expression node `emitExpr` builds
+			// carries its go/types type (the call nodes built in
+			// ASSIGNMENT position are built elsewhere and carry none,
+			// single-valued ones included — their consumers read
+			// `resultTypes`, BUG-110): the decoder's `exprTypeOf` consumers (the range
 			// collection temporary, the blank-assignment discard
 			// temporaries) declare a temporary from it and REFUSE on its
 			// absence (release-readiness punch list item 2, 2026-10-12).
@@ -5380,7 +5383,7 @@ func (e *emitter) emitExpr(x ast.Expr) (any, error) {
 			// and the bare `nil` literal (the decoder's `nil` arm takes an
 			// optional type) — are omitted BY NAME (`noSingleWireType`),
 			// not by a swallowed error.
-			if _, typeless := e.noSingleWireType(x); !typeless {
+			if !e.noSingleWireType(x) {
 				ty, terr := e.typeOf(x)
 				if terr != nil {
 					return nil, terr

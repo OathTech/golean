@@ -27,4 +27,4 @@ method-value-from-iface	methodValueFromInterface	-	ok	-	methods,interfaces,funct
 # singleton 10 on every run (20/20 under GOMAXPROCS 1/8, default and -N -l). work=200000 is ~10× the measured node+edge work; width 4
 # covers the picks' bound (2). Alternative named: `depth=N` (declare the wide-pick depth and keep the strict spot check) — not taken,
 # the certificate is the stronger claim at the same cost.
-nil-receiver-recursion	nilReceiverRecursion	-	ok	-	methods,pointers,nil,recursion	confluent	every pick of the per-node sweep (`t.v`, `t.l`, `t.r` reads vs the two Sum calls) is outcome-equivalent — Sum mutates nothing — so every schedule folds the same 10; engine=dedup certifies |set| = 1 over all picks (9053 unique states, checker-accepted); gc 10	width=4,sites=64,work=200000,engine=dedup
+nil-receiver-recursion	nilReceiverRecursion	-	ok	-	methods,pointers,nil,recursion	confluent	every pick of the per-node sweep (`t.v`, `t.l`, `t.r` reads vs the two Sum calls) is outcome-equivalent — Sum mutates nothing — so every schedule folds the same 10; engine=dedup certifies |set| = 1 over all picks (9053 unique states, checker-accepted); gc 10	work=200000,engine=dedup

@@ -11,7 +11,7 @@ mutex-copy-independent	mutexCopyIndependent	-	ok	-	sync,mutex,value_copy
 # closes the state graph in 600 edges (<1 s), |set|=1 checker-accepted,
 # backedge=full; 20 gc draws (plain/-race alternating) inside the
 # singleton. docs/evidence/2026-09-03_strict-routing/.
-unlock-from-other-goroutine	unlockFromOtherGoroutine	-	ok	-	sync,mutex,goroutines,channels	confluent	the lock is handed across goroutines legally (a Mutex is not owner-bound): the child unlocks then signals on an unbuffered channel, main receives and re-locks — the rendezvous orders every step, so 3 is the one member on every schedule; width 4 covers the 2-runnable bounds	width=4,sites=64,work=200000,engine=dedup,backedge=full
+unlock-from-other-goroutine	unlockFromOtherGoroutine	-	ok	-	sync,mutex,goroutines,channels	confluent	the lock is handed across goroutines legally (a Mutex is not owner-bound): the child unlocks then signals on an unbuffered channel, main receives and re-locks — the rendezvous orders every step, so 3 is the one member on every schedule	work=200000,engine=dedup
 # waitgroup-reuse: depth=128 under the STRICT-LANE DEPTH GUARD (memo P1,
 # [USER]-ruled 2026-09-03): the guard's first full run found 9-15 of its
 # ~20 wide scheduling picks served AFTER the fixed adversarial streams

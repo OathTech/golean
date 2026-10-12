@@ -151,6 +151,17 @@ expect_accept "well-formed confluent row" \
   '-\trangeFirstKey\t-\tok\t-\tmaps\tconfluent\twhy text\twidth=4'
 expect_accept "well-formed racy row" \
   '-\trangeFirstKey\t-\trace\t-\tmaps,race\tracy\t-\twidth=4'
+# Release-readiness item 27 (2026-10-12): under engine=dedup the whole-graph
+# certificate reads only work= (plus members=/statuses=) — width=/sites=/cap=/
+# backedge= are refused as inert by name, and width= is not required there.
+expect_reject "dedup row carrying inert width=/sites= (item 27)" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=4,sites=8,work=1000,engine=dedup' \
+  "inert under the whole-graph certificate"
+expect_reject "dedup row carrying inert backedge= (item 27)" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tconfluent\twhy text\twork=1000,engine=dedup,backedge=full' \
+  "inert under the whole-graph certificate"
+expect_accept "dedup row without width (item 27)" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twork=1000,members=1,engine=dedup'
 expect_accept "membership row with a members pin" \
   '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=16,members=3'
 # statuses= (status-diverse envelopes, audit F8/BUG-044; fixtures added
@@ -434,6 +445,18 @@ if [ "$WITH_GO" -eq 1 ]; then
       echo "ok: harness refuses the retired samples= param by name (F4b)"
     else
       echo "FAIL: harness did not refuse samples= as retired (F4b); row: ${row:-<none>}"
+      fail=1
+    fi
+    # Item 27 (2026-10-12): a dedup row carrying width= that bypasses the
+    # manifest is refused by the harness BY NAME — never handed to a CLI
+    # that refuses the flag, never silently dropped.
+    printf 'lane-i27\t%s\trangeFirstKey\t-\tok\tmaps,range,keys,loops,nondet\t-\tmembership\twhy\twidth=16,engine=dedup\n' "$GO_DIR" > "$TMP/manifest-i27.tsv"
+    GOLEAN_COVERAGE_ARTIFACTS="$ART" scripts/diff-coverage "$TMP/manifest-i27.tsv" >/dev/null 2>&1
+    row="$(tail -1 "$ART/latest.tsv" 2>/dev/null || true)"
+    if [[ "$row" == FAIL*"	manifest	"*"inert under the whole-graph certificate"* ]]; then
+      echo "ok: harness refuses a dedup row's inert width= by name (item 27)"
+    else
+      echo "FAIL: harness did not refuse a dedup row's inert width= (item 27); row: ${row:-<none>}"
       fail=1
     fi
 

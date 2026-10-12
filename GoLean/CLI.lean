@@ -186,6 +186,7 @@ private def usage : String :=
   "  golean coverage-observations --input <file> --function <name> [--arg-int <n> | --arg-bool <true|false> ...] [--fuel <n>] [--engine dedup]\n" ++
   "      [--max-width <B>] [--max-sites <D>] [--cap <N>] [--work-cap <W>] [--expect-status <ok|panic|ok,panic|race>]
       [--allow-nonterm-iters <per-branch-loop-re-entries>] [--backedge <full|k>]\n" ++
+  "      (--engine dedup reads only --work-cap and --expect-status; --fuel, --max-width, --max-sites, --cap and --backedge are refused there by name)\n" ++
   "  golean choice-trace --input <file> --function <name> [--arg-int <n> | --arg-bool <true|false> ...] [--fuel <n>] [--stream <spec>]... [--trace]\n" ++
   "  golean choice-trace --batch <manifest.tsv> --out <results.tsv> [--dump <file>] [--fuel <n>] [--skip <k>] [--take <n>]\n" ++
   "      (the labelled-consumption tracer; `golean choice-trace --help` for the stream specs and the manifest format)\n"
@@ -958,6 +959,11 @@ structure EnumArgs where
   `.multi` arrivals, consuming selects, mapIter, append spills) fail
   loud — such a row stays on the DFS. -/
   engine : Option String := none
+  /-- The flags given on the command line, in order (release-readiness
+  item 27, review F3 2026-10-12): the dedup path reads only `--work-cap`
+  and `--expect-status`, and refuses by name the DFS flags it cannot read
+  — a flag that parses but changes nothing would be a silent no-op. -/
+  given : List String := []
   deriving Repr
 
 private def parseEnumArgs : List String → EnumArgs → Except String EnumArgs
@@ -971,13 +977,13 @@ private def parseEnumArgs : List String → EnumArgs → Except String EnumArgs
   | "--arg-bool" :: value :: rest, cfg => do
       parseEnumArgs rest { cfg with args := cfg.args.push (.bool (← parseBoolLiteral value)) }
   | "--fuel" :: value :: rest, cfg => do
-      parseEnumArgs rest { cfg with fuel := (← parseJsonNat "--fuel" value) }
+      parseEnumArgs rest { cfg with fuel := (← parseJsonNat "--fuel" value), given := cfg.given ++ ["--fuel"] }
   | "--max-width" :: value :: rest, cfg => do
-      parseEnumArgs rest { cfg with maxWidth := (← parseJsonNat "--max-width" value) }
+      parseEnumArgs rest { cfg with maxWidth := (← parseJsonNat "--max-width" value), given := cfg.given ++ ["--max-width"] }
   | "--max-sites" :: value :: rest, cfg => do
-      parseEnumArgs rest { cfg with maxSites := (← parseJsonNat "--max-sites" value) }
+      parseEnumArgs rest { cfg with maxSites := (← parseJsonNat "--max-sites" value), given := cfg.given ++ ["--max-sites"] }
   | "--cap" :: value :: rest, cfg => do
-      parseEnumArgs rest { cfg with cap := (← parseJsonNat "--cap" value) }
+      parseEnumArgs rest { cfg with cap := (← parseJsonNat "--cap" value), given := cfg.given ++ ["--cap"] }
   | "--work-cap" :: value :: rest, cfg => do
       parseEnumArgs rest { cfg with workCap := (← parseJsonNat "--work-cap" value) }
   | "--allow-nonterm-iters" :: value :: rest, cfg => do
@@ -989,9 +995,9 @@ private def parseEnumArgs : List String → EnumArgs → Except String EnumArgs
       .error s!"--allow-nonterm is RETIRED (a per-branch budget in pool steps; it moved with every step-count change — C4, train r59): declare the budget in loop re-entries with --allow-nonterm-iters <K> (docs/2026-10-06_spin-bounds.md)\n{usage}"
   | "--backedge" :: value :: rest, cfg => do
       if value == "full" then
-        parseEnumArgs rest { cfg with backedgeMode := some none }
+        parseEnumArgs rest { cfg with backedgeMode := some none, given := cfg.given ++ ["--backedge"] }
       else
-        parseEnumArgs rest { cfg with backedgeMode := some (some (← parseJsonNat "--backedge" value)) }
+        parseEnumArgs rest { cfg with backedgeMode := some (some (← parseJsonNat "--backedge" value)), given := cfg.given ++ ["--backedge"] }
   | "--engine" :: value :: rest, cfg =>
       if value == "dedup" then
         parseEnumArgs rest { cfg with engine := some value }
@@ -1434,6 +1440,22 @@ structure ExpCtx where
   deliberately un-certified, and `backedgeCapped` prints it). -/
   backedgeMode : Option (Option Nat) := none
 
+/-- The ENUMERATORS' readout: a readout refusal (`readoutRefusal?` — BUG-099's
+synthetic runtime-error type observed in a result) is the ENUMERATION's
+refusal, in the shape of a step-level `unsupported` («cannot certify the
+observation set»), never a member. The member vocabulary is `ok`/`panic`/
+`race`; a refusal word printed as a member under exit 0 — as happened
+without `--expect-status`: the DFS recorded it as a leaf, the dedup path
+listed it beside `certified=checkCert` — would certify a set the machine
+cannot stand behind (the runtime lane's adversarial review, 2026-10-12,
+MEDIUM). `readoutObs` stays the one rendering seam. -/
+private def readoutMember (nameOf : TypeIdx → Option TypeId) (r : GoLean.GoCore.Readout)
+    (site : String) : Except String Json :=
+  match readoutRefusal? r with
+  | some stop =>
+      .error s!"result readout refused {site} — cannot certify the observation set: {renderStop stop}"
+  | none => .ok (readoutObs nameOf r).2
+
 /-- Record one terminal leaf: status discipline (audit F1; SET-valued
 since the arc-final audit F8 — see `EnumArgs.expectStatus`), observation
 dedup, cap check. -/
@@ -1563,9 +1585,10 @@ partial def poolDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
               match GoCore.Machine.loadMany ctx.ep.ctx σf resultLocs with
               | .error e =>
                   .error s!"result readout failed at a terminal: {renderStop e}"
-              | .ok vals =>
-                  let (st, obs) := readoutObs ctx.ep.ctx.types.nameOf? { values := vals.toArray, output := acc }
-                  recordLeaf ctx o p st obs p.length
+              | .ok vals => do
+                  let obs ← readoutMember ctx.ep.ctx.types.nameOf? { values := vals.toArray, output := acc }
+                    s!"at a terminal under pick assignment {p.reverse}"
+                  recordLeaf ctx o p "ok" obs p.length
           (match GoCore.Machine.runnableIdxs ctx.ep.ctx m.shared m.threads with
           | [] => exitLeaf out path
           | _ :: _ =>
@@ -1814,10 +1837,23 @@ of the unmodified `execProgLoop`). The DFS lane's accountant/sentinel/
 alias-ladder heuristics do not apply here; the trust boundary is the
 checker plus the compiled-code trust every differential artifact
 already carries. -/
+private def dedupInertFlags : List String :=
+  ["--fuel", "--max-width", "--max-sites", "--cap", "--backedge"]
+
 def runDedupObservations (ep : EnumProgram) (cfg : EnumArgs) : IO UInt32 := do
   if ep.initBody?.isSome then
     IO.eprintln "coverage-observations: --engine dedup does not support a $pkginit phase (refused fail-closed; use the DFS engine)"
     return 1
+  -- Release-readiness item 27 (review F3, 2026-10-12): the certificate is
+  -- about the WHOLE state graph, not a budgeted exploration — the DFS's
+  -- per-site width, site count, observation cap, run fuel and back-edge
+  -- mode have no reading here (`buildCert` takes the work budget only).
+  -- Before the fix these flags parsed and changed nothing; a silent no-op
+  -- is refused by name instead (exit 2: a usage error, like --max-width 0).
+  let inert := cfg.given.filter dedupInertFlags.contains
+  if !inert.isEmpty then
+    IO.eprintln s!"coverage-observations: --engine dedup reads only --work-cap (the state-graph work budget) and --expect-status: {", ".intercalate inert} given — inapplicable to the whole-graph certificate (not a budgeted exploration), refused by name rather than ignored (release-readiness item 27)"
+    return 2
   -- Refuse, never ignore: nonterm accounting under dedup is an open
   -- ruling (M-9) — a certificate is silent about divergent branches,
   -- so accepting the flag here would answer M-9 silently (launch
@@ -1847,7 +1883,13 @@ def runDedupObservations (ep : EnumProgram) (cfg : EnumArgs) : IO UInt32 := do
       -- constructor table for panic/race; fatal/deadlock members are still
       -- refused upstream (engine + checker), so no new word is emitted.
       -- BUG-099: an `.ok` member whose readout observes the synthetic
-      -- runtime-error type carries the refusal's status word, not `ok`.
+      -- runtime-error type is the ENUMERATION's refusal (`readoutMember`):
+      -- never a member, never a status word beside `certified=checkCert`.
+      for t in cert.members do
+        if let .ok vs := t.1 then
+          if let .error why := readoutMember ep.ctx.types.nameOf? { values := vs.toArray } "on a certified member" then
+            IO.eprintln s!"coverage-observations: {why}"
+            return 1
       let obsOf : GoCore.Machine.Obs → String × Json := fun o =>
         match o with
         | .ok vs => readoutObs ep.ctx.types.nameOf? { values := vs.toArray }
@@ -1868,7 +1910,7 @@ def runDedupObservations (ep : EnumProgram) (cfg : EnumArgs) : IO UInt32 := do
       let lines := (cert.members.map (fun t => (obsJson t.1).compress)).qsort (· < ·)
       for line in lines do
         IO.println line
-      IO.eprintln s!"coverage-observations: observations={cert.members.size} steps={stats.edges} probes=0 sites={stats.nodes} leaves=0 maxdepth=0 width={cfg.maxWidth} engine=dedup nodes={stats.nodes} edges={stats.edges} dedupHits={stats.dedupHits} certified=checkCert"
+      IO.eprintln s!"coverage-observations: observations={cert.members.size} steps={stats.edges} probes=0 sites={stats.nodes} leaves=0 maxdepth=0 width=- engine=dedup nodes={stats.nodes} edges={stats.edges} dedupHits={stats.dedupHits} certified=checkCert"
       return 0
 
 private def runCoverageObservations (args : List String) : IO UInt32 := do

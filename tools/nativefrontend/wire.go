@@ -929,20 +929,20 @@ func (e *emitter) emitInstantiatedNamed(ty *types.Named) (any, error) {
 // can meet it (`_ = nil` and `for range nil` are compile errors). The whole-
 // corpus export comparison that derived this list (1386 packages, old vs new
 // frontend) found exactly these: every other difference was a `nil`.
-func (e *emitter) noSingleWireType(expr ast.Expr) (why string, ok bool) {
+func (e *emitter) noSingleWireType(expr ast.Expr) bool {
 	tv, found := e.info.Types[expr]
 	if !found {
-		return "", false
+		return false
 	}
 	switch t := tv.Type.(type) {
-	case *types.Tuple:
-		return "tuple-typed call", true
-	case *types.Basic:
+	case *types.Tuple: // a multi-valued or no-result call
+		return true
+	case *types.Basic: // the bare nil literal
 		if t.Kind() == types.UntypedNil {
-			return "untyped nil literal", true
+			return true
 		}
 	}
-	return "", false
+	return false
 }
 
 // typeOf returns the emitted wire type of an expression from go/types.

@@ -130,7 +130,13 @@ Optional lane columns (membership lane, arc slice 3,
   consumption depth, default 8), `cap` (max distinct observations,
   default 64), `work` (enumerator work cap, default 200000), `members`
   (the certified set's exact cardinality — a mechanical pin; also the
-  sampling rule's early-stop target, below). `samples=` is RETIRED
+  sampling rule's early-stop target, below). Under `engine=dedup` (the
+  verified whole-graph certificate) only `work=`, `members=` and
+  `statuses=` are read: `width=`, `sites=`, `cap=` and `backedge=` are
+  REFUSED there as inert — by the manifest, by the harness, and at the CLI
+  (`--max-width`/`--max-sites`/`--cap`/`--fuel`/`--backedge` with
+  `--engine dedup` exit 2 by name; release-readiness item 27, 2026-10-12)
+  — and `width=` is not required. `samples=` is RETIRED
   (2026-09-03): both `scripts/coverage-manifest` and the harness refuse
   it by name — the Go-side draw budget is no longer a per-row count.
 - **Membership sampling rule** ([USER]-ruled gate change, Mike
@@ -291,8 +297,9 @@ covered by the fixed streams):
 
 - Scheduling rows routed to `lane=confluent` (3):
   `goroutines/pipeline/{two-stage,buffered-stage}`,
-  `spec-examples-stmt/go-statements/func-literal` — `engine=dedup`,
-  `backedge=full`, |set| = 1 checker-accepted; 20 gc draws each
+  `spec-examples-stmt/go-statements/func-literal` — `engine=dedup`
+  (the `backedge=full` declared then was inert under dedup, retired with
+  item 27), |set| = 1 checker-accepted; 20 gc draws each
   (plain/-race alternating) inside the singleton.
 - Scheduling rows declaring `depth=N` (5) — FINDING: their state
   graphs do NOT close under `engine=dedup` within the fail-loud caps
@@ -337,7 +344,8 @@ covered by the fixed streams):
   `core/unseq-stage-d-0920`, [AGENT]; `docs/2026-09-20_unseq-stage-d-design.md`
   §3): `spec-examples-stmt/continue-label` — the strict `depth=128` the
   Stage C pilot declared (w=18 `unseqNext` picks, a silent singleton) →
-  `lane=confluent`, `engine=dedup` (width 4, sites 64, work 200000). Route α
+  `lane=confluent`, `engine=dedup` (work 200000; the width/sites declared
+  then were inert under dedup, retired with item 27). Route α
   certifies the `unseq` scheduler's pick in the dedup engine (`innerVecs`
   N-PICK; `checkCert_slowObs` unchanged in statement), so the spot check
   became a certificate: 5122 unique states / 5145 edges / 24 dedup hits,

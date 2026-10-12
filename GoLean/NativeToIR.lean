@@ -1012,10 +1012,13 @@ consumer asks for it (the range collection temporary `$rcoll`, the blank-
 assignment discard temporaries `$blank<i>`), and NEVER reconstructed. The
 frontend puts `type` on every single-valued expression node (`emitExpr`,
 tools/nativefrontend/emit.go — a `typeOf` failure there is the
-declaration's refusal, not an omitted key); only a multi-valued call node
-(a tuple type, which no wire type spells) carries none, and no consumer
-of THIS function reads one — those temporaries are typed from the call's
-`resultTypes` vector (BUG-110). So an absent key here is a forged or
+declaration's refusal, not an omitted key). The nodes carrying none are
+the CALL nodes built in assignment position outside `emitExpr` — every
+one of them, single-valued included (`_ = p.sum()`), as well as the
+multi-valued tuple no wire type spells — and the bare `nil` literal; no
+consumer of THIS function reads one: the call temporaries are typed from
+the call's `resultTypes` vector (BUG-110) and routed before this function,
+and `_ = nil` / `for range nil` are compile errors. So an absent key here is a forged or
 mutated wire, or a frontend that dropped a lowering failure: refused by
 name (release-readiness punch list item 2, 2026-10-12; the `| none =>
 pure (.int .int)` fallback it replaces declared the temporary `int`

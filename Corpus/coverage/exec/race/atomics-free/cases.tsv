@@ -6,7 +6,7 @@
 # twins); every enumerated
 # path must be race-free. Confluent where the observation is
 # schedule-independent, membership where it is not.
-atomic-vs-atomic	atomicVsAtomic	-	ok	-	sync,atomics,ints,goroutines,channels,race	confluent	two atomic Adds on one word never conflict (both atomic — mem#model / TSan's both_read_or_atomic); the channel join orders the final Load	width=4,sites=32,work=4000000,engine=dedup
+atomic-vs-atomic	atomicVsAtomic	-	ok	-	sync,atomics,ints,goroutines,channels,race	confluent	two atomic Adds on one word never conflict (both atomic — mem#model / TSan's both_read_or_atomic); the channel join orders the final Load	work=4000000,engine=dedup
 plain-read-vs-load	plainReadVsLoad	-	ok	-	sync,atomics,ints,goroutines,channels,closures,race	confluent	a plain read beside an atomic read is read/read — no write-like operand, no race by mem#model; nothing writes so the value is fixed	width=4,sites=64
 publish-acquire	publishAcquire	-	ok	-	sync,atomics,ints,goroutines,closures,race,nondet	membership	the store-release/load-acquire pair: on the path where the flag is seen the plain data read is HB-after the plain write (mem#atomic's synchronized-before), on the other path no data read happens — race-free on every path; the SC-excluded stale-data member 100 is absent; admitted {0, 1}	width=4,sites=32
 rmw-acquire	rmwAcquire	-	ok	-	sync,atomics,ints,goroutines,closures,race,nondet	membership	an RMW (Add 0) observing the store inherits the storer's clock (TSan mo_acq_rel; mem#atomic) — the conditional plain read is ordered; admitted {0, 1}	width=4,sites=32

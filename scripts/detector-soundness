@@ -318,15 +318,20 @@ run_row() {
       esac
     done
     local missing=""
-    [[ -z "$width" ]] && missing="width="
-    [[ -z "$sites" ]] && missing="${missing:+$missing,}sites="
+    # engine=dedup rows declare no width/sites (release-readiness item 27:
+    # the whole-graph certificate reads only the work budget).
+    if [[ -z "$engine" ]]; then
+      [[ -z "$width" ]] && missing="width="
+      [[ -z "$sites" ]] && missing="${missing:+$missing,}sites="
+    fi
     if [[ -n "$missing" ]]; then
       m_verdict="REFUSED:params-omit-$missing"
       detail="${detail:+$detail; }params '$params' omit $missing — the runner will not invent an enumeration bound; declare it in cases.tsv (lane $lane)"
     else
-      local e_args=(coverage-observations --input "$wire" --function "$fn" --max-width "$width" --max-sites "$sites" --cap "$cap" --work-cap "$work")
+      local e_args=(coverage-observations --input "$wire" --function "$fn" --work-cap "$work")
+      [[ -z "$engine" ]] && e_args+=(--max-width "$width" --max-sites "$sites" --cap "$cap")
       [[ -n "$engine" ]] && e_args+=(--engine "$engine")
-      [[ -n "$backedge" ]] && e_args+=(--backedge "$backedge")
+      [[ -n "$backedge" && -z "$engine" ]] && e_args+=(--backedge "$backedge")
       [[ -n "$iters" && -z "$engine" ]] && e_args+=(--allow-nonterm-iters "$iters")
       e_args+=(${args[@]+"${args[@]}"})
       run_with_timeout "$ENUM_TIMEOUT" "$GOLEAN_BIN" "${e_args[@]}" > "$d/observations.txt" 2> "$d/enum-stats.txt"

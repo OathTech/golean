@@ -26,7 +26,7 @@ closed-struct-zero	closedStructChannelZero	-	ok	-	channels,close,structs,zero_va
 # closes the state graph in 18,694 edges (<1 s), |set|=1 checker-
 # accepted, backedge=full; 20 gc draws (plain/-race alternating) inside
 # the singleton. docs/evidence/2026-09-03_strict-routing/.
-ping-pong	pingPong	-	ok	-	channels,goroutines,range,close	confluent	strict request/reply lockstep on two unbuffered channels: each ping rendezvouses before its pong is received, the range/close ends the worker, and the final receive on the closed pong is fixed (!ok) — one member on every schedule; width 4 covers the 2-runnable scheduler and back-edge bounds	width=4,sites=64,work=200000,engine=dedup,backedge=full
+ping-pong	pingPong	-	ok	-	channels,goroutines,range,close	confluent	strict request/reply lockstep on two unbuffered channels: each ping rendezvouses before its pong is received, the range/close ends the worker, and the final receive on the closed pong is fixed (!ok) — one member on every schedule	work=200000,engine=dedup
 fallthrough-middle-default-1	fallthroughIntoMiddleDefault	1	ok	-	switch,fallthrough,default
 fallthrough-middle-default-2	fallthroughIntoMiddleDefault	2	ok	-	switch,fallthrough,default
 fallthrough-middle-default-9	fallthroughIntoMiddleDefault	9	ok	-	switch,fallthrough,default

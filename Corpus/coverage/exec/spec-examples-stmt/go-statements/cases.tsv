@@ -12,5 +12,5 @@
 # wide picks fully covered (named-call 3 default / 6 adversarial, no
 # exhaustion). Evidence: docs/evidence/2026-09-03_strict-routing/.
 named-call	goStatementNamedCall	-	ok	-	goroutines,channels,make
-func-literal	goStatementFuncLiteral	-	ok	-	goroutines,channels,closures,loops,bools	confluent	the unbuffered rendezvous fixes each of the three receives to the literal's next send (true every time), the count is 3 on every schedule, and the sender's unending loop only ever parks on its next send (leaked at return; the exit-window pick does not reach the observable); width 4 covers the 2-runnable scheduler and back-edge bounds	width=4,sites=64,work=200000,engine=dedup,backedge=full
+func-literal	goStatementFuncLiteral	-	ok	-	goroutines,channels,closures,loops,bools	confluent	the unbuffered rendezvous fixes each of the three receives to the literal's next send (true every time), the count is 3 on every schedule, and the sender's unending loop only ever parks on its next send (leaked at return; the exit-window pick does not reach the observable)	work=200000,engine=dedup
 params-at-go	goStatementParamsEvaluatedAtGo	-	ok	-	goroutines,channels,evaluation_order,closures

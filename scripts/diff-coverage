@@ -882,8 +882,10 @@ run_case_rows() {
     local conf_dir="$OUT/membership/$id"
     mkdir -p "$conf_dir"
     local conf_args=(coverage-observations --input "$wire_json" --function "$function_name"
-      --max-width "$width" --max-sites "$sites" --cap "$obs_cap" --work-cap "$work"
-      --expect-status "$expected_status")
+      --work-cap "$work" --expect-status "$expected_status")
+    if [[ -z "$engine" ]]; then
+      conf_args+=(--max-width "$width" --max-sites "$sites" --cap "$obs_cap")
+    fi
     if [[ -n "$backedge" ]]; then
       conf_args+=(--backedge "$backedge")
     fi
@@ -1008,8 +1010,10 @@ run_case_rows() {
     local racy_dir="$OUT/membership/$id"
     mkdir -p "$racy_dir"
     local racy_args=(coverage-observations --input "$wire_json" --function "$function_name"
-      --max-width "$width" --max-sites "$sites" --cap "$obs_cap" --work-cap "$work"
-      --expect-status race)
+      --work-cap "$work" --expect-status race)
+    if [[ -z "$engine" ]]; then
+      racy_args+=(--max-width "$width" --max-sites "$sites" --cap "$obs_cap")
+    fi
     if [[ -n "$backedge" ]]; then
       racy_args+=(--backedge "$backedge")
     fi
@@ -1442,14 +1446,17 @@ membership_go_observation() {
 # Parse the lane params into width/sites/obs_cap/work/members.
 # Validated by coverage-manifest AND re-validated here (audit F4: a value
 # that reaches the harness malformed — e.g. sites=0 — must fail loud,
-# never degrade to a zero-oracle pass). Width has NO default (audit F2a),
+# never degrade to a zero-oracle pass). Width has NO default (audit F2a)
+# on the DFS; under engine=dedup width=/sites=/cap=/backedge= are REFUSED
+# as inert (release-readiness item 27: the whole-graph certificate reads
+# only the work budget),
 # and since slice 4 the assertion is checked MECHANICALLY per site by the
 # enumerator. `samples=` is RETIRED (the 2026-09-03 sampling rule sets
 # the draw budget by run mode — see MEMBERSHIP_DRAWS) and refused here
 # by name, so a row that still carries it cannot pass with a budget it
 # did not get. Returns nonzero after reporting on a bad shape.
 parse_lane_params() {
-  width="" sites=8 obs_cap=64 work=200000 members="" statuses="$expected_status" backedge="" iters="" engine=""
+  width="" sites=8 obs_cap=64 work=200000 members="" statuses="$expected_status" backedge="" iters="" engine="" given=""
   if [[ "$params" != "-" ]]; then
     local kv key value
     IFS=',' read -r -a kvs <<< "$params"
@@ -1507,6 +1514,7 @@ parse_lane_params() {
           return 1
         fi
         backedge="$value"
+        given="$given backedge"
         continue
       fi
       if [[ "$key" == "nonterm" ]]; then
@@ -1568,6 +1576,7 @@ parse_lane_params() {
         report_fail "$id" "$features" "manifest" "lane param $key must be a positive integer: $kv"
         return 1
       fi
+      given="$given $key"
       case "$key" in
         width) width="$value" ;;
         sites) sites="$value" ;;
@@ -1581,7 +1590,21 @@ parse_lane_params() {
       esac
     done
   fi
-  if [[ -z "$width" ]]; then
+  if [[ -n "$engine" ]]; then
+    # Release-readiness item 27 (review F3, 2026-10-12): the dedup
+    # certificate is about the WHOLE state graph — the DFS's width/sites/
+    # cap/backedge have no reading there (the CLI refuses the flags by
+    # name, exit 2). A declaration the run never reads is refused here
+    # too, never carried as decoration; width= is not required.
+    local inert="" k
+    for k in width sites cap backedge; do
+      [[ " $given " == *" $k "* ]] && inert="${inert:+$inert,}$k="
+    done
+    if [[ -n "$inert" ]]; then
+      report_fail "$id" "$features" "manifest" "engine=dedup reads only work= (plus members=/statuses=): $inert inert under the whole-graph certificate — remove it (release-readiness item 27)"
+      return 1
+    fi
+  elif [[ -z "$width" ]]; then
     report_fail "$id" "$features" "manifest" "$lane case must declare an explicit width=<B> (author-asserted >= every consumption-site bound; mechanically checked per site)"
     return 1
   fi
@@ -1719,8 +1742,10 @@ run_membership_case_rows() {
   # set. Status-diverse envelopes (BUG-044's main-exit window) declare
   # statuses=ok+panic and pass the whole set.
   local enum_args=(coverage-observations --input "$wire_json" --function "$function_name"
-    --max-width "$width" --max-sites "$sites" --cap "$obs_cap" --work-cap "$work"
-    --expect-status "${statuses//+/,}" ${int_flags+"${int_flags[@]}"})
+    --work-cap "$work" --expect-status "${statuses//+/,}" ${int_flags+"${int_flags[@]}"})
+  if [[ -z "$engine" ]]; then
+    enum_args+=(--max-width "$width" --max-sites "$sites" --cap "$obs_cap")
+  fi
   if [[ -n "$backedge" ]]; then
     enum_args+=(--backedge "$backedge")
   fi

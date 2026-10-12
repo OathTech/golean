@@ -710,6 +710,52 @@ for sub in coverage-observations choice-trace; do
     echo "ok [$sub $name] refused (exit 1), naming: ${parts[*]:2}"
   done
 done
+# Release-readiness item 27 (review F3, 2026-10-12): `--engine dedup` reads only `--work-cap` and `--expect-status`.
+# The DFS's `--fuel`/`--max-width`/`--max-sites`/`--cap`/`--backedge` were accepted and silently ignored on that
+# path; now each is refused by name (exit 2, a usage error — the certificate is about the whole state graph, not a
+# budgeted exploration). Positive control: the bare dedup call certifies pick(1, true, false, 2) = 103.
+rc=0; out="$("$GOLEAN" coverage-observations --input "$gate_scratch/ab.json" --function pick --engine dedup \
+  --arg-int 1 --arg-bool true --arg-bool false --arg-int 2 2>&1)" || rc=$?
+if [[ $rc -ne 0 || "$out" != *'"value":103}'* || "$out" != *'engine=dedup'*'certified=checkCert'* ]]; then
+  echo "check-wire-boundary: FAIL [dedup positive] — the bare --engine dedup call did not certify 103 (exit $rc): $out" >&2; exit 1
+fi
+echo "ok [dedup positive] --engine dedup certifies pick(1, true, false, 2) = 103"
+for control in \
+    'dedup-fuel|--fuel 1000|--fuel' \
+    'dedup-max-width|--max-width 1|--max-width' \
+    'dedup-max-sites|--max-sites 8|--max-sites' \
+    'dedup-cap|--cap 64|--cap' \
+    'dedup-backedge|--backedge full|--backedge' \
+    'dedup-two-flags|--max-width 1 --cap 64|--max-width, --cap'; do
+  IFS='|' read -r -a parts <<< "$control"
+  name="${parts[0]}"; read -r -a cargs <<< "${parts[1]}"
+  rc=0; out="$("$GOLEAN" coverage-observations --input "$gate_scratch/ab.json" --function pick --engine dedup \
+    "${cargs[@]}" --arg-int 1 --arg-bool true --arg-bool false --arg-int 2 2>&1)" || rc=$?
+  if [[ $rc -ne 2 || "$out" != *'--engine dedup reads only --work-cap'* || "$out" != *"${parts[2]} given"* ]]; then
+    echo "check-wire-boundary: FAIL [$name] — expected exit 2 naming '${parts[2]}' as refused under --engine dedup (exit $rc): $out" >&2; exit 1
+  fi
+  echo "ok [$name] refused (exit 2), naming ${parts[2]}"
+done
+# The runtime lane's adversarial review (2026-10-12, MEDIUM): a readout the seam refuses (BUG-099's recovered runtime
+# error observed as `any`) is the ENUMERATION's refusal on both engines — exit 1, «cannot certify the observation set»,
+# naming BUG-099 — never a member printed under exit 0 (before: without --expect-status the DFS recorded it as a leaf
+# and the dedup path listed it beside certified=checkCert). Positive control: `plain` certifies {7} on both engines.
+# Fixture Tests/wire-boundary-readout/main.go.
+GOCACHE="$ROOT/artifacts/go-build-cache" GO111MODULE=off \
+  go run ./tools/nativefrontend --dir Tests/wire-boundary-readout --out "$gate_scratch/readout.json"
+for eng in dfs dedup; do
+  eargs=(); [[ "$eng" == dedup ]] && eargs=(--engine dedup)
+  rc=0; out="$("$GOLEAN" coverage-observations --input "$gate_scratch/readout.json" --function plain ${eargs[@]+"${eargs[@]}"} 2>&1)" || rc=$?
+  if [[ $rc -ne 0 || "$out" != *'"value":7}'* ]]; then
+    echo "check-wire-boundary: FAIL [readout positive $eng] — plain did not certify 7 (exit $rc): $out" >&2; exit 1
+  fi
+  echo "ok [readout positive $eng] plain certifies 7"
+  rc=0; out="$("$GOLEAN" coverage-observations --input "$gate_scratch/readout.json" --function recoveredAsAny ${eargs[@]+"${eargs[@]}"} 2>&1)" || rc=$?
+  if [[ $rc -ne 1 || "$out" != *'cannot certify the observation set'* || "$out" != *'BUG-099'* || "$out" == *'"status":"unsupported"'* ]]; then
+    echo "check-wire-boundary: FAIL [readout refusal $eng] — expected exit 1 and the enumeration's refusal naming BUG-099, no member line (exit $rc): $out" >&2; exit 1
+  fi
+  echo "ok [readout refusal $eng] the BUG-099 readout is the enumeration's refusal (exit 1), no member printed"
+done
 # BUG-120 (2026-10-08): a MISSING input file is a named refusal on every subcommand that reads one — never an
 # uncaught IO exception. native-json-run: a status:error JSON naming the path; the enumerators: their stderr line;
 # choice-trace --batch: its manifest. Each must exit 1 and name the path and the cause.
@@ -754,4 +800,4 @@ if [[ $rc -ne 1 || "$out" != *"choice-trace: $nodir/dump.tsv: cannot write outpu
   echo "check-wire-boundary: FAIL [choice-trace unwritable-dump] — expected exit 1 and a refusal naming the dump path (exit $rc): $out" >&2; exit 1
 fi
 echo "ok [choice-trace unwritable-dump] refused (exit 1), naming the dump path"
-echo 'Wire boundary gate: PASS (11 byte-level controls + 56 unseq-node controls + 13 promotion-record controls + 16 B6 numeric-locals controls + 5 rand-intn controls + 4 type-key controls + 10 entry-argument controls + 12 enumerator entry-argument controls + 5 missing-input controls + 2 unwritable-output controls through the real CLI)'
+echo 'Wire boundary gate: PASS (11 byte-level controls + 56 unseq-node controls + 13 promotion-record controls + 16 B6 numeric-locals controls + 5 rand-intn controls + 4 type-key controls + 10 entry-argument controls + 12 enumerator entry-argument controls + 5 missing-input controls + 2 unwritable-output controls + 7 dedup-flag controls + 4 readout-refusal controls through the real CLI)'

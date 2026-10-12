@@ -17,7 +17,7 @@ compute	forkJoinCompute	-	ok	-	goroutines,channels,loops	confluent	the worker's 
 # |set| = 1 (checker-accepted); gc's draw is the singleton 34 on every run (20/20 under GOMAXPROCS 1/8, default and -N -l). The lane
 # and the why are unchanged; work=200000 is ~10× the measured node+edge work. Alternative named: raise the DFS work cap — not taken,
 # the per-schedule DFS re-explores what the pick's merge folds.
-two-workers-own-chans	forkJoinTwoWorkersOwnChans	-	ok	-	goroutines,channels	confluent	each worker owns its channel; both joins complete before the readout on every schedule; the sweep's pick (the read of `b` vs the receive on `a`) is outcome-equivalent, engine=dedup certifies |set| = 1 (9015 unique states)	width=4,sites=24,work=200000,engine=dedup
+two-workers-own-chans	forkJoinTwoWorkersOwnChans	-	ok	-	goroutines,channels	confluent	each worker owns its channel; both joins complete before the readout on every schedule; the sweep's pick (the read of `b` vs the receive on `a`) is outcome-equivalent, engine=dedup certifies |set| = 1 (9015 unique states)	work=200000,engine=dedup
 args-eval-now	goArgsEvalNow	-	ok	-	goroutines,channels,evaluation_order	confluent	spawn arguments evaluate in the spawner before the fork (spec), so the child sees the pre-mutation value on every schedule	width=4,sites=8
 closure-capture	goClosureCapture	-	ok	-	goroutines,channels,closures	confluent	the captured cell is written only before the spawn and read only by the child; the join orders the readout	width=4,sites=8
 method-callee	goMethodCallee	-	ok	-	goroutines,channels,methods	confluent	the method child communicates only through the join channel	width=4,sites=8

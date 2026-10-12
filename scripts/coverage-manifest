@@ -268,7 +268,7 @@ validate_lane_params() {
   local params="$2"
   local lane_ctx="${3:-}"
   local expected_status_ctx="${4:-}"
-  local kv key value seen=""
+  local kv key value seen="" has_engine=0 inert=""
   if [[ "$params" == "-" ]]; then
     return 0
   fi
@@ -315,6 +315,10 @@ validate_lane_params() {
       return 1
     fi
     seen="$seen $key"
+    case "$key" in
+      width|sites|cap|backedge) inert="${inert:+$inert,}$key=" ;;
+      engine) has_engine=1 ;;
+    esac
     if [[ "$key" == "statuses" ]]; then
       # Status-diverse envelope declaration (audit F8) — its own shape,
       # not an integer. Membership-only: the other lanes' claims are
@@ -384,6 +388,14 @@ validate_lane_params() {
       return 1
     fi
   done
+  if [[ "$has_engine" == 1 && -n "$inert" ]]; then
+    # Release-readiness item 27 (review F3, 2026-10-12): under engine=dedup
+    # the whole-graph certificate reads only work= (plus members=/statuses=);
+    # width=/sites=/cap=/backedge= were carried as decoration and never read
+    # (the CLI refuses the flags by name, exit 2). Refused here too.
+    echo "coverage-manifest: $cases_file: engine=dedup reads only work= (plus members=/statuses=): $inert inert under the whole-graph certificate — remove it (release-readiness item 27)" >&2
+    return 1
+  fi
   return 0
 }
 
@@ -564,7 +576,7 @@ while IFS= read -r cases_file; do
         # slice-4 stepwise engine the assertion is checked MECHANICALLY
         # at every explored site; the declaration discipline stands.)
         case ",$params," in
-          *,width=*) ;;
+          *,width=*|*,engine=dedup,*) ;;
           *)
             echo "coverage-manifest: $cases_file: lane=membership requires an explicit width=<B> in params (author-asserted >= every consumption-site bound; argue the bound in why)" >&2
             bad=1
@@ -606,7 +618,7 @@ while IFS= read -r cases_file; do
             ;;
         esac
         case ",$params," in
-          *,width=*) ;;
+          *,width=*|*,engine=dedup,*) ;;
           *)
             echo "coverage-manifest: $cases_file: lane=confluent requires an explicit width=<B> in params" >&2
             bad=1
@@ -636,7 +648,7 @@ while IFS= read -r cases_file; do
             ;;
         esac
         case ",$params," in
-          *,width=*) ;;
+          *,width=*|*,engine=dedup,*) ;;
           *)
             echo "coverage-manifest: $cases_file: lane=racy requires an explicit width=<B> in params" >&2
             bad=1

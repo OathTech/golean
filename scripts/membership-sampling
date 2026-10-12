@@ -196,7 +196,9 @@ while IFS=$'\t' read -r id go_dir fn args status features reason lane why params
     printf '%s\t-\t%s\t-\t-\t-\t-\t-\t-\t-\t-\t-\tFRONTEND EXPORT FAILED\n' "$id" "$samples" >> "$SUMMARY"
     continue
   fi
-  enum_args=(coverage-observations --input "$wire" --function "$fn" --max-width "$width" --max-sites "$sites" --cap "$obs_cap" --work-cap "$work" --expect-status "${statuses//+/,}")
+  enum_args=(coverage-observations --input "$wire" --function "$fn" --work-cap "$work" --expect-status "${statuses//+/,}")
+  # engine=dedup reads only the work budget (release-readiness item 27): the DFS caps are refused there by name.
+  [[ -z "$engine" ]] && enum_args+=(--max-width "$width" --max-sites "$sites" --cap "$obs_cap")
   [[ -n "$backedge" ]] && enum_args+=(--backedge "$backedge")
   [[ -n "$engine" ]] && enum_args+=(--engine "$engine")
   [[ -n "$iters" ]] && enum_args+=(--allow-nonterm-iters "$iters")

@@ -8089,15 +8089,16 @@ version-tracked red row. Fix criterion: a corpus row over the program above PASS
   controls of `scripts/check-wire-boundary` — the results path and the dump path under a missing directory, each
   refused `choice-trace: <path>: cannot write output: <OS error>`, exit 1, no `uncaught`)
 
+- Discovered: 2026-10-08, the bug119-120 lane's Opus adversarial audit (verdict MERGE-CLEAN; an informational note,
+  not a blocking finding), as relayed by the [AGENT] coordinator; rowed by the [AGENT] train worker r75 — «every
+  detected gap is rowed», [USER] Mike 2026-09-03, relayed.
+
 FIXED [AGENT] 2026-10-12: exactly the fix plan below — `CLI.writeOutputText` / `CLI.appendOutputLines`
 (`GoLean/CLI.lean`, beside `readInputText`) catch the OS error and refuse `<path>: cannot write output: <OS error>`
 (the path named once, Lean's `file:` line dropped by the same `oneLine`); `runBatch` routes the two headers and every
 per-case append through them, a per-case failure attributed `case <id>: …` (an unparsable manifest line's ERROR record
 `manifest line <n> (unparsable): …`), returned as the subcommand's `.error` → `choice-trace: …`, exit 1. Fix criterion
 met: both repro commands print the named refusal, exit 1, no `uncaught exception` (the two controls above run them).
-- Discovered: 2026-10-08, the bug119-120 lane's Opus adversarial audit (verdict MERGE-CLEAN; an informational note,
-  not a blocking finding), as relayed by the [AGENT] coordinator; rowed by the [AGENT] train worker r75 — «every
-  detected gap is rowed», [USER] Mike 2026-09-03, relayed.
 
 WHAT: BUG-120's fix made every input READ refuse by name; the batch loop's WRITES are still unguarded — the results
 header (`IO.FS.writeFile outPath`), the `--dump` header (`IO.FS.writeFile dp`) and the per-case appends
