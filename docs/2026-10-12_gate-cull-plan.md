@@ -504,6 +504,11 @@ was done on the branch (fixes landed as the commit after the evidence triage):
   **NIT 9** (lowerdiag blocks, not a speedbump) recorded as a deviation
   above; **NIT 10** (`--rehash` dropped; `GOLEAN_ALLOW_NO_DIFF` under
   `--diff`) pre-existing, no fail-open path, left.
+- **The merge gate at the final tip `dde758e8`** (audit fixes landed, clean
+  tree, box-wide build lock held): `capped scripts/ci --diff` RESULT: PASS,
+  580 s wall (02:57:10Z to 03:06:50Z); differential 3936/3936 no regression
+  (3705/231), negative 394/394, every gate step and every speedbump ok, the
+  rebuilt binary (no provenance macro) under test.
 - **Cuts the reviewer would restore: none.** Verified line-equivalence of
   `judge_record` and `repin_guard` with the old gate, the scans, the
   de-indented differential lanes, the fresh-fixture method-identity read,
