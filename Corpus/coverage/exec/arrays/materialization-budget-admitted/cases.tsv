@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features
+# The admitted side of BUG-078's nested materialization budget
+# (arrayFootprintBudget = 1<<24, fail-closed 2026-10-12). Measured on
+# main's binary at c266ce6b under `capped` (strict rows carry no why;
+# the numbers live here and in main.go):
+#   nested-at-budget: [4096][4096]byte = exactly 1<<24 leaves, admitted
+#     (strict `>`); one element store 2.01 s, its literal 4.11 s.
+#   make-large-elem: make([][1024]byte, 1<<13) — count inside
+#     sliceCapBudget (BUG-090), 2^23 leaves, 1.01 s.
+nested-at-budget	nestedAtBudget	-	ok	-	arrays
+make-large-elem	makeLargeElem	-	ok	-	arrays,slices,make

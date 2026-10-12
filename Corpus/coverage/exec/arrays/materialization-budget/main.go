@@ -2,7 +2,7 @@ package main
 
 // RED BY DESIGN (BUG-078, $GOROOT/test harvest 2026-09-01,
 // issue34395.go): array types past the interpreter's materialization
-// budget (1<<20 elements, GoLean/NativeToIR.lean arrayLenBudget)
+// budget (1<<16 elements since 2026-09-01, GoLean/NativeToIR.lean arrayLenBudget)
 // refuse BY NAME at the wire boundary instead of grinding the
 // quadratic element-wise normalize path to a native stack overflow
 // (exit 134 — a process abort is not a cause-naming refusal). The

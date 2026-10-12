@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+# over-budget: RED BY DESIGN — the machine refuses array TYPES whose
+# footprint through nesting exceeds 1<<24 scalar elements with a
+# cause-naming message (BUG-078 residual (3), fail-closed 2026-10-12:
+# [1024][1024][128]byte is 2^27 leaves; each dimension is inside the
+# per-dimension bound); gc runs it fine, so the row is a standing
+# machine-refuses/gc-succeeds delta (visible red, never a wrong answer,
+# never a wall-clock kill). A decode refusal is per WIRE, so the type
+# lives alone in this directory.
+over-budget	nestedOverBudget	-	ok	-	arrays,globals

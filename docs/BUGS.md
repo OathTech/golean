@@ -4592,7 +4592,18 @@ the issue53619 family was wrong.
   1<<20 at the slice; RE-DERIVED to 1<<16 at the audit fix round
   2026-09-01 (SHOULD-FIX 2) — the 1<<20 figure had been measured on
   the default-value path, not the literal/store path the bug names;
-  the constant's docstring now states each number's path)
+  the constant's docstring now states each number's path. RESIDUALS
+  (2)/(3) FAIL-CLOSED BY NAME 2026-10-12, lane
+  `core/bug078-nested-budget-1012` — release-readiness item 30, [USER]
+  Mike 2026-10-12 «30: can we fail-close until we fix?», relayed by the
+  [AGENT] coordinator: the decoder's NESTED bound `arrayFootprintBudget`
+  (1<<24 scalar elements, the type's footprint through nesting, defined
+  entries and struct fields) and BUG-090's `sliceCapBudget`; the
+  paragraph «FAIL-CLOSED (2026-10-12)» at the end of this entry has the
+  measurements, the one residual that is NOT closed — the large-element
+  `make`, (2b) — and the finding that (1)'s quadratic term was already
+  gone)
+- Expect: FAIL
 - Pinned-by: none (the refusal surfaces at `lean-observation`; the
   row below is a FAIL-BY-DESIGN refusal pin, red forever at the
   oracle's `ok`, listed on the Cases line per the BUG-070/071/072
@@ -4600,7 +4611,7 @@ the issue53619 family was wrong.
   counts a listed row as explained, so the row leaves untriaged-ids.
   Audit fix round 2026-09-01, RECORD 8: the slice had parked it in
   untriaged-ids with a ceiling raise 11→12 instead; reverted)
-- Cases: arrays/materialization-budget/over-budget
+- Cases: arrays/materialization-budget/over-budget, arrays/materialization-budget-nested/over-budget
 - Discovered: 2026-09-01 ($GOROOT/test harvest,
   docs/2026-09-01_gotest-triage.md INFRA note — issue34395.go's
   `[100<<20]byte` global: exit 134, "Stack overflow detected.
@@ -4647,6 +4658,87 @@ values — one element store into an admitted `[1024][1024][128]byte`
 measured 46 s (the store re-normalizes through the nesting), so an
 oversized nested value can still reach the wall clock: an honest
 kill, never a wrong answer, lifted by (1).
+
+**FAIL-CLOSED (2026-10-12, [AGENT] lane `core/bug078-nested-budget-1012`;
+release-readiness item 30 — [USER] Mike 2026-10-12 «30: can we fail-close
+until we fix?», relayed by the [AGENT] coordinator, whose answer this lane
+executes: a named refusal at the decoder's existing budget choke point.)**
+The residuals, RE-MEASURED on main's binary at c266ce6b (milner-oath,
+single runs under `capped -m 16G`, wall clock incl. ≈0.1 s process start;
+the probe programs were `.tmp/probes/*` — ephemeral; the gate's per-case
+wall is 60 s since 2026-10-07, [USER] «Agree 1 / 2», relayed):
+
+*(1) is not what the paragraph above says it is.* `normalizeListWith` is
+LINEAR since C1 S1 (2026-09-18, the accumulator form — `Ops.lean`'s own
+docstring); every flat path reads 0.11 s at 1<<16 today (literal / store
+/ default; 5.0 / 5.5 / 0.03 s on 2026-09-01). The quadratic term is
+gone. What remains is the LINEAR leaf walk, ≈0.15 µs per scalar element
+on the store path and ≈0.25 µs on the literal path, and a REGRESSION of
+the default path: `var a [1024][1024][128]byte; a[0][0][0]` reads 20.0 s
+(1.1 s on 2026-09-01 — the default value is no longer a shared
+replicate; the C4 block-entry allocation stores it through the cell's
+normalize). So the budgets are now RESOURCE bounds on a linear cost, and
+no normalize rewrite lifts them; what would is not materializing (a
+shared-default representation), owed as the (1) that is left.
+
+*(3) CLOSED by refusal.* The decoder's array arm (`decodeTy`,
+`GoLean/NativeToIR.lean`) now checks the type's FOOTPRINT — its length
+times its element type's, through nested arrays, `.defined` entries
+(resolved through the type table's footprint slots) and struct fields —
+against `arrayFootprintBudget = 1<<24`, and a struct TypeDef's SUM of
+fields against the same at its entry. The 2-D sweep, store / literal
+(`var a [m][n]byte; a[0][0] = 1` / `a := [m][n]byte{}; a[0][0] = 1`):
+2^20 0.21 / 0.41 s; 2^22 0.61 / 1.11 s; 2^23 1.11 / 2.11 s; **2^24 2.01
+/ 4.11 s** (the budget); 2^25 4.41 / 7.31 s; 2^26 7.91 / 16.6 s; 2^27
+(`[1024][1024][128]byte`, this residual's shape) store 19.4 s, default
+20.0 s, GLOBAL with one store 34.3 s, literal 53.4 s — the smallest
+sweep product past the 30 s figure; 2^28 store 35.0 s (the store path's
+crossing). The product is what costs, not the shape:
+`[64][64][64]byte{}` (2^18) 0.21 s, a `[512][512]byte` struct field
+(2^18) 0.21 s, `[1024]S` with `S{a [1024]byte}` (2^20) 0.21 s, a store
+into the second of two `[4096][2048]byte` fields (2^24 in sum) 2.01 s —
+the store normalizes the whole struct, hence the per-entry SUM — and
+`type Grid [4096]Row; type Row [4096]byte` (2^24) 2.01 s. 1<<24 keeps
+the worst path at 4.1 s (BUG-078's own ≈5 s margin rule, >5× under the
+30 s figure, 14× under the 60 s wall); one doubling breaks it. (The
+sweep's box load was not recorded; a back-to-back check afterwards at a
+1-minute load of 62 read the 2^24 store at 3.5–3.9 s on main's binary
+and the lane's alike — the margin absorbs a loaded box.) The
+per-dimension `arrayLenBudget` (1<<16) STAYS as the flat bound (its
+docstring carries the re-measurement; raising it is a separate
+deliberate re-measure and would move the `over-budget` pin). THE CHOKE
+POINT and why it is complete: the decoder has ONE `.array` constructor,
+the arm, so every array type on the wire — inline in a global, a body
+or a TypeDef — is built there and checked innermost-first; declared
+element types resolve through the table's footprints, which the decoder
+now computes FIRST (the type table decodes before the globals and the
+bodies — a reorder, since a TypeDef body needs only the name → index
+map), one slot per entry, filled in table order and asserted complete
+after the well-foundedness clause; an entry still ahead (a forward
+reference or cycle) leaves `none`, its check is skipped and the clause
+refuses that wire by name — never admitted by default. The cause key is
+`error:array-footprint-budget` (`scripts/machine-causes.tsv`). Pins:
+`arrays/materialization-budget-nested/over-budget` (the shape above,
+born FAIL/lean-observation by design, on the Cases line);
+`arrays/materialization-budget-admitted/nested-at-budget`
+(`[4096][4096]byte`, exactly 1<<24, one store, 2.01 s, PASS) and
+`…/make-large-elem` (`make([][1024]byte, 1<<13)`, 2^23 leaves, 1.01 s,
+PASS). Decoder tests: `Tests/GoCoreEval.lean` (at / one past, inline;
+through a defined entry; the struct sum).
+
+*(2) CLOSED by BUG-090's `sliceCapBudget` (1<<23, Machine.lean,
+2026-10-12) for the element COUNT:* `make([]byte, 100<<20)` refuses
+`unsupported` by name in 0.11 s; `make([]byte, 1<<23)` 1.21 s ok, one
+past refused 0.11 s; `make([]int, 1<<23)` 2.51 s ok, one past refused.
+*(2b) NOT closed — recorded:* the count budget does not see the element
+type's footprint: `make([][1024]byte, 1<<13)` (2^23 leaves) 1.01 s ok,
+`1<<16` (2^26 leaves) 7.31 s ok, **`1<<20` (2^30 leaves, count inside
+the budget) is KILLED — exit 137 at the 16 G memory cap after 16.7 s**
+— an honest kill, never a wrong answer, not a named refusal. The fix is
+at the `make` site, `Machine.lean` (`cap × footprint(elem)` against the
+budget, the footprint computed in the core over the type table) — a
+semantic-core change outside this lane's boundary, STOPPED and reported
+rather than made; owed here with (1).
 
 ## BUG-080 — race detector U4: the sync primitives' OWN state-word accesses are unmodeled, so a plain access to a primitive in use by another goroutine (copy / overwrite) runs to a value where gc's -race build refuses
 
