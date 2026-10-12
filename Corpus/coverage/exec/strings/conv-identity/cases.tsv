@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+# R19 / BUG-121 (2026-10-12, lane fix/release-runtime-1012): element-address identity of two []byte(s) conversions
+# of ONE string — gc go1.26.5 shares the backing (zero-copy: &b[0] == &c[0] TRUE; two literal conversions share too),
+# the machine allocates fresh (FALSE). ident-var and ident-lit are FAIL/differential BY RECORD (observed ∉ modeled)
+# until the identity axis is modeled or the deviation ratified ([USER]; inventory R19) — BUG-121's Cases line carries
+# them; ident-var-written is the control: a written result leaves gc's zero-copy regime, fresh on both sides (PASS).
+# gc's answer is the same under the default build, -gcflags=-l and -race (deterministic): strict lane.
+ident-var	identVar	-	ok	-	strings,bytes,conversions,aliasing,identity,pointers
+ident-lit	identLit	-	ok	-	strings,bytes,conversions,aliasing,identity,pointers
+ident-var-written	identVarWritten	-	ok	-	strings,bytes,conversions,aliasing,identity,pointers

@@ -6458,6 +6458,24 @@ Scope: `Machine.lean` panic sites (`panicEntry`/`deliver`), `Syntax.lean`
 lane's slice (a machine-model arc with its own probes of every fault's concrete
 type). Fix criterion: both Cases rows PASS; the `$runtime.Error` id is gone.
 
+**GUARDED BY NAME at the observation seam (2026-10-12, [AGENT] lane `fix/release-runtime-1012`; release-readiness
+punch list item 1, [USER] Mike 2026-10-12 «starting with the ones that require no input from me», relayed).** The
+`observed` row was the one channel still answering a plausible WRONG value (`{"dynamic":"Error", string}`, status `ok`,
+FAIL/differential) while its three siblings refused by name. Now the CLI's readout seam (`readoutObs` /
+`readoutRefusal?` / `runtimeErrorObserved?`, `GoLean/CLI.lean`) refuses before rendering any result value whose
+dynamic type is the synthetic id — through interface boxes, struct fields and array elements, the containers an
+observation renders with a dynamic type — with status `unsupported`: «observation of result <i> names the dynamic type
+of a recovered runtime error (<where>), which the machine models as one synthetic id ($runtime.Error, reserved table
+index 1) where gc has a concrete runtime type per fault (runtime.boundsError / runtime.errorString /
+*runtime.TypeAssertionError / …) with a struct payload — no gc-correct observation exists; BUG-099, refused by name».
+Every seam that renders a readout goes through it (`native-json-run` with exit 1, the enumerators' leaf labels,
+`coverage-observations`' status discipline, `observationOfRunOut`), so no status word says `ok` over the refusal. The
+row flips FAIL/differential → FAIL/lean-observation (a stage move, no PASS→non-PASS; re-pinned with this lane's
+`--diff`). NOT a fix: the machine's payload model is unchanged (the PLAN above stands); the entry stays open, and the
+fix criterion is unchanged — when the concrete types land, this guard stops firing and both rows PASS. Scope note:
+the guard is in the CLI (the observation channel), not the core — the value itself is well-formed in the machine and
+its other uses already refuse where they would render it.
+
 ## BUG-100 — C6 DESIGNED RED, pinned: a function-local defined type as a generic TYPE's argument (`box[score]`) refuses by name — gc's observable instantiation name embeds the compiler counter `decl.gen`, a ratified impossibility (ledger §5.1 item 1), not a bug [coverage; (c)-pin; the entry exists so the refusal cannot stop firing unnoticed]
 
 - Status: open
@@ -8022,7 +8040,11 @@ ONCE (`oneLine` drops Lean's own `file: <path>` line). Out of scope, open: the b
 ## BUG-121 — zero-copy ALIASING of `[]byte(s)` is observable through element-address identity: two conversions of one string share their backing under gc (`&b[0] == &c[0]` is TRUE), the machine always allocates fresh (FALSE) [semantic core; allocation identity; PREDATES lane `lane/conv-cap-1007` — `main` fresh-allocates too; found by the lane's Fable adversarial audit, 2026-10-07]
 
 - Status: open
-- Pinned-by: none (no corpus row compares element addresses of two conversion results; the program is inlined below)
+- Pinned-by: differential (PINNED 2026-10-12, lane `fix/release-runtime-1012`, release-readiness item 1 — [USER]
+  Mike 2026-10-12 «starting with the ones that require no input from me», relayed by the [AGENT] coordinator: the
+  rows below are the inline program as a strict-lane case, `Corpus/coverage/exec/strings/conv-identity/`; before
+  this the entry had NO corpus row and its cited evidence file had been deleted by the evidence triage)
+- Cases: strings/conv-identity/ident-var, strings/conv-identity/ident-lit
 - Discovered: 2026-10-07, the conv-cap lane's Fable adversarial audit (verdict MERGE-CLEAN; this its item 1, a
   pre-existing wrong answer, not introduced by the lane), as relayed by the [AGENT] coordinator; rowed by the [AGENT]
   train worker r74 — «every detected gap is rowed», [USER] Mike 2026-09-03, relayed.

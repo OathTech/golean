@@ -423,6 +423,52 @@ private def cliErrorJson (message : String) : Json :=
     ("message", Json.str message)
   ]
 
+/-- BUG-099 at the OBSERVATION seam (release-readiness item 1, 2026-10-12):
+a readout value whose dynamic type is the machine's ONE synthetic
+runtime-error id (`$runtime.Error`, `runtimeErrorTypeIdx`) has no
+gc-correct observation — gc spells the concrete fault type
+(`boundsError`, `errorString`, `*TypeAssertionError`, …) with a struct
+payload, the machine `Error` with a string — so the readout REFUSES BY
+NAME instead of rendering a wrong `ok` (the row
+`panic-recover/recovered-runtime-error-type/observed`, a silently wrong
+answer until this). The three sibling channels already refuse: the
+concrete-target assert text (`typeAssertPanicMessage`, Ops.lean), the
+panic print (Machine.lean) and the method set (BUG-009/BUG-053). The
+search walks what an observation RENDERS with a dynamic type — interface
+boxes, through struct fields and array elements; slice/map/chan bases
+render as identities and carry none. -/
+private partial def runtimeErrorObserved? : GoValue → Option String
+  | .interface (.defined idx) v =>
+      if idx == GoCore.runtimeErrorTypeIdx then some "an interface box"
+      else (runtimeErrorObserved? v).map (fun w => s!"a boxed value: {w}")
+  | .interface _ v => runtimeErrorObserved? v
+  | .struct typeId fields =>
+      fields.findSome? (fun (name, v) =>
+        (runtimeErrorObserved? v).map (fun w => s!"field {name} of {typeId.unqualified}: {w}"))
+  | .array vs =>
+      vs.findSome? (fun v => (runtimeErrorObserved? v).map (fun w => s!"an array element: {w}"))
+  | _ => none
+
+/-- The readout's refusal, if any result value observes BUG-099's synthetic
+type (the first such result, by position). -/
+private def readoutRefusal? (r : GoLean.GoCore.Readout) : Option Stop :=
+  ((List.range r.values.size).findSome? (fun i =>
+      r.values[i]? >>= fun v => (runtimeErrorObserved? v).map (fun w => (i, w)))).map
+    (fun (i, w) =>
+      .unsupported s!"observation of result {i} names the dynamic type of a recovered runtime error ({w}), which the machine models as one synthetic id ({GoCore.runtimeErrorTypeId.key}, reserved table index {GoCore.runtimeErrorTypeIdx}) where gc has a concrete runtime type per fault (runtime.boundsError / runtime.errorString / *runtime.TypeAssertionError / …) with a struct payload — no gc-correct observation exists; BUG-099, refused by name")
+
+/-- The observation AND its status word for a readout, from one place: `ok`
+with `runJson`, or BUG-099's refusal (status `unsupported`) with the run's
+output prefix. Every seam that renders a readout goes through this, so the
+status word beside an observation (the enumerators' leaf labels,
+`coverage-observations`' status discipline, `native-json-run`'s exit code)
+never says `ok` over a refusal. -/
+private def readoutObs (nameOf : TypeIdx → Option TypeId) (r : GoLean.GoCore.Readout) :
+    String × Json :=
+  match readoutRefusal? r with
+  | some stop => (stop.status, errorJson stop r.output)
+  | none => ("ok", runJson nameOf r)
+
 private partial def decodeLocObservation (path : String) (json : Json) : Except String Unit := do
   let obj ← StrictJson.obj path json
   let tag ← StrictJson.string s!"{path}.tag" (← StrictJson.field path obj "tag")
@@ -664,8 +710,11 @@ private def runNativeJsonRun (args : List String) : IO UInt32 := do
                   | .ok entryArgs =>
                   match GoLean.GoCore.Machine.runProgramPoolOutM cfg.fuel program functionName entryArgs cfg.choices with
                   | .ok result =>
-                      IO.println (runJson program.typeDefs.nameOf? result).compress
-                      return 0
+                      -- BUG-099: a readout that would observe the synthetic
+                      -- runtime-error type is a refusal (exit 1), never `ok`.
+                      let (status, obs) := readoutObs program.typeDefs.nameOf? result
+                      IO.println obs.compress
+                      return (if status == "ok" then 0 else 1)
                   | .error (err, out) =>
                       IO.println (errorJson err out).compress
                       return 1
@@ -1105,19 +1154,17 @@ def enumPoolRun (pctx : GoCore.ProgramCtx) (resultLocs : List Loc)
                 -- bound-2 site, mirrored: with runnable goroutines left,
                 -- pick 0 exits now, pick 1 takes one more pool step.
                 (match GoCore.Machine.runnableIdxs pctx m.shared m.threads with
-                | [] =>
-                    return ("ok", runJson pctx.types.nameOf?
-                      { values := (← (GoCore.Machine.loadMany pctx σf resultLocs).mapError (·, acc)).toArray,
-                        output := acc },
-                      choices)
+                | [] => do
+                    let vals ← (GoCore.Machine.loadMany pctx σf resultLocs).mapError (·, acc)
+                    let (st, obs) := readoutObs pctx.types.nameOf? { values := vals.toArray, output := acc }
+                    return (st, obs, choices)
                 | _ :: _ =>
                     let (pick, choices₁) :=
                       GoCore.Choices.consumeAt .l5ExitWindow 2 choices
-                    if pick == 0 then
-                      return ("ok", runJson pctx.types.nameOf?
-                        { values := (← (GoCore.Machine.loadMany pctx σf resultLocs).mapError (·, acc)).toArray,
-                          output := acc },
-                        choices₁)
+                    if pick == 0 then do
+                      let vals ← (GoCore.Machine.loadMany pctx σf resultLocs).mapError (·, acc)
+                      let (st, obs) := readoutObs pctx.types.nameOf? { values := vals.toArray, output := acc }
+                      return (st, obs, choices₁)
                     else
                       match fuel with
                       | 0 => throw (stepFuelStop itersCap, acc)
@@ -1224,7 +1271,7 @@ canonical JSON (audit F5). Since stdlib slice 3 the whole-run result is a
 `RunResult` (the stop carries its output prefix). -/
 def observationOfRunOut (nameOf : TypeIdx → Option TypeId) :
     GoCore.Machine.RunResult → Json
-  | .ok result => runJson nameOf result
+  | .ok result => (readoutObs nameOf result).2
   | .error (err, out) => errorJson err out
 
 /-- The `Except Stop Readout` form (the sequential drivers, which have no
@@ -1517,9 +1564,8 @@ partial def poolDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
               | .error e =>
                   .error s!"result readout failed at a terminal: {renderStop e}"
               | .ok vals =>
-                  recordLeaf ctx o p "ok"
-                    (runJson ctx.ep.ctx.types.nameOf? { values := vals.toArray, output := acc })
-                    p.length
+                  let (st, obs) := readoutObs ctx.ep.ctx.types.nameOf? { values := vals.toArray, output := acc }
+                  recordLeaf ctx o p st obs p.length
           (match GoCore.Machine.runnableIdxs ctx.ep.ctx m.shared m.threads with
           | [] => exitLeaf out path
           | _ :: _ =>
@@ -1800,14 +1846,14 @@ def runDedupObservations (ep : EnumProgram) (cfg : EnumArgs) : IO UInt32 := do
       -- `errorJson` on the terminal) — byte-identical to the former per-
       -- constructor table for panic/race; fatal/deadlock members are still
       -- refused upstream (engine + checker), so no new word is emitted.
-      let statusOf : GoCore.Machine.Obs → String := fun o =>
+      -- BUG-099: an `.ok` member whose readout observes the synthetic
+      -- runtime-error type carries the refusal's status word, not `ok`.
+      let obsOf : GoCore.Machine.Obs → String × Json := fun o =>
         match o with
-        | .ok _ => "ok"
-        | .terminal t => t.status
-      let obsJson : GoCore.Machine.Obs → Json := fun o =>
-        match o with
-        | .ok vs => runJson ep.ctx.types.nameOf? { values := vs.toArray }
-        | .terminal t => errorJson (.terminal t)
+        | .ok vs => readoutObs ep.ctx.types.nameOf? { values := vs.toArray }
+        | .terminal t => (t.status, errorJson (.terminal t))
+      let statusOf : GoCore.Machine.Obs → String := fun o => (obsOf o).1
+      let obsJson : GoCore.Machine.Obs → Json := fun o => (obsOf o).2
       -- The member vocabulary (audit fix F5): refuse by name before any
       -- status word is compared or printed.
       for t in cert.members do

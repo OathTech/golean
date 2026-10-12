@@ -3060,7 +3060,11 @@ R-rows here at admission (register rule). Evidence for the slice-1 census: `docs
   `&b[0] == &c[0]` is TRUE under gc go1.26.5 (default, `-gcflags=-l`,
   `-race`) and FALSE on the machine: observed ∉ modeled, BUG-121 (the
   program inline there; `docs/evidence/2026-10-08_train-r74/bug121-repro.txt`).
-  A written or escaping result is fresh under gc too.
+  A written or escaping result is fresh under gc too. PINNED by corpus
+  rows since 2026-10-12 (lane `fix/release-runtime-1012`):
+  `strings/conv-identity/{ident-var,ident-lit}` FAIL/differential by
+  record, `ident-var-written` the fresh-on-both-sides control (PASS);
+  strict lane — gc's answer is the same on all three builds.
 - RE-ENVELOPE: a future [USER] decision under the standing rule «semantic
   widenings must match real Go» (BUG-121's fix plan); until then the
   machine's fresh point is a known-≠-oracle deterministic point (§10).

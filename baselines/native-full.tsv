@@ -1,5 +1,23 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3938 (3707 PASS / 231 FAIL)
+# cases: 3941 (3708 PASS / 233 FAIL)
+# re-pinned: 2026-10-12 [AGENT] coordinator, train 2 (staging branch train2/stage-1012 off main 40432018) — the two re-pins below
+#   were each measured off main d92b95fd and combine here: 3936 + 2 (sched-boundary) + 3 (release-runtime) = 3941; PASS 3705 + 2
+#   + 1 = 3708; FAIL 231 + 2 = 233. No row is touched by both lanes; verified by the train's scripts/ci --diff at the staged tip.
+# re-pinned: 2026-10-12 [AGENT], lane fix/release-runtime-1012 (off main d92b95fd) — release-readiness punch list item 1, the
+#   no-input parts ([USER] Mike 2026-10-12 «manage some agents working through the backlog, starting with the ones that
+#   require no input from me», relayed by the [AGENT] coordinator; docs/2026-10-12_release-readiness.md). WHY: (a) BUG-121
+#   (zero-copy aliasing of []byte(s): gc shares the backing, &b[0] == &c[0] TRUE; the machine always fresh-allocates,
+#   FALSE) had NO corpus row — BORN ROWS +3 strings/conv-identity/* (strict lane: gc's answer is the same on the default,
+#   -gcflags=-l and -race builds, verified 2026-10-12 `true true false`; the machine `false false false`): ident-var and
+#   ident-lit FAIL/differential BY RECORD, on BUG-121's Cases line (Pinned-by: none → differential); ident-var-written the
+#   fresh-on-both-sides control, PASS. (b) BUG-099's silently-wrong row panic-recover/recovered-runtime-error-type/observed
+#   (the machine rendered the recovered runtime error's dynamic type as the synthetic `Error` with a string payload, status
+#   ok, where gc has `boundsError` — the one BUG-099 channel not refusing by name) now REFUSES at the CLI's readout seam
+#   (`readoutObs` / `readoutRefusal?`, GoLean/CLI.lean: «observation of result 0 names the dynamic type of a recovered
+#   runtime error … BUG-099, refused by name», status unsupported, exit 1): ONE STAGE MOVE, FAIL/differential →
+#   FAIL/lean-observation, on BUG-099's Cases line already. NO PASS→non-PASS flip; no lane move; no removal. Counts:
+#   3936 + 3 = 3939; PASS 3705 + 1 = 3706; FAIL 231 + 2 = 233 (the data rows, awk-tallied). Measured by this lane's
+#   scripts/ci --diff at the branch tip (the gate run recorded in the commit message).
 # re-pinned: 2026-10-12 [AGENT], lane core/sched-boundary-1012 (off main d92b95fd) — BUG-123 FIXED: the channel-length read and the
 #   print apply are registry boundaries (`Config.atBoundary`, Multi.lean). The Codex release-trust review's F1/R2 (relayed by the
 #   [USER] 2026-10-12; punch-list items 23/24) under the standing rule [USER] 2026-10-07 «semantic widenings must match real Go»
@@ -4836,7 +4854,7 @@ PASS	panic-recover/recover-store-local	-
 PASS	panic-recover/recover-twice	-
 PASS	panic-recover/recover-value	-
 FAIL	panic-recover/recovered-runtime-error-type/assert-int	lean-observation
-FAIL	panic-recover/recovered-runtime-error-type/observed	differential
+FAIL	panic-recover/recovered-runtime-error-type/observed	lean-observation
 PASS	panic-recover/repanic-collapse/bool-reboxed	membership
 PASS	panic-recover/repanic-collapse/defined-passthrough	membership
 PASS	panic-recover/repanic-collapse/defined-reboxed	membership
@@ -5655,6 +5673,9 @@ PASS	strings/builder-model/zero	-
 PASS	strings/byte-conversion-cap	membership
 PASS	strings/byte-slice-to-string-copy	-
 PASS	strings/concat-eval-order	-
+FAIL	strings/conv-identity/ident-lit	differential
+FAIL	strings/conv-identity/ident-var	differential
+PASS	strings/conv-identity/ident-var-written	-
 PASS	strings/defined-copy-invalid-utf8	-
 PASS	strings/defined-slice-string-conversion	-
 PASS	strings/fields-conformance/all-space	-
