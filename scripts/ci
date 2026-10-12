@@ -389,7 +389,8 @@ fi
 # ── GATE: the re-pin guard. A re-pin that flips a case PASS -> non-PASS, or
 # moves a FAIL row's cause from a named key into the non-verdict/crash family
 # (scripts/check-cause-regressions), must list it on a `- Cases:` line in
-# docs/BUGS.md; a stage alternation of the old
+# docs/BUGS.md; a removed row (PASS or FAIL) must be named by a
+# `# removed: <id> — <why>` header line (scripts/check-row-removals); a stage alternation of the old
 # baseline must survive unless the new one names its removal. Dirty tree:
 # worktree vs HEAD; clean tree: HEAD vs HEAD~1 (a shallow clone fails closed).
 repin_guard() {  # <baseline file>
@@ -437,6 +438,11 @@ repin_guard() {  # <baseline file>
   cause_out="$(./scripts/check-cause-regressions "git:$old:$base" "$surv_new" 2>&1)" || cause_rc=$?
   if [ "$cause_rc" -eq 0 ]; then [ -n "$cause_out" ] && printf '%s\n' "$cause_out" | sed 's/^/  /'
   else printf '%s\n' "$cause_out" | sed 's/^/  /'; bad "re-pin guard ($base: a FAIL row's cause regressed into the non-verdict/crash family without a BUGS.md Cases: line, or the check could not run — exit $cause_rc)"; fi
+  # Row removals (PASS or FAIL) need a `# removed: <id> — <why>` header line.
+  local rem_rc=0 rem_out
+  rem_out="$(./scripts/check-row-removals "git:$old:$base" "$surv_new" 2>&1)" || rem_rc=$?
+  if [ "$rem_rc" -eq 0 ]; then [ -n "$rem_out" ] && printf '%s\n' "$rem_out" | sed 's/^/  /'
+  else printf '%s\n' "$rem_out" | sed 's/^/  /'; bad "re-pin guard ($base: a baseline row removed without a \`# removed:\` header line, or the check could not run — exit $rem_rc)"; fi
 }
 step "baseline re-pin guard (PASS→non-PASS flips must be on a BUGS.md Cases: line; alternations survive)"
 repin_guard baselines/native-full.tsv

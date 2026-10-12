@@ -30,7 +30,8 @@ The key grammar (first rule that applies wins; PASS rows are `-`):
   1. a runner non-verdict phrase (scripts/diff-coverage's signal_cause /
      undecided_cause / obs_eq_cause), at ANY stage, matched only at the
      detail's start or right after `sampling rule: ` / `driver-coupling pin: `
-     / `membership check: ` (never inside quoted text; a frontend-export
+     / `membership check: ` / `draw i/K (plain|race) [-race ]go sample: `
+     (never inside quoted text; a frontend-export
      `native frontend (exit N): ` detail is a verdict exit and skips rule 1):
      `KILLED (exit N` -> killed:N; `TIMED OUT after` -> timeout;
      `failed with exit N (did not decide)` -> undecided:N;
@@ -73,11 +74,15 @@ def die(msg):
 # `<what> KILLED (exit N …` / `<what> TIMED OUT after …` / `<what> failed
 # with exit N (did not decide)` / `observation-eq could not decode the
 # observation (exit 2 …` — ALWAYS at the detail's start, or right after one
-# of three runner prefixes (fix round, review MEDIUM-3: a phrase quoted
+# of four runner prefixes (fix round, review MEDIUM-3: a phrase quoted
 # anywhere else — a refusal text echoing a format string, an oracle's
 # stderr — is not the runner's and must not key as a non-verdict). <what>
 # is the runner's own short name: no ':', '{' or '—' in it.
-RUNNER_PREFIXES = ("sampling rule: ", "driver-coupling pin: ", "membership check: ")
+# The prefixes: three comparator sites, and the membership DRAW
+# (diff-coverage's `draw i/K (plain|race) [-race ]<sample>` over
+# membership_go_observation's `go sample: <cause> …` — last round's review).
+RUNNER_PREFIX = re.compile(r"^(?:sampling rule: |driver-coupling pin: |membership check: |"
+                           r"draw \d+/\d+ \((?:plain|race)\) (?:-race )?go sample: )")
 NONVERDICT = [
     (re.compile(r"^[^:{\u2014]*? KILLED \(exit (\d+)"), lambda m: "killed:" + m.group(1)),
     (re.compile(r"^[^:{\u2014]*? TIMED OUT after "), lambda m: "timeout"),
@@ -87,11 +92,8 @@ NONVERDICT = [
 
 
 def nonverdict(detail):
-    head = detail
-    for p in RUNNER_PREFIXES:
-        if head.startswith(p):
-            head = head[len(p):]
-            break
+    m = RUNNER_PREFIX.match(detail)
+    head = detail[m.end():] if m else detail
     for rx, key in NONVERDICT:
         m = rx.match(head)
         if m:

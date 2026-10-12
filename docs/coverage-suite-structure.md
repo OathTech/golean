@@ -658,6 +658,11 @@ A FAIL row whose cause is re-pinned from a named key into the
 non-verdict/crash family (`killed:`, `timeout`, `undecided:`, `crash:`)
 needs a `docs/BUGS.md` `- Cases:` line, like a PASS→non-PASS flip
 (`scripts/check-cause-regressions`, run by `scripts/ci`'s re-pin guard).
+A re-pin that REMOVES a row — PASS or FAIL, e.g. with its retired fixture —
+must name it in the new baseline's header: `# removed: <id> — <why>`
+(`scripts/check-row-removals`, the same guard; the `# alternation removed:`
+convention). A removed PASS row still needs its `BUGS.md` Cases line as
+well (the flip rule is unchanged).
 
 Non-verdict exits of a comparator, oracle, driver or enumerator run are
 reported at the stage of the CHECK that could not complete — the stage

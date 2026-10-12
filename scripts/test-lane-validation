@@ -371,6 +371,42 @@ bd_expect "(xi) a refusal text QUOTING ' KILLED (exit 137' keys its class, not k
 bd_base $'FAIL\tfx/g\tgo-observation\t-\nFAIL\tfx/s\tmembership\tkilled:137'
 bd_res $'FAIL\tfx/g\tx\tgo-observation\tcould not extract Go panic message: stderr="panic: Lean run KILLED (exit 137 — fake"\nFAIL\tfx/s\tx\tmembership\tsampling rule: observation-eq KILLED (exit 137 — SIGKILL: cgroup/OOM or an external kill; did not decide) comparing draw 3/32'
 bd_expect "(xi) a go-observation detail carrying the phrase stays \`-\`; a runner prefix + phrase keys killed:N" 0 "no regression"
+# Rule 1 over EVERY real non-verdict call-site shape of scripts/diff-coverage
+# (the confirmation pass's enumeration; `:423` lake build reports to stderr
+# and publishes no row): id = the call site, then stage, detail, wanted key.
+K137='KILLED (exit 137 — SIGKILL: cgroup/OOM or an external kill; did not decide)'
+CS="$TMP/callsites"; mkdir -p "$CS"
+{
+  printf 'result\tid\tfeatures\tstage\tdetail\n'
+  while IFS='|' read -r cid st det; do printf 'FAIL\t%s\tx\t%s\t%s\n' "$cid" "$st" "$det"; done <<CSEOF
+754|go-harness|harness generation $K137 — no harness produced; captured output: x
+807|go-observation|observation-eq $K137 validating the Go observation — validity NOT decided: {"status":"ok"}
+807d|go-observation|observation-eq could not decode the observation (exit 2 — did not decide; comparator said: bad) validating the Go observation — validity NOT decided: {}
+821|go-run|go run oracle TIMED OUT after 30s (GO_TIMEOUT_SECONDS) — no Go observation produced (not a ok verdict); captured output: x
+933|frontend-export|native frontend $K137 — no wire produced; captured output: x
+993|confluent|enumerator $K137 (schedule-confluence not certified): stats
+1046|lean-observation|Lean run failed with exit 3 (did not decide) — no observation produced (expected status ok); captured output: x
+1070|differential|observation-eq TIMED OUT after 30s (LEAN_TIMEOUT_SECONDS) — Lean/Go equality NOT decided (not a mismatch): Lean={} Go={}
+1079|confluent|observation-eq KILLED (exit 143 — SIGTERM: an external kill; did not decide) — certified member vs driver observation NOT decided (not enumerator/driver drift): member={} driver={}
+1123|racy|enumerator TIMED OUT after 60s — 'every enumerated path refuses' not certified: stats
+1196|nondet|oracle-invariance re-run under stream [9,8,7] $K137 — invariance NOT certified (a killed run is not an observed variance); captured output: x
+1214|nondet|observation-eq could not decode the observation (exit 2 — did not decide; comparator said: bad) comparing the default observation against stream [1,0] — invariance NOT decided: default={} variant={}
+1255|nondet|depth guard (choice-trace) TIMED OUT after 480s (LEAN_TRACE_TIMEOUT_SECONDS) — stream coverage NOT established (the strict PASS's invariance half is unproven); captured output: x
+1448|membership|draw 3/32 (plain) go sample: go run oracle $K137 — no sample produced (not a status verdict); captured output: x
+1448t|membership|draw 5/32 (plain) go sample: go run oracle TIMED OUT after 30s (GO_TIMEOUT_SECONDS) — no sample produced (not a status verdict); captured output: x
+1481|membership|draw 4/32 (race) -race go sample: observation-eq could not decode the observation (exit 2 — did not decide; comparator said: bad) validating the sample — validity NOT decided: {}
+1764|membership|sampling rule: observation-eq $K137 comparing draw 3/32 against an earlier distinct draw — saturation NOT decided
+1805|frontend-export|native frontend TIMED OUT after 30s (GO_TIMEOUT_SECONDS) — no wire produced; captured output: x
+1856|membership|enumerator $K137 (coverage not certified): stats
+1899|membership|driver-coupling pin: native-json-run under stream [1,2] TIMED OUT after 60s (LEAN_TIMEOUT_SECONDS) — coupling NOT certified (a killed run is not copied-driver drift); captured output: x
+1916|membership|driver-coupling pin: observation-eq $K137 comparing the stream [1,2] observation against member 0 — coupling NOT decided (not copied-driver drift): {}
+1961|membership|membership check: observation-eq failed with exit 4 (did not decide) comparing a Go sample against member #1 — membership NOT decided: sample={}
+CSEOF
+} > "$CS/results.tsv"
+want=$'754\tkilled:137\n807\tkilled:137\n807d\tundecided:decode\n821\ttimeout\n933\tkilled:137\n993\tkilled:137\n1046\tundecided:3\n1070\ttimeout\n1079\tkilled:143\n1123\ttimeout\n1196\tkilled:137\n1214\tundecided:decode\n1255\ttimeout\n1448\tkilled:137\n1448t\ttimeout\n1481\tundecided:decode\n1764\tkilled:137\n1805\ttimeout\n1856\tkilled:137\n1899\ttimeout\n1916\tkilled:137\n1961\tundecided:4'
+rc=0; got="$(scripts/coverage-cause "$CS/results.tsv" 2>&1)" || rc=$?
+if [ "$rc" -eq 0 ] && [ "$got" = "$want" ]; then echo "ok: coverage-cause rule 1 keys every diff-coverage non-verdict call-site shape (21 sites + the draw's timeout and decode forms)"
+else echo "FAIL: coverage-cause call-site shapes (exit $rc):"; diff <(printf '%s\n' "$want") <(printf '%s\n' "$got") | sed 's/^/  /'; fail=1; fi
 bd_base $'FAIL\tfx/m\tlean-observation\tunsupported:float-to-int-range'
 bd_res $'FAIL\tfx/m\tx\tlean-observation\texpected status ok, got {"message":"float-to-int conversion out of range/NaN (implementation-dependent in Go)","output":"","schema":"golean-observation-v1","status":"unsupported"}'
 bd_expect "(xii) the pinned machine refusal -> no drift" 0 "no regression"
@@ -476,6 +512,25 @@ printf 'result\tid\tstage\tcause\nFAIL\tfx/fe\tfrontend-export\tFR-15/complex\n#
 cr_expect "alternation member -> killed:139 without a Cases line -> FAIL by name" 1 $'UNEXPLAINED\tfx/alt'
 printf 'result\tid\tstage\tcause\nFAIL\tfx/fe\tlean-observation\ttimeout\n' > "$CR/new.tsv"
 cr_expect "named -> timeout at another stage -> FAIL by name" 1 $'UNEXPLAINED\tfx/fe'
+# Row REMOVALS across a re-pin (confirmation pass LOW): the ci re-pin guard
+# calls scripts/check-row-removals OLD NEW.
+RM="$TMP/row-removals"; mkdir -p "$RM"
+printf 'result\tid\tstage\nFAIL\tfx/red\tfrontend-accepts\nPASS\tfx/p\t-\n' > "$RM/old.tsv"
+rm_expect() {  # $1 name, $2 expected exit, $3 required text
+  local name="$1" want="$2" needle="$3" out rc=0
+  out="$(scripts/check-row-removals "$RM/old.tsv" "$RM/new.tsv" 2>&1)" || rc=$?
+  if [ "$rc" -ne "$want" ]; then echo "FAIL: row-removals $name: exit $rc, expected $want: $out"; fail=1
+  elif [[ "$out" != *"$needle"* ]]; then echo "FAIL: row-removals $name: exit $want but without the expected text ($needle): $out"; fail=1
+  else echo "ok: row-removals $name"; fi
+}
+printf 'result\tid\tstage\nPASS\tfx/p\t-\n' > "$RM/new.tsv"
+rm_expect "a FAIL row removed silently -> FAIL by name" 1 $'REMOVED\tfx/red'
+printf 'result\tid\tstage\nFAIL\tfx/red\tfrontend-accepts\n' > "$RM/new.tsv"
+rm_expect "a PASS row removed silently -> FAIL by name" 1 $'REMOVED\tfx/p'
+printf '# removed: fx/red — fixture: the case directory was retired\nresult\tid\tstage\nPASS\tfx/p\t-\n' > "$RM/new.tsv"
+rm_expect "a removal named by a # removed: header line -> ok with a note" 0 $'NOTE\tfx/red'
+printf 'result\tid\tstage\nPASS\tfx/p\t-\nFAIL\tfx/red\tfrontend-accepts\nPASS\tfx/new\t-\n' > "$RM/new.tsv"
+rm_expect "every row kept (a born row is not a removal) -> ok" 0 ""
 # check-bugs: the alternation row is counted, by name.
 printf '## BUG-901 — fixture\n\n- Status: fixed\n- Pinned-by: none (fixture)\n- Cases: fx/other\n' > "$CB/bugs.md"
 printf 'result\tid\tstage\nFAIL\tfx/other\tlean-observation\nFAIL\tfx/alt\tnondet|differential\n' > "$CB/baseline.tsv"
