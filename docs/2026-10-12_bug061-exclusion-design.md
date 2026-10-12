@@ -1,0 +1,85 @@
+# BUG-061 — the by-name exclusion (design note, 2026-10-12)
+
+[AGENT] lane `fix/bug061-refuse-1012`, under [USER] Mike 2026-10-12, verbatim
+(`docs/2026-10-12_release-readiness.md` §5): «D1: I think this should probably be
+refused, if it's easy to exclude.» Record only; the living statement is the
+BUG-061 entry in `docs/BUGS.md` and the header of
+`tools/nativefrontend/staticinit.go`.
+
+## 1. The mechanism
+
+gc schedules only the packages with residual initialization WORK
+(`pkginit.MakeTask`: no `..inittask` record for a package with no work and no
+inittask-bearing import), and "residual" is what survives
+`cmd/compile/internal/staticinit`. The frontend's rule (`sourceHasInitWork`)
+calls every non-constant package-level initializer work. `StaticAssign` folds
+strictly more than go/types' constants: array/slice/struct literals of static
+elements, `&global`, same-package copies of static globals, func values,
+`[]byte("lit")`, conversions to interface of static values, and — with the
+inliner on — calls whose inlined body is one `return <static>` (`errors.New`).
+So the frontend can keep a node gc deleted; a spurious node keeps a spurious
+EDGE; an edge can delay an importer past a package it should have beaten. The
+witness `multipkg/init-order-staticinit/seq`: `zq`'s only initializer is
+`var A = [3]int{1, 2, 3}`; `la` blank-imports `zq`; `la < lb < zq` by schedule
+key. gc prunes `zq`, `la` is ready at step one and wins the tie: 12. The
+frontend holds `la` behind `zq`, `lb` goes first: 21. The under-approximation
+bites exactly when (i) a package's only work is of a shape staticinit may fold,
+(ii) some importer waits on it, and (iii) a competitor that sorts between the
+importer and the uncertain package is ready meanwhile.
+
+## 2. The exclusion
+
+Two parts, both in `staticinit.go`, the emitted schedule unchanged:
+
+1. **Classify** each non-constant initializer of a source package: WORK where
+   `StaticAssign` has no case and inlining cannot rescue (map literals,
+   arithmetic, indexing, field reads, method values, receives, non-NOP
+   conversions, builtins, calls through interfaces or func values, calls whose
+   body is not a single return, foreign-package and string-typed copies), else
+   MAYBE-STATIC. Each WORK arm cites its gc reading; the classifier errs toward
+   MAYBE-STATIC (an error there adds a refusal, never a silent order). A
+   package is UNCERTAIN iff it has no init body, no WORK initializer and at
+   least one MAYBE-STATIC one.
+2. **Enumerate** every pruning of the uncertain packages (cap 12 → 4096 walks;
+   beyond it refuse by name), recompute the node set and the two-pass walk,
+   and REFUSE iff some pruning orders the packages WITH work differently from
+   the emitted walk. The message names BUG-061, the package(s), the
+   initializer(s) with positions, and both orders. Lowerdiag cause
+   `staticinit-uncertain-order` (a (c)-pin, ledger §5.1 C2).
+
+Why not the blunt rule «refuse any uncertain package»? It is not "without
+refusing programs the model gets right": a MAYBE-STATIC package nobody but
+main imports, or one that is a node anyway through a node import, cannot move
+another package. Why enumerate rather than compare the two extremes? With two
+uncertain packages the extremes can agree while a middle assignment differs
+(`X < Y < W1 < W3`, X→W1, Y→W3: neither and both give X,Y; W1 alone gives
+Y,X). The enumeration is exact for the classification it is given.
+
+## 3. Measured corpus impact
+
+Frontend run over the 28 multi-package corpus roots (`multipkg/*` ×25,
+`generics/qualified-instantiation`, `fmt/formatter-box-crosspkg`,
+`channels/select-multi-ready`), `init/hidden-dep-order` (with its allow) and the
+raft twin assembly (`scripts/check-frontend-pins`' `twin-prog`), before and
+after:
+
+| rule | refuses | baseline rows moved |
+|---|---|---|
+| this exclusion (classify + enumerate) | `multipkg/init-order-staticinit` only | 1: the witness, FAIL/differential → FAIL/frontend-export; twin wire byte-identical |
+| blunt «any uncertain package» (measured with a throwaway patched copy) | `multipkg/errors-new` (`liberr`), `multipkg/wire-codec` (`wirepb`), the witness, the raft twin (`quorum`, `raft`, `tracker`) | 33 PASSing rows (3 + 29 + 1) plus the twin pin — rejected |
+
+No PASS → non-PASS flip; 3939 = 3706 PASS / 233 FAIL unchanged (the branch's
+figure after the runtime lane's three born rows). Unit tests
+(`staticinit_test.go`): the witness refuses with the named text; init-body,
+map-literal, multi-statement-call, arithmetic, constant and empty controls
+lower; an uncertain package imported only by main or a node through its
+imports lowers; 52 classifier shapes pinned arm by arm plus the blank and
+tuple rules; the node fact unchanged.
+
+## 4. Still owed
+
+The staticinit model itself — L-011's decision at a point where gc is not
+single-valued (`callinit` flips between `go run` and `-gcflags=all='-N -l'`).
+Until then the row stays red by name and the guard is the release's answer to
+item 1 for BUG-061. The latitude-inventory entry L-011 (c) owes is untouched
+here.

@@ -282,7 +282,7 @@ rows covering all 158 anchors.
 | An_example_package | covered(B) | the spec's concurrent prime sieve pinned (`spec-examples-stmt/prime-sieve/{five,eight}`). |
 | Program_initialization_and_execution | covered(D) | chapter preamble. |
 | The_zero_value | covered(A) | 3 dispositions + `zero_values` rows in every container/type suite + generics zero-composite; COMPLEX zero values → FR-15 (pinned red: `complex/zero-value`, `complex/generic-type-set/zero-value`; carve-out added at the audit fix round). |
-| Package_initialization | covered(B) | `init/` (19 pkgs) + `multipkg/init-order*`; the section's two spec-open points are the RATIFIED (c)-pins (C1–C8 ratified/discharged 2026-08-20 — §5.1 and the triage table; this cell still said "ratification-pending" until 2026-08-22, launch audit D7 MEDIUM-3; note the C-numbers here are the TRIAGE (c)-pin register, not the latitude inventory's C-rows): hidden-dep order C1 (L:E7, 1 red) and staticinit pruning C2 (L-011, 1 red); init-spawned goroutines → Q-INITSPAWN; a package-level initializer calling a stdlib function outside H-11's `pureUnmodeledCallees` allowlist → FR-22 (1 red, a WHOLE-EXPORT kill — cedar-go census 2026-09-03: `time.Date` in `types/datetime.go:16,19` took down 18/22 packages). |
+| Package_initialization | covered(B) | `init/` (19 pkgs) + `multipkg/init-order*`; the section's two spec-open points are the RATIFIED (c)-pins (C1–C8 ratified/discharged 2026-08-20 — §5.1 and the triage table; this cell still said "ratification-pending" until 2026-08-22, launch audit D7 MEDIUM-3; note the C-numbers here are the TRIAGE (c)-pin register, not the latitude inventory's C-rows): hidden-dep order C1 (L:E7, 1 red) and staticinit pruning C2 (L-011, 1 red — GUARDED BY NAME 2026-10-12, [USER] D1 «refused, if it's easy to exclude»: the order-sensitive shape refuses at the frontend, cause `staticinit-uncertain-order`, the red now FAIL/frontend-export; BUG-061, `docs/2026-10-12_bug061-exclusion-design.md`); init-spawned goroutines → Q-INITSPAWN; a package-level initializer calling a stdlib function outside H-11's `pureUnmodeledCallees` allowlist → FR-22 (1 red, a WHOLE-EXPORT kill — cedar-go census 2026-09-03: `time.Date` in `types/datetime.go:16,19` took down 18/22 packages). |
 | Program_initialization | covered(B) | thin normative text (points at Package_initialization); covered by the same suites. |
 | Program_execution | covered(B) | main-termination semantics + L:C4 (main-exit window ENVELOPED, `goroutines/` exit rows). |
 | Errors | covered(B) | `interfaces/{error-interface,error-idioms,assert-error-satisfaction}` + 2 COMPILE-ONLY pins (universe shadowing; error-last convention). |
@@ -514,7 +514,11 @@ requires a written profound reason. The complete list:
    `callinit`, C3 panic-qualifier rendering, C4 abort rendering, C5
    float→int out-of-range — **8 reds** after the 2026-08-20 split;
    it was 9 while C4 counted 4) — latitude/impossibility arguments
-   written fresh in triage §4. **RATIFIED 2026-08-20** (C1–C8), with
+   written fresh in triage §4. C2 is GUARDED BY NAME since
+   2026-10-12 (BUG-061; [USER] D1): its red moved
+   FAIL/differential → FAIL/frontend-export, the frontend refusing
+   the order-sensitive shape instead of realizing an order gc may
+   not — the same posture C1 has had since 2026-08-31. **RATIFIED 2026-08-20** (C1–C8), with
    the C4 split taken: `panic-recover/panic-newline-abort` left this
    list for queue stage 0 as mini-slice A7. Their re-envelope
    obligations were routed to W3.2 (raft master plan §W3.2 — parked

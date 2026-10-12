@@ -300,6 +300,19 @@ Discipline notes, recorded up front:
 - Status: open. Owed: (a) BUG-061, the measured residual; (b) the
   re-envelope decision above; (c) a latitude-inventory entry, since
   this ledger records faults and the envelope itself belongs there.
+- 2026-10-12 ([AGENT] lane `fix/bug061-refuse-1012`; [USER] Mike
+  2026-10-12 verbatim «D1: I think this should probably be refused, if
+  it's easy to exclude.», relayed): (a) is GUARDED BY NAME at the
+  frontend — `tools/nativefrontend/staticinit.go` sorts the non-constant
+  initializers into the shapes `StaticAssign` certainly leaves as work
+  and the shapes it may fold, and refuses the export iff some pruning of
+  the packages whose only work is of the second kind would reorder the
+  packages with work (the 11-of-26 residual above is the "may fold"
+  class; `callinit` sits inside it, so the optimizer-dependent flavor is
+  refused with the rest rather than modeled). The emitted order is
+  unchanged for everything else: the witness row alone moved to
+  FAIL/frontend-export; the raft twin wire is byte-identical. (a)'s
+  model and (b), (c) stay owed — `docs/2026-10-12_bug061-exclusion-design.md`.
 - 2026-10-05 (evidence, recorded [AGENT] train worker r66; cross-session
   message from the golean-logic coordinator, relayed): golean-logic
   2026-10-05 (read-only, raft @ 20d3946d): no observable divergence
