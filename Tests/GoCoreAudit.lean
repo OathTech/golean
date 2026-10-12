@@ -162,6 +162,8 @@ def exports : List Name := [
     ``GoLean.GoCore.SetupSound.runProgramSeededM_eq,
     ``GoLean.GoCore.SetupSound.runProgramSeededM_empty,
     ``GoLean.GoCore.SetupSound.runProgramPoolSeeded_empty,
+    -- RE-PIN 20 (2026-10-12, lane core/followups-1012): the seeded base's helper, BridgeSet row 602.
+    ``GoLean.GoCore.SetupSound.seedBase_seedLocs,
 
     -- Pool grind M1: the nine frozen statements, BridgeSet rows 503–511.
     ``GoLean.GoCore.PoolSound.raceUpdate_error,

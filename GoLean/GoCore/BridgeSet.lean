@@ -276,6 +276,17 @@ after the setup and the literal field `base := base`; rows 600–601 (the two er
 `{ readout := r, base := 0, seedFinal := #[] }` where they spelt `{ readout := r, seedFinal := #[] }`.
 The observation format is unchanged (the base is internal to the rendering); the pool spec
 (`scripts/check-pool-spec`) does not mention the seeded entry.
+
+RE-PIN 20 — the seeded base's HELPER ([AGENT worker, lane `core/followups-1012`], 2026-10-12; the
+seeded-base re-pin's review asked for it, recorded as owed in `docs/2026-10-09_seeded-heap-design.md`
+§4 by the train 6 records commit; under the standing mandate [USER] Mike 2026-10-12 «manage some
+agents working through the backlog, starting with the ones that require no input from me», relayed):
+rows 1–601 BYTE-IDENTICAL; row 602 ADDED, added-only — `seedBase_seedLocs : 0 < n →
+seedBase (seedLocs b n) = .ok b` closes the chain S6 → S1 → S2 → base = s₁.heap.size for a
+non-empty seed: the setup's slot list IS `seedLocs s₁.heap.size seed.size` (S2 `seedCells_locs`,
+row 594), so the readout's `base` (row 599) is the post-init bound the cells were placed from, and
+`seedBase`'s non-base refusal is unreachable from a setup (the empty seed's case is `seedBase_nil`,
+unpinned). No semantic, wire or observation change.
 -/
 
 namespace GoLean.GoCore.BridgeSet
@@ -4582,5 +4593,11 @@ example :
       = (fun r : Readout => ({ readout := r, base := 0, seedFinal := #[] } : SeededReadout)) <$>
           runProgramPoolOutM fuel program name args choices :=
   @GoLean.GoCore.SetupSound.runProgramPoolSeeded_empty
+
+-- 602. `SetupSound.lean` — `seedBase_seedLocs` (RE-PIN 20, added-only: a non-empty seed's base is its
+-- first slot's address; with S2 `seedCells_locs` (row 594) the readout's `base` (row 599) is
+-- `s₁.heap.size` — the chain S6 → S1 → S2 → base = s₁.heap.size for a non-empty seed)
+example : ∀ (b n : Nat), 0 < n → seedBase (seedLocs b n) = .ok b :=
+  @GoLean.GoCore.SetupSound.seedBase_seedLocs
 
 end GoLean.GoCore.BridgeSet

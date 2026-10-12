@@ -1054,6 +1054,16 @@ two erasure proofs need beyond their original shape. -/
 /-- The empty seed has no slot and base 0 (the erasure statements' literal). -/
 theorem seedBase_nil : seedBase #[] = .ok 0 := rfl
 
+/-- A NON-EMPTY seed's base is the first slot's address (RE-PIN 20, 2026-10-12 — the helper the
+seeded-base re-pin's review asked for): the setup's slot list IS `seedLocs s₁.heap.size seed.size`
+(S2 `seedCells_locs`), so for a non-empty seed the readout's `base` (S6) is the post-init bound the
+cells were placed from, `base = s₁.heap.size`, and `seedBase`'s non-base refusal is unreachable
+from a setup. -/
+theorem seedBase_seedLocs (b n : Nat) (h : 0 < n) : seedBase (seedLocs b n) = .ok b := by
+  cases n with
+  | zero => omega
+  | succ m => simp [seedBase, seedLocs, List.range_succ_eq_map]
+
 theorem runProgramSeededM_eq : runProgramSeededM_eq_stmt := fun _ _ _ _ _ _ => rfl
 
 theorem runProgramSeededM_empty : runProgramSeededM_empty_stmt := by
