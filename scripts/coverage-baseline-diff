@@ -7,11 +7,30 @@
 # — so a focused `diff-one` run diffs cleanly. Use --full to additionally require
 # every baseline case to be present (a completeness check for full corpus runs).
 #
-# Usage: scripts/coverage-baseline-diff [--full] [--baseline <file>] [<results.tsv>]
+# Usage: scripts/coverage-baseline-diff [--full] [--no-cause] [--baseline <file>] [<results.tsv>]
 #   default baseline: baselines/native-full.tsv; default results:
-#   artifacts/coverage/latest.tsv. Pass --baseline baselines/negative-full.tsv
-#   with artifacts/coverage/negative-latest.tsv for the negative lane (same
-#   column discipline in both lanes).
+#   artifacts/coverage/latest.tsv. Pass --no-cause --baseline
+#   baselines/negative-full.tsv with artifacts/coverage/negative-latest.tsv
+#   for the negative lane (a 3-column baseline: result,id,stage).
+#
+# THE CAUSE COLUMN (refusal-cause pinning, release-readiness item 8 /
+# gate-audit F9; [USER] Mike 2026-10-12 «1,3-6 approved» — D1-D6 of
+# docs/2026-10-12_refusal-cause-pinning-design.md as recommended): the
+# differential baseline's rows are result,id,stage,cause. `cause` is the
+# normalized key scripts/coverage-cause derives from a results row's
+# detail (the grammar is that script's header and the note's §3): `-` on
+# PASS rows and at the stages D4 leaves unpinned; a tools/lowerdiag
+# causes.tsv class at frontend-export; `<status>:<scripts/machine-causes.tsv
+# id>` at lean-observation; killed:N / timeout / undecided:N for a runner
+# non-verdict at any stage; crash:frontend / crash:lean-output. The
+# comparison is (result, stage, cause): a changed cause at the same
+# (result, id, stage) is DRIFT, reported as `CAUSE CHANGED` — a crash, a
+# timeout or a different refusal where the baseline pins a named one. The
+# column is REQUIRED unless --no-cause is given (a missing column is
+# REFUSED, exit 2 — never defaulted), and --no-cause on a 4-column baseline
+# is REFUSED too (the explicit flag must match the file). Unclassified keys
+# (`fe?:<head>`, `<status>:?`) are pinned like any other; scripts/ci
+# reports them under its speedbump heading (D5), never here.
 # Exit 0 = no regression among cases run. Exit 1 = drift (ids printed).
 # Exit 2 = could not judge (missing input, or a MALFORMED baseline record —
 #   named per row; never read as "no drift").
@@ -38,17 +57,23 @@
 #     was dropped by a regeneration — REFUSED; the re-pin guard's
 #     scripts/check-alternation-survival covers the row-disappears case) — the alternation is [USER]-ruled per row and the record
 #     says why on the line above it.
-# Rows without `|` compare exactly, as before.
+# Rows without `|` compare exactly, as before. On an alternation row the
+# CAUSE column is a `|` set PAIRED with the stage set (same member count;
+# member k is the cause pinned for stage member k), and the observed
+# (stage, cause) must be one of the pairs; a `|` cause on a plain row, an
+# unpaired count, or a cause set on a PASS row is REFUSED.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
 
 FULL=0
+CAUSE=1
 BASELINE="baselines/native-full.tsv"
 while :; do
   case "${1:-}" in
     --full) FULL=1; shift ;;
+    --no-cause) CAUSE=0; shift ;;
     --baseline) BASELINE="${2:?--baseline needs a file}"; shift 2 ;;
     *) break ;;
   esac
@@ -63,11 +88,28 @@ RESULTS="${1:-artifacts/coverage/latest.tsv}"
 # Only alternation MEMBERS are checked against it; plain rows compare
 # exactly and need no vocabulary. `-` (the PASS stage) is deliberately
 # absent: an alternation is non-PASS by rule.
-STAGE_VOCAB="manifest go-source go-harness go-run go-observation frontend-export lean-observation lean-run differential confluent membership racy nondet litmus-contract"
+# The negative lane's words (scripts/coverage-negative) are here too: its
+# frontend leg (D3) emits frontend-accepts / frontend-crash /
+# frontend-reason beside go-compile.
+STAGE_VOCAB="manifest go-source go-harness go-run go-observation frontend-export lean-observation lean-run differential confluent membership racy nondet litmus-contract go-compile frontend-accepts frontend-crash frontend-reason"
 
-# Baseline columns: result,id,stage. Results columns: result,id,features,stage.
-# Single awk pass, no temp files (sandbox-safe): load baseline (result/stage keyed
-# by id), then compare each result row; emit drift and one-sided ids. A baseline
+# The run's cause keys, derived ONCE (scripts/coverage-cause; exit 2 =
+# could not derive — a refusal to judge, never a no-drift result).
+CAUSES=""
+if [ "$CAUSE" -eq 1 ]; then
+  cause_rc=0
+  CAUSES="$(./scripts/coverage-cause "$RESULTS")" || cause_rc=$?
+  if [ "$cause_rc" -ne 0 ]; then
+    { echo "REFUSED: could not derive the cause keys of $(basename "$RESULTS") (scripts/coverage-cause exit $cause_rc — see above) — cannot judge it against $BASELINE (this is NOT a no-drift result)"; } || true
+    exit 2
+  fi
+fi
+
+# Baseline columns: result,id,stage,cause (result,id,stage under --no-cause).
+# Results columns: result,id,features,stage(,detail). Single awk pass, no temp
+# files of ours (sandbox-safe; the cause keys arrive on stdin as a here-string):
+# load baseline (result/stage/cause keyed by id), then compare each result row;
+# emit drift and one-sided ids. A baseline
 # id ABSENT from the results is "not run" (skipped) unless --full is set.
 # awk exit 3 = the baseline record is malformed (REFUSED lines name the rows;
 # 3, not 2, because gawk itself exits 2 on a fatal such as an unreadable
@@ -75,10 +117,20 @@ STAGE_VOCAB="manifest go-source go-harness go-run go-observation frontend-export
 # captured EXPLICITLY below — under `set -e` a bare $(...) would have died
 # silently, and under a `| sort` pipe the status would have been the sort's.
 awk_rc=0
-raw="$(awk -F'\t' -v BASE="$BASELINE" -v FULL="$FULL" -v VOCAB="$STAGE_VOCAB" '
+raw="$(awk -F'\t' -v BASE="$BASELINE" -v FULL="$FULL" -v VOCAB="$STAGE_VOCAB" -v CAUSE="$CAUSE" '
   function refuse(id, why) { print "REFUSED\t" id "\t" why; refused = 1 }
+  # A row as the drift report prints it: R/S, plus the cause in cause mode.
+  function show(r, st, c) { return CAUSE == 1 ? r "/" st " cause=" c : r "/" st }
   BEGIN {
     nv = split(VOCAB, vv, " "); for (i = 1; i <= nv; i++) vocab[vv[i]] = 1
+    # The run'"'"'s cause keys (id TAB cause, one per results row) on stdin.
+    if (CAUSE == 1)
+      while ((getline cl < "/dev/stdin") > 0) {
+        if (cl == "") continue
+        nc = split(cl, cf, "\t")
+        if (nc != 2) { print "INTERNAL\tmalformed coverage-cause line: " cl; exit 4 }
+        rcause[cf[1]] = cf[2]
+      }
     prev_reason = 0
     while ((getline line < BASE) > 0) {
       # `prev_reason` = the comment block immediately above the current
@@ -99,6 +151,17 @@ raw="$(awk -F'\t' -v BASE="$BASELINE" -v FULL="$FULL" -v VOCAB="$STAGE_VOCAB" '
       # CONFLICTING results would have been laundered the same way).
       if (f[2] in bseen) { print f[2] "\tDUPLICATE id in baseline (record integrity)"; }
       bseen[f[2]] = 1; bres[f[2]] = f[1]; bstage[f[2]] = f[3]
+      # The cause column: required in cause mode, absent under --no-cause
+      # — the format is declared by the flag, never inferred from the file.
+      if (CAUSE == 1) {
+        if (n != 4) refuse(f[2], "row has " n " column(s) — the baseline format is result,id,stage,cause (refusal-cause pinning); the cause column is REQUIRED, never defaulted (regenerate it: scripts/coverage-cause --apply)")
+        else if (f[4] == "") refuse(f[2], "EMPTY cause column (a PASS row and an unpinned stage carry `-`)")
+        else if (f[1] == "PASS" && f[4] != "-") refuse(f[2], "a PASS row carries the cause [" f[4] "] — PASS rows carry `-`")
+        else if (index(f[4], "|") > 0 && index(f[3], "|") == 0) refuse(f[2], "cause alternation [" f[4] "] on a row whose stage [" f[3] "] is not an alternation")
+        bcause[f[2]] = f[4]
+      } else if (n != 3) {
+        refuse(f[2], "row has " n " column(s) but --no-cause declares a result,id,stage baseline (a cause column would be silently ignored)")
+      }
       if (index(f[3], "|") > 0) {
         # A stage ALTERNATION: validated here, fail-closed, before any
         # comparison reads it.
@@ -113,6 +176,15 @@ raw="$(awk -F'\t' -v BASE="$BASELINE" -v FULL="$FULL" -v VOCAB="$STAGE_VOCAB" '
           balt[f[2], alt[k]] = 1
         }
         if (!prev_reason) refuse(f[2], "stage alternation [" f[3] "] without a `# reason:` line in the comment block immediately above it (the oracle mechanism must be named; the alternation is [USER]-ruled per row)")
+        if (CAUSE == 1 && n == 4) {
+          # The cause set is PAIRED with the stage set, member by member.
+          mc = split(f[4], calt, "|")
+          if (mc != m) refuse(f[2], "stage alternation [" f[3] "] has " m " member(s) but its cause [" f[4] "] has " mc " — the cause set pairs with the stage set, member by member")
+          else for (k = 1; k <= m; k++) {
+            if (calt[k] == "") refuse(f[2], "cause alternation [" f[4] "] has an empty member")
+            bpair[f[2], alt[k], calt[k]] = 1
+          }
+        }
         balts[f[2]] = 1
       }
       prev_reason = 0
@@ -123,28 +195,38 @@ raw="$(awk -F'\t' -v BASE="$BASELINE" -v FULL="$FULL" -v VOCAB="$STAGE_VOCAB" '
   /^#/ { next }
   $1 == "result" { next }
   NF >= 2 {
-    id = $2; now = $1 "/" $4; rseen[id] = 1
+    id = $2; rseen[id] = 1
+    if (CAUSE == 1) {
+      if (!(id in rcause)) { print "INTERNAL\tno cause key derived for the results row " id; exit 4 }
+      c = rcause[id]
+    }
+    now = show($1, $4, c); was = show(bres[id], bstage[id], bcause[id])
     if (!(id in bseen))      { print id "\tNEW id (not in baseline) -> " now; next }
     if (id in balts) {
-      # Result exact (and non-PASS by construction); stage a member of the set.
-      if ($1 == bres[id] && $1 != "PASS" && ((id, $4) in balt)) next
-      print id "\tbaseline[" bres[id] "/" bstage[id] "] -> now[" now "]"
+      # Result exact (and non-PASS by construction); stage a member of the
+      # set, and in cause mode the (stage, cause) pair one of the pinned pairs.
+      if ($1 == bres[id] && $1 != "PASS" && ((id, $4) in balt) && (CAUSE == 0 || ((id, $4, c) in bpair))) next
+      if (CAUSE == 1 && $1 == bres[id] && ((id, $4) in balt))
+        print id "\tbaseline[" was "] -> now[" now "] CAUSE CHANGED at a pinned stage member — a different refusal, a crash or a timeout where the baseline pins a named cause"
+      else print id "\tbaseline[" was "] -> now[" now "]"
       next
     }
-    if (bres[id] "/" bstage[id] != now) print id "\tbaseline[" bres[id] "/" bstage[id] "] -> now[" now "]"
+    if (bres[id] "/" bstage[id] != $1 "/" $4) print id "\tbaseline[" was "] -> now[" now "]"
+    else if (CAUSE == 1 && bcause[id] != c)
+      print id "\tbaseline[" was "] -> now[" now "] CAUSE CHANGED at the same result/stage — a different refusal, a crash or a timeout where the baseline pins a named cause"
   }
   END {
     if (refused) exit 3
     if (FULL == 1)
       for (id in bseen) if (!(id in rseen)) print id "\tMISSING (in baseline, not run — --full)"
   }
-' "$RESULTS")" || awk_rc=$?
+' "$RESULTS" <<< "$CAUSES")" || awk_rc=$?
 
 # The exit code is the verdict; an unwritable stdout/stderr must not turn
 # a refusal (2) into a write failure (1) — hence every report line is
 # inside `{ …; } || true` (audit fix 5).
 if [ "$awk_rc" -eq 3 ]; then
-  { echo "REFUSED: $BASELINE carries a malformed stage alternation — cannot judge $(basename "$RESULTS") against it (fix the record; this is NOT a no-drift result):"
+  { echo "REFUSED: $BASELINE carries a malformed record (a stage/cause alternation or the cause column) — cannot judge $(basename "$RESULTS") against it (fix the record; this is NOT a no-drift result):"
     printf '%s\n' "$raw" | grep '^REFUSED' | LC_ALL=C sort | sed 's/^REFUSED\t/  /'; } || true
   exit 2
 elif [ "$awk_rc" -ne 0 ]; then

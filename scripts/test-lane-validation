@@ -19,9 +19,13 @@
 #   missing go FAILS this part rather than skipping it: diff-coverage's
 #   own go check sits BELOW its up-front rm, so without go every fixture
 #   would pass VACUOUSLY (dying at the go check, not the path under test).
-#   Part A4 (always; pure shell): scripts/coverage-baseline-diff's per-row
-#   stage ALTERNATION rules ([USER] ruling (a) 2026-09-03) + check-bugs's
-#   handling of an alternation row (counted by name, never dropped).
+#   Part A4 (always; needs go on PATH for tools/lowerdiag's classifier):
+#   scripts/coverage-baseline-diff's per-row stage ALTERNATION rules ([USER]
+#   ruling (a) 2026-09-03), its CAUSE column (refusal-cause pinning,
+#   2026-10-12: a changed cause / crash / timeout at a pinned stage drifts;
+#   `-` rows unaffected; the format refusals; the D5 speedbump) +
+#   check-bugs's handling of an alternation row (counted by name, never
+#   dropped).
 #   Part B (--with-go only; needs go + the built golean binary, so ci runs
 #   it under --diff): scripts/diff-coverage's IN-HARNESS lane checks — the
 #   param re-validation (F4: a sites=0 row that somehow bypasses the
@@ -310,39 +314,113 @@ else echo "ok: check-bugs unrecognized Expect token fails closed (0)"; fi
 # fidelity filter (an untracked one fails (4) BY NAME, not by vanishing),
 # and a fidelity/non-fidelity MIX fails (6), as does an EMPTY stage.
 BD="$TMP/baseline-diff"; mkdir -p "$BD"
-bd_base() { printf 'result\tid\tstage\n%s\n' "$1" > "$BD/baseline.tsv"; }
-bd_res()  { printf 'result\tid\tfeatures\tstage\n%s\n' "$1" > "$BD/results.tsv"; }
-bd_expect() {  # $1 name, $2 expected exit, $3 required output text
-  local name="$1" want="$2" needle="$3" out rc=0
-  out="$(scripts/coverage-baseline-diff --baseline "$BD/baseline.tsv" "$BD/results.tsv" 2>&1)" || rc=$?
+# The differential baseline carries the CAUSE column (refusal-cause pinning,
+# release-readiness item 8; [USER] 2026-10-12 «1,3-6 approved»): rows are
+# result,id,stage,cause and results rows carry the detail scripts/coverage-cause
+# keys (it shells `go run ./tools/lowerdiag classify` for frontend texts — so
+# Part A4 needs go on PATH, like A2).
+bd_base() { printf 'result\tid\tstage\tcause\n%s\n' "$1" > "$BD/baseline.tsv"; }
+bd_res()  { printf 'result\tid\tfeatures\tstage\tdetail\n%s\n' "$1" > "$BD/results.tsv"; }
+bd_expect() {  # $1 name, $2 expected exit, $3 required output text, $4.. extra flags
+  local name="$1" want="$2" needle="$3" out rc=0; shift 3
+  out="$(scripts/coverage-baseline-diff "$@" --baseline "$BD/baseline.tsv" "$BD/results.tsv" 2>&1)" || rc=$?
   if [ "$rc" -ne "$want" ]; then echo "FAIL: baseline-diff $name: exit $rc, expected $want: $out"; fail=1
   elif [[ "$out" != *"$needle"* ]]; then echo "FAIL: baseline-diff $name: exit $want but without the expected text ($needle): $out"; fail=1
   else echo "ok: baseline-diff $name"; fi
 }
-bd_base $'# reason: fixture — oracle-schedule-dependent stage\nFAIL\tfx/alt\tnondet|differential'
-bd_res $'FAIL\tfx/alt\tx\tdifferential'
+FE_COMPLEX=$'native frontend (exit 1): nativefrontend: native frontend unsupported: basic type complex128\\nfor the full blocker picture run scripts/lower-diagnose x'
+FE_ANON=$'native frontend (exit 1): nativefrontend: native frontend unsupported: anonymous struct type struct{x int}'
+bd_base $'# reason: fixture — oracle-schedule-dependent stage\nFAIL\tfx/alt\tnondet|differential\t-|-'
+bd_res $'FAIL\tfx/alt\tx\tdifferential\tLean=1 Go=2'
 bd_expect "(i) member stage differential -> no drift" 0 "no regression"
-bd_res $'FAIL\tfx/alt\tx\tnondet'
+bd_res $'FAIL\tfx/alt\tx\tnondet\tvaries with iteration order'
 bd_expect "(i) member stage nondet -> no drift" 0 "no regression"
-bd_res $'FAIL\tfx/alt\tx\tfrontend-export'
-bd_expect "(ii) non-member stage -> drift" 1 $'fx/alt\tbaseline[FAIL/nondet|differential] -> now[FAIL/frontend-export]'
-bd_res $'PASS\tfx/alt\tx\t-'
-bd_expect "(iii) PASS never absorbed -> drift" 1 $'fx/alt\tbaseline[FAIL/nondet|differential] -> now[PASS/-]'
-bd_base $'# reason: fixture\nPASS\tfx/alt\tconfluent|membership'
-bd_res $'PASS\tfx/alt\tx\tconfluent'
+bd_res "$(printf 'FAIL\tfx/alt\tx\tfrontend-export\t%s' "$FE_COMPLEX")"
+bd_expect "(ii) non-member stage -> drift" 1 $'fx/alt\tbaseline[FAIL/nondet|differential cause=-|-] -> now[FAIL/frontend-export cause=FR-15/complex]'
+bd_res $'PASS\tfx/alt\tx\t-\twide=0'
+bd_expect "(iii) PASS never absorbed -> drift" 1 $'fx/alt\tbaseline[FAIL/nondet|differential cause=-|-] -> now[PASS/- cause=-]'
+bd_base $'# reason: fixture\nPASS\tfx/alt\tconfluent|membership\t-|-'
+bd_res $'PASS\tfx/alt\tx\tconfluent\t-'
 bd_expect "(iv) alternation on a PASS row -> REFUSED" 2 "alternation is for non-PASS rows only"
-bd_base $'# reason: fixture\nFAIL\tfx/alt\tnondet|bogus-stage'
-bd_res $'FAIL\tfx/alt\tx\tnondet'
+bd_base $'# reason: fixture\nFAIL\tfx/alt\tnondet|bogus-stage\t-|-'
+bd_res $'FAIL\tfx/alt\tx\tnondet\t-'
 bd_expect "(v) unknown stage word -> REFUSED" 2 "unknown stage word 'bogus-stage'"
-bd_base $'FAIL\tfx/alt\tnondet|differential'
-bd_res $'FAIL\tfx/alt\tx\tnondet'
+bd_base $'FAIL\tfx/alt\tnondet|differential\t-|-'
+bd_res $'FAIL\tfx/alt\tx\tnondet\t-'
 bd_expect "(vi) alternation without a # reason: line -> REFUSED" 2 'without a `# reason:` line'
-bd_base $'FAIL\tfx/plain\tnondet'
-bd_res $'FAIL\tfx/plain\tx\tdifferential'
-bd_expect "(vii) plain row stays exact -> drift" 1 $'fx/plain\tbaseline[FAIL/nondet] -> now[FAIL/differential]'
-bd_base $'# reason: fixture\nFAIL\tfx/plain\tnondet'
-bd_res $'FAIL\tfx/plain\tx\tnondet'
+bd_base $'FAIL\tfx/plain\tnondet\t-'
+bd_res $'FAIL\tfx/plain\tx\tdifferential\tLean=1 Go=2'
+bd_expect "(vii) plain row stays exact -> drift" 1 $'fx/plain\tbaseline[FAIL/nondet cause=-] -> now[FAIL/differential cause=-]'
+bd_base $'# reason: fixture\nFAIL\tfx/plain\tnondet\t-'
+bd_res $'FAIL\tfx/plain\tx\tnondet\t-'
 bd_expect "(viii) # reason: block over a NON-alternation row (regenerated plain) -> REFUSED" 2 "orphaned reason"
+# The CAUSE column (refusal-cause note §2's failure classes a, b, b').
+bd_base $'FAIL\tfx/fe\tfrontend-export\tFR-15/complex'
+bd_res "$(printf 'FAIL\tfx/fe\tx\tfrontend-export\t%s' "$FE_COMPLEX")"
+bd_expect "(x) same refusal cause at the same stage -> no drift" 0 "no regression"
+bd_res "$(printf 'FAIL\tfx/fe\tx\tfrontend-export\t%s' "$FE_ANON")"
+bd_expect "(x) a DIFFERENT refusal at the same result/stage -> drift (class a)" 1 $'fx/fe\tbaseline[FAIL/frontend-export cause=FR-15/complex] -> now[FAIL/frontend-export cause=FR-13/anon-struct] CAUSE CHANGED'
+bd_res $'FAIL\tfx/fe\tx\tfrontend-export\tnative frontend (exit 2): panic: runtime error: invalid memory address or nil pointer dereference'
+bd_expect "(xi) a frontend CRASH (exit 2) where a named refusal is pinned -> drift (class b)" 1 'now[FAIL/frontend-export cause=crash:frontend] CAUSE CHANGED'
+bd_res $'FAIL\tfx/fe\tx\tfrontend-export\tnative frontend TIMED OUT after 30s (GO_TIMEOUT_SECONDS) — no wire produced; captured output: '
+bd_expect "(xi) a frontend TIMEOUT where a named refusal is pinned -> drift (class b)" 1 'now[FAIL/frontend-export cause=timeout] CAUSE CHANGED'
+bd_base $'FAIL\tfx/m\tlean-observation\tunsupported:float-to-int-range'
+bd_res $'FAIL\tfx/m\tx\tlean-observation\texpected status ok, got {"message":"float-to-int conversion out of range/NaN (implementation-dependent in Go)","output":"","schema":"golean-observation-v1","status":"unsupported"}'
+bd_expect "(xii) the pinned machine refusal -> no drift" 0 "no regression"
+bd_res $'FAIL\tfx/m\tx\tlean-observation\tLean run KILLED (exit 139 — died on signal 11; did not decide) — no observation produced (expected status ok); captured output: '
+bd_expect "(xii) a Lean KILLED where a machine refusal is pinned -> drift (class b)" 1 'now[FAIL/lean-observation cause=killed:139] CAUSE CHANGED'
+bd_res $'FAIL\tfx/m\tx\tlean-observation\texpected status ok, got {"message":"boom","output":"","schema":"golean-observation-v1","status":"panic"}'
+bd_expect "(xii) a machine PANIC (a wrong answer) where a refusal is pinned -> drift (class b')" 1 'now[FAIL/lean-observation cause=panic:?] CAUSE CHANGED'
+bd_base $'FAIL\tfx/d\tdifferential\t-\nFAIL\tfx/g\tgo-observation\t-'
+bd_res $'FAIL\tfx/d\tx\tdifferential\tLean=3 Go=4\nFAIL\tfx/g\tx\tgo-observation\tcould not extract Go panic message: something else entirely'
+bd_expect "(xiii) \`-\` rows (differential, go-*) are unaffected by their detail -> no drift" 0 "no regression"
+bd_base $'FAIL\tfx/fe\tfrontend-export'
+bd_res "$(printf 'FAIL\tfx/fe\tx\tfrontend-export\t%s' "$FE_COMPLEX")"
+bd_expect "(xiv) a baseline WITHOUT the cause column -> REFUSED (never defaulted)" 2 "the cause column is REQUIRED"
+bd_base $'FAIL\tfx/fe\tfrontend-export\tFR-15/complex'
+bd_expect "(xiv) --no-cause on a 4-column baseline -> REFUSED (the flag must match the file)" 2 "--no-cause declares" --no-cause
+bd_res $'FAIL\tfx/fe\tx\tfrontend-export\tnative frontend: nativefrontend: native frontend unsupported: basic type complex128'
+bd_expect "(xiv) a record without the frontend exit code -> REFUSED (crash and refusal indistinguishable)" 2 "predates the refusal-cause runner"
+bd_base $'PASS\tfx/p\t-\tFR-15/complex'
+bd_res $'PASS\tfx/p\tx\t-\t-'
+bd_expect "(xiv) a cause on a PASS row -> REFUSED" 2 "PASS rows carry"
+SELSEL_OBS='{"message":"select-with-select rendezvous (unmodeled this slice)","output":"","schema":"golean-observation-v1","status":"unsupported"}'
+bd_base $'# reason: fixture — oracle-schedule-dependent stage\nFAIL\tfx/alt\tlean-observation|differential\tunsupported:select-select|-'
+bd_res "$(printf 'FAIL\tfx/alt\tx\tlean-observation\tvariant stream [1,0]: the machine produced status %s where the default run produced %s — a refusal under a variant stream is a refusal, not a variance (invariance NOT certified): %s' "'unsupported'" "'ok'" "$SELSEL_OBS")"
+bd_expect "(xv) cause alternation: the pinned (stage, cause) pair -> no drift" 0 "no regression"
+bd_res $'FAIL\tfx/alt\tx\tdifferential\tLean=5 Go=90'
+bd_expect "(xv) cause alternation: the other pinned pair -> no drift" 0 "no regression"
+bd_res $'FAIL\tfx/alt\tx\tlean-observation\tLean run TIMED OUT after 60s (LEAN_TIMEOUT_SECONDS) — no observation produced (expected status ok); captured output: '
+bd_expect "(xv) cause alternation: a pinned stage member with another cause -> drift" 1 'CAUSE CHANGED at a pinned stage member'
+bd_base $'# reason: fixture\nFAIL\tfx/alt\tlean-observation|differential\tunsupported:select-select'
+bd_expect "(xv) cause set not paired with the stage set -> REFUSED" 2 "pairs with the stage set"
+bd_base $'FAIL\tfx/fe\tfrontend-export\tFR-15/complex|-'
+bd_res "$(printf 'FAIL\tfx/fe\tx\tfrontend-export\t%s' "$FE_COMPLEX")"
+bd_expect "(xv) a cause alternation on a plain row -> REFUSED" 2 "is not an alternation"
+# D5: an unclassified text is PINNED (the diff judges it like any key) and
+# REPORTED by the speedbump (scripts/coverage-cause --unclassified, exit 1).
+bd_base $'FAIL\tfx/u\tfrontend-export\tfe?:something_entirely_new_the_table_has_never_seen'
+bd_res $'FAIL\tfx/u\tx\tfrontend-export\tnative frontend (exit 1): nativefrontend: something entirely new the table has never seen'
+bd_expect "(xvi) an unclassified key is pinned like any other -> no drift (D5: not a gate failure)" 0 "no regression"
+rc=0; out="$(scripts/coverage-cause --unclassified "$BD/results.tsv" 2>&1)" || rc=$?
+if [ "$rc" -eq 1 ] && [[ "$out" == *$'UNCLASSIFIED\tfx/u\tfrontend-export\tfe?:something_entirely_new'* ]]; then echo "ok: coverage-cause --unclassified reports the unclassified row (D5 speedbump, exit 1)"
+else echo "FAIL: coverage-cause --unclassified did not report fx/u with exit 1 (exit $rc): $out"; fail=1; fi
+bd_res "$(printf 'FAIL\tfx/u\tx\tfrontend-export\t%s' "$FE_COMPLEX")"
+rc=0; out="$(scripts/coverage-cause --unclassified "$BD/results.tsv" 2>&1)" || rc=$?
+if [ "$rc" -eq 0 ]; then echo "ok: coverage-cause --unclassified is quiet when every FAIL row classifies"
+else echo "FAIL: coverage-cause --unclassified exited $rc on a classified run: $out"; fail=1; fi
+# The column is REGENERATED from a run, never hand-maintained
+# (scripts/coverage-cause --apply): rows keep result/id/stage, gain the key;
+# a result/stage disagreement with the run is REFUSED (re-pin rows first).
+printf '# header kept\nresult\tid\tstage\nFAIL\tfx/fe\tfrontend-export\nPASS\tfx/p\t-\n' > "$BD/apply-base.tsv"
+printf 'result\tid\tfeatures\tstage\tdetail\nFAIL\tfx/fe\tx\tfrontend-export\t%s\nPASS\tfx/p\tx\t-\t-\n' "$FE_COMPLEX" > "$BD/results.tsv"
+rc=0; out="$(scripts/coverage-cause --apply "$BD/apply-base.tsv" "$BD/results.tsv" 2>&1)" || rc=$?
+if [ "$rc" -eq 0 ] && [ "$out" = "$(printf '# header kept\nresult\tid\tstage\tcause\nFAIL\tfx/fe\tfrontend-export\tFR-15/complex\nPASS\tfx/p\t-\t-')" ]; then echo "ok: coverage-cause --apply regenerates the cause column (rows and header kept)"
+else echo "FAIL: coverage-cause --apply (exit $rc) produced: $out"; fail=1; fi
+printf 'result\tid\tstage\nFAIL\tfx/fe\tlean-observation\nPASS\tfx/p\t-\n' > "$BD/apply-base.tsv"
+rc=0; out="$(scripts/coverage-cause --apply "$BD/apply-base.tsv" "$BD/results.tsv" 2>&1)" || rc=$?
+if [ "$rc" -eq 2 ] && [[ "$out" == *"re-pin the rows first"* ]]; then echo "ok: coverage-cause --apply refuses a result/stage disagreement (cause column only)"
+else echo "FAIL: coverage-cause --apply accepted a stage disagreement (exit $rc): $out"; fail=1; fi
 # Alternation SURVIVAL across a re-pin (audit fix 4): the ci re-pin guard
 # calls scripts/check-alternation-survival OLD NEW.
 SV="$TMP/survival"; mkdir -p "$SV"

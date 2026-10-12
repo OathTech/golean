@@ -286,7 +286,7 @@ if [ "$RUN_DIFF" -eq 1 ]; then
     0|1) ok "differential run completed (exit $drc; the failing set is judged by the baseline diff)" ;;
     *)   bad "differential run BROKE (exit $drc — not a case failure; see output)" ;;
   esac
-  step "negative corpus, fresh run (scripts/coverage-negative)"
+  step "negative corpus, fresh run (scripts/coverage-negative: gc rejects AND the native frontend refuses as a rejection)"
   ./scripts/coverage-negative 2>&1 | tail -2 | sed 's/^/  /'; nrc=${PIPESTATUS[0]}
   case "$nrc" in
     0|1) ok "negative run completed (exit $nrc; judged by the baseline diff)" ;;
@@ -322,8 +322,19 @@ fi
 # oracle of record (no toolchain drift), and for a full run a manifest sha equal
 # to the manifest regenerated from the CURRENT corpus. A partial run is a note
 # in the fast tier and a FAIL under --diff. No record is a FAIL.
-judge_record() {  # <kind> <latest.tsv> <meta.tsv> <baseline> <manifest-cmd> <demand-full 0|1>
-  local kind=$1 latest=$2 meta=$3 baseline=$4 manifest_cmd=$5 demand_full=$6
+# The 7th argument is the baseline's column format for
+# scripts/coverage-baseline-diff: `cause` (result,id,stage,cause — the
+# differential baseline's refusal-cause column, release-readiness item 8)
+# or `no-cause` (result,id,stage — the negative baseline). Explicit per
+# call, never inferred from the file.
+judge_record() {  # <kind> <latest.tsv> <meta.tsv> <baseline> <manifest-cmd> <demand-full 0|1> <cause|no-cause>
+  local kind=$1 latest=$2 meta=$3 baseline=$4 manifest_cmd=$5 demand_full=$6 colfmt=$7
+  local -a fmt_flag=()
+  case "$colfmt" in
+    cause) ;;
+    no-cause) fmt_flag=(--no-cause) ;;
+    *) bad "$kind baseline diff (internal: judge_record column format '$colfmt' is neither cause nor no-cause)"; return ;;
+  esac
   local ran total runcommit head stale="" drift tool dirty meta_sha cur_sha rc=0
   if [ ! -f "$latest" ]; then
     if [ -n "${GOLEAN_ALLOW_NO_DIFF:-}" ]; then note "$kind baseline diff NOT RUN (no record; GOLEAN_ALLOW_NO_DIFF set — this environment never records one)"
@@ -349,7 +360,7 @@ judge_record() {  # <kind> <latest.tsv> <meta.tsv> <baseline> <manifest-cmd> <de
     if [ -z "$meta_sha" ] || [ -z "$cur_sha" ] || [ "$meta_sha" != "$cur_sha" ]; then
       bad "$kind baseline diff (meta manifest_sha256 [${meta_sha:-missing}] != the current corpus manifest — stale/foreign results; re-run scripts/ci --diff)"; return
     fi
-    ./scripts/coverage-baseline-diff --full --baseline "$baseline" "$latest" || rc=$?
+    ./scripts/coverage-baseline-diff --full ${fmt_flag[@]+"${fmt_flag[@]}"} --baseline "$baseline" "$latest" || rc=$?
     if [ "$rc" -ge 2 ]; then bad "$kind baseline diff (REFUSED / could not judge, exit $rc — NOT a drift verdict)"
     elif [ "$rc" -eq 1 ]; then bad "$kind baseline diff (DRIFT vs $baseline — see above)"
     elif [ "$dirty" = true ]; then note "$kind baseline diff FULL ($ran/$total, no regression) but recorded on a DIRTY tree — certifies that worktree state, not a commit$stale"
@@ -357,16 +368,23 @@ judge_record() {  # <kind> <latest.tsv> <meta.tsv> <baseline> <manifest-cmd> <de
   elif [ "$demand_full" -eq 1 ]; then
     bad "$kind baseline diff (--diff demanded a full run but the record is PARTIAL: $ran/$total)"
   else
-    ./scripts/coverage-baseline-diff --baseline "$baseline" "$latest" || rc=$?
+    ./scripts/coverage-baseline-diff ${fmt_flag[@]+"${fmt_flag[@]}"} --baseline "$baseline" "$latest" || rc=$?
     if [ "$rc" -ge 2 ]; then bad "$kind baseline diff (REFUSED / could not judge, exit $rc — NOT a drift verdict)"
     elif [ "$rc" -eq 1 ]; then bad "$kind baseline diff (DRIFT among the $ran cases run — see above)"
     else note "$kind baseline diff PARTIAL ($ran/$total run, no drift among them — NOT a full certification; use --diff)$stale${dirty:+ [git_dirty=$dirty]}"; fi
   fi
 }
 step "baselines: the recorded negative run vs baselines/negative-full.tsv"
-judge_record negative artifacts/coverage/negative-latest.tsv artifacts/coverage/negative-latest.meta.tsv baselines/negative-full.tsv ./scripts/coverage-negative-manifest "$RUN_DIFF"
+judge_record negative artifacts/coverage/negative-latest.tsv artifacts/coverage/negative-latest.meta.tsv baselines/negative-full.tsv ./scripts/coverage-negative-manifest "$RUN_DIFF" no-cause
 step "baselines: the recorded differential run vs baselines/native-full.tsv"
-judge_record differential artifacts/coverage/latest.tsv artifacts/coverage/latest.meta.tsv baselines/native-full.tsv ./scripts/coverage-manifest "$RUN_DIFF"
+judge_record differential artifacts/coverage/latest.tsv artifacts/coverage/latest.meta.tsv baselines/native-full.tsv ./scripts/coverage-manifest "$RUN_DIFF" cause
+# Speedbump (D5 of the refusal-cause note, [USER]-approved 2026-10-12): an
+# unclassified cause key (`fe?:<head>`, `<status>:?`) is pinned by the
+# baseline like any other, and REPORTED here so the classifier tables
+# (tools/lowerdiag/causes.tsv, scripts/machine-causes.tsv) catch up.
+if [ -f artifacts/coverage/latest.tsv ]; then
+  run_bump "every FAIL row's refusal cause classified (scripts/coverage-cause --unclassified)" ./scripts/coverage-cause --unclassified artifacts/coverage/latest.tsv
+fi
 
 # ── GATE: the re-pin guard. A re-pin that flips a case PASS -> non-PASS must
 # list it on a `- Cases:` line in docs/BUGS.md; a stage alternation of the old
