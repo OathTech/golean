@@ -263,6 +263,56 @@ validate_path_id() {
 #             row's expected_status (the default/plain-run status);
 #             e.g. statuses=ok+panic. Absent = the singleton
 #             {expected_status}, the pre-F8 discipline.
+# The seeded args grammar (seeded-heap slice C): comma-separated <int> |
+# ref:k(.f|[i])* | nil — k and i decimal nats without leading zeros, f an
+# ASCII identifier (GoLean/SeedFile.lean parseArgRef's grammar).
+SEED_NAT='(0|[1-9][0-9]*)'
+SEED_TOKEN="(-?[0-9]+|ref:${SEED_NAT}(\.[A-Za-z_][A-Za-z0-9_]*|\[${SEED_NAT}\])*|nil)"
+SEED_ARGS_RE="^${SEED_TOKEN}(,${SEED_TOKEN})*\$"
+
+# strict_params_ok <cases_file> <go_dir> <params>: the strict lane's params —
+# depth=<N> (the depth guard) and seed=<file> (seeded-heap slice C), each at
+# most once, comma-separated, nothing else.
+strict_params_ok() {
+  local cases_file="$1" go_dir="$2" params="$3" kv key value seen=""
+  IFS=',' read -r -a kvs <<< "$params"
+  for kv in "${kvs[@]}"; do
+    key="${kv%%=*}"
+    value="${kv#*=}"
+    if [[ "$kv" != *=* ]]; then
+      key="$kv"
+    fi
+    if [[ " $seen " == *" $key "* ]]; then
+      echo "coverage-manifest: $cases_file: duplicate strict-lane param key: $key" >&2
+      return 1
+    fi
+    seen="$seen $key"
+    case "$kv" in
+      depth=*)
+        if [[ ! "$value" =~ ^[1-9][0-9]*$ ]]; then
+          echo "coverage-manifest: $cases_file: strict-lane params may only declare depth=<N> (the depth guard's seeded-stream length; N a positive integer) and seed=<file>: $kv" >&2
+          return 1
+        fi
+        ;;
+      seed=*)
+        if [[ ! "$value" =~ ^[A-Za-z0-9_][A-Za-z0-9_./-]*$ || "/$value/" == */../* || "/$value/" == */./* ]]; then
+          echo "coverage-manifest: $cases_file: seed=<file> must be a plain path relative to the case directory (no absolute path, no . or .. component): $kv" >&2
+          return 1
+        fi
+        if [[ ! -f "$go_dir/$value" ]]; then
+          echo "coverage-manifest: $cases_file: seed file $go_dir/$value does not exist: $kv" >&2
+          return 1
+        fi
+        ;;
+      *)
+        echo "coverage-manifest: $cases_file: strict-lane params may only declare depth=<N> (the depth guard's seeded-stream length; N a positive integer) and seed=<file> (a golean-seed-v1 file): $kv" >&2
+        return 1
+        ;;
+    esac
+  done
+  return 0
+}
+
 validate_lane_params() {
   local cases_file="$1"
   local params="$2"
@@ -287,6 +337,14 @@ validate_lane_params() {
         # budget in pool STEPS moved with every step-count refactor (C4,
         # train r59). Refused by name, never silently re-read as iters=.
         echo "coverage-manifest: $cases_file: nonterm= is RETIRED (a per-branch budget in pool steps; it moved with every step-count change): declare the budget in loop re-entries with iters=<K> — docs/2026-10-06_spin-bounds.md: $kv" >&2
+        return 1
+        ;;
+      seed)
+        # seed=<file> (seeded-heap slice C, 2026-10-12; design
+        # docs/2026-10-09_seeded-heap-design.md §7, D6): seeded rows are
+        # STRICT-lane only in golean-seed-v1 — the enumerator
+        # (coverage-observations) does not seed. Refused by name.
+        echo "coverage-manifest: $cases_file: seed= is a strict-lane param in golean-seed-v1 (the enumerating lanes' coverage-observations does not seed — design D6): $kv (lane=$lane_ctx)" >&2
         return 1
         ;;
       depth)
@@ -494,10 +552,30 @@ while IFS= read -r cases_file; do
       bad=1
       continue
     fi
+    # SEEDED ROWS (seeded-heap slice C, 2026-10-12; design
+    # docs/2026-10-09_seeded-heap-design.md §7): a strict row may declare
+    # seed=<file> in params (a golean-seed-v1 file, relative to the case
+    # directory), and its args then widen to the tokens <int> |
+    # ref:k(.f|[i])* | nil (native-json-run's --arg-int / --arg-ref /
+    # --arg-nil; the same tokens go to the Go twin, tools/coverageharness
+    # --seed). A ref:/nil token without seed= refuses the row by name; the
+    # seed= value itself is validated with the strict params below.
+    row_seeded=0
+    if [[ ",${params:--}," == *",seed="* ]]; then
+      row_seeded=1
+    fi
     if [[ "$args" != "-" && ! "$args" =~ ^-?[0-9]+(,-?[0-9]+)*$ ]]; then
-      echo "coverage-manifest: $cases_file: invalid integer args: $args" >&2
-      bad=1
-      continue
+      if [[ "$args" =~ $SEED_ARGS_RE ]]; then
+        if [[ "$row_seeded" -eq 0 ]]; then
+          echo "coverage-manifest: $cases_file: a ref:/nil argument names a seed cell — it needs seed=<file> in params (strict lane, golean-seed-v1): $args" >&2
+          bad=1
+          continue
+        fi
+      else
+        echo "coverage-manifest: $cases_file: invalid integer args: $args (a seed=<file> row also takes ref:k(.f|[i])* and nil tokens)" >&2
+        bad=1
+        continue
+      fi
     fi
     if ! validate_features "$cases_file" "$features"; then
       bad=1
@@ -532,8 +610,11 @@ while IFS= read -r cases_file; do
           bad=1
           continue
         fi
-        if [[ "$params" != "-" && ! "$params" =~ ^depth=[1-9][0-9]*$ ]]; then
-          echo "coverage-manifest: $cases_file: strict-lane params may only declare depth=<N> (the depth guard's seeded-stream length; N a positive integer): $params" >&2
+        # Since seeded-heap slice C: also seed=<file> (a golean-seed-v1
+        # file relative to the case directory: plain path characters, no
+        # absolute path, no `..` component, the file must exist). Each key
+        # at most once; nothing else.
+        if [[ "$params" != "-" ]] && ! strict_params_ok "$cases_file" "$go_dir" "$params"; then
           bad=1
           continue
         fi

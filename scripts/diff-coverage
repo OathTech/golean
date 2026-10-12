@@ -547,20 +547,72 @@ run_case_rows() {
   # Re-validated here like every lane param (F4's discipline: a row that
   # bypasses the manifest must fail loud, never fall through to the
   # fixed streams).
-  local depth=""
+  local depth="" seed_file=""
+  local -a seed_flags=()
   if [[ "$lane" == "strict" ]]; then
     if [[ "$why" != "-" ]]; then
       report_fail "$id" "$features" "manifest" "strict-lane rows must leave why as -"
       return 0
     fi
     if [[ "$params" != "-" ]]; then
-      if [[ "$params" =~ ^depth=([1-9][0-9]*)$ ]]; then
-        depth="${BASH_REMATCH[1]}"
-      else
-        report_fail "$id" "$features" "manifest" "strict-lane params may only declare depth=<N> (the depth guard's seeded-stream length): $params"
-        return 0
-      fi
+      # depth=<N> (the depth guard) and, since seeded-heap slice C,
+      # seed=<file> (a golean-seed-v1 file relative to the case dir) —
+      # each at most once, nothing else; re-validated here like every
+      # lane param (F4's discipline).
+      local skv sseen=""
+      IFS=',' read -r -a skvs <<< "$params"
+      for skv in "${skvs[@]}"; do
+        if [[ " $sseen " == *" ${skv%%=*} "* ]]; then
+          report_fail "$id" "$features" "manifest" "duplicate strict-lane param key: ${skv%%=*}"
+          return 0
+        fi
+        sseen="$sseen ${skv%%=*}"
+        if [[ "$skv" =~ ^depth=([1-9][0-9]*)$ ]]; then
+          depth="${BASH_REMATCH[1]}"
+        elif [[ "$skv" =~ ^seed=([A-Za-z0-9_][A-Za-z0-9_./-]*)$ && "/${BASH_REMATCH[1]}/" != */../* && "/${BASH_REMATCH[1]}/" != */./* ]]; then
+          seed_file="$go_dir/${BASH_REMATCH[1]}"
+          if [[ ! -f "$seed_file" ]]; then
+            report_fail "$id" "$features" "manifest" "seed file $seed_file does not exist (seed=${BASH_REMATCH[1]})"
+            return 0
+          fi
+        else
+          report_fail "$id" "$features" "manifest" "strict-lane params may only declare depth=<N> (the depth guard's seeded-stream length) and seed=<file> (a golean-seed-v1 file relative to the case dir): $skv"
+          return 0
+        fi
+      done
     fi
+  elif [[ ",$params," == *",seed="* ]]; then
+    report_fail "$id" "$features" "manifest" "seed= is a strict-lane param in golean-seed-v1 (the enumerator does not seed — design D6): $params (lane=$lane)"
+    return 0
+  fi
+  # SEEDED ARGUMENTS (seeded-heap slice C): with seed= the args column
+  # takes <int> | ref:k(.f|[i])* | nil tokens, mapped IN ORDER to
+  # native-json-run's --arg-int / --arg-ref / --arg-nil (and to
+  # choice-trace's identical flags); the Go twin reads the same tokens
+  # (tools/coverageharness --seed). Without seed= a ref:/nil token
+  # refuses by name; the integer-only path below is unchanged.
+  if [[ -n "$seed_file" ]]; then
+    seed_flags=(--seed "$seed_file")
+    if [[ "$arg_ints" != "-" ]]; then
+      local stok
+      local -a stoks=()
+      IFS=',' read -r -a stoks <<< "$arg_ints"
+      for stok in "${stoks[@]}"; do
+        if [[ "$stok" =~ ^-?[0-9]+$ ]]; then
+          seed_flags+=(--arg-int "$stok")
+        elif [[ "$stok" =~ ^ref:((0|[1-9][0-9]*)(\.[A-Za-z_][A-Za-z0-9_]*|\[(0|[1-9][0-9]*)\])*)$ ]]; then
+          seed_flags+=(--arg-ref "${BASH_REMATCH[1]}")
+        elif [[ "$stok" == nil ]]; then
+          seed_flags+=(--arg-nil)
+        else
+          report_fail "$id" "$features" "manifest" "invalid seeded argument token: $stok (use <int>, ref:k(.f|[i])* or nil)"
+          return 0
+        fi
+      done
+    fi
+  elif [[ "$arg_ints" == *ref:* || ",$arg_ints," == *,nil,* ]]; then
+    report_fail "$id" "$features" "manifest" "a ref:/nil argument names a seed cell — it needs seed=<file> in params (strict lane): $arg_ints"
+    return 0
   fi
   # PER-LANE EPISTEMIC CAPTIONS — compact copy; the record is the
   # nondeterminism doctrine's "Per-lane epistemic captions" section
@@ -668,11 +720,19 @@ run_case_rows() {
   # go-run FAIL). Flattening removes the hazard class.
   go_run_dir="$OUT/go-run/${id//\//__}"
   local harness_rc=0 harness_cause
+  # A seeded row's Go twin: the SAME seed file and argument tokens
+  # (tools/coverageharness --seed, seed.go) — the generated main builds
+  # the cells, binds the ref/nil arguments and observes the seed.
+  local -a harness_seed=()
+  if [[ -n "$seed_file" ]]; then
+    harness_seed=(--seed "$seed_file")
+  fi
   harness_output="$(timed harness "$id" run_with_timeout "$GO_TIMEOUT_SECONDS" "$HARNESS_BIN" \
       --input "$go_file" \
       --out "$go_run_dir" \
       --subject "$function_name" \
       --expected-status "$expected_status" \
+      ${harness_seed[@]+"${harness_seed[@]}"} \
       --args "$arg_ints" 2>&1)" || harness_rc=$?
   if [[ "$harness_rc" -eq 124 ]]; then
     report_fail "$id" "$features" "go-harness" "harness generation TIMED OUT after ${GO_TIMEOUT_SECONDS}s (GO_TIMEOUT_SECONDS) — no harness produced; captured output: $harness_output"
@@ -926,7 +986,13 @@ run_case_rows() {
     confluent_detail="$(one_line "$(cat "$conf_dir/enum-stats.txt")")"
   fi
   lean_args=(native-json-run --input "$wire_json" --function "$function_name")
-  if [[ "$arg_ints" != "-" ]]; then
+  if [[ -n "$seed_file" ]]; then
+    # Seeded (slice C): --seed and the mapped tokens, carried by EVERY
+    # machine run of the row — the default stream and every invariance
+    # stream below reuse lean_args (a seeded row keeps the full strict
+    # claim).
+    lean_args+=("${seed_flags[@]}")
+  elif [[ "$arg_ints" != "-" ]]; then
     IFS=',' read -r -a ints <<< "$arg_ints"
     for value in "${ints[@]}"; do
       if [[ ! "$value" =~ ^-?[0-9]+$ ]]; then
@@ -1150,7 +1216,11 @@ run_case_rows() {
   if [[ "$FRONTEND" == "native" && "$lane" == "strict" ]]; then
     local trace_args=(choice-trace --input "$wire_json" --function "$function_name")
     local tv
-    if [[ "$arg_ints" != "-" ]]; then
+    if [[ -n "$seed_file" ]]; then
+      # Seeded (slice C): choice-trace seeds too (single-case mode), so
+      # the depth guard traces the seeded run itself.
+      trace_args+=("${seed_flags[@]}")
+    elif [[ "$arg_ints" != "-" ]]; then
       IFS=',' read -r -a ints4 <<< "$arg_ints"
       for tv in "${ints4[@]}"; do
         trace_args+=(--arg-int "$tv")

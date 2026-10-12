@@ -219,6 +219,35 @@ expect_reject "depth= on a membership row" \
 expect_reject "depth= on a confluent row" \
   '-\trangeFirstKey\t-\tok\t-\tmaps\tconfluent\twhy text\twidth=4,depth=64' \
   "strict-lane param"
+# seed= (seeded-heap slice C, 2026-10-12): a STRICT-lane param naming a
+# golean-seed-v1 file relative to the case dir; ref:/nil arg tokens only with it.
+mkdir -p "$CASE_DIR/seeds"
+printf '%s\n' '{"schema":"golean-seed-v1","cells":[]}' > "$CASE_DIR/seeds/s.json"
+expect_accept "strict seeded row with ref/nil/int tokens" \
+  '-\trangeFirstKey\tref:0.a[1],nil,-3\tok\t-\tmaps\tstrict\t-\tseed=seeds/s.json'
+expect_accept "strict seeded row with depth" \
+  '-\trangeFirstKey\tref:0\tok\t-\tmaps\tstrict\t-\tdepth=8,seed=seeds/s.json'
+expect_reject "ref: token without seed=" \
+  '-\trangeFirstKey\tref:0\tok\t-\tmaps\tstrict\t-\t-' \
+  "it needs seed=<file> in params"
+expect_reject "nil token without seed=" \
+  '-\trangeFirstKey\tnil\tok\t-\tmaps\tstrict\t-\tdepth=8' \
+  "it needs seed=<file> in params"
+expect_reject "malformed ref token" \
+  '-\trangeFirstKey\tref:01\tok\t-\tmaps\tstrict\t-\tseed=seeds/s.json' \
+  "invalid integer args"
+expect_reject "seed= on a membership row" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=16,seed=seeds/s.json' \
+  "seed= is a strict-lane param"
+expect_reject "seed file missing" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tstrict\t-\tseed=seeds/none.json' \
+  "does not exist"
+expect_reject "seed path escaping the case dir" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tstrict\t-\tseed=seeds/../s.json' \
+  "must be a plain path relative to the case directory"
+expect_reject "seed= declared twice" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tstrict\t-\tseed=seeds/s.json,seed=seeds/s.json' \
+  "duplicate strict-lane param key"
 
 # ---- Part A3 (always; pure shell): scripts/check-bugs.sh's `Expect: FAIL`
 # assertion for Pinned-by:none red-by-design pins (q-u4-gomem audit fix F4,
@@ -581,6 +610,11 @@ if [ "$WITH_GO" -eq 1 ]; then
     run_d D6 "$(printf 'lane-d6\t%s\tpipelineBufferedStage\t-\tok\t%s\t-\tstrict\t-\tdepth=0' "$PIPE_DIR" "$PIPE_FEATS")" \
       "FAIL*manifest*may only declare depth=*" \
       "harness re-validation refuses depth=0"
+    # SD1 (seeded-heap slice C): a ref: token that bypasses the manifest
+    # without seed= fails loud in the harness, by name.
+    run_d SD1 "$(printf 'lane-sd1\t%s\tpipelineBufferedStage\tref:0\tok\t%s\t-\tstrict\t-\t-' "$PIPE_DIR" "$PIPE_FEATS")" \
+      "FAIL*manifest*needs seed=<file>*" \
+      "harness re-validation refuses a ref: token without seed="
 
     FAKEBIN_G5="$TMP/fakebin-xargs-no-r"
     mkdir -p "$FAKEBIN_G5"
