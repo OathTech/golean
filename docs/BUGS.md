@@ -4611,7 +4611,7 @@ the issue53619 family was wrong.
   counts a listed row as explained, so the row leaves untriaged-ids.
   Audit fix round 2026-09-01, RECORD 8: the slice had parked it in
   untriaged-ids with a ceiling raise 11→12 instead; reverted)
-- Cases: arrays/materialization-budget/over-budget, arrays/materialization-budget-nested/over-budget
+- Cases: arrays/materialization-budget/over-budget, arrays/materialization-budget-nested/over-budget, arrays/materialization-budget-make/over-budget
 - Discovered: 2026-09-01 ($GOROOT/test harvest,
   docs/2026-09-01_gotest-triage.md INFRA note — issue34395.go's
   `[100<<20]byte` global: exit 134, "Stack overflow detected.
@@ -4675,11 +4675,18 @@ docstring); every flat path reads 0.11 s at 1<<16 today (literal / store
 gone. What remains is the LINEAR leaf walk, ≈0.15 µs per scalar element
 on the store path and ≈0.25 µs on the literal path, and a REGRESSION of
 the default path: `var a [1024][1024][128]byte; a[0][0][0]` reads 20.0 s
-(1.1 s on 2026-09-01 — the default value is no longer a shared
-replicate; the C4 block-entry allocation stores it through the cell's
-normalize). So the budgets are now RESOURCE bounds on a linear cost, and
-no normalize rewrite lifts them; what would is not materializing (a
-shared-default representation), owed as the (1) that is left.
+(1.1 s on 2026-09-01). The mechanism (corrected at the fix round,
+review LOW-1): C1 S1's NORMALIZE-AT-BIRTH — `Store.alloc` normalizes
+the cell's value at its declared type (charter §7 D3, 2026-09-18) —
+walks the default value leaf by leaf; `defaultValueTy` still builds a
+shared `Array.replicate` (Ops.lean), and C4's `allocDecls` is at most
+the route to that store. Semantically neutral: a Lean replicate is
+immutable, there is no aliasing hazard, the walk rebuilds an equal
+value — only the time is paid. So the budgets are now RESOURCE bounds
+on a linear cost, and no normalize rewrite lifts them; what would is
+not walking a value that is normal by construction — a
+`defaultValue`-is-normal lemma lets `allocDecls` skip the normalize
+(the reviewer's fast path) — owed as the (1) that is left.
 
 *(3) CLOSED by refusal.* The decoder's array arm (`decodeTy`,
 `GoLean/NativeToIR.lean`) now checks the type's FOOTPRINT — its length
@@ -4730,15 +4737,39 @@ through a defined entry; the struct sum).
 2026-10-12) for the element COUNT:* `make([]byte, 100<<20)` refuses
 `unsupported` by name in 0.11 s; `make([]byte, 1<<23)` 1.21 s ok, one
 past refused 0.11 s; `make([]int, 1<<23)` 2.51 s ok, one past refused.
-*(2b) NOT closed — recorded:* the count budget does not see the element
-type's footprint: `make([][1024]byte, 1<<13)` (2^23 leaves) 1.01 s ok,
-`1<<16` (2^26 leaves) 7.31 s ok, **`1<<20` (2^30 leaves, count inside
-the budget) is KILLED — exit 137 at the 16 G memory cap after 16.7 s**
-— an honest kill, never a wrong answer, not a named refusal. The fix is
-at the `make` site, `Machine.lean` (`cap × footprint(elem)` against the
-budget, the footprint computed in the core over the type table) — a
-semantic-core change outside this lane's boundary, STOPPED and reported
-rather than made; owed here with (1).
+*(2b) — the count budget does not see the element type's footprint:*
+`make([][1024]byte, 1<<13)` (2^23 leaves) 1.01 s ok, `1<<14` (exactly
+2^24) 2.01 s ok, `1<<16` (2^26 leaves) 7.31 s ok, **`1<<20` (2^30
+leaves, count inside the budget) is KILLED — exit 137 at the 16 G
+memory cap after 16.7 s**; the pre-merge review (MEDIUM-1) reproduced
+the kill at a count 16× under `sliceCapBudget`: `1<<18` 37.0 s /
+13.6 GB (a hair under the cap), **`1<<19` exit 137 at 16.7 GB after
+57 s**. CLOSED BY NAME FOR A CONSTANT COUNT at the fix round
+(2026-10-12, the decoder's half — the half the ruling reaches without
+the core): `checkMakeFootprint` (`GoLean/NativeToIR.lean`), called by
+both `make-slice` arms (the statement and the unseq allocation),
+refuses `n × footprint(T) > arrayFootprintBudget` for the largest
+CONSTANT operand `n` (the cap when constant — the backing is
+cap-sized — else the len, a lower bound on it), naming the make's
+spelling, `n`, the per-element footprint, the product, the budget and
+this entry; cause key `error:make-footprint-budget`
+(`scripts/machine-causes.tsv`, a sibling of `array-footprint-budget`
+so the baseline pins which bound fired). Pins:
+`arrays/materialization-budget-make/over-budget` (`make([][1024]byte,
+1<<19)`, born FAIL/lean-observation by design, on the Cases line —
+0.11 s where the reviewer measured a 57 s kill) and
+`arrays/materialization-budget-admitted/make-at-budget`
+(`make([][1024]byte, 1<<14)`, exactly 1<<24, 2.01 s, PASS); decoder
+tests for the len, the cap and the scalar-element control. **STILL
+OPEN — the RUN-TIME half:** a `make` whose count is a variable
+(`make([][1024]byte, n)`, `n` = 1<<19 at run time) is still an honest
+kill, never a wrong answer. The fix is the core's `make` site
+(`Machine.lean`, the `sliceCapBudget` guard, which has the element type
+in scope): `cap × footprint(elem) > budget → unsupported` on that
+template, with the relational `make` rule and its soundness /
+completeness cases in lockstep — about half a session; a semantic-core
+change outside this lane's boundary, reported, not made; owed here with
+(1) under release-readiness item 30.
 
 ## BUG-080 — race detector U4: the sync primitives' OWN state-word accesses are unmodeled, so a plain access to a primitive in use by another goroutine (copy / overwrite) runs to a value where gc's -race build refuses
 

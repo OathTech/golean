@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+# over-budget: RED BY DESIGN — a `make` whose CONSTANT count times the
+# element footprint exceeds 1<<24 scalar elements refuses by name at
+# decode (BUG-078 residual (2b), decoder half, fix round 2026-10-12:
+# make([][1024]byte, 1<<19) is 2^29 leaves at a count 16× under
+# sliceCapBudget; a memory kill before); gc runs it fine, so the row is
+# a standing machine-refuses/gc-succeeds delta (visible red, never a
+# wrong answer, never a kill). A decode refusal is per WIRE, so the
+# make lives alone in this directory.
+over-budget	makeOverBudget	-	ok	-	arrays,slices,make

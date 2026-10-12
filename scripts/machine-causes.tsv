@@ -26,3 +26,4 @@ array-materialization-budget	error	elements exceeds the interpreter's materializ
 nil-slice-base	stuck	expected array or slice value for slice expression, got GoLean.GoValue.nil
 race	race	data race detected
 array-footprint-budget	error	nested materialization budget
+make-footprint-budget	error	footprint budget for a constant-length make

@@ -447,7 +447,8 @@ re-normalizes through the nesting), so oversized NESTED values can
 still reach the wall clock — an honest kill, never a wrong answer.
 Raising the budget is a deliberate re-measure on the literal/store
 paths, not a tweak; the owed linear normalize (BUG-078 residual (1),
-TODO.md) is what lifts it.
+owner since 2026-10-12: release-readiness item 30,
+`docs/2026-10-12_release-readiness.md`) is what lifts it.
 
 RE-MEASURED 2026-10-12 (lane `core/bug078-nested-budget-1012`, main's
 binary at c266ce6b, single runs under `capped`): the normalize went
@@ -511,10 +512,21 @@ at 3.5–3.9 s on main's and on this binary alike — the margin is there
 to absorb exactly that.) It is 256× the per-dimension bound and far
 above every corpus type (the largest array type is 128 elements). Past
 it the decoder REFUSES BY NAME at the array arm (the product, the
-budget, BUG-078), never a wall-clock kill. What it does NOT bound:
-`make`'s runtime length — `sliceCapBudget` (Machine.lean) bounds the
-element COUNT, so `make([][1024]byte, 1<<20)` (2^30 leaves, count in
-budget) is still an honest kill (recorded, BUG-078 residual (2b)). -/
+budget, BUG-078), never a wall-clock kill. The bound is on the TYPE, as
+`arrayLenBudget`'s is: `var s [][1024][1024][128]byte; len(s)` and
+`new([1024][1024][128]byte)` refuse at decode although nothing
+materializes — the same policy, a type the machine could not
+materialize is refused where it is spelled. A `make` with a CONSTANT
+length or cap is bounded by the same number through
+`checkMakeFootprint` (`n × footprint(T)`; BUG-078 residual (2b), the
+decoder's half: `make([][1024]byte, 1<<19)`, 2^29 leaves at a count
+16× under `sliceCapBudget`, was a kill — exit 137 at 16.7 GB after
+57 s under `capped -m 16G`, the reviewer's reproduction; `1<<18` ran
+37.0 s / 13.6 GB). What it does NOT bound, STILL OPEN: a `make` whose
+count is a run-time value — `sliceCapBudget` (Machine.lean) bounds the
+element COUNT only, so `make([][1024]byte, n)` with `n` a variable at
+1<<19 is still an honest kill; the fix is the core's `make` site
+(release-readiness item 30). -/
 def arrayFootprintBudget : Nat := 1 <<< 24
 
 /-- The MATERIALIZATION FOOTPRINT of a type, in scalar elements: the leaf
@@ -1470,6 +1482,36 @@ private def unseqCheckConstSize (path what : String) (j : Json) : LowerM Unit :=
         fail s!"unseq: {path}: constant {what} {v} in make does not fit the platform's int (a compile-time error in Go — audit F3, 2026-09-21); refused by name"
   | none => pure ()
 
+/-- BUG-078 residual (2b), the DECODER's half (fix round 2026-10-12, review MEDIUM-1 —
+the half the ruling «fail-close until we fix» reaches without the core): a `make([]T, len,
+cap)` whose CONSTANT length or cap `n` has `n × footprint(T)` past `arrayFootprintBudget`
+refuses by name — the backing materializes that many leaves, and `sliceCapBudget` (the
+element COUNT, Machine.lean) does not see the element type: the reviewer's reproduction
+under `capped -m 16G`, `make([][1024]byte, 1<<18)` 37.0 s / 13.6 GB (a hair under the cap),
+`1<<19` exit 137 at 16.7 GB after 57 s — a kill at a count 16× under `sliceCapBudget`.
+`n` is the largest constant operand: the backing is cap-sized and cap ≥ len, so a constant
+cap is the count and a constant len alone is a lower bound on it; a non-constant operand
+is the machine's at run time — the OWED core half (release-readiness item 30: the guard at
+Machine.lean's `sliceCapBudget` site has the element type in scope; `cap × footprint >
+budget → unsupported` on that template, with the relational `make` rule and its
+soundness/completeness cases in lockstep). Negative constants are not this check's
+(go/types rejects them; the unseq arm's `unseqCheckConstSize` names them; `Int.toNat` makes
+them 0 here). Both `make-slice` arms (the statement and the unseq allocation) call this;
+a `.defined` element with no footprint cannot occur in a body (the table is asserted
+complete before bodies decode) and fails closed if it does. -/
+private def checkMakeFootprint (path : String) (elemTy : Ty) (lenJ : Json) (capJ : Option Json) :
+    LowerM Unit := do
+  let constOf (j : Json) : Nat := match unseqConstInt? j with | some v => v.toNat | none => 0
+  let n := max (constOf lenJ) ((capJ.map constOf).getD 0)
+  if n == 0 then return
+  match tyFootprint? (← read).tyFootprint elemTy with
+  | .error e => throw e
+  | .ok (some f) =>
+      if n * f > arrayFootprintBudget then
+        fail s!"make([]{arrayShapeSpelling elemTy}, {n}) materializes {n * f} scalar elements ({n} × {f} per element), past the interpreter's footprint budget for a constant-length make ({arrayFootprintBudget} elements, arrayFootprintBudget; BUG-078 residual (2b), refused by name) at {path}"
+  | .ok none =>
+      fail s!"make at {path}: the element type {arrayShapeSpelling elemTy} refers to a type table entry with no footprint after the table was accepted (internal inconsistency; fail closed)"
+
 /-- Stage E audit fix round F1 (2026-09-21): the static type a PAYLOAD carries on the wire, when it
 carries one — a `$` slot's declared cell type (`none` for an undeclared slot: the graph-level
 «unknown slot» check names that), a source local's / constant's / zero value's `type` annotation,
@@ -2154,8 +2196,13 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
   | "make-slice" =>
       let t ← decodeTarget s!"{path}.target" (← StrictJson.field path obj "target")
       let elemTy ← decodeTy s!"{path}.elem" (← StrictJson.field path obj "elem")
-      let lenE ← decodeExpr s!"{path}.len" (← StrictJson.field path obj "len")
-      let capE ← (match obj.get? "cap" with
+      let lenJ ← StrictJson.field path obj "len"
+      let capJ := obj.get? "cap"
+      -- BUG-078 residual (2b), decoder half: a constant count times the
+      -- element footprint past `arrayFootprintBudget` refuses here.
+      checkMakeFootprint path elemTy lenJ capJ
+      let lenE ← decodeExpr s!"{path}.len" lenJ
+      let capE ← (match capJ with
         | some c => do pure (some (← decodeExpr s!"{path}.cap" c))
         | none => pure none)
       declareTargets #[t]
@@ -3057,6 +3104,8 @@ partial def decodeUnseq (results : Array Param) (path : String) (obj : StrictJso
                       if l > c then
                         fail s!"unseq: {apath}: constant len {l} larger than constant cap {c} in make — a compile-time error in Go (audit F3, 2026-09-21); refused by name"
                   | _, _ => pure ()
+                -- BUG-078 residual (2b), decoder half (the statement arm's twin).
+                checkMakeFootprint apath elemTy lenJ (a.get? "cap")
                 let capE ← optPayload "cap"
                 typeMismatch (.slice elemTy)
                 pure (AllocSpec.makeSlice elemTy (← decodeExpr s!"{apath}.len" lenJ) capE)
@@ -3975,7 +4024,11 @@ partial def decodeProgram (json : Json) : Except String Program := do
   -- THE TYPE TABLE DECODES FIRST (BUG-078 residual (3), 2026-10-12;
   -- before this the globals and the bodies decoded ahead of it — a
   -- TypeDef body needs only the name → index map, nothing a global or a
-  -- body contributes). Each entry's materialization FOOTPRINT
+  -- body contributes). Refusal precedence is therefore: the table (and
+  -- its acceptance clause), then the globals, then the bodies — the
+  -- reorder changed it, and no control asserts the old order; a wire
+  -- with faults in two of them now names the table's first. Each
+  -- entry's materialization FOOTPRINT
   -- (`typeDefFootprint?`) is computed as it decodes and checked against
   -- `arrayFootprintBudget` — a struct whose fields SUM past the budget
   -- refuses here, by the entry's name — and recorded in the slot the
