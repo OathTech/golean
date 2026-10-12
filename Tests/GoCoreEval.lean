@@ -2663,6 +2663,135 @@ private def labelShapeFacts : IO Bool := do
   passed := passed && (← dedupAlphaFacts)
   return passed
 
+/-! ## Seeded-heap slice B: the seed file, `--arg-ref`, the seeded observation
+
+[AGENT worker, lane `cli/seeded-heap-b-1012`] 2026-10-12 (design
+`docs/2026-10-09_seeded-heap-design.md` §1/§5/§6; [USER] Mike 2026-10-12 «Agree on the two
+strategic questions, let's do it», relayed). Their own do-block (`main`'s is at the elaborator's
+recursion-depth limit). The byte-level controls through the real CLI are
+`scripts/check-wire-boundary`'s seeded section; these pin the pieces. -/
+
+/-- `type Node struct { next *Node; val int }` after the reserved prefix (index 2), and two
+local types both spelled `T` (indices 3, 4) — the D2 ambiguity. -/
+private def seedEvalTypes : GoCore.TypeEnv :=
+  GoCore.TypeEnv.reserved
+    |>.push (⟨"main.Node"⟩, .struct #[⟨"next", .pointer (.defined 2), false⟩, ⟨"val", .int .int, false⟩])
+    |>.push (⟨"main.T·1"⟩, .defined (.int .int))
+    |>.push (⟨"main.T·2"⟩, .defined .bool)
+
+private def seedDecode (text : String) : Except String (Array GoCore.Machine.SeedCell) :=
+  SeedFile.decodeSeedBytes seedEvalTypes text.toUTF8
+
+private def seedDecodeErr (text : String) : String :=
+  match seedDecode text with
+  | .ok _ => "<decoded>"
+  | .error e => e
+
+/-- `func F(p *int) (z int) { *p = *p + 1; z = *p }` — the `inc` shape (design P1/P3). -/
+private def seedIncProgram : GoCore.Program := {
+  funcs := #[{
+    id := ⟨"F"⟩,
+    args := #[{ id := vid "p", typ := .pointer (.int .int) }],
+    results := #[{ id := vid "z", typ := .int .int }],
+    body := .seqn #[
+      .assign (.addr (.var (vid "p"))) (.add (.deref (.var (vid "p")) (.int .int)) (.intLit 1 .int)),
+      .assign (.var (vid "z")) (.deref (.var (vid "p")) (.int .int))] }],
+  typeDefs := GoCore.TypeEnv.reserved }
+
+private def seedFacts : IO Bool := do
+  let mut passed := true
+  -- The decoder: the cycle between two Node cells decodes onto slice A's types (fields as given,
+  -- the core orders them); a pointer cell into a field.
+  passed := passed && (← expectStrEq "SEED-B: a two-cell cycle and a field pointer decode onto SeedCell"
+    (match seedDecode "{\"schema\":\"golean-seed-v1\",\"cells\":[{\"type\":\"Node\",\"value\":{\"next\":{\"ref\":{\"cell\":1,\"path\":[]}},\"val\":2}},{\"type\":\"Node\",\"value\":{\"val\":3,\"next\":{\"ref\":{\"cell\":0,\"path\":[]}}}},{\"type\":\"**Node\",\"value\":{\"nil\":true}},{\"type\":\"[2]*int\",\"value\":[{\"ref\":{\"cell\":0,\"path\":[\"val\"]}},{\"nil\":true}]}]}" with
+     | .ok cells => toString (repr cells)
+     | .error e => e)
+    (toString (repr (#[
+      { typ := .defined 2, value := .struct [("next", .ref 1 []), ("val", .int 2)] },
+      { typ := .defined 2, value := .struct [("next", .ref 0 []), ("val", .int 3)] },
+      { typ := .pointer (.pointer (.defined 2)), value := .nil },
+      { typ := .array 2 (.pointer (.int .int)), value := .array [.ref 0 [.field "val"], .nil] }
+      ] : Array GoCore.Machine.SeedCell))))
+  -- The decoder's refusals, each by name.
+  passed := passed && (← expectStrEq "SEED-B: an ambiguous Ident refuses (D2), naming both keys"
+    (seedDecodeErr "{\"schema\":\"golean-seed-v1\",\"cells\":[{\"type\":\"T\",\"value\":1}]}")
+    "seed.cells[0].type: type T: ambiguous — 2 declared types are spelled T (main.T·1, main.T·2); golean-seed-v1 refuses, never picks (D2)")
+  passed := passed && (← expectStrEq "SEED-B: an undeclared Ident refuses"
+    (seedDecodeErr "{\"schema\":\"golean-seed-v1\",\"cells\":[{\"type\":\"Nope\",\"value\":1}]}")
+    "seed.cells[0].type: type Nope: no declared type of that name in the program")
+  passed := passed && (← expectStrEq "SEED-B: a string type spelling is not in v1"
+    (seedDecodeErr "{\"schema\":\"golean-seed-v1\",\"cells\":[{\"type\":\"[2]string\",\"value\":1}]}")
+    "seed.cells[0].type: type spelling string: string is not in golean-seed-v1")
+  passed := passed && (← expectStrEq "SEED-B: an exponent number refuses by TOKEN (1e2 parses as 100)"
+    (seedDecodeErr "{\"schema\":\"golean-seed-v1\",\"cells\":[{\"type\":\"int\",\"value\":1e2}]}")
+    "number 1e2: a fraction or exponent is not allowed in golean-seed-v1 (integers only)")
+  passed := passed && (← expectStrEq "SEED-B: a digit inside a string is not a number token"
+    (seedDecodeErr "{\"schema\":\"golean-seed-v1\",\"cells\":[{\"type\":\"[1]int\",\"value\":[{\"nil\":true}]}],\"x\":\"1.5e3\"}")
+    "seed: expected exactly keys [\"cells\", \"schema\"], got [\"cells\", \"schema\", \"x\"]")
+  passed := passed && (← expectStrEq "SEED-B: {\"nil\": false} refuses"
+    (seedDecodeErr "{\"schema\":\"golean-seed-v1\",\"cells\":[{\"type\":\"*int\",\"value\":{\"nil\":false}}]}")
+    "seed.cells[0].value.nil: expected true (a nil pointer is {\"nil\":true})")
+  passed := passed && (← expectStrEq "SEED-B: a ref with an extra key refuses"
+    (seedDecodeErr "{\"schema\":\"golean-seed-v1\",\"cells\":[{\"type\":\"*int\",\"value\":{\"ref\":{\"cell\":0,\"path\":[],\"x\":1}}}]}")
+    "seed.cells[0].value.ref: expected exactly keys [\"cell\", \"path\"], got [\"cell\", \"path\", \"x\"]")
+  passed := passed && (← expectStrEq "SEED-B: a wrong schema refuses"
+    (seedDecodeErr "{\"schema\":\"golean-seed-v0\",\"cells\":[]}")
+    "seed.schema: expected \"golean-seed-v1\", got \"golean-seed-v0\"")
+  -- `--arg-ref`'s grammar.
+  passed := passed && (← expectStrEq "SEED-B: --arg-ref 0.a[3].b parses root-first"
+    (match SeedFile.parseArgRef "0.a[3].b" with
+     | .ok r => toString (repr r) | .error e => e)
+    (toString (repr ((0, [.field "a", .index 3, .field "b"]) : Nat × List GoCore.Machine.SeedPathElem))))
+  passed := passed && (← expectTrue "SEED-B: --arg-ref refuses 01, 0., 0[], 0[1, x"
+    (["01", "0.", "0[]", "0[1", "x", "", "0.a.", "0[-1]"].all fun t => (SeedFile.parseArgRef t).toOption.isNone))
+  -- A seeded RUN's readout through the pool entry and the seeded observation (b = 0: no globals,
+  -- no init — the seed is the first allocation).
+  passed := passed && (← expectStrEq "SEED-B: inc over a seeded int cell — result and final cell"
+    (match GoCore.Machine.runProgramPoolSeededOutM 1000 seedIncProgram "F"
+        #[{ typ := .int .int, value := .int 41 }] #[.ref 0 []] with
+     | .ok sr => (CLI.seededObs (fun _ => none) 0 sr).2.compress
+     | .error (e, _) => s!"stopped: {e.message}")
+    "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"seed\":[{\"kind\":\"int\",\"tag\":\"int\",\"value\":42}],\"status\":\"ok\",\"values\":[{\"kind\":\"int\",\"tag\":\"int\",\"value\":42}]}")
+  -- The seed-relative rendering over a synthetic readout: b = 4, two cells; a field pointer into
+  -- cell 1 and an index pointer into cell 0 render as `seedRef`; a pointer below the seed
+  -- refuses the WHOLE observation, naming the position.
+  let synth (vals : Array GoValue) : GoCore.Machine.SeededReadout :=
+    { readout := { values := vals }, seedFinal := #[.int 1 .int, .addr (.index (.base ⟨4⟩) 2)] }
+  let inside := CLI.seededObs (fun _ => none) 4 (synth #[.addr (.field (.base ⟨5⟩) ⟨"main.Node"⟩ "next")])
+  passed := passed && (← expectStrEq "SEED-B: seed-relative observation (seedRef in a result and in a cell)"
+    inside.2.compress
+    "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"seed\":[{\"kind\":\"int\",\"tag\":\"int\",\"value\":1},{\"cell\":0,\"path\":[2],\"tag\":\"seedRef\"}],\"status\":\"ok\",\"values\":[{\"cell\":1,\"path\":[\"next\"],\"tag\":\"seedRef\"}]}")
+  passed := passed && (← expectStrEq "SEED-B: an escaping pointer refuses the whole observation (unsupported)"
+    (CLI.seededObs (fun _ => none) 4 (synth #[.addr (.base ⟨2⟩)])).2.compress
+    "{\"message\":\"seed readout: result 0 holds a pointer outside the seed (root address 2: a parameter, result, global or run-allocated cell) — not expressible seed-relative\",\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"unsupported\"}")
+  -- The decoder: a seeded observation round-trips; a seedRef needs a `seed` key and a cell
+  -- inside it; the unseeded key set is unchanged.
+  passed := passed && (← expectTrue "SEED-B: decodeObservation accepts the seeded encoder's output"
+    (CLI.decodeObservation "left" inside.2.compress).isOk)
+  passed := passed && (← expectTrue "SEED-B: decodeObservation refuses a seedRef without a seed key"
+    !(CLI.decodeObservation "left"
+      "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"cell\":0,\"path\":[],\"tag\":\"seedRef\"}]}").isOk)
+  passed := passed && (← expectTrue "SEED-B: decodeObservation refuses a seedRef cell outside the seed"
+    !(CLI.decodeObservation "left"
+      "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"seed\":[{\"tag\":\"bool\",\"value\":true}],\"status\":\"ok\",\"values\":[{\"cell\":1,\"path\":[],\"tag\":\"seedRef\"}]}").isOk)
+  passed := passed && (← expectTrue "SEED-B: decodeObservation refuses a seedRef with an extra key"
+    !(CLI.decodeObservation "left"
+      "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"seed\":[{\"tag\":\"bool\",\"value\":true}],\"status\":\"ok\",\"values\":[{\"cell\":0,\"id\":3,\"path\":[],\"tag\":\"seedRef\"}]}").isOk)
+  passed := passed && (← expectTrue "SEED-B: decodeObservation refuses a seed key on a panic observation"
+    !(CLI.decodeObservation "left"
+      "{\"message\":\"x\",\"output\":\"\",\"schema\":\"golean-observation-v1\",\"seed\":[],\"status\":\"panic\"}").isOk)
+  -- Unseeded output is byte-identical: a raw `addr` id, no `seed` key.
+  passed := passed && (← expectStrEq "SEED-B: the unseeded observation keeps raw addr ids and no seed key"
+    (CLI.observationOfRun (fun _ => none) (.ok { values := #[.addr (.base ⟨3⟩)] })).compress
+    "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"id\":3,\"tag\":\"addr\"}]}")
+  pure passed
+
+/-- `stepLabelControls` then `seedFacts` (both always run). -/
+private def stepLabelAndSeedControls : IO Bool := do
+  let a ← stepLabelControls
+  let b ← seedFacts
+  pure (a && b)
+
 set_option maxRecDepth 4096 in
 def main : IO UInt32 := do
   let mut passed := true
@@ -3777,7 +3906,9 @@ def main : IO UInt32 := do
   -- The stray-panic refusal controls (2026-09-27): their own do-block, same reason.
   passed := passed && (← strayPanicRefusalFacts)
   -- The step-label controls (2026-09-28): their own do-block.
-  passed := passed && (← stepLabelControls)
+  -- The step-label controls and (2026-10-12) the seeded-heap slice B pins: one call, so
+  -- `main`'s do-block does not grow (it is at the elaborator's recursion-depth limit).
+  passed := passed && (← stepLabelAndSeedControls)
   if passed then
     return 0
   else
