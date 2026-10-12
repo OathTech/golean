@@ -8163,3 +8163,75 @@ print arm (`docs/language-coverage-ledger.md`). Canonical-stream consequence rec
 new consults the default stream's slot 0 is the lowest-index runnable goroutine, so a child at a print or `len(ch)`
 beside a runnable main now yields to main where it used to continue — strict rows are stream-invariant by their own
 check, so no result depends on it.
+
+## BUG-123 — `uintptr` and `uint64` are ONE runtime type identity (the decoder maps `uintptr` to `.uint64`): comma-ok assertions, interface equality, type switches, `map[any]` key counts and slice/pointer assertions over a boxed uintptr answer WRONGLY with status ok — GUARDED by name at the frontend since 2026-10-12 pending the parked repair [decoder + semantic core; wrong answer (observed ∉ modeled); KNOWN since the typed-consumer sprint's held L5 (`docs/2026-09-05_typed-consumer-sprint-handoff.md` decision 2, the parked `typed-uintptr-identity` branch) and absent from the release punch list until the release-trust review's R1 (`docs/2026-10-12_release-trust-review.md`); rowed and guarded by lane `fix/uintptr-refuse-1012`, release-readiness item 26]
+
+- Status: open
+- Pinned-by: none (the six rows FAIL at `frontend-export` BY DESIGN — the frontend refuses the identity-bearing
+  position by name, so the wrong answer can no longer be observed through a lowered program; a differential pin would
+  assert the wrong direction. The re-pin guard reads this Cases line: the six ids are born-FAIL rows explained here,
+  and `Expect: FAIL` makes `scripts/check-bugs.sh` trip if the refusal ever stops firing. The repair lane flips them
+  PASS and moves this entry to Status: fixed.)
+- Expect: FAIL
+- Cases: interfaces/uintptr-identity/assert, interfaces/uintptr-identity/equal, interfaces/uintptr-identity/switch, interfaces/uintptr-identity/map-key, interfaces/uintptr-identity/slice-assert, interfaces/uintptr-identity/pointer-assert
+- Discovered: the sprint's held L5 item (2026-09-05; the staged "BUG-107" that never reached main — this entry takes
+  the next free number, as the handoff said it would); re-measured 2026-10-12 by the Codex release-trust review (R1,
+  six fresh probes, all `status: ok` with the wrong boolean or int); ruled [USER] Mike 2026-10-12, verbatim: «D6:
+  agree on both - refuse and repair asap.» (relayed by the [AGENT] coordinator). This entry: [AGENT] lane worker
+  `fix/uintptr-refuse-1012`, 2026-10-12 — the REFUSE half.
+
+WHAT: spec#Numeric_types makes `uintptr` a distinct type («an unsigned integer large enough to store the uninterpreted
+bits of a pointer value»), identical to no other type (spec#Type_identity). `GoLean/NativeToIR.lean` `intKindOfName`
+maps the wire's `uintptr` to the machine's `.uint64`, so after decoding the two types are one identity. Every runtime
+comparison of identities then collapses them (gc go1.26.5 on the left, the machine at the lane base `4365c313` on the
+right — the review’s reproduction block re-run at the lane base `4365c313` (a run dump is reproducible from the tree and is not committed, `docs/evidence/README.md`)):
+
+| expression | gc | machine |
+|---|---:|---:|
+| `any(uintptr(1)).(uint64)` comma-ok | false | true |
+| `any(uintptr(1)) == any(uint64(1))` | false | true |
+| type switch over `any(uintptr(1))`, `case uint64: 64; case uintptr: 1` | 1 | 64 |
+| `len(map[any]int{uintptr(1): 7, uint64(1): 9})` | 2 | 1 |
+| `any([]uintptr{1}).([]uint64)` comma-ok | false | true |
+| `any(&uintptrVar).(*uint64)` comma-ok | false | true |
+
+WIDTH-only uses are correct and unaffected: 64 bits is the right width for `uintptr` on the pinned platform (latitude
+inventory §11 item 6); arithmetic, conversions, storage, `atomic.*Uintptr`, `println` lower and pass as before
+(`atomics/ops/*uintptr`, `atomics/typed/uintptr`, `builtins/print/uints`). A subject RETURNING a uintptr was already
+refused at the CLI's observation seam (`GoLean/CLI.lean`, the kind table has no `uintptr`) — that refusal protects the
+observation channel only, not a boolean or int computed from the identity, which is what the six probes return.
+
+WHERE: `GoLean/NativeToIR.lean` `intKindOfName` (`"uintptr" => pure .uint64`); the machine's `IntKind` has no
+`uintptr` (`GoLean/GoCore/Syntax.lean`) — the declaration layer (`GoLean/NativeDeclaration.lean`) does keep it
+distinct. The parked repair (`origin/typed-uintptr-identity` @ `5f185fb3`, off `47195683` 2026-09-05; a wide
+footprint across the decoder, four `GoLean/GoCore/` modules and the harness) adds the identity.
+
+GUARD (this lane, 2026-10-12; FR-38 in `docs/language-coverage-ledger.md`): `tools/nativefrontend/uintptrid.go`
+`checkUintptrIdentity` — a per-body pre-pass (every function, method and stencil body under its instantiation, called
+from `emit.go` `emitFuncDecl`; every `$pkginit` initializer in the H-11 dry run) that refuses BY NAME, through the
+standing per-declaration quarantine, at exactly the identity-bearing positions: (a) a value whose static type MENTIONS
+`uintptr` (itself; pointer/slice/array/map/chan/struct/func types over it; a defined type over it; a source named
+type whose method set mentions it; a modeled stdlib type through its method set only — `sync.Map`'s hidden hash seed
+is not on the wire, `atomic.Uintptr`'s `Load() uintptr` is a requirement the decoder would collapse) converted to an
+interface type, explicitly (`any(x)`) or at any implicit assignability position (assignment, `var` initializer,
+call argument incl. variadic and multi-value, return, composite-literal field/element/key, send, `map[I]` index key,
+`panic`, `append` element, the assignment form of `range`, interface `==`/`!=`, `switch` case against an interface
+tag); (b) a type assertion or type-switch case whose TARGET mentions `uintptr`. The rule is complete because every
+runtime identity comparison takes an interface value and every interface value holding a uintptr-mentioning dynamic
+type is produced by (a) — the dispatch tables are no third entry (method tables key on the receiver's NAMED type,
+stencils on `renderTypeKey`, which spells `uintptr`; only the decoder's IntKind collapses). Text: «uintptr identity is
+unmodeled (lowered as uint64): <construct> at <pos> — refused by name pending the typed-uintptr-identity repair
+(release-readiness item 26, BUG-123)»; `tools/lowerdiag/causes.tsv` `uintptr-identity`. Unit pins
+`tools/nativefrontend/uintptrid_test.go`: the six probes and 28 more refusing shapes, a generic stencil scanned under
+its instantiation (the `uint64` stencil lowers), a package-level initializer, the opaque-type rule, 11 width-only
+controls, and a sibling's own refusal not masked. Corpus: the six rows above (FAIL/frontend-export, red by design)
+and `interfaces/uintptr-identity/width-only` (PASS, 172). The lane's `scripts/ci --diff` flipped NO existing row
+(no corpus program boxed a uintptr-mentioning value into an interface; the five files that mention `uintptr` use it
+width-only).
+
+FIX PLAN (the REPAIR half of D6, its own lane after this one): rebase `typed-uintptr-identity` onto main under its
+standing hard stop (handoff decision 2: the latitude row R1 and w7 J-8 records amended, third-lane review, a REAL full
+run — merge protocol 5a fires), give `uintptr` its own machine identity, then retire FR-38's refusal and this guard,
+flip the six rows PASS (`Expect: FAIL` and the `Pinned-by: none` reason go with it) and mark this entry fixed. Fix
+criterion: the six rows PASS against go1.26.5 with the gc values above; `width-only` still PASSes; the unit suite's
+refusing shapes become lowering shapes with the gc answers.

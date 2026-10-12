@@ -3121,3 +3121,27 @@ Tracked figure 3917 = 3677 / 240 → 3936 = 3705 / 231 (re-pin reason in the bas
   comparison of main's frontend against the lane's (1386 executable packages) is byte-identical on 1353, fails on both
   for 25 (flag-dependent exports), differs on exactly the 8 packages holding the shape; the raft subject's twin wire is
   byte-identical (`scripts/check-frontend-pins`). No semantic-core, decoder or wire-schema change.
+
+### 8av. Movement at the `uintptr` identity guard (2026-10-12, lane `fix/uintptr-refuse-1012`; stacked on `fix/release-runtime-1012` @ `4365c313`, off main `d92b95fd`)
+
+[AGENT] lane worker, under [USER] Mike 2026-10-12, verbatim: «D6: agree on both - refuse and repair asap.» (relayed by
+the [AGENT] coordinator; release-readiness punch list item 26, this lane the REFUSE half — the repair rebases the parked
+`typed-uintptr-identity` branch in its own lane). The entry BUG-123 and row FR-38 carry the record; the refusal is
+`tools/nativefrontend/uintptrid.go`. Tracked figure 3939 = 3706 / 233 → 3946 = 3707 / 239 (re-pin reason in the
+baseline header). Movement, tallied by row:
+
+- BORN 7 (`Corpus/coverage/exec/interfaces/uintptr-identity/`), all strict: the six R1 probe shapes
+  `{assert, equal, switch, map-key, slice-assert, pointer-assert}` FAIL/frontend-export RED BY DESIGN on BUG-123's
+  Cases line (`Expect: FAIL`) — before the guard each was a `status: ok` WRONG ANSWER (gc go1.26.5
+  `false false 1 2 false false`, the machine `true true 64 1 true true`; the review's reproduction block, re-run at the
+  lane base); `width-only` PASS (172), the control — arithmetic, a conversion, a `*uintptr` to a non-interface
+  parameter, a `[]uintptr`, a `map[uintptr]`.
+- FLIPS 0: no existing row boxes a uintptr-mentioning value into an interface or names one as an assertion target —
+  the five corpus files mentioning `uintptr` (`atomics/ops`, `atomics/typed`, `builtins/print/uints`, the cedar-go
+  `constraints` stand-in) use it width-only and keep their pins. Measured by the lane's `scripts/ci --diff` at the
+  branch tip (the commit message records the run).
+- Frontend-only: no semantic-core, decoder or wire-schema change; the raft twin wire is byte-identical
+  (`scripts/check-frontend-pins`).
+- Buckets: FR-38 opens GUARDED (6 reds, red by design, retired by the repair lane); the (a)-queued set and the
+  post-vintage count are unchanged — a refusal of a wrong answer is not a frontier gap, so the §8 arithmetic moves by
+  the six designed reds only.

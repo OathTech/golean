@@ -1,0 +1,15 @@
+# id	subject	args	expected_status	expected_reason	features
+# BUG-123 / FR-38 (2026-10-12, lane fix/uintptr-refuse-1012; release-readiness item 26, [USER] D6 «refuse and repair
+# asap»): uintptr's runtime type IDENTITY. The decoder realizes uintptr as uint64, so the six identity-bearing subjects
+# answered WRONGLY with status ok (machine `true true 64 1 true true`; gc go1.26.5 `false false 1 2 false false`) — the
+# release-trust review's R1 probes. Since the lane each REFUSES BY NAME at the frontend (tools/nativefrontend/uintptrid.go,
+# «uintptr identity is unmodeled (lowered as uint64): … — refused by name pending the typed-uintptr-identity repair»):
+# FAIL/frontend-export RED BY DESIGN on BUG-123's Cases line (Expect: FAIL). width-only is the PASS control (172):
+# arithmetic, conversion, a *uintptr to a non-interface parameter, []uintptr, map[uintptr] — never boxed, never asserted.
+assert	uintptrAssert	-	ok	-	interfaces,type_assertions,comma_ok,identity,ints,widths
+equal	uintptrEqual	-	ok	-	interfaces,equality,comparisons,identity,ints,widths
+switch	uintptrSwitch	-	ok	-	interfaces,type_switch,identity,ints,widths
+map-key	uintptrMapKey	-	ok	-	interfaces,maps,keys,identity,ints,widths
+slice-assert	uintptrSliceAssert	-	ok	-	interfaces,type_assertions,comma_ok,slices,identity,ints,widths
+pointer-assert	uintptrPointerAssert	-	ok	-	interfaces,type_assertions,comma_ok,pointers,identity,ints,widths
+width-only	widthOnly	-	ok	-	ints,widths,conversions,pointers,slices,maps
