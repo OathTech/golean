@@ -1,0 +1,1 @@
+{"schema":"golean-seed-v1","cells":[{"type":"Node","value":{"next":{"ref":{"cell":1,"path":[]}},"val":2}},{"type":"Node","value":{"val":3,"next":{"ref":{"cell":0,"path":[]}}}}]}

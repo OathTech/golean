@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+aliased	addNaive	ref:0,ref:0	ok	-	seeded,pointers,aliasing	strict	-	seed=seed-one.json
+distinct	addNaive	ref:0,ref:1	ok	-	seeded,pointers,aliasing	strict	-	seed=seed-two.json

@@ -287,3 +287,56 @@ carries a CORE RE-PIN** (slice B pre-merge review LOW-2, 2026-10-12): `SeededRea
 run; pure and inert, measured unmeasurable). S6 `runProgramSeededM_eq_stmt` (BridgeSet row 599) and the
 two erasure statements (rows 600–601) spell the `{ readout := …, seedFinal := … }` literal, so this is a
 RE-PIN with CHANGED rows, not rows added only — it needs its own written reason and the logic team's notice.
+
+**Slice C landed on the lane (2026-10-12, [AGENT worker, lane `cli/seeded-heap-c-1012`], stacked on `train4/stage-1012`).** No core
+edit; the `SeededReadout.base` re-pin above stays OPEN (slice C did not need it: the CLI's second setup call is untouched). Delivered:
+**the Go twin** `tools/coverageharness --seed <file> --args <tokens>` (`tools/coverageharness/seed.go`; trusted surface #2): at
+GENERATION the file's bytes, envelope, value shapes and type spellings are checked and refused by the classes `GoLean/SeedFile.lean`
+refuses (strict UTF-8, duplicate keys, number tokens with a fraction or exponent, the `ref`/`nil` forms and their v1 limit, every type
+class outside v1, qualified names); the generated `main` then allocates every cell with `new(T)` (the spelling pasted — an undeclared
+or function-local `<Ident>` is a compile error at `go run`, loud), fills them in cell order BY REFLECT with the resolver's typing (ints
+range-checked at their reflect kind, never wrapped; every declared struct field required and no other; a blank field refused; arrays of
+the exact length; `nil` only at a pointer; a `ref` walked along the DECLARED type — no pointer followed — and its target type required
+to equal the pointer's element type), binds the arguments (`ref:` by a type assertion to the parameter's type, `nil`, `T(v)`), calls
+the subject and observes. **How a pointer becomes seed-relative, and why it is exact:** the pointer is matched by (address, element type)
+against every addressable sub-object of every cell (roots, struct fields, array elements, recursively), walked from the live cells at
+observation time (heap objects; gc's collector does not move them). For a non-zero-size element type the match is unique — two distinct
+sub-objects at one address overlap, so one contains the other; equal types mean equal sizes, so the containment is at offset 0 with
+nothing beside it, i.e. a type containing itself by value, which Go forbids — and no non-seed object can sit at that address either
+(live non-zero-size objects do not overlap). So «found» is exactly «this cell, this path» (field names as declared, indices as ints:
+the machine's `seedRelative?` path) and «not found» is exactly «outside the seed», which refuses the WHOLE observation with status
+`unsupported` and GoLean's text class («seed readout: result i / cell k holds a pointer outside the seed …»; the Go side names no root
+address). A zero-size element type has no such guarantee and refuses by name. **The manifest and the runner:** strict-lane
+`params` take `seed=<file>` (relative to the case dir, no `.`/`..`, must exist; may co-occur with `depth=`; each key once); `args` take
+`<int>` | `ref:k(.f|[i])*` | `nil` (a `ref:`/`nil` token without `seed=` refuses the row; `seed=` on an enumerating lane refuses), all
+by name in `scripts/coverage-manifest` AND re-validated in `scripts/diff-coverage`, which maps the tokens to `--arg-int`/`--arg-ref`/
+`--arg-nil` and passes `--seed` to the default run, the three invariance streams and the depth guard. **Rows:** 12, all BORN PASS under
+`Corpus/coverage/exec/seeded/` (tag `seeded`): the G-R control program widened by an allocating initializer (the empty seed — S4's
+erasure — and a cell added to the global and the init-allocated box), `addNaive` aliased (20/20, one cell 20) and distinct (12/19), a
+two-cell cycle returning a pointer into the seed (`seedRef` cell 1) and relinked (the `seed` key shows the mutated pointers), a pointer
+argument into an array field (`ref:0.a[1]`), a pointer result into one (`seedRef` cell 0 `["a",2]`, through a `*int` cell pointing at
+`a[1]`), a nil-terminated list walked from a `ref` and from `nil`, a nil dereference past its end (panic, no `seed` key on either
+side), and a result-less `swap` of two `int8` cells (the `seed` key alone is the observation). The seed files sit beside each case's `main.go` (`seed-<name>.json`; §7's example `seeds/alias.json` would be a husk case directory to `scripts/check-coverage`). Each row's two observations were read
+and compared by hand as well as by the runner.
+Engineering choices, [AGENT], and where the code departs from §7 (the code wins): (i) the fill is REFLECT at run time, not generated
+assignments — the typing checks need the program's types, which the generator does not have, and unexported fields are reached
+through `reflect.NewAt` (the assignment the prologue would write); (ii) the address table is walked AT OBSERVATION, not built before
+the call (§7) — the same table, since the cells' layout is static and they do not move; (iii) **`choice-trace` SEEDS** (single-case
+mode; refused in `--batch`): §7 did not mention that a strict PASS includes the depth guard, which runs the tracer, and the tracer
+refused `--seed` in v1 — so a seeded row could never complete its strict claim. The tracer's v1 refusal was engineering («D1, D5 and the
+v1 refusals of the enumerator/tracer are engineering, [AGENT]», §10), so it is lifted for the tracer only: `CLI.EnumProgram` gains
+`seeded?`, placed after init by `EnumProgram.entryStore` (the core's own `seedCells` then `resolveSeedArgs`, `runProgramSetupSeededM`'s
+order), and the tracer's driver agreement compares the tracer and the enumerator driver against `runProgramPoolSeededOutM` on the raw-id
+rendering; `explore` and the dedup seed refuse a seeded program by name, and `coverage-observations` still refuses the flags (D6);
+(iv) the ESCAPING POINTER is two CONTROLS, not a corpus row: both sides refuse with status `unsupported`, and a refusal never passes, so
+the row would be red by design — the machine's refusal is `scripts/check-wire-boundary`'s `seed-escape` (slice B), the Go twin's is
+`tools/coverageharness/seed_test.go` (`escaping result`, `escaping cell`); (v) the Go side refuses EVERY `\u` surrogate escape (Go's
+decoder would turn an unpaired one into U+FFFD silently; GoLean accepts a paired one — the harness refuses it, fail closed); (vi) a
+`ref:`/`nil` argument needs a parameter SPELLED `*T` on the Go side (a named pointer type refuses there); (vii) a seeded `ok` subject
+may return nothing (its cells are observable; an unseeded one still must return a value); (viii) the unseeded generator output is
+byte-identical (the template's three insertions are empty), checked over all 3953 unseeded rows. **What v1 does not cover** (named
+refusals on one or both sides, never a silent pass): the enumerating lanes (no seeded membership/confluent/racy rows); string, float,
+slice, map, channel, function and interface values in cells; a slice/map/chan observation based in the seed (the machine renders its
+base seed-relative, the Go twin refuses the kind); a pointer to a zero-size type in an observation; structs with a field named `ref` or
+`nil`; function-local types in a seed (ambiguous or unnamable from `main`); named pointer parameter types; variadic subjects; paired
+surrogate escapes; and the init-twice cost of a seeded run (the `base` debt above).

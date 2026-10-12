@@ -187,7 +187,12 @@ Rules:
 
 - `id` is `-` for a one-case package, otherwise a kebab-case suffix.
 - `subject` is the source-level Go function Lean should run.
-- `args` is `-` or comma-separated integer arguments.
+- `args` is `-` or comma-separated integer arguments. On a **seeded** row (a
+  strict row with `seed=<file>` in `params`, below) the tokens may also be
+  `ref:k(.f|[i])*` (a pointer to seed cell `k` or a component of it: `ref:0`,
+  `ref:0.next`, `ref:1[2]`, `ref:0.a[3].b`) and `nil` (a nil pointer), in
+  parameter order — `native-json-run`'s `--arg-ref`/`--arg-nil`. A `ref:`/`nil`
+  token without `seed=` refuses the row by name.
 - `expected_status` is one of `ok` or `panic`.
 - `expected_reason` is `-` for `ok`; it is required for `panic`.
 - Frontend export failures, Lean `unsupported`, Lean `stuck`, Lean `error`, and
@@ -195,7 +200,8 @@ Rules:
   expected statuses in executable metadata.
 - `features` is a comma-separated list of canonical feature tags.
 - `ok` subjects must return at least one observable value. Use a checksum or
-  deterministic summary for mutation-heavy tests.
+  deterministic summary for mutation-heavy tests. (A seeded row may return
+  nothing: its `seed` key — the cells' final values — is observable.)
 
 Derived fields:
 
@@ -280,8 +286,9 @@ stream is compared with its own default trajectory):
    fewer than four reports) is a `nondet` FAIL naming that cause —
    never a pass.
 
-`depth=N` is the strict lane's ONLY param (`why` stays `-`); on the
-enumerating lanes it is refused as a category error. Sizing
+`depth=N` is a strict-lane param (`why` stays `-`); on the enumerating lanes it
+is refused as a category error. The strict lane's other param is `seed=<file>`
+(the seeded rows below); the two may co-occur, each at most once. Sizing
 convention [AGENT]: N = the smallest power of two ≥ 4·w, min 64, where
 w is the default-stream wide count at the row's trace; the guard, not
 the convention, is the check. `depth=` is the strict lane's spot check
@@ -372,6 +379,48 @@ with the named cause; the same row confluent → certified; `depth=128`
 → PASS with `wide=`/`depth=`; `depth=4` → refused naming the seeded
 stream; the variant-stream refusal reported at `lean-observation`;
 `depth=0` refused by the harness's own re-validation.
+
+### Seeded rows: `seed=<file>` (seeded-heap slice C, 2026-10-12)
+
+A strict row may run its subject over a **seeded heap**: `params` declares
+`seed=<file>`, a `golean-seed-v1` file (`docs/cli.md` §2.1.1) given relative to
+the case directory (plain path characters, no absolute path, no `.`/`..`
+component; the file must exist — the manifest and the runner both refuse
+otherwise, by name), and `args` takes the seeded tokens above. Design:
+`docs/2026-10-09_seeded-heap-design.md` §7. Both twins read the same file:
+
+- the machine: `native-json-run --seed <file>` with the tokens mapped in order to
+  `--arg-int`/`--arg-ref`/`--arg-nil`, on the default stream AND every
+  invariance stream (a seeded row keeps the full strict claim), and
+  `choice-trace --seed …` for the depth guard (the tracer seeds since slice C;
+  `coverage-observations` does not, so `seed=` on an enumerating lane is refused
+  by name — design D6);
+- the Go oracle: `tools/coverageharness --seed <file> --args <tokens>`
+  (`tools/coverageharness/seed.go`). The generated `main` allocates every cell
+  (`new(T)`, the file's type spelling pasted), fills them in cell order by
+  reflect with the resolver's typing (ints range-checked at their kind, every
+  declared struct field required and no other, a blank field refused, arrays
+  of the exact length, `nil` only at a pointer, a `ref`'s target type equal to
+  the pointer's element type), binds the arguments, calls the subject, and
+  observes in GoLean's seeded shape: a pointer into a cell is
+  `{"tag":"seedRef","cell":k,"path":[…]}` (matched by address AND element type
+  against every addressable sub-object of every cell — exact for a non-zero-size
+  type, refused by name for a zero-size one), the `seed` key holds the cells'
+  final values, and a pointer outside the seed refuses the whole observation
+  with status `unsupported` («seed readout: result i / cell k holds a pointer
+  outside the seed …», GoLean's text class). The file's shape and type
+  spellings are refused at generation, by the classes GoLean's decoder refuses.
+
+The observations then compare through `observation-eq` exactly like any other
+row; `panic` rows carry no `seed` key on either side. A row whose subject lets
+a pointer escape the seed is NOT a corpus row: both sides refuse (status
+`unsupported`), and a refusal never passes, so it would be red by design. The
+pair is pinned as controls instead: the machine's refusal by
+`scripts/check-wire-boundary` (`seed-escape`), the Go twin's by
+`tools/coverageharness/seed_test.go` (`escaping result`, `escaping cell`).
+The rows live under `Corpus/coverage/exec/seeded/`, tagged `seeded`, each seed
+file BESIDE the case's `main.go` (`seed-<name>.json`): a subdirectory without a
+`cases.tsv` is a husk case directory to `scripts/check-coverage`.
 
 ## Go Source Contract
 

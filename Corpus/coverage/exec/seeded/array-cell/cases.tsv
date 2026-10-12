@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+elem-arg	inc	ref:0.a[1]	ok	-	seeded,pointers,arrays,fields,addressability	strict	-	seed=seed-pair.json
+elem-result	third	ref:0,ref:1	ok	-	seeded,pointers,arrays,fields,addressability	strict	-	seed=seed-pair.json

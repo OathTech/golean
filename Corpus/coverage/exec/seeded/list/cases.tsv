@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+nil-terminated	walk	ref:0	ok	-	seeded,pointers,nil,loops	strict	-	seed=seed-three.json
+nil-arg	walk	nil	ok	-	seeded,pointers,nil	strict	-	seed=seed-three.json
+nil-deref	third	ref:0	panic	invalid memory address or nil pointer dereference	seeded,pointers,nil,panic	strict	-	seed=seed-three.json

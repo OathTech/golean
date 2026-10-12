@@ -1,0 +1,1 @@
+{"schema":"golean-seed-v1","cells":[{"type":"Pair","value":{"a":[1,9,3],"b":true}},{"type":"*int","value":{"ref":{"cell":0,"path":["a",1]}}}]}

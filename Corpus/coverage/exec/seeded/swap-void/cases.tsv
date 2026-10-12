@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+-	swap	ref:0,ref:1	ok	-	seeded,pointers,multi_assign	strict	-	seed=seed-two.json

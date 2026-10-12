@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+empty	F	-	ok	-	seeded,init,globals	strict	-	seed=seed-empty.json
+global-plus-cell	addGlobals	ref:0	ok	-	seeded,pointers,init,globals	strict	-	seed=seed-five.json

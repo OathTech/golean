@@ -1,5 +1,15 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3953 (3714 PASS / 239 FAIL)
+# cases: 3965 (3726 PASS / 239 FAIL)
+# re-pinned: 2026-10-12 [AGENT], lane cli/seeded-heap-c-1012 (stacked on train4/stage-1012 2f6f6581) — the SEEDED-HEAP ENTRY, slice C
+#   (differential; design docs/2026-10-09_seeded-heap-design.md §7; [USER] Mike 2026-10-12 «Agree on the two strategic questions, let's
+#   do it», relayed — GO, with the trusted-surface #2 change of tools/coverageharness accepted). WHY: corpus rows may now run their
+#   subject over a seeded heap (params seed=<file>, args tokens ref:k(.f|[i])* / nil; the Go twin tools/coverageharness --seed).
+#   BORN ROWS +12 PASS under seeded/ (alias/aliased, alias/distinct, array-cell/elem-arg, array-cell/elem-result, cycle/next-ptr,
+#   cycle/relink, init-control/empty, init-control/global-plus-cell, list/nil-terminated, list/nil-arg, list/nil-deref, swap-void):
+#   both sides' seeded observations equal through observation-eq on the default stream, the three invariance streams equal, the
+#   depth guard (choice-trace --seed) at wide=0. NO existing row moves; no PASS->non-PASS flip; no lane move; no removal. The
+#   unseeded harness is byte-identical (generated source, stderr and exit, all 3953 unseeded rows, old vs new generator). Counts:
+#   3953 + 12 = 3965; PASS 3714 + 12 = 3726; FAIL 239. Measured by capped scripts/ci --diff at the lane's tip.
 # re-pinned: 2026-10-12 [AGENT], lane fix/bug061-refuse-1012 (off fix/release-runtime-1012 4365c313, itself off main) — BUG-061 GUARDED BY
 #   NAME (release-readiness item 1 / §5 D1; [USER] Mike 2026-10-12 verbatim «D1: I think this should probably be refused, if it's easy to
 #   exclude.», relayed by the [AGENT] coordinator). WHY: the frontend's pruning rule calls every non-constant package-level initializer
@@ -5212,6 +5222,18 @@ PASS	scoping/switch-clause-scope	-
 PASS	scoping/switch-init-shadow	-
 PASS	scoping/type-switch-guard-shadow	-
 PASS	scoping/var-shadow-init	-
+PASS	seeded/alias/aliased	-
+PASS	seeded/alias/distinct	-
+PASS	seeded/array-cell/elem-arg	-
+PASS	seeded/array-cell/elem-result	-
+PASS	seeded/cycle/next-ptr	-
+PASS	seeded/cycle/relink	-
+PASS	seeded/init-control/empty	-
+PASS	seeded/init-control/global-plus-cell	-
+PASS	seeded/list/nil-terminated	-
+PASS	seeded/list/nil-arg	-
+PASS	seeded/list/nil-deref	-
+PASS	seeded/swap-void	-
 PASS	slices/append-nil	-
 PASS	slices/append-overlap	-
 PASS	slices/append-overlap-window	-

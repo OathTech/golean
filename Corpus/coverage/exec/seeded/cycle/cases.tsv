@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+next-ptr	next	ref:0	ok	-	seeded,pointers,structs	strict	-	seed=seed-cycle.json
+relink	relink	ref:0	ok	-	seeded,pointers,structs,assignment	strict	-	seed=seed-cycle.json
