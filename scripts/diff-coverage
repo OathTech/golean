@@ -105,9 +105,12 @@ rm -f "$RESULTS_TSV" "$META_TSV"
 # would silently DISABLE the guard instead of failing loud. Same
 # fail-loud standard the lane params already get in parse_lane_params.
 # Placed after the rm above so a run dying here leaves no readable
-# stale results pair (the gate-integrity invariant).
+# stale results pair (the gate-integrity invariant). The tracer's knob
+# LEAN_TRACE_TIMEOUT_SECONDS joined the list 2026-10-12 (release-trust
+# review F4, relayed by the [USER]): it reached run_with_timeout
+# unvalidated, so 0, "none" or "nonsense" silently disabled its alarm.
 for _tvar in LAKE_BUILD_TIMEOUT_SECONDS GO_TIMEOUT_SECONDS \
-    LEAN_TIMEOUT_SECONDS LEAN_ENUM_TIMEOUT_SECONDS; do
+    LEAN_TIMEOUT_SECONDS LEAN_ENUM_TIMEOUT_SECONDS LEAN_TRACE_TIMEOUT_SECONDS; do
   if [[ ! "${!_tvar}" =~ ^[1-9][0-9]*$ ]]; then
     echo "diff-coverage: $_tvar must be a positive integer (seconds), got '${!_tvar}' — refusing to run with a disabled or malformed timeout" >&2
     exit 2
