@@ -3271,6 +3271,19 @@ re-audit of multi-cell apply steps (`appendSlice` spill, `copySlice`) —
 coarse-but-recorded, fine sequentially, must not silently enter
 concurrency claims.
 
+**Current (note 2026-10-12, [AGENT] records lane `docs/release-records-1012`, release-readiness item 10; history
+above kept as written):** the mechanism this entry describes no longer exists. `Rel`/`ExprR`, Iris invariant opening and
+the F4 arc are gone from this repo (the big-step rules deleted at R1+R2 above; the Iris layer parked on
+`park/reasoning-2026-08-31` at the 2026-08-31 split), and the R4 item «goroutine rules + scheduler `Choices`» has
+landed: the labelled pool relation `StepML` with the scheduler's pick recorded first, proved sound and complete per
+step against the executable (`GoLean/GoCore/PoolStep.lean`, `PoolSound.lean`, train r70). The live residue is the
+other R4 item, now tracked as latitude inventory **U-5** (`docs/2026-08-11_latitude-inventory.md` §6: `appendSlice`
+spill, `copySlice`, `clearSlice`, `sortSlice` are single apply steps; the granularity re-audit before any concurrency
+claim mentions them is owed), together with CLAUDE.md's open obligation that the machine's concurrency granularity
+reduces to Go's access granularity (not a theorem). This entry stays `open` on that residue; the «TODO.md backlog»
+owner named above is historical (TODO.md is marked HISTORICAL) — the residue's owner is the release-readiness backlog
+(`docs/2026-10-12_release-readiness.md` §3, the U-2…U-7 row).
+
 ## BUG-011 — anonymous `struct{}{}` literal stuck at named empty-struct types
 
 - Status: fixed (2026-08-05, general-coverage slice 2 — corpus case FIRST
@@ -3878,6 +3891,19 @@ user ruling — a claim-standard change is not the arc's to make);
 (c) THE PRINCIPLED FIX: the reduction/DPOR lane (NPDRF, slice 5) —
 sound schedule reduction re-shrinks exactly these trees, and the
 mover theorem resumes over the widened point set by design.
+
+**Current (note 2026-10-12, [AGENT] records lane `docs/release-records-1012`, release-readiness item 10; history
+above kept as written):** the row still fails closed, but NOT by the mechanism described above. The last corpus run
+(`artifacts/coverage/latest.tsv`, run at `06b57f49`) records `goroutines/worker-pool/sum` (confluent, default
+enumerator — the manifest row `Corpus/coverage/exec/goroutines/worker-pool/cases.tsv` carries `width=4,sites=18,
+work=15000000` and NO `engine=dedup`) as: «enumerator failed (exit 1; schedule-confluence not certified):
+coverage-observations: backEdge scheduling site of bound 2 under pick assignment [0] — the row must DECLARE its
+back-edge tree: backedge=<k> … or backedge=full … — stage D §5d, never a silent prune». That is a refusal by name on
+the row's undeclared `backedge` parameter, reached before any cap or dedup budget; whether the tree closes once a
+`backedge=` is declared is unmeasured. Also stale above: the «tier=slow» / «CERTIFIED-CACHED» / «`--slow` drift alarm»
+structure (the certificate apparatus, `tier=` and `--slow` were retired in the 2026-10-12 gate cull — every row now
+enumerates fresh under `scripts/ci --diff`), and the «TODO.md backlog» owner (TODO.md is HISTORICAL; the live owner is
+the release-readiness backlog, `docs/2026-10-12_release-readiness.md` §2).
 
 ## BUG-066 — slice expression with an elided high bound evaluates its base TWICE
 
@@ -4518,7 +4544,10 @@ slices, whose values normalize by reference — probed:
 abort). IDEALIZATION BOUNDARY, not fidelity: gc materializes such
 arrays fine; the region past the budget is a deliberate visible
 machine-refuses/gc-succeeds red, never a wrong answer, never an
-abort. Owed residuals recorded (owner: TODO.md, "Owed core fixes"):
+abort. Owed residuals recorded (owner: TODO.md, "Owed core fixes"
+— TODO.md is HISTORICAL; re-pointed 2026-10-12 [AGENT], release-readiness
+item 10: the owner is the release-readiness backlog,
+`docs/2026-10-12_release-readiness.md`):
 (1) the linear-normalize core fix lifts the budget need; (2) huge
 `make` lengths still grind to the wall-clock/fuel budget (an honest
 stop, but slow); (3) the flat per-type bound does not cap NESTED
@@ -6914,6 +6943,8 @@ standing pin of this limit. Until ruled, (iii) holds.
 - Pinned-by: differential
 - Cases: init/init-panic, noodler/initpanic/panic, noodler/initpanic/var-panic, noodler/initpanic/deadlock, init/quarantined-var-panicking/sibling
 
+**PENDING [USER] since 2026-09-07; re-posed in the release-readiness backlog D3** (`docs/2026-10-12_release-readiness.md` §5; note 2026-10-12, [AGENT] records lane).
+
 MERGE-TRAIN NOTE ([AGENT] L4 worker, 2026-09-07): numbered against main's
 top BUG-104 at cut time. The landing plan (§4 D1) SUGGESTED reserving 107 for
 the HELD `uintptr` chunk L5; numbers are allocated at landing, so L5 takes
@@ -7222,7 +7253,7 @@ language only`). [AGENT] detail: no `go.mod` → the pinned 1.26, unchanged
 (the corpus's mode). Per-file `//go:build go1.N` constraints and
 `//go:debug` settings are out of this entry's scope.
 
-## BUG-110 — the production wire decoder is fail-open at two points: `Lean.Json.parse` collapses DUPLICATE object keys before the schema validators see them (a forged leading `schema` field vanished behind the genuine one and the wire ran), and a call assigned to `_` with its `resultTypes` vector removed is reconstructed as `int` by `resultTypes[i]?.getD .int` [decoder; trusted surface #1 boundary; review 2026-09-11 F3 = 2026-09-05 gate audit F9, ACCEPTED (master plan §7.2), unfixed]
+## BUG-110 — the production wire decoder is fail-open at two points: `Lean.Json.parse` collapses DUPLICATE object keys before the schema validators see them (a forged leading `schema` field vanished behind the genuine one and the wire ran), and a call assigned to `_` with its `resultTypes` vector removed is reconstructed as `int` by `resultTypes[i]?.getD .int` [decoder; trusted surface #1 boundary; review 2026-09-11 F3 = 2026-09-05 gate audit F9, ACCEPTED (master plan §7.2), unfixed at filing — FIXED 2026-09-12, stage S3]
 
 - Status: fixed ([AGENT] lane `fix/review-boundary-0911` stage S3, 2026-09-12 — filed open by the coordinator 2026-09-11 from `docs/2026-09-11_project-review.md` §4 F3; the F9 disposition of 2026-09-05 named the same `.getD .int` sites)
 - Pinned-by: none (not a baseline row — the pin is `scripts/check-wire-boundary`, a `scripts/ci` step ("wire boundary (production byte decoder through the real CLI)"): the fixture `Tests/wire-boundary/main.go` (the review's discard-call probe) is lowered fresh by the frontend, its wire BYTES are mutated, and every mutant is driven through the real `golean native-json-run` — a forged leading duplicate `schema`, a duplicate key inside a call node, an absent `resultTypes` vector, a mis-sized one, a missing `buildContext`, an unpaired high / low surrogate escape in an UNREAD field, a raw invalid UTF-8 byte (all must refuse naming their cause), plus the untouched wire and a valid surrogate pair (must run and answer 42))
@@ -7630,6 +7661,12 @@ red row; it does not move the untriaged ratchet either. Proposed, not applied: t
 are unchanged. No widening of `crashview.go` is licensed by this evidence (shape (a) must stay refused;
 shape (b) is uncaptured); the follow-up observer lane's rule, its positive control and its FOUR forgery
 controls are specified in the evidence README §5a.
+
+**Applied (note 2026-10-12, [AGENT] records lane `docs/release-records-1012`, release-readiness item 10):** the
+proposed `why` wording (evidence README §5b) is now in the row's `why` column,
+`Corpus/coverage/exec/goroutines/wake-then-abort/cases.tsv`, appended to the existing text (`scripts/coverage-manifest`
+parses the row, exit 0). The entry's header lines and the Cases call stay as they were. The K=80 slow tier it mentions
+was retired in the 2026-10-12 gate cull; the merge gate samples at K=32.
 
 ## BUG-116 — the legacy inline `len`/`cap`/`min`/`max` path realized the LEFT operand's panic where gc realizes the BUILT-IN's OPERAND's panic: a late-failing NON-CALL operand (index / slice expression / dereference / pointer-field read / division / shift / compound LOAD) left of an inline built-in whose own operand panics, CALL-FREE — main's strict singleton excluded gc's member (observed ∉ modeled) [frontend lowering; wrong answer; FIXED at Stage E6a by the refined trigger; found by the Stage E6a adversarial audit, F1, 2026-09-24]
 
