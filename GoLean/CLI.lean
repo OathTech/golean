@@ -163,7 +163,10 @@ private def usage : String :=
   "  golean observation-eq --left <json> --right <json>\n" ++
   "  golean coverage-observations --input <file> --function <name> [--arg-int <n> | --arg-bool <true|false> ...] [--fuel <n>] [--engine dedup]\n" ++
   "      [--max-width <B>] [--max-sites <D>] [--cap <N>] [--work-cap <W>] [--expect-status <ok|panic|ok,panic|race>]
-      [--allow-nonterm-iters <per-branch-loop-re-entries>] [--backedge <full|k>]\n"
+      [--allow-nonterm-iters <per-branch-loop-re-entries>] [--backedge <full|k>]\n" ++
+  "  golean choice-trace --input <file> --function <name> [--arg-int <n> | --arg-bool <true|false> ...] [--fuel <n>] [--stream <spec>]... [--trace]\n" ++
+  "  golean choice-trace --batch <manifest.tsv> --out <results.tsv> [--dump <file>] [--fuel <n>] [--skip <k>] [--take <n>]\n" ++
+  "      (the labelled-consumption tracer; `golean choice-trace --help` for the stream specs and the manifest format)\n"
 
 private def absoluteFrom (base : FilePath) (path : FilePath) : FilePath :=
   if path.isRelative then (base / path).normalize else path.normalize
