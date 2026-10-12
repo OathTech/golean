@@ -137,6 +137,16 @@ GOLEAN_BIN="$ROOT/.lake/build/bin/golean"
 lean() {
   run_with_timeout "$LEAN_TIMEOUT_SECONDS" "$GOLEAN_BIN" "$@"
 }
+# timed <phase> <id> <cmd...>: run the command, append its wall time (µs) for
+# the row to the timings file, return its exit code unchanged. Redirections on
+# the call apply to the command; the record has its own.
+timed() {
+  local ph=$1 cid=$2 rc=0 t0=${EPOCHREALTIME/./}
+  shift 2
+  "$@" || rc=$?
+  printf '%s\t%s\t%s\n' "$cid" "$ph" "$(( ${EPOCHREALTIME/./} - t0 ))" >> "$TIMINGS_TMP"
+  return "$rc"
+}
 
 # A NON-VERDICT exit code names itself (cause-naming slice 2, 2026-09-03,
 # discharging the residual owed at the first slice's audit F1 —
@@ -198,7 +208,7 @@ signal_cause() {
 OBS_EQ_STDERR=""
 obs_eq() {
   local rc=0
-  OBS_EQ_STDERR="$(lean observation-eq --left "$1" --right "$2" 2>&1 >/dev/null)" || rc=$?
+  OBS_EQ_STDERR="$(timed obs-eq "${id:-?}" lean observation-eq --left "$1" --right "$2" 2>&1 >/dev/null)" || rc=$?
   return "$rc"
 }
 # Names obs_eq's non-verdict codes (returns 1, prints nothing, for 0/1).
@@ -238,6 +248,22 @@ if ! GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go build -o "$HARNESS_BIN" ./tool
   echo "diff-coverage: could not build tools/coverageharness (fail closed)" >&2
   exit 2
 fi
+# THE FRONTEND BINARY, built ONCE per run too (gate-cull follow-up 1a,
+# 2026-10-12): `go run ./tools/nativefrontend` relinked the frontend for every
+# one of ~3900 rows. It lives in the run's own gitignored artifacts dir, never
+# in the tree (the 2026-07-31 stale-committed-binary incident is why nothing
+# reads a prebuilt one); the frontend shells out to nothing at run time. A
+# build failure is a fail-closed exit, never a fallback to `go run`.
+FRONTEND_BIN="$OUT/bin/nativefrontend"
+if ! GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go build -o "$FRONTEND_BIN" ./tools/nativefrontend; then
+  echo "diff-coverage: could not build tools/nativefrontend (fail closed)" >&2
+  exit 2
+fi
+# Per-subprocess wall records (follow-up 1b): every worker appends
+# `<id>\t<phase>\t<microseconds>`; publish_results sums them per phase into the
+# meta and keeps the file as timings.tsv, so a slow run says where it went.
+TIMINGS_TMP="$OUT/.timings.tsv.tmp"
+: > "$TIMINGS_TMP"
 
 # ORACLE VERSION PIN (launch audit D10-F4, 2026-08-22): every fidelity
 # claim is against the pinned oracle. Nothing checked this mechanically
@@ -352,7 +378,7 @@ fi
 echo "diff-coverage: membership sampling budget K=$MEMBERSHIP_DRAWS (alternate plain/-race, early stop at members=)"
 
 cleanup() {
-  rm -f "$RESULTS_TMP" "$META_TMP"
+  rm -f "$RESULTS_TMP" "$META_TMP" "$TIMINGS_TMP"
   if [[ -n "$GENERATED_MANIFEST" ]]; then
     rm -f "$GENERATED_MANIFEST"
   fi
@@ -368,6 +394,14 @@ publish_results() {
   # WITHOUT meta — exactly the unattributable state scripts/ci
   # refuses. Meta-first leaves at worst meta-without-results, which no
   # consumer reads as a run.
+  # Per-phase wall totals (follow-up 1b, 2026-10-12): where the run's time
+  # went, by subprocess kind, from the workers' per-call records; the records
+  # themselves stay beside the results as timings.tsv (id, phase, µs).
+  if [[ -s "$TIMINGS_TMP" ]]; then
+    awk -F'\t' '{ s[$2] += $3; n[$2]++ } END { for (p in s) printf "phase_%s_seconds\t%.1f\nphase_%s_calls\t%d\n", p, s[p] / 1e6, p, n[p] }' "$TIMINGS_TMP" \
+      | LC_ALL=C sort >> "$META_TMP"
+    mv "$TIMINGS_TMP" "$OUT/timings.tsv"
+  fi
   mv "$META_TMP" "$META_TSV"
   mv "$RESULTS_TMP" "$RESULTS_TSV"
 }
@@ -631,7 +665,7 @@ run_case_rows() {
   # go-run FAIL). Flattening removes the hazard class.
   go_run_dir="$OUT/go-run/${id//\//__}"
   local harness_rc=0 harness_cause
-  harness_output="$(run_with_timeout "$GO_TIMEOUT_SECONDS" "$HARNESS_BIN" \
+  harness_output="$(timed harness "$id" run_with_timeout "$GO_TIMEOUT_SECONDS" "$HARNESS_BIN" \
       --input "$go_file" \
       --out "$go_run_dir" \
       --subject "$function_name" \
@@ -815,7 +849,7 @@ run_case_rows() {
     fe_flags+=(--allow-hidden-dep-init-order)
   fi
   local native_rc=0 native_cause
-  native_export="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run ./tools/nativefrontend ${fe_flags[@]+"${fe_flags[@]}"} --dir "$go_dir" --out "$wire_json" 2>&1)" || native_rc=$?
+  native_export="$(timed frontend "$id" run_with_timeout "$GO_TIMEOUT_SECONDS" "$FRONTEND_BIN" ${fe_flags[@]+"${fe_flags[@]}"} --dir "$go_dir" --out "$wire_json" 2>&1)" || native_rc=$?
   if [[ "$native_rc" -eq 124 ]]; then
     report_fail "$id" "$features" "frontend-export" "native frontend TIMED OUT after ${GO_TIMEOUT_SECONDS}s (GO_TIMEOUT_SECONDS) — no wire produced; captured output: $native_export"
     return 0
@@ -861,7 +895,7 @@ run_case_rows() {
       done
     fi
     local conf_rc=0 conf_timeout="$LEAN_ENUM_TIMEOUT_SECONDS" conf_what_sig
-    run_with_timeout "$conf_timeout" "$GOLEAN_BIN" "${conf_args[@]}" \
+    timed enum "$id" run_with_timeout "$conf_timeout" "$GOLEAN_BIN" "${conf_args[@]}" \
         > "$conf_dir/observations.txt" 2> "$conf_dir/enum-stats.txt" || conf_rc=$?
     if [[ "$conf_rc" -ne 0 ]]; then
       # Timeouts NAMED here too (audit F4, 2026-08-15): the empty-detail-
@@ -902,7 +936,7 @@ run_case_rows() {
     return 0
   fi
 
-  if lean_observation="$(lean "${lean_args[@]}" 2>&1)"; then
+  if lean_observation="$(timed lean-default "$id" lean "${lean_args[@]}" 2>&1)"; then
     lean_status=0
   else
     lean_status=$?
@@ -915,8 +949,8 @@ run_case_rows() {
   # and 1 (error observation, JSON on stdout); anything else produced no
   # observation. Stage stays lean-observation on purpose: a Lean run
   # that cannot finish is a machine-side fidelity failure
-  # (scripts/check-bugs.sh and tools/reconcile-records count that stage;
-  # lean-run is outside their fidelity set).
+  # (scripts/check-bugs.sh counts that stage; lean-run is outside its
+  # fidelity set).
   local lean_cause
   if lean_cause="$(undecided_cause "$lean_status" "Lean run" "$LEAN_TIMEOUT_SECONDS" LEAN_TIMEOUT_SECONDS)"; then
     report_fail "$id" "$features" "lean-observation" "$lean_cause — no observation produced (expected status $expected_status); captured output: $lean_observation"
@@ -987,7 +1021,7 @@ run_case_rows() {
       done
     fi
     local racy_rc=0
-    run_with_timeout "$LEAN_ENUM_TIMEOUT_SECONDS" "$GOLEAN_BIN" "${racy_args[@]}" \
+    timed enum "$id" run_with_timeout "$LEAN_ENUM_TIMEOUT_SECONDS" "$GOLEAN_BIN" "${racy_args[@]}" \
         > "$racy_dir/observations.txt" 2> "$racy_dir/enum-stats.txt" || racy_rc=$?
     if [[ "$racy_rc" -ne 0 ]]; then
       local racy_what="enumerator failed (exit $racy_rc) — 'every enumerated path refuses' not certified" racy_what_sig
@@ -1065,7 +1099,7 @@ run_case_rows() {
       # order". Stage stays nondet — invariance is what was NOT
       # certified — with the wall clock named as the cause.
       variant_rc=0
-      variant_obs="$(lean "${lean_args[@]}" --choices "$oracle" 2>&1)" || variant_rc=$?
+      variant_obs="$(timed lean-variant "$id" lean "${lean_args[@]}" --choices "$oracle" 2>&1)" || variant_rc=$?
       if variant_cause="$(undecided_cause "$variant_rc" "oracle-invariance re-run under stream [$olabel]" "$LEAN_TIMEOUT_SECONDS" LEAN_TIMEOUT_SECONDS)"; then
         report_fail "$id" "$features" "nondet" "$variant_cause — invariance NOT certified (a killed run is not an observed variance); captured output: $variant_obs"
         nondet=1
@@ -1120,7 +1154,7 @@ run_case_rows() {
       trace_args+=(--stream "${inv_streams[$si]}")
     done
     local trace_rc=0 trace_out trace_cause
-    trace_out="$(run_with_timeout "$LEAN_TRACE_TIMEOUT_SECONDS" "$GOLEAN_BIN" "${trace_args[@]}" 2>&1)" || trace_rc=$?
+    trace_out="$(timed trace "$id" run_with_timeout "$LEAN_TRACE_TIMEOUT_SECONDS" "$GOLEAN_BIN" "${trace_args[@]}" 2>&1)" || trace_rc=$?
     if trace_cause="$(undecided_cause "$trace_rc" "depth guard (choice-trace)" "$LEAN_TRACE_TIMEOUT_SECONDS" LEAN_TRACE_TIMEOUT_SECONDS)"; then
       report_fail "$id" "$features" "nondet" "$trace_cause — stream coverage NOT established (the strict PASS's invariance half is unproven); captured output: $trace_out"
       return 0
@@ -1255,7 +1289,7 @@ go_run_oracle() {
   # was pinned for panicnil.
   # The terminal discriminator consumes runtime frames from THIS execution.
   # system adds diagnostics without the crash bit or a recover wrapper.
-  run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOFLAGS= GODEBUG=panicnil=0 GOTRACEBACK=system GOCACHE="$GO_BUILD_CACHE" \
+  timed oracle "$id" run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOFLAGS= GODEBUG=panicnil=0 GOTRACEBACK=system GOCACHE="$GO_BUILD_CACHE" \
     ${gopath_env[@]+"${gopath_env[@]}"} \
     bash -c 'cd "$1" && shift && exec go run "$@" .' go-run-oracle "$go_run_dir" ${race_flag[@]+"${race_flag[@]}"} \
     > "$go_run_dir/oracle.stdout" 2> "$go_run_dir/oracle.stderr" || rc=$?
@@ -1648,7 +1682,7 @@ run_membership_case_rows() {
     mem_fe_flags+=(--allow-hidden-dep-init-order)
   fi
   local mem_native_rc=0 mem_native_cause
-  native_export="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run ./tools/nativefrontend ${mem_fe_flags[@]+"${mem_fe_flags[@]}"} --dir "$go_dir" --out "$wire_json" 2>&1)" || mem_native_rc=$?
+  native_export="$(timed frontend "$id" run_with_timeout "$GO_TIMEOUT_SECONDS" "$FRONTEND_BIN" ${mem_fe_flags[@]+"${mem_fe_flags[@]}"} --dir "$go_dir" --out "$wire_json" 2>&1)" || mem_native_rc=$?
   if [[ "$mem_native_rc" -eq 124 ]]; then
     report_fail "$id" "$features" "frontend-export" "native frontend TIMED OUT after ${GO_TIMEOUT_SECONDS}s (GO_TIMEOUT_SECONDS) — no wire produced; captured output: $native_export"
     return 0
@@ -1694,7 +1728,7 @@ run_membership_case_rows() {
     enum_args+=(--allow-nonterm-iters "$iters")
   fi
   local enum_timeout="$LEAN_ENUM_TIMEOUT_SECONDS" enum_rc=0 enum_what_sig
-  run_with_timeout "$enum_timeout" "$GOLEAN_BIN" "${enum_args[@]}" \
+  timed enum "$id" run_with_timeout "$enum_timeout" "$GOLEAN_BIN" "${enum_args[@]}" \
       > "$mem_dir/observations.txt" 2> "$mem_dir/enum-stats.txt" || enum_rc=$?
   if [[ "$enum_rc" -ne 0 ]]; then
     local enum_what="enumerator failed (exit $enum_rc; coverage not certified)"
@@ -1742,7 +1776,7 @@ run_membership_case_rows() {
     # and reported drift. Coupling is what was NOT certified; the wall
     # clock is the cause.
     coupling_rc=0
-    coupling_obs="$(lean "${run_args[@]}" 2>&1)" || coupling_rc=$?
+    coupling_obs="$(timed lean-coupling "$id" lean "${run_args[@]}" 2>&1)" || coupling_rc=$?
     if coupling_cause="$(undecided_cause "$coupling_rc" "driver-coupling pin: native-json-run under stream [$cs]" "$LEAN_TIMEOUT_SECONDS" LEAN_TIMEOUT_SECONDS)"; then
       report_fail "$id" "$features" "membership" "$coupling_cause — coupling NOT certified (a killed run is not copied-driver drift); captured output: $coupling_obs"
       return 0
@@ -1881,9 +1915,9 @@ while IFS= read -r line; do
 done < "$MANIFEST"
 case_count="$row_i"
 
-export CASE_OUT ROOT OUT FRONTEND GO_BUILD_CACHE GOLEAN_BIN HARNESS_BIN LEAN_TRACE_TIMEOUT_SECONDS \
+export CASE_OUT ROOT OUT FRONTEND GO_BUILD_CACHE GOLEAN_BIN HARNESS_BIN FRONTEND_BIN TIMINGS_TMP LEAN_TRACE_TIMEOUT_SECONDS \
   GO_TIMEOUT_SECONDS LEAN_TIMEOUT_SECONDS LEAN_ENUM_TIMEOUT_SECONDS MEMBERSHIP_DRAWS
-export -f run_case run_case_rows run_with_timeout lean obs_eq obs_eq_cause undecided_cause signal_cause \
+export -f run_case run_case_rows run_with_timeout lean timed obs_eq obs_eq_cause undecided_cause signal_cause \
   report_pass report_pass_lane report_fail one_line \
   membership_go_observation run_membership_case_rows go_run_oracle go_diagnostics attach_output oracle_observer oracle_setup_failed \
   parse_lane_params member_status_allowed seeded_stream
