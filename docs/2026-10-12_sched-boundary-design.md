@@ -118,8 +118,11 @@ Each observable operation executed while ≥ 2 goroutines are runnable is one mo
 of bound |runnable|: enumeration trees multiply per such operation on the membership /
 confluent rows. Rows expected to move: those mixing prints or `len(ch)` with live peers —
 `builtins/print/goroutine-interleaving` (two one-print children), `goroutines/sched-
-dependent/len-handoff` (one `len`), the strict rows under `panic-recover/panic-preprint`,
-`race/gomem-only`, `sync/trylock` (three streams each, linear — no tree). No `engine=dedup`
+dependent/len-handoff` (one `len`). The strict rows under `panic-recover/panic-preprint`,
+`race/gomem-only` and `sync/trylock` were listed here at first but do not move: their subjects
+print beside no live peer (panic-preprint has no goroutines; gomem-only's and trylock's only
+`println` calls sit in the fixtures' `main()`, never lowered) — the adversarial review's LOW-1,
+corrected after the gate confirmed nothing moved. No `engine=dedup`
 row prints (the engine refuses output by name); `imported-goose/channel/google-search` (the
 former slow row) has no print and no `len(ch)` in its subject (grep of its `main.go`); the
 other dedup packages' `len(ch)` reads (`goroutines/buffered-wake`, `noodler/select`) sit in
