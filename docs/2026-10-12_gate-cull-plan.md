@@ -431,7 +431,19 @@ Measured on this box (milner-oath, 32 cores, warm `.lake`, box default cap
 - fast tier: 47 s wall; RESULT: FAIL on exactly the two «NO recorded run»
   baseline steps (this box had no corpus record yet), every other gate step
   and every speedbump ok.
-- `--diff`: see the lane-4 close commit (filled in after the run).
+- `--diff` at the clean tip `21af8d1b`, under the box-wide build lock: **RESULT:
+  PASS, 802 s wall**, every gate step and every speedbump ok; differential
+  3936/3936 no regression (3705 PASS / 231 FAIL, the r75 figures), negative
+  394/394 no regression, 32 jobs, K=32. The former `tier=slow` row
+  `imported-goose/channel/google-search` enumerated fresh — 6 observations,
+  6.28 M dedup steps, `members=6` met — inside the shared 300 s budget: no
+  timeout, no cache, no certificate. Of the 802 s, roughly 90 s is the fast
+  tier, ~540 s the differential corpus, ~30 s the negative corpus, ~100 s the
+  unseq scheduler and the rest the baselines and regenerations; the corpus is
+  now two thirds of the merge gate, so the next lever (not in this cull, a
+  [USER] call) is the corpus run itself: the per-case `go run
+  ./tools/nativefrontend` could be one build per run, and the strict lane's
+  three invariance streams are four interpreter runs per case.
 
 Open for the [USER] (D10): the global rule «Artifacts: rebuild or push, never
 hoard» (2026-10-12) says gate tails and run dumps are not committed; this
