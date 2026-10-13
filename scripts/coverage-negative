@@ -40,6 +40,47 @@ if ! command -v go >/dev/null 2>&1; then
   exit 2
 fi
 
+# THE ORACLE-ONLY TOOLCHAIN SWITCH (release-readiness item 32; the
+# rationale, the [USER] ruling and the measured reason it is PATH/GOROOT
+# and not GOTOOLCHAIN — GOPATH mode ignores GOTOOLCHAIN — are
+# scripts/diff-coverage's twin block). GOLEAN_ORACLE_GOTOOLCHAIN=goX.Y.Z
+# runs ONLY gc's per-row `go build` (the rejection oracle) under that
+# toolchain; the frontend's build and run stay on the live toolchain, which
+# must be the pin. A canary checks the switch took. Unset: nothing here
+# runs. A gc that ACCEPTS a row under the alternate is a finding for the
+# caller (a FAIL row, stage go-compile), never a re-pin.
+ORACLE_GOTOOLCHAIN="${GOLEAN_ORACLE_GOTOOLCHAIN:-}"
+oracle_toolchain_env=()
+if [[ -n "$ORACLE_GOTOOLCHAIN" ]]; then
+  if [[ ! "$ORACLE_GOTOOLCHAIN" =~ ^go[0-9]+\.[0-9]+(\.[0-9]+)?((rc|beta)[0-9]+)?$ ]]; then
+    echo "coverage-negative: GOLEAN_ORACLE_GOTOOLCHAIN='$ORACLE_GOTOOLCHAIN' is not a toolchain name (goX.Y.Z); refusing" >&2
+    exit 2
+  fi
+  _pin="$(head -1 "$ROOT/baselines/go-oracle-pin" 2>/dev/null | tr -d '[:space:]')"
+  _fe_tc="$(go version 2>/dev/null | awk '{print $3}')"
+  if [[ -z "$_pin" || "$_fe_tc" != "$_pin" ]]; then
+    echo "coverage-negative: GOLEAN_ORACLE_GOTOOLCHAIN: the frontend side's toolchain '${_fe_tc:-<go version failed>}' is not the pin '${_pin:-<baselines/go-oracle-pin unreadable>}'; refusing" >&2
+    exit 2
+  fi
+  if ! ORACLE_GOROOT="$(env -u GOROOT GO111MODULE=on GOFLAGS= GOTOOLCHAIN="$ORACLE_GOTOOLCHAIN" go env GOROOT 2>&1)" \
+      || [[ ! -x "$ORACLE_GOROOT/bin/go" ]]; then
+    echo "coverage-negative: GOLEAN_ORACLE_GOTOOLCHAIN=$ORACLE_GOTOOLCHAIN does not resolve to a runnable toolchain here ($(printf '%s' "$ORACLE_GOROOT" | head -c 300)); refusing" >&2
+    exit 2
+  fi
+  oracle_toolchain_env=(PATH="$ORACLE_GOROOT/bin:$PATH" GOROOT="$ORACLE_GOROOT" GOTOOLCHAIN=local)
+  mkdir -p "$GO_BUILD_CACHE"
+  _canary="$(mktemp -d "${TMPDIR:-/tmp}/golean-oracle-canary.XXXXXX")"
+  printf 'package main\n\nimport (\n\t"fmt"\n\t"runtime"\n)\n\nfunc main() { fmt.Print(runtime.Version()) }\n' > "$_canary/main.go"
+  _said="$(cd "$_canary" && env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" "${oracle_toolchain_env[@]}" go run . 2>&1)"
+  rm -rf "$_canary"
+  if [[ "$_said" != "$ORACLE_GOTOOLCHAIN" ]]; then
+    echo "coverage-negative: GOLEAN_ORACLE_GOTOOLCHAIN canary reports runtime.Version()='$(printf '%s' "$_said" | head -c 300)', not $ORACLE_GOTOOLCHAIN — the switch did not take; refusing" >&2
+    exit 2
+  fi
+  unset _pin _fe_tc _canary _said
+  echo "coverage-negative: ORACLE toolchain $ORACLE_GOTOOLCHAIN ($ORACLE_GOROOT; canary ok); frontend on $(go version | awk '{print $3}')" >&2
+fi
+
 # ORACLE VERSION PIN (exec-lane pattern, diff-coverage's block verbatim
 # in miniature — assessment D-5: the negative lane previously held the
 # pin only transitively, when invoked under ci after its step 0c; a
@@ -48,11 +89,12 @@ GO_PIN_FILE="$ROOT/baselines/go-oracle-pin"
 if [[ -f "$GO_PIN_FILE" ]]; then
   go_pin="$(head -1 "$GO_PIN_FILE" | tr -d '[:space:]')"
   go_live="$(go version | awk '{print $3}')"
-  if [[ "$go_live" != "$go_pin" ]]; then
+  go_oracle="${ORACLE_GOTOOLCHAIN:-$go_live}"
+  if [[ "$go_oracle" != "$go_pin" ]]; then
     if [[ "${GOLEAN_ALLOW_GO_DRIFT:-0}" = 1 ]]; then
-      echo "WARNING: live toolchain $go_live != pinned oracle $go_pin (GOLEAN_ALLOW_GO_DRIFT=1 — this run is NOT against the oracle of record)" >&2
+      echo "WARNING: live toolchain $go_oracle != pinned oracle $go_pin (GOLEAN_ALLOW_GO_DRIFT=1 — this run is NOT against the oracle of record)" >&2
     else
-      echo "coverage-negative: live toolchain $go_live != pinned oracle $go_pin (baselines/go-oracle-pin); refusing — set GOLEAN_ALLOW_GO_DRIFT=1 to probe a non-oracle toolchain loudly" >&2
+      echo "coverage-negative: live toolchain $go_oracle != pinned oracle $go_pin (baselines/go-oracle-pin); refusing — set GOLEAN_ALLOW_GO_DRIFT=1 to probe a non-oracle toolchain loudly" >&2
       exit 2
     fi
   fi
@@ -128,7 +170,7 @@ unset _gstatus
 # (scripts/ci) prefer go_drift_actual, falling back to the legacy
 # go_drift field on pre-T3-6 records.
 go_drift_actual=false
-if [[ "$go_live" != "$go_pin" ]]; then
+if [[ "$go_live" != "$go_pin" || "$go_oracle" != "$go_pin" ]]; then
   go_drift_actual=true
 fi
 {
@@ -139,7 +181,13 @@ fi
   printf 'manifest_cases\t%s\n' "$manifest_cases"
   printf 'git_commit\t%s\n' "$git_commit"
   printf 'git_dirty\t%s\n' "$git_dirty"
-  printf 'go_toolchain\t%s\n' "$(go version 2>/dev/null | awk '{print $3}' || printf 'unknown')"
+  if [[ -n "$ORACLE_GOTOOLCHAIN" ]]; then
+    printf 'go_toolchain\t%s\n' "$ORACLE_GOTOOLCHAIN"
+  else
+    printf 'go_toolchain\t%s\n' "$(go version 2>/dev/null | awk '{print $3}' || printf 'unknown')"
+  fi
+  printf 'go_toolchain_frontend\t%s\n' "$go_live"
+  printf 'go_toolchain_oracle\t%s\n' "$go_oracle"
   printf 'go_drift_allowed\t%s\n' "${GOLEAN_ALLOW_GO_DRIFT:-0}"
   printf 'go_drift_actual\t%s\n' "$go_drift_actual"
 } > "$META_TMP"
@@ -260,7 +308,7 @@ while IFS=$'\t' read -r id go_dir expected_substring features extra || [[ -n "${
   fi
 
   binary="$BUILD_OUT/${id//\//__}"
-  if output="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go build -o "$binary" "./$go_dir" 2>&1)"; then
+  if output="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" ${oracle_toolchain_env[@]+"${oracle_toolchain_env[@]}"} go build -o "$binary" "./$go_dir" 2>&1)"; then
     report_negative_fail "$id" "$features" "go-compile" "program unexpectedly compiled"
     continue
   fi

@@ -688,6 +688,47 @@ soundness alarm — a killed command has decided nothing
 `docs/evidence/2026-09-03_timeout-cause/`,
 `docs/evidence/2026-09-03_runner-exitcode/`).
 
+### Go version diversity (report-only; release-readiness item 32)
+
+`scripts/capped scripts/go-version-diversity [--staticinit] [--record <dir>] <goX.Y.Z>`
+re-runs the differential and negative corpora with ONLY THE ORACLE on another
+Go toolchain and compares every row with the recorded run of record
+(`artifacts/coverage/`, at the pin and the current manifests — else it refuses:
+«run scripts/ci --diff first»). The seam is the runners' knob
+`GOLEAN_ORACLE_GOTOOLCHAIN=<v>` (headers of `scripts/diff-coverage` and
+`scripts/coverage-negative`): the per-row `go run` / gc `go build` alone gets
+the module-cache toolchain's `PATH`/`GOROOT` (Go ignores `GOTOOLCHAIN` in the
+oracle's GOPATH mode — measured), a `runtime.Version()` canary checks the switch
+took, and the native frontend and harness stay on the pin, so the lowering is
+not a second variable. Both toolchains are in each run's meta
+(`go_toolchain_frontend`, `go_toolchain_oracle`, `go_drift_actual=true`), and an
+oracle off the pin still needs `GOLEAN_ALLOW_GO_DRIFT=1` (the script sets it).
+Artifacts go under `.tmp/go-diversity/<v>/`; the report is printed and written
+to `report.txt` there.
+
+What it compares: per row result, stage, cause key and the normalized detail
+(artifact roots, GOROOT paths, addresses, goroutine ids); on rows where all of
+those agree, the oracle's own recorded observation (stdout, the fd-2 split, the
+abort message); per negative row result, stage and detail; with
+`--staticinit`, gc's static-init verdict table re-recorded under `<v>`. Classes:
+«oracle does not compile under `<v>`» (a fixture needs a feature that toolchain
+lacks — by construction, not a behaviour change), result/stage/cause flips,
+detail changes, membership sampling captions that moved (not a version signal),
+and oracle-observation changes (strict rows listed; sampled lanes counted).
+
+What a difference means: Go's behaviour differs between the two versions on
+that row (the machine's side does not depend on the Go version) — a latitude
+the model may need to admit, a version-specific behaviour the pin's written
+reason should name, or a fixture tied to a newer toolchain. It is a FINDING for
+a human, never a re-pin: the oracle of record moves only deliberately, with a
+full run and a written reason (CLAUDE.md, trusted surface 2). Exit 0 when the
+runs complete (differences included), 1 when a run could not complete, 2 on a
+refusal. Only toolchains already in the module cache run inside the sandbox;
+the [USER] fetches one outside it with `GOTOOLCHAIN=<v> go version`.
+`scripts/oracle-version-sweep` (2026-09-01) is the older probe: it puts the
+candidate first on PATH for the whole run, frontend included, and compares
+(result, stage) only.
+
 ## Migration Plan
 
 1. Add JSON output next to `artifacts/coverage/latest.tsv`.

@@ -240,6 +240,71 @@ if ! command -v go >/dev/null 2>&1; then
   exit 2
 fi
 
+# THE ORACLE-ONLY TOOLCHAIN SWITCH (release-readiness item 32, Go version
+# diversity — [USER] Mike 2026-10-13 «if we wanted to add more Go version
+# diversity, is there an easy way to do that? I'm happy to install things»
+# and «the go setup should support you calling different go versions»,
+# relayed; seam chosen by the [AGENT] lane apparatus/go-diversity-1013).
+# GOLEAN_ORACLE_GOTOOLCHAIN=goX.Y.Z runs ONLY the oracle — the per-case
+# `go run` in go_run_oracle — under that toolchain. Everything else stays
+# on the live (= pinned, checked below) toolchain: the harness and frontend
+# builds, the version probes, and — load-bearing — the frontend's own
+# run-time `go list -export` (go/types' importer.Default() execs
+# $GOROOT/bin/go of the toolchain that BUILT the frontend), so the lowering
+# is not a second variable. The seam is the runner, not the harness binary:
+# the harness never runs `go`; the oracle's `go run` is this script's.
+# HOW, and why not GOTOOLCHAIN: the oracle runs in GOPATH mode
+# (GO111MODULE=off) and Go IGNORES GOTOOLCHAIN there — measured: under
+# `GO111MODULE=off GOTOOLCHAIN=go1.24.9`, `go version` says go1.24.9 but
+# `go run` compiles with /usr/local/go's tools and runtime.Version() says
+# go1.26.5. So the alternate's GOROOT is resolved ONCE (`GOTOOLCHAIN=<v>
+# go env GOROOT` in module mode: the module-cache toolchain), and the
+# oracle command alone gets PATH=<that>/bin:…, GOROOT=<that>,
+# GOTOOLCHAIN=local. A CANARY then builds and runs a runtime.Version()
+# program in exactly that environment; it must print <v> or the run is
+# refused (a switch that silently did not take would be a null result
+# dressed as a diversity run). Unset (the gate's path): nothing here runs
+# and no command's environment changes. Set: the frontend side must report
+# the pin (else refused — the frontend never runs under the alternate), and
+# an oracle != pin still needs GOLEAN_ALLOW_GO_DRIFT=1 (the pin check
+# below). The meta records go_toolchain_frontend and go_toolchain_oracle;
+# go_toolchain stays the ORACLE's (what scripts/ci reads). Report-only:
+# never the oracle of record, never a re-pin (scripts/go-version-diversity
+# drives it). Only toolchains already in the module cache resolve inside
+# the sandbox.
+ORACLE_GOTOOLCHAIN="${GOLEAN_ORACLE_GOTOOLCHAIN:-}"
+if [[ -n "$ORACLE_GOTOOLCHAIN" ]]; then
+  if [[ ! "$ORACLE_GOTOOLCHAIN" =~ ^go[0-9]+\.[0-9]+(\.[0-9]+)?((rc|beta)[0-9]+)?$ ]]; then
+    echo "diff-coverage: GOLEAN_ORACLE_GOTOOLCHAIN='$ORACLE_GOTOOLCHAIN' is not a toolchain name (goX.Y.Z); refusing" >&2
+    exit 2
+  fi
+  _pin="$(head -1 "$ROOT/baselines/go-oracle-pin" 2>/dev/null | tr -d '[:space:]')"
+  _fe_tc="$(go version 2>/dev/null | awk '{print $3}')"
+  if [[ -z "$_pin" || "$_fe_tc" != "$_pin" ]]; then
+    echo "diff-coverage: GOLEAN_ORACLE_GOTOOLCHAIN: the frontend side's toolchain '${_fe_tc:-<go version failed>}' is not the pin '${_pin:-<baselines/go-oracle-pin unreadable>}'; refusing (the frontend must stay on the oracle of record)" >&2
+    exit 2
+  fi
+  if ! ORACLE_GOROOT="$(env -u GOROOT GO111MODULE=on GOFLAGS= GOTOOLCHAIN="$ORACLE_GOTOOLCHAIN" go env GOROOT 2>&1)" \
+      || [[ ! -x "$ORACLE_GOROOT/bin/go" ]]; then
+    echo "diff-coverage: GOLEAN_ORACLE_GOTOOLCHAIN=$ORACLE_GOTOOLCHAIN does not resolve to a runnable toolchain here ($(printf '%s' "$ORACLE_GOROOT" | head -c 300)); refusing — a toolchain not in the module cache cannot download inside the sandbox" >&2
+    exit 2
+  fi
+  export ORACLE_GOTOOLCHAIN ORACLE_GOROOT
+  # The canary, in the oracle's own environment (go_run_oracle's knobs).
+  mkdir -p "$GO_BUILD_CACHE"
+  _canary="$(mktemp -d "${TMPDIR:-/tmp}/golean-oracle-canary.XXXXXX")"
+  printf 'package main\n\nimport (\n\t"fmt"\n\t"runtime"\n)\n\nfunc main() { fmt.Print(runtime.Version()) }\n' > "$_canary/main.go"
+  _said="$(cd "$_canary" && env GO111MODULE=off GOFLAGS= GOCACHE="$GO_BUILD_CACHE" \
+      PATH="$ORACLE_GOROOT/bin:$PATH" GOROOT="$ORACLE_GOROOT" GOTOOLCHAIN=local go run . 2>&1)"
+  rm -rf "$_canary"
+  if [[ "$_said" != "$ORACLE_GOTOOLCHAIN" ]]; then
+    echo "diff-coverage: GOLEAN_ORACLE_GOTOOLCHAIN canary: a program run in the oracle's environment reports runtime.Version()='$(printf '%s' "$_said" | head -c 300)', not $ORACLE_GOTOOLCHAIN — the switch did not take; refusing" >&2
+    exit 2
+  fi
+  unset _pin _fe_tc _canary _said
+  echo "diff-coverage: ORACLE toolchain $ORACLE_GOTOOLCHAIN ($ORACLE_GOROOT; canary ok); frontend and harness on $(go version | awk '{print $3}')" >&2
+fi
+
 # THE HARNESS BINARY, built ONCE per run (stdlib slice 3, 2026-09-04): it is
 # invoked twice per case now — harness generation and the oracle's fd-2
 # SPLIT (`--split-stderr`, tools/coverageharness/split.go) — so a per-case
@@ -280,11 +345,14 @@ GO_PIN_FILE="$ROOT/baselines/go-oracle-pin"
 if [[ -f "$GO_PIN_FILE" ]]; then
   go_pin="$(head -1 "$GO_PIN_FILE" | tr -d '[:space:]')"
   go_live="$(go version | awk '{print $3}')"
-  if [[ "$go_live" != "$go_pin" ]]; then
+  # The ORACLE's toolchain: the live one, unless GOLEAN_ORACLE_GOTOOLCHAIN
+  # switched the oracle alone (block above; the live one is then the pin).
+  go_oracle="${ORACLE_GOTOOLCHAIN:-$go_live}"
+  if [[ "$go_oracle" != "$go_pin" ]]; then
     if [[ "${GOLEAN_ALLOW_GO_DRIFT:-0}" = 1 ]]; then
-      echo "WARNING: live toolchain $go_live != pinned oracle $go_pin (GOLEAN_ALLOW_GO_DRIFT=1 — this run is NOT against the oracle of record)" >&2
+      echo "WARNING: live toolchain $go_oracle != pinned oracle $go_pin (GOLEAN_ALLOW_GO_DRIFT=1 — this run is NOT against the oracle of record)" >&2
     else
-      echo "diff-coverage: live toolchain $go_live != pinned oracle $go_pin (baselines/go-oracle-pin); refusing — set GOLEAN_ALLOW_GO_DRIFT=1 to probe a non-oracle toolchain loudly" >&2
+      echo "diff-coverage: live toolchain $go_oracle != pinned oracle $go_pin (baselines/go-oracle-pin); refusing — set GOLEAN_ALLOW_GO_DRIFT=1 to probe a non-oracle toolchain loudly" >&2
       exit 2
     fi
   fi
@@ -345,7 +413,7 @@ unset _gstatus
 # bit; rationale in scripts/coverage-negative's twin block. Readers
 # prefer go_drift_actual, falling back to legacy go_drift records.
 go_drift_actual=false
-if [[ "$go_live" != "$go_pin" ]]; then
+if [[ "$go_live" != "$go_pin" || "$go_oracle" != "$go_pin" ]]; then
   go_drift_actual=true
 fi
 {
@@ -362,7 +430,15 @@ fi
   # Durable oracle provenance (delta-review DR1 MEDIUM-3): a run under
   # GOLEAN_ALLOW_GO_DRIFT=1 must not be indistinguishable from an
   # oracle-of-record run in the artifact a re-pin consumes.
-  printf 'go_toolchain\t%s\n' "$(go version 2>/dev/null | awk '{print $3}' || printf 'unknown')"
+  if [[ -n "$ORACLE_GOTOOLCHAIN" ]]; then
+    printf 'go_toolchain\t%s\n' "$ORACLE_GOTOOLCHAIN"
+  else
+    printf 'go_toolchain\t%s\n' "$(go version 2>/dev/null | awk '{print $3}' || printf 'unknown')"
+  fi
+  # Both sides by name (item 32): the frontend's (and harness's) toolchain
+  # and the oracle's; equal unless GOLEAN_ORACLE_GOTOOLCHAIN split them.
+  printf 'go_toolchain_frontend\t%s\n' "$go_live"
+  printf 'go_toolchain_oracle\t%s\n' "$go_oracle"
   printf 'go_traceback\tsystem\n'
   printf 'go_crash_channel\tsame-run-setcrashoutput-v1\n'
   printf 'go_drift_allowed\t%s\n' "${GOLEAN_ALLOW_GO_DRIFT:-0}"
@@ -1386,8 +1462,15 @@ go_run_oracle() {
   # was pinned for panicnil.
   # The terminal discriminator consumes runtime frames from THIS execution.
   # system adds diagnostics without the crash bit or a recover wrapper.
+  # The oracle-only toolchain switch (GOLEAN_ORACLE_GOTOOLCHAIN, item 32;
+  # the block at the top says why PATH/GOROOT, not GOTOOLCHAIN): scoped to
+  # THIS command; absent when unset, the environment unchanged.
+  local toolchain_env=()
+  if [[ -n "${ORACLE_GOTOOLCHAIN:-}" ]]; then
+    toolchain_env=(PATH="$ORACLE_GOROOT/bin:$PATH" GOROOT="$ORACLE_GOROOT" GOTOOLCHAIN=local)
+  fi
   timed oracle "$id" run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOFLAGS= GODEBUG=panicnil=0 GOTRACEBACK=system GOCACHE="$GO_BUILD_CACHE" \
-    ${gopath_env[@]+"${gopath_env[@]}"} \
+    ${gopath_env[@]+"${gopath_env[@]}"} ${toolchain_env[@]+"${toolchain_env[@]}"} \
     bash -c 'cd "$1" && shift && exec go run "$@" .' go-run-oracle "$go_run_dir" ${race_flag[@]+"${race_flag[@]}"} \
     > "$go_run_dir/oracle.stdout" 2> "$go_run_dir/oracle.stderr" || rc=$?
   return "$rc"
