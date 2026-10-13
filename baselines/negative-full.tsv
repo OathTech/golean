@@ -1,6 +1,14 @@
 # GoLean negative-corpus (compile-rejection) baseline
 # recorded: 2026-08-18  commit: f68a4d86+ (spec-truth P3 slice 2)  oracle: go build (rejection)  [header corrected 2026-08-31: the old "+ frontend fail-closed" conjunct claimed a check that does not exist — scripts/coverage-negative invokes no GoLean tool (p2-fact claim 5)]
-# manifest_cases: 405  pass: 404  fail: 1
+# manifest_cases: 405  pass: 405  fail: 0
+# re-pinned: 2026-10-13 [AGENT], lane frontend/main-undeclared-refuse-1013 (staged at train 9 over the chan-elem lane's
+#   405-row baseline; the lane itself measured 395/395/0 at its own tip) — ONE FAIL->PASS (the allowed direction):
+#   functions/main-undeclared, FAIL frontend-accepts -> PASS (frontend=type-check). BUG-125 fixed by refusal under the
+#   [USER]'s ruling, Mike 2026-10-13, verbatim, relayed: «I feel like this is just opening the door to endless special-case
+#   nonsense. I'd prefer to just refuse this case, and maybe support it later»: the frontend now refuses a `package main`
+#   with no `func main` by default (tools/nativefrontend/entrymode.go; the negative leg passes no --subject), every
+#   differential-corpus export passes --subject. No row added or removed; no other row moves.
+#   Counts: 405 rows; PASS 404 + 1 = 405; FAIL 1 - 1 = 0. Measured by capped scripts/ci --diff at the train-9 stage tip.
 # re-pinned: 2026-10-13 [AGENT], lane frontend/chan-elem-limit-1013 FIX ROUND (the pre-merge adversarial review, relayed by the
 #   [AGENT] coordinator; MEDIUM-1 and MEDIUM-2): TWO BORN ROWS, both PASS at frontend=type-check, each frontend-accepts before
 #   the fix round (measured): functions/func-args-too-large — a function type whose argument area (gc's TFUNCARGS: params,
@@ -30,6 +38,13 @@
 #   program gc rejects), frontend-crash (a timeout, a signal, exit 2 or any other code) or frontend-reason (exit 1
 #   for another reason). The 2026-08-31 correction above («invokes no GoLean tool») is SUPERSEDED from this date.
 #   HEADER ONLY: no row moves — all 394 PASS under the leg (356 type-check, 37 parse, 1 file-selection; measured).
+# re-pinned: 2026-10-13 [AGENT], lane frontend/main-undeclared-refuse-1013 — ONE FAIL->PASS (the allowed direction):
+#   functions/main-undeclared, FAIL frontend-accepts -> PASS (frontend=type-check). BUG-125 fixed by refusal under the
+#   [USER]'s ruling, Mike 2026-10-13, verbatim, relayed: «I feel like this is just opening the door to endless special-case
+#   nonsense. I'd prefer to just refuse this case, and maybe support it later»: the frontend now refuses a `package main`
+#   with no `func main` by default (tools/nativefrontend/entrymode.go; the negative leg passes no --subject), every
+#   differential-corpus export passes --subject. No row added or removed; no other row moves.
+#   Counts: 395 rows; PASS 394 + 1 = 395; FAIL 1 - 1 = 0. Measured by capped scripts/ci --diff at the lane's tip.
 # re-pinned: 2026-10-12 [AGENT], lane apparatus/refusal-cause-1012 FIX ROUND (the pre-merge adversarial review, MEDIUM-1,
 #   relayed by the [AGENT] coordinator): ONE BORN ROW, FAIL functions/main-undeclared at frontend-accepts — a `package main`
 #   with no `func main`: gc rejects it («function main is undeclared in the main package»), the native frontend LOWERS it
@@ -195,7 +210,7 @@ PASS	functions/call-nonfunction	-
 PASS	functions/duplicate-parameter	-
 PASS	functions/func-args-too-large	-
 PASS	functions/func-compare	-
-FAIL	functions/main-undeclared	frontend-accepts
+PASS	functions/main-undeclared	-
 PASS	functions/missing-function-body	-
 PASS	functions/struct-func-compare	-
 PASS	functions/wrong-arity	-
