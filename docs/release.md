@@ -97,5 +97,21 @@ push rule). Pushing the tag is a separate sign-off.
   alternative, and the strict lane's depth guard is what the gate relies on.
 - **The strict lane's comparable surface** (F4): outside seeded mode the Go observer has no pointer, slice, map or
   channel arm, so a strict row whose result holds one of those cannot be compared and is a visible red.
+- **gc's size limits are mirrored by over-approximation** (train 9, punch-list row 34; `tools/nativefrontend/gclimits.go`):
+  a channel element type of 64 KiB or more, an array larger than the address space, a struct or a function-argument
+  list of 2^50 bytes or more is refused after type-check with gc's text — at EVERY mention of the type, including
+  declarations and dead code gc would never size, so some programs gc builds are refused by name (the message says
+  so; 25 such shapes pinned as refused-by-design in `tools/nativefrontend/gclimits_test.go`). [USER] Mike 2026-10-13, verbatim, relayed: «I feel like this is
+  just opening the door to endless special-case nonsense. I'd prefer to just refuse this case, and maybe support it
+  later». A body-less user function is refused the same way (BUG-126).
+- **A `package main` with no `func main` is refused** by the frontend's default mode, as gc refuses to build it
+  (BUG-125, `tools/nativefrontend/entrymode.go`, the same ruling). The differential corpus exports its subjects with
+  `--subject`, which skips only that rule; a consumer exporting a main-less package passes it too, or adds a `main`.
+  No whole-program mode for such packages — «maybe support it later».
+- **A variable-length `make` past the budget is a memory kill, not a refusal** (punch-list row 30's open half, row
+  31(d)): a constant-length `make` whose count × element footprint exceeds the budget refuses by name at decode, but
+  when the length is computed at run time the backing is built, and a count × footprint past the cap ends the run
+  under `capped` with exit 137 — loud, never a wrong answer, but an apparatus kill rather than a named refusal. The
+  core guard at the `make` site (the `sliceCapBudget` template) is a lane awaiting the [USER]'s word.
 - The ten limits of the 2026-10-03 offer (`docs/2026-10-03_offer-to-logic-team.md`) stand.
 

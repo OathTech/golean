@@ -14,6 +14,8 @@ reading everything else.
 - `semantics-overview.md`: the semantics for someone who will reason against it (the machine,
   the relation, drivers, labels, the choice tape, stops, the pinned set, limits), with each
   claim pointing at its Lean name.
+- `release.md`: what a release is (the tag, the pins, the gate, the frozen changelog, the stated
+  limits, the three predicates), who tags, the procedure, and the stated limits ruled so far.
 - `cli.md`: the `golean` subcommands, the wire format `golean-native-v3`, the observation
   format `golean-observation-v1`, and three deliberate escape hatches.
 
@@ -70,6 +72,10 @@ A few dated files are still the **plan of record or a live design**:
 - `2026-10-12_gate-cull-plan.md`: the gate's current shape and its follow-ups.
 - `2026-10-03_offer-to-logic-team.md`: the last re-pin offer to the logic repository, whose §4
   lists the stated limits.
+
+The release passes so far, each a record: `2026-10-12_release-trust-review.md` (the first
+fresh-context trust review) and `2026-10-13_fresh-eyes-fail-closed-pass.md` (the fail-closed pass);
+the brief for the next one is `codex-briefs/2026-10-13_zero-context-release-pass.md`.
 
 The pinned-statement design notes (`2026-09-24_execution-statement.md`,
 `2026-09-28_step-label.md`, `2026-10-04_pool-relation-spec.md`) are records too. What they

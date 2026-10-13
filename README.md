@@ -93,7 +93,10 @@ GO111MODULE=off go build -o .tmp/nativefrontend ./tools/nativefrontend
 - `output` holds the bytes the program wrote with `print`/`println`.
 
 The exit code is 0 for `ok` and 1 for every other status. Entry arguments are
-passed with `--arg-int`/`--arg-bool`. The subcommands, the wire and
+passed with `--arg-int`/`--arg-bool`. A package with no `func main` is refused by
+the frontend, as gc would refuse to build it; most corpus cases are such packages
+(the differential harness supplies `main` around the subject), and the frontend
+exports one as a subject with `--subject` (`docs/cli.md`). The subcommands, the wire and
 observation formats, the refusal classes, and three deliberate escape hatches are
 documented in [`docs/cli.md`](docs/cli.md). To run a corpus case through the whole
 differential (Go and Lean, compared), use
