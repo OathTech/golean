@@ -433,6 +433,7 @@ def file(k, cid, summary, ev):
     cls[k].append(summary)
     evidence.append((k, cid, ev))
 same = 0
+sampled_match = {"same": 0, "differs": 0}
 for cid in sorted(set(pin) | set(alt)):
     if cid not in pin or cid not in alt:
         file("missing", cid, f"  {cid}: only in the {'record' if cid in pin else ALT + ' run'}", [])
@@ -455,6 +456,10 @@ for cid in sorted(set(pin) | set(alt)):
             pa, aa = raw_abort(REC, cid), raw_abort(OUT, cid)
             ev = base + [f"pin raw abort: {clip(pa or '<absent>')}", f"{ALT} raw abort: {clip(aa or '<absent>')}"]
             if lane == "membership":
+                # Single draw: the failing draw is not in draws.txt; its raw
+                # text is compared with the pin's last draw (a hint only —
+                # the pin's draws vary too).
+                sampled_match["same" if (pa is not None and pa == aa) else "differs"] += 1
                 file("abort-sampled", cid, f"{cid}[pin {fmt_set(ep).split(' {')[0]}; {ALT} {fmt_set(ea).split(' {')[0]}]", ev)
             elif not same_program(cid):
                 file("abort-unverified", cid, cid, ev)
@@ -527,7 +532,7 @@ if SI:
 n = lambda k: len(cls[k])
 ndiff = sum(len(v) for k, v in cls.items() if k != "obs-unverified")
 counts = (f"[oracle-compile={n('compile')} abort-unclassifiable={n('abort-same') + n('abort-differ') + n('abort-sampled') + n('abort-unverified')} "
-          f"(text-same={n('abort-same')} text-differs={n('abort-differ')} sampled-single-draw={n('abort-sampled')} unverified={n('abort-unverified')}) "
+          f"(text-same={n('abort-same')} text-differs={n('abort-differ')} sampled-single-draw={n('abort-sampled')} (its raw text = the pin's last draw: {sampled_match['same']}, differs: {sampled_match['differs']}) unverified={n('abort-unverified')}) "
           f"flip={n('flip')} detail={n('detail')} exhibited-set-differs={n('exhibited-differs')} sampling-captions={n('sampling')} "
           f"oracle-obs-strict={n('obs-strict')} oracle-obs-lastdraw={n('obs-lastdraw')} oracle-obs-unverified={n('obs-unverified')} missing={n('missing')}]")
 print(f"go-version-diversity: oracle {ALT} ({ALT_GOROOT}) vs the pinned oracle {PIN}; frontend and harness on {LIVE}")
@@ -543,7 +548,7 @@ else:
     floor = read(CONTROL_REPORT)
     fl = [l for l in (floor or "").splitlines() if l.startswith("(") and " vs pin) " in l]
     if fl:
-        print("  NOISE FLOOR (latest --control run of the pin): " + " | ".join(l.split(") ", 1)[1] for l in fl))
+        print("  NOISE FLOOR (latest --control run of the pin): " + " | ".join(l.split(" vs pin) ", 1)[1] for l in fl))
     else:
         print("  NOISE FLOOR: no --control report found — run `scripts/go-version-diversity --control` to calibrate.")
 print(f"({ALT} vs pin) differential rows={len(set(pin) | set(alt))} same={same} differ={ndiff} {counts}")
