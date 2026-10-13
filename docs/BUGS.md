@@ -4604,14 +4604,16 @@ the issue53619 family was wrong.
   `make`, (2b) — and the finding that (1)'s quadratic term was already
   gone)
 - Expect: FAIL
-- Pinned-by: none (the refusal surfaces at `lean-observation`; the
-  row below is a FAIL-BY-DESIGN refusal pin, red forever at the
+- Pinned-by: none (the refusal surfaces at `frontend-export` since
+  2026-10-13 — the frontend's per-declaration quarantine, paragraph
+  «PER DECLARATION (2026-10-13)» below; at `lean-observation` before;
+  the rows below are FAIL-BY-DESIGN refusal pins, red forever at the
   oracle's `ok`, listed on the Cases line per the BUG-070/071/072
   precedent — check-bugs verifies EXISTENCE only for none-entries and
   counts a listed row as explained, so the row leaves untriaged-ids.
   Audit fix round 2026-09-01, RECORD 8: the slice had parked it in
   untriaged-ids with a ceiling raise 11→12 instead; reverted)
-- Cases: arrays/materialization-budget/over-budget, arrays/materialization-budget-nested/over-budget, arrays/materialization-budget-make/over-budget
+- Cases: arrays/materialization-budget/over-budget, arrays/materialization-budget-nested/over-budget, arrays/materialization-budget-make/over-budget, arrays/materialization-budget-quarantine/literal-over-budget, arrays/materialization-budget-quarantine/global-over-budget, arrays/materialization-budget-quarantine/type-over-budget, arrays/materialization-budget-quarantine/make-over-budget
 - Discovered: 2026-09-01 ($GOROOT/test harvest,
   docs/2026-09-01_gotest-triage.md INFRA note — issue34395.go's
   `[100<<20]byte` global: exit 134, "Stack overflow detected.
@@ -4784,6 +4786,68 @@ template, with the relational `make` rule and its soundness /
 completeness cases in lockstep — about half a session; a semantic-core
 change outside this lane's boundary, reported, not made; owed here with
 (1) under release-readiness item 30.
+
+**PER DECLARATION (2026-10-13, [AGENT] lane `frontend/decl-budgets-1013`;
+finding F2 of the zero-context fail-closed pass,
+`docs/2026-10-13_fresh-eyes-fail-closed-pass.md` on branch
+`audit/freshpass-1013`, verbatim: «a decode-time budget refusal
+(`[70000]int` literal, `arrayLenBudget`) refuses the whole wire — 27
+unrelated subjects went `error`. Named and closed, but the frontend's
+per-declaration quarantine does not cover these budgets. Fix: apply them
+per declaration in the frontend.»; under [USER] Mike's 2026-10-12 backlog
+mandate «manage some agents working through the backlog, starting with
+the ones that require no input from me», relayed by the [AGENT]
+coordinator.)** The three decoder refusals above were per WIRE: one
+over-budget declaration turned every subject of its package into
+`error`. The native frontend now applies the SAME rule per declaration
+(`tools/nativefrontend/budgets.go`, on go/types): an array type past
+`arrayLenBudget` (checked first) or past `arrayFootprintBudget` through
+its nesting, a declared struct whose fields sum past it, and a `make`
+with a constant count whose `n × footprint` is past it — the make bound
+behind the make site's own order (gc's `makeslice` panic by gc/amd64
+`Sizeof`, then `sliceCapBudget`; both stay the machine's), its constant
+read off the EMITTED operand as the decoder's `unseqConstInt?` reads it.
+The refusal is an ordinary `unsupported`, so the standing quarantine
+units apply — decided by the existing conventions, [AGENT]: a FUNCTION
+or METHOD becomes its H-3 stub; a package-level VAR is FR-24-poisoned
+(its readers stub; an initializer is H-11's to decide — an
+effect-isolated literal is skipped, anything else refuses the whole
+export naming it, as today); a declared TYPE that REACHES a violation
+(through arrays, fields, pointers, slices, maps, channels, signatures
+and other source-declared types; not through interfaces) ships as an
+existence-only marker TypeDef (the D5 `unsupported` shape) and every
+mention of it outside signature-opaque mode refuses, so each user
+quarantines by its own unit; quarantined method stubs and interface
+requirement lists still name the marker (satisfaction answers), and an
+over-budget inline array in a signature gets an FR-25-shaped marker
+under its own spelling. Init code (an `init()` body) keeps the standing
+whole-export refusal. The decoder's checks STAY unchanged as the
+whole-wire backstop (a forged or hand-built wire; an imported named type
+the frontend counts as one leaf — an E5-T shadow model's TypeDef is the
+model's — is an under-estimate the backstop catches), both doors' doc
+comments say so. ONE SOURCE for the numbers: the frontend reads them
+from `tools/nativefrontend/budgets.tsv` (embedded; never spelled in Go),
+and `Tests/GoCoreEval.lean` (`budgetsTableTests`) fails unless that
+table equals `arrayLenBudget`, `arrayFootprintBudget`, `sliceCapBudget`
+and `maxAllocBytes` exactly, row for row — chosen over emitting the
+budgets on the wire (a wire-schema change for every consumer) and over a
+generated Go file (a generator step); `tools/lowerdiag` reads the same
+table at run time for its static prediction. THE ROWS (stage moves, no
+result flip): the three over-budget pins move FAIL/lean-observation →
+FAIL/frontend-export (the subject is now the stub — the harness's
+standing convention for a called quarantine), cause keys
+`error:array-materialization-budget` / `error:array-footprint-budget` /
+`error:make-footprint-budget` → `by-design/materialization-budget` (the
+new `tools/lowerdiag/causes.tsv` row, ordered before the FR-24 rows so a
+poisoned var's reader keys by the budget it hit; the three machine-cause
+rows stay for a forged wire). BORN: `arrays/materialization-budget-quarantine/`
+— one package with four over-budget declarations (a `[70000]int`
+literal, a `[70000]int` global with its reader, `type Grid
+[4096][4097]byte` with a method and a user, `make([][1024]byte, 1<<15)`)
+born FAIL/frontend-export by design (on the Cases line), and in the SAME
+package the make-maxalloc control (`make([]byte, 1<<48+1)`, gc's own
+panic, recovered) and three unrelated subjects, all PASS — F2's point.
+Frontend tests: `tools/nativefrontend/budgets_test.go`.
 
 ## BUG-080 — race detector U4: the sync primitives' OWN state-word accesses are unmodeled, so a plain access to a primitive in use by another goroutine (copy / overwrite) runs to a value where gc's -race build refuses
 

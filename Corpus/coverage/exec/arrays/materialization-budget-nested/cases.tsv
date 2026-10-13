@@ -1,4 +1,7 @@
 # id	subject	args	expected_status	expected_reason	features
+# Since 2026-10-13 (F2, BUG-078 «PER DECLARATION»): refused per declaration by the
+# frontend (stage frontend-export, cause by-design/materialization-budget); the
+# decoder's whole-wire check stays as the backstop.
 # over-budget: RED BY DESIGN — the machine refuses array TYPES whose
 # footprint through nesting exceeds 1<<24 scalar elements with a
 # cause-naming message (BUG-078 residual (3), fail-closed 2026-10-12:

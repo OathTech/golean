@@ -1,0 +1,26 @@
+# id	subject	args	expected_status	expected_reason	features
+# F2 of the 2026-10-13 fresh-eyes fail-closed pass (BUG-078): the
+# materialization budgets are applied PER DECLARATION by the frontend
+# (tools/nativefrontend/budgets.go), so the over-budget declarations
+# below are each quarantined by name (RED BY DESIGN, oracle truth `ok`
+# in the expected column — gc materializes them fine) while the
+# UNRELATED subjects in the same package PASS — before, the decoder's
+# whole-wire refusal turned every row here into `error`.
+#   literal-over-budget: [70000]int in a function body — an H-3 stub.
+#   global-over-budget: a reader of a [70000]int package var — FR-24
+#     poison (the initializer is H-11-skipped), the reader stubs.
+#   type-over-budget: a user of `type Grid [4096][4097]byte` (2^24+4096
+#     leaves, the NESTED budget) — the type is an existence-only marker.
+#   make-over-budget: make([][1024]byte, 1<<15) — 2^25 leaves, the
+#     constant-count make bound.
+#   make-maxalloc-control: make([]byte, 1<<48+1) — gc's OWN run-time
+#     makeslice panic, recovered; never pre-empted by the budget (PASS).
+#   unrelated-*: PASS — F2's point.
+literal-over-budget	bigLiteral	-	ok	-	arrays
+global-over-budget	readBigGlobal	-	ok	-	arrays,globals
+type-over-budget	gridSum	-	ok	-	arrays,defined_type
+make-over-budget	bigMake	-	ok	-	arrays,slices,make
+make-maxalloc-control	makeMaxAlloc	-	ok	-	slices,make,panic,recover
+unrelated-sum	unrelatedSum	-	ok	-	loops
+unrelated-small-array	unrelatedSmallArray	-	ok	-	arrays
+unrelated-struct	unrelatedStruct	-	ok	-	structs

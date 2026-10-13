@@ -14,6 +14,12 @@ package main
 // near miss, never a cause-naming refusal. The expected column records
 // the oracle's truth: gc materializes the 128 MiB array fine and reads
 // back the 42.
+//
+// SINCE 2026-10-13 (F2, BUG-078 «PER DECLARATION»): the native frontend
+// applies the same budget per declaration (tools/nativefrontend/
+// budgets.go), so the refusal lands as this declaration's quarantine
+// stub (stage frontend-export) and the rest of the package exports; the
+// decoder's check stays as the whole-wire backstop.
 var big [1024][1024][128]byte
 
 func nestedOverBudget() int {

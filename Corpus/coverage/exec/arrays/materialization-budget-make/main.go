@@ -14,6 +14,12 @@ package main
 // The expected column records the oracle's truth: gc allocates the
 // 512 MiB backing fine and reads back the 7. A make with a RUN-TIME
 // count is the owed core half (release-readiness item 30).
+//
+// SINCE 2026-10-13 (F2, BUG-078 «PER DECLARATION»): the native frontend
+// applies the same budget per declaration (tools/nativefrontend/
+// budgets.go), so the refusal lands as this declaration's quarantine
+// stub (stage frontend-export) and the rest of the package exports; the
+// decoder's check stays as the whole-wire backstop.
 func makeOverBudget() int {
 	b := make([][1024]byte, 1<<19)
 	b[0][0] = 7

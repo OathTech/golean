@@ -427,6 +427,12 @@ the message `frontend-quarantined: <cause>`.
   never call may be stubs, and so may functions you do call (you find out when the call happens).
 - *Why it is deliberate:* one unsupported helper should not hide every other function in the
   package from the differential.
+- *The materialization budgets too (BUG-078, since 2026-10-13):* an array type past the
+  interpreter's budgets (`tools/nativefrontend/budgets.tsv`) or a constant-count `make` past the
+  footprint budget quarantines the declaration that spells it, a package-level var of such a type
+  is poisoned (its readers are stubs), and a declared type that reaches one ships as an
+  existence-only `unsupported` TypeDef whose users are stubs. The decoder keeps the same checks
+  as a whole-wire backstop, so a hand-built wire that carries such a type is still refused whole.
 - *How to tell:* `jq '[.funcs[], .methods[] | select(has("unsupported")) | {name, id, unsupported}]' wire.json`
   lists every stub before you run anything. For the full blocker picture, run
   `scripts/lower-diagnose <dir>`.

@@ -3186,3 +3186,27 @@ figure 3966 = 3727 / 239 → 3971 = 3738 / 233 (re-pin reason in the baseline he
   kind set stays ten) — no readout row born.
 - Buckets: FR-38 closes (its 6 designed reds were never a frontier gap); the (a)-queued set and the post-vintage count are
   unchanged.
+
+### 8ax. Movement at the per-declaration materialization budgets (2026-10-13, lane `frontend/decl-budgets-1013`, off main `94b8adf2`)
+
+[AGENT] lane worker, finding F2 of the zero-context fail-closed pass
+(`docs/2026-10-13_fresh-eyes-fail-closed-pass.md` on `audit/freshpass-1013`; punch-list row 33), under [USER] Mike
+2026-10-12 «manage some agents working through the backlog, starting with the ones that require no input from me», relayed
+by the [AGENT] coordinator. The native frontend applies BUG-078's three budgets PER DECLARATION
+(`tools/nativefrontend/budgets.go`; the numbers from `tools/nativefrontend/budgets.tsv`, pinned to the Lean constants by
+`Tests/GoCoreEval.lean`); the decoder's refusals stay as the whole-wire backstop. BUG-078's paragraph «PER DECLARATION
+(2026-10-13)» has the rule, the quarantine units and the precedence. Tracked figure 3976 = 3741 / 235 → 3984 = 3745 / 239
+(re-pin reason in the baseline header). Movement, tallied by row:
+
+- STAGE MOVES 3, no result flip, on BUG-078's Cases line: `arrays/materialization-budget/over-budget`,
+  `arrays/materialization-budget-nested/over-budget`, `arrays/materialization-budget-make/over-budget` —
+  FAIL/lean-observation (the decoder's whole-wire refusal) → FAIL/frontend-export (the declaration's quarantine stub);
+  cause keys → `by-design/materialization-budget` (new `tools/lowerdiag/causes.tsv` row, scope `decl`; the static pass
+  predicts it from the same table).
+- BORN 8 (`Corpus/coverage/exec/arrays/materialization-budget-quarantine/`, one package): 4 FAIL/frontend-export by design on
+  BUG-078's Cases line (a `[70000]int` literal, a `[70000]int` global's reader, a user of an over-budget declared type, a
+  constant-count `make` over the footprint budget) and 4 PASS in the same package (the make-maxalloc control — gc's own
+  panic, never pre-empted — and three unrelated subjects: F2's point, the package exports).
+- 0 PASS→non-PASS; no removal. Buckets: the 4 born reds sit with BUG-078's designed refusal pins (the post-vintage bucket's
+  BUG-078 member); the §8 header tally above is NOT restated here (it reads 3936 since 2026-10-08 and predates several
+  re-pins; restating it is a records task of its own).

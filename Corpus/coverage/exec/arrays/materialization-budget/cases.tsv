@@ -1,4 +1,7 @@
 # id	subject	args	expected_status	expected_reason	features
+# Since 2026-10-13 (F2, BUG-078 «PER DECLARATION»): refused per declaration by the
+# frontend (stage frontend-export, cause by-design/materialization-budget); the
+# decoder's whole-wire check stays as the backstop.
 # over-budget: RED BY DESIGN — the machine refuses array types past
 # 1<<16 elements (1<<20 at birth, re-derived 2026-09-01) with a
 # cause-naming message (BUG-078); gc runs it
