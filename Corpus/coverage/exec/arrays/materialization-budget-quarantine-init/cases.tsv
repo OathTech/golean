@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+# Fix round 2026-10-13 (review MEDIUM-1, BUG-078): `var _ Sizer = (*Big)(nil)`
+# and `var p = &Big{}` over an over-budget type are skipped and poisoned
+# per declaration (H-11 effect-isolated), so the package exports:
+#   reader-over-budget: RED BY DESIGN (the reader of the poisoned `p` is a
+#     quarantine stub; gc runs it fine — oracle truth `ok`).
+#   unrelated: PASS — the export survived the idioms.
+reader-over-budget	readP	-	ok	-	arrays,globals,methods
+unrelated	unrelated	-	ok	-	loops

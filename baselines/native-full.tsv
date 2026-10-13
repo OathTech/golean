@@ -1,5 +1,19 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3984 (3745 PASS / 239 FAIL)
+# cases: 3987 (3747 PASS / 240 FAIL)
+# re-pinned: 2026-10-13 [AGENT], lane frontend/decl-budgets-1013 FIX ROUND (the pre-merge adversarial review, relayed by the [AGENT]
+#   coordinator): BLOCKER-1 — the signature-opaque budget-array marker is keyed by the frontend's canonical identity key
+#   (renderTypeKey/ifaceKeyCtx), not a source spelling, so [N]byte/[N]uint8, [N]rune/[N]int32, an alias and func parameter names
+#   name ONE marker (the first cut answered «does not satisfy» where gc says yes — a silent wrong answer the review reproduced);
+#   MEDIUM-1 — `var _ I = (*Big)(nil)` and `var p = &Big{}` over a budget type are H-11 effect-isolated (skipped + poisoned per
+#   declaration, no longer a whole-export kill); LOW-1 — the cause row is anchored to the per-declaration heads and a new
+#   export-scope row `materialization-budget-export` keys the whole-export forms (no corpus row has one). 3984 + 3 = 3987;
+#   PASS 3745 + 2 = 3747; FAIL 239 + 1 = 240. No existing row moved (results, stages and causes unchanged); 0 PASS->non-PASS.
+#   NEW rows:
+#     arrays/materialization-budget-quarantine/alias-satisfaction PASS — gc 11111 (four comma-ok asserts and a type switch across
+#       the identity pairs); the first cut's spelling key answered 0 for the byte/rune/alias/func pairs.
+#     arrays/materialization-budget-quarantine-init/reader-over-budget FAIL/frontend-export by-design/materialization-budget — BY
+#       DESIGN, on BUG-078's Cases line (oracle truth `ok`, 70000): the reader of the poisoned `var p = &Big{}`.
+#     arrays/materialization-budget-quarantine-init/unrelated PASS — 30: the package with `var _ Sizer = (*Big)(nil)` exports.
 # re-pinned: 2026-10-13 [AGENT], lane frontend/decl-budgets-1013 — F2 of the zero-context fail-closed pass (docs/2026-10-13_fresh-eyes-
 #   fail-closed-pass.md on audit/freshpass-1013; punch-list row 33), under [USER] Mike's 2026-10-12 backlog mandate «manage some agents
 #   working through the backlog, starting with the ones that require no input from me», relayed. F2 verbatim: «a decode-time budget
@@ -2187,6 +2201,9 @@ PASS	arrays/materialization-budget-quarantine/make-maxalloc-control	-	-
 PASS	arrays/materialization-budget-quarantine/unrelated-sum	-	-
 PASS	arrays/materialization-budget-quarantine/unrelated-small-array	-	-
 PASS	arrays/materialization-budget-quarantine/unrelated-struct	-	-
+PASS	arrays/materialization-budget-quarantine/alias-satisfaction	-	-
+FAIL	arrays/materialization-budget-quarantine-init/reader-over-budget	frontend-export	by-design/materialization-budget
+PASS	arrays/materialization-budget-quarantine-init/unrelated	-	-
 FAIL	arrays/materialization-budget/over-budget	frontend-export	by-design/materialization-budget
 PASS	arrays/nested-arrays	-	-
 PASS	arrays/nested-copy-value	-	-

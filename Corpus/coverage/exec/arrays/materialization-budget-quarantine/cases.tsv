@@ -16,6 +16,9 @@
 #   make-maxalloc-control: make([]byte, 1<<48+1) — gc's OWN run-time
 #     makeslice panic, recovered; never pre-empted by the budget (PASS).
 #   unrelated-*: PASS — F2's point.
+#   alias-satisfaction: PASS (gc 11111) — the signature marker is keyed by
+#     type identity ([N]byte/[N]uint8, rune/int32, alias, func param
+#     names); fix round 2026-10-13, review BLOCKER-1.
 literal-over-budget	bigLiteral	-	ok	-	arrays
 global-over-budget	readBigGlobal	-	ok	-	arrays,globals
 type-over-budget	gridSum	-	ok	-	arrays,defined_type
@@ -24,3 +27,4 @@ make-maxalloc-control	makeMaxAlloc	-	ok	-	slices,make,panic,recover
 unrelated-sum	unrelatedSum	-	ok	-	loops
 unrelated-small-array	unrelatedSmallArray	-	ok	-	arrays
 unrelated-struct	unrelatedStruct	-	ok	-	structs
+alias-satisfaction	aliasSatisfaction	-	ok	-	arrays,interfaces,methods,type_assertions,type_switch

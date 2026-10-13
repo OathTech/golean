@@ -3210,3 +3210,9 @@ by the [AGENT] coordinator. The native frontend applies BUG-078's three budgets 
 - 0 PASS→non-PASS; no removal. Buckets: the 4 born reds sit with BUG-078's designed refusal pins (the post-vintage bucket's
   BUG-078 member); the §8 header tally above is NOT restated here (it reads 3936 since 2026-10-08 and predates several
   re-pins; restating it is a records task of its own).
+- FIX ROUND (same day, the pre-merge adversarial review): 3984 = 3745 / 239 → 3987 = 3747 / 240. BORN 3:
+  `arrays/materialization-budget-quarantine/alias-satisfaction` PASS (gc 11111; the signature marker keyed by type
+  identity — review BLOCKER-1), `arrays/materialization-budget-quarantine-init/reader-over-budget` FAIL/frontend-export by
+  design on BUG-078's Cases line and `…-init/unrelated` PASS (review MEDIUM-1: `var _ I = (*Big)(nil)` / `var p = &Big{}`
+  poison per declaration). New cause row `materialization-budget-export` (by-design, export scope; no corpus row keys
+  it). Nothing else moved.

@@ -81,7 +81,49 @@ func unrelatedStruct() int {
 	return p.x*p.x + p.y*p.y
 }
 
+// alias-satisfaction (fix round 2026-10-13, review BLOCKER-1): an
+// over-budget array in a METHOD SIGNATURE rides an opaque marker keyed by
+// Go type IDENTITY — [N]byte ≡ [N]uint8, [N]rune ≡ [N]int32, an alias ≡
+// its target, func parameter names ignored — so the requirement list and
+// the stub name the same marker and satisfaction answers as gc does
+// (a spelling key answered «no» where gc says yes: a silent wrong answer).
+type MyByte = byte
+
+type IByte interface{ M([70000]byte) }
+type IRune interface{ R([70000]rune) }
+type IAlias interface{ A([70000]MyByte) }
+type IFunc interface{ F([70000]func(x int) int) }
+
+type Impl struct{}
+
+func (Impl) M([70000]uint8)           {}
+func (Impl) R([70000]int32)           {}
+func (Impl) A([70000]uint8)           {}
+func (Impl) F([70000]func(y int) int) {}
+
+func aliasSatisfaction() int {
+	var x any = Impl{}
+	r := 0
+	if _, ok := x.(IByte); ok {
+		r += 1
+	}
+	if _, ok := x.(IRune); ok {
+		r += 10
+	}
+	if _, ok := x.(IAlias); ok {
+		r += 100
+	}
+	if _, ok := x.(IFunc); ok {
+		r += 1000
+	}
+	switch x.(type) {
+	case IByte:
+		r += 10000
+	}
+	return r
+}
+
 func main() {
 	println(bigLiteral(), readBigGlobal(), gridSum(), bigMake(), makeMaxAlloc(),
-		unrelatedSum(), unrelatedSmallArray(), unrelatedStruct())
+		unrelatedSum(), unrelatedSmallArray(), unrelatedStruct(), aliasSatisfaction())
 }

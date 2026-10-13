@@ -4613,7 +4613,7 @@ the issue53619 family was wrong.
   counts a listed row as explained, so the row leaves untriaged-ids.
   Audit fix round 2026-09-01, RECORD 8: the slice had parked it in
   untriaged-ids with a ceiling raise 11→12 instead; reverted)
-- Cases: arrays/materialization-budget/over-budget, arrays/materialization-budget-nested/over-budget, arrays/materialization-budget-make/over-budget, arrays/materialization-budget-quarantine/literal-over-budget, arrays/materialization-budget-quarantine/global-over-budget, arrays/materialization-budget-quarantine/type-over-budget, arrays/materialization-budget-quarantine/make-over-budget
+- Cases: arrays/materialization-budget/over-budget, arrays/materialization-budget-nested/over-budget, arrays/materialization-budget-make/over-budget, arrays/materialization-budget-quarantine/literal-over-budget, arrays/materialization-budget-quarantine/global-over-budget, arrays/materialization-budget-quarantine/type-over-budget, arrays/materialization-budget-quarantine/make-over-budget, arrays/materialization-budget-quarantine-init/reader-over-budget
 - Discovered: 2026-09-01 ($GOROOT/test harvest,
   docs/2026-09-01_gotest-triage.md INFRA note — issue34395.go's
   `[100<<20]byte` global: exit 134, "Stack overflow detected.
@@ -4848,6 +4848,46 @@ born FAIL/frontend-export by design (on the Cases line), and in the SAME
 package the make-maxalloc control (`make([]byte, 1<<48+1)`, gc's own
 panic, recovered) and three unrelated subjects, all PASS — F2's point.
 Frontend tests: `tools/nativefrontend/budgets_test.go`.
+
+*Fix round (2026-10-13, the pre-merge adversarial review, relayed by the
+[AGENT] coordinator).* BLOCKER-1: the first cut keyed the signature-opaque
+array marker by `types.TypeString`, a SPELLING — `M([70000]byte)` in an
+interface and `M([70000]uint8)` on the type minted two markers and the
+machine answered «does not satisfy» (status ok; gc: satisfies) — a silent
+wrong answer main did not have (it refused the whole wire). The marker is
+now keyed by the frontend's canonical identity key (`renderTypeKey` in
+`ifaceKeyCtx`: basics by kind, aliases unaliased, parameter names dropped);
+a rendering that refuses refuses the signature by name. Pinned by
+`arrays/materialization-budget-quarantine/alias-satisfaction` (PASS, gc
+11111 over byte/uint8, rune/int32, an alias, func parameter names and a
+type switch) and `TestBudgetSignatureMarkerIsCanonical` (a spelling key
+fails it: 7 markers for 3 identities). MEDIUM-1: H-11's effect-isolation
+predicate admits two more shapes over a type that REACHES a budget
+violation — the nil conversion `var _ I = (*Big)(nil)` (cannot panic, no
+call, no allocation) and `&T{…}` of a fresh composite literal with
+admissible elements (its address lands only in the poisoned cell) — so
+these idioms are skipped and poisoned per declaration; still WHOLE-EXPORT
+by name: an initializer with a call (`var big = makeBig()`) and any budget
+refusal inside `init()` (now spelled «init function … does not lower …
+the WHOLE export refuses»). Pinned by
+`arrays/materialization-budget-quarantine-init/` (the reader of `var p =
+&Big{}` FAIL by design on the Cases line, an unrelated subject PASS).
+LOW-1: the cause row `materialization-budget` is anchored to the
+per-declaration heads; the whole-export forms key as
+`by-design/materialization-budget-export` (scope export). NIT-1: a stub
+quarantined for another reason names any budget-array marker in its
+signature. RESIDUAL, designed (review LOW-2): an INSTANTIATED generic type
+that reaches a budget violation refuses even in signature-opaque mode (it
+has no declared marker and its stencil would ship the over-budget shape),
+so a method stub whose signature carries one refuses the WHOLE export by
+name. Not taken here (review LOW-3, pre-existing, adjacent): gc rejects
+`chan T` with `Sizeof(T) >= 64 KiB` at compile time («channel element type
+too large (>64kB)», cmd/compile/internal/types/size.go) and go/types does
+not — the frontend exports and the machine runs it; mirroring it as a
+REJECTION is a whole-program post-type-check scan (the negative lane needs
+a `type-check:` exit, not a per-declaration refusal) plus gc's exact sizing
+reach (types in uninstantiated generic code are never sized), not a
+one-line chan-arm check — left to its own lane.
 
 ## BUG-080 — race detector U4: the sync primitives' OWN state-word accesses are unmodeled, so a plain access to a primitive in use by another goroutine (copy / overwrite) runs to a value where gc's -race build refuses
 
