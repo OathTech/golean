@@ -4748,9 +4748,13 @@ the kill at a count 16× under `sliceCapBudget`: `1<<18` 37.0 s /
 (2026-10-12, the decoder's half — the half the ruling reaches without
 the core): `checkMakeFootprint` (`GoLean/NativeToIR.lean`), called by
 both `make-slice` arms (the statement and the unseq allocation),
-refuses `n × footprint(T) > arrayFootprintBudget` for the largest
-CONSTANT operand `n` (the cap when constant — the backing is
-cap-sized — else the len, a lower bound on it), naming the make's
+refuses `n × footprint(T) > arrayFootprintBudget` for the backing's
+CONSTANT count `n` (the cap when a cap operand is spelled and constant;
+the len only when no cap is spelled — a constant len beside a RUN-TIME
+cap drives nothing, the confirmation pass's MEDIUM: a smaller run-time
+cap is gc's «makeslice: cap out of range» panic before any backing, so
+a decode refusal there would be the make-maxalloc wrong-answer class
+again; `make([][1024]byte, 1<<19, n)` decodes), naming the make's
 spelling, `n`, the per-element footprint, the product, the budget and
 this entry — and ONLY where the machine would otherwise materialize, in
 the make site's own order: gc's `makeslice` panic first (`n ×

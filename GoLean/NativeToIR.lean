@@ -1500,9 +1500,15 @@ refuses by name — the backing materializes that many leaves, and `sliceCapBudg
 element COUNT, Machine.lean) does not see the element type: the reviewer's reproduction
 under `capped -m 16G`, `make([][1024]byte, 1<<18)` 37.0 s / 13.6 GB (a hair under the cap),
 `1<<19` exit 137 at 16.7 GB after 57 s — a kill at a count 16× under `sliceCapBudget`.
-`n` is the largest constant operand: the backing is cap-sized and cap ≥ len, so a constant
-cap is the count and a constant len alone is a lower bound on it; a non-constant operand
-is the machine's at run time — the OWED core half (release-readiness item 30: the guard at
+`n` is the backing's CONSTANT count: the cap when a cap operand is spelled and constant;
+the len only when NO cap operand is spelled (then the backing is len-sized). A constant
+len beside a RUN-TIME cap drives nothing (the confirmation pass's MEDIUM, 2026-10-12): it
+is a lower bound on the backing only on the non-panicking path — when the run-time cap is
+smaller, gc panics «makeslice: cap out of range» before any backing exists, so refusing at
+decode would pre-empt that panic, the same wrong-answer class as the make-maxalloc catch
+below. A negative constant's `Int.toNat` is 0 (go/types rejects negative constants;
+harmless). A non-constant count is the machine's at run time — the OWED core half
+(release-readiness item 30: the guard at
 Machine.lean's `sliceCapBudget` site has the element type in scope; `cap × footprint >
 budget → unsupported` on that template, with the relational `make` rule and its
 soundness/completeness cases in lockstep). Negative constants are not this check's
@@ -1525,7 +1531,11 @@ footprint. -/
 private def checkMakeFootprint (path : String) (elemTy : Ty) (lenJ : Json) (capJ : Option Json) :
     LowerM Unit := do
   let constOf (j : Json) : Nat := match unseqConstInt? j with | some v => v.toNat | none => 0
-  let n := max (constOf lenJ) ((capJ.map constOf).getD 0)
+  -- A spelled cap owns the count (a non-constant one yields 0: skip); the
+  -- len counts only when no cap operand is spelled.
+  let n : Nat := match capJ with
+    | some c => constOf c
+    | none => constOf lenJ
   if n == 0 then return
   let ctx ← read
   match tySizeBytes ctx.types elemTy with

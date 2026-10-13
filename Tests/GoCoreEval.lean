@@ -3019,6 +3019,20 @@ private def bug078BudgetTests : IO Bool := do
     (decodeMsg (makeWire u8 (toString ((1 <<< 48) + 1)) none)).isOk)
   passed := passed && (← expectTrue "BUG-078 (2b): make([][1024]uint8, 1<<24) — a count past sliceCapBudget — DECODES (the machine's own named refusal, not the decoder's)"
     (decodeMsg (makeWire row1024 (toString (1 <<< 24)) none)).isOk)
+  -- The MIXED form (the confirmation pass's MEDIUM): a constant len
+  -- beside a RUN-TIME cap — `make([][1024]byte, 1<<19, n)` with `n` a
+  -- parameter — drives nothing: a smaller run-time cap is gc's own
+  -- «cap out of range» panic before any backing. The frontend's own
+  -- wire shape (a `param` local read by `ident`).
+  let mixedWire : String :=
+    "{\"schema\":\"golean-native-v3\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"types\":[],\"methods\":[],\"methodSets\":[],\"promotions\":[]," ++
+    "\"funcs\":[{\"name\":\"mk\",\"params\":[{\"id\":\"n\",\"local\":0,\"type\":{\"kind\":\"int\",\"int\":\"int\"}}],\"variadic\":false," ++
+    "\"locals\":[{\"kind\":\"param\",\"name\":\"n\",\"pos\":\"main.go:3:12\"}],\"results\":[]," ++
+    "\"body\":{\"stmt\":\"block\",\"body\":[{\"stmt\":\"make-slice\",\"elem\":" ++ row1024 ++ ",\"len\":" ++ intLit (toString (1 <<< 19)) ++
+    ",\"cap\":{\"expr\":\"ident\",\"local\":0,\"name\":\"n\",\"type\":{\"kind\":\"int\",\"int\":\"int\"}}" ++
+    ",\"target\":{\"id\":\"$c0\",\"target\":\"declare\",\"type\":{\"kind\":\"slice\",\"elem\":" ++ row1024 ++ "}}}]}}]}"
+  passed := passed && (← expectTrue "BUG-078 (2b): make([][1024]uint8, 1<<19, n) with a RUN-TIME cap DECODES — the constant len is no bound (a smaller cap is gc's `cap out of range` panic first)"
+    (decodeMsg mixedWire).isOk)
   pure passed
 
 set_option maxRecDepth 4096 in
