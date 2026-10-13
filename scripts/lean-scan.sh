@@ -38,6 +38,17 @@ strip_lean_comments() {
   }'
 }
 
+# The meta-hatch pattern of scripts/ci's escape-hatch scan, applied to
+# comment-stripped code: `unsafe` declarations, `opaque`, and the two
+# attributes that make the COMPILED behaviour something other than the
+# logical content — `implemented_by` and `extern`. An `@[extern "c_sym"] def
+# f := <body>` passes a clean build, a clean axiom list AND a clean kernel
+# replay (the kernel checks the body; the executable runs the symbol), so the
+# text scan is the only guard (lane gate/kernel-replay-1013 fix round, review
+# F1, 2026-10-13). Both the `@[...]` form and `attribute [...] name`. Lives
+# here so a scratch probe greps with the gate's own pattern, never a copy.
+META_HATCH_RE='(^|[[:space:]])unsafe([[:space:]]+(def|abbrev|instance|structure|inductive|theorem|example)\b|[[:space:]]*$)|(^|[[:space:]])opaque([[:space:]]+[A-Za-z_]|[[:space:]]*$)|@\[[^]]*\b(implemented_by|extern)\b|(^|[[:space:]])attribute[[:space:]]*\[[^]]*\b(implemented_by|extern)\b'
+
 # (lean_imports — the canonical import-list extractor — was removed at the
 # repo split, 2026-08-31: its consumers were the proofs-side closure walks,
 # all parked. It lives on with them at

@@ -17,8 +17,11 @@
 #
 # Fail closed, three ways, and never a skip:
 #   * ANY nonzero exit of the checker fails — a kernel rejection («leanchecker
-#     found a problem in <module>»), a missing build tree, a cgroup kill (137
-#     with capped's KILLED banner: a killed replay has checked nothing).
+#     found a problem in <module>»), a missing build tree, a cgroup kill: the
+#     checker's exit 137 reaches this script (GNU time says «Command terminated
+#     by signal 9»), and this script's own FAIL line is the signal — it exits 1,
+#     so capped's KILLED banner does not print on this path (fix round F4a).
+#     A killed replay has checked nothing.
 #   * The set of modules replayed (the checker's `--verbose` lines) must EQUAL
 #     the set of GoLean modules on disk (GoLean.lean + GoLean/**/*.lean). The
 #     checker replays whatever oleans it FINDS on the search path: a module
@@ -37,7 +40,7 @@
 # default) and always prints the value it ran with. A caller's value is honoured.
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
-cd "$ROOT"
+cd "$ROOT" || { echo "check-kernel-replay: cannot cd to $ROOT" >&2; exit 1; }
 [[ $# = 0 ]] || { echo 'check-kernel-replay: expected no arguments' >&2; exit 2; }
 
 # Scratch under this checkout's own .tmp (the sibling gate scripts' convention,
@@ -93,10 +96,18 @@ got="$scratch/modules.got"
 grep '^replaying ' "$log" | sed 's/^replaying //' | LC_ALL=C sort -u > "$got"
 n_got="$(wc -l < "$got" | tr -d ' ')"
 if ! diff -u "$want" "$got" > "$scratch/modules.diff"; then
-  echo "  modules on disk (-) vs replayed (+):" >&2
-  grep -E '^[-+][^-+]' "$scratch/modules.diff" | sed 's/^/    /' >&2
-  refuse "the replayed set ($n_got modules) is not the on-disk GoLean module set ($n_want): an olean missing from the build tree is skipped by the checker in silence, a stale olean has no source"
+  # Each difference names its olean and the remedy (fix round F3): Lake never
+  # deletes the olean of a renamed or removed module, and never builds a
+  # module the root does not import.
+  while IFS= read -r line; do
+    m="${line:1}"; p=".lake/build/lib/lean/$(printf '%s' "$m" | tr . /).olean"
+    case "$line" in
+      +*) echo "  STALE olean $p — replayed, but module $m has no source: remove it (with its .ilean/.hash/.trace siblings), or restore the source" >&2 ;;
+      -*) echo "  MISSING olean $p — module $m is on disk but was not replayed: the build produced no olean for it (a module not imported from GoLean.lean is not built; a symlinked olean is invisible to the checker)" >&2 ;;
+    esac
+  done < <(grep -E '^[-+][^-+]' "$scratch/modules.diff")
+  refuse "the replayed set ($n_got modules) is not the on-disk GoLean module set ($n_want); each difference and its remedy is named above"
 fi
 
 rm -rf "$scratch"
-printf 'Kernel replay gate: PASS — %s GoLean modules replayed in a fresh kernel by leanchecker (= the %s modules on disk)\n' "$n_got" "$n_want"
+printf 'Kernel replay gate: PASS — %s GoLean modules replayed through the kernel into a fresh environment of their imports by leanchecker (= the %s modules on disk)\n' "$n_got" "$n_want"

@@ -151,7 +151,7 @@ fi
 # ── GATE: the escape-hatch scan over GoLean/ (the charter: the semantic core is
 # total). Text scans on code with comments stripped; the machine check is the
 # core totality audit below. One step, four scans.
-step "escape-hatch scan (sorry/admit/native_decide/axiom; unsafe/opaque/implemented_by; decide +native; partial in GoLean/GoCore/; core imports no EnumDedup)"
+step "escape-hatch scan (sorry/admit/native_decide/axiom; unsafe/opaque/implemented_by/extern; decide +native; partial in GoLean/GoCore/; core imports no EnumDedup)"
 scan_bad=0
 [ -d GoLean ] || { bad "escape-hatch scan: GoLean/ missing — the scan would be vacuous"; scan_bad=1; }
 hatch="$(find GoLean GoLean.lean Main.lean -name '*.lean' -not -path '*/.lake/*' -print0 2>/dev/null \
@@ -166,8 +166,7 @@ nat_hatch=""
 part_hatch=""
 while IFS= read -r -d '' f; do
   code="$(strip_lean_comments < "$f")"
-  hits="$(printf '%s\n' "$code" | grep -nE \
-      '(^|[[:space:]])unsafe([[:space:]]+(def|abbrev|instance|structure|inductive|theorem|example)\b|[[:space:]]*$)|(^|[[:space:]])opaque([[:space:]]+[A-Za-z_]|[[:space:]]*$)|@\[[^]]*implemented_by' || true)"
+  hits="$(printf '%s\n' "$code" | grep -nE "$META_HATCH_RE" || true)"
   [ -n "$hits" ] && meta_hatch="${meta_hatch}$(printf '%s\n' "$hits" | sed "s|^|${f}:|")"$'\n'
   hits="$(printf '%s\n' "$code" | grep -nE 'decide[[:space:]]*\+[[:space:]]*native|decide[[:space:]]*\([[:space:]]*config[[:space:]]*:=[^)]*native[[:space:]]*:=[[:space:]]*true' || true)"
   [ -n "$hits" ] && nat_hatch="${nat_hatch}$(printf '%s\n' "$hits" | sed "s|^|${f}:|")"$'\n'
@@ -176,7 +175,7 @@ while IFS= read -r -d '' f; do
     [ -n "$hits" ] && part_hatch="${part_hatch}$(printf '%s\n' "$hits" | sed "s|^|${f}:|")"$'\n' ;;
   esac
 done < <(find GoLean GoLean.lean Main.lean -name '*.lean' -not -path '*/.lake/*' -print0 2>/dev/null)
-if [ -n "$meta_hatch" ]; then printf '%s' "$meta_hatch"; bad "escape-hatch scan: unsafe/opaque/implemented_by in GoLean/ (the compiled behaviour may diverge from the logical content)"; scan_bad=1; fi
+if [ -n "$meta_hatch" ]; then printf '%s' "$meta_hatch"; bad "escape-hatch scan: unsafe/opaque/implemented_by/extern in GoLean/ (the compiled behaviour may diverge from the logical content; an extern body passes the build, the axiom audit and the kernel replay)"; scan_bad=1; fi
 if [ -n "$nat_hatch" ]; then printf '%s' "$nat_hatch"; bad "escape-hatch scan: a native-decision spelling (same class as native_decide)"; scan_bad=1; fi
 if [ -n "$part_hatch" ]; then printf '%s' "$part_hatch"; bad "escape-hatch scan: partial declaration in GoLean/GoCore/ (the semantic core uses structural/well-founded recursion)"; scan_bad=1; fi
 if [ -f GoLean/EnumDedup.lean ]; then
@@ -240,20 +239,29 @@ else echo "  declared but not in defaultTargets:$lf_missing" >&2; bad "lakefile 
 
 # ── GATE: the kernel replay of the built GoLean oleans (the Codex zero-context
 # pass, F4; release-readiness row 40, [USER]-ruled 2026-10-13). leanchecker
-# re-checks every `GoLean.*` module's declarations in a fresh kernel from its
-# imports, which the build, the text scan and the axiom audit cannot do: a
-# metaprogram that skipped the kernel (debug.skipKernelTC) leaves a clean
-# build and a clean axiom list. The script fails on any nonzero exit (a kill
-# included) and on a replayed set ≠ the on-disk module set; here the count it
-# names is carried into the summary line, and a PASS without a count is a FAIL.
-step "kernel replay (scripts/check-kernel-replay: leanchecker over every built GoLean olean, a fresh kernel from its imports)"
-kr_out="$(bash scripts/check-kernel-replay 2>&1)"; kr_rc=$?
-kr_n="$(printf '%s\n' "$kr_out" | sed -n 's/^Kernel replay gate: PASS.*[^0-9]\([0-9][0-9]*\) GoLean modules replayed.*/\1/p' | tail -1)"
-if [ "$kr_rc" -eq 0 ] && [ -n "$kr_n" ]; then
-  printf '%s\n' "$kr_out" | tail -2 | sed 's/^/  /'; ok "kernel replay ($kr_n GoLean modules replayed in a fresh kernel — leanchecker)"
+# replays every `GoLean.*` module's declarations through the kernel into a
+# fresh environment built from its imports (the imports trusted as loaded),
+# which the build, the text scan and the axiom audit cannot do: a metaprogram
+# that skipped the kernel (debug.skipKernelTC) leaves a clean build and a
+# clean axiom list. The script fails on any nonzero exit (a kill included) and
+# on a replayed set ≠ the on-disk module set; here the count it names is
+# carried into the summary line, and a PASS without a positive count is a
+# FAIL. Not run when the build above failed: the oleans on disk would be the
+# previous build's, and a green over them would read as this source's (fix
+# round F2, 2026-10-13).
+step "kernel replay (scripts/check-kernel-replay: leanchecker over every built GoLean olean, replayed through the kernel into a fresh environment of its imports)"
+if [ "$core_rc" -ne 0 ]; then
+  echo "  not run: the lake build above failed (exit $core_rc)"
+  bad "kernel replay NOT RUN (the lake build failed, exit $core_rc — the oleans on disk are not this source's)"
 else
-  printf '%s\n' "$kr_out" | tail -25 | sed 's/^/  /'
-  bad "kernel replay (exit $kr_rc${kr_n:+, $kr_n modules}${kr_n:-, no module count} — a killed, refused or incomplete replay is NOT a pass; see above)"
+  kr_out="$(bash scripts/check-kernel-replay 2>&1)"; kr_rc=$?
+  kr_n="$(printf '%s\n' "$kr_out" | sed -n 's/^Kernel replay gate: PASS.*[^0-9]\([0-9][0-9]*\) GoLean modules replayed.*/\1/p' | tail -1)"
+  if [ "$kr_rc" -eq 0 ] && [ "${kr_n:-0}" -gt 0 ]; then
+    printf '%s\n' "$kr_out" | tail -2 | sed 's/^/  /'; ok "kernel replay ($kr_n GoLean modules replayed through the kernel — leanchecker)"
+  else
+    printf '%s\n' "$kr_out" | tail -25 | sed 's/^/  /'
+    bad "kernel replay (exit $kr_rc, ${kr_n:-no} module count — a killed, refused, incomplete or empty replay is NOT a pass; see above)"
+  fi
 fi
 
 # ── GATE: the machine check of totality — a harness imports every GoLean/

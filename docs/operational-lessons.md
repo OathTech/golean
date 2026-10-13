@@ -589,7 +589,7 @@ rule now says it outright — a slow gate is a reason to examine and trim.
 
 The zero-context review (`docs/2026-10-13_codex-zero-context-pass.md`, F4)
 found that the gate built and audited axioms but never replayed the built
-oleans through a fresh kernel, so a metaprogram that skipped the kernel
+oleans through the kernel into a fresh environment, so a metaprogram that skipped the kernel
 (`debug.skipKernelTC`, `addDeclWithoutChecking`) would pass the build, the
 escape-hatch scan AND the axiom audit (a scratch `bogus : False :=
 True.intro` built that way printed «does not depend on any axioms»; only
@@ -630,7 +630,15 @@ So: the gate's replay inherits `scripts/ci`'s `LEAN_NUM_THREADS`
 (cap/8G), the script sets 4 when run by hand with it unset ([AGENT]
 2026-10-13; faster and five times lighter than the default), and the line
 it prints names the thread count, the wall and the peak. A cgroup kill
-lands as exit 137 with `capped`'s KILLED banner and the script refuses by
-name («a killed replay has checked nothing»; self-tested under
-`capped -m 1G`). `lake check` (toolchains ≥ 4.35) is the stronger form
-when the Lean pin moves; this toolchain is 4.32.2.
+reaches the script as the checker's exit 137 (GNU time: «Command
+terminated by signal 9»); the script's own FAIL line is the signal
+(«KILLED (exit 137 …); a killed replay has checked nothing») and it exits
+1, so `capped`'s KILLED banner does NOT print on this path — self-tested
+under `capped -m 1G`. The same kernel in a fresh environment, not an
+independent verifier, and the imports are trusted as loaded (a dependency
+package would be trusted, not replayed; none today). `@[extern]` is
+outside its reach by construction — the kernel checks the Lean body, the
+executable runs the named symbol — so the escape-hatch text scan carries
+that guard (`META_HATCH_RE` in `scripts/lean-scan.sh`, `extern` added in
+the fix round, review F1). `lake check` (toolchains ≥ 4.35) is the
+stronger form when the Lean pin moves; this toolchain is 4.32.2.
