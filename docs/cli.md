@@ -100,7 +100,7 @@ runs `<name>` on the goroutine pool (`GoLean.GoCore.Machine.runProgramPoolOutM`)
     reaches main's exit. On every other ending (panic, deadlock, fuel-out, a refusal, a setup or
     `$pkginit` failure) the count is not available, and the line says so instead: «choice
     consultations not counted — the run ended with status X, for which the driver returns no
-    leftover tape; …». A count-free line is never omitted on such an ending. Cost: one list of
+    leftover tape; …». A count-free line is never omitted on a MACHINE ending (a CLI-level refusal before the driver — arity, a wrong `--arg-*` kind, a bad seed file, a missing function — prints nothing: no step ran, zero is exact) on such an ending. Cost: one list of
     2^20 zeros, about 50 MB more peak memory and no measurable time.
   - **`--choice-report=full`**: also runs `choice-trace`'s accounting pass
     (`GoLean.ChoiceTrace.consumptionReport`, the same loop as §2.4) on the same wire, arguments,

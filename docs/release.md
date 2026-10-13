@@ -86,5 +86,16 @@ push rule). Pushing the tag is a separate sign-off.
   limit as written here, the ask having offered «name it, or widen»). Widening (a boundary at the abort) would
   touch `atBoundary_of_abort` and the driver's terminal-priority classification — a pinned-statement question
   left for a later ruling.
+- **Go version** (the diversity runs of 2026-10-13, punch-list rows 32 and 35): the language is Go 1.26's — gc 1.27's
+  generic methods are refused at parse; fidelity is to gc go1.26.5 exactly — a user on gc 1.25.0–1.25.3 sees no
+  panic on `any(f) == any(f)` where the model and the spec panic (golang/go#76010); abort TEXTS are
+  version-sensitive (the `panic(nil)` prefix in 1.27, `[recovered, repanicked]` since 1.26, the unhashable-key
+  phrasing, `print` of floats) — observation-format sensitivities, not semantics. `scripts/go-version-diversity`
+  measures a toolchain against the pinned record; it never re-pins.
+- **The enumerator's practical reach** (fresh-eyes pass F3): the DFS enumerator's defaults (`--max-sites 8`,
+  `--work-cap`) are tripped by most two-goroutine shapes; the refusal is loud, the dedup engine is the
+  alternative, and the strict lane's depth guard is what the gate relies on.
+- **The strict lane's comparable surface** (F4): outside seeded mode the Go observer has no pointer, slice, map or
+  channel arm, so a strict row whose result holds one of those cannot be compared and is a visible red.
 - The ten limits of the 2026-10-03 offer (`docs/2026-10-03_offer-to-logic-team.md`) stand.
 
