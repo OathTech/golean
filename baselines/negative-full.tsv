@@ -1,6 +1,13 @@
 # GoLean negative-corpus (compile-rejection) baseline
 # recorded: 2026-08-18  commit: f68a4d86+ (spec-truth P3 slice 2)  oracle: go build (rejection)  [header corrected 2026-08-31: the old "+ frontend fail-closed" conjunct claimed a check that does not exist — scripts/coverage-negative invokes no GoLean tool (p2-fact claim 5)]
-# manifest_cases: 403  pass: 402  fail: 1
+# manifest_cases: 405  pass: 404  fail: 1
+# re-pinned: 2026-10-13 [AGENT], lane frontend/chan-elem-limit-1013 FIX ROUND (the pre-merge adversarial review, relayed by the
+#   [AGENT] coordinator; MEDIUM-1 and MEDIUM-2): TWO BORN ROWS, both PASS at frontend=type-check, each frontend-accepts before
+#   the fix round (measured): functions/func-args-too-large — a function type whose argument area (gc's TFUNCARGS: params,
+#   rounded to 8, then results) reaches 1<<50, «bad type: func» (gc go1.26.5's internal compiler error; the frontend says
+#   «type func(…) too large»); functions/missing-function-body — a body-less, non-linknamed function beside an answerable
+#   sibling, «missing function body» (docs/BUGS.md BUG-126). No other row moves; no flip. Counts: 403 + 2 = 405; PASS 402 +
+#   2 = 404; FAIL 1. Measured by capped scripts/ci --diff at the fix round's tip.
 # re-pinned: 2026-10-13 [AGENT], lane frontend/chan-elem-limit-1013 — release-readiness row 34 (gc's 64 KiB channel-element
 #   limit not mirrored: the BUG-125 class), under [USER] Mike's 2026-10-12 backlog mandate, relayed. EIGHT BORN ROWS, all PASS
 #   (gc rejects with the substring AND the native frontend refuses at type-check — tools/nativefrontend/gclimits.go, the
@@ -186,8 +193,10 @@ PASS	floats/implicit-int-float	-
 PASS	functions/array-func-compare	-
 PASS	functions/call-nonfunction	-
 PASS	functions/duplicate-parameter	-
+PASS	functions/func-args-too-large	-
 PASS	functions/func-compare	-
 FAIL	functions/main-undeclared	frontend-accepts
+PASS	functions/missing-function-body	-
 PASS	functions/struct-func-compare	-
 PASS	functions/wrong-arity	-
 PASS	generics/alias-method-receiver	-

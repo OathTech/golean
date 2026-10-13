@@ -1,50 +1,63 @@
 package main
 
-// gclimits.go — gc's type-SIZE rejections, mirrored after type-check
-// (release-readiness row 34; [AGENT] lane frontend/chan-elem-limit-1013,
-// 2026-10-13, under the [USER]'s 2026-10-12 backlog mandate, relayed).
+// gclimits.go — gc's type-SIZE rejections and its «missing function
+// body» rejection, refused after type-check (release-readiness row 34;
+// [AGENT] lane frontend/chan-elem-limit-1013, 2026-10-13, under the
+// [USER]'s 2026-10-12 backlog mandate, relayed; BUG-126 for the
+// body-less half).
 //
 // go/types does not enforce gc's size limits; gc applies them in
-// cmd/compile/internal/types/size.go (CalcSize) to every type it SIZES,
+// cmd/compile/internal/types/size.go (CalcSize) to the types it sizes,
 // after type-checking, and rejects the whole compilation unit. Without
 // this file the frontend lowered such programs and the machine answered
 // them (`chan [9000]int`: `c == nil` → true) — a program gc rejects,
-// answered (the BUG-125 class). Mirrored here, measured against gc
-// go1.26.5 (the oracle pin) shape by shape (TestGcSizeLimits):
+// answered (the BUG-125 class). The limits, measured against gc go1.26.5
+// (the oracle pin) shape by shape (TestGcSizeLimits):
 //
 //   - TCHANARGS: `if t1.Elem().width >= 1<<16` → «channel element type
 //     too large (>64kB)». The bound is >= 65536: `chan [8192]int`
 //     (exactly 65536 bytes) is REJECTED, `chan [65535]byte` accepted.
 //   - CalcArraySize: `n > (MaxWidth-1)/elem.width` → «type %L larger
 //     than address space» (MaxWidth = 1<<50 on amd64, amd64/galign.go).
-//   - calcStructOffset: a field END offset `>= MaxWidth` → «type %L too
-//     large» — which gc go1.26.5 actually reports as an INTERNAL
-//     COMPILER ERROR («bad type: struct {…}», typePos on an unnamed
-//     struct): gc rejects the program either way.
+//   - calcStructOffset over a struct's fields, and over a function
+//     type's receiver, parameters (end rounded to RegSize 8) and results
+//     (TFUNCARGS): a field END `>= MaxWidth` → «type %L too large»,
+//     which gc go1.26.5 reports as an internal compiler error («bad
+//     type: …», typePos on an unnamed type): a rejection either way.
 //
-// WHAT IS SIZED is what gc sizes, no more: every type reachable
-// (through array/slice/pointer/chan/map elements, struct fields,
-// signatures, interface methods, named types' underlying) from the
-// expressions and declared objects of every NON-generic declaration of
-// the program's source (non-library) units, plus the instantiation
-// closure: a generic function or method body is sized only at a
-// concrete instantiation reached from non-generic code or from a body
-// already being sized (an instantiation that appears only inside an
-// uninstantiated generic body is not — gc go1.26.5 accepts it, measured).
-// Uninstantiated generic code is never sized: `func f[T any]() { var c
-// chan [9000]T }` is accepted until something instantiates it at a type
-// that makes the element too large.
+// WHAT IS SIZED — MENTIONS, NOT gc's SIZED SET; OVER-REFUSAL BY DESIGN
+// ([USER] Mike 2026-10-13, relayed: «I feel like this is just opening
+// the door to endless special-case nonsense. I'd prefer to just refuse
+// this case, and maybe support it later»). Every type MENTIONED
+// (reachable through array/slice/pointer/chan/map elements, struct
+// fields, signatures, interface methods, named types' underlying) by
+// any expression or declared object of every non-generic declaration of
+// the program's source (non-library) units — dead or live, declared or
+// used — plus the same inside every instantiated generic body. gc sizes
+// less: its unified-IR writer drops function-local type and const
+// declarations, blank `var _ T` without initializer, constant-false
+// branches, `for false` bodies, constant-mismatched switch cases and
+// statements after a terminating one, and constant expressions (an
+// `unsafe.Sizeof` operand) are folded unsized. Those programs gc
+// ACCEPTS and GoLean REFUSES, by name: the message appends
+// gcMentionsClause. The pruning is NOT implemented; TestGcSizeLimits
+// lists each such shape with both verdicts, the to-do list of a later
+// «support it» lane. In the other direction the scan is exact on the
+// generic boundary, which is not a pruning rule: uninstantiated generic
+// code is never sized (gc accepts `func f[T any]() { var c chan
+// [9000]T }` until something instantiates it at a type that makes the
+// element too large, and an instantiation that appears only inside an
+// uninstantiated body is not performed); genericity is read from
+// go/types, never from the receiver's spelling.
 //
 // The refusal is a TYPE-CHECK-CLASS REJECTION of the whole program
-// (`type-check: <pos>: <gc's message>`), never a per-declaration
+// (`type-check: <pos>: <gc's message>[clause]`), never a per-declaration
 // quarantine: gc rejects the compilation unit, so no part of the
 // program may lower (the negative lane's frontend leg reads exactly
-// this class). Every distinct offending type is named once, at its
-// first source position, sorted; gc's own count and positions are
-// artifacts of its type interning and of the compiler's current
-// position when the deferred size check runs (it reports a func-local
-// instantiation at the generic function's name, and dedups same-line
-// reports), so they are not reproduced — the verdict (reject) is.
+// this class). Every distinct offending type is named once, sorted by
+// position; gc's own count and positions are artifacts of its type
+// interning and of the compiler's current position when the deferred
+// size check runs, so they are not reproduced — the verdict is.
 //
 // NOT mirrored here (recorded on release-readiness row 34): the stack
 // frame limit (ssagen/pgen.go `>= 1<<30`, «stack frame too large
@@ -73,6 +86,13 @@ const (
 	gcChanElemMax  = int64(1) << 16 // size.go TCHANARGS: width >= 1<<16 rejects
 	gcSizeWorkCap  = 100000         // instantiation-closure bound (fail closed)
 	gcChanElemText = "channel element type too large (>64kB)"
+	// gcMentionsClause: appended to every size-limit refusal. The scan
+	// sizes MENTIONS, not gc's sized set (see the file comment), so the
+	// refusal may be wider than gc's rejection; the clause says so
+	// ([USER] Mike 2026-10-13, relayed: «I'd prefer to just refuse this
+	// case, and maybe support it later»).
+	gcMentionsClause = " [GoLean sizes every mention of the type, including declarations and dead code that gc would not size; such a program is refused by name, not supported]"
+	gcRegSize        = 8 // amd64 RegSize: TFUNCARGS rounds the params' end to it
 )
 
 type gcSizeViolation struct {
@@ -129,6 +149,40 @@ func checkGcSizeLimits(fset *token.FileSet, units []*sourcePkg) error {
 			}
 		}
 	}
+	// gc's «missing function body» (noder/writer.go funcDecl): a
+	// body-less function or method in a -complete package (cmd/go
+	// passes -complete when the package has no non-Go files; file
+	// selection already refuses non-Go sources) is a rejection unless
+	// it is //go:linkname'd — a directive in any file of the package
+	// that imports "unsafe" (gc rejects the directive elsewhere: «only
+	// allowed in Go files that import "unsafe"») naming the
+	// package-level function (linknameDirectives over the files'
+	// comments; methods cannot be linknamed). //go:wasmimport
+	// does not exempt here: gc honours it only when GOARCH is wasm
+	// (noder.go), never at the pinned linux/amd64.
+	for _, u := range units {
+		if u.library {
+			continue
+		}
+		linked := map[string]bool{}
+		for _, f := range u.files {
+			if !gcImportsUnsafe(f) {
+				continue // gc rejects a linkname in such a file outright
+			}
+			for local := range linknameDirectives(f) {
+				linked[local] = true
+			}
+		}
+		for _, f := range u.files {
+			for _, d := range f.Decls {
+				if fd, ok := d.(*ast.FuncDecl); ok && fd.Body == nil && (fd.Recv != nil || !linked[fd.Name.Name]) {
+					s.pos = fd.Name.Pos()
+					s.record(fmt.Sprintf("bodyless:%p", fd), "missing function body")
+				}
+			}
+		}
+	}
+
 	// Phase 1: every non-generic declaration of the source units.
 	for _, u := range units {
 		if u.library {
@@ -139,7 +193,7 @@ func checkGcSizeLimits(fset *token.FileSet, units []*sourcePkg) error {
 			for _, d := range f.Decls {
 				switch d := d.(type) {
 				case *ast.FuncDecl:
-					if gcGenericFuncDecl(d) {
+					if gcGenericFuncDecl(u.info, d) {
 						continue
 					}
 					s.visit(d)
@@ -202,26 +256,16 @@ func checkGcSizeLimits(fset *token.FileSet, units []*sourcePkg) error {
 }
 
 // gcGenericFuncDecl: a function with type parameters, or a method of a
-// generic type (its receiver carries type parameters).
-func gcGenericFuncDecl(d *ast.FuncDecl) bool {
-	if d.Type.TypeParams != nil && len(d.Type.TypeParams.List) > 0 {
-		return true
+// generic type — read from go/types (the declared object's signature),
+// never from the receiver's spelling (`(*G[T])`, `((*G[T]))` are the
+// same receiver; review HIGH-2).
+func gcGenericFuncDecl(info *types.Info, d *ast.FuncDecl) bool {
+	fn, ok := info.Defs[d.Name].(*types.Func)
+	if !ok {
+		return false // no object (cannot happen after type-check): sized, the fail-closed side
 	}
-	if d.Recv == nil || len(d.Recv.List) == 0 {
-		return false
-	}
-	rt := d.Recv.List[0].Type
-	if st, ok := rt.(*ast.StarExpr); ok {
-		rt = st.X
-	}
-	if p, ok := rt.(*ast.ParenExpr); ok {
-		rt = p.X
-	}
-	switch rt.(type) {
-	case *ast.IndexExpr, *ast.IndexListExpr:
-		return true
-	}
-	return false
+	sig := fn.Type().(*types.Signature)
+	return sig.TypeParams().Len() > 0 || sig.RecvTypeParams().Len() > 0
 }
 
 // visit sizes every type recorded for the nodes under n (expressions,
@@ -622,12 +666,12 @@ func (s *gcSizeScan) walk(t types.Type) {
 	case *types.Array:
 		if w := gcSizes.Sizeof(ty.Elem()); w < 0 || (w > 0 && ty.Len() > (gcMaxWidth-1)/w) {
 			msg := fmt.Sprintf("type %s larger than address space", types.TypeString(ty, nil))
-			s.record(msg, msg)
+			s.record(msg, msg+gcMentionsClause)
 		}
 		s.walk(ty.Elem())
 	case *types.Chan:
 		if w := gcSizes.Sizeof(ty.Elem()); w < 0 || w >= gcChanElemMax {
-			s.record("chan:"+types.TypeString(ty, nil), gcChanElemText)
+			s.record("chan:"+types.TypeString(ty, nil), gcChanElemText+gcMentionsClause)
 		}
 		s.walk(ty.Elem())
 	case *types.Map:
@@ -643,8 +687,8 @@ func (s *gcSizeScan) walk(t types.Type) {
 			for i, v := range vars {
 				sz := gcSizes.Sizeof(v.Type())
 				if offs[i] < 0 || sz < 0 || offs[i] >= gcMaxWidth || sz >= gcMaxWidth || offs[i]+sz >= gcMaxWidth {
-					msg := fmt.Sprintf("type %s too large (gc go1.26.5 reports it as an internal compiler error: bad type)", types.TypeString(ty, nil))
-					s.record(msg, msg)
+					msg := fmt.Sprintf("type %s too large", types.TypeString(ty, nil))
+					s.record(msg, msg+gcMentionsClause)
 					break
 				}
 			}
@@ -653,6 +697,10 @@ func (s *gcSizeScan) walk(t types.Type) {
 			s.walk(ty.Field(i).Type())
 		}
 	case *types.Signature:
+		if gcFuncArgsTooLarge(ty) {
+			msg := fmt.Sprintf("type %s too large", types.TypeString(ty, nil))
+			s.record(msg, msg+gcMentionsClause)
+		}
 		s.walk(ty.Params())
 		s.walk(ty.Results())
 	case *types.Tuple:
@@ -671,11 +719,58 @@ func (s *gcSizeScan) walk(t types.Type) {
 	}
 }
 
-// record keeps one violation per offending type (key), at its first
-// position.
+// gcFuncArgsTooLarge mirrors CalcSize's TFUNCARGS arm: calcStructOffset
+// over the receiver, then the parameters (continuing the offset), the
+// offset rounded up to RegSize, then the results; each field is placed
+// at its alignment and any field END >= MaxWidth is gc's «type … too
+// large» (go1.26.5 then ICEs, «bad type: func(…)», like the struct arm).
+func gcFuncArgsTooLarge(sig *types.Signature) bool {
+	off := int64(0)
+	over := false
+	place := func(v *types.Var) {
+		if over {
+			return
+		}
+		sz, al := gcSizes.Sizeof(v.Type()), gcSizes.Alignof(v.Type())
+		if sz < 0 || sz >= gcMaxWidth || al <= 0 {
+			over = true
+			return
+		}
+		off = (off + al - 1) / al * al
+		off += sz
+		if off >= gcMaxWidth {
+			over = true
+		}
+	}
+	if r := sig.Recv(); r != nil {
+		place(r)
+	}
+	for i := 0; i < sig.Params().Len(); i++ {
+		place(sig.Params().At(i))
+	}
+	off = (off + gcRegSize - 1) / gcRegSize * gcRegSize
+	for i := 0; i < sig.Results().Len(); i++ {
+		place(sig.Results().At(i))
+	}
+	return over
+}
+
+// record keeps one violation per offending type (key), at the earliest
+// position the walk records for it — not necessarily the type's first
+// mention in the source: the walk dedups by type identity, so a mention
+// reached earlier through an already-walked identical type is not seen.
 func (s *gcSizeScan) record(key, msg string) {
 	if v, ok := s.viol[key]; ok && v.pos <= s.pos {
 		return
 	}
 	s.viol[key] = gcSizeViolation{pos: s.pos, msg: msg}
+}
+
+func gcImportsUnsafe(f *ast.File) bool {
+	for _, im := range f.Imports {
+		if im.Path != nil && im.Path.Value == `"unsafe"` {
+			return true
+		}
+	}
+	return false
 }

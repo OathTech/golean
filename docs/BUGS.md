@@ -8654,3 +8654,30 @@ subject-mode export of the exec corpus; the real fix is a whole-program MODE (a 
 manifest-driven entry contract) — a frontend-contract design question, not a few lines. Fix criterion: the
 negative-corpus row `functions/main-undeclared` PASSes on the frontend leg (`frontend=type-check` or a named
 whole-program refusal) with no exec-corpus row moving.
+
+## BUG-126 — the native frontend QUARANTINED a body-less user function per declaration and lowered the rest of the program, which gc rejects whole («missing function body») [frontend boundary; over-acceptance — a sibling subject was answered; found by the pre-merge review of lane `frontend/chan-elem-limit-1013` (MEDIUM-2, relayed by the [AGENT] coordinator), 2026-10-13; FIXED the same day in that lane]
+
+- Status: fixed
+- Pinned-by: none (the witness is a NEGATIVE-corpus row, `functions/missing-function-body`, born PASS at
+  `frontend=type-check` in `baselines/negative-full.tsv`; `scripts/check-bugs.sh` reads only the differential baseline.)
+- Discovered: lane worker `frontend/chan-elem-limit-1013` while measuring row 34's sibling limits ([AGENT], 2026-10-13);
+  the detail corrected by the lane's pre-merge review (MEDIUM-2): `func main` is never exported (emit.go), so
+  `--function main` answers «entry function not found»; a sibling `func g() int { return 7 }` beside `func f(x int)`
+  (no body) was answered `ok 7` while gc rejects the unit. Entry: [AGENT] lane worker, 2026-10-13.
+
+WHAT: gc's rule (cmd/compile/internal/noder/writer.go funcDecl): a body-less function is rejected («missing function
+body») when the package is compiled `-complete` — cmd/go passes it when the package has no non-Go files, and the
+frontend's file selection already refuses non-Go sources, so every admitted directory is `-complete` — unless the
+function is `//go:linkname`d (a directive in a file that imports "unsafe"; gc rejects the directive elsewhere) or
+`//go:wasmimport`ed (honoured only when GOARCH is wasm — never at the pinned linux/amd64). go/types accepts the
+declaration; the frontend stubbed it as `unsupported: bodyless function f` and lowered everything else.
+
+WHY IT IS NOT BUG-125: BUG-125 is the absence of a whole-program MODE (a main-less `package main` is the exec corpus's
+subject contract); this one is a per-declaration rule gc applies regardless of entry — a whole-program rejection
+needs no mode.
+
+FIX: `tools/nativefrontend/gclimits.go` (the post-type-check hook of release-readiness row 34) rejects the program as
+`type-check: <pos>: missing function body` for every body-less function or method of a source unit that is not
+linknamed by such a directive (the stub quarantine stays for linknamed declarations). `go/ast` finds 0 body-less
+declarations under `Corpus/`, `raftsubject/`, `raftharness/`; no exec row moves. Pinned by the negative row and
+`TestGcSizeLimits` (d01, d02, e02, g11, g13).

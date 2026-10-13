@@ -529,20 +529,31 @@ requires a written profound reason. The complete list:
    impossibility/out-of-language rows no envelope machinery converts.
 5. **Body-less (externally-implemented) function declarations** —
    assembly linkage; not representable in the corpus or the machine's
-   trust story (P3 SKIPPED row records it).
+   trust story (P3 SKIPPED row records it). CORRECTED 2026-10-13
+   ([AGENT], lane `frontend/chan-elem-limit-1013`, BUG-126): in a
+   `-complete` package (Go files only — every directory file selection
+   admits) a body-less declaration is a gc REJECTION («missing function
+   body»), not out-of-scope linkage, unless `//go:linkname`d; the
+   frontend now rejects the program (`type-check:`), and the stub
+   quarantine stays for linknamed declarations only.
 6. **gc's implementation size limits** (not language: the spec has no
    size limit; gc applies them in `cmd/compile/internal/types/size.go`
-   after type-checking and rejects the compilation unit). MIRRORED
+   after type-checking and rejects the compilation unit). REFUSED
    2026-10-13 ([AGENT], lane `frontend/chan-elem-limit-1013`,
    release-readiness row 34) as a whole-program `type-check:` rejection
-   (`tools/nativefrontend/gclimits.go`, over exactly what gc sizes): the
-   channel element `>= 1<<16`, the array larger than the address space,
-   the struct too large — negative rows `channels/chan-elem-*`,
-   `generics/chan-elem-too-large-*`, `arrays/array-larger-than-address-
-   space`, `structs/struct-too-large`. NOT YET mirrored (row 34): the
-   stack frame limit (`ssagen/pgen.go`, «stack frame too large (>1GB)»),
-   a per-function backend rule; the interface-too-large limit
-   (`len(methods) >= MaxWidth/8`) is unreachable in source.
+   with gc's text (`tools/nativefrontend/gclimits.go`): the channel
+   element `>= 1<<16`, the array larger than the address space, the
+   struct too large, the function-argument area too large — negative
+   rows `channels/chan-elem-*`, `generics/chan-elem-too-large-*`,
+   `arrays/array-larger-than-address-space`, `structs/struct-too-large`,
+   `functions/func-args-too-large`. The scan sizes MENTIONS, not gc's
+   sized set: over-refusal by design (dead code, local declarations and
+   constant-folded operands gc never sizes are refused by name, the
+   message saying so); the pruning is not implemented — [USER]
+   2026-10-13. NOT YET mirrored (row 34): the stack frame limit
+   (`ssagen/pgen.go`, «stack frame too large (>1GB)»), a per-function
+   backend rule; the interface-too-large limit (`len(methods) >=
+   MaxWidth/8`) is unreachable in source.
 
 ## 6. The concurrency-entangled design questions
 
