@@ -14,6 +14,8 @@
 # S2b docstring's peek list; the counts are the scanner's at the inventoried tree.
 GoLean/CLI.lean	enumPoolRun	loadMany	2	DRIVER READOUT — the enumerator driver's result readout after termination
 GoLean/CLI.lean	poolDFS	loadMany	1	DRIVER READOUT — the pool DFS driver's result readout after termination
+GoLean/CLI.lean	runProgramPoolOutLeftoverM	loadMany	1	DRIVER READOUT — result cells after termination (runProgramPoolOutM's wiring returning the leftover tape for native-json-run's choice count; the program is over)
+GoLean/CLI.lean	runProgramPoolSeededOutLeftoverM	loadMany	2	DRIVER READOUT — result cells and the seed cells after termination (runProgramPoolSeededOutM's wiring returning the leftover tape for native-json-run's choice count; the program is over)
 GoLean/ChoiceTrace.lean	partnersFor	chanCell	1	TRACER OBSERVATION — the choice tracer reads the channel object to name select partners in its dump (tooling; not a machine step)
 GoLean/ChoiceTrace.lean	tryLockFacts	syncCell	1	TRACER OBSERVATION — the choice tracer reads the sync word to report TryLock facts in its dump (tooling; not a machine step)
 GoLean/EnumDedup.lean	nodeObs	loadMany	1	DRIVER READOUT — the untrusted dedup engine's observation of a terminated node (CLI-side)
