@@ -59,7 +59,7 @@
 # judged records), baselines/, Corpus/, or deps/. Artifacts land under
 # artifacts/grossmith/<date>/ (override: GOLEAN_GROSSMITH_ARTIFACTS),
 # a SEPARATE tree canonicalised and refused if it resolves into any of
-# those (oracle-version-sweep's O1 pattern). Scratch (TMPDIR for the
+# those (the O1 pattern of the retired oracle-version-sweep, in git history). Scratch (TMPDIR for the
 # harness and the reference builds) is forced inside that tree too:
 # /tmp is write-only under the agent sandbox, and a harness that cannot
 # read back its own row files fails every case as a worker death.
@@ -105,7 +105,7 @@ esac
 # Output root: separate tree, canonicalised, refused if it resolves
 # into the judged records, the baselines, the corpus, or the reference
 # checkouts. Same two-pass (pre-mkdir lexical, post-mkdir symlink-
-# resolving) shape as oracle-version-sweep.
+# resolving) shape as the retired oracle-version-sweep (git history).
 today="$(date -u +%F)"
 OUT="${GOLEAN_GROSSMITH_ARTIFACTS:-artifacts/grossmith/$today}"
 refuse_root() {

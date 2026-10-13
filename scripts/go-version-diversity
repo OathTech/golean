@@ -7,11 +7,19 @@
 # I'm happy to install things», then «the go setup should support you calling
 # different go versions» (relayed by the [AGENT] coordinator; the plan on
 # row 32 is the coordinator's [AGENT] proposal, agreed in principle). Built by
-# the [AGENT] lane apparatus/go-diversity-1013.
+# the [AGENT] lane apparatus/go-diversity-1013. Supersedes
+# scripts/oracle-version-sweep (retired: it floated the frontend with the
+# oracle and judged result/stage only).
 #
 #   scripts/capped scripts/go-version-diversity [--staticinit] [--record <dir>] [--reuse] <goX.Y.Z>
+#   scripts/capped scripts/go-version-diversity --control [--staticinit] [--record <dir>] [--reuse]
 #
-# (--reuse re-compares the last run for <v> without re-running the corpora.)
+# --control runs the PIN through the same oracle-only seam on a fresh run and
+# compares it with the record: everything it reports is run-to-run noise by
+# definition — the NOISE FLOOR. A version report prints the latest control's
+# counts beside its own (.tmp/go-diversity/control-<pin>/). --reuse
+# re-compares the last run without re-running the corpora; it refuses unless
+# that run's per-row evidence (go-run/, membership/) is still there.
 #
 # THE SEAM: scripts/diff-coverage and scripts/coverage-negative take
 # GOLEAN_ORACLE_GOTOOLCHAIN=<v> (their header blocks): the oracle's per-row
@@ -20,77 +28,99 @@
 # checked by a runtime.Version() canary; the native frontend (go/types) and
 # the harness are built and run on the pinned toolchain, so the lowering is
 # not a second variable. Both toolchains land in each run's meta
-# (go_toolchain_frontend / go_toolchain_oracle, go_drift_actual=true).
+# (go_toolchain_frontend / go_toolchain_oracle, go_drift_actual).
+#
+# TWO EFFECTS OF THE PINNED ABORT CLASSIFIER (tools/coverageharness/
+# abortkind.go pins go1.26.5's runtime/panic.go frame lines — trusted
+# surface 2, not changed here): under any non-pin toolchain (1) every
+# panic/fatal row refuses classification, so the MACHINE does not compare it;
+# this report compares those rows on the oracle's raw text only (stdout + the
+# stderr head: program output, panic/fatal message); (2) a sampled
+# (membership) row with a panic member stops at its first such draw, so
+# sampled abort rows are SINGLE-DRAW under diversity.
 #
 # WHAT IT COMPARES (the machine's side of a row does not depend on the Go
 # version, so every difference is Go's — or the sampling's, named as such):
 #   * per differential row: result, stage, the refusal-cause key
-#     (scripts/coverage-cause), and the detail text normalized (artifact
-#     roots, GOROOT paths, go-build dirs, hex addresses, goroutine ids);
-#   * per row whose columns all agree: the ORACLE's own recorded observation
-#     (go-run/<id>/oracle.stdout, the fd-2 split, the abort message, the
-#     panic text before the traceback) — the signal on rows the machine never
-#     compared (a frontend refusal) or that admit a set (sampled lanes);
-#   * per negative row: result, stage, detail (gc accepting a program it
-#     used to reject, or rejecting it with another message, is a finding);
-#   * --staticinit: gc's static-init verdict table (tools/staticinitoracle)
-#     re-recorded under <v>, diffed against the committed one.
-# Classes in the report: «oracle does not compile under <v>» (a fixture uses
-# a language feature or API newer than <v>, or one removed since — by
-# construction, not a behaviour change); result/stage/cause flips; detail
-# changes; sampling captions moved (membership `exhibited=`/`draws=`, not a
-# version signal); oracle-observation changes (strict lane listed, sampled
-# lanes counted).
+#     (scripts/coverage-cause), and the detail text normalized (`bytes`
+#     observation values decoded first, then artifact roots, GOROOT paths,
+#     go-build dirs, hex addresses, goroutine ids; tracebacks cut);
+#   * per membership row: the EXHIBITED SETS (the distinct per-draw oracle
+#     observations, membership/<id>/draws.txt) — a member one side exhibited
+#     and the other never did is its own class, with both draw counts
+#     (sampling-ambiguous: absence in K draws is not impossibility);
+#   * per row whose columns agree: the ORACLE's own recorded output
+#     (go-run/<id>/: stdout, the fd-2 split, the abort message), only where
+#     the record ran byte-identical program files (every .go under the row's
+#     go-run dir, gopath/ included) — racy/confluent rows keep the LAST draw
+#     only (no per-draw record exists for those lanes);
+#   * per negative row: result, stage, detail;
+#   * --staticinit: gc's static-init verdict table re-recorded under <v>.
+# The report (printed, and written to .tmp/go-diversity/<v>/report.txt)
+# ends with an EVIDENCE appendix — per classified row: class, both details,
+# both exhibited sets / raw abort texts — so it stands alone after the
+# run's artifacts are cleaned.
 #
 # WHAT IT IS NOT: never a re-pin (the oracle of record is
 # baselines/go-oracle-pin, moved only deliberately with a full run and a
 # written reason — CLAUDE.md, trusted surface 2); never the gate (no lock,
-# artifacts only under .tmp/go-diversity/<v>/, the judged records are read,
-# never written). Each difference is a FINDING for a human: a latitude to
-# admit, a version-specific behaviour the pin's reason should name, or a
-# fixture that depends on a newer toolchain.
+# artifacts only under .tmp/go-diversity/, the judged records are read,
+# never written). Each difference is a FINDING for a human.
 #
-# REFUSALS (exit 2, nothing run): bad usage; <v> is the pin («pointless: that
-# is the oracle of record»); <v> not runnable here (not in the module cache —
-# the [USER] runs `GOTOOLCHAIN=<v> go version` OUTSIDE the sandbox to fetch
-# it); no usable record (missing results/meta, recorded off the pin or
-# drifted, or for another case set — «run scripts/ci --diff first»).
+# REFUSALS (exit 2, nothing run): bad usage; <v> is the pin without
+# --control («pointless: that is the oracle of record»); <v> not runnable
+# here (not in the module cache — the [USER] runs `GOTOOLCHAIN=<v> go
+# version` OUTSIDE the sandbox to fetch it); no usable record (missing
+# results/meta, recorded off the pin or drifted, or for another case set —
+# «run scripts/ci --diff first»); --reuse without the run's evidence.
 # Exit 1 = a run could not complete (a runner infra exit, a meta that does
-# not show the split toolchains, a comparator failure). Exit 0 = the run
-# completed; the differences are findings, not failures. The report is
-# printed and written to .tmp/go-diversity/<v>/report.txt.
+# not show the asked toolchains, a comparator failure). Exit 0 = the run
+# completed; the differences are findings, not failures.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT" || exit 2
 
-usage() { echo "usage: scripts/capped scripts/go-version-diversity [--staticinit] [--record <dir>] [--reuse] <goX.Y.Z>   (--help: the header)" >&2; exit 2; }
+usage() {
+  echo "usage: scripts/capped scripts/go-version-diversity [--staticinit] [--record <dir>] [--reuse] <goX.Y.Z>" >&2
+  echo "       scripts/capped scripts/go-version-diversity --control [--staticinit] [--record <dir>] [--reuse]   (--help: the header)" >&2
+  exit 2
+}
 STATICINIT=0
 REUSE=0
+CONTROL=0
 RECORD="$ROOT/artifacts/coverage"
 V=""
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
     --staticinit) STATICINIT=1; shift ;;
     --reuse) REUSE=1; shift ;;
+    --control) CONTROL=1; shift ;;
     --record) [[ -n "${2:-}" ]] || usage; RECORD="$2"; shift 2 ;;
-    -h|--help) sed -n '2,60p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,79p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
     -*) echo "go-version-diversity: unknown option '$1'" >&2; usage ;;
     *) [[ -z "$V" ]] || { echo "go-version-diversity: one toolchain per run" >&2; usage; }; V="$1"; shift ;;
   esac
 done
-[[ -n "$V" ]] || usage
-if [[ ! "$V" =~ ^go[0-9]+\.[0-9]+(\.[0-9]+)?((rc|beta)[0-9]+)?$ ]]; then
-  echo "go-version-diversity: '$V' is not a toolchain name (goX.Y.Z)" >&2
-  exit 2
-fi
 PIN="$(head -1 baselines/go-oracle-pin 2>/dev/null | tr -d '[:space:]')"
 if [[ -z "$PIN" ]]; then
   echo "go-version-diversity: baselines/go-oracle-pin unreadable — refusing" >&2
   exit 2
 fi
-if [[ "$V" == "$PIN" ]]; then
-  echo "go-version-diversity: $V is the pin — pointless: that is the oracle of record (scripts/ci --diff runs it)" >&2
+if [[ "$CONTROL" = 1 ]]; then
+  if [[ -n "$V" && "$V" != "$PIN" ]]; then
+    echo "go-version-diversity: --control runs the pin ($PIN), not '$V'" >&2
+    usage
+  fi
+  V="$PIN"
+fi
+[[ -n "$V" ]] || usage
+if [[ ! "$V" =~ ^go[0-9]+\.[0-9]+(\.[0-9]+)?((rc|beta)[0-9]+)?$ ]]; then
+  echo "go-version-diversity: '$V' is not a toolchain name (goX.Y.Z)" >&2
+  exit 2
+fi
+if [[ "$V" == "$PIN" && "$CONTROL" != 1 ]]; then
+  echo "go-version-diversity: $V is the pin — pointless: that is the oracle of record (scripts/ci --diff runs it); --control runs it as the noise-floor calibration" >&2
   exit 2
 fi
 LIVE="$(go version 2>/dev/null | awk '{print $3}')"
@@ -158,14 +188,24 @@ if [[ "$REC_COMMIT" != "$HEAD_COMMIT" ]]; then
   fi
 fi
 
-OUT_REL=".tmp/go-diversity/$V"
+if [[ "$CONTROL" = 1 ]]; then
+  OUT_REL=".tmp/go-diversity/control-$PIN"
+else
+  OUT_REL=".tmp/go-diversity/$V"
+fi
 OUT="$ROOT/$OUT_REL"
+CONTROL_REPORT="$ROOT/.tmp/go-diversity/control-$PIN/report.txt"
 d_rc="reused" n_rc="reused"
 if [[ "$REUSE" = 1 ]]; then
-  # --reuse: re-compare an existing run (no corpus run): its results, meta and
-  # record snapshot must all be there; the meta checks below still apply.
+  # --reuse: re-compare an existing run (no corpus run). The comparison reads
+  # per-row evidence (go-run/, membership/) as well as the TSVs; without it
+  # the classes would silently change (a no-compile row read as a flip), so
+  # its absence is a refusal by name.
   for f in latest.tsv latest.meta.tsv negative-latest.tsv negative-latest.meta.tsv; do
     [[ -s "$OUT/$f" ]] || { echo "go-version-diversity: --reuse: $OUT_REL/$f missing — run without --reuse" >&2; exit 2; }
+  done
+  for d in go-run membership; do
+    [[ -d "$OUT/$d" && -d "$RECORD/$d" ]] || { echo "go-version-diversity: --reuse: the per-row evidence $d/ is gone (from $OUT_REL or the record) — the report would reclassify rows; run without --reuse" >&2; exit 2; }
   done
 else
   rm -rf "$OUT"
@@ -178,32 +218,35 @@ for f in latest.tsv latest.meta.tsv negative-latest.tsv negative-latest.meta.tsv
   cp "$RECORD/$f" "$OUT/record/$f" || { echo "go-version-diversity: cannot snapshot $RECORD/$f" >&2; exit 2; }
 done
 if [[ "$REUSE" != 1 ]]; then
-echo "go-version-diversity: oracle $V ($ALT_GOROOT); frontend $LIVE (pin $PIN); record $RECORD; artifacts $OUT_REL"
-
-# THE RUNS (report-only probes: drift allowed loudly, artifacts redirected).
-run_env=(GOLEAN_ORACLE_GOTOOLCHAIN="$V" GOLEAN_ALLOW_GO_DRIFT=1 GOLEAN_COVERAGE_ARTIFACTS="$OUT_REL")
-d_rc=0
-env "${run_env[@]}" GOLEAN_COVERAGE_RESULTS="$OUT_REL/latest.tsv" GOLEAN_COVERAGE_META="$OUT_REL/latest.meta.tsv" \
-  scripts/diff-coverage > "$OUT/diff-coverage.log" 2>&1 || d_rc=$?
-tail -3 "$OUT/diff-coverage.log"
-if [[ "$d_rc" -ge 2 ]]; then
-  echo "go-version-diversity: the differential run could not complete (exit $d_rc; $OUT_REL/diff-coverage.log) — nothing to compare" >&2
-  exit 1
+  echo "go-version-diversity: oracle $V ($ALT_GOROOT)$([[ "$CONTROL" = 1 ]] && printf ' [CONTROL]'); frontend $LIVE (pin $PIN); record $RECORD; artifacts $OUT_REL"
+  # THE RUNS (report-only probes, artifacts redirected; drift allowed loudly
+  # off the pin — a control run is at the pin and needs no escape).
+  run_env=(GOLEAN_ORACLE_GOTOOLCHAIN="$V" GOLEAN_COVERAGE_ARTIFACTS="$OUT_REL")
+  if [[ "$CONTROL" != 1 ]]; then run_env+=(GOLEAN_ALLOW_GO_DRIFT=1); fi
+  d_rc=0
+  env "${run_env[@]}" GOLEAN_COVERAGE_RESULTS="$OUT_REL/latest.tsv" GOLEAN_COVERAGE_META="$OUT_REL/latest.meta.tsv" \
+    scripts/diff-coverage > "$OUT/diff-coverage.log" 2>&1 || d_rc=$?
+  tail -3 "$OUT/diff-coverage.log"
+  if [[ "$d_rc" -ge 2 ]]; then
+    echo "go-version-diversity: the differential run could not complete (exit $d_rc; $OUT_REL/diff-coverage.log) — nothing to compare" >&2
+    exit 1
+  fi
+  n_rc=0
+  env "${run_env[@]}" GOLEAN_NEGATIVE_RESULTS="$OUT_REL/negative-latest.tsv" GOLEAN_NEGATIVE_META="$OUT_REL/negative-latest.meta.tsv" \
+    scripts/coverage-negative > "$OUT/coverage-negative.log" 2>&1 || n_rc=$?
+  tail -3 "$OUT/coverage-negative.log"
+  if [[ "$n_rc" -ge 2 ]]; then
+    echo "go-version-diversity: the negative run could not complete (exit $n_rc; $OUT_REL/coverage-negative.log) — nothing to compare" >&2
+    exit 1
+  fi
 fi
-n_rc=0
-env "${run_env[@]}" GOLEAN_NEGATIVE_RESULTS="$OUT_REL/negative-latest.tsv" GOLEAN_NEGATIVE_META="$OUT_REL/negative-latest.meta.tsv" \
-  scripts/coverage-negative > "$OUT/coverage-negative.log" 2>&1 || n_rc=$?
-tail -3 "$OUT/coverage-negative.log"
-if [[ "$n_rc" -ge 2 ]]; then
-  echo "go-version-diversity: the negative run could not complete (exit $n_rc; $OUT_REL/coverage-negative.log) — nothing to compare" >&2
-  exit 1
-fi
-fi
+want_drift=true
+[[ "$CONTROL" = 1 ]] && want_drift=false
 for m in "$OUT/latest.meta.tsv:$D_SHA" "$OUT/negative-latest.meta.tsv:$N_SHA"; do
   f="${m%%:*}"; want="${m#*:}"
   if [[ "$(meta_get "$f" go_toolchain_oracle)" != "$V" || "$(meta_get "$f" go_toolchain_frontend)" != "$PIN" \
-        || "$(meta_get "$f" go_drift_actual)" != true || "$(meta_get "$f" manifest_sha256)" != "$want" ]]; then
-    echo "go-version-diversity: $f does not record oracle=$V frontend=$PIN drift=true on the current case set — the run is not what was asked; refusing to report it" >&2
+        || "$(meta_get "$f" go_drift_actual)" != "$want_drift" || "$(meta_get "$f" manifest_sha256)" != "$want" ]]; then
+    echo "go-version-diversity: $f does not record oracle=$V frontend=$PIN drift=$want_drift on the current case set — the run is not what was asked; refusing to report it" >&2
     exit 1
   fi
 done
@@ -226,9 +269,19 @@ if ! scripts/coverage-cause "$OUT/record/latest.tsv" > "$OUT/cause.pin.tsv" \
   exit 1
 fi
 if ! python3 -I - "$V" "$PIN" "$LIVE" "$ALT_GOROOT" "$RECORD" "$OUT" "$DM" "$d_rc" "$n_rc" "$TREE_NOTE" "$SI_TSV" \
-    > "$OUT/report.txt" <<'PY'
-import os, re, sys
-V, PIN, LIVE, ALT_GOROOT, REC, OUT, MANIFEST, D_RC, N_RC, TREE_NOTE, SI = sys.argv[1:12]
+    "$CONTROL" "$CONTROL_REPORT" > "$OUT/report.txt" <<'PY'
+import json, os, re, sys
+(V, PIN, LIVE, ALT_GOROOT, REC, OUT, MANIFEST, D_RC, N_RC, TREE_NOTE, SI,
+ CONTROL, CONTROL_REPORT) = sys.argv[1:14]
+CONTROL = CONTROL == "1"
+ALT = f"{V}(control)" if CONTROL else V
+
+def read(path):
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            return f.read()
+    except FileNotFoundError:
+        return None
 
 def rows(path):
     out = {}
@@ -250,11 +303,33 @@ def causes(path):
             out[k] = v
     return out
 
-# Every absolute prefix starts at a `/`: the details carry escaped `\t/path`
-# text, and a prefix class allowed to start anywhere ate the `t`.
-ART = re.compile(r'(?:/[^\s"\'\\=]*/)?(?:artifacts/coverage|\.tmp/go-diversity/go[^/\s"\'\\]+)/')
+# `bytes` observation values (golean-observation-v1 strings) are decoded
+# BEFORE normalizing, so an address printed into a string (fmt %v of a
+# pointer) is normalized like any other — raw or JSON-escaped in a detail.
+BYTES = re.compile(r'(\\?)"bytes\1":\[([0-9, ]*)\]')
+def decode_bytes(s):
+    def sub(m):
+        try:
+            text = bytes(int(x) for x in m.group(2).split(",") if x.strip()).decode("utf-8", "replace")
+        except ValueError:
+            return m.group(0)
+        q = m.group(1)
+        return f'{q}"str{q}":{q}"' + json.dumps(text)[1:-1].replace('"', '\\"') + f'{q}"'
+    return BYTES.sub(sub, s)
+
+# Every absolute prefix starts at a `/`: details carry escaped `\t/path` text.
+ART = re.compile(r'(?:/[^\s"\'\\=]*/)?(?:artifacts/coverage|\.tmp/go-diversity/[^/\s"\'\\]+)/')
 GOROOT = re.compile(r'(?:/usr/local/go|/[^\s"\'\\]*/toolchain@v0\.0\.1-go[^/\s]+)/')
+# Cut a crash text (raw, or escaped inside a detail) before its goroutine
+# dumps: GOTRACEBACK=system's runtime frames and system goroutines vary run
+# to run and version to version; the message and output are the observation.
+TRACE = re.compile(r'(?:\n|\\n)(?:goroutine \d+|goroutine N|runtime stack:)')
+def head(s):
+    m = TRACE.search(s)
+    return s[:m.start()] if m else s
+
 def norm(s):
+    s = decode_bytes(s)
     s = ART.sub("<ART>/", s)
     s = GOROOT.sub("<GOROOT>/", s)
     s = re.sub(r'/[^\s"\'\\]*go-build\d+', "<GOBUILD>", s)
@@ -262,16 +337,11 @@ def norm(s):
     s = re.sub(r'(<GOROOT>/src/[^\s:"\'\\]+\.(?:go|s)):\d+', r"\1:L", s)
     s = re.sub(r'0x[0-9a-fA-F]+', "0x_", s)
     s = re.sub(r'goroutine \d+', "goroutine N", s)
-    return s
+    return head(s)
 
-# Cut a crash text (raw, or escaped inside a detail) before its goroutine
-# dumps: GOTRACEBACK=system lists runtime-internal frames and system
-# goroutines whose set and order vary run to run and version to version;
-# they are not part of the observation (the message and output are).
-TRACE = re.compile(r'(?:\n|\\n)(?:goroutine \d+|goroutine N|runtime stack:)')
-def head(s):
-    m = TRACE.search(s)
-    return s[:m.start()] if m else s
+def clip(s, n=300):
+    s = s.replace("\n", "\\n")
+    return s if len(s) <= n else s[:n] + "…"
 
 def oneline_diff(a, b, ctx=30, width=110):
     p = 0
@@ -279,61 +349,67 @@ def oneline_diff(a, b, ctx=30, width=110):
         p += 1
     st = max(0, p - ctx)
     q = lambda s: (("…" if st else "") + s[st:st + width] + ("…" if len(s) > st + width else "")).replace("\n", "\\n")
-    return f"pin«{q(a)}» {V}«{q(b)}»"
+    return f"pin«{q(a)}» {ALT}«{q(b)}»"
 
-def read(path):
-    try:
-        with open(path, encoding="utf-8", errors="replace") as f:
-            return f.read()
-    except FileNotFoundError:
-        return None
-
-def oracle_obs(root, cid):
-    d = os.path.join(root, "go-run", cid.replace("/", "__"))
-    if not os.path.isdir(d):
-        return None
-    parts = []
-    for name in ("oracle.stdout", "oracle.split.err", "oracle.message.err"):
-        parts.append(f"{name}={read(os.path.join(d, name)) or ''}")
-    crash = read(os.path.join(d, "oracle.crash")) or read(os.path.join(d, "oracle.stderr")) or ""
-    parts.append("abort=" + head(crash))
-    return norm(" | ".join(parts))
+def rundir(root, cid):
+    return os.path.join(root, "go-run", cid.replace("/", "__"))
 
 def same_program(cid):
-    # The record's per-row oracle files are only evidence for THIS row if the
-    # record ran the same program: every .go file in the two go-run dirs
-    # (the fixture copy + the generated harness) byte-identical. A record
-    # whose go-run tree is from another run or tree (a copied results file
-    # beside an older go-run/) fails this, and the row's oracle files are
+    # The record's per-row oracle files are evidence for THIS row only if the
+    # record ran the same program: every .go file under the two go-run dirs
+    # (the fixture copy, the generated harness, and the gopath/ tree of a
+    # multi-package row) byte-identical. Otherwise the row's oracle files are
     # NOT compared — counted as unverifiable, never as agreement.
-    n = cid.replace("/", "__")
-    a, b = os.path.join(REC, "go-run", n), os.path.join(OUT, "go-run", n)
+    a, b = rundir(REC, cid), rundir(OUT, cid)
     if not (os.path.isdir(a) and os.path.isdir(b)):
         return False
-    fa = sorted(f for f in os.listdir(a) if f.endswith(".go"))
-    fb = sorted(f for f in os.listdir(b) if f.endswith(".go"))
-    if fa != fb or not fa:
-        return False
-    for f in fa:
-        with open(os.path.join(a, f), "rb") as x, open(os.path.join(b, f), "rb") as y:
-            if x.read() != y.read():
-                return False
-    return True
+    def gofiles(d):
+        out = {}
+        for dp, _, fs in os.walk(d):
+            for f in fs:
+                if f.endswith(".go"):
+                    p = os.path.join(dp, f)
+                    with open(p, "rb") as x:
+                        out[os.path.relpath(p, d)] = x.read()
+        return out
+    fa, fb = gofiles(a), gofiles(b)
+    return bool(fa) and fa == fb
+
+def oracle_obs(root, cid):
+    d = rundir(root, cid)
+    if not os.path.isdir(d):
+        return None
+    parts = [f"{n}={read(os.path.join(d, n)) or ''}" for n in ("oracle.stdout", "oracle.split.err", "oracle.message.err")]
+    crash = read(os.path.join(d, "oracle.crash")) or read(os.path.join(d, "oracle.stderr")) or ""
+    parts.append("abort=" + crash)
+    return norm(" | ".join(parts))
 
 def raw_abort(root, cid):
     # The oracle's own bytes, independent of the harness's classification:
-    # stdout, and stderr up to the first goroutine trace (program output +
-    # the panic/fatal message).
-    d = os.path.join(root, "go-run", cid.replace("/", "__"))
+    # stdout, and stderr up to the first goroutine trace.
+    d = rundir(root, cid)
     if not os.path.isdir(d):
         return None
-    err = read(os.path.join(d, "oracle.stderr")) or ""
-    return norm(head("stdout=" + (read(os.path.join(d, "oracle.stdout")) or "") + " | stderr=" + err))
+    return norm("stdout=" + (read(os.path.join(d, "oracle.stdout")) or "") + " | stderr=" + (read(os.path.join(d, "oracle.stderr")) or ""))
+
+def exhibited(root, cid):
+    # The membership lane's per-draw oracle observations: (draws, set).
+    t = read(os.path.join(root, "membership", cid, "draws.txt"))
+    if t is None:
+        return None
+    obs = [norm(l.split("\t", 1)[1] if "\t" in l else l) for l in t.splitlines() if l.strip()]
+    return (len(obs), set(obs))
+
+def fmt_set(ex):
+    if ex is None:
+        return "<no per-draw record>"
+    n, s = ex
+    return f"draws={n} exhibited={len(s)} {{" + " ; ".join(clip(x, 160) for x in sorted(s)) + "}"
 
 PINNED_ABORT = "abort classification: unknown first runtime frame/source"
 
 def compile_failure(root, cid):
-    err = read(os.path.join(root, "go-run", cid.replace("/", "__"), "oracle.stderr")) or ""
+    err = read(os.path.join(rundir(root, cid), "oracle.stderr")) or ""
     if err.startswith("# ") or "\n# " in err[:200]:
         lines = [l for l in err.splitlines() if l and not l.startswith("# ")]
         return lines[0] if lines else err.splitlines()[0]
@@ -349,53 +425,74 @@ with open(MANIFEST) as f:
 
 pin, alt = rows(os.path.join(OUT, "record", "latest.tsv")), rows(os.path.join(OUT, "latest.tsv"))
 cp, ca = causes(os.path.join(OUT, "cause.pin.tsv")), causes(os.path.join(OUT, "cause.alt.tsv"))
-cls = {k: [] for k in ("compile", "abort-same", "abort-differ", "abort-sampled", "abort-unverified", "obs-unverified", "flip", "detail", "sampling", "obs-strict", "obs-sampled", "missing")}
+KEYS = ("compile", "abort-same", "abort-differ", "abort-sampled", "abort-unverified", "flip", "detail",
+        "exhibited-differs", "sampling", "obs-strict", "obs-lastdraw", "obs-unverified", "missing")
+cls = {k: [] for k in KEYS}
+evidence = []   # (class, id, lines)
+def file(k, cid, summary, ev):
+    cls[k].append(summary)
+    evidence.append((k, cid, ev))
 same = 0
 for cid in sorted(set(pin) | set(alt)):
     if cid not in pin or cid not in alt:
-        cls["missing"].append(f"  {cid}: only in the {'record' if cid in pin else V + ' run'}")
+        file("missing", cid, f"  {cid}: only in the {'record' if cid in pin else ALT + ' run'}", [])
         continue
     (pr, ps, pd), (ar, as_, ad) = pin[cid], alt[cid]
     pc, ac = cp.get(cid, "?"), ca.get(cid, "?")
-    npd, nad = head(norm(pd)), head(norm(ad))
+    npd, nad = norm(pd), norm(ad)
     lane = lanes.get(cid, "?")
+    ep, ea = exhibited(REC, cid), exhibited(OUT, cid)
+    base = [f"lane={lane} pin={pr}/{ps}/{pc} {ALT}={ar}/{as_}/{ac}",
+            f"pin detail: {clip(npd)}", f"{ALT} detail: {clip(nad)}"]
+    if ep is not None or ea is not None:
+        base += [f"pin exhibited: {fmt_set(ep)}", f"{ALT} exhibited: {fmt_set(ea)}"]
     if (pr, ps, pc) != (ar, as_, ac) or npd != nad:
         cf = compile_failure(OUT, cid)
         if cf and not compile_failure(REC, cid):
-            cls["compile"].append(f"  {cid}  pin={pr}/{ps} {V}={ar}/{as_}  gc: {cf[:160]}")
+            file("compile", cid, f"  {cid}  pin={pr}/{ps} {ALT}={ar}/{as_}  gc: {cf[:160]}", base + [f"gc: {cf}"])
             continue
         if PINNED_ABORT in ad and PINNED_ABORT not in pd:
-            if not same_program(cid):
-                cls["abort-unverified"].append(cid)
-                continue
             pa, aa = raw_abort(REC, cid), raw_abort(OUT, cid)
-            if pa is not None and pa == aa:
-                cls["abort-same"].append(cid)
-            elif lane != "strict":
-                cls["abort-sampled"].append(f"{cid}[{lane}]")
+            ev = base + [f"pin raw abort: {clip(pa or '<absent>')}", f"{ALT} raw abort: {clip(aa or '<absent>')}"]
+            if lane == "membership":
+                file("abort-sampled", cid, f"{cid}[pin {fmt_set(ep).split(' {')[0]}; {ALT} {fmt_set(ea).split(' {')[0]}]", ev)
+            elif not same_program(cid):
+                file("abort-unverified", cid, cid, ev)
+            elif pa is not None and pa == aa:
+                file("abort-same", cid, cid, ev)
             else:
-                cls["abort-differ"].append(f"  {cid}  pin={pr}/{ps}\n      {oneline_diff(pa or '<pin oracle files absent>', aa or '<no oracle files>')}")
+                file("abort-differ", cid, f"  {cid}  pin={pr}/{ps} lane={lane}\n      {oneline_diff(pa or '<pin oracle files absent>', aa or '<no oracle files>')}", ev)
             continue
     if (pr, ps, pc) != (ar, as_, ac):
-        cls["flip"].append(f"  {cid}  pin={pr}/{ps}/{pc} {V}={ar}/{as_}/{ac}\n      {oneline_diff(npd, nad)}")
+        file("flip", cid, f"  {cid}  pin={pr}/{ps}/{pc} {ALT}={ar}/{as_}/{ac}\n      {oneline_diff(npd, nad)}", base)
+        continue
+    if ep is not None and ea is not None and ep[1] != ea[1]:
+        only_p, only_a = sorted(ep[1] - ea[1]), sorted(ea[1] - ep[1])
+        file("exhibited-differs", cid,
+             f"  {cid}  {pr}/{ps}  pin draws={ep[0]} exhibited={len(ep[1])}, {ALT} draws={ea[0]} exhibited={len(ea[1])}"
+             + "".join(f"\n      only pin: {clip(x, 200)}" for x in only_p)
+             + "".join(f"\n      only {ALT}: {clip(x, 200)}" for x in only_a), base)
         continue
     if npd != nad:
-        if pr == "PASS" and (ps == "membership" or re.sub(r"\d+", "N", npd) == re.sub(r"\d+", "N", nad)):
-            cls["sampling"].append(cid)
+        if pr == "PASS" and ps == "membership" and ep is not None and ea is not None:
+            file("sampling", cid, cid, base)   # same exhibited set; the captions' draw counts moved
         else:
-            cls["detail"].append(f"  {cid}  {pr}/{ps}/{pc}\n      {oneline_diff(npd, nad)}")
+            file("detail", cid, f"  {cid}  {pr}/{ps}/{pc}\n      {oneline_diff(npd, nad)}", base)
         continue
     if not same_program(cid):
         cls["obs-unverified"].append(cid)
         same += 1
         continue
+    if ep is not None and ea is not None:
+        same += 1   # the exhibited sets (above) are this lane's oracle evidence
+        continue
     po, ao = oracle_obs(REC, cid), oracle_obs(OUT, cid)
     if po is not None and ao is not None and po != ao:
-        lane = lanes.get(cid, "?")
+        ev = base + [f"pin oracle: {clip(po, 500)}", f"{ALT} oracle: {clip(ao, 500)}"]
         if lane == "strict":
-            cls["obs-strict"].append(f"  {cid}  {pr}/{ps} (lane strict)\n      {oneline_diff(po, ao)}")
+            file("obs-strict", cid, f"  {cid}  {pr}/{ps} (lane strict)\n      {oneline_diff(po, ao)}", ev)
         else:
-            cls["obs-sampled"].append(f"{cid}[{lane}]")
+            file("obs-lastdraw", cid, f"{cid}[{lane}]", ev)
         continue
     same += 1
 
@@ -403,11 +500,12 @@ npin, nalt = rows(os.path.join(OUT, "record", "negative-latest.tsv")), rows(os.p
 neg_diff, neg_same = [], 0
 for cid in sorted(set(npin) | set(nalt)):
     if cid not in npin or cid not in nalt:
-        neg_diff.append(f"  {cid}: only in the {'record' if cid in npin else V + ' run'}")
+        neg_diff.append(f"  {cid}: only in the {'record' if cid in npin else ALT + ' run'}")
         continue
     a, b = npin[cid], nalt[cid]
     if (a[0], a[1], norm(a[2])) != (b[0], b[1], norm(b[2])):
-        neg_diff.append(f"  {cid}  pin={a[0]}/{a[1]} {V}={b[0]}/{b[1]}\n      {oneline_diff(norm(a[2]), norm(b[2]))}")
+        neg_diff.append(f"  {cid}  pin={a[0]}/{a[1]} {ALT}={b[0]}/{b[1]}\n      {oneline_diff(norm(a[2]), norm(b[2]))}")
+        evidence.append(("negative", cid, [f"pin={a[0]}/{a[1]} {ALT}={b[0]}/{b[1]}", f"pin detail: {clip(norm(a[2]))}", f"{ALT} detail: {clip(norm(b[2]))}"]))
     else:
         neg_same += 1
 
@@ -424,60 +522,75 @@ if SI:
     a, b = verdicts("tools/nativefrontend/testdata/staticinit-oracle.tsv"), verdicts(SI)
     for k in sorted(set(a) | set(b)):
         if a.get(k) != b.get(k):
-            si_lines.append(f"  {k}: pin={a.get(k, '<absent>')} {V}={b.get(k, '<absent>')}")
+            si_lines.append(f"  {k}: pin={a.get(k, '<absent>')} {ALT}={b.get(k, '<absent>')}")
 
+n = lambda k: len(cls[k])
 ndiff = sum(len(v) for k, v in cls.items() if k != "obs-unverified")
-print(f"go-version-diversity: oracle {V} ({ALT_GOROOT}) vs the pinned oracle {PIN}; frontend and harness on {LIVE}")
+counts = (f"[oracle-compile={n('compile')} abort-unclassifiable={n('abort-same') + n('abort-differ') + n('abort-sampled') + n('abort-unverified')} "
+          f"(text-same={n('abort-same')} text-differs={n('abort-differ')} sampled-single-draw={n('abort-sampled')} unverified={n('abort-unverified')}) "
+          f"flip={n('flip')} detail={n('detail')} exhibited-set-differs={n('exhibited-differs')} sampling-captions={n('sampling')} "
+          f"oracle-obs-strict={n('obs-strict')} oracle-obs-lastdraw={n('obs-lastdraw')} oracle-obs-unverified={n('obs-unverified')} missing={n('missing')}]")
+print(f"go-version-diversity: oracle {ALT} ({ALT_GOROOT}) vs the pinned oracle {PIN}; frontend and harness on {LIVE}")
 print(f"  record: {REC}  (differential run exit {D_RC}, negative run exit {N_RC}: 1 = FAIL rows, read against the record below)")
 if TREE_NOTE:
     print(f"  {TREE_NOTE}")
-print("  REPORT-ONLY: never a re-pin; each difference is a finding for a human.")
-print(f"({V} vs pin) differential rows={len(set(pin) | set(alt))} same={same} differ={ndiff} "
-      f"[oracle-compile={len(cls['compile'])} abort-unclassifiable={len(cls['abort-same']) + len(cls['abort-differ']) + len(cls['abort-sampled'])} "
-      f"(abort-text-same={len(cls['abort-same'])} abort-text-differs={len(cls['abort-differ'])} abort-sampled={len(cls['abort-sampled'])} abort-unverified={len(cls['abort-unverified'])}) flip={len(cls['flip'])} detail={len(cls['detail'])} "
-      f"sampling={len(cls['sampling'])} oracle-obs-strict={len(cls['obs-strict'])} "
-      f"oracle-obs-sampled={len(cls['obs-sampled'])} oracle-obs-unverified={len(cls['obs-unverified'])} missing={len(cls['missing'])}]")
-print(f"({V} vs pin) negative rows={len(set(npin) | set(nalt))} same={neg_same} differ={len(neg_diff)}")
+if CONTROL:
+    print("  CONTROL RUN: the pin vs the pin on a fresh run — every difference below is run-to-run NOISE by definition (the noise floor).")
+else:
+    print("  REPORT-ONLY: never a re-pin; each difference is a finding for a human.")
+    print(f"  PINNED ABORT CLASSIFIER (tools/coverageharness/abortkind.go, go1.26.5's runtime/panic.go lines): under {V} every panic/fatal row is")
+    print("  NOT machine-compared (raw text only, below), and sampled (membership) abort rows are SINGLE-DRAW under diversity.")
+    floor = read(CONTROL_REPORT)
+    fl = [l for l in (floor or "").splitlines() if l.startswith("(") and " vs pin) " in l]
+    if fl:
+        print("  NOISE FLOOR (latest --control run of the pin): " + " | ".join(l.split(") ", 1)[1] for l in fl))
+    else:
+        print("  NOISE FLOOR: no --control report found — run `scripts/go-version-diversity --control` to calibrate.")
+print(f"({ALT} vs pin) differential rows={len(set(pin) | set(alt))} same={same} differ={ndiff} {counts}")
+print(f"({ALT} vs pin) negative rows={len(set(npin) | set(nalt))} same={neg_same} differ={len(neg_diff)}")
 if SI:
-    print(f"({V} vs pin) staticinit shapes differ={len(si_lines)}")
+    print(f"({ALT} vs pin) staticinit shapes differ={len(si_lines)}")
 heads = [
-    ("compile", f"oracle does not compile under {V} (a fixture needs a newer/removed toolchain feature — by construction)"),
-    ("abort-differ", f"abort NOT classifiable under {V} (see below) AND the oracle's raw abort text differs from the pin's"),
+    ("compile", f"oracle does not compile under {ALT} (a fixture needs a newer/removed toolchain feature — by construction)"),
+    ("abort-differ", f"abort NOT machine-compared under {ALT}, and the oracle's raw abort text differs from the pin's"),
     ("flip", "result/stage/cause changed"),
     ("detail", "detail changed (same result/stage/cause)"),
-    ("obs-strict", "oracle observation changed, all columns equal (strict lane)"),
+    ("exhibited-differs", "membership: one side exhibited a member the other never did (SAMPLING-AMBIGUOUS: absence within the draw budget is not impossibility; both draw counts shown)"),
+    ("obs-strict", "oracle output changed, all columns equal (strict lane)"),
     ("missing", "row present on one side only"),
 ]
 for k, h in heads:
     if cls[k]:
-        print(f"-- {h} ({len(cls[k])})")
+        print(f"-- {h} ({n(k)})")
         print("\n".join(cls[k]))
-if cls["abort-same"]:
-    print(f"-- abort NOT classifiable under {V}, raw abort text identical to the pin's ({len(cls['abort-same'])}): the harness's abort "
-          f"classifier is source-pinned to the pin's runtime (tools/coverageharness/abortkind.go: runtime/panic.go:879/1253/1229), so "
-          f"every panic/fatal row refuses under another toolchain BY DESIGN — these rows are NOT compared by the machine under {V}; "
-          f"only stdout + the stderr head (program output, panic/fatal message) were compared, and agree: " + " ".join(cls["abort-same"]))
-if cls["abort-unverified"]:
-    print(f"-- abort NOT classifiable under {V}, and the record's oracle files are not this program's (stale or absent go-run/ in the record) — NOT compared ({len(cls['abort-unverified'])}): " + " ".join(cls["abort-unverified"]))
-if cls["obs-unverified"]:
-    print(f"-- columns agree, but the record's oracle files are not this program's — the oracle-observation check did NOT run on these rows ({len(cls['obs-unverified'])}; counted in same=): " + " ".join(cls["obs-unverified"][:40]) + (" …" if len(cls["obs-unverified"]) > 40 else ""))
-if cls["abort-sampled"]:
-    print(f"-- abort NOT classifiable under {V} on a sampled lane, the last draw's raw text differs (schedule-dependent; not by itself a version signal) ({len(cls['abort-sampled'])}): " + " ".join(cls["abort-sampled"]))
-if cls["sampling"]:
-    print(f"-- sampling captions moved (PASS; membership draws, or digits only — not a version signal) ({len(cls['sampling'])}): " + " ".join(cls["sampling"]))
-if cls["obs-sampled"]:
-    print(f"-- oracle's last sampled observation changed (non-strict lanes; schedule-dependent, PASS/FAIL unchanged — not by itself a version signal) ({len(cls['obs-sampled'])}): " + " ".join(cls["obs-sampled"]))
+inline = [
+    ("abort-same", f"abort NOT machine-compared under {ALT}, raw abort text identical to the pin's"),
+    ("abort-sampled", f"abort on a membership row: SINGLE-DRAW under {ALT} (the first panic draw stops the row); exhibited sets in the appendix"),
+    ("abort-unverified", "abort NOT machine-compared, and the record's oracle files are not this program's — NOT compared"),
+    ("sampling", "membership PASS, same exhibited set, only the captions' draw counts moved"),
+    ("obs-lastdraw", "racy/confluent row: the LAST draw's oracle output changed (no per-draw record for these lanes; schedule-dependent, not by itself a version signal)"),
+    ("obs-unverified", "columns agree, but the record's oracle files are not this program's — the oracle-output check did NOT run (counted in same=)"),
+]
+for k, h in inline:
+    if cls[k]:
+        print(f"-- {h} ({n(k)}): " + " ".join(cls[k]))
 if neg_diff:
     print(f"-- negative lane changed ({len(neg_diff)})")
     print("\n".join(neg_diff))
 if si_lines:
     print(f"-- static-init verdicts changed ({len(si_lines)})")
     print("\n".join(si_lines))
+print()
+print(f"== EVIDENCE (per classified row; normalized, clipped) — {len(evidence)} row(s)")
+for k, cid, ev in evidence:
+    print(f"[{k}] {cid}")
+    for line in ev:
+        print(f"    {line}")
 PY
 then
   echo "go-version-diversity: the comparison failed (see above) — no report" >&2
   exit 1
 fi
-cat "$OUT/report.txt"
-echo "go-version-diversity: report written to $OUT_REL/report.txt"
+sed '/^== EVIDENCE/,$d' "$OUT/report.txt"
+echo "go-version-diversity: report (with the per-row EVIDENCE appendix) written to $OUT_REL/report.txt"
 exit 0

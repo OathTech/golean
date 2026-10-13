@@ -71,7 +71,7 @@ if [[ -n "$ORACLE_GOTOOLCHAIN" ]]; then
   mkdir -p "$GO_BUILD_CACHE"
   _canary="$(mktemp -d "${TMPDIR:-/tmp}/golean-oracle-canary.XXXXXX")"
   printf 'package main\n\nimport (\n\t"fmt"\n\t"runtime"\n)\n\nfunc main() { fmt.Print(runtime.Version()) }\n' > "$_canary/main.go"
-  _said="$(cd "$_canary" && env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" "${oracle_toolchain_env[@]}" go run . 2>&1)"
+  _said="$(cd "$_canary" && env GO111MODULE=off GOFLAGS= GOCACHE="$GO_BUILD_CACHE" "${oracle_toolchain_env[@]}" go run . 2>&1)"
   rm -rf "$_canary"
   if [[ "$_said" != "$ORACLE_GOTOOLCHAIN" ]]; then
     echo "coverage-negative: GOLEAN_ORACLE_GOTOOLCHAIN canary reports runtime.Version()='$(printf '%s' "$_said" | head -c 300)', not $ORACLE_GOTOOLCHAIN — the switch did not take; refusing" >&2

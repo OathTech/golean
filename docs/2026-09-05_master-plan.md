@@ -401,7 +401,7 @@ sampling budget K=32 on `--diff`, K=80 on `--slow` ([USER] 2026-09-03,
 Pin `go1.26.5` in `baselines/go-oracle-pin`; enforced by ci step 166 and
 by every runner (`scripts/diff-coverage:326-339`, `coverage-negative:
 47-60`, `gotest-triage:100-101`, `cedar-census:88-89`, `lower-diagnose:
-78-79`, `oracle-version-sweep:120-122`, `oracle-386-static:227-229`).
+78-79`, `oracle-version-sweep:120-122` (retired 2026-10-13, superseded by `scripts/go-version-diversity`: it floated the frontend with the oracle and judged result/stage only), `oracle-386-static:227-229`).
 Legs ([USER] fidelity decision 4, `docs/assessment/decisions-2026-08-31.md`
 item 4; report `docs/2026-09-01_oracle-legs.md`): version sweep —
 only ONE toolchain on the box, null-validated on a 50-case sample (48

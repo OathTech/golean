@@ -62,7 +62,8 @@ TARGET_DIR="$(realpath -e -- "$TARGET_DIR")"
 # Output root: EXACTLY artifacts/lower-diagnose/ or a directory under it
 # (structural: a diagnostic can never land beside a wire the gate reads —
 # not in artifacts/coverage, not at a bare artifacts/, not anywhere an
-# environment override points; the pattern of scripts/oracle-version-sweep's
+# environment override points; the pattern of the retired (git history)
+# scripts/oracle-version-sweep's
 # judged-tree refusal, inverted to an allowlist). `..` segments refused as
 # written, before normalization.
 DIAG_ABS="$(realpath -m -- "$ROOT/artifacts/lower-diagnose")"

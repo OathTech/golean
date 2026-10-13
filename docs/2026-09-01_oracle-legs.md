@@ -22,6 +22,14 @@ round, O4.)
 
 ## Leg 1 — the oracle version sweep: BUILT-AND-NULL-VALIDATED
 
+> **RETIRED 2026-10-13** ([AGENT] lane apparatus/go-diversity-1013, review
+> fix round): `scripts/oracle-version-sweep` is deleted, superseded by
+> `scripts/go-version-diversity` (`docs/coverage-suite-structure.md`, «Go
+> version diversity»), which switches the ORACLE alone (the frontend stays
+> on the pin), covers the negative lane, and compares causes, details,
+> exhibited sets and the oracle's own output. The text below is the
+> historical record; the tool is in git history.
+
 **Tool:** `scripts/oracle-version-sweep`. Given
 `GOLEAN_ORACLE_GO=<go binary | GOROOT dir>`, it re-runs the
 differential corpus (`scripts/diff-coverage`, the standing runner —

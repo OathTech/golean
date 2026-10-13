@@ -690,7 +690,11 @@ soundness alarm — a killed command has decided nothing
 
 ### Go version diversity (report-only; release-readiness item 32)
 
-`scripts/capped scripts/go-version-diversity [--staticinit] [--record <dir>] <goX.Y.Z>`
+```sh
+scripts/capped scripts/go-version-diversity [--staticinit] [--record <dir>] [--reuse] <goX.Y.Z>
+scripts/capped scripts/go-version-diversity --control [--staticinit] [--record <dir>] [--reuse]
+```
+
 re-runs the differential and negative corpora with ONLY THE ORACLE on another
 Go toolchain and compares every row with the recorded run of record
 (`artifacts/coverage/`, at the pin and the current manifests — else it refuses:
@@ -701,33 +705,52 @@ the module-cache toolchain's `PATH`/`GOROOT` (Go ignores `GOTOOLCHAIN` in the
 oracle's GOPATH mode — measured), a `runtime.Version()` canary checks the switch
 took, and the native frontend and harness stay on the pin, so the lowering is
 not a second variable. Both toolchains are in each run's meta
-(`go_toolchain_frontend`, `go_toolchain_oracle`, `go_drift_actual=true`), and an
+(`go_toolchain_frontend`, `go_toolchain_oracle`, `go_drift_actual`), and an
 oracle off the pin still needs `GOLEAN_ALLOW_GO_DRIFT=1` (the script sets it).
 Artifacts go under `.tmp/go-diversity/<v>/`; the report is printed and written
-to `report.txt` there.
+to `report.txt` there, ending with a per-row EVIDENCE appendix (class, both
+details, both exhibited sets or raw abort texts) so it stands alone after the
+artifacts are cleaned. `--control` runs the pin itself through the same seam
+on a fresh run: everything it reports is run-to-run noise, and a version report
+prints the latest control's counts as its NOISE FLOOR. `--reuse` re-compares
+the last run and refuses if its per-row evidence (`go-run/`, `membership/`) is
+gone.
 
 What it compares: per row result, stage, cause key and the normalized detail
-(artifact roots, GOROOT paths, addresses, goroutine ids); on rows where all of
-those agree, the oracle's own recorded observation (stdout, the fd-2 split, the
-abort message); per negative row result, stage and detail; with
-`--staticinit`, gc's static-init verdict table re-recorded under `<v>`. Classes:
-«oracle does not compile under `<v>`» (a fixture needs a feature that toolchain
-lacks — by construction, not a behaviour change), result/stage/cause flips,
-detail changes, membership sampling captions that moved (not a version signal),
-and oracle-observation changes (strict rows listed; sampled lanes counted).
+(`bytes` observation values decoded, then artifact roots, GOROOT paths,
+addresses, goroutine ids; tracebacks cut); per membership row the EXHIBITED
+SETS (distinct per-draw oracle observations); on rows where all of those agree,
+the oracle's own recorded output (stdout, the fd-2 split, the abort message —
+the last draw only on racy/confluent rows, which keep no per-draw record), and
+only where the record ran byte-identical program files; per negative row result,
+stage and detail; with `--staticinit`, gc's static-init verdict table
+re-recorded under `<v>`. Classes: «oracle does not compile under `<v>`» (a
+fixture needs a feature that toolchain lacks — by construction, not a behaviour
+change); result/stage/cause flips; detail changes; membership rows where one
+side exhibited a member the other never did (sampling-ambiguous: both draw
+counts are shown); membership PASS rows whose captions moved with the same
+exhibited set; oracle-output changes.
+
+Two effects of the PINNED ABORT CLASSIFIER (`tools/coverageharness/abortkind.go`
+pins go1.26.5's `runtime/panic.go` frame lines; trusted surface, unchanged):
+under any non-pin toolchain (1) every panic/fatal row (about 12 % of the corpus)
+refuses classification, so the machine does not compare it — the report
+compares those rows on the oracle's raw text only (program output and the
+panic/fatal message); (2) a membership row with a panic member stops at its
+first such draw, so sampled abort rows are SINGLE-DRAW under diversity.
 
 What a difference means: Go's behaviour differs between the two versions on
 that row (the machine's side does not depend on the Go version) — a latitude
 the model may need to admit, a version-specific behaviour the pin's written
-reason should name, or a fixture tied to a newer toolchain. It is a FINDING for
-a human, never a re-pin: the oracle of record moves only deliberately, with a
-full run and a written reason (CLAUDE.md, trusted surface 2). Exit 0 when the
-runs complete (differences included), 1 when a run could not complete, 2 on a
-refusal. Only toolchains already in the module cache run inside the sandbox;
-the [USER] fetches one outside it with `GOTOOLCHAIN=<v> go version`.
-`scripts/oracle-version-sweep` (2026-09-01) is the older probe: it puts the
-candidate first on PATH for the whole run, frontend included, and compares
-(result, stage) only.
+reason should name, or a fixture tied to a newer toolchain — unless the control
+run shows the same class as noise. It is a FINDING for a human, never a re-pin:
+the oracle of record moves only deliberately, with a full run and a written
+reason (CLAUDE.md, trusted surface 2). Exit 0 when the runs complete
+(differences included), 1 when a run could not complete, 2 on a refusal. Only
+toolchains already in the module cache run inside the sandbox; the [USER]
+fetches one outside it with `GOTOOLCHAIN=<v> go version`. It supersedes
+`scripts/oracle-version-sweep` (2026-09-01, retired 2026-10-13: it floated the
+frontend with the oracle and judged result/stage only; in git history).
 
 ## Migration Plan
 

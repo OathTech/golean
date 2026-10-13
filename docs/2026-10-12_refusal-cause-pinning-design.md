@@ -331,7 +331,7 @@ half):
    [USER]-approved D1); 0 result/stage moves; 239 FAIL rows keyed; the key
    grammar is this note §3». The forward re-pin guard is unaffected (it
    reads columns 1-2). Confirm that `check-bugs`, `check-coverage`,
-   `oracle-version-sweep`, `choice-trace-summarize` and the lowerdiag test
+   `oracle-version-sweep` (retired 2026-10-13, superseded by `scripts/go-version-diversity`: it floated the frontend with the oracle and judged result/stage only), `choice-trace-summarize` and the lowerdiag test
    read only columns ≤ 3 (checked here: all index columns 1-3 by position).
 6. `scripts/coverage-negative`: the frontend leg of §3, using the frontend
    built at `artifacts/coverage/bin/nativefrontend`, or built by the

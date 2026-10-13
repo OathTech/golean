@@ -254,10 +254,11 @@ fi
 # is not a second variable. The seam is the runner, not the harness binary:
 # the harness never runs `go`; the oracle's `go run` is this script's.
 # HOW, and why not GOTOOLCHAIN: the oracle runs in GOPATH mode
-# (GO111MODULE=off) and Go IGNORES GOTOOLCHAIN there — measured: under
-# `GO111MODULE=off GOTOOLCHAIN=go1.24.9`, `go version` says go1.24.9 but
-# `go run` compiles with /usr/local/go's tools and runtime.Version() says
-# go1.26.5. So the alternate's GOROOT is resolved ONCE (`GOTOOLCHAIN=<v>
+# (GO111MODULE=off) and Go IGNORES GOTOOLCHAIN there — measured: an
+# ambient `GOTOOLCHAIN=go1.24.9 go version` says go1.24.9, but with
+# GO111MODULE=off added (`go version`, `go env GOVERSION`, `go run`) the go
+# command stays on /usr/local/go: `go run` compiles with its tools and
+# runtime.Version() says go1.26.5. So the alternate's GOROOT is resolved ONCE (`GOTOOLCHAIN=<v>
 # go env GOROOT` in module mode: the module-cache toolchain), and the
 # oracle command alone gets PATH=<that>/bin:…, GOROOT=<that>,
 # GOTOOLCHAIN=local. A CANARY then builds and runs a runtime.Version()
