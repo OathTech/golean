@@ -172,6 +172,31 @@ expect_refusal low-surrogate      'JSON parse error' 'unpaired low surrogate'
 expect_refusal invalid-utf8       'JSON parse error' 'not valid UTF-8'
 expect_refusal over-depth         'JSON parse error' 'JSON nesting deeper than'
 
+# THE ENTRY RULE's two texts (Codex F5, release-readiness row 41; RULED [USER] Mike 2026-10-13,
+# verbatim, relayed: «Yes, do option (1)» — keep `main` unexported in every mode and make the
+# refusal explain itself; GoLean/CLI.lean entryFunc). The fixture declares `func main` (the
+# frontend's default mode admits it, BUG-125) and the wire never holds it: `--function main`
+# refuses naming the cause and the way out; any other missing name keeps the pre-F5 text
+# byte-for-byte (no BUG-125 clause).
+expect_entry_refusal() {  # fn fragment... (and the main-only clause must be ABSENT for other names)
+  local fn="$1" out rc=0 cause; shift
+  out="$("$GOLEAN" native-json-run --input "$gate_scratch/program.json" --function "$fn" 2>&1)" || rc=$?
+  if [[ $rc -ne 1 || "$out" != *'"status":"error"'* ]]; then
+    echo "check-wire-boundary: FAIL [entry-$fn] — expected the CLI's refusal (exit 1, status error), got exit $rc: $out" >&2; exit 1
+  fi
+  for cause in "$@"; do
+    if [[ "$out" != *"$cause"* ]]; then
+      echo "check-wire-boundary: FAIL [entry-$fn] — refused, but the refusal does not name '$cause': $out" >&2; exit 1
+    fi
+  done
+  if [[ "$fn" != main && "$out" == *'BUG-125'* ]]; then
+    echo "check-wire-boundary: FAIL [entry-$fn] — the main-only explanation leaked onto another missing name: $out" >&2; exit 1
+  fi
+  echo "ok [entry-$fn] refused, naming: $*"
+}
+expect_entry_refusal main   'entry function not found: main' 'the frontend admits a program'"'"'s main (BUG-125: it must exist) but never exports it' 'run one of them with --function (docs/cli.md)'
+expect_entry_refusal nosuch 'entry function not found: nosuch'
+
 # THE `unseq` NODE (evaluation-order model v2.1 Stage C, 2026-09-19; design
 # docs/2026-09-19_unseq-stage-c-design.md §5): the hand-built W1 wire
 # (Tests/unseq-wire/w1.json, build.py) is the positive control — on the canonical
@@ -1095,4 +1120,4 @@ for sub in coverage-observations choice-trace; do
     echo "ok [cr-flag-$sub $flag] refused by name (exit 2): native-json-run's flag alone"
   done
 done
-echo 'Wire boundary gate: PASS (11 byte-level controls + 56 unseq-node controls + 13 promotion-record controls + 16 B6 numeric-locals controls + 5 rand-intn controls + 4 type-key controls + 10 entry-argument controls + 12 enumerator entry-argument controls + 5 missing-input controls + 2 unwritable-output controls + 7 dedup-flag controls + 4 readout-refusal controls + 31 func-refusal controls + 3 CLI-error-shape controls + 36 seeded-entry controls + 17 choice-report controls through the real CLI)'
+echo 'Wire boundary gate: PASS (11 byte-level controls + 2 entry-rule controls + 56 unseq-node controls + 13 promotion-record controls + 16 B6 numeric-locals controls + 5 rand-intn controls + 4 type-key controls + 10 entry-argument controls + 12 enumerator entry-argument controls + 5 missing-input controls + 2 unwritable-output controls + 7 dedup-flag controls + 4 readout-refusal controls + 31 func-refusal controls + 3 CLI-error-shape controls + 36 seeded-entry controls + 17 choice-report controls through the real CLI)'

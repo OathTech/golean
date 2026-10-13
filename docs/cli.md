@@ -32,7 +32,14 @@ oracle harness supplies `main` around the subject function and the machine's ent
 `--function`, so the check is skipped; it changes nothing else, and is a no-op on a package that
 declares `func main`. A non-`main` (library) package is not subject to the rule. (Not to be
 confused with `tools/coverageharness`'s `--subject`, which names the subject *function*: a
-different binary.)
+different binary.) In either mode the wire holds the package's named functions and **never
+`main`**: the default mode requires `func main` (BUG-125) and exports everything else, so a run
+names one of those functions with `--function`; `--function main` refuses with `entry function
+not found: main — the frontend admits a program's main (BUG-125: it must exist) but never
+exports it; the wire holds the package's other functions; run one of them with --function
+(docs/cli.md)` (status `error`, exit 1; `GoLean/CLI.lean` `entryFunc`). This is the contract
+([USER]-ruled 2026-10-13: keep `main` unexported in every mode, explain the refusal), not a gap: a
+program's `main` is the oracle's entry, the machine's is the named function.
 
 **Compiler directives are refused by name** (`directives.go`, BUG-127; [USER]-ruled 2026-10-13).
 At the same file-selection step, in the root package and every case-local import, every comment

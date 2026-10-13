@@ -79,13 +79,21 @@ def entryParamUnderlying (types : GoCore.TypeEnv) : Nat → GoCore.Ty → Except
   | _, t => .ok t
 
 /-- The entry function and the arity check of `entryArgValues`/`entrySeedArgs` (the unseeded
-text byte-identical to the pre-seed CLI's: the BUG-119 controls pin it). -/
+text byte-identical to the pre-seed CLI's: the BUG-119 controls pin it). A missing `main` is
+the one named case (Codex F5, release-readiness row 41; RULED [USER] Mike 2026-10-13, verbatim,
+relayed: «Yes, do option (1)» — keep `main` unexported in every mode and make the refusal explain
+itself): the frontend admits a program only with `func main` (BUG-125) and never exports it, so
+`--function main` says why and names the way out; every other missing name keeps the old text. -/
 def entryFunc (program : GoCore.Program) (name : String) (args : Array EntryArg) (seeded : Bool) :
     Except String GoCore.Func := do
   let func ←
     match GoCore.findFunctionIn? program.funcs ⟨name⟩ with
     | some func => pure func
-    | none => throw s!"entry function not found: {name}"
+    | none =>
+        if name == "main" then
+          throw "entry function not found: main — the frontend admits a program's main (BUG-125: it must exist) but never exports it; the wire holds the package's other functions; run one of them with --function (docs/cli.md)"
+        else
+          throw s!"entry function not found: {name}"
   if func.args.size != args.size then
     let flags := if seeded then "--arg-int/--arg-bool/--arg-ref/--arg-nil" else "--arg-int/--arg-bool"
     throw s!"entry function {name} takes {func.args.size} parameter(s), got {args.size} command-line argument(s) ({flags})"
