@@ -1,5 +1,14 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3987 (3747 PASS / 240 FAIL)
+# cases: 3989 (3749 PASS / 240 FAIL)
+# re-pinned: 2026-10-13 [AGENT], lane frontend/chan-elem-limit-1013 — release-readiness row 34 («gc's 64 KiB channel-element limit
+#   is not mirrored … the BUG-125 class (a program gc rejects, answered)»), under [USER] Mike's 2026-10-12 backlog mandate «manage
+#   some agents working through the backlog, starting with the ones that require no input from me», relayed. WHY: the native
+#   frontend now mirrors gc's type-size rejections after type-check (tools/nativefrontend/gclimits.go: the channel element
+#   >= 1<<16, the array larger than the address space, the struct too large) as a whole-program `type-check:` rejection; these
+#   two rows are the ACCEPTED boundary control. 3987 + 2 = 3989; PASS 3747 + 2 = 3749; FAIL 240. No existing row moved; 0
+#   PASS->non-PASS; no removal. NEW rows (one package, Corpus/coverage/exec/channels/element-size-limit/):
+#     byte-65535-roundtrip PASS — gc 34: a [65535]byte element (the largest gc accepts) sent and received on a buffered channel.
+#     int-8191-nil PASS — gc 1: `var c chan [8191]int` (65528 bytes; [8192]int, exactly 65536, is rejected — a negative row).
 # re-pinned: 2026-10-13 [AGENT], lane frontend/decl-budgets-1013 FIX ROUND (the pre-merge adversarial review, relayed by the [AGENT]
 #   coordinator): BLOCKER-1 — the signature-opaque budget-array marker is keyed by the frontend's canonical identity key
 #   (renderTypeKey/ifaceKeyCtx), not a source spelling, so [N]byte/[N]uint8, [N]rune/[N]int32, an alias and func parameter names
@@ -2600,6 +2609,8 @@ PASS	channels/defer-close-two/first	-	-
 PASS	channels/defer-close-two/second	-	-
 PASS	channels/defer-close-two/unrelated	-	-
 PASS	channels/directional-types	-	-
+PASS	channels/element-size-limit/byte-65535-roundtrip	-	-
+PASS	channels/element-size-limit/int-8191-nil	-	-
 PASS	channels/make-directional	-	-
 PASS	channels/make-edge/buffered-fifo	-	-
 PASS	channels/make-edge/close-does-not-drain	-	-

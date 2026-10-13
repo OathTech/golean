@@ -1,0 +1,2 @@
+# expected_substring	features
+channel element type too large (>64kB)	channels,arrays,compile_error

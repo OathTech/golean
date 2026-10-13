@@ -530,6 +530,19 @@ requires a written profound reason. The complete list:
 5. **Body-less (externally-implemented) function declarations** —
    assembly linkage; not representable in the corpus or the machine's
    trust story (P3 SKIPPED row records it).
+6. **gc's implementation size limits** (not language: the spec has no
+   size limit; gc applies them in `cmd/compile/internal/types/size.go`
+   after type-checking and rejects the compilation unit). MIRRORED
+   2026-10-13 ([AGENT], lane `frontend/chan-elem-limit-1013`,
+   release-readiness row 34) as a whole-program `type-check:` rejection
+   (`tools/nativefrontend/gclimits.go`, over exactly what gc sizes): the
+   channel element `>= 1<<16`, the array larger than the address space,
+   the struct too large — negative rows `channels/chan-elem-*`,
+   `generics/chan-elem-too-large-*`, `arrays/array-larger-than-address-
+   space`, `structs/struct-too-large`. NOT YET mirrored (row 34): the
+   stack frame limit (`ssagen/pgen.go`, «stack frame too large (>1GB)»),
+   a per-function backend rule; the interface-too-large limit
+   (`len(methods) >= MaxWidth/8`) is unreachable in source.
 
 ## 6. The concurrency-entangled design questions
 

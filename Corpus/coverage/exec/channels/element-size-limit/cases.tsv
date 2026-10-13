@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+byte-65535-roundtrip	channelElemMaxBytes	-	ok	-	channels,make,arrays
+int-8191-nil	channelElemMaxInts	-	ok	-	channels,nil,arrays

@@ -4887,7 +4887,8 @@ not — the frontend exports and the machine runs it; mirroring it as a
 REJECTION is a whole-program post-type-check scan (the negative lane needs
 a `type-check:` exit, not a per-declaration refusal) plus gc's exact sizing
 reach (types in uninstantiated generic code are never sized), not a
-one-line chan-arm check — left to its own lane.
+one-line chan-arm check — left to its own lane. (TAKEN 2026-10-13: release-readiness row 34, lane
+`frontend/chan-elem-limit-1013`, `tools/nativefrontend/gclimits.go`.)
 
 ## BUG-080 — race detector U4: the sync primitives' OWN state-word accesses are unmodeled, so a plain access to a primitive in use by another goroutine (copy / overwrite) runs to a value where gc's -race build refuses
 

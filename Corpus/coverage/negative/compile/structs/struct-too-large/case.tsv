@@ -1,0 +1,2 @@
+# expected_substring	features
+bad type: struct	structs,arrays,compile_error

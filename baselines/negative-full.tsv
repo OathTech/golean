@@ -1,6 +1,17 @@
 # GoLean negative-corpus (compile-rejection) baseline
 # recorded: 2026-08-18  commit: f68a4d86+ (spec-truth P3 slice 2)  oracle: go build (rejection)  [header corrected 2026-08-31: the old "+ frontend fail-closed" conjunct claimed a check that does not exist — scripts/coverage-negative invokes no GoLean tool (p2-fact claim 5)]
-# manifest_cases: 395  pass: 394  fail: 1
+# manifest_cases: 403  pass: 402  fail: 1
+# re-pinned: 2026-10-13 [AGENT], lane frontend/chan-elem-limit-1013 — release-readiness row 34 (gc's 64 KiB channel-element
+#   limit not mirrored: the BUG-125 class), under [USER] Mike's 2026-10-12 backlog mandate, relayed. EIGHT BORN ROWS, all PASS
+#   (gc rejects with the substring AND the native frontend refuses at type-check — tools/nativefrontend/gclimits.go, the
+#   post-type-check mirror of cmd/compile/internal/types/size.go); each was frontend-accepts before the lane (exit 0, measured):
+#     channels/chan-elem-too-large, -exactly-64k ([8192]int = 65536: gc's bound is width >= 1<<16), -unused-type (gc sizes
+#     every declared type), -padding (1 + 7 + 65528); generics/chan-elem-too-large-instantiated (f[int]; f uninstantiated and
+#     f[byte] are accepted), -method (a generic type's method body, sized once G[int] exists) — «channel element type too
+#     large (>64kB)»; arrays/array-larger-than-address-space (*[1<<50]byte; MaxWidth = 1<<50 on amd64) — «larger than
+#     address space»; structs/struct-too-large (two [1<<49]byte fields; calcStructOffset's limit, which gc go1.26.5 reports
+#     as an internal compiler error) — «bad type: struct». No other row moves; no flip. Counts: 395 + 8 = 403; PASS 394 + 8 =
+#     402; FAIL 1. Measured by capped scripts/ci --diff at the lane's tip.
 # Columns: result<TAB>id<TAB>stage (sorted by id); detail omitted (churns).
 # Regression = any flip/stage change vs this file (scripts/coverage-baseline-diff
 # --no-cause --baseline baselines/negative-full.tsv artifacts/coverage/negative-latest.tsv;
@@ -36,6 +47,7 @@
 result	id	stage
 PASS	arrays/array-compare-different-length	-
 PASS	arrays/array-index-float	-
+PASS	arrays/array-larger-than-address-space	-
 PASS	arrays/array-length-mismatch-assign	-
 PASS	arrays/array-literal-too-many	-
 PASS	arrays/array-negative-key	-
@@ -76,6 +88,10 @@ PASS	builtins/new-no-args	-
 PASS	builtins/new-too-many-args	-
 PASS	channels/assign-receive-to-send	-
 PASS	channels/assign-send-to-receive	-
+PASS	channels/chan-elem-exactly-64k	-
+PASS	channels/chan-elem-too-large	-
+PASS	channels/chan-elem-too-large-padding	-
+PASS	channels/chan-elem-too-large-unused-type	-
 PASS	channels/close-receive-only	-
 PASS	channels/make-channel-float-len	-
 PASS	channels/make-channel-too-many-args	-
@@ -179,6 +195,8 @@ PASS	generics/alias-missing-instantiation	-
 PASS	generics/alias-noncomparable-argument	-
 PASS	generics/alias-wrong-arity	-
 PASS	generics/bad-type-argument	-
+PASS	generics/chan-elem-too-large-instantiated	-
+PASS	generics/chan-elem-too-large-method	-
 PASS	generics/compare-unconstrained	-
 PASS	generics/composite-literal-mixed-underlying	-
 PASS	generics/empty-type-set	-
@@ -412,6 +430,7 @@ PASS	structs/selector-composite-literal-address	-
 PASS	structs/selector-conversion-result-address	-
 PASS	structs/selector-conversion-result-assign	-
 PASS	structs/selector-unaddressable-literal	-
+PASS	structs/struct-too-large	-
 PASS	structs/tag-function-argument	-
 PASS	structs/tag-map-key-mismatch	-
 PASS	structs/tag-return-mismatch	-

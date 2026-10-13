@@ -1,0 +1,2 @@
+# expected_substring	features
+larger than address space	arrays,pointers,compile_error

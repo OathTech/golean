@@ -765,6 +765,13 @@ func (l *loader) loadProgram(mainFiles []*ast.File) ([]*sourcePkg, error) {
 		unit.pkg = pkg
 	}
 
+	// gc's type-size limits (gclimits.go, release-readiness row 34): a
+	// whole-program, type-check-class rejection — gc rejects the
+	// compilation unit, so nothing may lower.
+	if err := checkGcSizeLimits(l.fset, order); err != nil {
+		return nil, err
+	}
+
 	// Reachability pruning of the LIBRARY units (stdlibreach.go): from
 	// the program's roots (every declaration of every non-library unit,
 	// plus the library units' own init() functions and effectful
