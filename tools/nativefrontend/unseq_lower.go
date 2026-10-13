@@ -784,14 +784,16 @@ func (b *unseqBuilder) structLitHead(cl *ast.CompositeLit) (map[string]any, erro
 			keyedTypes[name] = e.goTypeOf(kv.Value)
 			continue
 		}
-		// A BLANK field's operand (BUG-127; emit.go `emitBlankFieldOperand`
+		// A BLANK field's operand (BUG-129; emit.go `emitBlankFieldOperand`
 		// is the legacy path's twin): Go evaluates it and discards it, so it
 		// is lowered here IN SOURCE ORDER with its siblings for its
 		// occurrences alone — its calls are E1-ordered events, its reads and
 		// checked accesses occurrences the tape orders exactly as a
 		// non-blank field's — and its cell is consumed by nothing; the head
 		// stores the field's zero value below. A constant or `nil` operand
-		// has no run-time evaluation at all.
+		// has no run-time evaluation at all. BUG-129's OPEN F1/F2 (gc drops
+		// a side-effect-free panicky blank operand with its panic; never
+		// evaluates a package-level literal's blank operand) hold here too.
 		if i := len(positional); i < st.NumFields() && st.Field(i).Name() == "_" {
 			if tv, ok := e.typesEntry(elt); !ok || (tv.Value == nil && !tv.IsNil()) {
 				if _, err := b.value(elt); err != nil {

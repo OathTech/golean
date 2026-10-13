@@ -7834,7 +7834,7 @@ func (e *emitter) emitStructLit(cl *ast.CompositeLit, t types.Type, st *types.St
 			}
 			if fld.Name() == "_" {
 				// A BLANK field: the operand is evaluated and discarded,
-				// the field holds the zero value (BUG-127; the helper).
+				// the field holds the zero value (BUG-129; the helper).
 				w, err := e.emitBlankFieldOperand(positional[i], fld.Type())
 				if err != nil {
 					return nil, err
@@ -7883,37 +7883,54 @@ func (e *emitter) emitStructLit(cl *ast.CompositeLit, t types.Type, st *types.St
 }
 
 // emitBlankFieldOperand lowers the operand of a positional struct literal
-// at a BLANK field `_ T` (BUG-127 — the Codex zero-context pass's F1,
-// release-readiness row 37; [USER] Mike 2026-10-13 «2 fix», relayed). Go
-// EVALUATES the operand and DISCARDS it: spec#Comparison_operators
+// at a BLANK field `_ T` (BUG-129 — the Codex zero-context pass's F1,
+// release-readiness row 37; [USER] Mike 2026-10-13 «2 fix», relayed). WHAT
+// LANDED: the field holds T's ZERO VALUE — spec#Comparison_operators
 // compares «corresponding non-blank field values» only, and gc never
-// stores it — walk/complit.go `fixedlit` turns a blank field's element
-// into `_ = value` (dropped outright when side-effect-free) and
-// compare/compare.go skips blank fields — so the field holds T's ZERO
-// VALUE, and equality, map-key identity and copies follow from the core's
-// unchanged field-by-field comparison. Before this the operand was stored
-// and compared: `S{1, 2} == S{9, 2}` answered false (gc true), a map of
-// two such keys had two entries (gc one), and an interface-typed blank
-// holding a slice panicked «comparing uncomparable type» where gc does
-// not.
+// stores the operand (walk/complit.go `fixedlit` assigns it to `_`;
+// compare/compare.go skips blank fields) — so equality, map-key identity
+// and copies follow from the core's unchanged field-by-field comparison.
+// Before this the operand was stored and compared: `S{1, 2} == S{9, 2}`
+// answered false (gc true), a map of two such keys had two entries (gc
+// one), and an interface-typed blank holding a slice panicked «comparing
+// uncomparable type» where gc does not.
 //
-// The EVALUATION keeps the literal's standing order discipline exactly as
-// a non-blank field's: the operand's calls are hoisted by emitExpr at
-// their lexical position (E1), a panicky residual keeps its E13
-// `unseq-probe`, and the residual itself is evaluated at the field's own
-// position among the literal's arguments — gc's order too (`order` hoists
-// the calls, `fixedlit` evaluates the residual per element in order) — so
-// no member Go leaves open is baked in and the structural-allocation
-// guard sees nothing new. The wire has no "evaluate and discard" node
-// and the core is untouched by the ruling, so the discard is spelled with
-// the core's own ARRAY LITERAL: `index-get(array-lit 2 T [(0, operand)],
-// 1)` evaluates element 0 there and reads the OMITTED index 1, which
-// `buildArrayValue` fills with T's zero value. A constant or `nil`
-// operand has no run-time evaluation at all (nothing to observe) and
-// lowers to the zero value directly. Keyed literals cannot name a blank
-// field (go/types: «unknown field _ in struct literal»; the negative row
-// `structs/blank-field-keyed`), and an omitted field already takes the
-// zero value above.
+// THE OPERAND'S EVALUATION, as lowered here: a constant or `nil` operand
+// lowers to the zero value directly (nothing to evaluate); any other
+// operand is emitted by emitExpr exactly as a non-blank field's would be —
+// its calls hoisted at their lexical position (E1), a panicky residual
+// keeping its E13 `unseq-probe` — and its residual is evaluated at the
+// field's own position among the literal's arguments, through the core's
+// own array literal `index-get(array-lit 2 T [(0, operand)], 1)`: element
+// 0 is evaluated there and the OMITTED index 1 is T's zero
+// (`buildArrayValue`), the one "evaluate and discard" the wire spells
+// without a new node (the core untouched by the ruling). The pre-merge
+// review (relayed by the [AGENT] coordinator, 2026-10-13) confirmed this
+// evaluation agrees with gc for calls, receives and the operands gc's
+// side-effect census KEEPS (index, slice, deref, division by a
+// non-constant, type assertion, make), in order.
+//
+// KNOWN ≠ gc, OPEN, awaiting the [USER]'s ruling (recorded under BUG-129;
+// both pre-existing at the branch base, both measured, both relayed by
+// the review): (F1) gc DROPS a blank operand that its census
+// `staticinit.isSideEffect` (staticinit/sched.go:816–898) calls
+// side-effect free TOGETHER WITH ITS PANIC — `fixedlit` (walk/complit.go:
+// 231) skips the `_ = value` when `!AnySideEffects(value)`; the census
+// lists shifts (OLSH/ORSH: a negative count panics) and comparisons
+// (OEQ/ONE: an uncomparable dynamic type panics) as side-effect free,
+// under any pure wrapper (arithmetic, conversion, unary, parens, a nested
+// struct/array literal — not `&&`/`||`, which `order` rewrites into
+// statements and gc keeps): `S{1 << n, 2}` with n = -1 is gc 2, here a
+// panic. (F2) at PACKAGE LEVEL gc never evaluates a blank operand at all,
+// calls included: `staticinit.initplan` (sched.go:545) skips the blank
+// fields of a struct literal, so no plan entry — hence no init-time
+// statement — exists for it (`StaticAssign`'s struct/array/slice/&-literal
+// arms, sched.go:355–417; a map literal is dynamic and keeps its effects);
+// `var w = S{bump(), 2}` runs no bump in gc, one here (the initializer is
+// a fabricated assignment, emitProgram). Keyed literals cannot name a
+// blank field (gc and go/types: «unknown field _ in struct literal»; the
+// negative row `structs/blank-field-keyed`), and an omitted field already
+// takes the zero value above.
 func (e *emitter) emitBlankFieldOperand(x ast.Expr, fieldTy types.Type) (any, error) {
 	fty, err := e.emitType(fieldTy)
 	if err != nil {

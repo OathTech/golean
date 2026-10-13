@@ -1,8 +1,9 @@
 package main
 
-// Blank struct fields take the zero value: the operand is evaluated and
-// discarded (spec#Comparison_operators: «corresponding non-blank field
-// values»; gc walk/complit.go fixedlit, compare/compare.go). BUG-127.
+// Blank struct fields take the zero value (spec#Comparison_operators:
+// «corresponding non-blank field values»; gc compare/compare.go skips
+// them). BUG-129; the operand's evaluation beyond calls and the operands
+// gc keeps is BUG-129's OPEN F1/F2.
 
 type blankEqS struct {
 	_ int

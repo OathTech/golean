@@ -1,8 +1,11 @@
 package main
 
-// A panic inside a blank field's operand still happens, at the operand's
-// own position (BUG-127): a panicking call, and a panicky non-call
+// A panic inside a blank field's operand happens for the operands gc
+// KEEPS (BUG-129: a call, an index — gc's side-effect census), at the
+// operand's own position: a panicking call, and a panicky non-call
 // residual beside a sibling call (spec-unsequenced: membership rows).
+// gc DROPS a side-effect-free panicky operand (a shift, an interface
+// comparison) with its panic: BUG-129's OPEN F1, not pinned here.
 
 type blankPanicS struct {
 	_ int

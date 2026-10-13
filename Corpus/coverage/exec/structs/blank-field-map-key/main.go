@@ -1,7 +1,7 @@
 package main
 
 // A blank field holds the zero value, so two keys differing only in a
-// blank operand are ONE map key (BUG-127).
+// blank operand are ONE map key (BUG-129).
 
 type blankKeyS struct {
 	_ int

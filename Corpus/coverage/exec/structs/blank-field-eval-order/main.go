@@ -1,7 +1,8 @@
 package main
 
-// A blank field's operand is EVALUATED (its calls at their lexical
-// position, left to right with its siblings) and then discarded (BUG-127).
+// A blank field's CALL operand is evaluated (at its lexical position,
+// left to right with its siblings) and then discarded (BUG-129; gc keeps
+// a call — its OPEN F1/F2 are the operands gc drops).
 
 type blankOrderS struct {
 	_ int

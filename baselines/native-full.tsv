@@ -5,7 +5,7 @@
 #   the [AGENT] coordinator: evaluate the blank operand at its position, store the field type's zero value — gc's own treatment).
 #   WHY: the native frontend now lowers a positional literal's `_` operand as evaluated-and-discarded on both lowering paths
 #   (emit.go `emitBlankFieldOperand`, unseq_lower.go `structLitHead`) and the field holds the zero value; GoLean/ untouched
-#   (BUG-127). 3989 + 19 = 4008; PASS 3749 + 19 = 3768; FAIL 240. No existing row moved (results, stages and causes unchanged);
+#   (BUG-129). 3989 + 19 = 4008; PASS 3749 + 19 = 3768; FAIL 240. No existing row moved (results, stages and causes unchanged);
 #   0 PASS->non-PASS; no removal. Measured by capped scripts/ci --diff at the lane tip (612 s). NEW rows (four packages under
 #   Corpus/coverage/exec/structs/; 11 RED at the branch base 2e69dd86 with the fix stashed, 8 PASS there too — the pins the fix
 #   must keep):
@@ -20,6 +20,11 @@
 #       panicky index operand, the recovered value.
 #     structs/blank-field-panic/{index-then-call-sweep,index-then-call-legacy} PASS/membership — PASS at base: the
 #       spec-unsequenced «panicky blank residual beside a sibling call» on each path (members=2; gc draws call-first).
+#   CORRECTED 2026-10-13 [AGENT] (the pre-merge review, relayed by the [AGENT] coordinator; BUG-127 renumbered BUG-129 at train 10):
+#   what landed is the zero-value fix; the operand's EVALUATION is gc's only for calls and the operands gc's side-effect census
+#   keeps. Two measured, pre-existing, OPEN classes await the [USER]'s ruling: F1 gc drops a side-effect-free panicky blank operand
+#   (a shift, an interface comparison) WITH its panic; F2 gc never evaluates a package-level literal's blank operand at all. No
+#   row moves; none of the 19 rows pins either class.
 # re-pinned: 2026-10-13 [AGENT], lane frontend/directives-1013 FIX ROUND (the pre-merge adversarial review, relayed by the [AGENT]
 #   coordinator; HIGH-1: the directive allowlist was placement-blind — gc rejects a directive after code on its line, a //go:build
 #   after the package clause and a //go:noinline no func or method declaration follows («misplaced compiler directive»), the frontend
