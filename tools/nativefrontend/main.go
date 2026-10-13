@@ -68,6 +68,11 @@ func run() error {
 	// every allowed run.
 	flag.BoolVar(&allowHiddenDepInitOrder, "allow-hidden-dep-init-order", false,
 		"apparatus-only: allow the recorded E7 hidden-dep init-order deviation case to lower (finding still printed as a WARNING)")
+	// The entry rule (entrymode.go, BUG-125): by default a `package main`
+	// with no `func main` refuses, as gc does; --subject skips that one
+	// check for the differential corpus's subject export.
+	flag.BoolVar(&subjectMode, "subject", false,
+		"subject mode, the differential corpus's: export a `package main` that declares no func main (the oracle harness supplies main around the subject; the machine's entry is --function). Default: such a package refuses, as gc does")
 	// Stdlib source-through (stdlibsource.go): the pinned GOROOT source
 	// root and the library pin, both repo-relative by default (every
 	// driver script runs the frontend from the repo root); two MODES

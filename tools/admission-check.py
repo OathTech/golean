@@ -77,7 +77,9 @@ def artifact():
     env = os.environ.copy()
     env["GO111MODULE"] = "off"
     env["GOCACHE"] = str(ROOT / "artifacts/go-build-cache")
-    run(["go", "run", "./tools/nativefrontend", "--dir",
+    # --subject (BUG-125): the fixture is a SUBJECT package (no func main;
+    # scripts/check-admission's diff-coverage run supplies main around it).
+    run(["go", "run", "./tools/nativefrontend", "--subject", "--dir",
          str(ROOT / "Tests/admission-fixture"), "--out", str(wire)], env=env)
     run([str(ROOT / "scripts/capped"), "lean", "--run",
          "tools/check-admission-artifact.lean", str(wire)])

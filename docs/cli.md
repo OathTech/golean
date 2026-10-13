@@ -17,12 +17,22 @@ Go package dir ──nativefrontend──▶ wire JSON (golean-native-v3) ──
 ```sh
 GO111MODULE=off go build -o .tmp/nativefrontend ./tools/nativefrontend
 .tmp/nativefrontend --dir <package-dir> [--out <wire.json>]      # default: stdout
+.tmp/nativefrontend --subject --dir <package-dir> [--out <wire.json>]
 ```
 
 The frontend type-checks the package in `--dir`, together with every case-local package it
 imports, using gc's file selection for linux/amd64 (`fileselect.go`). It refuses a `go.mod`
 whose `go` directive is not the pinned language version (`modfile.go`). It then emits one wire
-for the whole program. Exit codes:
+for the whole program.
+
+By default the package is a **program**: a `package main` that declares no `func main` refuses
+as gc does (`nativefrontend: type-check: function main is undeclared in the main package (<dir>; …)`,
+exit 1, no wire; `entrymode.go`, BUG-125). `--subject` is the differential corpus's mode: the
+oracle harness supplies `main` around the subject function and the machine's entry is
+`--function`, so the check is skipped; it changes nothing else, and is a no-op on a package that
+declares `func main`. A non-`main` (library) package is not subject to the rule.
+
+Exit codes:
 
 - 0: a wire was written. **This does not mean every declaration lowered** (see §6.3).
 - 1: refused. The first stderr line names the cause, and the second line points at

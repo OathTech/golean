@@ -764,6 +764,9 @@ func (l *loader) loadProgram(mainFiles []*ast.File) ([]*sourcePkg, error) {
 		}
 		unit.pkg = pkg
 	}
+	if err := checkEntryDeclared(l.rootDir, mainUnit); err != nil { // entrymode.go, BUG-125
+		return nil, err
+	}
 
 	// gc's type-size limits (gclimits.go, release-readiness row 34): a
 	// whole-program, type-check-class rejection — gc rejects the

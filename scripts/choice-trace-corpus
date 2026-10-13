@@ -108,7 +108,10 @@ while IFS=$'\t' read -r id go_dir fn args status features reason lane why params
     continue
   fi
   w="$OUT/wire/${id//\//__}.json"
-  fe_flags=()
+  # --subject (BUG-125, tools/nativefrontend/entrymode.go): the corpus row is a SUBJECT —
+  # the oracle harness supplies main around it — so the frontend's default whole-program
+  # entry rule (a `package main` with no func main refuses, as gc) is skipped.
+  fe_flags=(--subject)
   [[ "$id" == "init/hidden-dep-order" ]] && fe_flags+=(--allow-hidden-dep-init-order)
   if err="$(GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run ./tools/nativefrontend ${fe_flags[@]+"${fe_flags[@]}"} --dir "$go_dir" --out "$w" 2>&1)"; then
     printf '%s\t%s\t%s\t%s\t%s\n' "$id" "$ROOT/$w" "$fn" "$args" "$STREAMS" >> "$OUT/batch.tsv"

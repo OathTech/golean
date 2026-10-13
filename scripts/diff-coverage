@@ -998,7 +998,10 @@ run_case_rows() {
   # detector, with the finding downgraded to a visible warning. The
   # allow is keyed to the exact case id HERE, in the apparatus — a new
   # hidden-dep case cannot opt itself in from source.
-  fe_flags=()
+  # --subject (BUG-125, tools/nativefrontend/entrymode.go): the corpus row is a SUBJECT —
+  # the oracle harness supplies main around it — so the frontend's default whole-program
+  # entry rule (a `package main` with no func main refuses, as gc) is skipped.
+  fe_flags=(--subject)
   if [[ "$id" == "init/hidden-dep-order" ]]; then
     fe_flags+=(--allow-hidden-dep-init-order)
   fi
@@ -1877,7 +1880,8 @@ run_membership_case_rows() {
   mkdir -p "$(dirname "$wire_json")"
   local native_export
   # E7 apparatus allow — same keyed exception as the strict lane above.
-  local mem_fe_flags=()
+  # --subject: the corpus row is a subject (BUG-125) — as the strict lane above.
+  local mem_fe_flags=(--subject)
   if [[ "$id" == "init/hidden-dep-order" ]]; then
     mem_fe_flags+=(--allow-hidden-dep-init-order)
   fi

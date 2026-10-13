@@ -554,6 +554,18 @@ requires a written profound reason. The complete list:
    (`ssagen/pgen.go`, «stack frame too large (>1GB)»), a per-function
    backend rule; the interface-too-large limit (`len(methods) >=
    MaxWidth/8`) is unreachable in source.
+7. **A `package main` with no `func main`, as a whole program** —
+   gc refuses it («function main is undeclared in the main package»)
+   and so does the frontend by default since 2026-10-13 (BUG-125,
+   `tools/nativefrontend/entrymode.go`; the negative row
+   `functions/main-undeclared` PASSes at `frontend=type-check`). The
+   frontend's `--subject` mode (every differential-corpus export) skips
+   the check: there the oracle harness supplies `main`. A
+   whole-program MODE that would run such a package's other functions
+   as gc never would is not queued: RULED [USER] Mike 2026-10-13,
+   verbatim, relayed by the [AGENT] coordinator: «I feel like this is just opening the door to endless special-case nonsense. I'd prefer to just refuse this case, and maybe support it later» —
+   «maybe later», not owed; no further gc compilation-unit rules are
+   mirrored on its account.
 
 ## 6. The concurrency-entangled design questions
 

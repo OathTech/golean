@@ -374,6 +374,7 @@ func (a *analyzer) run() {
 			}
 		}
 	}
+	a.entryDeclared() // entrymode.go, BUG-125
 	for _, f := range a.lp.files {
 		a.fileLevel(f)
 		for _, d := range f.Decls {

@@ -260,6 +260,9 @@ report_negative_pass() {
 # panic's exit 2 or any other code), frontend-reason (exit 1 for another
 # reason — e.g. a coverage refusal that would start LOWERING the program
 # once its feature lands).
+# The leg passes NO --subject (BUG-125, tools/nativefrontend/entrymode.go):
+# it judges the WHOLE PROGRAM, under gc's rule that a `package main` declares
+# func main — the frontend's default.
 FE_PARSE_RE='^nativefrontend: ([^:]+)\.go:[0-9]+:[0-9]+: '
 frontend_leg() {
   local go_dir="$1" out rc=0 first

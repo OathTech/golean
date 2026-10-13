@@ -92,6 +92,7 @@ func runReport(args []string) error {
 	declsTSV := fs.String("decls-tsv", "", "also write the per-declaration TSV here")
 	histTSV := fs.String("histogram-tsv", "", "also write the cause/key histogram TSV here")
 	pkgTSV := fs.String("per-package-tsv", "", "also write the per-package TSV here")
+	fs.BoolVar(&subjectMode, "subject", false, "judge the target as the differential corpus's SUBJECT export (the frontend's --subject): a `package main` with no func main is not refused (default: refused as main-undeclared, as the frontend and gc do)")
 	commit := fs.String("commit", "", "commit id to stamp (default: git rev-parse HEAD in --repo, '+dirty' if the tree is dirty)")
 	if err := fs.Parse(args); err != nil {
 		return err

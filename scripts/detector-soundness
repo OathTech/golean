@@ -278,7 +278,10 @@ run_row() {
 
   # --- machine side ---
   local wire="$d/wire.json" fe_out
-  local fe_flags=()
+  # --subject (BUG-125, tools/nativefrontend/entrymode.go): the corpus row is a SUBJECT —
+  # the oracle harness supplies main around it — so the frontend's default whole-program
+  # entry rule (a `package main` with no func main refuses, as gc) is skipped.
+  local fe_flags=(--subject)
   if [[ "$id" == "init/hidden-dep-order" ]]; then fe_flags+=(--allow-hidden-dep-init-order); fi
   if ! fe_out="$(run_with_timeout "$GO_BUILD_TIMEOUT" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run ./tools/nativefrontend ${fe_flags[@]+"${fe_flags[@]}"} --dir "$go_dir" --out "$wire" 2>&1)"; then
     m_verdict="ENUM-FAIL:frontend-refused"

@@ -13,6 +13,7 @@
 #
 #   scripts/lower-diagnose <go package dir | main.go> [--json] [--out DIR]
 #                          [--no-frontend] [--tsv] [--include pkg[,pkg]]
+#                          [--subject]
 #
 # What it does:
 #   1. DYNAMIC pass — runs the REAL frontend (tools/nativefrontend) on the
@@ -23,6 +24,11 @@
 #      against docs/stdlib-admission-register.md (read, not hardcoded) and
 #      tools/lowerdiag/machine-surface.tsv; causes from tools/lowerdiag/
 #      causes.tsv (checked against the ledger's FR ids by go test).
+#   --subject: judge the target as a differential-corpus SUBJECT (the
+#      oracle harness supplies main): passed to BOTH the frontend and the
+#      static pass, which then skip the entry rule (a `package main` with no
+#      func main refuses as main-undeclared — BUG-125). Default: whole
+#      program, as the frontend's default.
 #   3. REPORT — first refusal + cause; distance line; the full histogram
 #      (cause -> declarations, sole-blocker count, packages); top blockers
 #      with their FR rows/plans; the cumulative projection; per package.
@@ -40,12 +46,13 @@ cd "$ROOT"
 
 die() { echo "lower-diagnose: $*" >&2; exit 2; }
 
-TARGET=""; JSON=0; TSV=0; RUN_FE=1; INCLUDE=""; OUT="${LOWER_DIAGNOSE_ARTIFACTS:-artifacts/lower-diagnose}"
+TARGET=""; JSON=0; TSV=0; RUN_FE=1; INCLUDE=""; SUBJECT=(); OUT="${LOWER_DIAGNOSE_ARTIFACTS:-artifacts/lower-diagnose}"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --json) JSON=1 ;;
     --tsv) TSV=1 ;;
     --no-frontend) RUN_FE=0 ;;
+    --subject) SUBJECT=(--subject) ;;
     --out) OUT="${2:?--out needs a dir}"; shift ;;
     --include) INCLUDE="${2:?--include needs pkg paths}"; shift ;;
     -h|--help) sed -n '2,40p' "${BASH_SOURCE[0]}"; exit 0 ;;
@@ -54,7 +61,7 @@ while [[ $# -gt 0 ]]; do
   esac
   shift
 done
-[[ -n "$TARGET" ]] || die "usage: scripts/lower-diagnose <dir|main.go> [--json] [--tsv] [--out DIR] [--no-frontend]"
+[[ -n "$TARGET" ]] || die "usage: scripts/lower-diagnose <dir|main.go> [--json] [--tsv] [--out DIR] [--no-frontend] [--subject]"
 [[ -e "$TARGET" ]] || die "target $TARGET does not exist"
 if [[ -f "$TARGET" ]]; then TARGET_DIR="$(dirname "$TARGET")"; else TARGET_DIR="$TARGET"; fi
 TARGET_DIR="$(realpath -e -- "$TARGET_DIR")"
@@ -115,7 +122,7 @@ if [[ "$RUN_FE" = 1 ]]; then
   PROBE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/lower-diagnose-probe.XXXXXX")"
   PROBE="$PROBE_DIR/probe.DIAGNOSTIC-COPY.json"
   timeout "${LOWER_DIAGNOSE_GO_TIMEOUT:-120}" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" \
-    go run ./tools/nativefrontend --dir "$TARGET_DIR" --out "$PROBE" > /dev/null 2> "$FE_ERR.raw" || fe_rc=$?
+    go run ./tools/nativefrontend ${SUBJECT[@]+"${SUBJECT[@]}"} --dir "$TARGET_DIR" --out "$PROBE" > /dev/null 2> "$FE_ERR.raw" || fe_rc=$?
   # repo-relative paths only (evidence rule 2: no absolute worktree paths)
   { echo "$BANNER"; echo "# frontend exit status: $fe_rc"; sed "s#$ROOT/##g" "$FE_ERR.raw"; } > "$FE_ERR"; rm -f "$FE_ERR.raw"
   if [[ "$fe_rc" -eq 0 && -s "$PROBE" ]]; then
@@ -135,10 +142,10 @@ if [[ "$TSV" = 1 ]]; then
   tsv_args=(--decls-tsv "$CASE/decls.tsv" --histogram-tsv "$CASE/histogram.tsv" --per-package-tsv "$CASE/per-package.tsv")
 fi
 inc_args=(); [[ -n "$INCLUDE" ]] && inc_args=(--include "$INCLUDE")
-"$OUT/lowerdiag" report --repo "$ROOT" "${fe_args[@]+"${fe_args[@]}"}" "${tsv_args[@]+"${tsv_args[@]}"}" "${inc_args[@]+"${inc_args[@]}"}" "$TARGET_DIR" > "$CASE/report.txt" \
+"$OUT/lowerdiag" report --repo "$ROOT" ${SUBJECT[@]+"${SUBJECT[@]}"} "${fe_args[@]+"${fe_args[@]}"}" "${tsv_args[@]+"${tsv_args[@]}"}" "${inc_args[@]+"${inc_args[@]}"}" "$TARGET_DIR" > "$CASE/report.txt" \
   || { cat "$CASE/report.txt" >&2; die "static pass failed for $TARGET_DIR (see above)"; }
 if [[ "$JSON" = 1 ]]; then
-  "$OUT/lowerdiag" report --repo "$ROOT" "${fe_args[@]+"${fe_args[@]}"}" "${inc_args[@]+"${inc_args[@]}"}" --json "$TARGET_DIR" > "$CASE/report.json" || die "json report failed"
+  "$OUT/lowerdiag" report --repo "$ROOT" ${SUBJECT[@]+"${SUBJECT[@]}"} "${fe_args[@]+"${fe_args[@]}"}" "${inc_args[@]+"${inc_args[@]}"}" --json "$TARGET_DIR" > "$CASE/report.json" || die "json report failed"
 fi
 cat "$CASE/report.txt"
 echo "lower-diagnose: report -> $CASE/report.txt$( [[ "$JSON" = 1 ]] && printf ' + report.json' )$( [[ "$TSV" = 1 ]] && printf ' + decls/histogram/per-package.tsv' ); first refusal -> $FE_ERR" >&2

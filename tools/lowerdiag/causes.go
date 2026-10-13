@@ -166,6 +166,9 @@ var staticCauseIDs = []string{
 	// BUG-078 / F2 (2026-10-13): the per-declaration materialization budget
 	// (an array type spelled past budgets.tsv's bounds).
 	"materialization-budget",
+	// BUG-125 (2026-10-13): a `package main` with no `func main`, outside
+	// --subject (entrymode.go).
+	"main-undeclared",
 }
 
 // methodWrap unwraps the per-declaration quarantine's "method T.M (cause;

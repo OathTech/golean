@@ -650,9 +650,11 @@ importer failure, `could not import`, which is `frontend-reason`), a
 go/parser error on one of the row's files, or the file-selection boundary
 (BUG-108); otherwise it fails at `frontend-accepts` (exit 0: GoLean lowered
 a program gc rejects), `frontend-crash` or `frontend-reason`. The class is
-the PASS row's detail (`frontend=type-check|parse|file-selection`). One row
-is red by design: `functions/main-undeclared` (BUG-125 — the frontend is a
-subject lowerer and accepts a `package main` with no `func main`).
+the PASS row's detail (`frontend=type-check|parse|file-selection`). The
+leg runs the frontend WITHOUT `--subject`: it judges a whole program, so
+`functions/main-undeclared` (a `package main` with no `func main`) is a
+`type-check` rejection there (BUG-125, fixed by refusal 2026-10-13), while
+every differential-corpus export passes `--subject`.
 
 A FAIL row whose cause is re-pinned from a named key into the
 non-verdict/crash family (`killed:`, `timeout`, `undecided:`, `crash:`)

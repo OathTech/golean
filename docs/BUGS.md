@@ -8631,12 +8631,13 @@ line, the changelog row (the logic repository's two exhaustive `IntKind` matches
 Fix criterion met: the six rows PASS against go1.26.5 with the gc values above; `width-only` and the five atomics rows
 still PASS; the fresh `scripts/ci --diff` at the lane's tip is the measurement (its commit message records the run).
 
-## BUG-125 — the native frontend LOWERS a `package main` with no `func main`, a program gc rejects («function main is undeclared in the main package») [frontend boundary; over-acceptance, no wrong answer observed; found by the negative corpus's new frontend leg, lane `apparatus/refusal-cause-1012` fix round (review MEDIUM-1), 2026-10-12]
+## BUG-125 — the native frontend LOWERS a `package main` with no `func main`, a program gc rejects («function main is undeclared in the main package») [frontend boundary; over-acceptance, no wrong answer observed; found by the negative corpus's new frontend leg, lane `apparatus/refusal-cause-1012` fix round (review MEDIUM-1), 2026-10-12] [FIXED BY REFUSAL 2026-10-13: the frontend refuses such a package by default; `--subject` is the corpus's explicit opt-in]
 
-- Status: open
+- Status: fixed
 - Pinned-by: none (the witness is a NEGATIVE-corpus row, `functions/main-undeclared`, born FAIL at
-  `frontend-accepts` in `baselines/negative-full.tsv`; `scripts/check-bugs.sh` reads only the differential baseline,
-  so it carries no Cases line here. The negative baseline diff holds it: the row turning PASS is drift, read at the fix.)
+  `frontend-accepts` in `baselines/negative-full.tsv`, PASS at `frontend=type-check` since the fix;
+  `scripts/check-bugs.sh` reads only the differential baseline, so it carries no Cases line here. The negative
+  baseline holds it: the row turning FAIL again is a regression the baseline diff reports.)
 - Discovered: the pre-merge adversarial review of lane `apparatus/refusal-cause-1012` (relayed by the [AGENT]
   coordinator, 2026-10-12): `package main` with only `func f()` — gc exits 1, the frontend exits 0 and writes a wire.
   This entry and the row: [AGENT] lane worker `apparatus/refusal-cause-1012`, 2026-10-12.
@@ -8654,6 +8655,28 @@ subject-mode export of the exec corpus; the real fix is a whole-program MODE (a 
 manifest-driven entry contract) — a frontend-contract design question, not a few lines. Fix criterion: the
 negative-corpus row `functions/main-undeclared` PASSes on the frontend leg (`frontend=type-check` or a named
 whole-program refusal) with no exec-corpus row moving.
+
+FIX (2026-10-13, [AGENT] lane `frontend/main-undeclared-refuse-1013`), under the [USER]'s ruling on the options
+(a whole-program mode vs a refusal), Mike 2026-10-13, verbatim, relayed by the [AGENT] coordinator: «I feel like this
+is just opening the door to endless special-case nonsense. I'd prefer to just refuse this case, and maybe support it
+later». So the defect — the frontend LOWERED a program gc rejects — is fixed by refusing it, not by a mode:
+- by default (no flag) the frontend refuses a `package main` whose checked package declares no `func main`, right
+  after type-checking, as `nativefrontend: type-check: function main is undeclared in the main package (<dir>; …)`,
+  exit 1, no wire (`tools/nativefrontend/entrymode.go`, one call in `load.go`). gc's text is its linker's
+  (`runtime.main_main·f: function main is undeclared in the main package`) and carries NO source position — measured
+  at the go1.26.5 pin on the row, on a two-file package and on a package whose only `main` is a method; so the
+  refusal names the directory, not a file. A non-`main` (library) package is not subject to the rule (gc requires
+  none); a non-function `main` is go/types' own error, before this check.
+- `--subject` (new flag) skips exactly this check — the differential corpus's mode, where the oracle harness
+  supplies `main` around the subject. Every apparatus exporter of a corpus subject passes it (`scripts/diff-coverage`
+  both lanes — `scripts/diff-one` goes through it —, `membership-sampling`, `detector-soundness`,
+  `choice-trace-corpus`, `tools/admission-check.py`); `scripts/coverage-negative` passes nothing (whole program).
+  Callers whose inputs always declare `func main` are unchanged (the wire-boundary and unseq-wire fixtures, the
+  frontend-pins twin and deviation case, the raft tools' assembled programs, cedar-census drivers, gotest-triage's
+  `$GOROOT/test` programs). `scripts/lower-diagnose` and `tools/lowerdiag report` gain the same `--subject` knob;
+  the static judge applies the same rule (cause row `main-undeclared`, by-design, export scope).
+- NOT owed: a whole-program MODE (lowering such a package's other functions as gc never would run them) is the
+  ruling's «maybe later»; no further gc compilation-unit rules are mirrored on this account (ledger §5.1 item 7).
 
 ## BUG-126 — the native frontend QUARANTINED a body-less user function per declaration and lowered the rest of the program, which gc rejects whole («missing function body») [frontend boundary; over-acceptance — a sibling subject was answered; found by the pre-merge review of lane `frontend/chan-elem-limit-1013` (MEDIUM-2, relayed by the [AGENT] coordinator), 2026-10-13; FIXED the same day in that lane]
 
