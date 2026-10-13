@@ -25,12 +25,11 @@ no-blocked premise DROPPED, (b) the guard spelling `initPrintRefusal? c' = none`
 `runPkgInitM`/`markInitPhase` wrapper equation added. Phase 3 proves them all (`SetupSound.lean`;
 RE-PIN 13, rows 521–527).
 
-ADDITIVE. The pinned `runProgramSetup_noInit` and the `{}`-store `setup_lookup_arg` /
-`setup_lookup_result` / `setup_resultLocs` / `setup_heap_size` of `Equations.lean` are unchanged
-(statements and proofs); each is the instance of its general form here at the empty store — shown
-as `example`s at the end of `SetupSound.lean`. No definition of the interpreter, the drivers or the
-setup functions changes; the one new definition is `zeroCell` (a reading of `Store.alloc`'s result
-on a zero value, used to STATE the seeding equation).
+These internal correspondence statements preserve the setup semantics.
+Their empty-store specializations are checked as `example`s at the end of
+`SetupSound.lean`; the former public equation API was retired with the
+relational-surface refactor. `zeroCell` reads `Store.alloc`'s result on a zero
+value and is used to state the seeding equation.
 
 The controls at the end are `rfl` after `#eval` (the #eval-first rule): a one-global program with
 an initializer, and the print position where the two loops of G-R4 DISAGREE (its premise is
@@ -117,8 +116,8 @@ def runProgramSetup_init_stmt : Prop :=
 
 /-! ## G-R3 — the entry layout from a pre-bind store
 
-The four `{}`-store lemmas of `Equations.lean` over an ARBITRARY pre-bind store `s₁` (the post-init
-store): the cells are `entrySlot s₁ k = .base ⟨s₁.heap.size + k⟩` (`Machine.lean`, the C4 D8 layout
+Layout over an arbitrary pre-bind store `s₁` (the post-init store): the cells
+are `entrySlot s₁ k = .base ⟨s₁.heap.size + k⟩` (`Machine.lean`, the C4 D8 layout
 function) — the same slots frame entry allocates (`frameEntry_lookup_arg`/`_result`). -/
 
 /-- **G-R3, the argument layout.** Parameter `i` is bound to the `i`-th cell the entry allocates from
@@ -236,8 +235,8 @@ def runInitConfig_fuelOut_iff_stmt : Prop :=
 
 `runPkgInitM` with a `$pkginit` PRESENT, in terms of `runInitConfig` on the init configuration —
 the link from G-R1's premise (`runPkgInitM ⟨program⟩ fuel s₀ choices = .ok (s₁, choices₁)`) to
-`runInitConfig`, and through G-R4 to `execStmtLoop`. The twin of `Equations.lean`'s
-`runPkgInitM_none`. -/
+`runInitConfig`, and through G-R4 to `execStmtLoop`. The absent-initializer
+case is an internal helper in `SetupSound.lean`. -/
 
 /-- **The wrapper equation.** With `$pkginit` found, nullary and resultless (the design's
 `Definition ctx hI [] [] Dinit`), `runPkgInitM` IS `runInitConfig` on the init configuration — the

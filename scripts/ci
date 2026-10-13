@@ -289,8 +289,8 @@ echo "  ok:$evok  fail:$evbad  exit:$evrc"
 if [ "$evrc" -eq 0 ] && [ "$evbad" -eq 0 ] && [ "$evok" -gt 0 ]; then ok "eval tests ($evok ok)"
 else printf '%s\n' "$evout" | grep -iE '^(not ok|fail)' | head -10; bad "eval tests (exit $evrc, $evbad bad, $evok ok — zero ok is a degenerate run)"; fi
 
-# ── GATE: the lowering and decoder boundary, and the relational product's
-# equation API — each its own script, each fail-closed.
+# ── GATE: the lowering and decoder boundary — each its own script, each
+# fail-closed.
 step "unseq wire, Stage C (scripts/check-unseq-wire)"
 run_gate "unseq wire (wires from bytes vs reference sets; decoder mutants refused by name)" bash scripts/check-unseq-wire
 step "wire boundary (scripts/check-wire-boundary)"
@@ -301,8 +301,6 @@ step "frontend pins (scripts/check-frontend-pins)"
 run_gate "frontend pins (init-order deviation observation + raft twin wire, byte-exact)" ./scripts/check-frontend-pins
 step "declaration boundary (scripts/check-declarations)"
 run_gate "declaration boundary (Go identity, strict JSON, Unicode table = oracle, fixture pin)" bash scripts/check-declarations
-step "semantic equations (scripts/check-equations)"
-run_gate "semantic equations (client PASS, exhaustive enrollment, no-unfold guard, import whitelist)" bash scripts/check-equations
 
 # ── --diff: the fresh corpus runs. Exit 1 from a runner = some cases FAIL
 # (judged by the baseline step below); >= 2 = the run itself broke.

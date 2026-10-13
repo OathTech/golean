@@ -103,7 +103,9 @@ has the following parts:
 
 Whole-program setup (seeding globals, the package initializer, binding the entry's arguments)
 is `runProgramSetupM` / `seedGlobals` (`StepFn.lean`), with equations in
-`SetupStatement.lean`/`SetupSound.lean` and `runProgramSetup_noInit` (`Equations.lean`).
+`SetupStatement.lean`/`SetupSound.lean`. `GoLean.Relational` supplies the new
+successful relational program specification and bridges in both directions;
+see `relational-interface.md` for its scope and outstanding outcome work.
 
 ## 5. The goroutine pool
 
@@ -193,28 +195,33 @@ words come from `Stop.status`.
 | refusal | `Refusal.internal` | `error` | no: a machine invariant broke (a machine bug) |
 | — | `Stop.fuelOut` | `fuel-out` | no: the bounded run ended first (a model artifact) |
 
-A refusal has no relation successor, so the theorems are partial-correctness statements across
-a refusal. A refusal is never counted as a pass.
+A refusing choice produces no successful `Step`; another choice at the same
+state can still succeed. The successful transition relation alone therefore
+does not establish refusal freedom. A refusal is never counted as a pass.
 
 ## 9. The pinned statement set and the re-pin offer
 
-`BridgeSet.lean` contains one `example` per pinned statement, with binders written out, and
-it is imported by the default build. If a pinned type drifts, the build fails. There are
-currently 590 rows. The device does not catch a changed binder annotation, or a changed
-definition with an unchanged type (the file header says so). The semantic equations are
-gated separately (`scripts/check-equations`).
+`BridgeSet.lean` retains internal regression pins with binders written out,
+imported by the default build. The executable equation API, its pins and
+its dedicated gate were retired in the relational refactor. Type drift fails
+the build; a definition change with an unchanged type is not caught by pins.
 
-The set is the consumer's interface. The logic repository pins a commit, currently the tag
-`logic-offer/2026-10-03`. Changes accumulate on `main` behind that pin. Each change that
+The client reasoning surface is documented in `relational-interface.md`;
+the internal pin catalogue is not that surface. The logic repository selects
+its own revision. Changes accumulate on `main` behind consumer pins. Each change that
 affects a pinned row or a consumer-visible behaviour is a line in the post-offer changelog
 (`docs/changelog/20d3946d-WINDOW.md`), and the rows ship together as the next batched **re-pin
-offer**. The diff of `BridgeSet.lean` between two pins is the interface diff. The last offer is
-`docs/2026-10-03_offer-to-logic-team.md`.
+offer**. Review the relational exports and their documented domains between
+pins; `BridgeSet.lean` alone no longer describes the client interface.
+The last offer is `docs/2026-10-03_offer-to-logic-team.md`.
 
 ## 10. Stated limits
 
-- **Setup is a premise.** Whole-program setup is stated by equations, not derived from the
-  relation. Its no-globals, no-initializer case is the pinned `runProgramSetup_noInit`.
+- **Setup and failures.** The older driver bridges assume successful setup;
+  `SetupSound.runProgramSetup_init` retains its internal correspondence.
+  `Relational.ProgramNormal` now includes validation, seeding, initialization,
+  local entry and readback for successful sequential executions. The unified
+  all-outcome program relation remains open; see `relational-interface.md`.
 - **Printing during package initialization is refused** (`initPrintRefusal?`, `Machine.lean`).
 - **`NoRefusal` and the sequential classification apply to the sequential driver only.** A `go`
   statement leaves that domain, and the pool results of §5 cover it instead.

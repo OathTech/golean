@@ -9,6 +9,8 @@ reading everything else.
 
 **Start here**
 
+- `relational-interface.md`: first-cut relational exports, bridges, symbolic
+  use and explicit gaps for the logic team's demo.
 - `../README.md`: the front door. It covers what GoLean is, how to build and run it, and its
   limits.
 - `semantics-overview.md`: the semantics for someone who will reason against it (the machine,

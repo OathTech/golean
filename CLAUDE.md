@@ -85,8 +85,8 @@ single-goroutine reduction to the sequential results
 relational run is some tape's prefix» is FALSE as a bare statement
 (the relation steps past an aborted goroutine, the driver classifies
 it first); it holds per step and for runs that pass the driver's gate.
-Limits: setup is a premise (its no-globals, no-initializer case is the
-pinned equation `runProgramSetup_noInit`), init-time printing is
+Limits: setup is a premise of those older driver bridges (the retained
+setup equation is `SetupSound.runProgramSetup_init`), init-time printing is
 refused, and the domain premise `NoRefusal` covers the sequential
 driver only (a `go` statement leaves it). A refusal has no relation
 successor: a partial-correctness boundary ([USER] approved this
@@ -176,7 +176,7 @@ Everything else is untrusted tooling.
   module's declarations through the kernel into a fresh environment of its
   imports), the core totality audit, the eval tests, the
   frontend and harness `go test`s, the unseq-wire, wire-boundary,
-  method-identity, frontend-pin, declaration and equation checks, and the
+  method-identity, frontend-pin and declaration checks, and the
   baseline diff of the last recorded corpus runs with the forward re-pin
   guard. `scripts/ci --diff` before any merge to `main`: the same plus a
   FRESH run of the differential corpus and of the negative corpus (gc
