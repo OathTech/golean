@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+# directives/linkname-accepted — BUG-127 ([AGENT], lane
+# frontend/directives-1013, 2026-10-13). gc returns 7 and so did the model
+# at main 2e69dd86 (an agreeing export): the row pins that a user
+# `//go:linkname` gc accepts is REFUSED BY DESIGN anyway (FAIL/
+# frontend-export, by-design/compiler-directive) — RULED [USER] Mike
+# 2026-10-13 «3, agree»; the gc-REJECTED linkname is the negative row
+# directives/linkname-invalid-reference.
+-	linknamedCall	-	ok	-	unsafe,functions,calls,returns

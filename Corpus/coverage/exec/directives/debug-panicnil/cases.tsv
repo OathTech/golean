@@ -1,0 +1,13 @@
+# id	subject	args	expected_status	expected_reason	features
+# directives/debug-panicnil — BUG-128 red-first row ([AGENT], lane
+# frontend/directives-1013, 2026-10-13; the Codex zero-context pass F3).
+# Measured at main 2e69dd86 with GODEBUG unset: gc returns true (the
+# directive selects the legacy panic(nil)), the model printed false with
+# status ok — a wrong answer with a clean export. Under the runner's
+# oracle pin GODEBUG=panicnil=0 (scripts/diff-coverage: the environment
+# overrides the source directive) gc prints false too, so this runner
+# would have MASKED the delta; the row's value is the pinned refusal.
+# RED BY DESIGN since the fix: `//go:debug` refuses by name at file
+# selection (FAIL/frontend-export, by-design/runtime-setting) — RULED
+# [USER] Mike 2026-10-13 «3, agree».
+-	debugPanicNil	-	ok	-	panic,recover,defer,returns

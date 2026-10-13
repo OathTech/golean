@@ -169,6 +169,10 @@ var staticCauseIDs = []string{
 	// BUG-125 (2026-10-13): a `package main` with no `func main`, outside
 	// --subject (entrymode.go).
 	"main-undeclared",
+	// BUG-127 / BUG-128 (2026-10-13): a compiler directive outside the
+	// allowlist, a line directive, a //go:debug line (static.go fileLevel —
+	// the frontend's twin is tools/nativefrontend/directives.go).
+	"compiler-directive", "runtime-setting",
 }
 
 // methodWrap unwraps the per-declaration quarantine's "method T.M (cause;

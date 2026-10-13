@@ -570,6 +570,41 @@ requires a written profound reason. The complete list:
    selection under BUG-108's posture (an `unsupported` refusal the
    negative leg does not class as a rejection), not by this rule
    (review LOW-1, 2026-10-13; no such negative row exists).
+8. **Compiler directives** — meaning gc reads from a COMMENT:
+   `//go:embed` (data), `//go:linkname` (symbol renaming and pulls),
+   the codegen and race-instrumentation pragmas (`//go:nosplit`,
+   `//go:norace`, `//go:nocheckptr`, `//go:noescape`, …),
+   `//go:wasmimport`/`wasmexport`, `//go:fix`, verbs gc does not know
+   (ignored outside the standard library), and the `//line`/`/*line`
+   position directives. REFUSED BY NAME at file selection, in the root
+   package and every case-local imported package, 2026-10-13 (BUG-127,
+   `tools/nativefrontend/directives.go`; the Codex zero-context pass
+   F2) — RULED [USER] Mike 2026-10-13, verbatim, relayed by the [AGENT]
+   coordinator: «3, agree», under the standing preference «I'd prefer
+   to just refuse this case, and maybe support it later». THE
+   ALLOWLIST, the directives with no effect on the compiled program:
+   `//go:build` (the langversion.go constraint policy judges it),
+   `//go:noinline` (ten corpus files; optimisation only),
+   `//go:generate` (never read by the compiler). Widening it is a
+   ruling (`TestCompilerDirectiveAllowlist`); `//go:fix` is the one
+   candidate recorded. Rows: `directives/embed-string`,
+   `directives/linkname-accepted`, `directives/line-directive` (red by
+   design, cause `by-design/compiler-directive`); the controls
+   `directives/generate-control`, `directives/noinline-control`;
+   negative `directives/embed-missing-file`,
+   `directives/linkname-invalid-reference`. RUNTIME SETTINGS are the
+   same class (BUG-128, the pass's F3): `//go:debug` in any user unit
+   and `godebug` in any go.mod the module scanner reads refuse by name
+   (`directives/debug-panicnil`, cause `by-design/runtime-setting`;
+   negative `directives/debug-unknown-setting`; the go.mod half pinned
+   by `TestModuleGoDirectiveRefusal`, the corpus having no go.mod). The
+   runtime-defaults contract — Go 1.26 module defaults, `panic(nil)` is
+   `*runtime.PanicNilError`, the oracle pinned with `GODEBUG=panicnil=0`
+   — is stated in `docs/cli.md` §1 and `docs/release.md` §4. Reach: a
+   user `//go:linkname` refuses before item 5's body-less rule, whose
+   linkname exemption is gone; stdlib source-through units are library
+   units and keep theirs. Not queued: modelling embed (a data/provenance
+   contract), linkname, or any GODEBUG setting.
 
 ## 6. The concurrency-entangled design questions
 

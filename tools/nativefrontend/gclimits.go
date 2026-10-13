@@ -153,29 +153,23 @@ func checkGcSizeLimits(fset *token.FileSet, units []*sourcePkg) error {
 	// body-less function or method in a -complete package (cmd/go
 	// passes -complete when the package has no non-Go files; file
 	// selection already refuses non-Go sources) is a rejection unless
-	// it is //go:linkname'd — a directive in any file of the package
-	// that imports "unsafe" (gc rejects the directive elsewhere: «only
-	// allowed in Go files that import "unsafe"») naming the
-	// package-level function (linknameDirectives over the files'
-	// comments; methods cannot be linknamed). //go:wasmimport
-	// does not exempt here: gc honours it only when GOARCH is wasm
-	// (noder.go), never at the pinned linux/amd64.
+	// it is //go:linkname'd in a file that imports "unsafe", or
+	// //go:wasmimport'ed at GOARCH=wasm. NEITHER exemption is reachable
+	// for a user unit since 2026-10-13 (BUG-127, directives.go): every
+	// `//go:linkname` and `//go:wasmimport` refuses the export at file
+	// selection, before this scan runs, so a body-less user declaration
+	// is ALWAYS gc's rejection here. The linkname exemption this scan
+	// carried (BUG-126, 2026-10-13) was removed with the directive
+	// refusal rather than kept as dead code; library units (stdlib
+	// source-through, where linknamed body-less functions are real) are
+	// skipped, as before.
 	for _, u := range units {
 		if u.library {
 			continue
 		}
-		linked := map[string]bool{}
-		for _, f := range u.files {
-			if !gcImportsUnsafe(f) {
-				continue // gc rejects a linkname in such a file outright
-			}
-			for local := range linknameDirectives(f) {
-				linked[local] = true
-			}
-		}
 		for _, f := range u.files {
 			for _, d := range f.Decls {
-				if fd, ok := d.(*ast.FuncDecl); ok && fd.Body == nil && (fd.Recv != nil || !linked[fd.Name.Name]) {
+				if fd, ok := d.(*ast.FuncDecl); ok && fd.Body == nil {
 					s.pos = fd.Name.Pos()
 					s.record(fmt.Sprintf("bodyless:%p", fd), "missing function body")
 				}
@@ -764,13 +758,4 @@ func (s *gcSizeScan) record(key, msg string) {
 		return
 	}
 	s.viol[key] = gcSizeViolation{pos: s.pos, msg: msg}
-}
-
-func gcImportsUnsafe(f *ast.File) bool {
-	for _, im := range f.Imports {
-		if im.Path != nil && im.Path.Value == `"unsafe"` {
-			return true
-		}
-	}
-	return false
 }

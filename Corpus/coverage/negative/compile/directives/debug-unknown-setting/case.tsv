@@ -1,0 +1,2 @@
+# expected_substring	features
+unknown //go:debug setting "nonexistentSetting"	functions,print,compile_error

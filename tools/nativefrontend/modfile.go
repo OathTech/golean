@@ -27,11 +27,21 @@ package main
 // come from the pinned GOROOT (stdlibsource.go, rev-checked), whose
 // src/go.mod IS the pinned toolchain's; they are not re-judged here.
 // OUT OF SCOPE, recorded: per-file `//go:build go1.N` constraints
-// (already refused as reserved tags by langversion.go), `//go:debug`
-// lines, and the `toolchain` directive (with GOTOOLCHAIN=local, the
-// oracle pin guard's mode, it cannot switch toolchains). The directive
-// is parsed by a small strict scanner — stdlib only, no x/mod — that
-// refuses anything it does not understand rather than guess.
+// (already refused as reserved tags by langversion.go) and the
+// `toolchain` directive (with GOTOOLCHAIN=local, the oracle pin guard's
+// mode, it cannot switch toolchains). The directive is parsed by a small
+// strict scanner — stdlib only, no x/mod — that refuses anything it does
+// not understand rather than guess. Since 2026-10-13 (BUG-128, release-
+// readiness row 39; RULED [USER] Mike 2026-10-13 «3, agree», relayed)
+// the same scanner REFUSES a `godebug` line or block BY NAME: the go
+// command folds the main module's godebug settings into the binary's
+// defaults (cmd/go/internal/load/godebug.go defaultGODEBUG) and the
+// model implements the Go 1.26 module defaults only — `panic(nil)`
+// raises *runtime.PanicNilError, the differential oracle is pinned with
+// GODEBUG=panicnil=0 (scripts/diff-coverage). gc reads only the MAIN
+// module's godebug lines; the refusal fires in every go.mod this scanner
+// reads (a nested module's too), by name, rather than re-deriving which
+// module is main. The source twin `//go:debug` is directives.go.
 
 import (
 	"bufio"
@@ -83,6 +93,12 @@ func goDirective(path string) (string, error) {
 		fields := strings.Fields(line)
 		if len(fields) == 0 {
 			continue
+		}
+		// A `godebug` line (`godebug panicnil=1`) or block (`godebug (`
+		// … `)`) is a runtime-settings directive: refused by name BEFORE
+		// the block logic below would skip its body (BUG-128).
+		if !inBlock && fields[0] == "godebug" {
+			return "", unsup("module directive: %s sets godebug (%s) — GODEBUG settings are not modeled: the semantics is the Go 1.26 module defaults (panic(nil) raises *runtime.PanicNilError; the differential oracle is pinned with GODEBUG=panicnil=0); RULED [USER] 2026-10-13: refuse by name (fail closed)", path, strings.TrimSpace(line))
 		}
 		// Block directives (`require (` … `)`) never contain a go
 		// directive; skip their bodies so a module path or version

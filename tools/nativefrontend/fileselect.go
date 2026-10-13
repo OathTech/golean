@@ -44,6 +44,11 @@ package main
 // `x_windows.go` that also says `//go:build cgo` (gc simply ignores
 // it), which is the fail-closed direction and is recorded here rather
 // than silently resolved by reimplementing go/build's suffix rule.
+// Since 2026-10-13 (directives.go, BUG-127/BUG-128) the selected files'
+// COMMENTS are scanned too: a compiler directive outside the allowlist
+// (`//go:build`, `//go:noinline`, `//go:generate`), a `//go:debug` line
+// or a line directive refuses the directory by name — meaning gc reads
+// from a comment that the lowering would otherwise never see.
 
 import (
 	"bufio"
@@ -162,6 +167,14 @@ func selectPackageFiles(fset *token.FileSet, dir string) ([]*ast.File, error) {
 	// applied here so selection and policy are ONE site for both the main
 	// package and every imported unit — previously each caller ran it.
 	if err := refuseBuildConstrainedFiles(fset, files); err != nil {
+		return nil, err
+	}
+	// COMPILER DIRECTIVES (directives.go, BUG-127/BUG-128): every comment
+	// of the selected files is scanned; a `//go:` directive outside the
+	// allowlist, a `//go:debug` line or a `//line`/`/*line` directive
+	// refuses by name here — the one site for the main package and every
+	// imported unit, like the constraint policy above.
+	if err := refuseCompilerDirectives(fset, dir, files); err != nil {
 		return nil, err
 	}
 	return files, nil

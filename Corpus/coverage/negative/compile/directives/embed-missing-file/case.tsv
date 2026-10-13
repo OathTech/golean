@@ -1,0 +1,2 @@
+# expected_substring	features
+pattern data.txt: no matching files found	imports,globals,compile_error

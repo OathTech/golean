@@ -8703,4 +8703,121 @@ FIX: `tools/nativefrontend/gclimits.go` (the post-type-check hook of release-rea
 `type-check: <pos>: missing function body` for every body-less function or method of a source unit that is not
 linknamed by such a directive (the stub quarantine stays for linknamed declarations). `go/ast` finds 0 body-less
 declarations under `Corpus/`, `raftsubject/`, `raftharness/`; no exec row moves. Pinned by the negative row and
-`TestGcSizeLimits` (d01, d02, e02, g11, g13).
+`TestGcSizeLimits` (d01, d02, e02, g11, g13). CORRECTED 2026-10-13 (BUG-127, lane `frontend/directives-1013`): a user
+`//go:linkname` now refuses at FILE SELECTION, before this rule, so the linkname exemption is unreachable for user
+units and was removed; g11 and g13 moved to `TestCompilerDirectives` as directive refusals.
+
+## BUG-127 — the native frontend LOWERED a user unit carrying an unmodeled COMPILER DIRECTIVE: a `//go:embed` string was answered as the zero value (gc 5), also with the file ABSENT where gc rejects the package; a user `//go:linkname` variable was answered 0 on a program gc's linker rejects; a `//line` directive was dropped [frontend boundary; wrong answer (embed: observed ∉ modeled) and over-acceptance; found by the Codex zero-context pass, F2 (`docs/2026-10-13_codex-zero-context-pass.md`), 2026-10-13] [FIXED BY REFUSAL 2026-10-13: every `//go:` directive outside the allowlist (`//go:build`, `//go:noinline`, `//go:generate`) and every `//line`/`/*line` directive refuses by name at file selection, in every user unit; lane `frontend/directives-1013`]
+
+- Status: fixed
+- Expect: FAIL
+- Pinned-by: none (the three Cases below are RED-BY-DESIGN refusal pins at `frontend-export`, cause
+  `by-design/compiler-directive`, red forever at the oracle's `ok` — the BUG-078 precedent; check-bugs verifies
+  existence and the FAIL direction. The gc-REJECTED shapes are NEGATIVE rows, `directives/embed-missing-file` and
+  `directives/linkname-invalid-reference`, born PASS at `frontend=file-selection` in `baselines/negative-full.tsv`
+  (each `frontend-accepts` on main's frontend, measured). The controls `directives/generate-control` and
+  `directives/noinline-control` are PASS rows and are not listed here.)
+- Cases: directives/embed-string, directives/linkname-accepted, directives/line-directive
+- Discovered: the Codex zero-context release review (F2, HIGH), 2026-10-13, reproduced by the [AGENT] coordinator
+  at main a0885047 and by this lane at main 2e69dd86 (identical frontend at 084267be). Entry: [AGENT] lane worker
+  `frontend/directives-1013`, 2026-10-13.
+
+WHAT: a compiler directive is meaning gc reads from a COMMENT (cmd/compile/internal/syntax/parser.go hands every
+comment whose text begins `go:` to the pragma handler, in any column; `//line` at column 1 and `/*line` anywhere
+rewrite positions). go/types accepts the program and the lowering never sees the comment, so the effect vanishes
+with a clean export: `//go:embed data.txt` + `var x string` — gc fills `x` from the file (prints 5 for «hello»), the
+model seeds the zero value and answers `0`, status ok; with data.txt absent gc rejects the package («pattern
+data.txt: no matching files found») and the frontend still exported it. `//go:linkname x runtime.zerobase` +
+`var x uintptr` (file imports "unsafe") — gc's linker rejects («link: main: invalid reference to runtime.zerobase»),
+the frontend exported and the model answered `0`. A verb gc does not know is IGNORED outside the standard library
+(noder.go: the «not allowed» error is std-only), so an unknown `//go:foo` is inert in gc; refusing it is over-refusal
+in the fail-closed direction.
+
+RED FIRST (measured 2026-10-13, this lane, the frontend built from main 2e69dd86/084267be, gc go1.26.5, GODEBUG
+unset): the review's four programs — embed: gc `5`, frontend exit 0, model `{"output":"0\n","status":"ok"}`;
+embed with data.txt absent: gc exit 1, frontend exit 0, model `0`; linkname `runtime.zerobase`: gc exit 1 (link),
+frontend exit 0, model `0`; a linkname gc ACCEPTS (`//go:linkname seven example.org/x.seven` over a function with
+a body): gc `7`, model `7`. The corpus rows on the same frontend: `directives/embed-string` (embeds its sibling
+`data.go` — the oracle harness carries `*.go` files only, so a data.txt would never reach the go-run directory):
+gc `true`, model `false` (status ok); `directives/linkname-accepted`: gc 7, model 7; `directives/line-directive`:
+gc 1, model 1; the three negative rows: frontend exit 0 on each (`frontend-accepts`).
+
+FIX ([USER] Mike 2026-10-13, verbatim, relayed by the [AGENT] coordinator: «3, agree» — to refuse by name, at file
+selection, in every user unit, any `//go:` directive outside an allowlist and any line directive; the standing
+preference, Mike 2026-10-13 on BUG-125: «I feel like this is just opening the door to endless special-case nonsense.
+I'd prefer to just refuse this case, and maybe support it later»): `tools/nativefrontend/directives.go`, called from
+`selectPackageFiles` (fileselect.go) — the one site serving the root package and every case-local imported package
+(load.go parseLocal). Every comment of every selected file is scanned; the first directive outside the allowlist
+refuses the export as `native frontend unsupported: file selection in <dir>: <file>:<line>:<col> carries the
+compiler directive \`<text>\` — …` (the negative leg's rejection shape, `frontend=file-selection`); a line directive
+as `… carries the line directive \`<text>\` — …`. Both forms of each are refused wherever they appear (an indented
+`//line` is prose to gc, over-refused by name, the message says so; a `/*go:…*/` block comment likewise). THE
+ALLOWLIST ([AGENT] proposal, ratified by the ruling): `//go:build` (the langversion.go constraint policy judges it;
+inert after the package clause), `//go:noinline` (ten corpus files; optimisation only), `//go:generate` (never read
+by the compiler). Widening it is a ruling, not an edit (`TestCompilerDirectiveAllowlist`). Candidates NOT widened,
+recorded for the [USER]: `//go:fix` (a gc 1.26 tool directive like generate, no compiled effect). No directive is
+modeled: not embed (would need a data/provenance contract), not linkname, not the codegen or race-instrumentation
+pragmas (`//go:norace` would hide a race from the -race oracle). Static twin: `tools/lowerdiag` (static.go
+fileLevel; causes.tsv `compiler-directive`, by-design, export scope; `TestCompilerDirectiveParity`).
+
+REACH: a user `//go:linkname` now refuses BEFORE the BUG-126 body-less rule (gclimits.go), whose linkname exemption
+became unreachable for user units and was REMOVED rather than kept as dead code (its two table rows g11/g13 moved to
+`TestCompilerDirectives`); stdlib source-through units are library units, not user units, and keep their linknamed
+declarations (stdlibsource.go `linknameDirectives`, the FR-22 poison of linknamed library variables). The corpus
+carries 15 `//go:noinline` (10 files), 1 `//go:generate` (raftsubject/quorum/quorum.go) and 1 `//go:build`
+(raftsubject/raft/state_trace_nop.go), all allowed; no exec row moves (measured by the full gate). Pinned by
+`TestCompilerDirectives` (28 shapes: every form gc recognizes, the allowlist, the imported-unit reach, prose that
+is not a directive), `TestCompilerDirectivesAtSelection`, the Cases rows and the negative rows.
+
+## BUG-128 — `//go:debug` lines and go.mod `godebug` lines were IGNORED, and the runtime-defaults contract was unstated: `//go:debug panicnil=1` flips gc's answer (`recover() == nil` after `panic(nil)` is `true`) while the model keeps the Go 1.21+ semantics (`false`); a setting gc rejects was accepted [frontend boundary; wrong answer under the directive, over-acceptance; found by the Codex zero-context pass, F3 (`docs/2026-10-13_codex-zero-context-pass.md`), 2026-10-13] [FIXED BY REFUSAL 2026-10-13: `//go:debug` in any user unit and `godebug` in any go.mod the frontend reads refuse by name; the contract is stated in `docs/cli.md` §1 and `docs/release.md` §4; lane `frontend/directives-1013`]
+
+- Status: fixed
+- Expect: FAIL
+- Pinned-by: none (`directives/debug-panicnil` is a RED-BY-DESIGN refusal pin at `frontend-export`, cause
+  `by-design/runtime-setting`; the gc-REJECTED shape is the NEGATIVE row `directives/debug-unknown-setting`, born
+  PASS at `frontend=file-selection` (`frontend-accepts` on main's frontend, measured); the go.mod `godebug` refusal
+  is pinned by `TestModuleGoDirectiveRefusal` (line, block, and a godebug line before the go directive) — the corpus
+  runs under GO111MODULE=off with no go.mod, so no corpus row can test it.)
+- Cases: directives/debug-panicnil
+- Discovered: the Codex zero-context release review (F3, HIGH), 2026-10-13; the GOPATH-mode default measured by
+  the [AGENT] coordinator and re-measured by this lane. Entry: [AGENT] lane worker `frontend/directives-1013`,
+  2026-10-13.
+
+WHAT: the go command folds GODEBUG settings into a binary's defaults (cmd/go/internal/load/godebug.go
+defaultGODEBUG): the main module's go.mod `godebug` lines, then the `//go:debug` lines of package main's files, on
+top of the defaults for the module's go version — and a module with NO go.mod (GOPATH mode, the corpus's mode) gets
+the pre-1.21 defaults. `panicnil` is the setting that changes a modeled program's meaning: under `panicnil=1`
+`panic(nil)` is recovered as a nil value, under the Go 1.21+ default it is a `*runtime.PanicNilError`. The model
+implements the modern semantics only (the machine's panicPayload; emit.go emitPanicStmt's note), and the
+differential runner pins the oracle with `GODEBUG=panicnil=0` on every `go run` (scripts/diff-coverage, the
+arc-final audit F21 of 2026-08-06) — a contract that lived in a runner comment and the latitude inventory, nowhere a
+consumer reads. The frontend's strict go.mod scanner (modfile.go, BUG-109) skipped a `godebug` line
+(`fields[0] != "go"` continued past it) and took `godebug (` for a block whose body it skipped; `//go:debug` lines
+were never read.
+
+RED FIRST (measured 2026-10-13, this lane, gc go1.26.5): with GODEBUG unset and no go.mod, the review's program
+(`//go:debug panicnil=1`; `recover() == nil` after `panic(nil)`) prints `true` in gc; the frontend from main
+2e69dd86/084267be exported it and the model answered `false`, status ok. `//go:debug nonexistentSetting=1`: gc
+rejects («invalid //go:debug: unknown //go:debug setting "nonexistentSetting"»), the frontend exported, the model
+answered `7`. The corpus row `directives/debug-panicnil`: gc `true`, model `false`; under the runner's pin
+`GODEBUG=panicnil=0` gc prints `false` too (the environment overrides the source directive), so the differential
+runner would have MASKED this delta — the row's value is the pinned refusal. The defaults, same program WITHOUT
+any directive: GOPATH mode (GO111MODULE=off, no go.mod), GODEBUG unset: `true` (LEGACY); the same with
+`GODEBUG=panicnil=0`: `false`; inside a `go 1.26` module (GO111MODULE=on): `false`; that module with
+`godebug panicnil=1` in go.mod: `true`. Main's frontend accepted a go.mod `godebug panicnil=1` line and a
+`godebug (` block silently (exit 0, a wire written); the lane's refuses both by name.
+
+FIX ([USER] Mike 2026-10-13 «3, agree», relayed): `//go:debug` is refused by the directive scan
+(`tools/nativefrontend/directives.go`) in ANY user unit at ANY position — the go command honours only package main's
+pre-package-clause lines; refusing the rest over-refuses by name — as `… carries the runtime-setting directive
+\`//go:debug …\` — GODEBUG settings are not modeled: the semantics is the Go 1.26 module defaults (panic(nil) raises
+*runtime.PanicNilError; the differential oracle is pinned with GODEBUG=panicnil=0) …`; a go.mod `godebug` line or
+block is refused by the strict scanner (modfile.go goDirective) as `module directive: <go.mod> sets godebug (…) — …`,
+in every go.mod the scanner reads (gc honours only the MAIN module's; a nested module's is over-refused by name).
+No setting is modeled. THE CONTRACT, now stated in `docs/cli.md` §1 («Runtime defaults») and `docs/release.md` §4:
+the model is Go 1.26 module-mode semantics; `panic(nil)` is `*runtime.PanicNilError`; the oracle is pinned with
+`GODEBUG=panicnil=0`; a consumer comparing a wire's run against gc by hand must run gc with the same pin (or inside
+a `go 1.21`+ module with no godebug override), else the `true`/`false` difference is the oracle's configuration,
+not the semantics. Static twin: causes.tsv `runtime-setting` (by-design, export scope). Pinned by
+`TestCompilerDirectives` (three `//go:debug` shapes), `TestModuleGoDirectiveRefusal`, the Cases row and the
+negative row.

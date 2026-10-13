@@ -414,6 +414,17 @@ func (a *analyzer) fileLevel(f *ast.File) {
 			}
 		}
 	}
+	// COMPILER DIRECTIVES (BUG-127/BUG-128; the frontend's twin is
+	// tools/nativefrontend/directives.go, one allowlist spelled twice —
+	// TestCompilerDirectiveParity holds them together): every comment of
+	// the file, any column, as gc's pragma handler reads them.
+	for _, cg := range f.Comments {
+		for _, c := range cg.List {
+			if id, key := directiveFinding(c.Text); id != "" {
+				get().add(finding{Cause: mustCause(id), Key: key, Pos: a.p.pos(c), Certain: true, Export: true})
+			}
+		}
+	}
 	for _, im := range f.Imports {
 		ip := strings.Trim(im.Path.Value, `"`)
 		local := a.p.isLocalPath(ip)
@@ -1490,4 +1501,45 @@ func (a *analyzer) shortCircuit(d *declReport, y ast.Expr) {
 		}
 		return true
 	})
+}
+
+// allowedDirectiveVerbs mirrors tools/nativefrontend/directives.go: the
+// //go: verbs with no effect on the compiled program ([USER]-ruled
+// 2026-10-13); widening it is a ruling, not an edit.
+var allowedDirectiveVerbs = map[string]bool{"go:build": true, "go:noinline": true, "go:generate": true}
+
+// directiveFinding classifies one comment as the frontend's scan does:
+// ("runtime-setting", directive) for a //go:debug line,
+// ("compiler-directive", directive) for a //go: verb outside the
+// allowlist or a line directive, ("", "") otherwise. The key is the
+// directive's first line.
+func directiveFinding(text string) (id, key string) {
+	body := text
+	if strings.HasPrefix(body, "/*") {
+		body = strings.TrimSuffix(body[2:], "*/")
+	} else {
+		body = strings.TrimSuffix(strings.TrimPrefix(body, "//"), "\r")
+	}
+	first := text
+	if i := strings.IndexByte(first, '\n'); i >= 0 {
+		first = first[:i]
+	}
+	first = strings.TrimRight(first, " \t\r")
+	switch {
+	case strings.HasPrefix(body, "line "):
+		return "compiler-directive", first
+	case strings.HasPrefix(body, "go:"):
+		verb := body
+		if i := strings.IndexAny(verb, " \t"); i >= 0 {
+			verb = verb[:i]
+		}
+		if verb == "go:debug" {
+			return "runtime-setting", first
+		}
+		if allowedDirectiveVerbs[verb] {
+			return "", ""
+		}
+		return "compiler-directive", first
+	}
+	return "", ""
 }

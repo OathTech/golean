@@ -193,9 +193,13 @@ func TestGcSizeLimits(t *testing.T) {
 		{"g08-fa-iface-method", "type I interface{ M(a, b [1<<49]byte) }\nfunc main() {}", "too large", false},
 		{"g09-bodyless-init", "func init()\nfunc main() {}", "func init must have a body", false},
 		{"g10-bodyless-generic", "func f[T any](x T)\nfunc main() {}", "generic function is missing function body", false},
-		{"g11-linkname-no-unsafe", "//go:linkname f\nfunc f()\nfunc main() {}", "missing function body", false},
+		// g11 (`//go:linkname f` without "unsafe": gc «missing function
+		// body») and g13 (with "unsafe": gc ACCEPTS) left this table on
+		// 2026-10-13 (BUG-127): a user `//go:linkname` refuses at FILE
+		// SELECTION, before this scan — TestCompilerDirectives pins both
+		// shapes as directive refusals, and the linkname exemption this
+		// scan carried is gone (gclimits.go).
 		{"g12-fa-generic-inst", "func g[T any]() { var f func(a, b T); _ = f }\nfunc main() { g[[1<<49]byte]() }", "too large", false},
-		{"g13-linkname-unsafe", "import _ \"unsafe\"\n\n//go:linkname f\nfunc f()\n\nfunc main() { println(1) }", "", false},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

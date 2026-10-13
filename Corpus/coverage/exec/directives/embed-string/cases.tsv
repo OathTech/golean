@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features
+# directives/embed-string — BUG-127 red-first row ([AGENT], lane
+# frontend/directives-1013, 2026-10-13; the Codex zero-context pass F2).
+# gc embeds data.go into `src` and prints true. At main 2e69dd86 the
+# frontend exported the program and the model answered the zero value
+# (the review's `len(x)` was 0 where gc printed 5): a wrong answer with a
+# clean export. RED BY DESIGN since the fix: `//go:embed` is outside the
+# directive allowlist and the export refuses by name at file selection
+# (FAIL/frontend-export, cause by-design/compiler-directive) — RULED
+# [USER] Mike 2026-10-13 «3, agree» (refuse by name, no modelling).
+-	embedNonEmpty	-	ok	-	imports,globals,strings,len,returns

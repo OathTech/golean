@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+# directives/line-directive — BUG-127 ([AGENT], lane
+# frontend/directives-1013, 2026-10-13). A `//line` directive at column 1
+# rewrites the positions gc reports (tracebacks, runtime error text);
+# gc returns 1 and so did the model at main 2e69dd86. RED BY DESIGN since
+# the fix: line directives refuse by name at file selection (FAIL/
+# frontend-export, by-design/compiler-directive) — RULED [USER] Mike
+# 2026-10-13 «3, agree».
+-	lineDirected	-	ok	-	functions,returns

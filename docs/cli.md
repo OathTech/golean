@@ -34,6 +34,29 @@ declares `func main`. A non-`main` (library) package is not subject to the rule.
 confused with `tools/coverageharness`'s `--subject`, which names the subject *function*: a
 different binary.)
 
+**Compiler directives are refused by name** (`directives.go`, BUG-127; [USER]-ruled 2026-10-13).
+At the same file-selection step, in the root package and every case-local import, every comment
+is scanned: a `//go:` directive outside the allowlist — `//go:build` (judged by the constraint
+policy), `//go:noinline` and `//go:generate`, the three with no effect on the compiled program —
+and any `//line` / `/*line` directive refuse the export (`nativefrontend: native frontend
+unsupported: file selection in <dir>: <file>:<line>:<col> carries the compiler directive
+`//go:embed data.txt` — …`, exit 1, no wire). So `//go:embed`, `//go:linkname`, `//go:nosplit`,
+`//go:norace`, `//go:wasmimport`, an unknown verb (gc ignores it; refused here) all refuse. No
+directive is modeled.
+
+**Runtime defaults (the contract).** The semantics is Go 1.26's with the *module-mode* runtime
+defaults: `panic(nil)` raises `*runtime.PanicNilError`, so `recover()` after it is non-nil. No
+GODEBUG setting is modeled: a `//go:debug` line in any user unit, and a `godebug` line or block in
+a `go.mod` the frontend reads, refuse by name (BUG-128; `… carries the runtime-setting directive
+`//go:debug panicnil=1` — …` / `module directive: <go.mod> sets godebug (…) — …`). The differential
+runner pins the oracle to match — `GODEBUG=panicnil=0` on every `go run` (`scripts/diff-coverage`)
+— because gc in GOPATH mode (no `go.mod`, the corpus's mode) defaults to the LEGACY `panic(nil)`
+(measured at go1.26.5: `recover() == nil` prints `true` there, `false` with the pin, `false` in a
+`go 1.26` module, `true` again in that module with `godebug panicnil=1`). A consumer comparing a
+wire's run against gc by hand must do the same: run gc with `GODEBUG=panicnil=0`, or inside a
+`go 1.21`-or-later module with no `godebug` override; otherwise the `true`/`false` difference is the
+oracle's configuration, not the semantics.
+
 Exit codes:
 
 - 0: a wire was written. **This does not mean every declaration lowered** (see §6.3).
