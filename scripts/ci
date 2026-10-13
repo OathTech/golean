@@ -5,7 +5,8 @@
 #
 #   scripts/ci          the fast tier — before any commit touching runtime code:
 #                       oracle pin, escape-hatch scan, lake build of every
-#                       target (warning-free), core totality audit, the Go and
+#                       target (warning-free), kernel replay of the built
+#                       GoLean oleans, core totality audit, the Go and
 #                       Lean unit tests, the lowering pins, and the baseline
 #                       diff of the LAST recorded corpus runs.
 #   scripts/ci --diff   the merge gate — the fast tier plus a FRESH run of the
@@ -236,6 +237,24 @@ done
 if [ -z "$lf_targets" ]; then bad "lakefile targets (defaultTargets could not be read — the build's target set is unverifiable)"
 elif [ -z "$lf_missing" ]; then ok "lakefile targets (every declared library and executable is a default target)"
 else echo "  declared but not in defaultTargets:$lf_missing" >&2; bad "lakefile targets (not built by the default build:$lf_missing — add to defaultTargets)"; fi
+
+# ── GATE: the kernel replay of the built GoLean oleans (the Codex zero-context
+# pass, F4; release-readiness row 40, [USER]-ruled 2026-10-13). leanchecker
+# re-checks every `GoLean.*` module's declarations in a fresh kernel from its
+# imports, which the build, the text scan and the axiom audit cannot do: a
+# metaprogram that skipped the kernel (debug.skipKernelTC) leaves a clean
+# build and a clean axiom list. The script fails on any nonzero exit (a kill
+# included) and on a replayed set ≠ the on-disk module set; here the count it
+# names is carried into the summary line, and a PASS without a count is a FAIL.
+step "kernel replay (scripts/check-kernel-replay: leanchecker over every built GoLean olean, a fresh kernel from its imports)"
+kr_out="$(bash scripts/check-kernel-replay 2>&1)"; kr_rc=$?
+kr_n="$(printf '%s\n' "$kr_out" | sed -n 's/^Kernel replay gate: PASS.*[^0-9]\([0-9][0-9]*\) GoLean modules replayed.*/\1/p' | tail -1)"
+if [ "$kr_rc" -eq 0 ] && [ -n "$kr_n" ]; then
+  printf '%s\n' "$kr_out" | tail -2 | sed 's/^/  /'; ok "kernel replay ($kr_n GoLean modules replayed in a fresh kernel — leanchecker)"
+else
+  printf '%s\n' "$kr_out" | tail -25 | sed 's/^/  /'
+  bad "kernel replay (exit $kr_rc${kr_n:+, $kr_n modules}${kr_n:-, no module count} — a killed, refused or incomplete replay is NOT a pass; see above)"
+fi
 
 # ── GATE: the machine check of totality — a harness imports every GoLean/
 # module and audits every declaration (classical trio only; required core

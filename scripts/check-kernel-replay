@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+# The kernel replay gate (lane gate/kernel-replay-1013, 2026-10-13; the
+# zero-context review docs/2026-10-13_codex-zero-context-pass.md F4;
+# release-readiness row 40, [USER] Mike 2026-10-13, verbatim, relayed:
+# «4 yes, critical finding, this is a core trust gap right? Fix it»).
+#
+# The toolchain's `leanchecker` (src/lean/LeanChecker.lean, `replayFromImports`)
+# re-reads every built olean whose module name starts with `GoLean`, imports
+# the module's own imports, and replays the module's declarations into that
+# environment THROUGH THE KERNEL. That catches environment tampering by
+# metaprograms — `debug.skipKernelTC`, `addDeclWithoutChecking`, a constant
+# added behind the elaborator's back — which neither the build (the tamperer
+# ran inside it), the escape-hatch text scan, nor the post-import axiom audit
+# (it reads the tampered environment as given) can see. It is the same kernel,
+# not an independent verifier; `lake check` (toolchains ≥ 4.35) is the stronger
+# form when the Lean pin moves.
+#
+# Fail closed, three ways, and never a skip:
+#   * ANY nonzero exit of the checker fails — a kernel rejection («leanchecker
+#     found a problem in <module>»), a missing build tree, a cgroup kill (137
+#     with capped's KILLED banner: a killed replay has checked nothing).
+#   * The set of modules replayed (the checker's `--verbose` lines) must EQUAL
+#     the set of GoLean modules on disk (GoLean.lean + GoLean/**/*.lean). The
+#     checker replays whatever oleans it FINDS on the search path: a module
+#     whose olean is absent would be skipped in silence, a stale olean without
+#     a source would be counted. An empty source set is a refusal too.
+#   * A PASS line is printed only after both checks, and names the count.
+#
+# Cost (docs/operational-lessons.md, «The kernel replay gate»): the checker
+# replays every module as a task on Lean's thread pool, so peak RSS is the SUM
+# of the concurrent modules' import closures. Measured 2026-10-13 on the 68
+# modules: at the toolchain default (32 workers on this box) 27 s wall and
+# 31.2 GB peak — 2 GiB under the 32 G box cap; at LEAN_NUM_THREADS=4 18 s and
+# 6.7 GB; at 8, 14 s and 11.2 GB. scripts/ci exports LEAN_NUM_THREADS scaled
+# to the cap (cap/8G, so 4 under 32 G); run by hand with it unset, this script
+# sets 4 ([AGENT] 2026-10-13: both faster and five times lighter than the
+# default) and always prints the value it ran with. A caller's value is honoured.
+set -uo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+[[ $# = 0 ]] || { echo 'check-kernel-replay: expected no arguments' >&2; exit 2; }
+
+# Scratch under this checkout's own .tmp (the sibling gate scripts' convention,
+# scripts/typed-gate-scratch.sh): a failed run's log stays where it ran.
+export TMPDIR="$ROOT/.tmp"
+mkdir -p "$TMPDIR"
+scratch="$(mktemp -d "$TMPDIR/kernel-replay.XXXXXX")"
+log="$scratch/leanchecker.log"
+refuse() { # <message>: fail by name, keep the log, exit 1
+  echo "check-kernel-replay: FAIL — $*" >&2
+  echo "check-kernel-replay: the checker's log is kept at $log" >&2
+  exit 1
+}
+
+# The on-disk module set (the same enumeration the escape-hatch scan and the
+# core totality audit walk). Fail if it is empty: the gate would be vacuous.
+want="$scratch/modules.want"
+{ find GoLean -name '*.lean' -not -path '*/.lake/*' | sed 's|\.lean$||; s|/|.|g'
+  [ -f GoLean.lean ] && echo GoLean; } | LC_ALL=C sort -u > "$want"
+n_want="$(wc -l < "$want" | tr -d ' ')"
+[ "$n_want" -gt 0 ] || refuse "no GoLean module found on disk (GoLean.lean / GoLean/**/*.lean) — nothing to replay"
+
+if [ -n "${LEAN_NUM_THREADS:-}" ]; then thr_note="LEAN_NUM_THREADS=$LEAN_NUM_THREADS (caller's)"
+else export LEAN_NUM_THREADS=4; thr_note="LEAN_NUM_THREADS=4 (this script's default; the toolchain default peaks at 31 GB)"; fi
+
+# Peak RSS from the kernel's rusage of the checker process (`/usr/bin/time`
+# wraps leanchecker directly, under `lake env` for the search path). Where GNU
+# time is absent the replay still runs and is judged; the line says so.
+timer=()
+if [ -x /usr/bin/time ]; then timer=(/usr/bin/time -f 'leanchecker-rusage wall=%e s maxrss=%M KB'); fi
+
+started=$SECONDS
+scripts/capped lake env "${timer[@]+"${timer[@]}"}" leanchecker --verbose GoLean > "$log" 2>&1; rc=$?
+wall=$((SECONDS - started))
+rusage="$(grep -m1 '^leanchecker-rusage ' "$log" || true)"
+if [ -n "$rusage" ]; then
+  kb="$(printf '%s\n' "$rusage" | sed -n 's/.*maxrss=\([0-9][0-9]*\) KB.*/\1/p')"
+  cost="wall $(printf '%s\n' "$rusage" | sed -n 's/.*wall=\([0-9.]*\) s.*/\1/p') s; peak RSS $((kb / 1024)) MB"
+else
+  cost="wall ${wall} s; peak RSS unmeasured (/usr/bin/time absent)"
+fi
+echo "kernel replay: lake env leanchecker --verbose GoLean; $thr_note; exit $rc; $cost"
+
+if [ "$rc" -ne 0 ]; then
+  grep -v '^replaying ' "$log" | tail -15 | sed 's/^/  /' >&2
+  case "$rc" in
+    137|143) refuse "the checker was KILLED (exit $rc — the cgroup cap or a signal); a killed replay has checked nothing" ;;
+    *)       refuse "leanchecker exited $rc (a kernel rejection names its module above; a missing olean or build tree is also a refusal)" ;;
+  esac
+fi
+
+got="$scratch/modules.got"
+grep '^replaying ' "$log" | sed 's/^replaying //' | LC_ALL=C sort -u > "$got"
+n_got="$(wc -l < "$got" | tr -d ' ')"
+if ! diff -u "$want" "$got" > "$scratch/modules.diff"; then
+  echo "  modules on disk (-) vs replayed (+):" >&2
+  grep -E '^[-+][^-+]' "$scratch/modules.diff" | sed 's/^/    /' >&2
+  refuse "the replayed set ($n_got modules) is not the on-disk GoLean module set ($n_want): an olean missing from the build tree is skipped by the checker in silence, a stale olean has no source"
+fi
+
+rm -rf "$scratch"
+printf 'Kernel replay gate: PASS — %s GoLean modules replayed in a fresh kernel by leanchecker (= the %s modules on disk)\n' "$n_got" "$n_want"

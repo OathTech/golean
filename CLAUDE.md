@@ -169,7 +169,9 @@ Everything else is untrusted tooling.
 
 - **Gates block.** `scripts/ci` before any commit that touches runtime
   code: the oracle pin, the escape-hatch scan, the `lake build` of every
-  target (warning-free), the core totality audit, the eval tests, the
+  target (warning-free), the kernel replay of the built `GoLean` oleans
+  (`scripts/check-kernel-replay`: the toolchain's `leanchecker`, every
+  module re-checked in a fresh kernel), the core totality audit, the eval tests, the
   frontend and harness `go test`s, the unseq-wire, wire-boundary,
   method-identity, frontend-pin, declaration and equation checks, and the
   baseline diff of the last recorded corpus runs with the forward re-pin

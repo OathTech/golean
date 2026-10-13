@@ -584,3 +584,53 @@ that grows until every edit invalidates it — run the thing instead; a check
 that tests a CHECKER (poison, mutant, receipt, self-test) adds no evidence
 about the product and belongs in a hand-run `scripts/test-*`; and the global
 rule now says it outright — a slow gate is a reason to examine and trim.
+
+## The kernel replay gate: the checker's peak is threads × import closures (2026-10-13)
+
+The zero-context review (`docs/2026-10-13_codex-zero-context-pass.md`, F4)
+found that the gate built and audited axioms but never replayed the built
+oleans through a fresh kernel, so a metaprogram that skipped the kernel
+(`debug.skipKernelTC`, `addDeclWithoutChecking`) would pass the build, the
+escape-hatch scan AND the axiom audit (a scratch `bogus : False :=
+True.intro` built that way printed «does not depend on any axioms»; only
+`leanchecker` refused it: «(kernel) declaration type mismatch»). Ruled
+[USER] Mike 2026-10-13, verbatim, relayed: «4 yes, critical finding, this
+is a core trust gap right? Fix it». Since lane `gate/kernel-replay-1013`
+`scripts/check-kernel-replay` runs `lake env leanchecker --verbose GoLean`
+in both tiers after the build and fails on any nonzero exit (a kill
+included) and on a replayed set that is not the on-disk module set (the
+checker replays whatever oleans it FINDS: a missing olean is skipped in
+silence).
+
+The cost law is the build's («Concurrency OOM», above): the checker runs
+one task per module on Lean's thread pool, each importing the module's
+closure, and the peak is the SUM over the concurrent tasks. Measured
+2026-10-13 (warm tree at `2e69dd86`, 68 modules, box load ~16, GNU time
+`%M` on the checker process, under the box lock, each run exit 0 with
+all 68 replayed):
+
+| `LEAN_NUM_THREADS` | wall | peak RSS |
+|---|---|---|
+| unset (toolchain default = hardware concurrency, 32 here; ~35 OS threads seen) | 27.3 s | 31.2 GB (29.8 GiB) — 2 GiB under the 32 G cap |
+| 8 (what `scripts/ci` exports under a 64 G cap) | 13.8 s | 11.2 GB |
+| 4 (what `scripts/ci` exports under the 32 G default) | 17.8 s | 6.7 GB |
+| 2 | 30.7 s | 3.1 GB |
+| 1 | 49.0 s | 2.3 GB |
+
+The coordinator's earlier «21 s, ~30 GB» was the unset case. Per-process
+per-module replay was also measured: the 66 leaf modules peak at 1.5 GB
+(`GoLean.GoCore.StepErrors`, 2.8 s) and sum to 58 s, but the checker
+matches targets by NAME PREFIX, so `leanchecker GoLean` and `leanchecker
+GoLean.GoCore` each replay their whole subtree (68 and 58 modules, 28 GB
+at the default threads) and a per-module loop through the CLI cannot
+isolate those two; the thread knob reaches the same peak reduction in one
+process. Inside the gate (fast tier, same tree, `LEAN_NUM_THREADS=4` from
+the cap): 15.0 s wall, 7.1 GB peak, of a 106 s fast tier.
+So: the gate's replay inherits `scripts/ci`'s `LEAN_NUM_THREADS`
+(cap/8G), the script sets 4 when run by hand with it unset ([AGENT]
+2026-10-13; faster and five times lighter than the default), and the line
+it prints names the thread count, the wall and the peak. A cgroup kill
+lands as exit 137 with `capped`'s KILLED banner and the script refuses by
+name («a killed replay has checked nothing»; self-tested under
+`capped -m 1G`). `lake check` (toolchains ≥ 4.35) is the stronger form
+when the Lean pin moves; this toolchain is 4.32.2.
