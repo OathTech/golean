@@ -1520,9 +1520,14 @@ counts exactly once. The spin rows' per-branch budget
 (`--allow-nonterm-iters K`) is counted in these — the machine's own
 iteration vocabulary, read through a public definition — rather than in
 pool steps, which a refactor changing the steps per iteration moves (C4,
-train r59; `docs/2026-10-06_spin-bounds.md`). -/
-def loopReentry (m : GoCore.Machine.MultiConfig) (ev : GoCore.Machine.StepEvent) : Bool :=
-  match m.threads[ev.who]? with
+train r59; `docs/2026-10-06_spin-bounds.md`).
+It reads only the PRE-step thread array (`threads`, i.e. `m.threads`), so a driver can capture
+that array before `stepMulti` and let the step update the store in place (holding the whole
+pre-step `MultiConfig` across the step forced a copy of the heap per step — quadratic on a growing
+heap; measured 2026-10-13 when `native-json-run`'s choice report began running `enumPoolRun` by
+default). -/
+def loopReentry (threads : Array GoCore.Machine.Thread) (ev : GoCore.Machine.StepEvent) : Bool :=
+  match threads[ev.who]? with
   | some (.running c none) => c.boundarySite == .backEdge
   | _ => false
 
@@ -1608,10 +1613,11 @@ def enumPoolRun (pctx : GoCore.ProgramCtx) (resultLocs : List Loc) (resultTys : 
                       match fuel with
                       | 0 => throw (stepFuelStop itersCap, acc)
                       | fuel + 1 => do
+                          let threads₀ := m.threads
                           let (m', choices', ev) ←
                             (GoCore.Machine.stepMulti pctx m choices₁).mapError (·, acc)
                           let acc' := ev.out.foldl GoString.append acc
-                          let iters' := if loopReentry m ev then iters + 1 else iters
+                          let iters' := if loopReentry threads₀ ev then iters + 1 else iters
                           match GoCore.Machine.raceUpdate ev m' r with
                           | .error .raceDetected =>
                               return ("race", errorJson .raceDetected acc', choices')
@@ -1626,10 +1632,11 @@ def enumPoolRun (pctx : GoCore.ProgramCtx) (resultLocs : List Loc) (resultTys : 
                   match fuel with
                   | 0 => throw (stepFuelStop itersCap, acc)
                   | fuel + 1 => do
+                      let threads₀ := m.threads
                       let (m', choices', ev) ←
                         (GoCore.Machine.stepMulti pctx m choices).mapError (·, acc)
                       let acc' := ev.out.foldl GoString.append acc
-                      let iters' := if loopReentry m ev then iters + 1 else iters
+                      let iters' := if loopReentry threads₀ ev then iters + 1 else iters
                       match GoCore.Machine.raceUpdate ev m' r with
                       | .error .raceDetected =>
                           return ("race", errorJson .raceDetected acc', choices')
@@ -2137,7 +2144,7 @@ partial def poolStepDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
                 -- branch into the counted nonterm class — the same
                 -- bucket the step-fuel budget used to fill, now moved
                 -- only by the program's own iteration count.
-                let iters' := if loopReentry m ev then iters + 1 else iters
+                let iters' := if loopReentry m.threads ev then iters + 1 else iters
                 let out' := { out with steps := out.steps + 1 }
                 if ctx.allowNontermIters.any (iters' > ·) then recordNonterm out'
                 else poolDFS ctx out' path resultLocs fuel iters' m' r' acc'

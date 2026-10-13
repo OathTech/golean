@@ -726,7 +726,10 @@ structure RunOutcome where
 compared with the machine's own label picks (`StepEvent.picks` in the
 pool phase, `stepFn`'s `StepLabel.picks` in the init phase). -/
 def stepRecords (a : Acc) (from_ : Nat) : List PickRecord :=
-  (a.consumed.toList.drop from_).filterMap fun c =>
+  -- `extract`, not `toList.drop`: the step's own records only, O(this step) rather than
+  -- O(every consumption so far) per step (quadratic over a long run — measured 2026-10-13 when
+  -- `native-json-run`'s choice report began running this loop by default).
+  (a.consumed.extract from_ a.consumed.size).toList.filterMap fun c =>
     if isEventRecorded c.site then some ⟨c.site, c.bound, c.pick⟩ else none
 
 partial def feedPicks (m : MultiConfig) (picks : List Nat) (a : Acc) : List Nat × Acc :=
