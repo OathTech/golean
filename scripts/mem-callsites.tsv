@@ -1,4 +1,6 @@
 # scripts/mem-callsites.tsv — the inventory of RAW memory-operation call sites
+GoLean/GoCore/RelationalEntry.lean	Readback	loadMany	1	NO EXECUTION — Prop-level final readback contract; the actual read remains the driver's readout
+GoLean/GoCore/RelationalFault.lean	LocalFault	loadRoot	1	NO EXECUTION — inductive refusal premise for a binding read; no interpreter operation is added
 # (C1 audit fix round F7, 2026-09-18; checked by scripts/check-mem-callsites in scripts/ci).
 # Columns: file <TAB> enclosing declaration <TAB> raw-op <TAB> count <TAB> reason.
 # The raw ops read or write a cell WITHOUT emitting an access (module docstring,

@@ -2,6 +2,7 @@
 -- Import modules here that should be built as part of the library.
 import GoLean.StrictJson
 import GoLean.GoCore
+import GoLean.Relational
 -- The relational trace/run correspondence, the abort observer and the string-panic
 -- members reached the default build only through the parked facade GoLean.Interface
 -- (docs/2026-09-16_typed-profiles-parked.md §3); they are core and are wired here
@@ -16,10 +17,7 @@ import GoLean.GoCore.StringPanic
 import GoLean.GoCore.BridgeSet
 import GoLean.GoCore.ExecutionStatement
 import GoLean.GoCore.Prefix
--- Window packet D (2026-10-03): the per-arm `stepFn` EQUATIONS with the `stepFn_eqns` rewrite
--- set (charter row 7's second check) and the sequential-to-pool PROJECTIONS (packet B audit F5).
-import GoLean.GoCore.EquationsAttr
-import GoLean.GoCore.Equations
+-- Internal sequential-to-pool correspondence.
 import GoLean.GoCore.PoolProjection
 -- The pool/registry half's SPEC PACKET (design gate, 2026-10-04): the labelled pool relation's
 -- frozen DEFINITIONS and its target STATEMENTS (Prop definitions only; the grind proves them).

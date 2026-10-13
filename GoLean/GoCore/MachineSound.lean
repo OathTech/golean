@@ -2787,17 +2787,10 @@ theorem execStmt_sound_normal {fuel : Nat} {env : LocalEnv} {σ : Store}
     Steps ctx (.exec prog env .stop) σ (.next .stop) σf :=
   execStmtLoop_sound_normal h
 
-/-- **Executable reachability is relation reachability** (sem-adequacy
-arc slice 4): a successful `stepFnIter` prefix is a `Steps` trace —
-`stepFn_sound` chained. This is the transport the interpreter-level
-invariance judgment (`Surface.GoInvariant` over `Surface.ReachableExec`)
-rides to consume relation-side discharges: every `stepFnIter`-reachable
-configuration is `Steps`-reachable. The CONVERSE (every `Steps`-reachable
-configuration is `stepFnIter`-reachable under some stream) is true on
-paper — `step_complete` realizes each rule at some stream — but chaining
-its per-step witness streams into ONE `stepFnIter` stream needs a
-stream-stitching lemma that is not built; it is not needed for any
-current discharge and is recorded in the arc doc, not claimed. -/
+/-- A successful executable prefix is a label-erased relational trace.
+The labelled converse is packaged in `RelationalSound.Run.realize`, using
+`Prefix.stepFn_any_residual` to stitch per-step witnesses into one tape.
+No infinite-run or fairness claim is made. -/
 theorem stepFnIter_sound :
     ∀ {n : Nat} {σ₀ : Store} {c₀ : Config} {ch : Choices}
       {c : Config} {σ : Store} {ch' : Choices},

@@ -22,12 +22,16 @@ trustworthy and portable, and it is validated by differential testing.
 The authoritative statement of what the repository provides is `CLAUDE.md`,
 «What this repo provides, and does not». For a newcomer's tour of the semantics,
 see [`docs/semantics-overview.md`](docs/semantics-overview.md).
+For semantic client proofs, import `GoLean.Relational` and start with the
+[relational interface](docs/relational-interface.md): labelled runs,
+construct laws and executable correspondence, with the first cut's explicit
+coverage limits. The former executable equation API has been removed.
 
 ## Who it is for
 
 - **The GoLean logic repository** (`~/projects/golean-logic`). It builds an Iris
-  program logic on this semantics and consumes it at a pinned commit (currently
-  the tag `logic-offer/2026-10-03`).
+  program logic on this semantics and selects a pinned commit. Its old pinned
+  development remains available while it trials the relational interface.
 - **Anyone who wants a Go semantics** to execute programs against, or to state
   and prove facts about, without having to trust a hand-written model.
 

@@ -1,5 +1,4 @@
 import GoLean.GoCore.SetupStatement
-import GoLean.GoCore.Equations
 import GoLean.GoCore.Prefix
 
 /-!
@@ -16,15 +15,39 @@ equation followed by `Prefix.lean`'s sequential statement) and the `runPkgInitM`
 The seeding equation rests on ONE loop lemma (`seedLoop`): `seedGlobals`'s `for g in globals, i in
 [0:globals.size]` is a `forIn` over the globals with the index range threaded as a `Stream`
 (`#print seedGlobals`); the lemma characterizes it by induction over the globals list, carrying
-«the stream's position IS the heap's size». The `{}`-store forms of `Equations.lean` are shown to be
-the instances at the empty store by the `example`s at the end (their pinned theorems are
-unchanged).
+«the stream's position IS the heap's size». The `example`s at the end
+specialize these results to the empty store. The retired public equation
+API is not needed by these proofs.
 -/
 
 namespace GoLean.GoCore.SetupSound
 
 open GoLean GoLean.GoCore GoLean.GoCore.Machine GoLean.GoCore.SetupStatement
-open GoLean.GoCore.Equations (seedGlobals_nil runPkgInitM_none pinResultLocs_eq_of_lookup)
+variable {ctx : ProgramCtx}
+
+private theorem seedGlobals_nil : seedGlobals ctx ({} : Store) #[] = .ok {} := by
+  simp [seedGlobals, Store.nextAddr, Bind.bind, Except.bind]
+
+
+private theorem runPkgInitM_none {fuel : Nat} {s : Store} {ch : Choices}
+    (h : findFunctionIn? ctx.functions pkgInitFuncId = none) :
+    runPkgInitM ctx fuel s ch = .ok (s, ch) := by
+  simp [runPkgInitM, h]
+
+
+private theorem pinResultLocs_eq_of_lookup :
+    ∀ (env : LocalEnv) (ps : List Param) (f : Nat → Loc),
+      (∀ (j : Nat) (hj : j < ps.length), LocalEnv.lookup env ps[j].id = some (f j)) →
+      pinResultLocs env ps = .ok ((List.range ps.length).map f)
+  | _, [], _, _ => rfl
+  | env, p :: ps, f, h => by
+      have h0 := h 0 (by simp)
+      simp only [List.getElem_cons_zero] at h0
+      have hrest := pinResultLocs_eq_of_lookup env ps (fun j => f (j + 1)) (fun j hj => by
+        have := h (j + 1) (by simpa using Nat.succ_lt_succ hj)
+        simpa using this)
+      simp [pinResultLocs, h0, hrest, Bind.bind, Except.bind, List.range_succ_eq_map, Function.comp_def]
+
 
 /-! ## `List.mapM` over `Except`, read back -/
 
@@ -398,9 +421,9 @@ theorem runPkgInitM_ok_iff : runPkgInitM_ok_iff_stmt := by
 
 /-! ## The `{}`-store forms are the instances at the empty store
 
-The statements of `Equations.lean`'s `runProgramSetup_noInit`, `setup_lookup_arg`,
-`setup_lookup_result`, `setup_resultLocs` and `setup_heap_size`, re-derived from the general forms
-(controls — the pinned theorems themselves are unchanged). -/
+Specializations of the retained setup laws: argument/result lookup,
+result-location pinning, heap size and setup without initialization.
+These are controls re-derived from the general forms. -/
 
 example {fuel : Nat} {program : Program} {name : String} {args : Array GoValue} {choices : Choices}
     {func : Func} {env frameEnv : LocalEnv} {s₂ s₃ : Store} {resultLocs : List Loc}
