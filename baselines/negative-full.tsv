@@ -1,6 +1,12 @@
 # GoLean negative-corpus (compile-rejection) baseline
 # recorded: 2026-08-18  commit: f68a4d86+ (spec-truth P3 slice 2)  oracle: go build (rejection)  [header corrected 2026-08-31: the old "+ frontend fail-closed" conjunct claimed a check that does not exist — scripts/coverage-negative invokes no GoLean tool (p2-fact claim 5)]
-# manifest_cases: 414  pass: 414  fail: 0
+# manifest_cases: 415  pass: 415  fail: 0
+# re-pinned: 2026-10-13 [AGENT], lane frontend/blank-fields-1013 — release-readiness row 37 (BUG-127; RULED [USER] Mike
+#   2026-10-13 «2 fix», verbatim, relayed by the [AGENT] coordinator): ONE BORN ROW, PASS at frontend=type-check:
+#   structs/blank-field-keyed — a keyed struct literal naming a blank field (`S{_: 1, X: 2}`), rejected by gc and refused by
+#   go/types alike («unknown field _ in struct literal of type S»); the pin that the keyed form never reaches the blank-field
+#   lowering. No other row moves. Counts: 405 + 1 = 406 rows; PASS 405 + 1 = 406; FAIL 0. Measured by capped scripts/ci --diff
+#   at the lane tip.
 # re-pinned: 2026-10-13 [AGENT], lane frontend/directives-1013 FIX ROUND (the pre-merge adversarial review, relayed; HIGH-1, the
 #   placement-blind allowlist; BUG-127). SIX BORN ROWS, each frontend-accepts on main's frontend and on the lane's first landing
 #   (measured) and PASS at frontend=file-selection since the placement rules, gc's «misplaced compiler directive» on each:
@@ -469,6 +475,7 @@ PASS	strings/string-to-int	-
 PASS	strings/string-to-int-slice	-
 PASS	strings/surrogate-rune-escape	-
 PASS	structs/ambiguous-promoted-field	-
+PASS	structs/blank-field-keyed	-
 PASS	structs/blank-field-selector	-
 PASS	structs/duplicate-field	-
 PASS	structs/duplicate-literal-field	-

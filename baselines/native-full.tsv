@@ -1,5 +1,25 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3998 (3754 PASS / 244 FAIL)
+# cases: 4017 (3773 PASS / 244 FAIL)
+# re-pinned: 2026-10-13 [AGENT], lane frontend/blank-fields-1013 — release-readiness row 37 (the Codex zero-context pass's F1,
+#   «blank struct fields participate in equality and map-key identity»), RULED [USER] Mike 2026-10-13 «2 fix» (verbatim, relayed by
+#   the [AGENT] coordinator: evaluate the blank operand at its position, store the field type's zero value — gc's own treatment).
+#   WHY: the native frontend now lowers a positional literal's `_` operand as evaluated-and-discarded on both lowering paths
+#   (emit.go `emitBlankFieldOperand`, unseq_lower.go `structLitHead`) and the field holds the zero value; GoLean/ untouched
+#   (BUG-127). 3989 + 19 = 4008; PASS 3749 + 19 = 3768; FAIL 240. No existing row moved (results, stages and causes unchanged);
+#   0 PASS->non-PASS; no removal. Measured by capped scripts/ci --diff at the lane tip (612 s). NEW rows (four packages under
+#   Corpus/coverage/exec/structs/; 11 RED at the branch base 2e69dd86 with the fix stashed, 8 PASS there too — the pins the fix
+#   must keep):
+#     structs/blank-field-equality/{differing-blanks,duplicate-blanks,interface-blank-slice-self,interface-blank-recovered,
+#       nested-literal,pointer-literal,generic-instantiation,element-literals,conversion-copy} PASS — RED at base (wrong
+#       booleans; «comparing uncomparable type []int» where gc compares nil; recovered 99 where gc returns 7).
+#     structs/blank-field-map-key/{cardinality,interface-blank} PASS — RED at base (two keys where gc has one; «hash of
+#       unhashable type []int» where gc stores nil).
+#     structs/blank-field-eval-order/{effectful,boxed-effectful,sweep} PASS — PASS at base: the operand's calls and output
+#       order on the legacy and the sweep path.
+#     structs/blank-field-panic/{call-operand,index-operand,recovered-value} PASS — PASS at base: a panicking call operand, a
+#       panicky index operand, the recovered value.
+#     structs/blank-field-panic/{index-then-call-sweep,index-then-call-legacy} PASS/membership — PASS at base: the
+#       spec-unsequenced «panicky blank residual beside a sibling call» on each path (members=2; gc draws call-first).
 # re-pinned: 2026-10-13 [AGENT], lane frontend/directives-1013 FIX ROUND (the pre-merge adversarial review, relayed by the [AGENT]
 #   coordinator; HIGH-1: the directive allowlist was placement-blind — gc rejects a directive after code on its line, a //go:build
 #   after the package clause and a //go:noinline no func or method declaration follows («misplaced compiler directive»), the frontend
@@ -6010,6 +6030,25 @@ PASS	strings/trimspace-repeat/trim-inner-runes	-	-
 PASS	strings/trimspace-repeat/trim-unicode	-	-
 PASS	structs/anonymous-field	-	-
 PASS	structs/blank-field	-	-
+PASS	structs/blank-field-equality/differing-blanks	-	-
+PASS	structs/blank-field-equality/duplicate-blanks	-	-
+PASS	structs/blank-field-equality/interface-blank-slice-self	-	-
+PASS	structs/blank-field-equality/interface-blank-recovered	-	-
+PASS	structs/blank-field-equality/nested-literal	-	-
+PASS	structs/blank-field-equality/pointer-literal	-	-
+PASS	structs/blank-field-equality/generic-instantiation	-	-
+PASS	structs/blank-field-equality/element-literals	-	-
+PASS	structs/blank-field-equality/conversion-copy	-	-
+PASS	structs/blank-field-eval-order/effectful	-	-
+PASS	structs/blank-field-eval-order/boxed-effectful	-	-
+PASS	structs/blank-field-eval-order/sweep	-	-
+PASS	structs/blank-field-map-key/cardinality	-	-
+PASS	structs/blank-field-map-key/interface-blank	-	-
+PASS	structs/blank-field-panic/call-operand	-	-
+PASS	structs/blank-field-panic/index-operand	-	-
+PASS	structs/blank-field-panic/index-then-call-sweep	membership	-
+PASS	structs/blank-field-panic/index-then-call-legacy	membership	-
+PASS	structs/blank-field-panic/recovered-value	-	-
 PASS	structs/comparable	-	-
 PASS	structs/copy-value	-	-
 PASS	structs/decl-order-reversed/array-equality	-	-
