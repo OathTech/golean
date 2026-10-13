@@ -43,7 +43,7 @@ subcommand exits 2. In every subcommand, a malformed or unknown flag, or a missi
 ```
 golean native-json-run --input <wire> --function <name> [--seed <file.json>]
     [--arg-int <n> | --arg-bool <true|false> | --arg-ref <k(.f|[i])*> | --arg-nil ...]
-    [--fuel <n>] [--choices <n,n,...>]
+    [--fuel <n>] [--choices <n,n,...>] [--no-choice-report]
 ```
 
 This decodes the wire, seeds the package-level variables, runs the package initializer, and then
@@ -75,6 +75,31 @@ runs `<name>` on the goroutine pool (`GoLean.GoCore.Machine.runProgramPoolOutM`)
   status `fuel-out`.
 - `--choices` is the choice tape (§5, and the caveats in §6.1). It defaults to empty, which
   selects the canonical member at every choice site.
+- **The choice report** (default; F1 of the 2026-10-13 fail-closed pass). When the run consulted
+  a choice site (§5) with more than one option, its observation is **one member of a set**, not
+  the program's only behaviour. The run then prints one extra line on **stderr**, after the
+  observation:
+
+  ```
+  native-json-run: consulted 1 choice site(s) — appendSpill=1 (bound 32); the observation is the canonical member of a set — the certified set is coverage-observations'
+  ```
+
+  The line has N, the number of consultations with bound ≥ 2 (a site consulted twice counts
+  twice), then per site (named as `choice-trace` names them) its count and bound (`bounds lo–hi`
+  when they differed). With `--choices` the wording is «the member the stream [..] selects».
+  Nothing extra is printed when no site was consulted. stdout is the same either way. Gc's
+  answer may be another member: here gc answers 32 and the canonical member is 4. The set itself
+  is `coverage-observations`' (§2.3). The line comes from `choice-trace`'s accounting pass
+  (`GoLean.ChoiceTrace.consumptionReport`, the same loop as §2.4), run after the production
+  driver on the same wire, arguments, seed, fuel and tape. That pass's driver-agreement check
+  must hold: the enumerator driver's observation must equal the production run's, and there must
+  be no tracer alarm or menu-invariant violation. Otherwise the run is **refused**, with status
+  `error` («consumption accounting disagrees with the driver …») and exit 1. An unmarked or
+  wrongly marked answer is never printed. `--no-choice-report` skips the pass, which leaves
+  stdout identical and stderr silent. The differential runner passes it, because its depth guard
+  already accounts every strict row. Cost: the pass replays the run twice more (tracer and
+  enumerator driver). Measured: no visible cost on small programs, about 3.5–4.5× on long or concurrent
+  runs, and memory linear in steps (about 1 GB at the default fuel).
 
 Exit codes: **0** if the status is `ok`, **1** for every other status (including `error`),
 **2** for a usage error. Before any step runs, these failures produce a `status:error` JSON on
@@ -395,8 +420,10 @@ site the run never reached, are ignored.
   and reports an observation for a tape other than the one you meant.
 - *Why it is deliberate:* it makes every list of naturals a valid tape (the enumerator and the
   proofs quantify over all of them), and it makes the empty tape the canonical run.
-- *How to tell:* run `golean choice-trace --input <wire> --function <f> --stream <your tape>
-  --trace`. The row's `consumed` and `exhaustedAt` columns, and the per-consumption lines
+- *How to tell:* `native-json-run` itself now says, on stderr, when a choice site was
+  consulted, how many times, and at which sites with which bounds (the choice report, §2.1), so
+  a single run's observation is never silently a point answer. For the detail, run `golean
+  choice-trace --input <wire> --function <f> --stream <your tape> --trace`. The row's `consumed` and `exhaustedAt` columns, and the per-consumption lines
   (bound, the tape value drawn, the realized pick), show exactly what was used, what wrapped,
   and where the tape ran out.
 

@@ -252,12 +252,19 @@ structure RunArgs where
   default. The harness runs the same program under several sequences to check
   observation invariance. -/
   choices : List Nat := []
+  /-- `native-json-run` only: after the run, account the choice consumption (the tracer's pass,
+  `GoLean.ChoiceTrace.consumptionReport`) and say on stderr when a choice site was consulted
+  (F1 of the 2026-10-13 fail-closed pass). `--no-choice-report` turns it off — the differential
+  runner passes it (its depth guard accounts every strict row's consumption already). -/
+  choiceReport : Bool := true
   deriving Repr
 
 private def usage : String :=
   "usage:\n" ++
   "  golean native-json-run --input <file> --function <name> [--seed <file.json>]\n" ++
   "      [--arg-int <n> | --arg-bool <true|false> | --arg-ref <k(.f|[i])*> | --arg-nil ...] [--fuel <n>] [--choices <n,n,...>]\n" ++
+  "      [--no-choice-report]  (by default a run that consulted a choice site says so on stderr: its observation is one member\n" ++
+  "       of a set — the set is coverage-observations'; docs/cli.md §2.2)\n" ++
   "      (entry arguments bind the parameters positionally, in command-line order; each is checked against its parameter type;\n" ++
   "       --arg-ref and --arg-nil need --seed: a reference into the seed's cells, a nil pointer — golean-seed-v1, docs/cli.md)\n" ++
   "  golean observation-eq --left <json> --right <json>\n" ++
@@ -317,6 +324,8 @@ private def parseRunArgs : List String → RunArgs → Except String RunArgs
       let parts := (value.splitOn ",").filter (fun s => !s.isEmpty)
       let choices ← parts.mapM (fun s => parseJsonNat "--choices" s)
       parseRunArgs rest { cfg with choices }
+  | "--no-choice-report" :: rest, cfg =>
+      parseRunArgs rest { cfg with choiceReport := false }
   | flag :: _, _ => .error s!"unknown or incomplete option: {flag}\n{usage}"
 
 -- The OBSERVATION channel renders type names the way Go's
@@ -547,7 +556,9 @@ private def errorJson (error : Stop) (output : GoString := GoString.empty) : Jso
   ]
 
 /-- A CLI-level `status:error` observation (an unreadable file, a parse/decode refusal, a bad entry
-argument or seed file — every one BEFORE any step runs). Since release-readiness item 22
+argument or seed file — every one BEFORE any step runs; and, since the choice report (F1 of the
+2026-10-13 fail-closed pass), `native-json-run`'s refusal when the consumption accounting disagrees
+with the driver — the run's own observation is then withheld). Since release-readiness item 22
 (2026-10-12; [USER] Mike «22: fix it», relayed) it carries `output` like every other status: the
 empty string, which is exactly what the program wrote (it never ran). Before, the key was absent,
 so the strict decoder — `error` admits exactly `message, output, schema, status` — refused the
@@ -1014,6 +1025,45 @@ private def runObservationEq (args : List String) : IO UInt32 := do
             IO.eprintln s!"right: {right.compress}"
             return 1
 
+/-- What `native-json-run` hands the consumption-accounting pass (F1 of the 2026-10-13 fail-closed
+pass): the decoded run's inputs and the PRODUCTION driver's result (seeded: its readout
+projection, `(·.readout)`). -/
+structure ChoiceReportInput where
+  program : GoCore.Program
+  functionName : String
+  entryArgs : Array GoValue
+  seeded? : Option (Array GoCore.Machine.SeedCell × Array GoCore.Machine.SeedArg)
+  fuel : Nat
+  choices : List Nat
+  result : GoCore.Machine.RunResult
+
+/-- The consumption-accounting pass `native-json-run` runs after the production driver. It lives
+in `GoLean.ChoiceTrace` (which imports this module), so `Main` passes it in: `.ok none` — no choice
+site consulted, nothing to say; `.ok (some line)` — the stderr line; `.error why` — the accounting
+disagrees with the driver (or cannot run), and the run is REFUSED by name. -/
+abbrev ChoiceReporter := ChoiceReportInput → Except String (Option String)
+
+/-- Print the production observation, consulting the consumption report first (unless
+`--no-choice-report`): a disagreeing or failing accounting pass REFUSES the run by name (status
+`error`, exit 1) instead of printing an unmarked observation; a consulted choice site adds one
+stderr line after the observation; zero consultations print nothing extra (byte-identical). -/
+private def emitWithChoiceReport (reporter : ChoiceReporter) (cfg : RunArgs) (input : ChoiceReportInput)
+    (status : String) (obs : Json) : IO UInt32 := do
+  if !cfg.choiceReport then
+    IO.println obs.compress
+    return (if status == "ok" then 0 else 1)
+  match reporter input with
+  | .error why =>
+      IO.println (cliErrorJson s!"consumption accounting disagrees with the driver (native-json-run's choice report; --no-choice-report skips the pass): {why}").compress
+      return 1
+  | .ok line? =>
+      IO.println obs.compress
+      if let some line := line? then
+        -- The observation first, then the marker, also when the two streams are merged.
+        (← IO.getStdout).flush
+        IO.eprintln line
+      return (if status == "ok" then 0 else 1)
+
 /-- `native-json-run --seed` (seeded-heap slice B, design §6): decode the seed file against the
 program's type table (`SeedFile.decodeSeedBytes` — the strict byte parse, the shape, the type
 spellings; refusals are `status:error`, exit 1, before any step), check the entry arguments
@@ -1025,8 +1075,8 @@ the readout's `base` (RE-PIN 19, 2026-10-12): the core reads it off the setup's 
 inside the run. Before the re-pin this driver re-ran `runProgramSetupSeededM` after the run to
 read slot 0 — package init twice per seeded run (slice B's recorded debt, review LOW-2). With an
 empty seed no location can be seed-relative and `b` is never consulted. -/
-private def runSeeded (program : GoCore.Program) (input : FilePath) (functionName : String)
-    (seedPath : FilePath) (cfg : RunArgs) : IO UInt32 := do
+private def runSeeded (reporter : ChoiceReporter) (program : GoCore.Program) (input : FilePath)
+    (functionName : String) (seedPath : FilePath) (cfg : RunArgs) : IO UInt32 := do
   match ← readInputBytes seedPath with
   | .error err =>
       IO.println (cliErrorJson err).compress
@@ -1042,16 +1092,17 @@ private def runSeeded (program : GoCore.Program) (input : FilePath) (functionNam
       IO.println (cliErrorJson s!"{input}: {err}").compress
       return 1
   | .ok seedArgs =>
-  match GoCore.Machine.runProgramPoolSeededOutM cfg.fuel program functionName seed seedArgs cfg.choices with
-  | .error (err, out) =>
-      IO.println (errorJson err out).compress
-      return 1
+  let res := GoCore.Machine.runProgramPoolSeededOutM cfg.fuel program functionName seed seedArgs cfg.choices
+  let input : ChoiceReportInput :=
+    { program, functionName, entryArgs := #[], seeded? := some (seed, seedArgs), fuel := cfg.fuel,
+      choices := cfg.choices, result := res.map (·.readout) }
+  match res with
+  | .error (err, out) => emitWithChoiceReport reporter cfg input err.status (errorJson err out)
   | .ok sr =>
       let (status, obs) := seededObs (ObsCtx.ofEntry program functionName) sr
-      IO.println obs.compress
-      return (if status == "ok" then 0 else 1)
+      emitWithChoiceReport reporter cfg input status obs
 
-private def runNativeJsonRun (args : List String) : IO UInt32 := do
+private def runNativeJsonRun (reporter : ChoiceReporter) (args : List String) : IO UInt32 := do
   let cwd ← IO.currentDir
   match parseRunArgs args {} with
   | .error err =>
@@ -1102,23 +1153,25 @@ private def runNativeJsonRun (args : List String) : IO UInt32 := do
                   -- Since stdlib slice 3 the whole-run result carries
                   -- the program OUTPUT on both paths (`RunResult`).
                   match cfg.seed with
-                  | some seedPath => runSeeded program input functionName (absoluteFrom cwd seedPath) cfg
+                  | some seedPath => runSeeded reporter program input functionName (absoluteFrom cwd seedPath) cfg
                   | none =>
                   match entryArgValues program functionName cfg.args with
                   | .error err =>
                       IO.println (cliErrorJson s!"{input}: {err}").compress
                       return 1
                   | .ok entryArgs =>
-                  match GoLean.GoCore.Machine.runProgramPoolOutM cfg.fuel program functionName entryArgs cfg.choices with
+                  let res := GoLean.GoCore.Machine.runProgramPoolOutM cfg.fuel program functionName entryArgs cfg.choices
+                  let rinput : ChoiceReportInput :=
+                    { program, functionName, entryArgs, seeded? := none, fuel := cfg.fuel,
+                      choices := cfg.choices, result := res }
+                  match res with
                   | .ok result =>
                       -- BUG-099: a readout that would observe the synthetic
                       -- runtime-error type is a refusal (exit 1), never `ok`.
                       let (status, obs) := readoutObs (ObsCtx.ofEntry program functionName) result
-                      IO.println obs.compress
-                      return (if status == "ok" then 0 else 1)
+                      emitWithChoiceReport reporter cfg rinput status obs
                   | .error (err, out) =>
-                      IO.println (errorJson err out).compress
-                      return 1
+                      emitWithChoiceReport reporter cfg rinput err.status (errorJson err out)
       | _, _ =>
           IO.eprintln s!"provide --input <file> and --function <name>\n{usage}"
           return 2
@@ -2443,12 +2496,15 @@ private def runCoverageObservations (args : List String) : IO UInt32 := do
           IO.eprintln s!"provide --input <file> and --function <name>\n{usage}"
           return 2
 
-def main (args : List String) : IO UInt32 := do
+/-- The CLI's subcommands. `reporter` is `native-json-run`'s consumption-accounting pass (F1 of the
+2026-10-13 fail-closed pass) — `GoLean.ChoiceTrace.consumptionReport`, passed in by `Main` because
+that module imports this one. -/
+def main (reporter : ChoiceReporter) (args : List String) : IO UInt32 := do
   match args with
   | ["--help"] | ["-h"] =>
       IO.println usage
       return 0
-  | "native-json-run" :: rest => runNativeJsonRun rest
+  | "native-json-run" :: rest => runNativeJsonRun reporter rest
   | "observation-eq" :: rest => runObservationEq rest
   | "coverage-observations" :: rest => runCoverageObservations rest
   | [] =>

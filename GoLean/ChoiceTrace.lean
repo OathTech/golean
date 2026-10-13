@@ -962,11 +962,16 @@ def StreamReport.tsvLine (id : String) (r : StreamReport) : String :=
 
 /-- Trace one stream and run the driver-agreement cross-checks:
 `CLI.enumRunProgram`'s status/leftover meter and the real engine's
-observation. -/
-def traceStream (program : Program) (functionName : String) (args : Array GoValue)
-    (ep : CLI.EnumProgram) (fuel : Nat) (spec : String) :
+observation.
+`real?` is the real engine's result when the caller has ALREADY run it on this very wire,
+function, arguments, fuel and stream (`native-json-run`'s consumption report, F1 of the
+2026-10-13 fail-closed pass): the agreement checks then compare the enumerator driver against THAT
+run instead of running the engine a second time. `none` runs it here (`choice-trace`, through
+`traceStream`). -/
+def traceStreamOn (program : Program) (functionName : String) (args : Array GoValue)
+    (ep : CLI.EnumProgram) (fuel : Nat) (spec : String) (stream : List Nat)
+    (real? : Option RunResult) :
     Except String (StreamReport × RunOutcome) := do
-  let stream ← parseStream spec
   let out ← traceProgram ep fuel stream
   -- Enumerator driver: observation + leftover meter. The meter is
   -- three-valued: `none` = no leftover available (the enumerator driver
@@ -985,9 +990,10 @@ def traceStream (program : Program) (functionName : String) (args : Array GoValu
   -- driver's own rendering, so the two drivers compare on one shape (the seed-relative rendering
   -- is `native-json-run`'s observation layer, not a driver property).
   let real : RunResult :=
-    match ep.seeded? with
-    | none => runProgramPoolOutM fuel program functionName args stream
-    | some (seed, sargs) =>
+    match real?, ep.seeded? with
+    | some r, _ => r
+    | none, none => runProgramPoolOutM fuel program functionName args stream
+    | none, some (seed, sargs) =>
         (runProgramPoolSeededOutM fuel program functionName seed sargs stream).map (·.readout)
   let realObs := (CLI.observationOfRunOut (CLI.ObsCtx.ofFunc program.typeDefs ep.func) real).compress
   -- The tracer's own loop classifies main's exit as `ok`; the READOUT seam may still refuse it
@@ -1010,6 +1016,63 @@ def traceStream (program : Program) (functionName : String) (args : Array GoValu
     agree := agree ++ ["engine/enumerator observation mismatch"]
   let agreeS := if agree.isEmpty then "ok" else "MISMATCH: " ++ "; ".intercalate agree
   return (summarize spec out enumObs agreeS, out)
+
+/-- `traceStreamOn` over a stream spec, the real engine run here (`choice-trace`). -/
+def traceStream (program : Program) (functionName : String) (args : Array GoValue)
+    (ep : CLI.EnumProgram) (fuel : Nat) (spec : String) :
+    Except String (StreamReport × RunOutcome) := do
+  traceStreamOn program functionName args ep fuel spec (← parseStream spec) none
+
+/-! ## `native-json-run`'s choice report (F1 of the 2026-10-13 fail-closed pass)
+
+F1, verbatim: «`native-json-run` on a program with a consulted choice site answers `ok` with the
+canonical member and nothing marks it». The pass below is `choice-trace`'s single-stream loop
+(`traceStreamOn`, the SAME function, not a copy) on the run `native-json-run` just made: same wire,
+function, arguments, seed, fuel and stream, with the production driver's result handed in so the
+engine is not run twice. Its driver-agreement verdict, alarms and menu-invariant violations must
+all be clean, else the run is refused by name (`CLI.emitWithChoiceReport`) — the marker is never
+printed on an accounting that disagrees with the driver. Only consultations with bound ≥ 2 count
+(a bound-≤-1 consultation pops nothing and carries no latitude — the uniform rule, G-U). -/
+
+/-- The bound part of a site's summary: `bound b` when every consultation had the same bound,
+else `bounds lo–hi`. -/
+def boundsString (bs : List Nat) : String :=
+  let lo := bs.foldl min (bs.headD 0)
+  let hi := bs.foldl max 0
+  if lo == hi then s!"bound {hi}" else s!"bounds {lo}–{hi}"
+
+/-- The stderr line for the wide consultations `wide` (non-empty) under the stream `choices`. -/
+def choiceReportLine (wide : List Consumption) (choices : List Nat) : String :=
+  let sites := allSites.filterMap fun s =>
+    let cs := wide.filter (·.site == s)
+    if cs.isEmpty then none
+    else some s!"{siteName s}={cs.length} ({boundsString (cs.map (·.bound))})"
+  let member :=
+    if choices.isEmpty then "the canonical member"
+    else s!"the member the stream [{",".intercalate (choices.map toString)}] selects"
+  s!"native-json-run: consulted {wide.length} choice site(s) — {" ".intercalate sites}; the observation is {member} of a set — the certified set is coverage-observations'"
+
+/-- The consumption-accounting pass `native-json-run` runs after the production driver
+(`CLI.ChoiceReporter`). -/
+def consumptionReport : CLI.ChoiceReporter := fun i => do
+  match CLI.enumSetup i.program i.functionName i.entryArgs i.seeded? with
+  | .error e =>
+      -- The stream-independent setup refused before any step (no choice can have been consulted):
+      -- the production run must have refused with the same observation, else the drivers disagree.
+      let oc := CLI.ObsCtx.ofEntry i.program i.functionName
+      let mine := (CLI.observationOfRunOut oc (.error (e, GoString.empty))).compress
+      let theirs := (CLI.observationOfRunOut oc i.result).compress
+      if mine == theirs then return none
+      throw s!"the accounting setup refused ({e.status}: {e.message}) where the driver gave {theirs}"
+  | .ok ep =>
+      let spec := ",".intercalate (i.choices.map toString)
+      let (r, out) ← traceStreamOn i.program i.functionName i.entryArgs ep i.fuel spec i.choices (some i.result)
+      if r.driverAgreement != "ok" then throw r.driverAgreement
+      if let some a := r.alarms.head? then throw s!"tracer alarm: {a}"
+      if let some v := r.violations.head? then throw s!"menu-invariant violation: {v}"
+      let wide := out.acc.consumed.toList.filter (·.bound ≥ 2)
+      if wide.isEmpty then return none
+      return some (choiceReportLine wide i.choices)
 
 /-- One per-consumption DUMP line (wave-(iii) B8-prep, 2026-09-04): the
 tracer's labeled record for one consumption of one (case, stream) —

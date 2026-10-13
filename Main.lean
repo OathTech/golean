@@ -11,4 +11,6 @@ def main (args : List String) : IO UInt32 :=
   -- than in `GoLean.CLI.main` because the module imports CLI (it reuses
   -- the enumerator's accountant and driver copies).
   | "choice-trace" :: rest => GoLean.ChoiceTrace.main rest
-  | _ => GoLean.CLI.main args
+  -- `native-json-run`'s consumption report (F1 of the 2026-10-13 fail-closed pass) is the
+  -- tracer's pass, handed to the CLI for the same reason.
+  | _ => GoLean.CLI.main GoLean.ChoiceTrace.consumptionReport args

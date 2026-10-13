@@ -1082,7 +1082,7 @@ run_case_rows() {
     confluent_member="$(head -1 "$conf_dir/observations.txt")"
     confluent_detail="$(one_line "$(cat "$conf_dir/enum-stats.txt")")"
   fi
-  lean_args=(native-json-run --input "$wire_json" --function "$function_name")
+  lean_args=(native-json-run --no-choice-report --input "$wire_json" --function "$function_name")
   if [[ -n "$seed_file" ]]; then
     # Seeded (slice C): --seed and the mapped tokens, carried by EVERY
     # machine run of the row — the default stream and every invariance
@@ -1970,7 +1970,7 @@ run_membership_case_rows() {
   # width the enumeration missed) — fail loud either way.
   local cs coupling_obs member m_found coupling_rc eq_rc eq_undecided coupling_cause
   for cs in "" "9,8,7,6,5,4,3,2,1,0" "1,3,5,7,9,2,4,6,8,0" "5,5,5,5,5,5,5,5"; do
-    local run_args=(native-json-run --input "$wire_json" --function "$function_name" ${int_flags+"${int_flags[@]}"})
+    local run_args=(native-json-run --no-choice-report --input "$wire_json" --function "$function_name" ${int_flags+"${int_flags[@]}"})
     if [[ -n "$cs" ]]; then
       run_args+=(--choices "$cs")
     fi

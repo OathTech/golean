@@ -7,6 +7,9 @@ import GoLean.CLI
 -- the import is spelled out rather than inherited through CLI so that
 -- dependency is legible.
 import GoLean.EnumDedup
+-- `native-json-run`'s consumption report (F1 of the 2026-10-13 fail-closed pass) is the tracer's
+-- pass (`GoLean.ChoiceTrace.consumptionReport`); its pins below call it directly.
+import GoLean.ChoiceTrace
 import Tests.FloatVectors
 
 namespace Tests.GoCoreEval
@@ -1871,6 +1874,59 @@ private def expectStrEq (name : String) (actual expected : String) : IO Bool := 
     IO.eprintln s!"FAIL: {name}: expected {repr expected}, got {repr actual}"
     return false
 
+/-- The consumption report's verdict on `program`/`name` under `choices`, with the PRODUCTION
+driver's result (or `forged` in its place — the disagreement pins). -/
+private def choiceReport (program : GoCore.Program) (name : String) (choices : List Nat)
+    (forged : Option GoCore.Machine.RunResult := none) : Except String (Option String) :=
+  let real := forged.getD (GoCore.Machine.runProgramPoolOutM 1000000 program name #[] choices)
+  GoLean.ChoiceTrace.consumptionReport
+    { program, functionName := name, entryArgs := #[], seeded? := none, fuel := 1000000, choices,
+      result := real }
+
+/-- The report is a line containing every needle. -/
+private def expectChoiceLine (name : String) (r : Except String (Option String))
+    (needles : List String) : IO Bool := do
+  match r with
+  | .ok (some line) =>
+      if needles.all (fun n => (line.splitOn n).length > 1) then
+        IO.println s!"ok: {name}"
+        return true
+      IO.eprintln s!"FAIL: {name}: the line lacks one of {needles}: {line}"
+      return false
+  | .ok none =>
+      IO.eprintln s!"FAIL: {name}: no line (expected one naming {needles})"
+      return false
+  | .error e =>
+      IO.eprintln s!"FAIL: {name}: refused: {e}"
+      return false
+
+/-- The report says nothing (no consultation) and agrees with the driver. -/
+private def expectNoChoiceLine (name : String) (r : Except String (Option String)) : IO Bool := do
+  match r with
+  | .ok none =>
+      IO.println s!"ok: {name}"
+      return true
+  | .ok (some line) =>
+      IO.eprintln s!"FAIL: {name}: unexpected line: {line}"
+      return false
+  | .error e =>
+      IO.eprintln s!"FAIL: {name}: refused: {e}"
+      return false
+
+/-- The report REFUSES, naming `needle`. -/
+private def expectChoiceRefusal (name : String) (r : Except String (Option String))
+    (needle : String) : IO Bool := do
+  match r with
+  | .error e =>
+      if (e.splitOn needle).length > 1 then
+        IO.println s!"ok: {name}"
+        return true
+      IO.eprintln s!"FAIL: {name}: refused, but not naming '{needle}': {e}"
+      return false
+  | .ok r =>
+      IO.eprintln s!"FAIL: {name}: expected a refusal naming '{needle}', got {repr r}"
+      return false
+
 private def expectEnumFailure (name : String) (result : Except String CLI.EnumOutcome)
     (needle : String) : IO Bool := do
   match result with
@@ -3434,6 +3490,28 @@ def main : IO UInt32 := do
     (enumerate enumInitPanicProgram "enum_init_read_F" (some ["panic"])) 1)
   passed := passed && (← expectDriverAgreement "GoCore enumerator agrees with the whole-program driver ($pkginit panic)"
     enumInitPanicProgram "enum_init_read_F" (some ["panic"]) [[], [3], [7, 1]])
+  -- `native-json-run`'s choice report (F1 of the 2026-10-13 fail-closed pass): the tracer's pass
+  -- on the production run. A consulted site is named with its count and bound; no consultation
+  -- says nothing (an ok run, an init panic); a stream is named; a result the accounting does not
+  -- reproduce, or a setup verdict it does not share, REFUSES by name — never an unmarked answer.
+  passed := passed && (← expectChoiceLine "choice report: the append spill is named (count 1, bound 32), canonical member"
+    (choiceReport enumCapPanicProgram "enum_cap_panic_F" []) ["consulted 1 choice site(s)", "appendSpill=1 (bound 32)", "the canonical member"])
+  passed := passed && (← expectChoiceLine "choice report: a given stream is named"
+    (choiceReport enumFirstKeyProgram "enum_first_key_F" [1]) ["mapIter=", "the stream [1] selects"])
+  passed := passed && (← expectChoiceLine "choice report: the $pkginit phase's pick counts"
+    (choiceReport enumInitPickProgram "enum_init_read_F" []) ["mapIter="])
+  passed := passed && (← expectNoChoiceLine "choice report: a $pkginit panic consulting nothing says nothing"
+    (choiceReport enumInitPanicProgram "enum_init_read_F" []))
+  passed := passed && (← expectNoChoiceLine "choice report: a pick-free ok run says nothing"
+    (choiceReport { funcs := #[coreEnumInitReadFunction], globals := #[{ name := "g", typ := .int }] } "enum_init_read_F" []))
+  passed := passed && (← expectNoChoiceLine "choice report: a setup refusal shared with the driver says nothing"
+    (choiceReport enumCapPanicProgram "no_such_F" []))
+  passed := passed && (← expectChoiceRefusal "choice report: a result the accounting does not reproduce refuses"
+    (choiceReport enumCapPanicProgram "enum_cap_panic_F" [] (some (.ok { values := #[.int 999], output := GoString.empty })))
+    "engine/enumerator observation mismatch")
+  passed := passed && (← expectChoiceRefusal "choice report: a setup verdict the driver does not share refuses"
+    (choiceReport enumCapPanicProgram "no_such_F" [] (some (.ok { values := #[], output := GoString.empty })))
+    "the accounting setup refused")
   -- Slice 4: the POOL engine's pins (stepwise explorer + consumption
   -- accountant), per pool consumption-site class.
   passed := passed && (← expectEnumMembers "GoCore pool enumerator: fork/join rendezvous is confluent (singleton over all schedules)"
