@@ -500,7 +500,13 @@ func buildReport(p *program, target, commit, goVersion, registerPath string, fro
 				fr.StaticSite = strings.Join(dedup(sites), " | ")
 				for _, s := range sites {
 					if strings.Contains(s, "EXPORT-scoped") {
-						fr.Note = "the same refusal string covers a body call and a package-level initializer; the static census places this key at an export-scoped site — that is the kill (see the site's FR row)"
+						if c != nil && c.ID == "main-undeclared" {
+							// The entry rule's site is the package itself, not a
+							// declaration (BUG-125 fix round, review NIT-2).
+							fr.Note = "the entry rule (BUG-125): this package main declares no func main, so the whole export is refused; a differential-corpus subject is judged with --subject, where the rule is skipped"
+						} else {
+							fr.Note = "the same refusal string covers a body call and a package-level initializer; the static census places this key at an export-scoped site — that is the kill (see the site's FR row)"
+						}
 						break
 					}
 				}

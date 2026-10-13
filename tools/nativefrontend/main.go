@@ -25,7 +25,14 @@ func main() {
 		// baseline's detail column carries the rest, uncompared).
 		var u unsupported
 		if errors.As(err, &u) && refusedDir != "" {
-			fmt.Fprintf(os.Stderr, "for the full blocker picture run scripts/lower-diagnose %s\n", refusedDir)
+			// A --subject export's picture is --subject's (BUG-125 fix round,
+			// review MEDIUM-1): without the flag the entry rule, not the
+			// blocker, is lower-diagnose's first refusal.
+			subject := ""
+			if subjectMode {
+				subject = "--subject "
+			}
+			fmt.Fprintf(os.Stderr, "for the full blocker picture run scripts/lower-diagnose %s%s\n", subject, refusedDir)
 		}
 		os.Exit(1)
 	}

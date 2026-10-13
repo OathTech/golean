@@ -8676,7 +8676,7 @@ later». So the defect — the frontend LOWERED a program gc rejects — is fixe
   `$GOROOT/test` programs). `scripts/lower-diagnose` and `tools/lowerdiag report` gain the same `--subject` knob;
   the static judge applies the same rule (cause row `main-undeclared`, by-design, export scope).
 - NOT owed: a whole-program MODE (lowering such a package's other functions as gc never would run them) is the
-  ruling's «maybe later»; no further gc compilation-unit rules are mirrored on this account (ledger §5.1 item 7).
+  ruling's «maybe later»; no further gc compilation-unit rules are mirrored on this account (ledger §5.1 item 7). Fix round (train 9, the lane's pre-merge review, MEDIUM-1): an `unsupported` refusal's «full blocker picture» pointer line, and the two doc sentences, carry `--subject` when the export did — without it `lower-diagnose`'s first refusal is this rule, not the blocker (demonstrated on `constants/typed-complex-binary`); NIT-2: `lowerdiag report`'s note for this key names the entry rule instead of the body/initializer boilerplate; LOW-1 (a `func main` only in a build-constraint-excluded file is refused by file selection first, under BUG-108's posture) recorded in `entrymode.go` and ledger item 7, not changed; LOW-2 (the `type-check:` label on a link-time error) kept as is, honest by its parenthetical.
 
 ## BUG-126 — the native frontend QUARANTINED a body-less user function per declaration and lowered the rest of the program, which gc rejects whole («missing function body») [frontend boundary; over-acceptance — a sibling subject was answered; found by the pre-merge review of lane `frontend/chan-elem-limit-1013` (MEDIUM-2, relayed by the [AGENT] coordinator), 2026-10-13; FIXED the same day in that lane]
 

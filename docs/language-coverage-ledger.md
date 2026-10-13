@@ -565,7 +565,11 @@ requires a written profound reason. The complete list:
    as gc never would is not queued: RULED [USER] Mike 2026-10-13,
    verbatim, relayed by the [AGENT] coordinator: «I feel like this is just opening the door to endless special-case nonsense. I'd prefer to just refuse this case, and maybe support it later» —
    «maybe later», not owed; no further gc compilation-unit rules are
-   mirrored on its account.
+   mirrored on its account. Reach: a `func main` only in a
+   build-constraint-excluded file is refused earlier, by file
+   selection under BUG-108's posture (an `unsupported` refusal the
+   negative leg does not class as a rejection), not by this rule
+   (review LOW-1, 2026-10-13; no such negative row exists).
 
 ## 6. The concurrency-entangled design questions
 

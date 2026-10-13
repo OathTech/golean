@@ -21,9 +21,22 @@ import (
 // --subject (subjectMode) is the differential corpus's mode: the oracle
 // harness supplies `main` around the subject function, and the machine's
 // entry is the CLI's --function, so a main-less `package main` is the
-// ordinary shape (436 of 1396 exec directories, BUG-125). Only this one
-// rule is skipped; nothing else about the export changes, and on a
-// package that declares `func main` the flag is a no-op.
+// ordinary shape (494 of the 1457 directories under Corpus/coverage/exec
+// that hold a .go file, 41 of them local sub-packages — counted
+// 2026-10-13 at the train-9 stage by `find … -name '*.go' -printf '%h\n'
+// | sort -u` and a grep for `^func main(`; BUG-125). Only this one rule
+// is skipped; nothing else about the export changes, and on a package
+// that declares `func main` the flag is a no-op.
+//
+// Reach (review LOW-1, 2026-10-13): a `func main` that lives only in a
+// file gc's build constraints exclude (`//go:build ignore`, `!linux`) is
+// gc's «undeclared» too, but file selection refuses the excluded file
+// FIRST (fileselect.go, BUG-108's posture: an `unsupported` refusal
+// naming the file, which the negative leg classes as frontend-reason,
+// not as a rejection), so this rule never sees it; no negative row of
+// that shape exists. Filename-convention exclusions (`main_windows.go`,
+// `_entry.go`, `main_test.go`) are dropped silently and DO reach this
+// rule (measured: refused, as gc does).
 //
 // This is the ONLY gc compilation-unit rule mirrored here — no
 // whole-program mode (supporting such packages as gc would build them) is

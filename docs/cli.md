@@ -30,13 +30,17 @@ as gc does (`nativefrontend: type-check: function main is undeclared in the main
 exit 1, no wire; `entrymode.go`, BUG-125). `--subject` is the differential corpus's mode: the
 oracle harness supplies `main` around the subject function and the machine's entry is
 `--function`, so the check is skipped; it changes nothing else, and is a no-op on a package that
-declares `func main`. A non-`main` (library) package is not subject to the rule.
+declares `func main`. A non-`main` (library) package is not subject to the rule. (Not to be
+confused with `tools/coverageharness`'s `--subject`, which names the subject *function*: a
+different binary.)
 
 Exit codes:
 
 - 0: a wire was written. **This does not mean every declaration lowered** (see §6.3).
-- 1: refused. The first stderr line names the cause, and the second line points at
-  `scripts/lower-diagnose <dir>` for the full blocker list.
+- 1: refused. The first stderr line names the cause. An `unsupported` refusal adds a second
+  line pointing at `scripts/lower-diagnose <dir>` for the full blocker list (`--subject <dir>`
+  when the export ran with `--subject`: without it the entry rule, not the blocker, is the
+  first refusal); a `type-check:`, parse or file-selection refusal is a single line.
 
 Other flags (`--stdlib-src`, `--stdlib-pin`, `--stdlib-pin-manifest`, `--stdlib-register`,
 `--stdlib-overlay-check`, `--unseq-census`) are apparatus modes used by the gate. They emit no
@@ -493,4 +497,4 @@ the message `frontend-quarantined: <cause>`.
   as a whole-wire backstop, so a hand-built wire that carries such a type is still refused whole.
 - *How to tell:* `jq '[.funcs[], .methods[] | select(has("unsupported")) | {name, id, unsupported}]' wire.json`
   lists every stub before you run anything. For the full blocker picture, run
-  `scripts/lower-diagnose <dir>`.
+  `scripts/lower-diagnose <dir>` (`--subject <dir>` for a corpus subject exported with `--subject`).

@@ -28,7 +28,7 @@ func TestEntryDeclaredRule(t *testing.T) {
 		return err
 	}
 	cases := []struct {
-		name, src string
+		name, src       string
 		refuseByDefault bool
 	}{
 		{"no-main", "package main\n\nfunc f() int { return 1 }\n", true},

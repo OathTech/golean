@@ -562,7 +562,7 @@ export fraction unchanged each time). [USER] direction (4) of
 `docs/language-coverage-ledger.md` §0 (2026-09-04, coordinator-relayed:
 «it'd be useful if we didn't just get stuck without any information
 about *why* it's happening») is served by `scripts/lower-diagnose <dir |
-main.go> [--json] [--tsv]` (`tools/lowerdiag`;
+main.go> [--json] [--tsv] [--subject]` (`tools/lowerdiag`;
 `docs/2026-09-04_lower-diagnose.md`): it runs the real frontend for the
 first refusal (what a user sees today), then a STATIC go/types demand
 census over EVERY declaration of the program and its case-local
