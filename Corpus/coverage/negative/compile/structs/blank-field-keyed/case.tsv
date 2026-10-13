@@ -1,0 +1,2 @@
+# expected_substring	features
+unknown field _ in struct literal	structs,fields,literals,compile_error

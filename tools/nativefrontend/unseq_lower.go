@@ -784,6 +784,24 @@ func (b *unseqBuilder) structLitHead(cl *ast.CompositeLit) (map[string]any, erro
 			keyedTypes[name] = e.goTypeOf(kv.Value)
 			continue
 		}
+		// A BLANK field's operand (BUG-127; emit.go `emitBlankFieldOperand`
+		// is the legacy path's twin): Go evaluates it and discards it, so it
+		// is lowered here IN SOURCE ORDER with its siblings for its
+		// occurrences alone — its calls are E1-ordered events, its reads and
+		// checked accesses occurrences the tape orders exactly as a
+		// non-blank field's — and its cell is consumed by nothing; the head
+		// stores the field's zero value below. A constant or `nil` operand
+		// has no run-time evaluation at all.
+		if i := len(positional); i < st.NumFields() && st.Field(i).Name() == "_" {
+			if tv, ok := e.typesEntry(elt); !ok || (tv.Value == nil && !tv.IsNil()) {
+				if _, err := b.value(elt); err != nil {
+					return nil, err
+				}
+			}
+			positional = append(positional, nil)
+			positionalTypes = append(positionalTypes, nil)
+			continue
+		}
 		w, err := b.value(elt)
 		if err != nil {
 			return nil, err
@@ -797,6 +815,14 @@ func (b *unseqBuilder) structLitHead(cl *ast.CompositeLit) (map[string]any, erro
 		if len(positional) > 0 {
 			if i >= len(positional) {
 				return nil, unsup("unseq lowering: positional struct literal missing field %s", fld.Name())
+			}
+			if fld.Name() == "_" {
+				fty, err := e.emitType(fld.Type())
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, map[string]any{"expr": "default", "type": fty})
+				continue
 			}
 			w, err := e.wrapInterfaceConversion(fld.Type(), positionalTypes[i], positional[i])
 			if err != nil {

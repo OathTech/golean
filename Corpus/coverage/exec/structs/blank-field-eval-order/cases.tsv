@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+effectful	blankOrderEffectful	-	ok	-	structs,fields,literals,evaluation_order,calls
+boxed-effectful	blankOrderBoxedEffectful	-	ok	-	structs,fields,literals,evaluation_order,calls,interfaces
+sweep	blankOrderSweep	-	ok	-	structs,fields,literals,evaluation_order,calls,slices

@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+differing-blanks	blankEqDifferingBlanks	-	ok	-	structs,fields,literals,comparability
+duplicate-blanks	blankEqDuplicateBlanks	-	ok	-	structs,fields,literals,comparability
+interface-blank-slice-self	blankEqInterfaceSliceSelf	-	ok	-	structs,fields,literals,comparability,interfaces,slices,maps
+interface-blank-recovered	blankEqInterfaceRecovered	-	ok	-	structs,fields,literals,comparability,interfaces,slices,defer,recover
+nested-literal	blankEqNestedLiteral	-	ok	-	structs,fields,literals,comparability
+pointer-literal	blankEqPointerLiteral	-	ok	-	structs,fields,literals,comparability,pointers
+generic-instantiation	blankEqGenericInstantiation	-	ok	-	structs,fields,literals,comparability,generics
+element-literals	blankEqElementLiterals	-	ok	-	structs,fields,literals,comparability,slices,maps
+conversion-copy	blankEqConversionCopy	-	ok	-	structs,fields,literals,comparability

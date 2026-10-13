@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+cardinality	blankMapKeyCardinality	-	ok	-	structs,fields,literals,comparability,maps
+interface-blank	blankMapKeyInterfaceBlank	-	ok	-	structs,fields,literals,comparability,maps,interfaces,slices

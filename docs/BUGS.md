@@ -8877,3 +8877,53 @@ obligation»); (b) `go.work` `godebug` lines are a THIRD override the frontend n
 limit (docs/cli.md §1, release.md §4), not a refusal; (c) `//go:debug panicnil=0` in GOPATH mode is the one
 source-level way to match the pin (measured: `false`) and is refused too — the pin is the oracle's environment,
 never the source.
+`TestGcSizeLimits` (d01, d02, e02, g11, g13).
+
+## BUG-127 — BLANK struct fields were STORED and COMPARED: the lowering kept a positional literal's `_` operand in the value and the core's field-by-field equality read it, where Go compares non-blank fields only and gc discards the operand — `S{1, 2} == S{9, 2}` answered false (gc true), a map keyed by two such values had two entries (gc one), an interface-typed blank holding a slice panicked «comparing uncomparable type» (gc never does) and hashed as «unhashable» (gc stores nil); duplicate `_` fields the same [native frontend lowering; wrong answer with status ok; the Codex zero-context release pass's F1 (`docs/2026-10-13_codex-zero-context-pass.md`), release-readiness row 37; FIXED 2026-10-13 in lane `frontend/blank-fields-1013`]
+
+- Status: fixed ([AGENT] lane worker, lane `frontend/blank-fields-1013`, 2026-10-13, under [USER] Mike 2026-10-13,
+  verbatim, relayed by the [AGENT] coordinator: «2 fix» — the coordinator's proposed lowering fix, approved: evaluate
+  the blank operand at its position in the literal and store the zero value of the field's type, gc's own treatment,
+  with no core change)
+- Pinned-by: differential
+- Cases: structs/blank-field-equality/differing-blanks, structs/blank-field-equality/duplicate-blanks, structs/blank-field-equality/interface-blank-slice-self, structs/blank-field-equality/interface-blank-recovered, structs/blank-field-equality/nested-literal, structs/blank-field-equality/pointer-literal, structs/blank-field-equality/generic-instantiation, structs/blank-field-equality/element-literals, structs/blank-field-equality/conversion-copy, structs/blank-field-map-key/cardinality, structs/blank-field-map-key/interface-blank
+- Discovered: the Codex zero-context release pass (F1, 2026-10-13, the [USER]'s own run, relayed), reproduced by the
+  [AGENT] coordinator at `a0885047` with the `S{1, 2} == S{9, 2}` / map / `recover` program; the lane reproduced the
+  same program RED at the branch base `2e69dd86` (GoLean `false` / `2 3 7` / `99`, status ok; gc `true` / `1 7 7` / `7`)
+  before changing anything. Entry: [AGENT] lane worker, 2026-10-13.
+
+WHAT: spec#Comparison_operators — «Two struct values are equal if their corresponding non-blank field values are
+equal» — and gc agree that a blank field's operand is EVALUATED and then DISCARDED: `cmd/compile/internal/walk/
+complit.go` `fixedlit` turns the element into `_ = value` (dropped outright when side-effect-free) and
+`cmd/compile/internal/compare/compare.go` skips blank fields in the generated equality. The native frontend emitted
+every positional operand into the `struct-lit` (`tools/nativefrontend/emit.go` `emitStructLit`, and the unseq sweep's
+twin `unseq_lower.go` `structLitHead`), so the value carried the operand and the core's `valueEqFields`
+(`GoLean/GoCore/Ops.lean`), which compares every declared field by name, read it — in `==`, in map-key identity and in
+the comparability check that panics on an uncomparable dynamic type. Four pre-existing corpus cases hold blank fields
+(`structs/blank-field`, `noodler/structs`, `spec-examples-stmt/struct-tags`, `spec-examples-decl/compile-only-forms`);
+none compares them, which is why the baseline stayed green.
+
+FIX (lowering only; `GoLean/` untouched): at a blank field `_ T` of a positional literal the operand is evaluated and
+the field takes T's zero value, on both lowering paths. The EVALUATION keeps each path's standing order discipline
+exactly as a non-blank field's would, so no member Go leaves open is baked in: on the legacy ANF path
+(`emitBlankFieldOperand`) the operand's calls are hoisted by `emitExpr` at their lexical position (E1), a panicky
+residual keeps its E13 `unseq-probe`, and the residual is evaluated at the field's own position among the literal's
+arguments — gc's order too (`order` hoists the calls, `fixedlit` evaluates the residual per element) — spelled with
+the core's own array literal, `index-get(array-lit 2 T [(0, operand)], 1)`: the core evaluates element 0 there and the
+omitted index 1 is T's zero (`buildArrayValue`), the one "evaluate and discard" the wire spells without a new node;
+on the unseq sweep path the operand is lowered in source order with its siblings for its occurrences alone (its calls
+E1-ordered events, its reads and checked accesses occurrences the tape orders) and its cell is consumed by nothing, the
+head storing `default T`. A constant or `nil` operand has no run-time evaluation and lowers to the zero value directly.
+Keyed literals cannot name a blank field (gc and go/types: «unknown field _ in struct literal» — the negative row
+`structs/blank-field-keyed`, PASS at `frontend=type-check`); an omitted blank field already took the zero value; every
+other source of a struct value (zero value, copy, conversion, element read) carries the zero on from the literal.
+Anonymous non-empty struct types are FR-13's standing frontend refusal, so no literal of one reaches this lowering (a
+`struct{_ int; X int}{1, 2}` row would be born red on FR-13, not on this bug; none was added).
+
+PINS: the 11 Cases rows above were RED at the branch base (the wrong booleans, counts and the two panics) and PASS at
+the tip; 8 sibling rows were PASS at both and pin what the fix must keep — the operand's evaluation
+(`structs/blank-field-eval-order/{effectful,boxed-effectful,sweep}`: output order and the stored sibling values, on
+both paths), a panicking call operand and a panicky index operand (`structs/blank-field-panic/{call-operand,
+index-operand}`, `recovered-value`), and the spec-unsequenced pair «panicky blank residual beside a sibling call» as
+MEMBERSHIP rows on each path (`index-then-call-sweep`: the `unseq` scheduler's pick; `index-then-call-legacy`: the E13
+probe's DEFER/RAISE pick; members=2, gc draws the call-first member).
