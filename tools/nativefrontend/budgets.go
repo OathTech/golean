@@ -360,21 +360,41 @@ func (e *emitter) typeBudgetViolationWalk(t types.Type, visiting map[*types.Name
 }
 
 // opaqueBudgetArrayRef: in SIGNATURE-OPAQUE mode an over-budget inline
-// array type emits as an opaque `named` marker under its own spelling
-// (the FR-25 shape: `[70000]int` cannot collide with a declared TypeId,
-// which is package-qualified and bracket-free at its head), recorded for
-// an existence-only TypeDef (budgetMarkerTypeDefs). Array identity is
-// structural, and both sides of a satisfaction question — the
-// requirement list and the stub — are emitted in this mode, so identical
-// keys ⇔ identical Go types; no value of the type ever exists.
-func (e *emitter) opaqueBudgetArrayRef(a *types.Array, reason string) map[string]any {
-	key := types.TypeString(a, nil)
+// array type emits as an opaque `named` marker, recorded for an
+// existence-only TypeDef (budgetMarkerTypeDefs). The marker is keyed by
+// the frontend's CANONICAL identity key (`renderTypeKey` in
+// ifaceKeyCtx — basics by Kind, aliases unaliased, parameter names
+// dropped), never by a source spelling: Go type identity has
+// `[N]byte` ≡ `[N]uint8`, `[N]rune` ≡ `[N]int32`, an alias ≡ its target,
+// `[N]func(x int)` ≡ `[N]func(y int)`, and both sides of a satisfaction
+// question — the requirement list and the implementing stub — must mint
+// the SAME marker (fix round 2026-10-13, review BLOCKER-1: a
+// `types.TypeString` key made `M([70000]byte)` vs `M([70000]uint8)`
+// answer «does not satisfy», a silent wrong answer). The key starts with
+// `[`, so it cannot collide with a declared TypeId (package-qualified)
+// or a mangled instantiation key (`pkg.T[...]`). A rendering that
+// refuses refuses the signature by name. Identical keys ⇔ identical Go
+// types (the key's injectivity, as for anonymous interfaces); no value
+// of the type ever exists. The key is recorded as TOUCHED so a stub's
+// reason names it (review NIT-1, opaqueSigClauses).
+func (e *emitter) opaqueBudgetArrayRef(a *types.Array, reason string) (map[string]any, error) {
+	key, err := e.renderTypeKey(a, ifaceKeyCtx)
+	if err != nil {
+		return nil, unsup("materialization budget (BUG-078) signature marker: %s; and its signature-opaque marker key does not render (%v)", reason, err)
+	}
+	if !strings.HasPrefix(key, "[") {
+		return nil, unsup("materialization budget (BUG-078) signature marker: %s; and its signature-opaque marker key %q is not an array spelling (internal inconsistency, fail closed)", reason, key)
+	}
 	if e.opaqueBudgetArrays == nil {
 		e.opaqueBudgetArrays = map[string]string{}
 	}
 	e.opaqueBudgetArrays[key] = reason
+	if e.opaqueTouchedBudget == nil {
+		e.opaqueTouchedBudget = map[string]bool{}
+	}
+	e.opaqueTouchedBudget[key] = true
 	e.noteTypeDisplay(key, typeDisplay{display: key})
-	return map[string]any{"kind": "named", "name": key}
+	return map[string]any{"kind": "named", "name": key}, nil
 }
 
 // budgetMarkerTypeDefs: the existence-only TypeDefs of the opaque

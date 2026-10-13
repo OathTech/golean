@@ -161,6 +161,15 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 						e.liftSeq = 0
 						fn, err := e.emitFuncDecl(d)
 						if err != nil {
+							// BUG-078 / F2 (fix round 2026-10-13, review
+							// LOW-1): a budget refusal inside init code
+							// kills the WHOLE export — say so in the text,
+							// so the cause table keys it as export scope,
+							// not as the per-declaration quarantine.
+							var u unsupported
+							if errors.As(err, &u) && strings.Contains(u.what, "materialization budget (BUG-078)") {
+								return nil, unsup("init function %s does not lower (materialization budget (BUG-078) refusal in init code: %s) — init runs before every subject, so the WHOLE export refuses (no per-declaration quarantine for init code)", mangled, u.what)
+							}
 							return nil, err
 						}
 						fn["name"] = mangled
@@ -1487,6 +1496,25 @@ func (e *emitter) initializerEffectIsolated(rhs ast.Expr) bool {
 			switch nn.Op {
 			case token.ADD, token.SUB, token.XOR, token.NOT:
 				return admissible(nn.X, depth+1)
+			case token.AND:
+				// BUG-078 / F2 (fix round 2026-10-13, review MEDIUM-1):
+				// `&T{…}` whose literal type REACHES a materialization-
+				// budget violation. A composite literal is a FRESH
+				// allocation (never an alias of an existing variable),
+				// its elements are walked by this same predicate (effect-
+				// and panic-free), and the only place its address lands
+				// is the declared cell(s), which the skip poisons — so
+				// nothing gc runs is observable: no call, no panic, no
+				// write a reader can see. Any other address-of stays
+				// refused (it would escape a pointer to live state).
+				lit, isLit := ast.Unparen(nn.X).(*ast.CompositeLit)
+				if !isLit {
+					return false
+				}
+				if lt := e.goTypeOf(lit); lt == nil || e.typeBudgetViolation(lt) == "" {
+					return false
+				}
+				return admissible(lit, depth+1)
 			default:
 				// AND (address-of, escapes a pointer into the cell) and
 				// ARROW (a receive is an effect on a modeled channel).
@@ -1521,6 +1549,22 @@ func (e *emitter) initializerEffectIsolated(rhs ast.Expr) bool {
 			return e.isInstantiation(nn.X)
 		case *ast.CallExpr:
 			if tv, isConv := e.info.Types[nn.Fun]; isConv && tv.IsType() {
+				// BUG-078 / F2 (fix round 2026-10-13, review MEDIUM-1):
+				// the compile-time interface check `var _ I = (*Big)(nil)`
+				// over a type that REACHES a materialization-budget
+				// violation. Converting the predeclared nil cannot panic
+				// (the slice-to-array panic needs a slice operand; nil
+				// to `*[N]T` is the nil pointer), calls nothing and
+				// allocates nothing; the value lands only in the declared
+				// cell(s), which the skip poisons (a blank target has
+				// none). Narrowed to budget types — the gap F2 opened.
+				if len(nn.Args) == 1 && e.typeBudgetViolation(tv.Type) != "" {
+					if id, isIdent := ast.Unparen(nn.Args[0]).(*ast.Ident); isIdent {
+						if _, isNil := e.info.Uses[id].(*types.Nil); isNil {
+							return true
+						}
+					}
+				}
 				if arrayTarget(tv.Type) {
 					return false
 				}
@@ -2123,14 +2167,18 @@ func (e *emitter) quarantinedMethodStub(d *ast.FuncDecl, u unsupported) (map[str
 // never left on across a body emission (a body must refuse on these
 // types).
 func (e *emitter) withOpaqueSigs(f func() error) (insts, basics []string, err error) {
-	saved, savedInsts, savedBasics := e.sigOpaque, e.opaqueTouchedInsts, e.opaqueTouchedBasics
-	e.opaqueTouchedInsts, e.opaqueTouchedBasics = map[string]bool{}, map[string]bool{}
+	saved, savedInsts, savedBasics, savedBudget := e.sigOpaque, e.opaqueTouchedInsts, e.opaqueTouchedBasics, e.opaqueTouchedBudget
+	e.opaqueTouchedInsts, e.opaqueTouchedBasics, e.opaqueTouchedBudget = map[string]bool{}, map[string]bool{}, map[string]bool{}
 	e.sigOpaque = true
 	err = f()
 	e.sigOpaque = saved
 	insts = sortedStringKeys(e.opaqueTouchedInsts)
 	basics = sortedStringKeys(e.opaqueTouchedBasics)
-	e.opaqueTouchedInsts, e.opaqueTouchedBasics = savedInsts, savedBasics
+	// BUG-078 / F2 (review NIT-1): the budget-array markers ride the
+	// basics list (keys start with `[`, disjoint from basic spellings);
+	// opaqueSigClauses renders each with its own cause.
+	basics = append(basics, sortedStringKeys(e.opaqueTouchedBudget)...)
+	e.opaqueTouchedInsts, e.opaqueTouchedBasics, e.opaqueTouchedBudget = savedInsts, savedBasics, savedBudget
 	return insts, basics, err
 }
 
@@ -2144,6 +2192,10 @@ func (e *emitter) opaqueSigClauses(insts, basics []string) string {
 			" — not modeled (FR-23), carried as an opaque marker"
 	}
 	for _, k := range basics {
+		if reason, isBudget := e.opaqueBudgetArrays[k]; isBudget {
+			out += "; " + reason + " — the array type " + k + " is carried as an opaque marker in the signature only"
+			continue
+		}
 		_, cause, _ := opaqueBasicMarker(e.opaqueBasics[k])
 		out += "; FR-25: basic type " + k + " is " + cause + " — carried as an opaque marker in the signature only"
 	}

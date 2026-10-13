@@ -263,6 +263,9 @@ type emitter struct {
 	// TypeDef (budgetMarkerTypeDefs); and the per-named-type memo of the
 	// budget walk (complete answers only).
 	opaqueBudgetArrays map[string]string
+	// The budget-array markers the CURRENT withOpaqueSigs window touched
+	// (returned with the basics so a stub's reason names them).
+	opaqueTouchedBudget map[string]bool
 	budgetMemo         map[*types.Named]string
 	// The markers the CURRENT withOpaqueSigs window touched (minted OR
 	// re-used — a key first minted by an interface requirement list is
@@ -688,7 +691,7 @@ func (e *emitter) emitType(t types.Type) (any, error) {
 		if ty.Len() > budgets.arrayLen {
 			reason := e.arrayBudgetViolation(ty)
 			if e.sigOpaque {
-				return e.opaqueBudgetArrayRef(ty, reason), nil
+				return e.opaqueBudgetArrayRef(ty, reason)
 			}
 			return nil, unsup("%s", reason)
 		}
@@ -698,7 +701,7 @@ func (e *emitter) emitType(t types.Type) (any, error) {
 		}
 		if reason := e.arrayBudgetViolation(ty); reason != "" {
 			if e.sigOpaque {
-				return e.opaqueBudgetArrayRef(ty, reason), nil
+				return e.opaqueBudgetArrayRef(ty, reason)
 			}
 			return nil, unsup("%s", reason)
 		}

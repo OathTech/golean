@@ -266,3 +266,138 @@ func runtime(n int) int { return len(make([][1024]byte, n)) }
 		}
 	}
 }
+
+// paramTypeName: the `named` marker a wire signature entry's first
+// param carries ("" if not a named reference).
+func paramTypeName(entry map[string]any) string {
+	ps, _ := entry["params"].([]any)
+	if len(ps) == 0 {
+		return ""
+	}
+	p, _ := ps[0].(map[string]any)
+	ty, _ := p["type"].(map[string]any)
+	if ty["kind"] != "named" {
+		return ""
+	}
+	name, _ := ty["name"].(string)
+	return name
+}
+
+func TestBudgetSignatureMarkerIsCanonical(t *testing.T) {
+	// Review BLOCKER-1 (fix round 2026-10-13): Go identity has
+	// [N]byte ≡ [N]uint8, [N]rune ≡ [N]int32, an alias ≡ its target, and
+	// func types ignore parameter names. The requirement list and the
+	// implementing stub must name the SAME marker — one per identity.
+	n := budgets.arrayLen + 1
+	src := fmt.Sprintf(`package main
+
+type MyByte = byte
+
+type IByte interface{ M([%[1]d]byte) }
+type IRune interface{ R([%[1]d]rune) }
+type IAlias interface{ A([%[1]d]MyByte) }
+type IFunc interface{ F([%[1]d]func(x int) int) }
+
+type T struct{}
+
+func (T) M([%[1]d]uint8)             {}
+func (T) R([%[1]d]int32)             {}
+func (T) A([%[1]d]uint8)             {}
+func (T) F([%[1]d]func(y int) int)   {}
+`, n)
+	program, err := emitSource(t, src)
+	if err != nil {
+		t.Fatalf("export refused: %v", err)
+	}
+	ms, _ := program["methods"].([]any)
+	byName := map[string][]string{}
+	for _, m := range ms {
+		mm := m.(map[string]any)
+		id := mm["id"].(memberID).Name
+		byName[id] = append(byName[id], paramTypeName(mm))
+	}
+	for _, name := range []string{"M", "R", "A", "F"} {
+		keys := byName[name]
+		if len(keys) != 2 || keys[0] == "" || keys[0] != keys[1] {
+			t.Errorf("%s: requirement and stub name different markers: %q", name, keys)
+		}
+	}
+	if byName["M"][0] != byName["A"][0] {
+		t.Errorf("[N]byte and [N]MyByte (alias) mint different markers: %q vs %q", byName["M"][0], byName["A"][0])
+	}
+	markers := 0
+	ts, _ := program["types"].([]any)
+	for _, td := range ts {
+		if name, _ := td.(map[string]any)["name"].(string); strings.HasPrefix(name, "[") {
+			markers++
+		}
+	}
+	if markers != 3 { // [N]uint8, [N]int32, [N]func(int) int
+		t.Errorf("want 3 canonical budget markers, got %d", markers)
+	}
+}
+
+func TestBudgetStubReasonNamesSignatureMarker(t *testing.T) {
+	// Review NIT-1: a method quarantined for ANOTHER reason whose
+	// signature carries an over-budget array names the marker.
+	src := fmt.Sprintf(`package main
+
+type T struct{}
+
+func (T) M(a [%d]int) complex128 { return 0 }
+`, budgets.arrayLen+1)
+	program, err := emitSource(t, src)
+	if err != nil {
+		t.Fatalf("export refused: %v", err)
+	}
+	m := findMethod(program, "main.T", "M")
+	if m == nil || !strings.Contains(fmt.Sprint(m["unsupported"]), "carried as an opaque marker in the signature only") ||
+		!strings.Contains(fmt.Sprint(m["unsupported"]), "materialization budget (BUG-078)") {
+		t.Fatalf("stub reason does not name the budget marker: %v", m)
+	}
+}
+
+func TestBudgetInitializerIdioms(t *testing.T) {
+	// Review MEDIUM-1: the compile-time interface check and an
+	// address-of literal over a budget type are H-11 effect-isolated —
+	// skipped and poisoned per declaration, the export survives.
+	src := `package main
+
+type Big [70000]int
+
+type Sizer interface{ Size() int }
+
+func (b *Big) Size() int { return len(b) }
+
+var _ Sizer = (*Big)(nil)
+
+var p = &Big{}
+
+func readP() int { return p.Size() }
+
+func ok() int { return 7 }
+`
+	program, err := emitSource(t, src)
+	if err != nil {
+		t.Fatalf("export refused (want per-declaration poison): %v", err)
+	}
+	if f := findFunc(program, "ok"); f == nil || f["unsupported"] != nil {
+		t.Fatalf("ok was refused: %v", f)
+	}
+	if f := findFunc(program, "readP"); f == nil || f["unsupported"] == nil {
+		t.Fatalf("readP is not a stub: %v", f)
+	}
+	// Still whole-export: a call in the initializer, and init code.
+	for name, bad := range map[string]string{
+		"call": "package main\n\ntype Big [70000]int\n\nfunc makeBig() *Big { return &Big{} }\n\nvar big = makeBig()\n\nfunc ok() int { return 7 }\n",
+		"init": "package main\n\nvar n int\n\nfunc init() { var a [70000]int; n = len(a) }\n\nfunc ok() int { return n }\n",
+	} {
+		_, err := emitSource(t, bad)
+		if err == nil || !strings.Contains(err.Error(), "materialization budget (BUG-078)") {
+			t.Errorf("%s: want a whole-export budget refusal, got %v", name, err)
+		}
+		if name == "init" && (err == nil || !strings.Contains(err.Error(), "init function")) {
+			t.Errorf("init: the whole-export text does not name init code: %v", err)
+		}
+	}
+}
