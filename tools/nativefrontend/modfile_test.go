@@ -45,6 +45,24 @@ func TestModuleGoDirectiveRefusal(t *testing.T) {
 		{"godebug line (BUG-128)", "module example.org/m\n\ngo 1.26\n\ngodebug panicnil=1\n", "sets godebug (godebug panicnil=1)"},
 		{"godebug block (BUG-128)", "module example.org/m\n\ngo 1.26\n\ngodebug (\n\tpanicnil=1\n)\n", "sets godebug (godebug ()"},
 		{"godebug before the go directive (BUG-128: refused first, by name)", "module example.org/m\n\ngodebug panicnil=1\n\ngo 1.21\n", "sets godebug"},
+		// Fix round (review MEDIUM-2): the spellings x/mod's lexer accepts —
+		// `(` is its own token — and the verb grammar at the pin. Measured
+		// with gc (GO111MODULE=on GOPROXY=off): `godebug(` and a trailing
+		// comment are honoured (true); `require(` builds; an unknown verb is
+		// «unknown directive: frobnicate»; `toolchain go1.27.0` is inert under
+		// GOTOOLCHAIN=local (refused here by name all the same).
+		{"godebug( without a blank (gc honours it; was accepted silently)", "module example.org/m\n\ngo 1.26\n\ngodebug(\n\tpanicnil=1\n)\n", "sets godebug (godebug()"},
+		{"godebug line with a trailing comment", "module example.org/m\n\ngo 1.26\n\ngodebug panicnil=1 // legacy\n", "sets godebug (godebug panicnil=1 // legacy)"},
+		{"godebug default=go1.20", "module example.org/m\n\ngo 1.26\n\ngodebug default=go1.20\n", "sets godebug"},
+		{"require( without a blank: accepted, the block skipped", "module example.org/m\n\ngo 1.26\n\nrequire(\n\tgolang.org/x/mod v0.20.0 // indirect\n)\n", ""},
+		{"require, exclude, replace, retract, tool, ignore lines: accepted", "module example.org/m\n\ngo 1.26\n\nrequire golang.org/x/mod v0.20.0\nexclude golang.org/x/mod v0.19.0\nreplace golang.org/x/mod => ../mod\nretract [v1.0.0, v1.0.1]\ntool example.org/m/cmd/gen\nignore ./testdata\n", ""},
+		{"retract block with a rationale comment: accepted", "module example.org/m\n\ngo 1.26\n\nretract (\n\tv1.0.0 // broken\n\t[v1.1.0, v1.1.2]\n)\n", ""},
+		{"unknown directive (the go command: «unknown directive: frobnicate»)", "module example.org/m\n\ngo 1.26\n\nfrobnicate on\n", "does not know (\"frobnicate on\")"},
+		{"toolchain naming the pin: accepted", "module example.org/m\n\ngo 1.26\n\ntoolchain go1.26.5\n", ""},
+		{"toolchain naming another toolchain: refused by name", "module example.org/m\n\ngo 1.26\n\ntoolchain go1.27.0\n", "names toolchain go1.27.0; the oracle is pinned to go1.26.5"},
+		{"toolchain default: refused by name (not the pin's name)", "module example.org/m\n\ngo 1.26\n\ntoolchain default\n", "names toolchain default"},
+		{"malformed toolchain directive", "module example.org/m\n\ngo 1.26\n\ntoolchain\n", "malformed toolchain directive"},
+		{"go token inside a require block is not the go directive (block skipped), go 1.26 outside it", "module example.org/m\n\nrequire (\n\tgo v0.0.0\n)\n\ngo 1.26\n", ""},
 	}
 	for _, c := range cases {
 		t.Run(c.label, func(t *testing.T) {

@@ -585,7 +585,15 @@ requires a written profound reason. The complete list:
    ALLOWLIST, the directives with no effect on the compiled program:
    `//go:build` (the langversion.go constraint policy judges it),
    `//go:noinline` (ten corpus files; optimisation only),
-   `//go:generate` (never read by the compiler). Widening it is a
+   `//go:generate` (never read by the compiler) — each only in the
+   PLACEMENTS gc accepts (fix round, review HIGH-1: a directive after
+   code on its line, a `//go:build` after the package clause, a
+   `//go:noinline` no func or method declaration follows are gc's
+   «misplaced compiler directive», refused by name; a `/*go:…*/`
+   block comment is prose to gc and here; negative rows
+   `directives/{noinline-in-body, noinline-before-var, noinline-at-eof,
+   generate-trailing, build-after-package, build-trailing}`, controls
+   `directives/placement-controls/*`). Widening it is a
    ruling (`TestCompilerDirectiveAllowlist`); `//go:fix` is the one
    candidate recorded. Rows: `directives/embed-string`,
    `directives/linkname-accepted`, `directives/line-directive` (red by
@@ -600,7 +608,14 @@ requires a written profound reason. The complete list:
    by `TestModuleGoDirectiveRefusal`, the corpus having no go.mod). The
    runtime-defaults contract — Go 1.26 module defaults, `panic(nil)` is
    `*runtime.PanicNilError`, the oracle pinned with `GODEBUG=panicnil=0`
-   — is stated in `docs/cli.md` §1 and `docs/release.md` §4. Reach: a
+   — is stated in `docs/cli.md` §1 and `docs/release.md` §4, with its
+   limits: the GOPATH-mode oracle is at the go 1.16-era default for
+   every other setting, sound at the pin because no admitted member
+   reaches one (an obligation on each admission, stated in the stdlib
+   register), `go.work` `godebug` lines are unread, `//go:debug
+   panicnil=0` is refused too. The go.mod scanner is strict (every
+   verb of the pin's grammar accepted, judged or refused by name;
+   `godebug(` included; `toolchain` only at the pin). Reach: a
    user `//go:linkname` refuses before item 5's body-less rule, whose
    linkname exemption is gone; stdlib source-through units are library
    units and keep theirs. Not queued: modelling embed (a data/provenance

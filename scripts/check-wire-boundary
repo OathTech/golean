@@ -176,8 +176,9 @@ expect_refusal over-depth         'JSON parse error' 'JSON nesting deeper than'
 # verbatim, relayed: «Yes, do option (1)» — keep `main` unexported in every mode and make the
 # refusal explain itself; GoLean/CLI.lean entryFunc). The fixture declares `func main` (the
 # frontend's default mode admits it, BUG-125) and the wire never holds it: `--function main`
-# refuses naming the cause and the way out; any other missing name keeps the pre-F5 text
-# byte-for-byte (no BUG-125 clause).
+# refuses naming the cause and the way out — in words true on EVERY wire it is printed for, a
+# library-package wire and a --subject wire with no main included (review LOW-3); any other
+# missing name keeps the pre-F5 text byte-for-byte (no BUG-125 clause).
 expect_entry_refusal() {  # fn fragment... (and the main-only clause must be ABSENT for other names)
   local fn="$1" out rc=0 cause; shift
   out="$("$GOLEAN" native-json-run --input "$gate_scratch/program.json" --function "$fn" 2>&1)" || rc=$?
@@ -194,7 +195,7 @@ expect_entry_refusal() {  # fn fragment... (and the main-only clause must be ABS
   fi
   echo "ok [entry-$fn] refused, naming: $*"
 }
-expect_entry_refusal main   'entry function not found: main' 'the frontend admits a program'"'"'s main (BUG-125: it must exist) but never exports it' 'run one of them with --function (docs/cli.md)'
+expect_entry_refusal main   'entry function not found: main' 'the frontend never exports main (in default mode it must exist, BUG-125)' 'run one of them with --function (docs/cli.md)'
 expect_entry_refusal nosuch 'entry function not found: nosuch'
 
 # THE `unseq` NODE (evaluation-order model v2.1 Stage C, 2026-09-19; design

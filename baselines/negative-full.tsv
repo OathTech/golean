@@ -1,6 +1,15 @@
 # GoLean negative-corpus (compile-rejection) baseline
 # recorded: 2026-08-18  commit: f68a4d86+ (spec-truth P3 slice 2)  oracle: go build (rejection)  [header corrected 2026-08-31: the old "+ frontend fail-closed" conjunct claimed a check that does not exist — scripts/coverage-negative invokes no GoLean tool (p2-fact claim 5)]
-# manifest_cases: 408  pass: 408  fail: 0
+# manifest_cases: 414  pass: 414  fail: 0
+# re-pinned: 2026-10-13 [AGENT], lane frontend/directives-1013 FIX ROUND (the pre-merge adversarial review, relayed; HIGH-1, the
+#   placement-blind allowlist; BUG-127). SIX BORN ROWS, each frontend-accepts on main's frontend and on the lane's first landing
+#   (measured) and PASS at frontend=file-selection since the placement rules, gc's «misplaced compiler directive» on each:
+#   directives/noinline-in-body (a1), noinline-before-var (a2), noinline-at-eof (a6), generate-trailing (a3), build-after-package (a5),
+#   build-trailing (a8). LABEL NOTE (review LOW-5): the directive refusal is a by-design `unsupported` spelled `file selection in …`,
+#   so these rows — and the three directive rows below — pass as frontend=file-selection although the frontend never learns gc's
+#   reason and refuses the same shapes when gc accepts them; consistent with the BUG-108 precedent (the cgo and non-Go-source
+#   refusals pass the same way). No other row moves; no flip. Counts: 408 + 6 = 414; PASS 408 + 6 = 414; FAIL 0. Measured by
+#   scripts/coverage-negative on the nine-row directives/ manifest and confirmed by capped scripts/ci --diff at the lane tip.
 # re-pinned: 2026-10-13 [AGENT], lane frontend/directives-1013 (off main 2e69dd86) — release-readiness rows 38 and 39 (the Codex
 #   zero-context pass F2/F3), RULED [USER] Mike 2026-10-13 «3, agree», relayed: compiler directives outside the allowlist, line
 #   directives, //go:debug and go.mod godebug refuse by name at file selection (BUG-127, BUG-128). THREE BORN ROWS, each
@@ -203,9 +212,15 @@ PASS	defer/defer-append-result	-
 PASS	defer/defer-len-result	-
 PASS	defer/defer-non-call	-
 PASS	defer/defer-receive-expression	-
+PASS	directives/build-after-package	-
+PASS	directives/build-trailing	-
 PASS	directives/debug-unknown-setting	-
 PASS	directives/embed-missing-file	-
+PASS	directives/generate-trailing	-
 PASS	directives/linkname-invalid-reference	-
+PASS	directives/noinline-at-eof	-
+PASS	directives/noinline-before-var	-
+PASS	directives/noinline-in-body	-
 PASS	floats/defined-type-mixed-add	-
 PASS	floats/float-bitwise-and	-
 PASS	floats/float-modulo	-

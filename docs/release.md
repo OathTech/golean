@@ -117,15 +117,23 @@ push rule). Pushing the tag is a separate sign-off.
   `tools/nativefrontend/directives.go`): in every user unit, any `//go:` directive outside the allowlist —
   `//go:build`, `//go:noinline`, `//go:generate`, the three with no effect on the compiled program — and any
   `//line`/`/*line` directive refuses the export at file selection (`//go:embed`, `//go:linkname`, the codegen and
-  race pragmas, unknown verbs gc ignores: all refused; no directive is modeled). [USER] Mike 2026-10-13, relayed:
-  «3, agree», under «I'd prefer to just refuse this case, and maybe support it later». Rows `directives/*` (three
-  red by design, two controls, three negative).
+  race pragmas, unknown verbs gc ignores: all refused; no directive is modeled); the three allowed verbs only in the
+  placements gc accepts (a directive after code on its line, a `//go:build` after the package clause, a
+  `//go:noinline` no func or method declaration follows: refused as gc's «misplaced compiler directive»). [USER]
+  Mike 2026-10-13, relayed: «3, agree», under «I'd prefer to just refuse this case, and maybe support it later».
+  Rows `directives/*` (three red by design, five controls, nine negative).
 - **The model's runtime defaults** (F3, row 39; BUG-128): the semantics is Go 1.26's with the MODULE-mode runtime
   defaults — `panic(nil)` is `*runtime.PanicNilError`. No GODEBUG setting is modeled: `//go:debug` lines (any user
   unit) and go.mod `godebug` lines/blocks refuse by name. The differential oracle is pinned with
   `GODEBUG=panicnil=0` on every `go run`, because gc in GOPATH mode (no go.mod — the corpus's mode) defaults to the
   LEGACY `panic(nil)` (measured at go1.26.5: `recover() == nil` is `true` there, `false` under the pin and in a
   `go 1.26` module). A consumer comparing a wire's run against gc by hand must run gc the same way (the pin, or a
-  `go 1.21`+ module with no godebug override). The contract is stated in `docs/cli.md` §1.
+  `go 1.21`+ module with no godebug override). Stated limits of the same contract: in GOPATH mode every GODEBUG
+  setting is at its go 1.16-era default and only `panicnil` is pinned — sound at the pin because no other
+  version-dependent setting is reached by an admitted stdlib member (measured against `internal/godebugs/table.go`;
+  an obligation on every future admission, `docs/stdlib-admission-register.md`); a `go.work` `godebug` line is an
+  override the frontend never reads (measured: it flips a module's answer while the export succeeds) — do not build
+  inside a workspace that sets one; `//go:debug panicnil=0`, the one source-level match for the pin, is refused
+  like every `//go:debug`. The contract is stated in `docs/cli.md` §1.
 - The ten limits of the 2026-10-03 offer (`docs/2026-10-03_offer-to-logic-team.md`) stand.
 

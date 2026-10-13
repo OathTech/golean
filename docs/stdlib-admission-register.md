@@ -48,6 +48,26 @@ source-through package CANNOT lower is the frontier suite
 `stdlib-source/frontier` (every detected gap is rowed — [USER]
 direction 3, relayed).
 
+### The GODEBUG obligation (per admission; BUG-128 fix round, 2026-10-13)
+
+The differential oracle runs in GOPATH mode, where the go command applies
+the go 1.16-era defaults to EVERY GODEBUG setting
+(`gover.DefaultGoModVersion = "1.16"`; `cmd/go/internal/load/godebug.go`
+`godebugForGoVersion`), and the runner pins only `GODEBUG=panicnil=0`
+(`scripts/diff-coverage`); the model implements the Go 1.26 module
+defaults. So an admission must not reach a setting whose `Old` default
+differs from the 1.26 default — `deps/go/src/internal/godebugs/table.go`,
+the entries with `Changed` > 16 — unless the runner pins that setting
+too; otherwise the oracle and the model diverge by configuration, not
+semantics. Measured at the pin against this register: `panicnil`
+(runtime, pinned) is the only such setting reached; `containermaxprocs`/
+`updatemaxprocs` (runtime) touch GOMAXPROCS only; `randseednop`
+(math/rand) needs `rand.Seed`, not admitted (`randautoseed` has no
+version-dependent default); `asynctimerchan` (time) needs a timer, not
+admitted (`time.Date` is pure); `winsymlink`/`winreadlinkvolume` (os) are
+Windows-only. An admission that reaches a new one must either pin it in
+the runner (and say so in docs/cli.md §1's contract) or be refused.
+
 ### The init-pure-at-the-pin argument (per source-through package)
 
 Reachability pruning drops an UNREACHED library variable's initializer,

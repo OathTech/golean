@@ -55,6 +55,15 @@ func TestCompilerDirectiveParity(t *testing.T) {
 		{"//line at column 1 and /*line*/ inline", "package main\n\n//line other.go:10\nfunc main() { /*line other.go:20*/ println(1) }\n", map[string]int{"compiler-directive": 2}},
 		{"indented //go:nosplit inside a body", "package main\n\nfunc main() {\n\t//go:nosplit\n\tprintln(1)\n}\n", map[string]int{"compiler-directive": 1}},
 		{"the allowlist and prose", "//go:build !with_tla\n\npackage main\n\n//go:generate echo hi\n//go:noinline\nfunc f() { println(1) }\n\n// go:embed with a blank is prose; so is //golang:\n//golang: x\nfunc main() { f() }\n", map[string]int{}},
+		// Placement (fix round, review HIGH-1): the three misplaced shapes.
+		{"a5: go:build after the package clause", "package main\n\n//go:build ignore\n\nfunc main() { println(1) }\n", map[string]int{"compiler-directive": 1}},
+		{"a3: go:generate after code on its line", "package main\n\nfunc main() { println(1) } //go:generate echo hi\n", map[string]int{"compiler-directive": 1}},
+		// (One finding per distinct directive text per file: the report
+		// dedups findings by key, so a2 and a6 are separate cases.)
+		{"a2: go:noinline before a var", "package main\n\n//go:noinline\nvar x = 1\n\nfunc main() { println(x) }\n", map[string]int{"compiler-directive": 1}},
+		{"a6: go:noinline at the end of the file", "package main\n\nfunc main() { println(1) }\n\n//go:noinline\n", map[string]int{"compiler-directive": 1}},
+		{"a13: go:noinline before the package clause", "//go:noinline\npackage main\n\nfunc f() int { return 1 }\n\nfunc main() { println(f()) }\n", map[string]int{"compiler-directive": 1}},
+		{"a9/a12/a10: method, blank line, in-body generate — accepted; block go: comments are prose", "package main\n\ntype T int\n\n//go:noinline\nfunc (t T) M() int { return int(t) }\n\n//go:noinline\n\nfunc f() int { return 1 } /*go:noinline*/\n\nfunc main() {\n\t//go:generate echo hi\n\tprintln(T(2).M() + f())\n}\n", map[string]int{}},
 	}
 	for _, c := range cases {
 		t.Run(c.label, func(t *testing.T) {

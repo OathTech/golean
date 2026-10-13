@@ -1,5 +1,14 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3995 (3751 PASS / 244 FAIL)
+# cases: 3998 (3754 PASS / 244 FAIL)
+# re-pinned: 2026-10-13 [AGENT], lane frontend/directives-1013 FIX ROUND (the pre-merge adversarial review, relayed by the [AGENT]
+#   coordinator; HIGH-1: the directive allowlist was placement-blind — gc rejects a directive after code on its line, a //go:build
+#   after the package clause and a //go:noinline no func or method declaration follows («misplaced compiler directive»), the frontend
+#   exported them). THREE BORN ROWS, all PASS, the placements gc ACCEPTS for the allowed verbs (measured at go1.26.5: 2, 1, 1), in one
+#   package Corpus/coverage/exec/directives/placement-controls/: noinline-method (a //go:noinline on a method), noinline-blank-line
+#   (a //go:noinline, a blank line, then its func), generate-in-body (a //go:generate inside a body — no pragma flag, never
+#   misplaced on its own line). The rejected placements are six negative rows. No existing row moved (the corpus's 15 //go:noinline,
+#   1 //go:generate and 1 //go:build are all in accepted placements, measured by this run). 3995 + 3 = 3998; PASS 3751 + 3 = 3754;
+#   FAIL 244. 0 PASS->non-PASS flips; no removal. Measured by scripts/diff-one and confirmed by capped scripts/ci --diff at the lane tip.
 # re-pinned: 2026-10-13 [AGENT], lane frontend/directives-1013 (off main 2e69dd86) — release-readiness rows 38 and 39 (the Codex
 #   zero-context pass F2/F3: unmodeled compiler directives accepted, //go:debug ignored), RULED [USER] Mike 2026-10-13, verbatim,
 #   relayed by the [AGENT] coordinator: «3, agree» — refuse by name, at file selection, in every user unit, any //go: directive
@@ -2876,6 +2885,9 @@ PASS	directives/generate-control	-	-
 FAIL	directives/line-directive	frontend-export	by-design/compiler-directive
 FAIL	directives/linkname-accepted	frontend-export	by-design/compiler-directive
 PASS	directives/noinline-control	-	-
+PASS	directives/placement-controls/generate-in-body	-	-
+PASS	directives/placement-controls/noinline-blank-line	-	-
+PASS	directives/placement-controls/noinline-method	-	-
 PASS	embedding/deep-promoted-field	-	-
 PASS	embedding/deep-promoted-method	-	-
 PASS	embedding/embedded-field-shadow	-	-

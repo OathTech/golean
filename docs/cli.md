@@ -35,9 +35,10 @@ confused with `tools/coverageharness`'s `--subject`, which names the subject *fu
 different binary.) In either mode the wire holds the package's named functions and **never
 `main`**: the default mode requires `func main` (BUG-125) and exports everything else, so a run
 names one of those functions with `--function`; `--function main` refuses with `entry function
-not found: main — the frontend admits a program's main (BUG-125: it must exist) but never
-exports it; the wire holds the package's other functions; run one of them with --function
-(docs/cli.md)` (status `error`, exit 1; `GoLean/CLI.lean` `entryFunc`). This is the contract
+not found: main — the frontend never exports main (in default mode it must exist, BUG-125); the
+wire holds the package's other functions; run one of them with --function (docs/cli.md)` (status
+`error`, exit 1; `GoLean/CLI.lean` `entryFunc`; the same words on a library-package wire and on a
+`--subject` wire, which never had a `main`). This is the contract
 ([USER]-ruled 2026-10-13: keep `main` unexported in every mode, explain the refusal), not a gap: a
 program's `main` is the oracle's entry, the machine's is the named function.
 
@@ -48,8 +49,11 @@ policy), `//go:noinline` and `//go:generate`, the three with no effect on the co
 and any `//line` / `/*line` directive refuse the export (`nativefrontend: native frontend
 unsupported: file selection in <dir>: <file>:<line>:<col> carries the compiler directive
 `//go:embed data.txt` — …`, exit 1, no wire). So `//go:embed`, `//go:linkname`, `//go:nosplit`,
-`//go:norace`, `//go:wasmimport`, an unknown verb (gc ignores it; refused here) all refuse. No
-directive is modeled.
+`//go:norace`, `//go:wasmimport`, an unknown verb (gc ignores it; refused here) all refuse. The
+three allowed verbs are allowed only in the placements gc accepts: a directive after code on its
+line, a `//go:build` after the package clause, or a `//go:noinline` that no func or method
+declaration follows is refused by name, as gc rejects it («misplaced compiler directive»). A
+`/*go:…*/` block comment is prose to gc and here. No directive is modeled.
 
 **Runtime defaults (the contract).** The semantics is Go 1.26's with the *module-mode* runtime
 defaults: `panic(nil)` raises `*runtime.PanicNilError`, so `recover()` after it is non-nil. No
@@ -62,7 +66,17 @@ runner pins the oracle to match — `GODEBUG=panicnil=0` on every `go run` (`scr
 `go 1.26` module, `true` again in that module with `godebug panicnil=1`). A consumer comparing a
 wire's run against gc by hand must do the same: run gc with `GODEBUG=panicnil=0`, or inside a
 `go 1.21`-or-later module with no `godebug` override; otherwise the `true`/`false` difference is the
-oracle's configuration, not the semantics.
+oracle's configuration, not the semantics. Three more points of the same contract: (a) in GOPATH
+mode the go command applies the go 1.16-era defaults to EVERY GODEBUG setting, and the runner pins
+only `panicnil`; this coincides with the model because, at the pin, `panicnil` is the only setting
+with a version-dependent default that an admitted stdlib member reaches (measured against
+`internal/godebugs/table.go`: `randseednop` needs `rand.Seed`, `asynctimerchan` needs a timer,
+neither admitted) — every future admission carries that obligation
+(`docs/stdlib-admission-register.md`, «GODEBUG obligation»); (b) a `go.work` `godebug` line is a
+third override the frontend never reads (measured: it flips a `go 1.26` module's `panic(nil)` to
+the legacy answer while the export succeeds) — a consumer must not build inside a workspace that
+sets one; (c) `//go:debug panicnil=0`, the one source-level way to match the pin in GOPATH mode, is
+refused like every other `//go:debug` line: the pin is the oracle's environment, never the source.
 
 Exit codes:
 

@@ -1,0 +1,12 @@
+# id	subject	args	expected_status	expected_reason	features
+# directives/placement-controls — BUG-127 fix round POSITIVE CONTROLS
+# ([AGENT], lane frontend/directives-1013, 2026-10-13; review HIGH-1): the
+# allowlisted directives in the placements gc accepts (measured at
+# go1.26.5 on the reviewer's a9, a12 and a10 probes: 2, 1, 1). PASS before
+# and after the placement rules — a rule that over-refuses a placement gc
+# accepts turns one of these red. The rejected placements are the negative
+# rows directives/{noinline-in-body, noinline-before-var, noinline-at-eof,
+# generate-trailing, build-after-package, build-trailing}.
+noinline-method	noinlineMethod	-	ok	-	methods,returns
+noinline-blank-line	noinlineBlankLine	-	ok	-	functions,returns
+generate-in-body	generateInBody	-	ok	-	functions,returns

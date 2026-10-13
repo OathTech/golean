@@ -420,7 +420,7 @@ func (a *analyzer) fileLevel(f *ast.File) {
 	// the file, any column, as gc's pragma handler reads them.
 	for _, cg := range f.Comments {
 		for _, c := range cg.List {
-			if id, key := directiveFinding(c.Text); id != "" {
+			if id, key := directiveFinding(a.p.fset, f, c); id != "" {
 				get().add(finding{Cause: mustCause(id), Key: key, Pos: a.p.pos(c), Certain: true, Export: true})
 			}
 		}
@@ -1508,12 +1508,17 @@ func (a *analyzer) shortCircuit(d *declReport, y ast.Expr) {
 // 2026-10-13); widening it is a ruling, not an edit.
 var allowedDirectiveVerbs = map[string]bool{"go:build": true, "go:noinline": true, "go:generate": true}
 
-// directiveFinding classifies one comment as the frontend's scan does:
-// ("runtime-setting", directive) for a //go:debug line,
-// ("compiler-directive", directive) for a //go: verb outside the
-// allowlist or a line directive, ("", "") otherwise. The key is the
-// directive's first line.
-func directiveFinding(text string) (id, key string) {
+// directiveFinding classifies one comment as the frontend's scan does
+// (directives.go judge/judgePlacement): ("runtime-setting", directive)
+// for a //go:debug line; ("compiler-directive", directive) for a //go:
+// verb outside the allowlist, a line directive, or an allowlisted verb in
+// a placement gc rejects («misplaced compiler directive»: after code on
+// its line, //go:build after the package clause, //go:noinline that no
+// func or method declaration follows); ("", "") otherwise — a block
+// `/*go:…*/` comment is prose to gc. The key is the directive's first
+// line.
+func directiveFinding(fset *token.FileSet, f *ast.File, c *ast.Comment) (id, key string) {
+	text := c.Text
 	body := text
 	if strings.HasPrefix(body, "/*") {
 		body = strings.TrimSuffix(body[2:], "*/")
@@ -1528,6 +1533,8 @@ func directiveFinding(text string) (id, key string) {
 	switch {
 	case strings.HasPrefix(body, "line "):
 		return "compiler-directive", first
+	case strings.HasPrefix(text, "/*"):
+		return "", ""
 	case strings.HasPrefix(body, "go:"):
 		verb := body
 		if i := strings.IndexAny(verb, " \t"); i >= 0 {
@@ -1536,10 +1543,52 @@ func directiveFinding(text string) (id, key string) {
 		if verb == "go:debug" {
 			return "runtime-setting", first
 		}
-		if allowedDirectiveVerbs[verb] {
-			return "", ""
+		if !allowedDirectiveVerbs[verb] {
+			return "compiler-directive", first
 		}
-		return "compiler-directive", first
+		if !directiveOwnLine(fset, c) {
+			return "compiler-directive", first
+		}
+		if verb == "go:build" && c.Pos() > f.Package {
+			return "compiler-directive", first
+		}
+		if verb == "go:noinline" && !directiveNextDeclIsFunc(f, c) {
+			return "compiler-directive", first
+		}
 	}
 	return "", ""
+}
+
+// directiveOwnLine is gc's blank flag: only whitespace before the comment
+// on its line (the file is re-read; an unreadable file counts as NOT on
+// its own line, so the finding fires rather than hides).
+func directiveOwnLine(fset *token.FileSet, c *ast.Comment) bool {
+	tf := fset.File(c.Pos())
+	if tf == nil {
+		return false
+	}
+	src, err := os.ReadFile(tf.Name())
+	if err != nil || len(src) != tf.Size() {
+		return false
+	}
+	off := tf.Offset(c.Pos())
+	lineStart := tf.Offset(tf.LineStart(tf.Line(c.Pos())))
+	return strings.TrimSpace(string(src[lineStart:off])) == ""
+}
+
+// directiveNextDeclIsFunc mirrors directives.go nextDeclIsFunc.
+func directiveNextDeclIsFunc(f *ast.File, c *ast.Comment) bool {
+	if c.Pos() < f.Package {
+		return false
+	}
+	for _, d := range f.Decls {
+		if d.Pos() <= c.Pos() && c.Pos() < d.End() {
+			return false
+		}
+		if d.Pos() > c.Pos() {
+			_, ok := d.(*ast.FuncDecl)
+			return ok
+		}
+	}
+	return false
 }

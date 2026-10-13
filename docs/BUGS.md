@@ -8750,11 +8750,15 @@ I'd prefer to just refuse this case, and maybe support it later»): `tools/nativ
 (load.go parseLocal). Every comment of every selected file is scanned; the first directive outside the allowlist
 refuses the export as `native frontend unsupported: file selection in <dir>: <file>:<line>:<col> carries the
 compiler directive \`<text>\` — …` (the negative leg's rejection shape, `frontend=file-selection`); a line directive
-as `… carries the line directive \`<text>\` — …`. Both forms of each are refused wherever they appear (an indented
-`//line` is prose to gc, over-refused by name, the message says so; a `/*go:…*/` block comment likewise). THE
-ALLOWLIST ([AGENT] proposal, ratified by the ruling): `//go:build` (the langversion.go constraint policy judges it;
-inert after the package clause), `//go:noinline` (ten corpus files; optimisation only), `//go:generate` (never read
-by the compiler). Widening it is a ruling, not an edit (`TestCompilerDirectiveAllowlist`). Candidates NOT widened,
+as `… carries the line directive \`<text>\` — …`. Both line forms are refused wherever they appear (an indented
+`//line` is prose to gc, over-refused by name, the message says so). A `/*go:…*/` BLOCK comment is prose to gc
+(scanner.go fullComment hands only `/*line` to the pragma handler; measured: `/*go:embed data.txt*/` leaves the
+variable empty, gc prints 0) and is prose here — CORRECTED in the fix round, which had over-refused it. THE
+ALLOWLIST ([AGENT] proposal, ratified by the ruling): `//go:build` (the langversion.go constraint policy judges it,
+before the package clause), `//go:noinline` (ten corpus files; optimisation only), `//go:generate` (never read by
+the compiler) — each ONLY IN THE PLACEMENTS gc ACCEPTS (the fix-round paragraph below; the first landing wrongly
+called a `//go:build` after the package clause «inert»). Widening it is a ruling, not an edit
+(`TestCompilerDirectiveAllowlist`). Candidates NOT widened,
 recorded for the [USER]: `//go:fix` (a gc 1.26 tool directive like generate, no compiled effect). No directive is
 modeled: not embed (would need a data/provenance contract), not linkname, not the codegen or race-instrumentation
 pragmas (`//go:norace` would hide a race from the -race oracle). Static twin: `tools/lowerdiag` (static.go
@@ -8768,6 +8772,30 @@ carries 15 `//go:noinline` (10 files), 1 `//go:generate` (raftsubject/quorum/quo
 (raftsubject/raft/state_trace_nop.go), all allowed; no exec row moves (measured by the full gate). Pinned by
 `TestCompilerDirectives` (28 shapes: every form gc recognizes, the allowlist, the imported-unit reach, prose that
 is not a directive), `TestCompilerDirectivesAtSelection`, the Cases rows and the negative rows.
+
+FIX ROUND (2026-10-13, the lane's pre-merge adversarial review, HIGH-1, relayed by the [AGENT] coordinator): the
+allowlist was PLACEMENT-BLIND. gc rejects with «misplaced compiler directive» (cmd/compile/internal/noder/noder.go
+`pragma` — the scanner's `blank` flag — and `checkUnusedDuringParse`; lex.go `pragmaFlag` gives `//go:build` the
+flag GoBuildPragma): (a) any `//go:` directive, whatever its verb, not on a line by itself; (b) a `//go:build` after
+the package clause (only the package clause consumes its flag); (c) a `//go:noinline` not consumed by the next func
+or method declaration — before the package clause, inside a declaration or a body, before a var/type/const/import
+declaration, at the end of the file. `//go:generate` carries no flag: never misplaced on its own line, anywhere.
+Main's frontend and the first landing exported every such program (the reviewer's a1–a8 and a11; `a1s` answered
+ok 1, `a5s` ok 5 where gc rejects the file). MEASURED at go1.26.5, GOPATH mode, on the reviewer's a1–a12 and the
+lane's a13–a20: rejected — a1 noinline in a body, a2 before a var, a3 generate after code, a4 noinline after code,
+a5 build after the package clause, a6 noinline at EOF, a7 before a type, a8 build after code, a11 before an import,
+a13 noinline before the package clause, a17 inside a var block, a18 before a func type, a19 an unknown verb after
+code; accepted — a9 noinline on a method (2), a10 generate in a body (1), a12 noinline, blank line, func (1), a14 a
+`/*go:noinline*/` after code (1: block comments are prose), a15 generate before the package clause (1), a16
+noinline, doc comment, func (1), a20 `/*go:embed*/` (0). FIX: `directives.go` judgePlacement — the own-line rule
+re-reads the file's bytes (a file whose size changed since the parse refuses), the build rule compares with the
+package clause, the noinline rule walks the top-level declarations (`that no func or method declaration follows`);
+each refusal names the placement and gc's text. Six NEGATIVE rows born PASS at `frontend=file-selection`
+(`frontend-accepts` on main's frontend): `directives/noinline-in-body`, `noinline-before-var`, `noinline-at-eof`,
+`generate-trailing`, `build-after-package`, `build-trailing`; three exec controls `directives/placement-controls/*`
+(a9, a12, a10) PASS. Pinned by `TestCompilerDirectives` (48 shapes) and lowerdiag's `TestCompilerDirectiveParity`
+(the static twin mirrors the three rules). The four texts that said the opposite (`directives_test.go`,
+`directives.go`, this entry, cli.md/release.md/ledger «the three with no effect») are corrected.
 
 ## BUG-128 — `//go:debug` lines and go.mod `godebug` lines were IGNORED, and the runtime-defaults contract was unstated: `//go:debug panicnil=1` flips gc's answer (`recover() == nil` after `panic(nil)` is `true`) while the model keeps the Go 1.21+ semantics (`false`); a setting gc rejects was accepted [frontend boundary; wrong answer under the directive, over-acceptance; found by the Codex zero-context pass, F3 (`docs/2026-10-13_codex-zero-context-pass.md`), 2026-10-13] [FIXED BY REFUSAL 2026-10-13: `//go:debug` in any user unit and `godebug` in any go.mod the frontend reads refuse by name; the contract is stated in `docs/cli.md` §1 and `docs/release.md` §4; lane `frontend/directives-1013`]
 
@@ -8821,3 +8849,31 @@ a `go 1.21`+ module with no godebug override), else the `true`/`false` differenc
 not the semantics. Static twin: causes.tsv `runtime-setting` (by-design, export scope). Pinned by
 `TestCompilerDirectives` (three `//go:debug` shapes), `TestModuleGoDirectiveRefusal`, the Cases row and the
 negative row.
+
+FIX ROUND (2026-10-13, review MEDIUM-2 and LOW-4, relayed): the scanner MISSED the `godebug(` spelling (no blank
+before the paren), which gc honours (measured: a go.mod with `godebug(` / `panicnil=1` / `)` prints `true` under
+`GO111MODULE=on GOPROXY=off`; the first landing's frontend exited 0 on it — `fields[0] == "godebug"` saw
+`godebug(`). x/mod's lexer makes `(` and `)` tokens of their own (cmd/vendor/golang.org/x/mod/modfile/read.go), so
+the scanner now splits them off before reading the verb, and is STRICT: gc's go.mod grammar at the pin
+(modfile/rule.go, the verb switch) is enumerated in `modfile.go` goModVerbs — `module`, `require`, `exclude`,
+`replace`, `retract`, `tool`, `ignore` accepted (line or block: the module graph cannot reach the lowered program,
+whose imports are the pinned GOROOT's stdlib and case-local relative paths; `tool`/`ignore` steer the go command,
+never the compiled program), `go` judged (BUG-109), `toolchain` accepted only when it names the pin (`go1.26.5`;
+another name is refused — under GOTOOLCHAIN=auto a consumer would build with an unmeasured toolchain; the
+apparatus runs GOTOOLCHAIN=local, where the line is inert, measured on `toolchain go1.27.0`), `godebug` refused
+(line, block, `godebug(`, a trailing comment, `godebug default=go1.20`), any other verb refused by name (gc: «unknown
+directive: frobnicate», measured). Pinned by `TestModuleGoDirectiveRefusal` (one case per spelling). THE CONTRACT,
+completed (LOW-4): (a) the oracle runs in GOPATH mode, where the go command applies the go 1.16-era defaults to
+EVERY GODEBUG setting (`gover.DefaultGoModVersion = "1.16"`, cmd/go/internal/modload `MainModules.GoVersion` with no
+module; `godebugForGoVersion`), and the runner pins only `panicnil`; the contract coincides with the oracle because,
+at the pin, `panicnil` is the ONLY setting with a version-dependent default (`Changed` > 16 in
+deps/go/src/internal/godebugs/table.go) that an admitted stdlib member reaches — measured against the admission
+register: runtime's `containermaxprocs`/`updatemaxprocs` touch GOMAXPROCS only, math/rand's `randseednop` needs
+`rand.Seed` (only `Intn`/`IntN` are admitted; `randautoseed` has no version-dependent default), time's
+`asynctimerchan` needs a timer (only `time.Date` is admitted), os's `winsymlink`/`winreadlinkvolume` are Windows-only
+— so every future admission carries the obligation stated in `docs/stdlib-admission-register.md` («GODEBUG
+obligation»); (b) `go.work` `godebug` lines are a THIRD override the frontend never reads: measured, a workspace's
+`godebug panicnil=1` flips a `go 1.26` module's program to `true` while the frontend exports it (exit 0) — a stated
+limit (docs/cli.md §1, release.md §4), not a refusal; (c) `//go:debug panicnil=0` in GOPATH mode is the one
+source-level way to match the pin (measured: `false`) and is refused too — the pin is the oracle's environment,
+never the source.

@@ -70,59 +70,105 @@ func findGoMod(dir string) (string, error) {
 	}
 }
 
+// goModVerbs: what this scanner does with each directive of gc's go.mod
+// grammar at the pin (cmd/vendor/golang.org/x/mod/modfile/rule.go, the
+// strict parser's verb switch — the go command refuses any other first
+// token: «unknown directive: <verb>», measured). x/mod's lexer makes `(`
+// and `)` tokens of their own, so `godebug(` is `godebug` `(` (measured:
+// gc honours it); the scanner splits them off before reading the verb.
+//
+//	module                 ACCEPTED: the module path names nothing the
+//	                       lowering reads (imports are stdlib or case-local).
+//	go                     JUDGED: must be the pinned language version
+//	                       (BUG-109).
+//	toolchain              ACCEPTED only when it names the pinned toolchain
+//	                       (go1.26.5); any other name REFUSED — under
+//	                       GOTOOLCHAIN=auto a consumer would be switched to
+//	                       a toolchain the semantics is not measured against
+//	                       (the apparatus runs GOTOOLCHAIN=local, where the
+//	                       line is inert, measured).
+//	godebug                REFUSED by name, line or block, with or without
+//	                       the blank before `(` (BUG-128).
+//	require, exclude,      ACCEPTED, line or block: the module graph cannot
+//	replace, retract       reach the lowered program — its imports are the
+//	                       standard library (from the pinned GOROOT) and
+//	                       case-local packages (relative paths), neither
+//	                       resolved through requires or replaces.
+//	tool, ignore           ACCEPTED: build-time directives of the go command
+//	                       (`go tool` dependencies; directories `./...`
+//	                       skips), never the compiled program.
+//	anything else          REFUSED by name: gc refuses the go.mod, and
+//	                       nothing unknown is guessed here.
+var goModAccepted = map[string]bool{"module": true, "require": true, "exclude": true, "replace": true, "retract": true, "tool": true, "ignore": true}
+
 // goDirective returns the language version named by the go.mod's `go`
-// directive as go/version's Lang form ("go1.21"). Fail closed: no
-// directive (the go command then assumes go 1.16 — another language
-// version), a repeated directive, or a version go/version cannot parse
-// are refusals naming the file.
+// directive as go/version's Lang form ("go1.21"), after judging every
+// other directive by goModVerbs. Fail closed: no `go` directive (the go
+// command then assumes go 1.16 — another language version), a repeated
+// directive, a version go/version cannot parse, a godebug directive, a
+// toolchain other than the pin, or a verb the grammar does not know are
+// refusals naming the file.
 func goDirective(path string) (string, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return "", unsup("module directive: cannot read %s (%v) — fail closed", path, err)
 	}
 	defer f.Close()
+	pinnedTC, err := pinnedToolchainName()
+	if err != nil {
+		return "", err
+	}
 	found := ""
 	sc := bufio.NewScanner(f)
 	sc.Buffer(make([]byte, 0, 64*1024), 1<<20)
 	inBlock := false
+	parens := strings.NewReplacer("(", " ( ", ")", " ) ")
 	for sc.Scan() {
-		line := sc.Text()
+		raw := sc.Text()
+		line := raw
 		if i := strings.Index(line, "//"); i >= 0 {
 			line = line[:i]
 		}
-		fields := strings.Fields(line)
+		fields := strings.Fields(parens.Replace(line))
 		if len(fields) == 0 {
 			continue
 		}
-		// A `godebug` line (`godebug panicnil=1`) or block (`godebug (`
-		// … `)`) is a runtime-settings directive: refused by name BEFORE
-		// the block logic below would skip its body (BUG-128).
-		if !inBlock && fields[0] == "godebug" {
-			return "", unsup("module directive: %s sets godebug (%s) — GODEBUG settings are not modeled: the semantics is the Go 1.26 module defaults (panic(nil) raises *runtime.PanicNilError; the differential oracle is pinned with GODEBUG=panicnil=0); RULED [USER] 2026-10-13: refuse by name (fail closed)", path, strings.TrimSpace(line))
-		}
-		// Block directives (`require (` … `)`) never contain a go
-		// directive; skip their bodies so a module path or version
-		// token spelled `go` inside one cannot be mistaken for it.
+		// Block bodies (`require (` … `)`) carry no directive verb; skipped
+		// so a module path or version token spelled like a verb inside one
+		// cannot be mistaken for it. Only ACCEPTED verbs open a block —
+		// `godebug (` is refused before this point.
 		if inBlock {
 			if fields[0] == ")" {
 				inBlock = false
 			}
 			continue
 		}
-		if len(fields) >= 2 && fields[len(fields)-1] == "(" {
-			inBlock = true
-			continue
+		verb := fields[0]
+		switch {
+		case verb == "godebug":
+			return "", unsup("module directive: %s sets godebug (%s) — GODEBUG settings are not modeled: the semantics is the Go 1.26 module defaults (panic(nil) raises *runtime.PanicNilError; the differential oracle is pinned with GODEBUG=panicnil=0); RULED [USER] 2026-10-13: refuse by name (fail closed)", path, strings.TrimSpace(raw))
+		case verb == "go":
+			if len(fields) != 2 {
+				return "", unsup("module directive: %s has a malformed go directive %q — fail closed", path, strings.TrimSpace(line))
+			}
+			if found != "" {
+				return "", unsup("module directive: %s repeats the go directive (%s and %s) — the go command refuses this too; fail closed", path, found, fields[1])
+			}
+			found = fields[1]
+		case verb == "toolchain":
+			if len(fields) != 2 {
+				return "", unsup("module directive: %s has a malformed toolchain directive %q — fail closed", path, strings.TrimSpace(line))
+			}
+			if fields[1] != pinnedTC {
+				return "", unsup("module directive: %s names toolchain %s; the oracle is pinned to %s — under GOTOOLCHAIN=auto a consumer would build with a toolchain the semantics is not measured against (the apparatus runs GOTOOLCHAIN=local, where the line is inert); refuse by name (fail closed)", path, fields[1], pinnedTC)
+			}
+		case goModAccepted[verb]:
+			if fields[len(fields)-1] == "(" {
+				inBlock = true
+			}
+		default:
+			return "", unsup("module directive: %s has a directive this scanner does not know (%q) — the go command refuses the go.mod («unknown directive: %s»), and nothing unknown is guessed here; fail closed", path, strings.TrimSpace(line), verb)
 		}
-		if fields[0] != "go" {
-			continue
-		}
-		if len(fields) != 2 {
-			return "", unsup("module directive: %s has a malformed go directive %q — fail closed", path, strings.TrimSpace(line))
-		}
-		if found != "" {
-			return "", unsup("module directive: %s repeats the go directive (%s and %s) — the go command refuses this too; fail closed", path, found, fields[1])
-		}
-		found = fields[1]
 	}
 	if err := sc.Err(); err != nil {
 		return "", unsup("module directive: cannot scan %s (%v) — fail closed", path, err)
