@@ -2939,6 +2939,64 @@ private def stepLabelAndSeedControls : IO Bool := do
   let c ← observationShapeFacts
   pure (a && b && c)
 
+/-- BUG-078 / F2 (2026-10-13, lane frontend/decl-budgets-1013 [AGENT]): the frontend applies
+the materialization budgets PER DECLARATION and reads their numbers from
+`tools/nativefrontend/budgets.tsv` (embedded; it never spells them). This is the pin that keeps
+that table equal to the Lean constants it transcribes — the decoder's `arrayLenBudget` /
+`arrayFootprintBudget` (the whole-wire backstop), the machine's `sliceCapBudget` and the
+platform's `maxAllocBytes` (the make site's precedence). Exactly these four rows, each equal;
+a missing file, a malformed row, an extra or a missing name FAILS (fail closed). Run from the
+repository root, as `scripts/ci` runs this executable. -/
+private def budgetsTableTests : IO Bool := do
+  let path := "tools/nativefrontend/budgets.tsv"
+  let expected : List (String × Nat) :=
+    [("arrayLenBudget", GoLean.NativeToIR.arrayLenBudget),
+     ("arrayFootprintBudget", GoLean.NativeToIR.arrayFootprintBudget),
+     ("sliceCapBudget", GoLean.GoCore.Machine.sliceCapBudget),
+     ("maxAllocBytes", GoLean.GoCore.maxAllocBytes)]
+  let text ← try IO.FS.readFile path catch e => do
+    IO.eprintln s!"FAIL: BUG-078/F2 budgets table: {path} unreadable ({e}) — the frontend's numbers cannot be pinned"
+    return false
+  let rows := text.splitOn "\n" |>.filter (fun l => !(l.all Char.isWhitespace) && !l.startsWith "#")
+  match rows with
+  | [] =>
+      IO.eprintln s!"FAIL: BUG-078/F2 budgets table: {path} has no header"
+      return false
+  | header :: body =>
+      if header != "name\tvalue\tlean" then
+        IO.eprintln s!"FAIL: BUG-078/F2 budgets table: header is {repr header}, want name/value/lean"
+        return false
+      let mut seen : List (String × Nat) := []
+      for l in body do
+        match l.splitOn "\t" with
+        | [name, value, _] =>
+            match value.toNat? with
+            | some v =>
+                if seen.any (·.1 == name) then
+                  IO.eprintln s!"FAIL: BUG-078/F2 budgets table: duplicate row {name}"
+                  return false
+                seen := seen ++ [(name, v)]
+            | none =>
+                IO.eprintln s!"FAIL: BUG-078/F2 budgets table: row {name} value {repr value} is not a decimal"
+                return false
+        | _ =>
+            IO.eprintln s!"FAIL: BUG-078/F2 budgets table: malformed row {repr l}"
+            return false
+      if seen.length != expected.length then
+        IO.eprintln s!"FAIL: BUG-078/F2 budgets table: {seen.length} row(s), want exactly {expected.length} ({expected.map (·.1)})"
+        return false
+      for (name, want) in expected do
+        match seen.find? (·.1 == name) with
+        | some (_, got) =>
+            if got != want then
+              IO.eprintln s!"FAIL: BUG-078/F2 budgets table: {name} = {got} in {path}, but the Lean constant is {want} — move the table with the constant"
+              return false
+        | none =>
+            IO.eprintln s!"FAIL: BUG-078/F2 budgets table: row {name} missing"
+            return false
+      IO.println s!"ok: BUG-078/F2: {path} equals the Lean budgets (arrayLenBudget, arrayFootprintBudget, sliceCapBudget, maxAllocBytes)"
+      return true
+
 /-- BUG-078 residuals (3) and (2b), the decoder's budgets (2026-10-12; its own definition so
 `main`'s LCNF compile stays inside the heartbeat budget — the file's existing split pattern). -/
 private def bug078BudgetTests : IO Bool := do
@@ -3881,6 +3939,7 @@ def main : IO UInt32 := do
      | .error msg => (msg.splitOn "materialization budget").length > 1 && (msg.splitOn "BUG-078").length > 1
      | .ok _ => false))
   passed := passed && (← bug078BudgetTests)
+  passed := passed && (← budgetsTableTests)
   -- The class pin proper: main.T has a TypeDef on the wire (the OLD
   -- guard's presence key) but NO method-set record — satisfaction must
   -- refuse `unsupported`, proving the guard keys on the RECORD.

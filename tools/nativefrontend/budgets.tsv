@@ -1,0 +1,24 @@
+# tools/nativefrontend/budgets.tsv — the interpreter's MATERIALIZATION BUDGETS as the
+# frontend reads them (BUG-078; F2 of the 2026-10-13 fresh-eyes fail-closed pass).
+#
+# ONE source of truth for the numbers outside Lean: the frontend embeds this file
+# (budgets.go, //go:embed) and NEVER spells the numbers itself; the static lowering
+# diagnostic (tools/lowerdiag) reads it at run time under --repo. The Lean definitions
+# named in column 3 are the semantic definitions; Tests/GoCoreEval.lean
+# (`budgetsTableTests`) reads THIS file and fails unless every row equals its Lean
+# constant and the row set is exactly these four — so a re-measured budget moves in
+# Lean, the pin test goes red, and this file follows in the same commit.
+#
+# Columns: name <TAB> value (decimal) <TAB> the Lean constant it transcribes.
+#   arrayLenBudget        per-dimension array length bound (decoder: the array arm)
+#   arrayFootprintBudget  nested footprint bound in scalar leaves, also the
+#                         constant-count make bound (checkMakeFootprint)
+#   sliceCapBudget        the machine's make COUNT bound (its own named refusal —
+#                         the make precedence: never quarantined by the frontend)
+#   maxAllocBytes         gc's makeslice limit (Platform; gc's own panic — the make
+#                         precedence: never quarantined by the frontend)
+name	value	lean
+arrayLenBudget	65536	GoLean.NativeToIR.arrayLenBudget
+arrayFootprintBudget	16777216	GoLean.NativeToIR.arrayFootprintBudget
+sliceCapBudget	8388608	GoLean.GoCore.Machine.sliceCapBudget
+maxAllocBytes	281474976710656	GoLean.GoCore.maxAllocBytes

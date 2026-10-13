@@ -467,7 +467,16 @@ bound is CONSERVATIVE today. It is kept as it stands: raising it is the
 separate deliberate re-measure the paragraph above demands (and would
 move the `arrays/materialization-budget/over-budget` pin). The bound
 that binds NESTED shapes is the product budget `arrayFootprintBudget`
-below, derived from the same day's sweep. -/
+below, derived from the same day's sweep.
+
+TWO DOORS (BUG-078 / F2, 2026-10-13, lane `frontend/decl-budgets-1013` [AGENT]): this refusal is
+the WHOLE-WIRE BACKSTOP — for a forged or hand-built wire, and for anything the frontend
+under-estimates. The PER-DECLARATION FRONT DOOR is the native frontend
+(`tools/nativefrontend/budgets.go`), which applies the same rule on go/types and quarantines only
+the declaration (an H-3 stub, an FR-24-poisoned var, a marker TypeDef), so one over-budget
+declaration no longer turns every subject of its package into `error` (the fresh-eyes pass's F2).
+The frontend reads the number from `tools/nativefrontend/budgets.tsv`, which
+`Tests/GoCoreEval.lean` (`budgetsTableTests`) pins equal to this constant: move both together. -/
 def arrayLenBudget : Nat := 1 <<< 16
 
 /-- The array-type NESTED materialization budget (BUG-078 residual (3),
@@ -537,7 +546,16 @@ decoder's half: `make([][1024]byte, 1<<19)`, 2^29 leaves at a count
 count is a run-time value — `sliceCapBudget` (Machine.lean) bounds the
 element COUNT only, so `make([][1024]byte, n)` with `n` a variable at
 1<<19 is still an honest kill; the fix is the core's `make` site
-(release-readiness item 30). -/
+(release-readiness item 30).
+
+TWO DOORS (BUG-078 / F2, 2026-10-13, lane `frontend/decl-budgets-1013` [AGENT]): this refusal is
+the WHOLE-WIRE BACKSTOP — for a forged or hand-built wire, and for anything the frontend
+under-estimates. The PER-DECLARATION FRONT DOOR is the native frontend
+(`tools/nativefrontend/budgets.go`), which applies the same rule on go/types and quarantines only
+the declaration (an H-3 stub, an FR-24-poisoned var, a marker TypeDef), so one over-budget
+declaration no longer turns every subject of its package into `error` (the fresh-eyes pass's F2).
+The frontend reads the number from `tools/nativefrontend/budgets.tsv`, which
+`Tests/GoCoreEval.lean` (`budgetsTableTests`) pins equal to this constant: move both together. -/
 def arrayFootprintBudget : Nat := 1 <<< 24
 
 /-- The MATERIALIZATION FOOTPRINT of a type, in scalar elements: the leaf
@@ -1527,7 +1545,16 @@ would otherwise MATERIALIZE: (i) gc's own check first — `n × tySizeBytes(T) >
 maxAllocBytes` is gc's panic, the machine's, not this check's (a `T` whose size the
 machine cannot compute refuses there too, before any backing); (ii) then the machine's
 count bound — `n > sliceCapBudget` is its named `unsupported`; (iii) only then the
-footprint. -/
+footprint.
+
+TWO DOORS (BUG-078 / F2, 2026-10-13, lane `frontend/decl-budgets-1013` [AGENT]): this refusal is
+the WHOLE-WIRE BACKSTOP — for a forged or hand-built wire, and for anything the frontend
+under-estimates. The PER-DECLARATION FRONT DOOR is the native frontend
+(`tools/nativefrontend/budgets.go`), which applies the same rule on go/types and quarantines only
+the declaration (an H-3 stub, an FR-24-poisoned var, a marker TypeDef), so one over-budget
+declaration no longer turns every subject of its package into `error` (the fresh-eyes pass's F2).
+The frontend reads the number from `tools/nativefrontend/budgets.tsv`, which
+`Tests/GoCoreEval.lean` (`budgetsTableTests`) pins equal to this constant: move both together. -/
 private def checkMakeFootprint (path : String) (elemTy : Ty) (lenJ : Json) (capJ : Option Json) :
     LowerM Unit := do
   let constOf (j : Json) : Nat := match unseqConstInt? j with | some v => v.toNat | none => 0

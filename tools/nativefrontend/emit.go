@@ -671,6 +671,8 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 	// refusal below still guards the table (a mangled key carries `[`,
 	// so it cannot collide with a declared or D5-marker name).
 	typeDefs = append(typeDefs, e.opaqueMarkerTypeDefs()...)
+	// BUG-078 / F2: the over-budget inline array markers (budgets.go).
+	typeDefs = append(typeDefs, e.budgetMarkerTypeDefs()...)
 
 	// The identity keys are built; refuse the export if any dotted
 	// import path reached a qualifier (the key grammar guard —
@@ -1899,6 +1901,24 @@ func (e *emitter) emitGenDeclTypes(d *ast.GenDecl) ([]any, []any, error) {
 			continue
 		}
 		qname := e.qualifiedTypeName(named.Obj())
+		// BUG-078 / F2 (budgets.go): a declared type that REACHES a
+		// materialization-budget violation ships as an EXISTENCE-ONLY
+		// marker (the D5 `unsupported` shape) carrying the budget refusal
+		// — the quarantine unit for a TYPE is the type itself: every
+		// mention outside signature-opaque mode refuses at emitType (so
+		// each declaration that uses it becomes its own stub or poison),
+		// the decoder never sees the over-budget shape (it would refuse
+		// the whole wire), and quarantined method stubs / interface
+		// requirement lists that name it still answer satisfaction. Its
+		// declared methods all quarantine (their receiver is a mention).
+		if reason := e.typeBudgetViolation(named); reason != "" {
+			out = append(out, map[string]any{
+				"name": qname,
+				"def": map[string]any{"kind": "unsupported",
+					"feature": reason + " — the declared type ships as an existence-only marker; every declaration that uses it is quarantined by name, the rest of the package exports"},
+			})
+			continue
+		}
 		if st, isStruct := named.Underlying().(*types.Struct); isStruct {
 			fields := []any{}
 			for i := 0; i < st.NumFields(); i++ {
@@ -10639,12 +10659,18 @@ func (e *emitter) emitMake(c *ast.CallExpr) (any, bool, error) {
 			return nil, false, err
 		}
 		node := map[string]any{"stmt": "make-slice", "target": target, "elem": elemTy, "len": lenArg}
+		var capArg any
 		if len(c.Args) >= 3 {
-			capArg, err := e.emitExpr(c.Args[2])
+			capArg, err = e.emitExpr(c.Args[2])
 			if err != nil {
 				return nil, false, err
 			}
 			node["cap"] = capArg
+		}
+		// BUG-078 / F2 (budgets.go): the decoder's constant-count make
+		// bound, its precedence included, as a per-declaration refusal.
+		if reason := e.makeBudgetViolation(u.Elem(), lenArg, capArg); reason != "" {
+			return nil, false, unsup("%s", reason)
 		}
 		e.pushHoist(node)
 		return ref, false, nil

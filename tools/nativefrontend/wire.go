@@ -257,6 +257,13 @@ type emitter struct {
 	// exists in the machine (emitBasic refuses with the flag off), and a
 	// CALL of the declaration refuses by name (the stub's reason).
 	opaqueBasics map[string]*types.Basic
+	// BUG-078 / F2 (budgets.go): the over-budget inline ARRAY types that
+	// reached a signature in SIGNATURE-OPAQUE mode (key = the type's own
+	// spelling -> the budget refusal), each an existence-only marker
+	// TypeDef (budgetMarkerTypeDefs); and the per-named-type memo of the
+	// budget walk (complete answers only).
+	opaqueBudgetArrays map[string]string
+	budgetMemo         map[*types.Named]string
 	// The markers the CURRENT withOpaqueSigs window touched (minted OR
 	// re-used — a key first minted by an interface requirement list is
 	// still the reason a later method stub fails closed), so every stub's
@@ -583,6 +590,19 @@ func (e *emitter) emitType(t types.Type) (any, error) {
 				return nil, unsup("sync/atomic.%s (outside the modeled sync/atomic surface — wave 1 models the typed integer wrappers Int32/Int64/Uint32/Uint64/Uintptr)", o.Name())
 			}
 		}
+		// BUG-078 / F2 (budgets.go): a source-declared named type that
+		// REACHES a materialization-budget violation refuses at every
+		// mention, so the mentioning declaration quarantines; its own
+		// TypeDef is the existence-only marker (emitGenDeclTypes). In
+		// SIGNATURE-OPAQUE mode a NON-generic one names that marker (a
+		// stub's or a requirement list's signature: satisfaction answers);
+		// an instantiated one refuses even there — it has no declared
+		// marker, and its stencil would ship the over-budget shape.
+		if reason := e.typeBudgetViolation(ty); reason != "" {
+			if !e.sigOpaque || ty.TypeArgs().Len() > 0 {
+				return nil, unsup("%s", reason)
+			}
+		}
 		if ty.TypeArgs().Len() > 0 {
 			return e.emitInstantiatedNamed(ty)
 		}
@@ -658,9 +678,29 @@ func (e *emitter) emitType(t types.Type) (any, error) {
 		}
 		return map[string]any{"kind": "slice", "elem": elem}, nil
 	case *types.Array:
+		// BUG-078 / F2 (budgets.go): the decoder's array-arm budgets,
+		// raised HERE as an ordinary refusal so the standing per-
+		// declaration quarantines apply (the decoder's refusal is the
+		// whole-wire backstop). The per-dimension bound is checked before
+		// the element, as the decoder does; the element's own refusal
+		// (innermost first) before the nested footprint. In SIGNATURE-
+		// OPAQUE mode the type becomes an opaque marker instead.
+		if ty.Len() > budgets.arrayLen {
+			reason := e.arrayBudgetViolation(ty)
+			if e.sigOpaque {
+				return e.opaqueBudgetArrayRef(ty, reason), nil
+			}
+			return nil, unsup("%s", reason)
+		}
 		elem, err := e.emitType(ty.Elem())
 		if err != nil {
 			return nil, err
+		}
+		if reason := e.arrayBudgetViolation(ty); reason != "" {
+			if e.sigOpaque {
+				return e.opaqueBudgetArrayRef(ty, reason), nil
+			}
+			return nil, unsup("%s", reason)
 		}
 		return map[string]any{"kind": "array", "len": ty.Len(), "elem": elem}, nil
 	case *types.Map:

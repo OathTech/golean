@@ -163,6 +163,9 @@ var staticCauseIDs = []string{
 	// (the fmt desugar member; the value shape). The former dot-import-float-bits
 	// cause is RETIRED — the primitive lowers from either spelling.
 	"dot-import-fmt-desugar", "dot-import-value-position",
+	// BUG-078 / F2 (2026-10-13): the per-declaration materialization budget
+	// (an array type spelled past budgets.tsv's bounds).
+	"materialization-budget",
 }
 
 // methodWrap unwraps the per-declaration quarantine's "method T.M (cause;
@@ -315,6 +318,57 @@ type supply struct {
 	floatBits     map[string]bool // "math.Float64bits" — the float-bits primitive's direct-call callees (floatbits.go floatBitsOps)
 	surfaceRows   int
 	libRefused    map[string]libraryRefusal // source-through members refused by name
+	// budgets: the materialization budgets the frontend applies per
+	// declaration (BUG-078 / F2), read at run time from the frontend's
+	// tools/nativefrontend/budgets.tsv — never spelled here. nil only in
+	// unit tests that hand-build a supply (the budget finding is then
+	// not judged; newSupply always loads it or fails).
+	budgets *diagBudgets
+}
+
+// diagBudgets: the two TYPE budgets of tools/nativefrontend/budgets.tsv
+// the static pass judges array types against.
+type diagBudgets struct{ arrayLen, arrayFootprint int64 }
+
+// readBudgets parses the frontend's budgets.tsv (name/value/lean rows);
+// both type budgets must be present and positive — fail closed.
+func readBudgets(path string) (*diagBudgets, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("budgets table unreadable (%v) — the static pass cannot judge the materialization budgets", err)
+	}
+	b := &diagBudgets{}
+	header := false
+	for i, line := range strings.Split(string(raw), "\n") {
+		if strings.HasPrefix(line, "#") || strings.TrimSpace(line) == "" {
+			continue
+		}
+		f := strings.Split(line, "\t")
+		if !header {
+			if line != "name\tvalue\tlean" {
+				return nil, fmt.Errorf("%s line %d: header is %q, want name/value/lean", path, i+1, line)
+			}
+			header = true
+			continue
+		}
+		if len(f) != 3 {
+			return nil, fmt.Errorf("%s line %d: %d column(s), want 3", path, i+1, len(f))
+		}
+		v, err := strconv.ParseInt(f[1], 10, 64)
+		if err != nil || v <= 0 {
+			return nil, fmt.Errorf("%s line %d: value %q is not a positive decimal", path, i+1, f[1])
+		}
+		switch f[0] {
+		case "arrayLenBudget":
+			b.arrayLen = v
+		case "arrayFootprintBudget":
+			b.arrayFootprint = v
+		}
+	}
+	if b.arrayLen == 0 || b.arrayFootprint == 0 {
+		return nil, fmt.Errorf("%s: arrayLenBudget / arrayFootprintBudget missing", path)
+	}
+	return b, nil
 }
 
 // libraryRefusal is one row of library-refusals.tsv.
@@ -476,6 +530,12 @@ func newSupply(registerPath string) (*supply, error) {
 	if err := readMachineSurface(machineSurfaceTSV, s); err != nil {
 		return nil, err
 	}
+	// <repo>/docs/stdlib-admission-register.md -> <repo>/tools/nativefrontend/budgets.tsv
+	b, err := readBudgets(filepath.Join(filepath.Dir(registerPath), "..", "tools", "nativefrontend", "budgets.tsv"))
+	if err != nil {
+		return nil, err
+	}
+	s.budgets = b
 	rows, err := loadLibraryRefusals(libraryRefusalsTSV)
 	if err != nil {
 		return nil, err

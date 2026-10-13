@@ -758,6 +758,17 @@ func (a *analyzer) typeFindings(t types.Type, at ast.Node, d *declReport) []find
 		case *types.Slice:
 			walk(u.Elem(), depth+1)
 		case *types.Array:
+			// BUG-078 / F2: the frontend's per-declaration budget refusal
+			// (tools/nativefrontend/budgets.go) — the per-dimension bound,
+			// then the nested footprint (a local named element counts
+			// through its underlying, everything non-array/struct is one
+			// leaf). The declared type's USERS are the frontend's to
+			// quarantine; this pass flags the declaration that spells it.
+			if b := a.p.sup.budgets; b != nil {
+				if u.Len() > b.arrayLen || a.footprint(u, 0) > b.arrayFootprint {
+					out = append(out, finding{Cause: mustCause("materialization-budget"), Key: typeStr(u), Pos: pos, Certain: true})
+				}
+			}
 			walk(u.Elem(), depth+1)
 		case *types.Chan:
 			walk(u.Elem(), depth+1)
@@ -781,6 +792,44 @@ func (a *analyzer) typeFindings(t types.Type, at ast.Node, d *declReport) []find
 	}
 	walk(t, 0)
 	return out
+}
+
+// footprint: the decoder's scalar-leaf count of t (BUG-078), saturating
+// past 1<<62 — the static twin of the frontend's budgetFootprint.
+func (a *analyzer) footprint(t types.Type, depth int) int64 {
+	const sat = int64(1) << 62
+	if depth > 32 {
+		return sat
+	}
+	mul := func(x, y int64) int64 {
+		if x != 0 && y > sat/x {
+			return sat
+		}
+		return x * y
+	}
+	switch u := types.Unalias(t).(type) {
+	case *types.Array:
+		return mul(u.Len(), a.footprint(u.Elem(), depth+1))
+	case *types.Named:
+		if _, iface := u.Underlying().(*types.Interface); iface || u.Obj().Pkg() == nil || !a.p.isLocalPkg(u.Obj().Pkg()) {
+			return 1
+		}
+		return a.footprint(u.Underlying(), depth+1)
+	case *types.Struct:
+		var total int64
+		for i := 0; i < u.NumFields(); i++ {
+			total += a.footprint(u.Field(i).Type(), depth+1)
+			if total > sat {
+				total = sat
+			}
+		}
+		if total < 1 {
+			total = 1
+		}
+		return total
+	default:
+		return 1
+	}
 }
 
 // stdlibSel: `pkg.Member` where pkg names a NON-local package.

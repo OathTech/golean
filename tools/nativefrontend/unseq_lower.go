@@ -991,8 +991,14 @@ func (b *unseqBuilder) makeNew(c *ast.CallExpr, name string) (any, error) {
 				return nil, unsup("unseq lowering: make of a slice without a length")
 			}
 			spec = map[string]any{"stmt": "make-slice", "elem": elemTy, "len": operands[0]}
+			var capOperand any
 			if len(operands) >= 2 {
 				spec["cap"] = operands[1]
+				capOperand = operands[1]
+			}
+			// BUG-078 / F2 (budgets.go): the statement arm's twin.
+			if reason := e.makeBudgetViolation(u.Elem(), operands[0], capOperand); reason != "" {
+				return nil, unsup("%s", reason)
 			}
 		case *types.Map:
 			keyTy, err := e.emitType(u.Key())
