@@ -233,6 +233,18 @@ def appendOutputLines (path : FilePath) (lines : List String) : IO (Except Strin
   catch err =>
     return .error s!"{path}: cannot write output: {oneLine (toString err)}"
 
+/-- `native-json-run`'s choice report mode (F1 of the 2026-10-13 fail-closed pass). -/
+inductive ChoiceReportMode where
+  /-- `--no-choice-report`: nothing on stderr; the production driver exactly as before. -/
+  | off
+  /-- The default: the consultation COUNT read off the production run's own leftover tape (the
+  tape padded with `choicePadLength` zeros) — no replay. -/
+  | count
+  /-- `--choice-report=full`: the count plus `choice-trace`'s accounting pass (sites, bounds, the
+  driver-agreement refusal, the menu invariants) — a replay, costly on long runs. -/
+  | full
+  deriving Repr, BEq, DecidableEq
+
 structure RunArgs where
   input : Option FilePath := none
   functionName : Option String := none
@@ -252,19 +264,21 @@ structure RunArgs where
   default. The harness runs the same program under several sequences to check
   observation invariance. -/
   choices : List Nat := []
-  /-- `native-json-run` only: after the run, account the choice consumption (the tracer's pass,
-  `GoLean.ChoiceTrace.consumptionReport`) and say on stderr when a choice site was consulted
-  (F1 of the 2026-10-13 fail-closed pass). `--no-choice-report` turns it off — the differential
-  runner passes it (its depth guard accounts every strict row's consumption already). -/
-  choiceReport : Bool := true
+  /-- `native-json-run` only: the choice report (F1 of the 2026-10-13 fail-closed pass; §2.1 of
+  docs/cli.md). Default `.count` (the padded-tape count, zero replay); `--choice-report=full` the
+  tracer pass; `--no-choice-report` off (the differential runner passes it — its depth guard
+  accounts every strict row's consumption already). -/
+  choiceReport : ChoiceReportMode := .count
+  /-- Set once a choice-report flag is given (a second one is a usage error). -/
+  choiceReportGiven : Bool := false
   deriving Repr
 
 private def usage : String :=
   "usage:\n" ++
   "  golean native-json-run --input <file> --function <name> [--seed <file.json>]\n" ++
   "      [--arg-int <n> | --arg-bool <true|false> | --arg-ref <k(.f|[i])*> | --arg-nil ...] [--fuel <n>] [--choices <n,n,...>]\n" ++
-  "      [--no-choice-report]  (by default a run that consulted a choice site says so on stderr: its observation is one member\n" ++
-  "       of a set — the set is coverage-observations'; docs/cli.md §2.2)\n" ++
+  "      [--no-choice-report | --choice-report=full]  (by default a run that consulted a choice site says so on stderr: its\n" ++
+  "       observation is one member of a set; =full also names the sites, replaying the run — docs/cli.md §2.1)\n" ++
   "      (entry arguments bind the parameters positionally, in command-line order; each is checked against its parameter type;\n" ++
   "       --arg-ref and --arg-nil need --seed: a reference into the seed's cells, a nil pointer — golean-seed-v1, docs/cli.md)\n" ++
   "  golean observation-eq --left <json> --right <json>\n" ++
@@ -325,7 +339,11 @@ private def parseRunArgs : List String → RunArgs → Except String RunArgs
       let choices ← parts.mapM (fun s => parseJsonNat "--choices" s)
       parseRunArgs rest { cfg with choices }
   | "--no-choice-report" :: rest, cfg =>
-      parseRunArgs rest { cfg with choiceReport := false }
+      if cfg.choiceReportGiven then .error s!"--no-choice-report: a choice-report flag was already given (at most one)\n{usage}"
+      else parseRunArgs rest { cfg with choiceReport := .off, choiceReportGiven := true }
+  | "--choice-report=full" :: rest, cfg =>
+      if cfg.choiceReportGiven then .error s!"--choice-report=full: a choice-report flag was already given (at most one)\n{usage}"
+      else parseRunArgs rest { cfg with choiceReport := .full, choiceReportGiven := true }
   | flag :: _, _ => .error s!"unknown or incomplete option: {flag}\n{usage}"
 
 -- The OBSERVATION channel renders type names the way Go's
@@ -1025,9 +1043,140 @@ private def runObservationEq (args : List String) : IO UInt32 := do
             IO.eprintln s!"right: {right.compress}"
             return 1
 
-/-- What `native-json-run` hands the consumption-accounting pass (F1 of the 2026-10-13 fail-closed
-pass): the decoded run's inputs and the PRODUCTION driver's result (seeded: its readout
-projection, `(·.readout)`). -/
+/-! ### The choice report (F1 of the 2026-10-13 fail-closed pass)
+
+F1, verbatim: «`native-json-run` on a program with a consulted choice site answers `ok` with the
+canonical member and nothing marks it». The DEFAULT report replays nothing: the run itself is made
+on the given tape padded with `choicePadLength` zeros, and the count of consultations is read off
+the leftover. By `Choices.consumeAt` (State.lean) a bound-≤-1 consult pops nothing and a drawn 0
+selects slot 0 exactly as an exhausted tape does, so the padded run IS the unpadded run (pinned by
+the eval tests over the driver; the wiring half — the variant below is the driver on the tape it is
+given — is the theorem `runProgramPoolOutLeftoverM_fst`). The driver returns its leftover only when
+the pool loop reaches main's exit; on a `Stop` ending there is none, and the report says so. -/
+
+/-- The zeros appended to the tape for the count (2^20). A run consulting more reports «at least». -/
+def choicePadLength : Nat := 2 ^ 20
+
+/-- `runProgramPoolOutM`'s wiring (setup, the pool loop, the readout — the same public core
+functions in the same order), also returning the pool loop's LEFTOVER tape when the loop reaches
+main's exit (`none` on a `Stop` ending, where `execProgLoopOut` returns none). -/
+def runProgramPoolOutLeftoverM (fuel : Nat) (program : GoCore.Program) (name : String)
+    (args : Array GoValue) (choices : GoCore.Choices) :
+    GoCore.Machine.RunResult × Option GoCore.Choices :=
+  match GoCore.Machine.runProgramSetupM fuel program name args choices with
+  | .error e => (.error (e, GoString.empty), none)
+  | .ok (pctx, c₀, s₀, resultLocs, choices₁) =>
+      match GoCore.Machine.execProgLoopOut pctx fuel ⟨#[.running c₀ none], s₀, 0⟩ {} choices₁ GoString.empty with
+      | (out, .error e) => (.error (e, out), none)
+      | (out, .ok (sF, left)) =>
+          match GoCore.Machine.loadMany pctx sF resultLocs with
+          | .ok vs => (.ok { values := vs.toArray, output := out }, some left)
+          | .error e => (.error (e, out), some left)
+
+/-- The variant's result IS the driver's, on the tape it is given. -/
+theorem runProgramPoolOutLeftoverM_fst (fuel : Nat) (program : GoCore.Program) (name : String)
+    (args : Array GoValue) (choices : GoCore.Choices) :
+    (runProgramPoolOutLeftoverM fuel program name args choices).1 =
+      GoCore.Machine.runProgramPoolOutM fuel program name args choices := by
+  unfold runProgramPoolOutLeftoverM GoCore.Machine.runProgramPoolOutM
+  rcases GoCore.Machine.runProgramSetupM fuel program name args choices with
+    _ | ⟨pctx, c₀, s₀, resultLocs, choices₁⟩
+  · rfl
+  · dsimp only
+    rcases GoCore.Machine.execProgLoopOut pctx fuel ⟨#[.running c₀ none], s₀, 0⟩ {} choices₁ GoString.empty with
+      ⟨out, _ | ⟨sF, left⟩⟩
+    · rfl
+    · dsimp only
+      rcases GoCore.Machine.loadMany pctx sF resultLocs with _ | vs <;> rfl
+
+/-- `runProgramPoolSeededOutM`'s wiring, also returning the leftover tape (as above). -/
+def runProgramPoolSeededOutLeftoverM (fuel : Nat) (program : GoCore.Program) (name : String)
+    (seed : Array GoCore.Machine.SeedCell) (args : Array GoCore.Machine.SeedArg) (choices : GoCore.Choices) :
+    Except (Stop × GoString) GoCore.Machine.SeededReadout × Option GoCore.Choices :=
+  match GoCore.Machine.runProgramSetupSeededM fuel program name seed args choices with
+  | .error e => (.error (e, GoString.empty), none)
+  | .ok (pctx, c₀, s₀, resultLocs, slots, choices₁) =>
+      match GoCore.Machine.seedBase slots with
+      | .error e => (.error (e, GoString.empty), none)
+      | .ok base =>
+      match GoCore.Machine.execProgLoopOut pctx fuel ⟨#[.running c₀ none], s₀, 0⟩ {} choices₁ GoString.empty with
+      | (out, .error e) => (.error (e, out), none)
+      | (out, .ok (sF, left)) =>
+          match GoCore.Machine.loadMany pctx sF resultLocs with
+          | .error e => (.error (e, out), some left)
+          | .ok vs =>
+              match GoCore.Machine.loadMany pctx sF slots.toList with
+              | .error e => (.error (e, out), some left)
+              | .ok fs =>
+                  (.ok { readout := { values := vs.toArray, output := out }, base := base,
+                         seedFinal := fs.toArray }, some left)
+
+/-- The seeded variant's result IS the seeded driver's, on the tape it is given. -/
+theorem runProgramPoolSeededOutLeftoverM_fst (fuel : Nat) (program : GoCore.Program) (name : String)
+    (seed : Array GoCore.Machine.SeedCell) (args : Array GoCore.Machine.SeedArg) (choices : GoCore.Choices) :
+    (runProgramPoolSeededOutLeftoverM fuel program name seed args choices).1 =
+      GoCore.Machine.runProgramPoolSeededOutM fuel program name seed args choices := by
+  unfold runProgramPoolSeededOutLeftoverM GoCore.Machine.runProgramPoolSeededOutM
+  rcases GoCore.Machine.runProgramSetupSeededM fuel program name seed args choices with
+    _ | ⟨pctx, c₀, s₀, resultLocs, slots, choices₁⟩
+  · rfl
+  · dsimp only
+    rcases GoCore.Machine.seedBase slots with _ | base
+    · rfl
+    · dsimp only
+      rcases GoCore.Machine.execProgLoopOut pctx fuel ⟨#[.running c₀ none], s₀, 0⟩ {} choices₁ GoString.empty with
+        ⟨out, _ | ⟨sF, left⟩⟩
+      · rfl
+      · dsimp only
+        rcases GoCore.Machine.loadMany pctx sF resultLocs with _ | vs
+        · rfl
+        · dsimp only
+          rcases GoCore.Machine.loadMany pctx sF slots.toList with _ | fs <;> rfl
+
+/-- The consultation count read off a padded run: `given` the user's tape length; `consulted`
+`given + choicePadLength − |leftover|`, exact while the leftover is non-empty (`exact`), a lower
+bound otherwise. -/
+structure ChoiceCount where
+  given : Nat
+  consulted : Nat
+  exact : Bool
+  deriving Repr, BEq
+
+def ChoiceCount.ofLeftover (given : Nat) (leftover : GoCore.Choices) : ChoiceCount :=
+  { given, consulted := given + choicePadLength - leftover.length, exact := !leftover.isEmpty }
+
+/-- The statuses the enumerator certifies a set for (`coverage-observations --expect-status`). -/
+def enumeratorCertifies (status : String) : Bool :=
+  status == "ok" || status == "panic" || status == "race"
+
+private def streamWords (choices : List Nat) : String :=
+  "[" ++ ",".intercalate (choices.map toString) ++ "]"
+
+/-- The default stderr line for a run that ended with `status` on the tape `choices`: `count?` is
+the padded count (`none` — a `Stop` ending, no leftover). `none` = nothing to say. Public for the
+eval pins. -/
+def choiceCountLine (choices : List Nat) (status : String) : Option ChoiceCount → Option String
+  | none =>
+      let tail :=
+        if enumeratorCertifies status then " (coverage-observations certifies the set)"
+        else s!"; no enumerator certificate for status {status}"
+      some s!"native-json-run: choice consultations not counted — the run ended with status {status}, for which the driver returns no leftover tape; if a choice site was consulted the observation is one member of a set — --choice-report=full or choice-trace counts them{tail}"
+  | some c =>
+      if c.consulted == 0 then none else
+      let n := if c.exact then s!"consulted {c.consulted} choice site(s)"
+        else s!"consulted at least {c.consulted} choice site(s) (beyond the {choicePadLength}-entry pad; --choice-report=full counts exactly)"
+      let member := if choices.isEmpty then "one member" else s!"the member the stream {streamWords choices} selects"
+      let cert :=
+        if enumeratorCertifies status then " — see coverage-observations (the certified set) and choice-trace (the sites)"
+        else s!" — no enumerator certificate for status {status}; choice-trace names the sites"
+      let exhausted :=
+        if !choices.isEmpty && c.consulted > c.given then
+          s!" (stream exhausted at consultation #{c.given + 1}; the rest drew the canonical 0)"
+        else ""
+      some s!"native-json-run: {n}; the observation is {member} of a set{cert}{exhausted}"
+
+/-- What `native-json-run` hands the full accounting pass (`--choice-report=full`): the decoded
+run's inputs and the run's result (seeded: its readout projection, `(·.readout)`). -/
 structure ChoiceReportInput where
   program : GoCore.Program
   functionName : String
@@ -1037,32 +1186,60 @@ structure ChoiceReportInput where
   choices : List Nat
   result : GoCore.Machine.RunResult
 
-/-- The consumption-accounting pass `native-json-run` runs after the production driver. It lives
-in `GoLean.ChoiceTrace` (which imports this module), so `Main` passes it in: `.ok none` — no choice
-site consulted, nothing to say; `.ok (some line)` — the stderr line; `.error why` — the accounting
-disagrees with the driver (or cannot run), and the run is REFUSED by name. -/
-abbrev ChoiceReporter := ChoiceReportInput → Except String (Option String)
+/-- The full pass's verdict: the tracer's count of consultations with bound ≥ 2 (`wide`) and its
+line (`none` when `wide = 0`). -/
+structure FullChoiceReport where
+  wide : Nat
+  line : Option String
 
-/-- Print the production observation, consulting the consumption report first (unless
-`--no-choice-report`): a disagreeing or failing accounting pass REFUSES the run by name (status
-`error`, exit 1) instead of printing an unmarked observation; a consulted choice site adds one
-stderr line after the observation; zero consultations print nothing extra (byte-identical). -/
-private def emitWithChoiceReport (reporter : ChoiceReporter) (cfg : RunArgs) (input : ChoiceReportInput)
-    (status : String) (obs : Json) : IO UInt32 := do
-  if !cfg.choiceReport then
-    IO.println obs.compress
-    return (if status == "ok" then 0 else 1)
-  match reporter input with
-  | .error why =>
-      IO.println (cliErrorJson s!"consumption accounting disagrees with the driver (native-json-run's choice report; --no-choice-report skips the pass): {why}").compress
-      return 1
-  | .ok line? =>
-      IO.println obs.compress
-      if let some line := line? then
-        -- The observation first, then the marker, also when the two streams are merged.
-        (← IO.getStdout).flush
-        IO.eprintln line
-      return (if status == "ok" then 0 else 1)
+/-- The full accounting pass (`--choice-report=full`). It lives in `GoLean.ChoiceTrace` (which
+imports this module), so `Main` passes it in: `.error why` — the accounting disagrees with the
+driver (or cannot run), and the run is REFUSED by name. -/
+abbrev ChoiceReporter := ChoiceReportInput → Except String FullChoiceReport
+
+/-- What `native-json-run` prints for a run: (stdout line, stderr line, exit code). Pure, so the
+refusal path is pinned in the eval tests with a forged reporter. `.off`: the observation only.
+`.count`: the observation and `choiceCountLine`. `.full`: the reporter must agree — a refusal, or
+a padded count that is exact and differs from the tracer's `wide`, REFUSES the run (status
+`error`, exit 1; the observation is withheld); else the tracer's line (or, when it is silent and
+the run ended without a count, nothing — the tracer counted zero). -/
+def choiceReportOutcome (mode : ChoiceReportMode) (reporter : ChoiceReporter)
+    (input : ChoiceReportInput) (count? : Option ChoiceCount) (status : String) (obs : Json) :
+    String × Option String × UInt32 :=
+  let code : UInt32 := if status == "ok" then 0 else 1
+  let refuse (why : String) : String × Option String × UInt32 :=
+    ((cliErrorJson s!"consumption accounting disagrees with the driver (native-json-run --choice-report=full; the default report does not replay): {why}").compress, none, 1)
+  match mode with
+  | .off => (obs.compress, none, code)
+  | .count => (obs.compress, choiceCountLine input.choices status count?, code)
+  | .full =>
+      match reporter input with
+      | .error why => refuse why
+      | .ok r =>
+          match count? with
+          | some c =>
+              if c.exact && c.consulted != r.wide then
+                refuse s!"the padded-tape count is {c.consulted}, the tracer counted {r.wide} consultation(s) with bound ≥ 2"
+              else if !c.exact && r.wide < c.consulted then
+                refuse s!"the padded-tape count is at least {c.consulted}, the tracer counted {r.wide}"
+              else (obs.compress, r.line, code)
+          | none => (obs.compress, r.line, code)
+
+/-- Print `choiceReportOutcome`: stdout first, then (flushed) the stderr line, so the order holds
+also when the two streams are merged. -/
+private def emitWithChoiceReport (mode : ChoiceReportMode) (reporter : ChoiceReporter)
+    (input : ChoiceReportInput) (count? : Option ChoiceCount) (status : String) (obs : Json) :
+    IO UInt32 := do
+  let (out, err?, code) := choiceReportOutcome mode reporter input count? status obs
+  IO.println out
+  if let some line := err? then
+    (← IO.getStdout).flush
+    IO.eprintln line
+  return code
+
+/-- The tape a run is made on: the given one, padded for the count unless the report is off. -/
+private def runTape (mode : ChoiceReportMode) (choices : List Nat) : List Nat :=
+  if mode == .off then choices else choices ++ List.replicate choicePadLength 0
 
 /-- `native-json-run --seed` (seeded-heap slice B, design §6): decode the seed file against the
 program's type table (`SeedFile.decodeSeedBytes` — the strict byte parse, the shape, the type
@@ -1092,15 +1269,21 @@ private def runSeeded (reporter : ChoiceReporter) (program : GoCore.Program) (in
       IO.println (cliErrorJson s!"{input}: {err}").compress
       return 1
   | .ok seedArgs =>
-  let res := GoCore.Machine.runProgramPoolSeededOutM cfg.fuel program functionName seed seedArgs cfg.choices
+  -- `.off`: the seeded driver itself; otherwise its leftover-returning wiring on the padded tape
+  -- (`runProgramPoolSeededOutLeftoverM_fst`).
+  let (res, left?) :=
+    if cfg.choiceReport == .off then
+      (GoCore.Machine.runProgramPoolSeededOutM cfg.fuel program functionName seed seedArgs cfg.choices, none)
+    else runProgramPoolSeededOutLeftoverM cfg.fuel program functionName seed seedArgs (runTape cfg.choiceReport cfg.choices)
+  let count? := left?.map (ChoiceCount.ofLeftover cfg.choices.length)
   let input : ChoiceReportInput :=
     { program, functionName, entryArgs := #[], seeded? := some (seed, seedArgs), fuel := cfg.fuel,
       choices := cfg.choices, result := res.map (·.readout) }
   match res with
-  | .error (err, out) => emitWithChoiceReport reporter cfg input err.status (errorJson err out)
+  | .error (err, out) => emitWithChoiceReport cfg.choiceReport reporter input count? err.status (errorJson err out)
   | .ok sr =>
       let (status, obs) := seededObs (ObsCtx.ofEntry program functionName) sr
-      emitWithChoiceReport reporter cfg input status obs
+      emitWithChoiceReport cfg.choiceReport reporter input count? status obs
 
 private def runNativeJsonRun (reporter : ChoiceReporter) (args : List String) : IO UInt32 := do
   let cwd ← IO.currentDir
@@ -1160,7 +1343,13 @@ private def runNativeJsonRun (reporter : ChoiceReporter) (args : List String) : 
                       IO.println (cliErrorJson s!"{input}: {err}").compress
                       return 1
                   | .ok entryArgs =>
-                  let res := GoLean.GoCore.Machine.runProgramPoolOutM cfg.fuel program functionName entryArgs cfg.choices
+                  -- `.off`: the driver itself; otherwise its leftover-returning wiring on the
+                  -- padded tape (`runProgramPoolOutLeftoverM_fst`) — the choice report's count.
+                  let (res, left?) :=
+                    if cfg.choiceReport == .off then
+                      (GoLean.GoCore.Machine.runProgramPoolOutM cfg.fuel program functionName entryArgs cfg.choices, none)
+                    else runProgramPoolOutLeftoverM cfg.fuel program functionName entryArgs (runTape cfg.choiceReport cfg.choices)
+                  let count? := left?.map (ChoiceCount.ofLeftover cfg.choices.length)
                   let rinput : ChoiceReportInput :=
                     { program, functionName, entryArgs, seeded? := none, fuel := cfg.fuel,
                       choices := cfg.choices, result := res }
@@ -1169,9 +1358,9 @@ private def runNativeJsonRun (reporter : ChoiceReporter) (args : List String) : 
                       -- BUG-099: a readout that would observe the synthetic
                       -- runtime-error type is a refusal (exit 1), never `ok`.
                       let (status, obs) := readoutObs (ObsCtx.ofEntry program functionName) result
-                      emitWithChoiceReport reporter cfg rinput status obs
+                      emitWithChoiceReport cfg.choiceReport reporter rinput count? status obs
                   | .error (err, out) =>
-                      emitWithChoiceReport reporter cfg rinput err.status (errorJson err out)
+                      emitWithChoiceReport cfg.choiceReport reporter rinput count? err.status (errorJson err out)
       | _, _ =>
           IO.eprintln s!"provide --input <file> and --function <name>\n{usage}"
           return 2

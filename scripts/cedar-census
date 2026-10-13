@@ -349,7 +349,9 @@ drive_one() {
   fi
   # --- Machine -----------------------------------------------------------
   local lean_out lean_rc lean_status
-  lean_out="$(timeout "$LEAN_TIMEOUT" "$GOLEAN_BIN" native-json-run --input "$wire" --function censusMain 2>&1)"
+  # --no-choice-report: stderr is merged into the capture compared below; the default choice-report line
+  # (docs/cli.md §2.1) would make every enveloped program's capture undecodable.
+  lean_out="$(timeout "$LEAN_TIMEOUT" "$GOLEAN_BIN" native-json-run --no-choice-report --input "$wire" --function censusMain 2>&1)"
   lean_rc=$?
   printf '%s\n' "$lean_out" > "$dir/lean.out"
   if [[ "$lean_rc" -eq 124 ]]; then

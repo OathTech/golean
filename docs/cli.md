@@ -43,7 +43,7 @@ subcommand exits 2. In every subcommand, a malformed or unknown flag, or a missi
 ```
 golean native-json-run --input <wire> --function <name> [--seed <file.json>]
     [--arg-int <n> | --arg-bool <true|false> | --arg-ref <k(.f|[i])*> | --arg-nil ...]
-    [--fuel <n>] [--choices <n,n,...>] [--no-choice-report]
+    [--fuel <n>] [--choices <n,n,...>] [--no-choice-report | --choice-report=full]
 ```
 
 This decodes the wire, seeds the package-level variables, runs the package initializer, and then
@@ -75,31 +75,51 @@ runs `<name>` on the goroutine pool (`GoLean.GoCore.Machine.runProgramPoolOutM`)
   status `fuel-out`.
 - `--choices` is the choice tape (§5, and the caveats in §6.1). It defaults to empty, which
   selects the canonical member at every choice site.
-- **The choice report** (default; F1 of the 2026-10-13 fail-closed pass). When the run consulted
-  a choice site (§5) with more than one option, its observation is **one member of a set**, not
-  the program's only behaviour. The run then prints one extra line on **stderr**, after the
-  observation:
+- **The choice report** (F1 of the 2026-10-13 fail-closed pass). When the run consulted a choice
+  site (§5) with more than one option, its observation is **one member of a set**, not the
+  program's only behaviour. `native-json-run` says so on **stderr**, after the observation. stdout
+  is the same in every mode (byte-identical to `--no-choice-report`), and so is the exit code,
+  except for the full pass's refusal below.
+  - **Default: the count, with no replay.** The run itself is made on the given tape followed by
+    K = 2^20 zeros, and the count is read off the tape the run leaves over: N = |tape| + K −
+    |leftover|. A drawn 0 selects slot 0, the same as an exhausted tape, and a one-option consult
+    draws nothing (`Choices.consumeAt`). So the padded run is the unpadded run: the eval tests pin
+    this over the driver, and `CLI.runProgramPoolOutLeftoverM_fst` proves the wiring half. The
+    count is exact while the leftover is non-empty. If all K zeros were used it is a lower bound,
+    and the line says «at least». Lines:
 
-  ```
-  native-json-run: consulted 1 choice site(s) — appendSpill=1 (bound 32); the observation is the canonical member of a set — the certified set is coverage-observations'
-  ```
+    ```
+    native-json-run: consulted 1 choice site(s); the observation is one member of a set — see coverage-observations (the certified set) and choice-trace (the sites)
+    native-json-run: consulted 4 choice site(s); the observation is the member the stream [1] selects of a set — see coverage-observations (the certified set) and choice-trace (the sites) (stream exhausted at consultation #2; the rest drew the canonical 0)
+    ```
 
-  The line has N, the number of consultations with bound ≥ 2 (a site consulted twice counts
-  twice), then per site (named as `choice-trace` names them) its count and bound (`bounds lo–hi`
-  when they differed). With `--choices` the wording is «the member the stream [..] selects».
-  Nothing extra is printed when no site was consulted. stdout is the same either way. Gc's
-  answer may be another member: here gc answers 32 and the canonical member is 4. The set itself
-  is `coverage-observations`' (§2.3). The line comes from `choice-trace`'s accounting pass
-  (`GoLean.ChoiceTrace.consumptionReport`, the same loop as §2.4), run after the production
-  driver on the same wire, arguments, seed, fuel and tape. That pass's driver-agreement check
-  must hold: the enumerator driver's observation must equal the production run's, and there must
-  be no tracer alarm or menu-invariant violation. Otherwise the run is **refused**, with status
-  `error` («consumption accounting disagrees with the driver …») and exit 1. An unmarked or
-  wrongly marked answer is never printed. `--no-choice-report` skips the pass, which leaves
-  stdout identical and stderr silent. The differential runner passes it, because its depth guard
-  already accounts every strict row. Cost: the pass replays the run twice more (tracer and
-  enumerator driver). Measured: no visible cost on small programs, about 3.5–4.5× on long or concurrent
-  runs, and memory linear in steps (about 1 GB at the default fuel).
+    N counts consultations, not distinct sites (a site consulted twice counts twice). Nothing is
+    printed when N = 0. For a status the enumerator does not certify (anything but `ok`, `panic`
+    and `race`, e.g. a readout refusal `unsupported`), the pointer to the certified set becomes
+    «no enumerator certificate for status X». The driver returns a leftover tape only when the run
+    reaches main's exit. On every other ending (panic, deadlock, fuel-out, a refusal, a setup or
+    `$pkginit` failure) the count is not available, and the line says so instead: «choice
+    consultations not counted — the run ended with status X, for which the driver returns no
+    leftover tape; …». A count-free line is never omitted on such an ending. Cost: one list of
+    2^20 zeros, about 50 MB more peak memory and no measurable time.
+  - **`--choice-report=full`**: also runs `choice-trace`'s accounting pass
+    (`GoLean.ChoiceTrace.consumptionReport`, the same loop as §2.4) on the same wire, arguments,
+    seed, fuel and tape. Its line names each site with its count and bound, for example
+    `appendSpill=1 (bound 32)`, or `bounds lo–hi` when the bounds differed. The pass must agree
+    with the run, or the run is **refused** (status `error`, «consumption accounting disagrees
+    with the driver …», exit 1, the observation withheld). Agreement means the enumerator driver's
+    observation equals the run's, the tracer's count equals the padded count (when exact), and
+    there are no tracer alarms or menu-invariant violations. It also counts on endings where the
+    default cannot. Cost: it steps the run twice more (tracer and enumerator driver). Measured on
+    2026-10-13: a 200k-append run 17 s → 56 s (3.2×), sequential long runs about 4.6×, an
+    8-goroutine probe 0.45 s → 2.0 s, and `goroutines/send-then-spin` 2.7 s → 342 s (about 125×;
+    476 190 consultations). Memory is linear in steps, about 94 B/step, so about 1 GB at the
+    default fuel.
+  - **`--no-choice-report`**: no line, and the driver runs on the unpadded tape exactly as before.
+    The differential runner passes it, because its depth guard accounts every strict row already.
+    So do the tools that merge stderr into a captured observation (`scripts/gotest-triage`,
+    `scripts/cedar-census`, `scripts/detector-soundness`) and the raft tools. At most one of the
+    two flags may be given; a second is a usage error. The other subcommands refuse both flags.
 
 Exit codes: **0** if the status is `ok`, **1** for every other status (including `error`),
 **2** for a usage error. Before any step runs, these failures produce a `status:error` JSON on
@@ -420,10 +440,11 @@ site the run never reached, are ignored.
   and reports an observation for a tape other than the one you meant.
 - *Why it is deliberate:* it makes every list of naturals a valid tape (the enumerator and the
   proofs quantify over all of them), and it makes the empty tape the canonical run.
-- *How to tell:* `native-json-run` itself now says, on stderr, when a choice site was
-  consulted, how many times, and at which sites with which bounds (the choice report, §2.1), so
-  a single run's observation is never silently a point answer. For the detail, run `golean
-  choice-trace --input <wire> --function <f> --stream <your tape> --trace`. The row's `consumed` and `exhaustedAt` columns, and the per-consumption lines
+- *How to tell:* `native-json-run` itself now says on stderr how many choice consultations the
+  run made, and where your tape ran out (the choice report, §2.1). On an ending without a
+  leftover tape it says the count is unavailable, so a single run's observation is never silently
+  a point answer. `--choice-report=full` adds the sites and bounds. For every consultation, run
+  `golean choice-trace --input <wire> --function <f> --stream <your tape> --trace`. The row's `consumed` and `exhaustedAt` columns, and the per-consumption lines
   (bound, the tape value drawn, the realized pick), show exactly what was used, what wrapped,
   and where the tape ran out.
 

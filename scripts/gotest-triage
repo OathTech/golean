@@ -328,7 +328,9 @@ PY
 
   # --- Machine ---------------------------------------------------------
   local lean_out lean_rc
-  lean_out="$(timeout "$LEAN_TIMEOUT" "$GOLEAN_BIN" native-json-run --input "$wire" --function gotestMain 2>&1)"
+  # --no-choice-report: stderr is merged into the capture compared below; the default choice-report line
+  # (docs/cli.md §2.1) would make every enveloped program's capture undecodable.
+  lean_out="$(timeout "$LEAN_TIMEOUT" "$GOLEAN_BIN" native-json-run --no-choice-report --input "$wire" --function gotestMain 2>&1)"
   lean_rc=$?
   if [[ "$lean_rc" -eq 124 ]]; then
     printf 'MACHINE-REFUSED\t%s\t%s\n' "$rel" "wall-clock timeout after ${LEAN_TIMEOUT}s (go: $go_status)"

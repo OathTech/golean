@@ -160,7 +160,9 @@ def main():
                        capture_output=True, text=True)
     if r.returncode != 0:
         sys.exit("runprobe.py: FRONTEND EXPORT REFUSED (the machine's first stop):\n%s" % r.stderr)
-    cmd = [args.golean, "native-json-run", "--input", wire,
+    # --no-choice-report: only stdout's observation is read here; the choice-report line
+    # (docs/cli.md §2.1) is not wanted in this tool's stderr diagnostics.
+    cmd = [args.golean, "native-json-run", "--no-choice-report", "--input", wire,
            "--function", args.function, "--fuel", args.fuel]
     if args.choices is not None:
         cmd += ["--choices", args.choices]

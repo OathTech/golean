@@ -294,7 +294,9 @@ run_row() {
     # "error" is a REAL machine status, so an unparseable output gets its
     # own sentinel naming the exit code.
     local s_out
-    s_out="$(run_with_timeout "$SINGLE_TIMEOUT" "$GOLEAN_BIN" native-json-run --input "$wire" --function "$fn" ${args[@]+"${args[@]}"} 2>&1)"
+    # --no-choice-report: the merged capture is stored as the single-run record (single.txt) beside
+    # the enumerated set; the choice-report line (docs/cli.md §2.1) is not part of that record.
+    s_out="$(run_with_timeout "$SINGLE_TIMEOUT" "$GOLEAN_BIN" native-json-run --no-choice-report --input "$wire" --function "$fn" ${args[@]+"${args[@]}"} 2>&1)"
     rc=$?
     if [[ "$rc" -eq 124 ]]; then m_single="timeout-${SINGLE_TIMEOUT}s"
     else

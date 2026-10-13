@@ -1023,15 +1023,18 @@ def traceStream (program : Program) (functionName : String) (args : Array GoValu
     Except String (StreamReport × RunOutcome) := do
   traceStreamOn program functionName args ep fuel spec (← parseStream spec) none
 
-/-! ## `native-json-run`'s choice report (F1 of the 2026-10-13 fail-closed pass)
+/-! ## `native-json-run --choice-report=full` (F1 of the 2026-10-13 fail-closed pass)
 
 F1, verbatim: «`native-json-run` on a program with a consulted choice site answers `ok` with the
-canonical member and nothing marks it». The pass below is `choice-trace`'s single-stream loop
-(`traceStreamOn`, the SAME function, not a copy) on the run `native-json-run` just made: same wire,
-function, arguments, seed, fuel and stream, with the production driver's result handed in so the
-engine is not run twice. Its driver-agreement verdict, alarms and menu-invariant violations must
-all be clean, else the run is refused by name (`CLI.emitWithChoiceReport`) — the marker is never
-printed on an accounting that disagrees with the driver. Only consultations with bound ≥ 2 count
+canonical member and nothing marks it». The DEFAULT report is the zero-replay count in `CLI`
+(`CLI.choiceCountLine`); this pass is the OPT-IN `--choice-report=full`: `choice-trace`'s
+single-stream loop (`traceStreamOn`, the SAME function, not a copy) on the run `native-json-run`
+just made — same wire, function, arguments, seed, fuel and stream, with that run's result handed in
+for the comparison. The run is stepped twice more (the tracer's loop and the enumerator driver), so
+the pass costs a multiple of the run (docs/cli.md §2.1 has the measured numbers). Its
+driver-agreement verdict, alarms and menu-invariant violations must all be clean, else the run is
+refused by name (`CLI.choiceReportOutcome`) — the marker is never printed on an accounting that
+disagrees with the driver. Only consultations with bound ≥ 2 count
 (a bound-≤-1 consultation pops nothing and carries no latitude — the uniform rule, G-U). -/
 
 /-- The bound part of a site's summary: `bound b` when every consultation had the same bound,
@@ -1041,8 +1044,9 @@ def boundsString (bs : List Nat) : String :=
   let hi := bs.foldl max 0
   if lo == hi then s!"bound {hi}" else s!"bounds {lo}–{hi}"
 
-/-- The stderr line for the wide consultations `wide` (non-empty) under the stream `choices`. -/
-def choiceReportLine (wide : List Consumption) (choices : List Nat) : String :=
+/-- The stderr line for the wide consultations `wide` (non-empty) under the stream `choices`, the
+run having ended with `status`. -/
+def choiceReportLine (wide : List Consumption) (choices : List Nat) (status : String) : String :=
   let sites := allSites.filterMap fun s =>
     let cs := wide.filter (·.site == s)
     if cs.isEmpty then none
@@ -1050,9 +1054,12 @@ def choiceReportLine (wide : List Consumption) (choices : List Nat) : String :=
   let member :=
     if choices.isEmpty then "the canonical member"
     else s!"the member the stream [{",".intercalate (choices.map toString)}] selects"
-  s!"native-json-run: consulted {wide.length} choice site(s) — {" ".intercalate sites}; the observation is {member} of a set — the certified set is coverage-observations'"
+  let cert :=
+    if CLI.enumeratorCertifies status then "the certified set is coverage-observations'"
+    else s!"no enumerator certificate for status {status}"
+  s!"native-json-run: consulted {wide.length} choice site(s) — {" ".intercalate sites}; the observation is {member} of a set — {cert}"
 
-/-- The consumption-accounting pass `native-json-run` runs after the production driver
+/-- The full accounting pass `native-json-run --choice-report=full` runs on the run's result
 (`CLI.ChoiceReporter`). -/
 def consumptionReport : CLI.ChoiceReporter := fun i => do
   match CLI.enumSetup i.program i.functionName i.entryArgs i.seeded? with
@@ -1062,7 +1069,7 @@ def consumptionReport : CLI.ChoiceReporter := fun i => do
       let oc := CLI.ObsCtx.ofEntry i.program i.functionName
       let mine := (CLI.observationOfRunOut oc (.error (e, GoString.empty))).compress
       let theirs := (CLI.observationOfRunOut oc i.result).compress
-      if mine == theirs then return none
+      if mine == theirs then return { wide := 0, line := none }
       throw s!"the accounting setup refused ({e.status}: {e.message}) where the driver gave {theirs}"
   | .ok ep =>
       let spec := ",".intercalate (i.choices.map toString)
@@ -1071,8 +1078,8 @@ def consumptionReport : CLI.ChoiceReporter := fun i => do
       if let some a := r.alarms.head? then throw s!"tracer alarm: {a}"
       if let some v := r.violations.head? then throw s!"menu-invariant violation: {v}"
       let wide := out.acc.consumed.toList.filter (·.bound ≥ 2)
-      if wide.isEmpty then return none
-      return some (choiceReportLine wide i.choices)
+      if wide.isEmpty then return { wide := 0, line := none }
+      return { wide := wide.length, line := some (choiceReportLine wide i.choices out.status) }
 
 /-- One per-consumption DUMP line (wave-(iii) B8-prep, 2026-09-04): the
 tracer's labeled record for one consumption of one (case, stream) —

@@ -418,7 +418,10 @@ def run_one(name, blocks, prefix, args, report, rec=None, resumed=None):
                            "--function", "runTrace", "--fuel", args.fuel,
                            "--record", os.path.join(scratch, "fast-record.jsonl")]
                 else:
-                    cmd = [args.golean, "native-json-run", "--input", wire,
+                    # --no-choice-report: only stdout's observation is read; the
+                    # choice-report line (docs/cli.md §2.1) would land in the recorded
+                    # machine stderr.
+                    cmd = [args.golean, "native-json-run", "--no-choice-report", "--input", wire,
                            "--function", "runTrace", "--fuel", args.fuel]
                 r = subprocess.run(cmd, capture_output=True, text=True)
                 raw = r.stdout.strip()

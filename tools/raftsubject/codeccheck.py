@@ -748,7 +748,9 @@ def main():
                        capture_output=True, text=True)
     if r.returncode != 0:
         sys.exit("codeccheck.py: frontend export failed:\n%s" % r.stderr)
-    r = subprocess.run([args.golean, "native-json-run", "--input", wire,
+    # --no-choice-report: only stdout's observation is read here; the choice-report line
+    # (docs/cli.md §2.1) is not wanted in this tool's stderr diagnostics.
+    r = subprocess.run([args.golean, "native-json-run", "--no-choice-report", "--input", wire,
                         "--function", "codecBattery", "--fuel", MACHINE_FUEL],
                        capture_output=True, text=True)
     if r.returncode != 0 and not r.stdout.strip():
