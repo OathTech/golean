@@ -266,7 +266,7 @@ type emitter struct {
 	// The budget-array markers the CURRENT withOpaqueSigs window touched
 	// (returned with the basics so a stub's reason names them).
 	opaqueTouchedBudget map[string]bool
-	budgetMemo         map[*types.Named]string
+	budgetMemo          map[*types.Named]string
 	// The markers the CURRENT withOpaqueSigs window touched (minted OR
 	// re-used — a key first minted by an interface requirement list is
 	// still the reason a later method stub fails closed), so every stub's
