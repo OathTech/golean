@@ -1,6 +1,15 @@
 # GoLean negative-corpus (compile-rejection) baseline
 # recorded: 2026-08-18  commit: f68a4d86+ (spec-truth P3 slice 2)  oracle: go build (rejection)  [header corrected 2026-08-31: the old "+ frontend fail-closed" conjunct claimed a check that does not exist — scripts/coverage-negative invokes no GoLean tool (p2-fact claim 5)]
-# manifest_cases: 405  pass: 405  fail: 0
+# manifest_cases: 408  pass: 408  fail: 0
+# re-pinned: 2026-10-13 [AGENT], lane frontend/directives-1013 (off main 2e69dd86) — release-readiness rows 38 and 39 (the Codex
+#   zero-context pass F2/F3), RULED [USER] Mike 2026-10-13 «3, agree», relayed: compiler directives outside the allowlist, line
+#   directives, //go:debug and go.mod godebug refuse by name at file selection (BUG-127, BUG-128). THREE BORN ROWS, each
+#   frontend-accepts on main's frontend (exit 0, a wire written; measured) and PASS at frontend=file-selection since the fix:
+#   directives/embed-missing-file — «pattern data.txt: no matching files found» (the go command; the embed pattern matches no file);
+#   directives/linkname-invalid-reference — «invalid reference to runtime.zerobase» (the linker; a pull linkname into a runtime symbol
+#   that is not push-linknamed); directives/debug-unknown-setting — «unknown //go:debug setting "nonexistentSetting"» (the go
+#   command). No other row moves; no flip. Counts: 405 + 3 = 408; PASS 405 + 3 = 408; FAIL 0. Measured by scripts/coverage-negative
+#   on the three-row manifest and confirmed by capped scripts/ci --diff at the lane tip.
 # re-pinned: 2026-10-13 [AGENT], lane frontend/main-undeclared-refuse-1013 (staged at train 9 over the chan-elem lane's
 #   405-row baseline; the lane itself measured 395/395/0 at its own tip) — ONE FAIL->PASS (the allowed direction):
 #   functions/main-undeclared, FAIL frontend-accepts -> PASS (frontend=type-check). BUG-125 fixed by refusal under the
@@ -194,6 +203,9 @@ PASS	defer/defer-append-result	-
 PASS	defer/defer-len-result	-
 PASS	defer/defer-non-call	-
 PASS	defer/defer-receive-expression	-
+PASS	directives/debug-unknown-setting	-
+PASS	directives/embed-missing-file	-
+PASS	directives/linkname-invalid-reference	-
 PASS	floats/defined-type-mixed-add	-
 PASS	floats/float-bitwise-and	-
 PASS	floats/float-modulo	-

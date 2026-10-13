@@ -1,5 +1,21 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3989 (3749 PASS / 240 FAIL)
+# cases: 3995 (3751 PASS / 244 FAIL)
+# re-pinned: 2026-10-13 [AGENT], lane frontend/directives-1013 (off main 2e69dd86) — release-readiness rows 38 and 39 (the Codex
+#   zero-context pass F2/F3: unmodeled compiler directives accepted, //go:debug ignored), RULED [USER] Mike 2026-10-13, verbatim,
+#   relayed by the [AGENT] coordinator: «3, agree» — refuse by name, at file selection, in every user unit, any //go: directive
+#   outside the allowlist (//go:build, //go:noinline, //go:generate), any //line directive, //go:debug lines and go.mod godebug
+#   lines; state the runtime-defaults contract (docs/cli.md §1, docs/release.md §4). WHY: a directive is meaning gc reads from a
+#   comment the lowering never saw — a //go:embed string answered 0 where gc printed 5 (also with the file absent, where gc rejects),
+#   a //go:linkname variable answered 0 where gc's linker rejects, //go:debug panicnil=1 answered false where gc prints true
+#   (BUG-127, BUG-128; tools/nativefrontend/directives.go, modfile.go). SIX BORN ROWS (one package each, Corpus/coverage/exec/
+#   directives/): FOUR RED BY DESIGN at frontend-export — embed-string (gc true: data.go embedded; the model answered false on main's
+#   frontend) by-design/compiler-directive; linkname-accepted (gc 7, the model 7 on main's frontend — refused by ruling, no modelling)
+#   by-design/compiler-directive; line-directive (gc 1, model 1) by-design/compiler-directive; debug-panicnil (gc true with GODEBUG
+#   unset, the model false; false under the runner's GODEBUG=panicnil=0 pin, which would have masked it) by-design/runtime-setting;
+#   TWO PASS controls — generate-control and noinline-control (gc 1), the allowlist's witnesses. The new rows are on the BUGS.md
+#   Cases lines of BUG-127/BUG-128 (Expect: FAIL). No existing row moved: the corpus's 15 //go:noinline, 1 //go:generate and
+#   1 //go:build are all allowed (measured by this run). 3989 + 6 = 3995; PASS 3749 + 2 = 3751; FAIL 240 + 4 = 244. 0 PASS->non-PASS
+#   flips; no removal. Measured by scripts/diff-one and confirmed by capped scripts/ci --diff at the lane tip.
 # re-pinned: 2026-10-13 [AGENT], lane frontend/chan-elem-limit-1013 — release-readiness row 34 («gc's 64 KiB channel-element limit
 #   is not mirrored … the BUG-125 class (a program gc rejects, answered)»), under [USER] Mike's 2026-10-12 backlog mandate «manage
 #   some agents working through the backlog, starting with the ones that require no input from me», relayed. WHY: the native
@@ -2854,6 +2870,12 @@ PASS	defer/multiple-lifo	-	-
 PASS	defer/recover-noop-after-quarantine	-	-
 PASS	defer/recover-normal-return	-	-
 PASS	defer/unnamed-return	-	-
+FAIL	directives/debug-panicnil	frontend-export	by-design/runtime-setting
+FAIL	directives/embed-string	frontend-export	by-design/compiler-directive
+PASS	directives/generate-control	-	-
+FAIL	directives/line-directive	frontend-export	by-design/compiler-directive
+FAIL	directives/linkname-accepted	frontend-export	by-design/compiler-directive
+PASS	directives/noinline-control	-	-
 PASS	embedding/deep-promoted-field	-	-
 PASS	embedding/deep-promoted-method	-	-
 PASS	embedding/embedded-field-shadow	-	-
