@@ -272,6 +272,68 @@ inventoried. This is a Prop-level effect premise, not an executable raw access.
 The inventory now records that reason; its targeted rerun passes all 86 rows.
 No other speedbump was red. No semantic source changed after the CI run.
 
-Candidate-pinned guarded acceptance and final independent candidate confirmation
-are in progress. The immutable pin and final evidence will be recorded below;
-no Add completion claim follows from this batch.
+## Checked delivery and review
+
+Immutable implementation: **`f224a6e0877bb7d2c17719d6b8475a890617d601`**.
+This commit contains the exact source checked by CI and the inventory fix above.
+Subsequent audit/handoff commits change documentation only.
+
+At that exact pin, the independent scratch bootstrap verifies clean clones and
+unchanged Iris/Batteries/Qq pins. All 75 original package files were compared
+with the frozen implementation: only the GoLean pin and the two appended
+harness library targets differ. Every frozen Lean request, target and proof is
+byte-identical. The checked adapter and wrapper sources are exactly the blocks
+above.
+
+- GoLean-only A–D harness: PASS, 53 jobs; all four adapter axiom reports use
+  only `propext`, `Classical.choice`, `Quot.sound`.
+- Candidate-pinned full package and wrappers: PASS, 332 jobs. Exact
+  `AliasTarget` is closed by `aliasTarget`; `PairTarget`, `SetTarget` and
+  `KeepTarget` remain closed. The four Add/invariant wrappers remove their
+  law arguments while preserving every other symbolic binder and premise.
+- All 65 frozen headline reports and all eight new acceptance reports use
+  only the standard trio. The frozen local-module audit checks 5,666
+  declarations; with the current acceptance module it checks 5,674. Its
+  drop from the baseline's 5,752 is explained below, not omitted coverage.
+- Kernel replay: PASS for the exact 156-module upstream/local/harness set
+  (86 GoLean, 34 GoLeanIris, 29 RelationalCodeX, five examples, two harnesses),
+  plus the unchanged exact 206-module dependency set: **362 modules total**.
+  Names and multiplicities match, with no missing, extra or duplicate modules.
+
+The [fresh independent audit](2026-10-14-rd5-independent-audit.md) accepts this
+immutable candidate with no new correctness or trust defect. Its separately
+written adapters and wrappers pass, as does its exhaustive 23,415-declaration
+upstream/local/wrapper axiom scan. Its exact replay covers 361 modules because
+it combines the two harnesses into one. It checked source/configuration equality
+to the immutable pin and separately checked the final inventory addition.
+The report was imported in documentation commit
+`d25b8aef09ae22551aa7fab310219e947c25d6f8`.
+
+The reviewer investigated the 86-declaration count change: precisely
+`Machine.applyStrictOp.eq_1` through `eq_86` moved from downstream
+`RelationalCodeX.Reuse.Struct` to upstream `RelationalExpression` through lazy
+equation generation. No declaration disappeared. Upstream exhaustive auditing
+and replay cover them at their new defining module.
+
+### Dispositions and remaining work
+
+- R1 (Alias): the upstream acceptance closes the exact frozen target with A,
+  independently confirmed by the reviewer. Logic still owns uptake/repinning
+  and its own milestone disposition; no peer file or live pin changed here.
+- R2 (Add): **open**. B/C/D close only initialization, entry, increment and
+  invariant-rule specializations. The full symbolic Add body/exit/result
+  composition and its original target remain downstream. No `AddTarget`
+  proof is delivered or claimed.
+- Memory-call inventory speedbump: fixed with the Prop-level reason; targeted
+  check passes, independently confirmed. It was a red report in the full CI
+  run, not a silently green original run.
+- Inherited `GoLeanIris/Memory.lean:1625` unused-`h` warning: reproduced,
+  unchanged. The frozen handoff's separate live **35 NOT-PUBLIC** failure
+  remains open; this experiment neither reruns nor clears that live gate.
+
+No C1 work was started or dispatched; this batch is independent of it.
+No merge, push, live-pin change or logic-worktree write was performed.
+Disposable acceptance clones, logs, replay output and corpus artifacts are
+removed after recording these conclusions and reproduction commands. The
+reviewer's report is committed; its temporary worktree is removed after a
+source-overlay snapshot ref preserves its dirty state.
