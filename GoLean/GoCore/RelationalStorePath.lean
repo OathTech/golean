@@ -60,6 +60,26 @@ structure StoreEffect (ctx : ProgramCtx) (operation : Store → Store → Prop)
   transition : ∀ s t, operation s t →
     ∃ l, Transition ctx ⟨before, s⟩ l ⟨after, t⟩ ∧ l.picks = []
 
+/-- Ordered write effects separated by store-preserving paths. A location may
+occur repeatedly; later effects consume the actual store left by earlier ones. -/
+inductive OrderedWrites (ctx : ProgramCtx) : List Loc → List GoValue → Config → Config → Prop where
+  | nil {c d} : StorePath ctx (fun _ => True) c d → OrderedWrites ctx [] [] c d
+  | cons {l ls v vs c d before after} :
+      StorePath ctx (fun _ => True) c before →
+      StoreEffect ctx (fun s t => storeLoc ctx s l v = .ok t) before after →
+      OrderedWrites ctx ls vs after d → OrderedWrites ctx (l :: ls) (v :: vs) c d
+
+theorem OrderedWrites.run {ctx : ProgramCtx} {ls : List Loc} {vs : List GoValue}
+    {c d : Config} (path : OrderedWrites ctx ls vs c d) {s t : Store}
+    (writes : WriteValues ctx ls vs s t) : PickFreeRun ctx ⟨c, s⟩ ⟨d, t⟩ := by
+  induction path generalizing s t with
+  | nil path => cases writes; exact path.run _ trivial
+  | cons pre effect _ ih =>
+    cases writes with
+    | cons write rest =>
+      obtain ⟨l, ht, hp⟩ := effect.transition _ _ write
+      exact (pre.run _ trivial).trans ((PickFreeRun.single ht hp).trans (ih rest))
+
 /-- Operand paths uniformly over stores and saved continuations. -/
 inductive OperandPaths (ctx : ProgramCtx) (fact : Store → Prop) (env : LocalEnv) :
     List Expr → List GoValue → Prop where

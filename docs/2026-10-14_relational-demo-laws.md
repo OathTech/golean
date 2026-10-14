@@ -370,3 +370,26 @@ exports first, and supply the smallest reusable semantic capability if needed.
 Ownership, guarded WP, invariants and callable contracts remain downstream.
 No concrete request is pending in this dispatch; upstream is ready and stops
 here. This update changes documentation only.
+
+
+## RD5 concrete A–D batch
+
+The next user relay freezes logic implementation
+`b6c31fb74f8817fd3ae6d90790204e0eabbc6d80` and reviewed handoff
+`66920605c244badf346352e241089951fd57d13d`, on the RD4 baseline above.
+The [RD5 composition handoff](2026-10-14_relational-composition-acceptance.md)
+records the request mapping, exact adapters, guarded wrapper and reproduction.
+
+The semantic-only A–D adapters now pass. Delivery exposes a result snapshot
+and ordered writes; RHS assignment composes read-only expressions; the while
+view supplies a real admitted entry and its control boundaries. D is derived
+from variable read, dereference, typed addition and pointer assignment, without
+a compound-increment production API. Existing RD4 phase statements and RD3
+endpoint domains are preserved. No C1 work had started or been dispatched.
+
+Full CI passes; its one inventory speedbump was fixed and passes on rerun.
+Candidate-pinned acceptance and final independent audit confirmation are completing.
+A must close the exact Alias target. B/C/D are intermediate Add acceptances;
+this batch neither proves AddTarget nor resolves downstream review R2. Pair,
+Set and Keep are regression targets. The final immutable delivery and review
+dispositions will be added to the composition handoff.
