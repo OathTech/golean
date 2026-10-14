@@ -160,4 +160,24 @@ theorem block_enter {ctx : ProgramCtx} {decls : Array Param} {ss : Array Stmt}
   · intro id hi
     exact blockEntry_lookup_outer h hi
 
+/-- Empty sequence execution preserves its governing continuation and store. -/
+theorem empty_sequence_run (ctx : ProgramCtx) (env : LocalEnv)
+    (k : Continuation) (s : Store) :
+    ∃ ls, Run ctx (statement (.seqn #[]) env k s) ls (resumed k s) ∧
+      (∀ l ∈ ls, l.picks = []) ∧ (∀ l ∈ ls, l.out = []) := by
+  have shape : seqCont [] env k.toMachine = k.toMachine ∨
+      seqCont [] env k.toMachine = .seq [] env k.toMachine := by
+    unfold seqCont
+    split
+    · split <;> simp_all
+    · exact .inr rfl
+  rcases shape with splice | wrap
+  · refine ⟨[⟨[], [], []⟩], .single ?_, by simp, by simp⟩
+    simpa [Transition, statement, resumed, splice] using
+      (Step.seqn (ctx := ctx) (ss := #[]) (env := env) (k := k.toMachine) (s := s))
+  · refine ⟨[⟨[], [], []⟩, ⟨[], [], []⟩],
+      .cons ?_ (.single (sequence_done ctx env k s).1), by simp, by simp⟩
+    simpa [Transition, statement, resumed, sequence, wrap] using
+      (Step.seqn (ctx := ctx) (ss := #[]) (env := env) (k := k.toMachine) (s := s))
+
 end GoLean.GoCore.Relational

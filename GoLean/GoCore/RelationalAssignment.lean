@@ -14,25 +14,6 @@ namespace GoLean.GoCore.Relational
 
 open Machine
 
-private theorem empty_sequence_run (ctx : ProgramCtx) (env : LocalEnv)
-    (k : Continuation) (s : Store) :
-    ∃ ls, Run ctx (statement (.seqn #[]) env k s) ls (resumed k s) ∧
-      (∀ l ∈ ls, l.picks = []) ∧ (∀ l ∈ ls, l.out = []) := by
-  have shape : seqCont [] env k.toMachine = k.toMachine ∨
-      seqCont [] env k.toMachine = .seq [] env k.toMachine := by
-    unfold seqCont
-    split
-    · split <;> simp_all
-    · exact .inr rfl
-  rcases shape with splice | wrap
-  · refine ⟨[⟨[], [], []⟩], .single ?_, by simp, by simp⟩
-    simpa [Transition, statement, resumed, splice] using
-      (Step.seqn (ctx := ctx) (ss := #[]) (env := env) (k := k.toMachine) (s := s))
-  · refine ⟨[⟨[], [], []⟩, ⟨[], [], []⟩],
-      .cons ?_ (.single (sequence_done ctx env k s).1), by simp, by simp⟩
-    simpa [Transition, statement, resumed, sequence, wrap] using
-      (Step.seqn (ctx := ctx) (ss := #[]) (env := env) (k := k.toMachine) (s := s))
-
 /-- Execute `*p = v` from operation-derived binding/read/write premises.
 The target can be an interior location or alias either parameter slot; both
 operands are read before the write. No distinctness or typing premise is

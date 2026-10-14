@@ -182,8 +182,8 @@ reuse example; upstream supplies their demonstrated missing semantic facts.
 
 The reviewed implementation pin is the full `b25a47ef` commit above. The
 request and acceptance hashes still match the first batch's recorded
-inputs. The current downstream stage record contains RQ1–RQ3; no further
-concrete request has been handed off. Reading concurrent downstream work
+inputs. At the first audit, the downstream stage record contained RQ1–RQ3;
+no further concrete request had then been handed off. Reading concurrent downstream work
 does not itself constitute a new request or a validation result.
 
 The fresh reviewer `relational_laws_audit` received the goals, sources and
@@ -220,7 +220,7 @@ independent checks are the clean-pin acceptance, axiom audit and replay
 reported above. No gate is waived, and the applicable fresh CI and audit
 requirements still apply to the actual tree proposed for merge.
 
-### Dispatch to logic
+### First-batch dispatch to logic
 
 Use immutable implementation pin
 `b25a47ef60984e2da16f80dedc0a1d5945806b8f`. With `import GoLean.Relational`,
@@ -235,3 +235,27 @@ semantic source remains exactly the implementation pin. Continue F1
 ownership/callable integration and the reuse example; hand off any concrete
 missing semantic laws with exact inputs and failed use sites. Upstream is
 ready for the next request. No merge or push has been performed.
+
+## RD3: reusable source calls and normal result delivery
+
+The next requested batch is implemented through `SavedCaller`, `CallBoundary`
+and `NormalExit`, with `SavedCaller.enter`, `CallBoundary.deliver` and the
+composed `SavedCaller.invoke`. Supporting source laws are `reference`,
+`assign_variable`, `return_start` and `return_sequence`. All are under
+`GoLean.GoCore.Relational`, available through `GoLean.Relational`.
+
+`LocalEntry.resultSlots` proves root result-slot validity from successful
+activation alone, without a distinct-name, typing or `MachineWf` premise.
+`Readback.traced` supplies the frame-read bridge. The composed call rule
+uses these internally. Pointer arguments and caller destinations retain
+arbitrary locations; writes preserve their specified order and allow aliases.
+No executable semantics or baseline changed.
+
+The original delivery proposition is false for interior pinned result cells,
+as the relay's checked counterexample explains. The corrected six propositions
+are discharged exactly. See [the RD3 handoff](2026-10-14_relational-call-acceptance.md)
+for frozen inputs, compatibility proofs, reproducible acceptance and migration
+instructions. Additional semantic callers use the same `invoke` rule for the
+existing Set body theorem and a nonempty-result explicit-return identity.
+The downstream Iris callers still require uptake and revalidation; no peer
+worktree was modified.
