@@ -413,3 +413,11 @@ audit accepts the pin. The composition handoff records reproduction and limits.
 After this independently audited E/F handoff, the user has now dispatched C1
 local-outcome completeness, scoped to main and initialization local execution.
 It does not include the whole-program bridge or observation/locality work.
+
+
+C1 has begun from the audited E/F response. Its
+[first compiled outcome constraint](2026-10-14_relational-outcome-completeness.md)
+records carriers, exact coverage/realization obligations, checked cost and
+conditional exclusion laws, and a concrete gap in the old selected-fault API.
+Ordinary-operation failure coverage and main/init correspondence remain owed;
+no C1 completeness or new public-facade export is claimed at this checkpoint.
