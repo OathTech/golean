@@ -18,6 +18,9 @@ imported. The implementation request and provenance are recorded in
 | Variable read | `read_variable` | Binding lookup and successful `loadRoot` imply the source transition, with its actual continuation-dependent trace, no picks/output and unchanged store. |
 | Sequence entry | `sequence_splice` | Pure entry of `.seqn ss` into a governing sequence with the same environment; preserves arbitrary tail, store and continuation. |
 | Pointer assignment | `assign_pointer_variables` | Source `*p = v` from symbolic variable lookup and read/write operation premises; arbitrary target `Loc`, including interior and aliasing cases; actual ordered labels, each pick-free and output-free. No general assignment claim. |
+| Declared call/return | `SavedCaller`, `CallBoundary`, `NormalExit`, `SavedCaller.enter`, `.invoke`, `CallBoundary.deliver` | Store-preserving pick-free operands, bound-variable destinations, no pending defers. Entry, independent callee body and ordered readback/writeback compose without client frame/target/signal construction. |
+| Activation result validity | `LocalEntry.resultSlots`, `Readback.traced` | Every successful activation pins root result slots; no signature-distinctness or `MachineWf` premise. The composed call law derives validity internally. |
+| Address/variable assignment/return | `reference`, `assign_variable`, `return_start`, `return_sequence`, `empty_sequence_run` | Symbolic semantic premises, actual labels, explicit normal-return exit view and exact cleanup endpoint. |
 | Block entry | `block_enter` | Allocation, heap growth, old-cell and outer-binding preservation. Silence does not imply purity. |
 | Memory | `PreservesOutside`, `write_support`, `allocate`, `write_read_root` | Whole-root write support, explicit normalization, allocation above the old bound. Separate from race instrumentation. |
 | Commutation | `root_writes_commute` | Two successful writes to different root cells, fixed normalized values, no allocation/output/control effects. Not an `unseq` theorem. |
@@ -44,7 +47,8 @@ without stronger premises. The GoLean-only downstream acceptance example
 checks with both law parameters supplied, proving its symbolic root-write,
 frame, normal-run and progress conclusions. This is still not an Iris
 ownership proof. Reproduction and precise scope:
-`2026-10-14_relational-demo-laws.md`.
+`2026-10-14_relational-demo-laws.md`. The RD3 call/return interface and exact
+compatibility checks are in `2026-10-14_relational-call-acceptance.md`.
 
 `Pure` concerns the store and `StepLabel` only. A client may observe control
 as well: `ReturnsDiscarded.pure` is the concrete example of a base-label

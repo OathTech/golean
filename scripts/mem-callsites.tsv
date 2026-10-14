@@ -96,3 +96,4 @@ GoLean/GoCore/Seed.lean	runProgramSeededM	loadMany	2	DRIVER READOUT — result c
 GoLean/GoCore/SeedPool.lean	runProgramPoolSeededOutM	loadMany	2	DRIVER READOUT — result cells and the final seed cells after main's exit on the pool
 GoLean/GoCore/SetupStatement.lean	runProgramSeededM_eq_stmt	loadMany	2	NO EXECUTION — the seeded run's definition statement (S6), a Prop
 GoLean/GoCore/SetupStatement.lean	seedCells_cell_stmt	Heap.lookup	1	NO EXECUTION — the pointwise seeding statement's cell reader (S2), a Prop
+GoLean/GoCore/RelationalCall.lean	WriteValues	storeLoc	1	NO EXECUTION — inductive ordered-write premise; actual delivery uses emitting storeTarget/Mem.store with retained labels
