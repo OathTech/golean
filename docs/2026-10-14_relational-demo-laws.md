@@ -387,9 +387,12 @@ from variable read, dereference, typed addition and pointer assignment, without
 a compound-increment production API. Existing RD4 phase statements and RD3
 endpoint domains are preserved. No C1 work had started or been dispatched.
 
+Immutable implementation: `f224a6e0877bb7d2c17719d6b8475a890617d601`.
 Full CI passes; its one inventory speedbump was fixed and passes on rerun.
-Candidate-pinned acceptance and final independent audit confirmation are completing.
-A must close the exact Alias target. B/C/D are intermediate Add acceptances;
-this batch neither proves AddTarget nor resolves downstream review R2. Pair,
-Set and Keep are regression targets. The final immutable delivery and review
-dispositions will be added to the composition handoff.
+Candidate-pinned acceptance passes (332 jobs), closing exact Alias and retaining
+Pair/Set/Keep. B/C/D and the invariant-rule specialization remain intermediate
+Add acceptances; this batch neither proves AddTarget nor resolves downstream
+review R2. Kernel replay covers the exact 362-module acceptance/dependency set,
+and axiom checks use only the standard trio. The fresh independent audit
+accepts the candidate, with its report and dispositions linked from the
+composition handoff. No merge, push, live repin or peer write occurred.
