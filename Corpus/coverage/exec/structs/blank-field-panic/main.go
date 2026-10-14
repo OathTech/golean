@@ -1,11 +1,12 @@
 package main
 
-// A panic inside a blank field's operand happens for the operands gc
-// KEEPS (BUG-129: a call, an index — gc's side-effect census), at the
-// operand's own position: a panicking call, and a panicky non-call
-// residual beside a sibling call (spec-unsequenced: membership rows).
-// gc DROPS a side-effect-free panicky operand (a shift, an interface
-// comparison) with its panic: BUG-129's OPEN F1, not pinned here.
+// RED BY DESIGN since the 2026-10-14 ruling ([USER] Mike «agree on both»,
+// BUG-129): a call or an index expression at a blank field is not a
+// constant, nil or a plain variable read, so each literal here refuses by
+// name (FAIL/frontend-export, by-design/blank-field-operand). Born
+// 2026-10-13 as PASS rows pinning a panicking call operand, a panicky index
+// operand and the spec-unsequenced «panicky blank residual beside a sibling
+// call» pair on both paths; gc's answers stand in the rows.
 
 type blankPanicS struct {
 	_ int

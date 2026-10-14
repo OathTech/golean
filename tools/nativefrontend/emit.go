@@ -7833,9 +7833,10 @@ func (e *emitter) emitStructLit(cl *ast.CompositeLit, t types.Type, st *types.St
 				return nil, unsup("positional struct literal missing field %s", fld.Name())
 			}
 			if fld.Name() == "_" {
-				// A BLANK field: the operand is evaluated and discarded,
-				// the field holds the zero value (BUG-129; the helper).
-				w, err := e.emitBlankFieldOperand(positional[i], fld.Type())
+				// A BLANK field holds the zero value; its operand is a
+				// constant, nil or a plain variable read, or the literal is
+				// refused by name (BUG-129, the 2026-10-14 ruling; the helper).
+				w, err := e.emitBlankFieldZero(positional[i], i, t, fld.Type())
 				if err != nil {
 					return nil, err
 				}
@@ -7882,92 +7883,152 @@ func (e *emitter) emitStructLit(cl *ast.CompositeLit, t types.Type, st *types.St
 	return map[string]any{"expr": "struct-lit", "target": target, "args": args}, nil
 }
 
-// emitBlankFieldOperand lowers the operand of a positional struct literal
-// at a BLANK field `_ T` (BUG-129 — the Codex zero-context pass's F1,
-// release-readiness row 37; [USER] Mike 2026-10-13 «2 fix», relayed). WHAT
-// LANDED: the field holds T's ZERO VALUE — spec#Comparison_operators
-// compares «corresponding non-blank field values» only, and gc never
-// stores the operand (walk/complit.go `fixedlit` assigns it to `_`;
+// emitBlankFieldZero lowers a positional struct literal's element at a BLANK
+// field `_ T` (BUG-129 — the Codex zero-context pass's F1, release-readiness
+// row 37). The field holds T's ZERO VALUE — spec#Comparison_operators
+// compares «corresponding non-blank field values» only, and gc never stores
+// the operand (walk/complit.go `fixedlit` assigns it to `_`;
 // compare/compare.go skips blank fields) — so equality, map-key identity
-// and copies follow from the core's unchanged field-by-field comparison.
-// Before this the operand was stored and compared: `S{1, 2} == S{9, 2}`
-// answered false (gc true), a map of two such keys had two entries (gc
-// one), and an interface-typed blank holding a slice panicked «comparing
-// uncomparable type» where gc does not.
+// and copies follow from the core's unchanged field-by-field comparison
+// ([USER] Mike 2026-10-13 «2 fix», relayed). Before this the operand was
+// stored and compared: `S{1, 2} == S{9, 2}` answered false (gc true), a map
+// of two such keys had two entries (gc one), an interface-typed blank
+// holding a slice panicked «comparing uncomparable type» where gc does not.
 //
-// THE OPERAND'S EVALUATION, as lowered here: a constant or `nil` operand
-// lowers to the zero value directly (nothing to evaluate); any other
-// operand is emitted by emitExpr exactly as a non-blank field's would be —
-// its calls hoisted at their lexical position (E1), a panicky residual
-// keeping its E13 `unseq-probe` — and its residual is evaluated at the
-// field's own position among the literal's arguments, through the core's
-// own array literal `index-get(array-lit 2 T [(0, operand)], 1)`: element
-// 0 is evaluated there and the OMITTED index 1 is T's zero
-// (`buildArrayValue`), the one "evaluate and discard" the wire spells
-// without a new node (the core untouched by the ruling). The pre-merge
-// review (relayed by the [AGENT] coordinator, 2026-10-13) confirmed this
-// evaluation agrees with gc for calls, receives and the operands gc's
-// side-effect census KEEPS (index, slice, deref, division by a
-// non-constant, type assertion, make), in order.
+// THE OPERAND is NOT evaluated. The lane's pre-merge review measured two
+// classes where gc's observation lies outside any evaluating model's set:
+// (F1) gc DROPS a blank operand its census `staticinit.isSideEffect`
+// (staticinit/sched.go:816–898) calls side-effect free TOGETHER WITH ITS
+// RUN-TIME PANIC — `fixedlit` (walk/complit.go:231) skips `_ = value` when
+// `!AnySideEffects(value)`; the census lists shifts (OLSH/ORSH: a negative
+// count panics) and comparisons (OEQ/ONE: an uncomparable dynamic type
+// panics) as side-effect free, under any pure wrapper (arithmetic,
+// conversion, unary, parens, a nested struct/array literal; not `&&`/`||`,
+// which `order` rewrites into statements): `S{1 << n, 2}` with n = -1 is gc
+// 2, an evaluating model a panic; (F2) at PACKAGE LEVEL gc never evaluates
+// a blank operand at all, calls included — `staticinit.initplan`
+// (sched.go:545) skips the blank fields of a struct literal, so no plan
+// entry and no init-time statement exists for it (`StaticAssign`'s
+// struct/array/slice/&-literal arms, sched.go:355–417; a map literal is
+// dynamic and keeps its effects): `var w = S{bump(), 2}` runs no bump in
+// gc. RULED [USER] Mike 2026-10-14 «agree on both» (relayed by the [AGENT]
+// coordinator; the recommendation agreed to, verbatim: «at a blank field,
+// a constant, `nil`, or a plain variable read gives the zero value with
+// nothing evaluated, and any other operand is refused by name»). So:
 //
-// KNOWN ≠ gc, OPEN, awaiting the [USER]'s ruling (recorded under BUG-129;
-// both pre-existing at the branch base, both measured, both relayed by
-// the review): (F1) gc DROPS a blank operand that its census
-// `staticinit.isSideEffect` (staticinit/sched.go:816–898) calls
-// side-effect free TOGETHER WITH ITS PANIC — `fixedlit` (walk/complit.go:
-// 231) skips the `_ = value` when `!AnySideEffects(value)`; the census
-// lists shifts (OLSH/ORSH: a negative count panics) and comparisons
-// (OEQ/ONE: an uncomparable dynamic type panics) as side-effect free,
-// under any pure wrapper (arithmetic, conversion, unary, parens, a nested
-// struct/array literal — not `&&`/`||`, which `order` rewrites into
-// statements and gc keeps): `S{1 << n, 2}` with n = -1 is gc 2, here a
-// panic. (F2) at PACKAGE LEVEL gc never evaluates a blank operand at all,
-// calls included: `staticinit.initplan` (sched.go:545) skips the blank
-// fields of a struct literal, so no plan entry — hence no init-time
-// statement — exists for it (`StaticAssign`'s struct/array/slice/&-literal
-// arms, sched.go:355–417; a map literal is dynamic and keeps its effects);
-// `var w = S{bump(), 2}` runs no bump in gc, one here (the initializer is
-// a fabricated assignment, emitProgram). Keyed literals cannot name a
-// blank field (gc and go/types: «unknown field _ in struct literal»; the
-// negative row `structs/blank-field-keyed`), and an omitted field already
-// takes the zero value above.
-func (e *emitter) emitBlankFieldOperand(x ast.Expr, fieldTy types.Type) (any, error) {
+//	 (i)  a constant expression or `nil` → the zero value, nothing emitted;
+//	 (ii) a PLAIN VARIABLE READ (`plainVariableRead`, below) → the zero
+//	      value, nothing emitted — gc drops the read; nothing observable
+//	      differs;
+//	(iii) anything else → REFUSED by name at this literal, naming the field,
+//	      the operand, its shape, the reason and the position — the message
+//	      the causes table keys as `by-design/blank-field-operand`.
+//
+// Both lowering paths apply this one rule (the unseq sweep's `structLitHead`
+// calls this helper too); the earlier discard encoding (an evaluating
+// `index-get(array-lit …)` wrapper, 2026-10-13) is gone. Keyed literals
+// cannot name a blank field (gc and go/types: «unknown field _ in struct
+// literal»; the negative row `structs/blank-field-keyed`), and an omitted
+// field already takes the zero value in emitStructLit.
+func (e *emitter) emitBlankFieldZero(x ast.Expr, fieldIdx int, litType types.Type, fieldTy types.Type) (any, error) {
 	fty, err := e.emitType(fieldTy)
 	if err != nil {
 		return nil, err
 	}
-	zero := map[string]any{"expr": "default", "type": fty}
+	if err := e.blankFieldOperandAdmitted(x, fieldIdx, litType); err != nil {
+		return nil, err
+	}
+	return map[string]any{"expr": "default", "type": fty}, nil
+}
+
+// blankFieldOperandAdmitted is the ruled allowlist (emitBlankFieldZero): nil
+// when the blank field's operand is a constant expression, `nil` or a plain
+// variable read; otherwise the refusal, by name.
+func (e *emitter) blankFieldOperandAdmitted(x ast.Expr, fieldIdx int, litType types.Type) error {
 	if tv, ok := e.typesEntry(x); ok && (tv.Value != nil || tv.IsNil()) {
-		return zero, nil
+		return nil
 	}
-	w, err := e.emitExpr(x)
-	if err != nil {
-		return nil, err
+	if e.plainVariableRead(x) {
+		return nil
 	}
-	w, err = e.wrapInterfaceConversion(fieldTy, e.goTypeOf(x), w)
-	if err != nil {
-		return nil, err
+	return unsup("blank field _ (field %d of %s) at %s: operand %s (%s) refused — gc elides a side-effect-free blank operand with its run-time panic, and never evaluates a package-level literal's blank operand; the frontend refuses a blank-field operand that is not a constant, nil or a plain variable read — [USER] 2026-10-14",
+		fieldIdx, litType, e.fset.Position(x.Pos()), types.ExprString(x), blankOperandShape(x))
+}
+
+// plainVariableRead reports whether x is a PLAIN VARIABLE READ, the one
+// non-constant operand shape admitted at a blank field (the 2026-10-14
+// ruling): an operand whose evaluation gc elides (ONAME and ODOT on a value
+// are side-effect free in `staticinit.isSideEffect`) and that can neither
+// panic nor have an effect, so dropping it unevaluated changes nothing
+// observable. Admitted, through any parentheses:
+//
+//   - an identifier denoting a VARIABLE (go/types `*types.Var`: a local, a
+//     parameter, a result, a package-level variable) — not a function, type,
+//     constant (constants take arm (i)), builtin or package name;
+//   - a package-qualified variable `pkg.V` (`v.X` a `*types.PkgName`, `Sel` a
+//     `*types.Var`);
+//   - a field selection `v.f`, `v.f.g`, `pkg.V.f` whose base is one of the
+//     above and whose every step is a FIELD selection with NO pointer
+//     indirection (`Selection.Kind() == FieldVal && !Indirect()`): the field
+//     of a struct VALUE, read by copy — no nil to dereference, nothing to
+//     call.
+//
+// Not plain, and so refused: a selection through a pointer or a promoted
+// field through an embedded pointer (`Indirect()`: a nil base panics — gc
+// keeps ODOTPTR as a side effect), a method value (allocates a closure; gc
+// keeps OMETHVALUE), an interface method value, a selector naming a
+// function, type or constant, and every other expression form (index,
+// slice, call, conversion, operator, composite literal, dereference,
+// address-of, type assertion, receive, function literal).
+func (e *emitter) plainVariableRead(x ast.Expr) bool {
+	switch v := ast.Unparen(x).(type) {
+	case *ast.Ident:
+		_, isVar := e.info.Uses[v].(*types.Var)
+		return isVar
+	case *ast.SelectorExpr:
+		if id, ok := ast.Unparen(v.X).(*ast.Ident); ok {
+			if _, isPkg := e.info.Uses[id].(*types.PkgName); isPkg {
+				_, isVar := e.info.Uses[v.Sel].(*types.Var)
+				return isVar
+			}
+		}
+		sel, ok := e.info.Selections[v]
+		if !ok || sel.Kind() != types.FieldVal || sel.Indirect() {
+			return false
+		}
+		return e.plainVariableRead(v.X)
 	}
-	arrTy, err := e.emitType(types.NewArray(fieldTy, 2))
-	if err != nil {
-		return nil, err
+	return false
+}
+
+// blankOperandShape names a refused blank-field operand's syntactic shape
+// for the refusal message (emitBlankFieldZero arm (iii)).
+func blankOperandShape(x ast.Expr) string {
+	switch v := ast.Unparen(x).(type) {
+	case *ast.CallExpr:
+		return "a call or conversion"
+	case *ast.CompositeLit:
+		return "a composite literal"
+	case *ast.FuncLit:
+		return "a function literal"
+	case *ast.BinaryExpr:
+		return "a binary " + v.Op.String() + " expression"
+	case *ast.UnaryExpr:
+		return "a unary " + v.Op.String() + " expression"
+	case *ast.StarExpr:
+		return "a pointer dereference"
+	case *ast.IndexExpr, *ast.IndexListExpr:
+		return "an index expression"
+	case *ast.SliceExpr:
+		return "a slice expression"
+	case *ast.TypeAssertExpr:
+		return "a type assertion"
+	case *ast.SelectorExpr:
+		return "a selector that is not a plain variable read (a pointer-dereferencing field, a method value, or not a variable)"
+	case *ast.Ident:
+		return "an identifier that does not denote a variable"
 	}
-	intTy, err := e.emitType(types.Typ[types.Int])
-	if err != nil {
-		return nil, err
-	}
-	return map[string]any{
-		"expr": "index-get",
-		"base": map[string]any{
-			"expr":   "array-lit",
-			"length": int64(2),
-			"elem":   fty,
-			"elems":  []any{map[string]any{"index": int64(0), "value": w}},
-			"type":   arrTy,
-		},
-		"index": map[string]any{"expr": "int", "value": "1", "type": intTy},
-		"type":  fty,
-	}, nil
+	return "an expression of another form"
 }
 
 // hoistSliceLit hoists a slice allocation (makeSlice + per-index assign) bound

@@ -135,5 +135,15 @@ push rule). Pushing the tag is a separate sign-off.
   override the frontend never reads (measured: it flips a module's answer while the export succeeds) — do not build
   inside a workspace that sets one; `//go:debug panicnil=0`, the one source-level match for the pin, is refused
   like every `//go:debug`. The contract is stated in `docs/cli.md` §1.
+- **A blank struct field's operand is not evaluated** (row 37; BUG-129/BUG-130): the field takes the zero
+  value — spec#Comparison_operators compares «non-blank field values» only — and the operand may be a constant,
+  `nil` or a plain variable read (an identifier naming a variable, a package-qualified variable, a struct VALUE's
+  field selection with no pointer on the path); any other operand refuses the literal by name, at package level
+  the initializer with it. The reason is gc's realization, which is not an evaluation: it drops a side-effect-free
+  blank operand together with its run-time panic (`walk/complit.go:231` via `staticinit.isSideEffect` — a negative
+  shift count, an interface comparison over an uncomparable dynamic type, under any pure wrapper: gc answers, an
+  evaluating model panics) and never evaluates a package-level struct literal's blank operand at all, calls
+  included (`staticinit.initplan`). [USER] Mike 2026-10-14 «agree on both»; the mirror of gc's census is «maybe
+  later» (ledger §5.1 item 9). Rows `structs/blank-field-*` (13 PASS, 14 red by design, one negative).
 - The ten limits of the 2026-10-03 offer (`docs/2026-10-03_offer-to-logic-team.md`) stand.
 

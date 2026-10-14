@@ -8,3 +8,4 @@ pointer-literal	blankEqPointerLiteral	-	ok	-	structs,fields,literals,comparabili
 generic-instantiation	blankEqGenericInstantiation	-	ok	-	structs,fields,literals,comparability,generics
 element-literals	blankEqElementLiterals	-	ok	-	structs,fields,literals,comparability,slices,maps
 conversion-copy	blankEqConversionCopy	-	ok	-	structs,fields,literals,comparability
+plain-variable-read	blankEqPlainVariableRead	-	ok	-	structs,fields,literals,comparability,globals

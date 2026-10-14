@@ -361,10 +361,25 @@ func (l *loader) exprInitKind(u *sourcePkg, e ast.Expr) initializerKind {
 		}
 		// OARRAYLIT/OSLICELIT/OSTRUCTLIT return true with each element
 		// assigned through StaticAssign; a failing element is appended
-		// as a dynamic statement, i.e. work.
-		for _, elt := range x.Elts {
+		// as a dynamic statement, i.e. work. A struct literal's BLANK
+		// field has NO plan entry at all — `initplan` (sched.go:545)
+		// `if a.Sym().IsBlank() { continue }` — so its operand is never
+		// work in gc, whatever it is; skipped here alike (BUG-129, the
+		// 2026-10-14 ruling: the lowering admits only a constant, nil or
+		// a plain variable read there and refuses the literal otherwise,
+		// so a skipped element is one gc would not have evaluated).
+		var st *types.Struct
+		switch u := tv.Type.Underlying().(type) {
+		case *types.Struct:
+			st = u
+		case *types.Pointer:
+			st, _ = u.Elem().Underlying().(*types.Struct)
+		}
+		for i, elt := range x.Elts {
 			if kv, ok := elt.(*ast.KeyValueExpr); ok {
 				elt = kv.Value
+			} else if st != nil && i < st.NumFields() && st.Field(i).Name() == "_" {
+				continue
 			}
 			if l.exprInitKind(u, elt) == initWork {
 				return initWork

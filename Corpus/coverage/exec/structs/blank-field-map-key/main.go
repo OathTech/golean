@@ -1,7 +1,8 @@
 package main
 
 // A blank field holds the zero value, so two keys differing only in a
-// blank operand are ONE map key (BUG-129).
+// blank operand are ONE map key (BUG-129; operands constants and variables,
+// the admitted shapes).
 
 type blankKeyS struct {
 	_ int
@@ -28,9 +29,10 @@ func blankMapKeyCardinality() int {
 }
 
 func blankMapKeyInterfaceBlank() int {
+	s1, s2 := []int{1}, []int{2}
 	m := map[blankKeyT]int{}
-	m[blankKeyT{[]int{1}, 2}] = 5
-	m[blankKeyT{[]int{2}, 2}] = 6
+	m[blankKeyT{s1, 2}] = 5
+	m[blankKeyT{s2, 2}] = 6
 	println(len(m), m[blankKeyT{nil, 2}])
 	return len(m)*10 + m[blankKeyT{nil, 2}]
 }

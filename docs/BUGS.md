@@ -8879,22 +8879,20 @@ source-level way to match the pin (measured: `false`) and is refused too — the
 never the source.
 `TestGcSizeLimits` (d01, d02, e02, g11, g13).
 
-## BUG-129 — BLANK struct fields were STORED and COMPARED: the lowering kept a positional literal's `_` operand in the value and the core's field-by-field equality read it, where Go compares non-blank fields only and gc never stores the operand — `S{1, 2} == S{9, 2}` answered false (gc true), a map keyed by two such values had two entries (gc one), an interface-typed blank holding a slice panicked «comparing uncomparable type» (gc never does) and hashed as «unhashable» (gc stores nil); duplicate `_` fields the same [native frontend lowering; wrong answer with status ok; the Codex zero-context release pass's F1 (`docs/2026-10-13_codex-zero-context-pass.md`), release-readiness row 37; the ZERO-VALUE class FIXED 2026-10-13 in lane `frontend/blank-fields-1013`; the operand's EVALUATION carries two OPEN, pre-existing classes found by the lane's pre-merge review (F1/F2 below), awaiting the [USER]'s ruling] [numbered BUG-127 on the lane's branch; renumbered BUG-129 at train 10, the directives lane having landed BUG-127/128 first]
+## BUG-129 — BLANK struct fields were STORED and COMPARED: the lowering kept a positional literal's `_` operand in the value and the core's field-by-field equality read it, where Go compares non-blank fields only and gc never stores the operand — `S{1, 2} == S{9, 2}` answered false (gc true), a map keyed by two such values had two entries (gc one), an interface-typed blank holding a slice panicked «comparing uncomparable type» (gc never does) and hashed as «unhashable» (gc stores nil); duplicate `_` fields the same [native frontend lowering; wrong answer with status ok; the Codex zero-context release pass's F1 (`docs/2026-10-13_codex-zero-context-pass.md`), release-readiness row 37; FIXED 2026-10-13 in lane `frontend/blank-fields-1013` — the field holds the zero value; the OPERAND question (what a blank field's operand evaluates, where gc drops it) CLOSED 2026-10-14 by REFUSAL under the [USER]'s ruling: BUG-130] [numbered BUG-127 on the lane's branch; renumbered BUG-129 at train 10, the directives lane having landed BUG-127/128 first]
 
 - Status: fixed ([AGENT] lane worker, lane `frontend/blank-fields-1013`, 2026-10-13, under [USER] Mike 2026-10-13,
-  verbatim, relayed by the [AGENT] coordinator: «2 fix» — the coordinator's proposed lowering fix, approved: evaluate
-  the blank operand at its position in the literal and store the zero value of the field's type, with no core change.
-  FIXED is the zero-value class this heading names and the Cases below pin; the two evaluation classes F1/F2 below are
-  OPEN and NOT this entry's Status — their disposition is the [USER]'s ruling, asked for by the coordinator 2026-10-13.)
+  verbatim, relayed by the [AGENT] coordinator: «2 fix» — the field takes the zero value of its type, with no core
+  change. The Cases below are the zero-value class, all PASS; the blank field's OPERAND is BUG-130's entry — refused by
+  name beyond a constant, nil or a plain variable read, RULED [USER] Mike 2026-10-14 «agree on both», relayed.)
 - Pinned-by: differential
-- Cases: structs/blank-field-equality/differing-blanks, structs/blank-field-equality/duplicate-blanks, structs/blank-field-equality/interface-blank-slice-self, structs/blank-field-equality/interface-blank-recovered, structs/blank-field-equality/nested-literal, structs/blank-field-equality/pointer-literal, structs/blank-field-equality/generic-instantiation, structs/blank-field-equality/element-literals, structs/blank-field-equality/conversion-copy, structs/blank-field-map-key/cardinality, structs/blank-field-map-key/interface-blank
+- Cases: structs/blank-field-equality/differing-blanks, structs/blank-field-equality/duplicate-blanks, structs/blank-field-equality/interface-blank-slice-self, structs/blank-field-equality/interface-blank-recovered, structs/blank-field-equality/nested-literal, structs/blank-field-equality/pointer-literal, structs/blank-field-equality/generic-instantiation, structs/blank-field-equality/element-literals, structs/blank-field-equality/conversion-copy, structs/blank-field-equality/plain-variable-read, structs/blank-field-map-key/cardinality, structs/blank-field-map-key/interface-blank, structs/blank-field-pkg-init-plain
 - Discovered: the Codex zero-context release pass (F1, 2026-10-13, the [USER]'s own run, relayed), reproduced by the
   [AGENT] coordinator at `a0885047` with the `S{1, 2} == S{9, 2}` / map / `recover` program; the lane reproduced the
   same program RED at the branch base `2e69dd86` (GoLean `false` / `2 3 7` / `99`, status ok; gc `true` / `1 7 7` / `7`)
-  before changing anything. F1/F2 below: the lane's pre-merge adversarial review (relayed by the [AGENT] coordinator,
-  2026-10-13), reproduced by the lane at its tip from the reviewer's own programs. Entry: [AGENT] lane worker,
-  2026-10-13; corrected the same day after the review (the first text claimed «gc's own treatment» for the
-  evaluation as a whole — overstated; this text replaces it).
+  before changing anything. Entry: [AGENT] lane worker, 2026-10-13; corrected 2026-10-13 after the lane's pre-merge
+  review (the first text claimed «gc's own treatment» for the operand's evaluation — overstated); restated 2026-10-14
+  under the ruling.
 
 WHAT: spec#Comparison_operators — «Two struct values are equal if their corresponding non-blank field values are
 equal» — and gc agree that a blank field's operand is never STORED: `cmd/compile/internal/walk/complit.go` `fixedlit`
@@ -8906,71 +8904,91 @@ map-key identity and in the comparability check that panics on an uncomparable d
 cases hold blank fields (`structs/blank-field`, `noodler/structs`, `spec-examples-stmt/struct-tags`,
 `spec-examples-decl/compile-only-forms`); none compares them, which is why the baseline stayed green.
 
-WHAT LANDED (lowering only; `GoLean/` untouched): at a blank field `_ T` of a positional literal the field takes T's
-zero value, on both lowering paths, so equality, map keys and copies follow from the core's unchanged comparison. The
-operand's EVALUATION keeps each path's standing discipline exactly as a non-blank field's would: on the legacy ANF
-path (`emitBlankFieldOperand`) the operand's calls are hoisted by `emitExpr` at their lexical position (E1), a panicky
-residual keeps its E13 `unseq-probe`, and the residual is evaluated at the field's own position among the literal's
-arguments, spelled with the core's own array literal `index-get(array-lit 2 T [(0, operand)], 1)` (element 0 evaluated
-there, the omitted index 1 is T's zero via `buildArrayValue` — the one "evaluate and discard" the wire spells without a
-new node); on the unseq sweep path the operand is lowered in source order with its siblings for its occurrences alone,
-its cell consumed by nothing, the head storing `default T`. A constant or `nil` operand lowers to the zero value
-directly. The review confirmed this evaluation matches gc for calls, receives and the operands gc's side-effect census
-KEEPS (index, slice, deref, division by a non-constant, type assertion, make), in order, on both paths (~70 subjects).
-Keyed literals cannot name a blank field (gc and go/types: «unknown field _ in struct literal» — the negative row
-`structs/blank-field-keyed`, PASS at `frontend=type-check`); an omitted blank field already took the zero value.
-Anonymous non-empty struct types are FR-13's standing frontend refusal, so no literal of one reaches this lowering.
+THE FIX (lowering only; `GoLean/` untouched): at a blank field `_ T` of a positional literal the field takes T's zero
+value, on both lowering paths (`emitBlankFieldZero`, called by `emitStructLit` and by the unseq sweep's
+`structLitHead`), so equality, map keys and copies follow from the core's unchanged comparison. The 11 original Cases
+rows were RED at the branch base (the wrong booleans, counts and the two panics) and PASS since; `plain-variable-read`
+and `pkg-init-plain` (2026-10-14) pin the admitted non-constant operand. Keyed literals cannot name a blank field (gc
+and go/types: «unknown field _ in struct literal» — the negative row `structs/blank-field-keyed`, PASS at
+`frontend=type-check`); an omitted blank field already took the zero value. Anonymous non-empty struct types are
+FR-13's standing frontend refusal, so no literal of one reaches this lowering.
 
-OPEN — KNOWN ≠ gc (observed ∉ modeled), both PRE-EXISTING at the branch base (the base stored the operand after
-evaluating it just the same), both measured by the review and reproduced by the lane, both awaiting the [USER]'s
-ruling (refuse by name, or record as gc deviations c-pin style); NOT pinned by any corpus row yet:
+THE OPERAND — the 2026-10-13 lowering EVALUATED it (an `index-get(array-lit …)` discard wrapper at the field's
+position; the sweep lowering it for its occurrences), and the lane's pre-merge review (relayed) measured two classes
+where gc's observation lies outside that model's set, both pre-existing at the base: (F1) gc DROPS a side-effect-free
+blank operand together with its run-time panic, (F2) gc never evaluates a package-level literal's blank operand at all.
+The disposition is the [USER]'s ruling of 2026-10-14 and the record is BUG-130's: the operand is NOT evaluated; a
+constant, nil or a plain variable read gives the zero value, anything else refuses the literal by name.
 
-- F1 — gc DROPS a side-effect-free blank operand TOGETHER WITH ITS PANIC. `walk/complit.go:231` `fixedlit`: `if a ==
-  ir.BlankNode && !staticinit.AnySideEffects(value) { continue }`, and `staticinit/sched.go:816–898` `isSideEffect`
-  calls side-effect free (lines 823–875) ONAME/OLITERAL/ONIL, OADD/OSUB/OMUL/OOR/OXOR/OAND/OANDNOT, ONEG/OPLUS/ONOT/
-  OBITNOT, OADDSTR, OADDR, OANDAND/OOROR, the string/bytes/runes conversions, OCAP/OLEN, every composite literal
-  (OCOMPLIT/OSTRUCTLIT/OARRAYLIT/OSLICELIT/OMAPLIT/OPTRLIT), OCONV/OCONVIFACE/OCONVNOP, ODOT (a value's field), the six
-  comparisons OEQ/ONE/OLT/OLE/OGT/OGE, OKEY/OSTRUCTKEY, **OLSH/ORSH**, ONEW, OPAREN, ORUNESTR, OREAL/OIMAG/OCOMPLEX;
-  ODIV/OMOD only with a non-zero constant divisor (878–882); OMAKECHAN/OMAKEMAP only with a constant zero size
-  (886–890); OMAKESLICE always a side effect (894). Of these, the ones that PANIC at run time — the exact class gc drops
-  with its panic — are the SHIFTS with a negative count (spec: «If the shift count is negative at run time, a run-time
-  panic occurs») and the interface COMPARISONS OEQ/ONE over an uncomparable dynamic type (spec: «A comparison of two
-  interface values with identical dynamic types causes a run-time panic if that type is not comparable … also when
-  comparing arrays of interface values or structs with interface-valued fields»), reached through any wrapper of pure
-  members (measured: `+ 1`, `int64(…)`, unary `-`, `!`, parens, a nested struct or array literal — and nesting at a
-  NON-blank outer field whose inner literal has a blank one: `NI{Inner{7, 2}, Inner{1 << n, 4}, 5}` gc 9, model panic);
-  NOT under `&&`/`||`, which `order` rewrites into statements (measured: gc panics, model panics — agree). Everything
-  the census KEEPS (calls, receives, index, slice, deref, assertion, division by a non-constant, make with a
-  non-constant size, slice→array conversion) panics on both sides — agree. Measured at the tip: `n := -1; s := S{1 <<
-  n, 2, 3}; s.X` gc 2 (also under `-gcflags='-N -l'`), model «negative shift amount», `coverage-observations` = {panic};
-  the same for `>>`, blank last, `&S{…}`, `[]S{{…}}`, `x << n`, `_ any` boxing a shift, two blanks `T{f(1), 1 << n, 2}`,
-  the sweep path (`S{1 << n, f(1), 3}`: gc `f 1`/1, model {panic, `f 1`+panic}); `a == b` over two `any` slices at a
-  `_ bool` field, `I{a} == I{b}` (a struct holding an interface), `a != b`, `!(a == b)`: gc 2, model «comparing
-  uncomparable type []int». Not F1: a shift at a NON-blank field and `_ = 1 << n` as a statement panic on both sides. A
-  float→int conversion out of range at a blank field: gc drops it (2), the model REFUSES by its standing R6 rule
-  (`float-to-int-range`) — a refusal where gc answers, the same census member (OCONV), noted. The model follows the
-  spec's reading that the operand is evaluated; gc's census is an optimization that elides a panic the spec requires,
-  the ORACLE's side being the one to classify — the ruling's business, not this entry's.
-- F2 — at PACKAGE LEVEL gc never evaluates a blank operand at all, calls included. `staticinit/sched.go:545` `initplan`
-  (OSTRUCTLIT): `if a.Sym().IsBlank() { continue }` — no plan entry, hence no init-time statement (the dynamic fallback
-  `assign`, sched.go:302–314, runs per ENTRY). The shape: a `var` initializer whose top level (after OCONVNOP stripping,
-  sched.go:298) is a struct or array literal (`StaticAssign` sched.go:402–417), a slice literal (385–400, falls
-  through), or `&` of one (OPTRLIT, 355–371), with blank-field struct literals reached at any depth through nested
-  array/struct literals (`addvalue`'s `isvaluelit` inlining, 569–579), nested slice literals and nested `&T{…}` (each a
-  recursive `StaticAssign` with its own plan). NOT through a map literal (OMAPLIT is dynamic, 419: walk/`fixedlit`
-  keeps its side effects) and not for a LOCAL literal. Measured (the reviewer's `g1`/`g2`): `var w = S{bump("w0"), 2,
-  bump("w2")}`, `var p = &S{bump("p0"), 2, 3}`, `var arr = [1]S{{bump("a0"), 1, 2}}`, `var sl = []S{{bump("s0"), 1, 2}}`
-  run NO bump in gc; `var mp = map[string]S{"a": {bump("m0"), 1, 2}}`, the non-blank `var nb = S{0, bump("nb"), 0}` and
-  a local `S{bump("l0"), 2, 3}` do — gc `cnt 3`, model `cnt 8` (every initializer is a fabricated assignment statement,
-  `emitProgram`, evaluated at setup like a local literal's); `var n = -1; var sh = S{1 << n, 2, 3}` gc fine (sh.X 2),
-  model panics at setup. Also noted by the review: the BUG-061 classifier (`tools/nativefrontend/staticinit.go`, the
-  `*ast.CompositeLit` arm, lines 365–372) classifies every element including a blank field's — a call there makes the
-  initializer WORK where gc has no entry for it, the direction BUG-061 guards against (a node gc deleted is kept).
+## BUG-130 — a BLANK struct field's operand that is not a constant, `nil` or a plain variable read is REFUSED by name — gc's realization is not an evaluation: it elides a side-effect-free blank operand WITH its run-time panic (negative shifts, interface comparisons over an uncomparable dynamic type, under any pure wrapper) and never evaluates a package-level struct literal's blank operand at all, calls included [native frontend lowering; a REFUSAL BY RULING, «maybe later», not a coverage gap; found by the pre-merge review of lane `frontend/blank-fields-1013` (2026-10-13, relayed) on BUG-129's first lowering; RULED [USER] Mike 2026-10-14; the two classes were pre-existing wrong answers (observed ∉ modeled) at the branch base and on the 2026-10-13 lowering alike]
 
-PINS: the 11 Cases rows above were RED at the branch base (the wrong booleans, counts and the two panics) and PASS at
-the tip; 8 sibling rows were PASS at both and pin what the fix must keep — the operand's evaluation for the operands gc
-KEEPS (`structs/blank-field-eval-order/{effectful,boxed-effectful,sweep}`: calls, output order and the stored sibling
-values, on both paths; `structs/blank-field-panic/{call-operand,index-operand}`, `recovered-value`: a panicking call,
-a panicky index) and the spec-unsequenced pair «panicky blank residual beside a sibling call» as MEMBERSHIP rows on
-each path (`index-then-call-sweep`: the `unseq` scheduler's pick; `index-then-call-legacy`: the E13 probe's
-DEFER/RAISE pick; members=2, gc draws the call-first member). No row pins F1 or F2.
+- Status: fixed
+- Expect: FAIL
+- Pinned-by: none (the 14 Cases below are RED-BY-DESIGN refusal pins at `frontend-export`, cause
+  `by-design/blank-field-operand` (`tools/lowerdiag/causes.tsv`); eight of them — `structs/blank-field-eval-order/*`
+  and `structs/blank-field-panic/*` — were born PASS 2026-10-13 on the evaluating lowering and FLIPPED PASS→FAIL
+  under the ruling (this Cases line is their flip record); the six `structs/blank-field-refused/*` and
+  `structs/blank-field-pkg-init-{call,shift}` rows were born FAIL. `scripts/check-bugs.sh` reads only differential
+  pins, so the PASS rows of the same ruling sit on BUG-129's Cases line.)
+- Cases: structs/blank-field-eval-order/effectful, structs/blank-field-eval-order/boxed-effectful, structs/blank-field-eval-order/sweep, structs/blank-field-panic/call-operand, structs/blank-field-panic/index-operand, structs/blank-field-panic/index-then-call-sweep, structs/blank-field-panic/index-then-call-legacy, structs/blank-field-panic/recovered-value, structs/blank-field-refused/negative-shift, structs/blank-field-refused/interface-compare, structs/blank-field-refused/nested-pure-wrapper, structs/blank-field-refused/composite-operand, structs/blank-field-pkg-init-call, structs/blank-field-pkg-init-shift
+- Discovered: the lane's pre-merge adversarial review (relayed by the [AGENT] coordinator, 2026-10-13) measured F1
+  (shifts) and F2 against the 2026-10-13 lowering; the lane reproduced both at its tip from the reviewer's programs
+  and found the interface-comparison member of F1. Ruling: [USER] Mike 2026-10-14, verbatim, relayed by the [AGENT]
+  coordinator: «agree on both»; the recommendation agreed to, verbatim: «at a blank field, a constant, `nil`, or a
+  plain variable read gives the zero value with nothing evaluated, and any other operand is refused by name». Entry:
+  [AGENT] lane worker, 2026-10-14.
+
+WHAT gc DOES (the reason the operand is not modeled as an evaluation; the census at the go1.26.5 pin,
+`deps/go/src/cmd/compile/internal/`):
+- F1 — `walk/complit.go:231` `fixedlit`: `if a == ir.BlankNode && !staticinit.AnySideEffects(value) { continue }` — a
+  blank field's element is DROPPED, panic and all, when the census `staticinit/sched.go:816–898` `isSideEffect` finds
+  no side effect in it. Side-effect free there (lines 823–875): ONAME/OLITERAL/ONIL, OADD/OSUB/OMUL/OOR/OXOR/OAND/
+  OANDNOT, ONEG/OPLUS/ONOT/OBITNOT, OADDSTR, OADDR, OANDAND/OOROR, the string/bytes/runes conversions, OCAP/OLEN, every
+  composite literal (OCOMPLIT/OSTRUCTLIT/OARRAYLIT/OSLICELIT/OMAPLIT/OPTRLIT), OCONV/OCONVIFACE/OCONVNOP, ODOT (a
+  value's field), the comparisons OEQ/ONE/OLT/OLE/OGT/OGE, OKEY/OSTRUCTKEY, **OLSH/ORSH**, ONEW, OPAREN, ORUNESTR,
+  OREAL/OIMAG/OCOMPLEX; ODIV/OMOD only with a non-zero constant divisor (878–882); OMAKECHAN/OMAKEMAP only with a
+  constant zero size (886–890); OMAKESLICE always a side effect (894). The members that PANIC at run time — the exact
+  class gc drops with its panic — are the SHIFTS with a negative count (spec: «If the shift count is negative at run
+  time, a run-time panic occurs») and the interface COMPARISONS over an uncomparable dynamic type (spec: «A comparison
+  of two interface values with identical dynamic types causes a run-time panic if that type is not comparable … also
+  when comparing arrays of interface values or structs with interface-valued fields»), through any wrapper of pure
+  members (measured: `+ 1`, `int64(…)`, unary `-`, `!`, parens, a nested struct or array literal, a nested literal at
+  a NON-blank outer field); not under `&&`/`||`, which `order` rewrites into statements (measured: gc panics).
+  Everything the census KEEPS (calls, receives, index, slice, deref, assertion, division by a non-constant, make with
+  a non-constant size, slice→array conversion) panics on both sides. Measured: `n := -1; S{1 << n, 2, 3}.X` gc 2 (also
+  under `-gcflags='-N -l'`), an evaluating model «negative shift amount»; `B{a == b, 2}` over two `any` slices gc 2,
+  the model «comparing uncomparable type []int»; a float→int conversion out of range at a blank field gc drops (2),
+  the model's standing R6 rule refuses.
+- F2 — `staticinit/sched.go:545` `initplan` (OSTRUCTLIT): `if a.Sym().IsBlank() { continue }` — no plan entry, hence no
+  init-time statement (the dynamic fallback `assign`, sched.go:302–314, runs per ENTRY). Reach: a `var` initializer
+  whose top level (OCONVNOP stripped, 298) is a struct or array literal (`StaticAssign` 402–417), a slice literal
+  (385–400), or `&` of one (OPTRLIT 355–371), with blank-field struct literals at any depth through nested
+  array/struct literals (`addvalue`, 569–579), nested slice literals and nested `&T{…}`; NOT through a map literal
+  (OMAPLIT dynamic, 419: walk/`fixedlit` keeps side effects) and not a LOCAL literal. Measured: `var w = S{bump(), 2,
+  bump()}`, `&S{bump(), 2, 3}`, `[1]S{{bump(), 1, 2}}`, `[]S{{bump(), 1, 2}}` run NO bump in gc; a map literal's
+  element, a non-blank field and a local literal do — gc `cnt 3`, the evaluating model `cnt 8`; `var n = -1; var sh
+  = S{1 << n, 2, 3}` gc fine, the evaluating model panics at setup.
+
+THE RULE AS LANDED (`tools/nativefrontend/emit.go` `emitBlankFieldZero` / `blankFieldOperandAdmitted` /
+`plainVariableRead`, called by `emitStructLit` and by the unseq sweep's `structLitHead` — one rule, both paths; the
+2026-10-13 discard encoding is gone): (i) a constant expression or `nil` → the zero value, nothing emitted; (ii) a
+PLAIN VARIABLE READ → the zero value, nothing emitted (gc drops the read; nothing observable differs) — an identifier
+denoting a variable (a local, parameter, result or package-level variable), a package-qualified variable `pkg.V`, or
+a field selection `v.f`, `v.f.g` whose every step is a FieldVal selection with no pointer indirection (a struct VALUE's
+field, read by copy — no nil to dereference, nothing to call; an embedded VALUE's promoted field included); NOT a
+selection through a pointer or an embedded pointer (nil panics; gc keeps ODOTPTR), a method value (gc keeps
+OMETHVALUE), a function/type/constant selector, or any other form; (iii) anything else → the literal REFUSED by name:
+`blank field _ (field <i> of <T>) at <pos>: operand <src> (<shape>) refused — gc elides a side-effect-free blank
+operand with its run-time panic, and never evaluates a package-level literal's blank operand; the frontend refuses a
+blank-field operand that is not a constant, nil or a plain variable read — [USER] 2026-10-14`. At package level the
+same refusal reaches the initializer (`package-level initializer of w does not lower (…)`: a call there refuses the
+export; a side-effect-free shape poisons the variable per declaration and its reader refuses by name), and the BUG-061
+classifier (`staticinit.go`, the `*ast.CompositeLit` arm) skips blank-field elements as `initplan` does. Measured:
+`var w = S{bump(), 2, 3}` refuses by name (gc 20, no bump), `var v = S{x, 2}` lowers with the zero. The 14 Cases: the
+eight 2026-10-13 rows (calls, an index, the two spec-unsequenced pairs, the recovered index panic — gc's answers
+stand as their expectations; the two membership rows are strict now, a refused literal having no realization to
+sample), the four gc-drop shapes (`negative-shift` gc 2, `interface-compare` gc 2, `nested-pure-wrapper` gc 9,
+`composite-operand` — the Codex pass's own F1 program, gc 7: a composite literal at an interface-typed blank field is
+not an admitted operand, so the headline program now refuses by name instead of answering), and the two package-level
+rows (`pkg-init-call` gc 20, `pkg-init-shift` gc 2). The ledger §5.1 item 9 carries the «maybe later»; `docs/release.md`
+§4 states the limit.

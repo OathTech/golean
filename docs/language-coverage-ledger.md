@@ -145,7 +145,7 @@ rows covering all 158 anchors.
 | String_types | covered(A) | `strings/` (37 pkgs): immutability, byte indexing, len, conversions both directions (19-red slice), invalid-UTF-8 edges, defined string types; integration via `examples/{strrev,rle,wordcount}`. |
 | Array_types | covered(A) | `arrays/` (19 pkgs) + disposition cases + neg:`spec-examples/array-type-*` (the spec's invalid self-referential types) and neg:`arrays/*`; value semantics, comparability, bounds panics all order/effect-observing. |
 | Slice_types | covered(B) | `slices/` (30 pkgs) + aliasing/growth suites; L:R2 (append spill capacity ENVELOPED), L:U-4 (overlap aliasing coverage, recorded unknown). |
-| Struct_types | covered(B) | `structs/` (38 pkgs), embedding suites; anonymous NON-EMPTY struct types as first-class types → FR-13 (7 reds); tags-in-conversions reds in the same family; BLANK fields hold the zero value (spec#Comparison_operators «non-blank field values»): `structs/blank-field-{equality,map-key,eval-order,panic}` (BUG-129, 2026-10-13; the keyed form `S{_: 1}` is the negative row `structs/blank-field-keyed`); the operand's EVALUATION is gc's for calls and the operands gc's side-effect census keeps, and KNOWN ≠ gc, OPEN (BUG-129 F1/F2, awaiting the [USER]'s ruling) where gc drops a side-effect-free panicky operand with its panic (a shift, an interface comparison) and never evaluates a package-level literal's blank operand. |
+| Struct_types | covered(B) | `structs/` (42 pkgs), embedding suites; anonymous NON-EMPTY struct types as first-class types → FR-13 (7 reds); tags-in-conversions reds in the same family; BLANK fields hold the zero value (spec#Comparison_operators «non-blank field values»): `structs/blank-field-{equality,map-key}`, `blank-field-pkg-init-plain` (BUG-129, 13 PASS rows; the keyed form `S{_: 1}` is the negative row `structs/blank-field-keyed`); a blank field's operand beyond a constant, nil or a plain variable read REFUSES by name (BUG-130, §5.1 item 9, [USER] 2026-10-14): `structs/blank-field-{eval-order,panic,refused}/*`, `blank-field-pkg-init-{call,shift}` — 14 red by design, `by-design/blank-field-operand`. |
 | Pointer_types | covered(B) | `pointers/` (18 pkgs) incl. nil-deref panic classes, BUG-056 arc (`&*p` matrix + race acceptance pin). |
 | Function_types | covered(B) | `functions/` (27 pkgs) + the Function_types COMPILE-ONLY disposition pin (all eight type forms). |
 | Interface_types | covered(B) | `interfaces/` (63 pkgs — the interfaces campaign) incl. `interfaces/embedding-satisfaction/*` (10 rows, BUG-095: an EMBEDDING interface's satisfaction requires its own methods too — type switch, assertion, comma-ok, nested, reverse cell, method value/expression, promoted wrapper, promoted method expression (audit fix R4), generic case; fixed 2026-09-05). Anonymous-interface IDENTITY across same-named packages: BUG-097 (open, `multipkg/same-name-anon-iface` red by the conflict guard — the wire name is package-NAME-qualified). |
@@ -620,6 +620,25 @@ requires a written profound reason. The complete list:
    linkname exemption is gone; stdlib source-through units are library
    units and keep theirs. Not queued: modelling embed (a data/provenance
    contract), linkname, or any GODEBUG setting.
+9. **A blank struct field's operand beyond a constant, `nil` or a plain
+   variable read** — REFUSED by name since 2026-10-14 (BUG-130; [USER] Mike
+   2026-10-14 «agree on both», relayed; the recommendation agreed to:
+   «at a blank field, a constant, `nil`, or a plain variable read gives
+   the zero value with nothing evaluated, and any other operand is
+   refused by name»). The reason is gc's own realization, which is not
+   an evaluation: `walk/complit.go:231` drops a side-effect-free blank
+   operand TOGETHER WITH its run-time panic (`staticinit.isSideEffect`,
+   sched.go:816–898, counts shifts and comparisons side-effect free — a
+   negative shift count or an uncomparable dynamic type panics in the
+   model and answers in gc), and `staticinit.initplan` (sched.go:545)
+   never evaluates a package-level struct literal's blank operand at
+   all, calls included. The zero value for the admitted shapes is the
+   fix (BUG-129, 13 PASS rows); the refusal rows are
+   `structs/blank-field-{eval-order,panic,refused}/*` and
+   `structs/blank-field-pkg-init-{call,shift}` (14, `by-design/
+   blank-field-operand`); the mirror of gc's census (an evaluating
+   model that drops exactly what gc drops) is «maybe later», never a
+   coverage gap.
 
 ## 6. The concurrency-entangled design questions
 

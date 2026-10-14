@@ -1,6 +1,11 @@
-# id	subject	args	expected_status	expected_reason	features	lane	why	params
-call-operand	blankPanicCallOperand	-	panic	blank operand boom	structs,fields,literals,panic,calls,print	-	-	-
-index-operand	blankPanicIndexOperand	-	panic	index out of range [5] with length 3	structs,fields,literals,panic,slices,indexing,print	-	-	-
-index-then-call-sweep	blankPanicIndexThenCallSweep	-	panic	index out of range [5] with length 3	structs,fields,literals,panic,slices,indexing,calls,print,evaluation_order,nondet	membership	BUG-129 `S{xs[5], wit(1)}` with a BLANK first field (xs = [1 2 3]): the blank operand's checked read panics; wit is the sibling event, spec-unsequenced against it — the panic alone, or `wit 1` then the panic (gc's, call-first); the ONE consumption site is the `unseq` scheduler's pick (`unseqNext`; Stage E E4 struct-literal payloads). members=2	width=2,sites=8,members=2
-index-then-call-legacy	blankPanicIndexThenCallLegacy	-	panic	index out of range [5] with length 3	structs,fields,literals,panic,slices,indexing,calls,print,evaluation_order,nondet	membership	BUG-129 on the legacy ANF path (a float field is outside the sweep grammar): `F{xs[5], float64(wit(1))}` with a BLANK first field — the blank operand's residual read is spec-unsequenced against the hoisted call; the ONLY consumption site is the unseqPanic probe of `xs[5]` (bound 2, latitude E13 option (b)): DEFER = `wit 1` then the panic at the field's position (gc's member), RAISE = the panic before the call. members=2	width=2,sites=8,members=2
-recovered-value	blankPanicRecoveredValue	-	ok	-	structs,fields,literals,panic,slices,indexing,defer,recover	-	-	-
+# id	subject	args	expected_status	expected_reason	features
+# structs/blank-field-panic — RED BY DESIGN since 2026-10-14 (BUG-129, [USER] Mike «agree on both»): a call or an
+# index at a blank field refuses the literal by name (by-design/blank-field-operand). Born PASS 2026-10-13: the two
+# index-then-call rows were MEMBERSHIP rows (the unseq scheduler's pick; the E13 probe's DEFER/RAISE pick, members=2,
+# gc drawing call-first); a refused literal has no realization to sample, so they are strict rows now with gc's own
+# answer (wit 1, then the panic) as the expectation.
+call-operand	blankPanicCallOperand	-	panic	blank operand boom	structs,fields,literals,panic,calls,print
+index-operand	blankPanicIndexOperand	-	panic	index out of range [5] with length 3	structs,fields,literals,panic,slices,indexing,print
+index-then-call-sweep	blankPanicIndexThenCallSweep	-	panic	index out of range [5] with length 3	structs,fields,literals,panic,slices,indexing,calls,print,evaluation_order
+index-then-call-legacy	blankPanicIndexThenCallLegacy	-	panic	index out of range [5] with length 3	structs,fields,literals,panic,slices,indexing,calls,print,evaluation_order
+recovered-value	blankPanicRecoveredValue	-	ok	-	structs,fields,literals,panic,slices,indexing,defer,recover

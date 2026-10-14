@@ -2,8 +2,10 @@ package main
 
 // Blank struct fields take the zero value (spec#Comparison_operators:
 // «corresponding non-blank field values»; gc compare/compare.go skips
-// them). BUG-129; the operand's evaluation beyond calls and the operands
-// gc keeps is BUG-129's OPEN F1/F2.
+// them). BUG-129. At a blank field only a constant, nil or a plain
+// variable read is admitted (the zero value, nothing evaluated); any
+// other operand refuses the literal by name ([USER] Mike 2026-10-14
+// «agree on both») — so the operands here are constants and variables.
 
 type blankEqS struct {
 	_ int
@@ -39,6 +41,12 @@ type blankEqG[T any] struct {
 
 type blankEqS2 blankEqS
 
+type blankEqPoint struct{ V int }
+
+type blankEqBox struct{ blankEqPoint }
+
+var blankEqGlobal = 9
+
 func blankEqBit(b bool) int {
 	if b {
 		return 1
@@ -59,8 +67,10 @@ func blankEqDuplicateBlanks() int {
 }
 
 func blankEqInterfaceSliceSelf() int {
-	a := blankEqT{[]int{1}, 2}
-	b := blankEqT{map[string]int{"k": 1}, 2}
+	sl := []int{1}
+	m := map[string]int{"k": 1}
+	a := blankEqT{sl, 2}
+	b := blankEqT{m, 2}
 	println(a == a, a == b, a == blankEqT{nil, 2}, a == blankEqT{nil, 3})
 	return blankEqBit(a == a)*1000 + blankEqBit(a == b)*100 + blankEqBit(a == blankEqT{nil, 2})*10 + blankEqBit(a == blankEqT{nil, 3})
 }
@@ -71,7 +81,8 @@ func blankEqInterfaceRecovered() (r int) {
 			r = 99
 		}
 	}()
-	a := blankEqT{[]int{1}, 2}
+	sl := []int{1}
+	a := blankEqT{sl, 2}
 	if a == a {
 		return 7
 	}
@@ -79,8 +90,9 @@ func blankEqInterfaceRecovered() (r int) {
 }
 
 func blankEqNestedLiteral() int {
-	a := blankEqOuter{blankEqInner{1, 2}, blankEqInner{3, 4}, 5}
-	b := blankEqOuter{blankEqInner{6, 7}, blankEqInner{8, 4}, 5}
+	in1, in2 := blankEqInner{1, 2}, blankEqInner{6, 7}
+	a := blankEqOuter{in1, blankEqInner{3, 4}, 5}
+	b := blankEqOuter{in2, blankEqInner{8, 4}, 5}
 	println(a == b, a.In == b.In, a.In.Y)
 	return blankEqBit(a == b)*100 + blankEqBit(a.In == b.In)*10 + a.In.Y
 }
@@ -114,4 +126,17 @@ func blankEqConversionCopy() int {
 	e.X = 2
 	println(c == d, blankEqS(d) == a, e == a)
 	return blankEqBit(c == d)*100 + blankEqBit(blankEqS(d) == a)*10 + blankEqBit(e == a)
+}
+
+// The admitted non-constant operand: a plain variable read — an identifier
+// naming a variable, a value-field selector (an embedded VALUE's promoted
+// field included), a package-level variable.
+func blankEqPlainVariableRead() int {
+	x, y := 5, 6
+	p, q := blankEqPoint{7}, blankEqBox{blankEqPoint{8}}
+	a, b := blankEqS{x, 2}, blankEqS{y, 2}
+	c, d := blankEqS{p.V, 2}, blankEqS{q.V, 2}
+	e, f := blankEqS{blankEqGlobal, 2}, blankEqS{(q.blankEqPoint.V), 2}
+	println(a == b, c == d, e == f, a == e)
+	return blankEqBit(a == b)*1000 + blankEqBit(c == d)*100 + blankEqBit(e == f)*10 + blankEqBit(a == e)
 }
