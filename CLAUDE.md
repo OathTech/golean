@@ -126,7 +126,9 @@ paragraph replaced the 2026-09-04 consumer-interface pointer with
 1. The interpreter (`GoLean/GoCore/` — `stepFn` and its drivers)
    and the native frontend lowering (`tools/nativefrontend` +
    `GoLean/NativeToIR.lean`), validated by the differential corpus
-   against `go run`.
+   against `go run`; what the kernel accepted rests on the Lean
+   toolchain pinned in `lean-toolchain` (the Go oracle pin's
+   counterpart), whose kernel the gate's replay runs.
 2. The differential apparatus: the coverage runners, the tracked
    baselines (`baselines/`) and the scripts that derive and compare
    them (`scripts/coverage-baseline-diff`, `scripts/coverage-cause` with
