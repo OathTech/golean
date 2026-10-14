@@ -127,8 +127,8 @@ name = "AcceptanceCheck"
 ```
 
 ```sh
-LEAN_NUM_THREADS=4 capped lake build
-LEAN_NUM_THREADS=4 capped lake env leanchecker --verbose GoLean RelationalDemo AcceptanceCheck
+LEAN_NUM_THREADS=2 capped lake build
+LEAN_NUM_THREADS=2 capped lake env leanchecker --verbose GoLean RelationalDemo AcceptanceCheck
 ```
 
 These imports exercise only the new GoLean exports; permanent upstream
@@ -144,6 +144,8 @@ The acceptance wrappers have only the standard classical trio of axioms.
 Kernel replay with the command above passed for exactly 89 source modules:
 80 GoLean modules, eight `RelationalDemo` modules and `AcceptanceCheck`;
 comparison against the source set found no missing or stale module.
+That original validation used four Lean threads; the reproduction commands
+above now use two, as required by the subsequent coordination charter.
 
 `capped scripts/ci --diff` passed in 742 seconds: every target built
 warning-free, the core totality/axiom audit and 396 eval tests passed,
@@ -167,3 +169,69 @@ these three specific requests; it is not closed for all constructs. The
 general refusal/outcome, observation-coverage and locality/sequentialization
 follow-ups remain open. No new `MachineWf`, refusal-freedom, typing or
 non-aliasing assumption is imposed on the requested laws.
+
+## Coordination and independent audit
+
+[USER] 2026-10-14: continue under the paired coordination charter in
+`golean-logic/.claude/worktrees/relational-demo-brief/docs/2026-10-14_golean-coordination-charter.md`;
+commission a fresh independent audit of
+`b25a47ef60984e2da16f80dedc0a1d5945806b8f`, disposition its findings, and
+respond to concrete logic requests in checked batches. Do not merge, push
+or modify the logic worker's tree. Logic owns the F1 ownership proof and
+reuse example; upstream supplies their demonstrated missing semantic facts.
+
+The reviewed implementation pin is the full `b25a47ef` commit above. The
+request and acceptance hashes still match the first batch's recorded
+inputs. The current downstream stage record contains RQ1–RQ3; no further
+concrete request has been handed off. Reading concurrent downstream work
+does not itself constitute a new request or a validation result.
+
+The fresh reviewer `relational_laws_audit` received the goals, sources and
+audit brief without the implementation conversation or a prescribed verdict.
+Its complete report is preserved in
+[the independent audit](2026-10-14-relational-laws-independent-audit.md).
+It found **no new correctness, trust or acceptance defect** at the exact
+implementation pin. The review ran in a separate worktree with independently
+copied caches and frozen downstream inputs; its report records all eight
+input hashes. It reproduced the unchanged acceptance, all five headline
+axiom checks, exact 89-module source/replay equality and the core audit.
+Supplemental checks discharge actual interior-write and coincident-slot
+operation premises; these are separate from downstream acceptance.
+
+### Dispositions
+
+[AGENT] 2026-10-14: retain the implementation unchanged after this audit.
+There is no new defect requiring a fix or waiver. Account for each numbered
+review conclusion and its limits as follows:
+
+| Review item | Disposition |
+| --- | --- |
+| 1, exact types/domains | Checked by the unchanged `rq1`/`rq2`/`rq3` assignments. Binding-slot reads retain `loadRoot`'s domain; the write target remains arbitrary `Loc`. No statement or premise change. |
+| 2, actual labels | Retain the actual ordered transitions and per-step pick/output guarantees. Existential traces are not silence or a fixed footprint theorem. No correction required. |
+| 3, aliasing/interior/cleanup | Checked by the proof and separate non-vacuity examples. The endpoint is `resumed k t`; no caller-tail execution is claimed. No correction required. |
+| 4, acceptance/safety | The symbolic acceptance derives operation success and progress. Fuel exhaustion remains possible in `PickFreeProgress.run`; this is not a general choiceful safety result. No correction required. |
+| 5, exports/trust/behavior | Facade, core audit, headline axioms and complete kernel replay passed. No executable implementation or baseline changed. No correction required. |
+| 6, remaining scope | Open: downstream ownership, interior separation/framing, callable integration and reuse; upstream general failure/outcome coverage, observation coverage, and locality/sequentialization. No blanket migration or demo-completion claim. Follow concrete missing-law requests under the coordination charter. |
+
+The review did not independently rerun full differential CI or authenticate
+the removed ephemeral metadata of the historical pre-commit run. That run
+remains the original implementer's evidence with its recorded scope; the
+independent checks are the clean-pin acceptance, axiom audit and replay
+reported above. No gate is waived, and the applicable fresh CI and audit
+requirements still apply to the actual tree proposed for merge.
+
+### Dispatch to logic
+
+Use immutable implementation pin
+`b25a47ef60984e2da16f80dedc0a1d5945806b8f`. With `import GoLean.Relational`,
+namespace `GoLean.GoCore.Relational`, RQ1 maps to `read_variable`, RQ2 to
+`sequence_splice`, RQ3 to `assign_pointer_variables`. No domain, premise or
+label changes. The unchanged GoLean-only acceptance closure plus the
+explicit wrappers above passes `LEAN_NUM_THREADS=2 capped lake build` and
+`LEAN_NUM_THREADS=2 capped lake env leanchecker --verbose GoLean RelationalDemo AcceptanceCheck`
+in independent scratch. Fresh adversarial audit found no new defects.
+The commit recording this audit changes documentation only; the audited
+semantic source remains exactly the implementation pin. Continue F1
+ownership/callable integration and the reuse example; hand off any concrete
+missing semantic laws with exact inputs and failed use sites. Upstream is
+ready for the next request. No merge or push has been performed.
