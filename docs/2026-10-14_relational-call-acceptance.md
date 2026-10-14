@@ -376,3 +376,15 @@ Recheck the actual Iris Keep/nonempty-result clients and their ownership
 protocol at that pin. This response does not claim those downstream proofs
 completed. The report-recording successor changes documentation only. No
 merge, push or peer-tree mutation was performed.
+
+## Subsequent downstream uptake
+
+Logic has now consumed the implementation pin above: `4432ff2` implements
+Keep and Identity through the shared Iris rule over `SavedCaller.invoke`,
+and reviewed handoff `2941b01` accepts that experimental finite-caller
+result. All six obligations are discharged and local call/exit plumbing
+is removed. The migration instructions above describe the original handoff;
+their RD3 uptake is complete. Existing guarded CodeX integration is the
+next downstream target, with no new upstream semantic blocker demonstrated.
+Full commit identities, provenance and RD4 readiness are recorded in the
+[existing handoff](2026-10-14_relational-demo-laws.md#rd3-uptake-and-rd4-readiness).
