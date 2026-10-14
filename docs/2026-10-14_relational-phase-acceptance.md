@@ -292,7 +292,7 @@ skipping replay. The main lane's full CI is separately identified evidence.
 
 ## Handoff
 
-Logic can repin the experimental dependency to
+The original delivery asked logic to repin the experimental dependency to
 `67f7d1c5ba6a96055a41802b978386d019e03c67`, consume the three exports above,
 remove its pending-law parameters, and migrate its phase vocabulary where
 appropriate. The original `SetTarget` and `KeepTarget` are closed in the
@@ -301,9 +301,15 @@ obligations, lookup premises and Keep's logical Set-contract support are
 unchanged. This is acceptance of the existing downstream proof, not a new
 upstream Iris/WP API or a live-pin update.
 
-Unconditional RD4 completion still requires logic's own uptake and regression
-check, preserving RD3. General observer coverage, additional source constructs
-and other previously recorded relational gaps remain outside this batch.
+Logic's isolated uptake and regression check are now complete at implementation
+`ae1486a6f43ab2dc8e8940ce8a22c865c7cae3db`, reviewed handoff
+`19c34ef745a2c1a4ef55030db2c1646a3676260e`: the exact guarded Set/Keep
+contracts are closed using the upstream interfaces directly, preserving RD3.
+The [ongoing handoff](2026-10-14_relational-demo-laws.md#rd4-uptake-and-rd5-readiness)
+records the relayed validation and RD5 readiness. No upstream revalidation is
+claimed by this documentation update. Production migration, general nonempty-
+result guarded lifting, wider observer coverage and other previously recorded
+relational gaps remain open.
 No merge, push, live repin or peer-worktree write occurred. Disposable scratch,
 clones, logs and corpus artifacts are removed after the checked conclusions
 and reproduction inputs are committed; the continuing implementation lane's
