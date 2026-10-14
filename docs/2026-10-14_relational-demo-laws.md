@@ -405,7 +405,11 @@ freezes logic implementation `8cf7c1652587366f324c1159a89d72cd0d297cf8`
 and reviewed handoff `57b677de9e76ca9c05de03d2b202910cabc660be`.
 `ReadOnlyExpr.less_int` supplies comparison; `sequence_signal_path` and
 `sequence_break_path` supply the missing sequence prefix. Exact adapters
-compile; full original Add acceptance and regressions are being checked.
-After the independently audited E/F handoff, the user has now dispatched C1
+compile. Immutable E/F pin `fc52512a6644c04996d327865919556107cf84ba`
+closes the original AddTarget through both acceptance routes; Alias/Pair/Set/Keep
+regressions pass. Full CI passes with all speedbumps green, candidate acceptance
+passes 352 jobs, exact 382-module kernel replay passes, and the fresh independent
+audit accepts the pin. The composition handoff records reproduction and limits.
+After this independently audited E/F handoff, the user has now dispatched C1
 local-outcome completeness, scoped to main and initialization local execution.
 It does not include the whole-program bridge or observation/locality work.
