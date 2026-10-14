@@ -72,4 +72,12 @@ theorem allocating_silence_is_not_pure {ctx : ProgramCtx} {decls : Array Param}
 #print axioms CallBoundary.deliver
 #print axioms SavedCaller.invoke
 
+#print axioms StorePath.run
+#print axioms StorePath.trans
+#print axioms StorePath.weaken
+#print axioms OperandPaths.values
+#print axioms pointer_assignment_phases
+#print axioms variable_assignment_phases
+#print axioms SavedCaller.entry_phases
+
 end Tests.RelationalContracts

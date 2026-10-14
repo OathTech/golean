@@ -297,3 +297,25 @@ reusable semantic capability. Return an audited immutable commit with exact
 export/adapter mapping and acceptance evidence, preserving domains, aliases,
 actual labels and the target's observation requirements. Upstream is ready
 for that request; this update changes documentation only.
+
+## RD4 concrete phase batch
+
+The readiness-only instruction above is superseded by the user's concrete
+RD4 relay, against frozen logic implementation
+`a1ddc673e03d91060c51f451dc5cd274916f9a4f` and reviewed handoff
+`4c868845ee91c068e63e0c63e78598cf5815b345`.
+
+`pointer_assignment_phases`, `SavedCaller.entry_phases` and
+`variable_assignment_phases` now provide the requested store-uniform
+preparation/effect/cleanup decomposition through `GoLean.Relational`.
+The shared vocabulary is `StorePath`, `StoreEffect`, `StepAdmission` and
+`OperandPaths`. The old endpoint contracts and executable semantics are
+unchanged; RD3's weaker operand domain remains available.
+
+All three exact frozen propositions have GoLean-only compatibility proofs.
+The [RD4 phase handoff](2026-10-14_relational-phase-acceptance.md) preserves
+those adapters, the closed guarded wrapper, frozen hashes and reproduction
+instructions. At this implementation freeze, full CI has passed in 725s; candidate-pinned
+Set/Keep acceptance and the fresh independent audit are still completing;
+this is not yet the final immutable delivery. Logic uptake and removal of
+its pending-law parameters remain downstream, after that delivery.

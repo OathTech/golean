@@ -19,6 +19,8 @@ imported. The implementation request and provenance are recorded in
 | Sequence entry | `sequence_splice` | Pure entry of `.seqn ss` into a governing sequence with the same environment; preserves arbitrary tail, store and continuation. |
 | Pointer assignment | `assign_pointer_variables` | Source `*p = v` from symbolic variable lookup and read/write operation premises; arbitrary target `Loc`, including interior and aliasing cases; actual ordered labels, each pick-free and output-free. No general assignment claim. |
 | Declared call/return | `SavedCaller`, `CallBoundary`, `NormalExit`, `SavedCaller.enter`, `.invoke`, `CallBoundary.deliver` | Store-preserving pick-free operands, bound-variable destinations, no pending defers. Entry, independent callee body and ordered readback/writeback compose without client frame/target/signal construction. |
+| Uniform store phases | `StorePath`, `.trans`, `.weaken`, `.run`, `StepAdmission`, `StoreEffect`, `OperandPaths` | Every traversed source is nonterminal and init-admitted; every path step preserves each store satisfying its fact. Actual labels remain pick-free, with no observer-silence claim. Final controls are unrestricted. |
+| Assignment/entry phases | `pointer_assignment_phases`, `variable_assignment_phases`, `SavedCaller.entry_phases` | Existential write/activation boundaries independent of stores; successful operations justify the effect. Assignment suffixes require no pre-write read facts. Symbolic aliases/interiors and arbitrary argument lists retained. |
 | Activation result validity | `LocalEntry.resultSlots`, `Readback.traced` | Every successful activation pins root result slots; no signature-distinctness or `MachineWf` premise. The composed call law derives validity internally. |
 | Address/variable assignment/return | `reference`, `assign_variable`, `return_start`, `return_sequence`, `empty_sequence_run` | Symbolic semantic premises, actual labels, explicit normal-return exit view and exact cleanup endpoint. |
 | Block entry | `block_enter` | Allocation, heap growth, old-cell and outer-binding preservation. Silence does not imply purity. |
@@ -49,6 +51,16 @@ frame, normal-run and progress conclusions. This is still not an Iris
 ownership proof. Reproduction and precise scope:
 `2026-10-14_relational-demo-laws.md`. The RD3 call/return interface and exact
 compatibility checks are in `2026-10-14_relational-call-acceptance.md`.
+
+The RD4 phases expose intermediate preservation, not just equality of endpoint
+stores. `OperandPaths` is stronger than RD3's `OperandValues`; the older entry
+and invocation laws retain their original domains. A path's `StepAdmission`
+records terminal/init guards only; transition existence is supplied separately.
+Successful `loadRoot` premises restrict read bindings to root locations; write
+targets and variable destinations may be interior and aliased.
+The three frozen phase requests and guarded Set/Keep acceptance are recorded in
+`2026-10-14_relational-phase-acceptance.md`. Client ownership updates and
+observer obligations remain downstream.
 
 `Pure` concerns the store and `StepLabel` only. A client may observe control
 as well: `ReturnsDiscarded.pure` is the concrete example of a base-label
