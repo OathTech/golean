@@ -327,7 +327,46 @@ waiver; each reviewed concern is dispositioned in the phase handoff.
 
 The sole downstream warning is the unchanged frozen unused-variable warning
 in `GoLeanIris/Memory.lean:1625`. Read bindings remain subject to `loadRoot`;
-write targets support interiors and aliases. Logic can now repin, remove its
-three pending-law parameters, and recheck its original targets while
-preserving RD3. Unconditional RD4 completion still awaits that live uptake.
+write targets support interiors and aliases. At this delivery, logic still
+needed to repin, remove its three pending-law parameters, and recheck its
+original targets while preserving RD3. That isolated uptake is now complete,
+as recorded below; production migration remains separate.
 No merge, push, live-pin change or logic-worktree write occurred.
+
+
+## RD4 uptake and RD5 readiness
+
+Logic's isolated RD4 uptake is complete, as confirmed by the user,
+`relational-demo-brief/docs/2026-10-14_rd5-golean-brief.md` and the peer's
+`docs/2026-10-14_relational-codex-stage.md`. Checked logic implementation:
+`ae1486a6f43ab2dc8e8940ce8a22c865c7cae3db`; reviewed handoff:
+`19c34ef745a2c1a4ef55030db2c1646a3676260e`.
+
+`RelationalCodeX.set_body_at : SetTarget` and
+`RelationalCodeX.keep_body_at : KeepTarget` close the exact original guarded
+contracts through actual `CodeAt`/`ControlAt`, without semantic-law parameters.
+Keep consumes Set's logical contract. Ordinary proofs use upstream
+`StorePath`, `StoreEffect` and `OperandPaths` directly; frozen request adapters
+remain separate. The downstream independent review reproduced the 310-job
+build, standard-axiom audit of 5,577 local declarations and exact replay of
+342 modules (136 local/GoLean plus 206 built dependencies). This is relayed
+uptake evidence, not a new upstream build or audit. Production migration and
+general nonempty-result guarded call lifting remain open. The inherited
+linter warning and separate live rule-index failure (35 NOT-PUBLIC) retain
+their downstream dispositions.
+
+[USER] 2026-10-14: retain
+`67f7d1c5ba6a96055a41802b978386d019e03c67` as the audited semantic baseline.
+The next logic increment targets existing Pair/Alias result-delivery contracts
+and the Add ownership loop. Return ready for a concrete request; no speculative
+API batch, repeated readiness audit, merge, push or peer-worktree writes.
+
+Pair/Alias exercise two results and repeated caller destinations, with Alias
+consuming Pair's contract. Add uses an ownership invariant, a framed cell and
+a returned value over its original `n ≤ 16` domain. These are next client
+constraints, not demonstrated upstream blockers. On a relayed obligation,
+freeze and reproduce its use site in independent scratch, try existing public
+exports first, and supply the smallest reusable semantic capability if needed.
+Ownership, guarded WP, invariants and callable contracts remain downstream.
+No concrete request is pending in this dispatch; upstream is ready and stops
+here. This update changes documentation only.
