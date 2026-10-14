@@ -131,3 +131,11 @@ in the [composition handoff](2026-10-14_relational-composition-acceptance.md#res
 `ReadOnlyExpr.less_int`, `sequence_signal_path`, `sequence_break_path`.
 They retain store-uniform paths and source admission; less-than compares the
 supplied integer values and sequence propagation leaves the tail unrestricted.
+
+
+C1 local-outcome completeness is now in progress. The
+[compiled constraint checkpoint](2026-10-14_relational-outcome-completeness.md)
+is experimental and does not extend this facade yet. It makes ordinary-failure
+coverage, main/init realization and all-alternative refusal/fatal exclusion
+explicit obligations. The non-exhaustiveness and program/observer limits above
+remain until those obligations are discharged.
