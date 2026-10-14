@@ -340,3 +340,39 @@ reason and the targeted checker rerun successfully (85 rows); every other
 speedbump passed in the full run. The full run was on the pre-commit tree;
 only documentation and this proof-only inventory row changed afterward.
 No failure was waived and no semantic source changed after validation.
+
+## Immutable handoff and audit dispositions
+
+Implementation pin: `95f1eb64ca3bfa3c39fd5aa0792d516e76a31089`.
+The fresh [independent audit](2026-10-14-rd3-independent-audit.md) found
+no correctness defect or unmet obligation in this fragment. The reviewer
+freshly elaborated changed modules and all acceptance inputs, replayed the
+full GoLean prefix and acceptance closure, and added alias tests for both
+normal exit modes. Before finalizing, it compared all 97 GoLean/Tests Lean
+sources to the immutable commit and confirmed exact module-set and byte
+equality. It also checked the final inventory correction and independently
+reran that speedbump successfully. No prior audit verdict was supplied as
+settled evidence. Full differential CI remains the implementer's validation,
+not an independently rerun reviewer result.
+
+[AGENT] 2026-10-14: retain the reviewed implementation. No finding needs a
+fix or waiver; account for the six review conclusions and their limits:
+
+| Review conclusion | Disposition |
+| --- | --- |
+| 1, exact compatibility | All six corrected propositions and both original examples checked without added assumptions. No change required. |
+| 2, upstream-owned plumbing | Both semantic callers use `invoke`; Set's separate body proof is reused. Actual Iris caller migration remains downstream. |
+| 3, result validity | Derived from activation, including duplicate identifiers; the original malformed-frame counterexample remains excluded. No semantic change or client root assumption. |
+| 4, aliasing | Both exit modes checked with repeated roots, interior destinations and result/destination overlap. No distinctness restriction introduced. |
+| 5, labels and fragment | Actual labels retained, every pick list empty; output silence is not asserted. Method dispatch, effectful operands and pending defers remain outside this fragment. |
+| 6, remaining coupling | Activation/memory/binding/arity facts and transparent carriers remain visible. Iris ownership/protocol and broader observation/failure work stay open; do not claim complete adapter migration. |
+
+Relay to logic: repin the experimental dependency to the implementation
+commit above. Import `GoLean.Relational` and migrate the ordinary caller rule
+to `SavedCaller.invoke` with upstream call/exit views. Use the six scratch
+adapters only as exact compatibility evidence. The two unchanged examples
+and both semantic callers pass; source laws have no missing-law parameters.
+Recheck the actual Iris Keep/nonempty-result clients and their ownership
+protocol at that pin. This response does not claim those downstream proofs
+completed. The report-recording successor changes documentation only. No
+merge, push or peer-tree mutation was performed.
