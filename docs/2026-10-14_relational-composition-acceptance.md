@@ -315,7 +315,7 @@ The reviewer investigated the 86-declaration count change: precisely
 equation generation. No declaration disappeared. Upstream exhaustive auditing
 and replay cover them at their new defining module.
 
-### Dispositions and remaining work
+### A–D dispositions at that checkpoint (E/F update below)
 
 - R1 (Alias): the upstream acceptance closes the exact frozen target with A,
   independently confirmed by the reviewer. Logic still owns uptake/repinning
@@ -337,3 +337,148 @@ Disposable acceptance clones, logs, replay output and corpus artifacts are
 removed after recording these conclusions and reproduction commands. The
 reviewer's report is committed; its temporary worktree is removed after a
 source-overlay snapshot ref preserves its dirty state.
+
+
+## Residual E/F — full Add acceptance
+
+[USER] 2026-10-14: complete residual RD5 E/F, then start C1 under the linked
+local-outcomes brief. E/F must remain independently consumable. No merge,
+push or peer writes. C1 is now explicitly dispatched after this response;
+the earlier A–D record of no C1 dispatch describes that earlier checkpoint.
+
+Frozen logic implementation: `8cf7c1652587366f324c1159a89d72cd0d297cf8`;
+reviewed handoff: `57b677de9e76ca9c05de03d2b202910cabc660be`; semantic baseline:
+`f224a6e0877bb7d2c17719d6b8475a890617d601`. All 95 package files under
+`experiments/2026-10-14_relational-codex/` were archived before editing/building.
+The Lean/dependency pins remain those above. Frozen SHA-256:
+
+- `RelationalCodeX/ResidualRequests.lean`: `244bc17b74bb5cee5ae33e97e425547780ec595d0bca1066131304a1f20d00bb`.
+- `RelationalCodeX/ContinuationRequests.lean`: `0a85427df14e733e15db9dc5460ff4352b5a3d156651f877ad7cf751d3c6e80a`.
+- `RelationalCodeX/ContinuationAcceptance.lean`: `85b84a5951735d33cbbf888f7292125ba876e94603c79767e34b4a408a7d2b20`.
+
+| Request | Public export | Exact adapter |
+| --- | --- | --- |
+| E `IntegerComparisonPhases` | `ReadOnlyExpr.less_int` | `RD5ResidualAcceptance.comparison` |
+| F `SequenceBreakPhases` | `sequence_signal_path`, `sequence_break_path` | `RD5ResidualAcceptance.sequenceBreak` |
+| Original `ExpressionPhases` | new comparison plus existing addition/dereference | `RD5ResidualAcceptance.expression` |
+
+[AGENT] 2026-10-14: extend `ReadOnlyExpr` with same-kind integer less-than,
+and expose signal propagation through one public sequence boundary. The break
+law composes signal raising with that general boundary law. These preserve
+arbitrary stores, expressions, integer values, kinds and final continuations;
+no executable behavior or original statement is changed.
+
+Comparison uses the supplied integer values, without extra normalization,
+fit bounds or the example's n≤16 premise. Source admission, intermediate
+preservation and actual labels are inherited from operand paths. Sequence
+propagation skips the remaining statements and does not inspect or admit the
+final tail. A signal crossing this one boundary is not a general cleanup or
+labelled-exit theorem.
+
+### Exact residual adapters and unconditional acceptance
+
+GoLean-only `ResidualAdapters.lean`:
+
+```lean
+import RelationalCodeX.ResidualRequests
+namespace RD5ResidualAcceptance
+open GoLean GoLean.GoCore GoLean.GoCore.Relational RelationalCodeX
+
+theorem comparison : IntegerComparisonPhases := by
+  intro ctx fact env l r x y kind hl hr
+  exact ReadOnlyExpr.less_int kind hl hr
+
+theorem sequenceBreak : SequenceBreakPhases := sequence_break_path
+
+theorem expression : ExpressionPhases := expressionPhases_of_comparison comparison
+
+#print axioms comparison
+#print axioms sequenceBreak
+#print axioms expression
+end RD5ResidualAcceptance
+```
+
+Full frozen-package `ResidualAcceptance.lean`:
+
+```lean
+import RelationalCodeX
+import ResidualAdapters
+namespace RD5ResidualAcceptance
+open RelationalCodeX
+
+theorem addTarget : AddTarget := RD5Acceptance.addResidualTarget comparison sequenceBreak
+theorem addFrozenTarget : AddTarget := RD5Acceptance.addTarget expression sequenceBreak
+theorem aliasTarget : AliasTarget := alias_body_at
+theorem pairTarget : PairTarget := pair_body_at
+theorem setTarget : SetTarget := set_body_at
+theorem keepTarget : KeepTarget := keep_body_at
+
+#print axioms addTarget
+#print axioms addFrozenTarget
+#print axioms aliasTarget
+#print axioms pairTarget
+#print axioms setTarget
+#print axioms keepTarget
+#eval RelationalCodeX.audit
+end RD5ResidualAcceptance
+```
+
+These wrappers supply only the missing semantic laws. The original AddTarget,
+program, resource predicates and all logical premises are unchanged. Both the
+residual acceptance and the older frozen ExpressionPhases acceptance are
+checked. Alias uses the ordinary direct proof, in addition to the aggregate's
+existing A–D compatibility checks; Pair/Set/Keep are retained.
+
+### Reproduction and checked state
+
+Use the bootstrap procedure above with scratch names `.tmp/rd5-ef` and
+`.tmp/rd5-ef-semantic`, changing the archived logic revision to
+`8cf7c1652587366f324c1159a89d72cd0d297cf8`. Copy both `ResidualRequests.lean`
+and `ContinuationRequests.lean` into the GoLean-only harness. Its library
+configuration is:
+
+```toml
+name = "RD5ResidualSemantic"
+version = "0.1.0"
+defaultTargets = ["ResidualAdapters"]
+[[require]]
+name = "GoLean"
+path = "../.."
+[[lean_lib]]
+name = "RelationalCodeX"
+globs = ["RelationalCodeX.ResidualRequests", "RelationalCodeX.ContinuationRequests"]
+[[lean_lib]]
+name = "ResidualAdapters"
+```
+
+Save the exact adapter in both packages. For full acceptance, change only the
+scratch GoLean pin to the immutable E/F commit below; keep all other dependency
+pins and all frozen Lean sources intact. Bootstrap independent clones with the
+frozen `setup.py`, then append library targets `ResidualAdapters` and
+`ResidualAcceptance` to the scratch lakefile. Build/replay:
+
+```sh
+# in .tmp/rd5-ef-semantic:
+LEAN_NUM_THREADS=2 capped lake build
+# in .tmp/rd5-ef:
+LEAN_NUM_THREADS=2 capped lake build RelationalCodeX ResidualAdapters ResidualAcceptance
+LEAN_NUM_THREADS=2 capped lake env leanchecker --verbose \
+  GoLean RelationalCodeX GoLeanIris GoLeanIrisExamples ResidualAdapters ResidualAcceptance
+LEAN_NUM_THREADS=2 capped lake env leanchecker --verbose Iris Batteries Qq
+```
+
+Compare exact replay names and multiplicities to all 86 GoLean source modules,
+88 frozen local modules and the two harness modules, plus the built dependency
+modules. Upstream `scripts/ci --diff`, the exhaustive core audit, headline axiom
+prints and direct GoLean replay use the commands above.
+
+At source freeze: upstream builds warning-free (72 jobs); exact E/F and the
+frozen E reconstruction pass GoLean-only (54 jobs), standard axioms only.
+Full `scripts/ci --diff` passes (586 seconds): 3,989 differential cases
+(3,749 PASS, 240 tracked FAIL), 405 negative cases, no baseline regression;
+396 interpreter checks pass. All speedbumps are green. The CI run certifies
+the frozen working-tree source, subsequently matched to the immutable commit.
+Direct kernel replay passes exact sets of 86 GoLean and 206 dependency modules.
+Immutable-candidate full acceptance and final independent source confirmation
+follow below; the reviewer has already checked unconditional original Add and
+Alias/Pair/Set/Keep against the frozen source overlay.

@@ -92,4 +92,8 @@ theorem allocating_silence_is_not_pure {ctx : ProgramCtx} {decls : Array Param}
 #print axioms CallBoundary.delivery_phases
 #print axioms while_control
 
+#print axioms ReadOnlyExpr.less_int
+#print axioms sequence_signal_path
+#print axioms sequence_break_path
+
 end Tests.RelationalContracts

@@ -124,3 +124,10 @@ self-contained `unseq`, field-load lowering, labelled loops, probe retirement,
 current raft coverage, recursive type layout and variadic/format lowering.
 They have not been silently included here, and old coverage figures have
 not been re-certified at this branch.
+
+
+The RD5 residual comparison/sequence laws are documented with exact adapters
+in the [composition handoff](2026-10-14_relational-composition-acceptance.md#residual-ef--full-add-acceptance):
+`ReadOnlyExpr.less_int`, `sequence_signal_path`, `sequence_break_path`.
+They retain store-uniform paths and source admission; less-than compares the
+supplied integer values and sequence propagation leaves the tail unrestricted.
