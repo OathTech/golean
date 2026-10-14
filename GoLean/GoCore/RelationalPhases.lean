@@ -1,4 +1,4 @@
-import GoLean.GoCore.RelationalStorePath
+import GoLean.GoCore.RelationalExpression
 
 /-!
 # Source assignment and call phases
@@ -10,7 +10,8 @@ Existential controls keep target plans and call frames inside these proofs.
 namespace GoLean.GoCore.Relational
 open Machine
 
-private theorem empty_sequence_path (ctx : ProgramCtx) (env : LocalEnv) (k : Continuation) :
+/-- Empty sequence cleanup with intermediate source admission, for every tail. -/
+theorem empty_sequence_path (ctx : ProgramCtx) (env : LocalEnv) (k : Continuation) :
     StorePath ctx (fun _ => True) (.exec (.seqn #[]) env k.toMachine) (.next k.toMachine) := by
   have shape : seqCont [] env k.toMachine = k.toMachine ∨
       seqCont [] env k.toMachine = .seq [] env k.toMachine := by
@@ -54,6 +55,54 @@ private theorem write_suffix (ctx : ProgramCtx) (env : LocalEnv) (k : Continuati
   (StorePath.pure (fun _ => ⟨Step.storeDone, rfl⟩)
     ⟨(by intro h; cases h), rfl⟩).trans (empty_sequence_path ctx env k)
 
+private theorem assignment_phases (ctx : ProgramCtx) (env : LocalEnv) (k : Continuation)
+    (lhs : Assignee) (pointer rhs : Expr) (target : Loc) (value : GoValue) (fact : Store → Prop)
+    (plan : targetPlan lhs = some (.chain [], [pointer]))
+    (hp : ReadOnlyExpr ctx fact env pointer (.addr target))
+    (hv : ReadOnlyExpr ctx fact env rhs value) :
+    ∃ before after,
+      StorePath ctx fact (.exec (.assign lhs rhs) env k.toMachine) before ∧
+      StoreEffect ctx (fun s t => storeLoc ctx s target value = .ok t) before after ∧
+      StorePath ctx (fun _ => True) after (.next k.toMachine) := by
+  let pk : Continuation := ⟨.tgtOpK (.chain []) [] [] [] [] .vals [rhs] [] (.seqn #[]) env k.toMachine⟩
+  let vk : Continuation := ⟨.rhsK .vals [.chain (.addr target) [] []] [] [] (.seqn #[]) env k.toMachine⟩
+  refine ⟨writeBefore env k target value, writeAfter env k, ?_,
+    write_effect ctx env k target value, write_suffix ctx env k⟩
+  apply (StorePath.pure (d := .evalE pointer env pk.toMachine)
+    (fun _ => ⟨Step.assignFirst plan, rfl⟩) ⟨(by intro h; cases h), rfl⟩).trans
+  apply (hp pk).trans
+  apply (StorePath.pure (c := .retV (.addr target) pk.toMachine) (d := .evalE rhs env vk.toMachine)
+    (fun _ => ⟨Step.tgtOpRhs rfl, rfl⟩) ⟨(by intro h; cases h), rfl⟩).trans
+  exact (hv vk).trans (StorePath.pure (fun _ => ⟨Step.rhsStores rfl rfl, rfl⟩)
+    ⟨(by intro h; cases h), rfl⟩)
+
+/-- Compose `*p = rhs` from a successful pointer-binding read and a read-only
+RHS. The pointee may be interior or aliased; reads are not assumed after writing.
+Address-former chains on the assignment's left side are outside this law. -/
+theorem pointer_rhs_phases (ctx : ProgramCtx) (env : LocalEnv) (k : Continuation)
+    (id : VarId) (slot target : Loc) (rhs : Expr) (value : GoValue) (fact : Store → Prop)
+    (bound : LocalEnv.lookup env id = some slot)
+    (read : ∀ s, fact s → loadRoot ctx s slot = .ok (.addr target))
+    (hv : ReadOnlyExpr ctx fact env rhs value) :
+    ∃ before after,
+      StorePath ctx fact (.exec (.assign (.addr (.var id)) rhs) env k.toMachine) before ∧
+      StoreEffect ctx (fun s t => storeLoc ctx s target value = .ok t) before after ∧
+      StorePath ctx (fun _ => True) after (.next k.toMachine) :=
+  assignment_phases ctx env k (.addr (.var id)) (.var id) rhs target value fact rfl
+    ((ReadOnlyExpr.variable ctx env id slot (.addr target) bound).weaken read) hv
+
+/-- Assign a read-only RHS to a bound variable, without exposing target frames. -/
+theorem variable_expression_phases (ctx : ProgramCtx) (env : LocalEnv) (k : Continuation)
+    (dst : VarId) (target : Loc) (rhs : Expr) (value : GoValue) (fact : Store → Prop)
+    (bound : LocalEnv.lookup env dst = some target)
+    (hv : ReadOnlyExpr ctx fact env rhs value) :
+    ∃ before after,
+      StorePath ctx fact (.exec (.assign (.var dst) rhs) env k.toMachine) before ∧
+      StoreEffect ctx (fun s t => storeLoc ctx s target value = .ok t) before after ∧
+      StorePath ctx (fun _ => True) after (.next k.toMachine) :=
+  assignment_phases ctx env k (.var dst) (.ref dst) rhs target value fact rfl
+    ((ReadOnlyExpr.reference ctx env dst target bound).weaken (fun _ _ => trivial)) hv
+
 /-- Split `*p = v` at its write. Both reads precede it; the target may be
 interior and may alias either operand binding. No final-tail admission is imposed. -/
 theorem pointer_assignment_phases (ctx : ProgramCtx) (env : LocalEnv) (k : Continuation)
@@ -66,23 +115,8 @@ theorem pointer_assignment_phases (ctx : ProgramCtx) (env : LocalEnv) (k : Conti
         (.exec (.assign (.addr (.var pId)) (.var vId)) env k.toMachine) before ∧
       StoreEffect ctx (fun s t => storeLoc ctx s target value = .ok t) before after ∧
       StorePath ctx (fun _ => True) after (.next k.toMachine) := by
-  let pk : Continuation := ⟨.tgtOpK (.chain []) [] [] [] [] .vals [.var vId] [] (.seqn #[]) env k.toMachine⟩
-  let vk : Continuation := ⟨.rhsK .vals [.chain (.addr target) [] []] [] [] (.seqn #[]) env k.toMachine⟩
-  refine ⟨writeBefore env k target value, writeAfter env k, ?_,
-    write_effect ctx env k target value, write_suffix ctx env k⟩
-  apply (StorePath.pure (d := .evalE (.var pId) env pk.toMachine)
-    (fun _ => ⟨Step.assignFirst rfl, rfl⟩) ⟨(by intro h; cases h), rfl⟩).trans
-  refine StorePath.step (d := .retV (.addr target) pk.toMachine) ?_ ⟨(by intro h; cases h), rfl⟩ ?_
-  · intro s hs
-    obtain ⟨tr, ht⟩ := read_variable ctx s env pk pId pSlot (.addr target) hp hs.1
-    exact ⟨⟨tr, [], []⟩, ht, rfl⟩
-  apply (StorePath.pure (c := .retV (.addr target) pk.toMachine) (d := .evalE (.var vId) env vk.toMachine)
-    (fun _ => ⟨Step.tgtOpRhs rfl, rfl⟩) ⟨(by intro h; cases h), rfl⟩).trans
-  refine StorePath.step (d := .retV value vk.toMachine) ?_ ⟨(by intro h; cases h), rfl⟩ ?_
-  · intro s hs
-    obtain ⟨tr, ht⟩ := read_variable ctx s env vk vId vSlot value hv hs.2
-    exact ⟨⟨tr, [], []⟩, ht, rfl⟩
-  exact StorePath.pure (fun _ => ⟨Step.rhsStores rfl rfl, rfl⟩) ⟨(by intro h; cases h), rfl⟩
+  exact pointer_rhs_phases ctx env k pId pSlot target (.var vId) value _ hp (fun _ h => h.1)
+    ((ReadOnlyExpr.variable ctx env vId vSlot value hv).weaken (fun _ h => h.2))
 
 /-- Split source-variable assignment at its write, including self-assignment
 and interior aliases. The post-write suffix needs no successful-read premise. -/
@@ -95,21 +129,8 @@ theorem variable_assignment_phases (ctx : ProgramCtx) (env : LocalEnv) (k : Cont
         (.exec (.assign (.var dst) (.var src)) env k.toMachine) before ∧
       StoreEffect ctx (fun s t => storeLoc ctx s target value = .ok t) before after ∧
       StorePath ctx (fun _ => True) after (.next k.toMachine) := by
-  let tk : Continuation := ⟨.tgtOpK (.chain []) [] [] [] [] .vals [.var src] [] (.seqn #[]) env k.toMachine⟩
-  let vk : Continuation := ⟨.rhsK .vals [.chain (.addr target) [] []] [] [] (.seqn #[]) env k.toMachine⟩
-  refine ⟨writeBefore env k target value, writeAfter env k, ?_,
-    write_effect ctx env k target value, write_suffix ctx env k⟩
-  apply (StorePath.pure (d := .evalE (.ref dst) env tk.toMachine)
-    (fun _ => ⟨Step.assignFirst rfl, rfl⟩) ⟨(by intro h; cases h), rfl⟩).trans
-  apply (StorePath.pure (d := .retV (.addr target) tk.toMachine)
-    (fun s => reference ctx s env tk dst target hd) ⟨(by intro h; cases h), rfl⟩).trans
-  apply (StorePath.pure (c := .retV (.addr target) tk.toMachine) (d := .evalE (.var src) env vk.toMachine)
-    (fun _ => ⟨Step.tgtOpRhs rfl, rfl⟩) ⟨(by intro h; cases h), rfl⟩).trans
-  refine StorePath.step (d := .retV value vk.toMachine) ?_ ⟨(by intro h; cases h), rfl⟩ ?_
-  · intro s hr
-    obtain ⟨tr, ht⟩ := read_variable ctx s env vk src source value hs hr
-    exact ⟨⟨tr, [], []⟩, ht, rfl⟩
-  exact StorePath.pure (fun _ => ⟨Step.rhsStores rfl rfl, rfl⟩) ⟨(by intro h; cases h), rfl⟩
+  exact variable_expression_phases ctx env k dst target (.var src) value _ hd
+    (ReadOnlyExpr.variable ctx env src source value hs)
 
 private def plans (ids : List VarId) : List (TargetShape × List Expr) :=
   ids.map fun id => (.chain [], [.ref id])

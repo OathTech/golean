@@ -21,6 +21,9 @@ imported. The implementation request and provenance are recorded in
 | Declared call/return | `SavedCaller`, `CallBoundary`, `NormalExit`, `SavedCaller.enter`, `.invoke`, `CallBoundary.deliver` | Store-preserving pick-free operands, bound-variable destinations, no pending defers. Entry, independent callee body and ordered readback/writeback compose without client frame/target/signal construction. |
 | Uniform store phases | `StorePath`, `.trans`, `.weaken`, `.run`, `StepAdmission`, `StoreEffect`, `OperandPaths` | Every traversed source is nonterminal and init-admitted; every path step preserves each store satisfying its fact. Actual labels remain pick-free, with no observer-silence claim. Final controls are unrestricted. |
 | Assignment/entry phases | `pointer_assignment_phases`, `variable_assignment_phases`, `SavedCaller.entry_phases` | Existential write/activation boundaries independent of stores; successful operations justify the effect. Assignment suffixes require no pre-write read facts. Symbolic aliases/interiors and arbitrary argument lists retained. |
+| Ordered delivery phases | `OrderedWrites`, `.run`, `CallBoundary.delivery_phases` | Snapshot all results before ordered write effects; repeated/interior destinations, both normal exits, arbitrary caller tail. Root result validity comes from activation; read facts are not retained after writes. |
+| Read-only RHS composition | `ReadOnlyExpr`, `.weaken`, `.variable`, `.reference`, `.int_literal`, `.deref`, `.add_int`, `variable_expression_phases`, `pointer_rhs_phases` | Uniform over stores and continuations, preserving intermediate stores/admission. General RHS for a bound variable or `*p`; typed integer normalization, interior dereference. Assignment address-former chains and other operators are not covered. |
+| While control | `WhileControl`, `while_control` | Real admitted entry step; Boolean selection and normal/unlabelled continue/break/return paths. No body/tail safety, invariant, termination or full-loop theorem is assumed or supplied. |
 | Activation result validity | `LocalEntry.resultSlots`, `Readback.traced` | Every successful activation pins root result slots; no signature-distinctness or `MachineWf` premise. The composed call law derives validity internally. |
 | Address/variable assignment/return | `reference`, `assign_variable`, `return_start`, `return_sequence`, `empty_sequence_run` | Symbolic semantic premises, actual labels, explicit normal-return exit view and exact cleanup endpoint. |
 | Block entry | `block_enter` | Allocation, heap growth, old-cell and outer-binding preservation. Silence does not imply purity. |
@@ -60,7 +63,10 @@ Successful `loadRoot` premises restrict read bindings to root locations; write
 targets and variable destinations may be interior and aliased.
 The three frozen phase requests and guarded Set/Keep acceptance are recorded in
 `2026-10-14_relational-phase-acceptance.md`. Client ownership updates and
-observer obligations remain downstream.
+observer obligations remain downstream. RD5 delivery/expression/loop adapters
+and the exact acceptance scope are recorded in
+`2026-10-14_relational-composition-acceptance.md`; the compound uint64 increment
+is derived there from expression and assignment exports, not a primitive API.
 
 `Pure` concerns the store and `StepLabel` only. A client may observe control
 as well: `ReturnsDiscarded.pure` is the concrete example of a base-label

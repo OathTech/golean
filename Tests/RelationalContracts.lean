@@ -80,4 +80,16 @@ theorem allocating_silence_is_not_pure {ctx : ProgramCtx} {decls : Array Param}
 #print axioms variable_assignment_phases
 #print axioms SavedCaller.entry_phases
 
+#print axioms ReadOnlyExpr.weaken
+#print axioms ReadOnlyExpr.variable
+#print axioms ReadOnlyExpr.reference
+#print axioms ReadOnlyExpr.int_literal
+#print axioms ReadOnlyExpr.deref
+#print axioms ReadOnlyExpr.add_int
+#print axioms pointer_rhs_phases
+#print axioms variable_expression_phases
+#print axioms OrderedWrites.run
+#print axioms CallBoundary.delivery_phases
+#print axioms while_control
+
 end Tests.RelationalContracts

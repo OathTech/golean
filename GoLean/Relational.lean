@@ -3,6 +3,8 @@ import GoLean.GoCore.RelationalSound
 import GoLean.GoCore.RelationalControl
 import GoLean.GoCore.RelationalCall
 import GoLean.GoCore.RelationalPhases
+import GoLean.GoCore.RelationalDelivery
+import GoLean.GoCore.RelationalLoop
 import GoLean.GoCore.RelationalAssignment
 import GoLean.GoCore.RelationalMemory
 import GoLean.GoCore.RelationalFault
