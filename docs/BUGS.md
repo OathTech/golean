@@ -8980,15 +8980,31 @@ selection through a pointer or an embedded pointer (nil panics; gc keeps ODOTPTR
 OMETHVALUE), a function/type/constant selector, or any other form; (iii) anything else → the literal REFUSED by name:
 `blank field _ (field <i> of <T>) at <pos>: operand <src> (<shape>) refused — gc elides a side-effect-free blank
 operand with its run-time panic, and never evaluates a package-level literal's blank operand; the frontend refuses a
-blank-field operand that is not a constant, nil or a plain variable read — [USER] 2026-10-14`. At package level the
-same refusal reaches the initializer (`package-level initializer of w does not lower (…)`: a call there refuses the
-export; a side-effect-free shape poisons the variable per declaration and its reader refuses by name), and the BUG-061
-classifier (`staticinit.go`, the `*ast.CompositeLit` arm) skips blank-field elements as `initplan` does. Measured:
-`var w = S{bump(), 2, 3}` refuses by name (gc 20, no bump), `var v = S{x, 2}` lowers with the zero. The 14 Cases: the
+blank-field operand that is not a constant, nil or a plain variable read — [USER] 2026-10-14; the way out: assign the
+operand to a variable first and use the variable (the program then evaluates it, in gc too)`. At PACKAGE LEVEL the
+same refusal reaches the initializer and the standing H-11 machinery decides its scope (CORRECTED 2026-10-14 after the
+second review, relayed — the first text said «poisons the var» for the shift, which is wrong): an initializer that is
+NOT H-11 effect-isolated (`emit.go` `initializerEffectIsolated`: a call, and every PANICKING shape — shifts by a
+non-constant, interface comparison, indexing, division by a non-constant, assertions … — answers false, its PANIC-FREE
+clause) refuses the WHOLE export (`package-level initializer of <v> does not lower (blank field … refused …) and is not
+H-11 effect-isolated — skipping it cannot be argued unobservable, so the WHOLE export refuses`): measured for `var w =
+S{bump(), 2, 3}` (gc 20, no bump runs) and for `var sh = S{1 << n, 2}` (gc 2) alike; an initializer that IS
+effect-isolated (`var p = S{x + 1, 2}`) is POISONED per declaration and its reader refuses by name (`package-level var
+p: its initializer does not lower (blank field …) — H-11 poison`), while a program that never reads `p` lowers and RUNS
+(gc 1, model 1) — a lazy admission that is sound here because gc never evaluates the blank operand either, so skipping
+the whole initializer omits nothing gc runs (H-11's own argument, with the blank field making it exact). The BUG-061
+classifier (`staticinit.go`, the `*ast.CompositeLit` arm) skips blank-field elements as `initplan` does, pinned by the
+staticinit oracle (`testdata/staticinit-shapes.go` `BlankCall`/`BlankTwin`/`BlankVar`: gc `none`/`work`/`none`,
+re-recorded 2026-10-14, 128 shapes). Measured: `var v = S{x, 2}` lowers with the zero. THE RULING'S COST (inside its
+letter; the «maybe later» lane's to-do list, each a shape the 2026-10-13 evaluating lowering answered as gc did and the
+rule now refuses): `struct{}{}` at a `_ struct{}` field, `x + 1`, `len(xs)` of a slice, `int64(x)`, `arr[0]` with a
+constant index, a composite literal (`[]int{1}`, `Inner{1, 2}`) — every one side-effect free and panic-free, dropped
+by gc and refusable only because the rule names shapes, not effects; constant-folded forms (`len(arr)` of an array,
+`1 << 100`, `cap(local) + len("abc")`, `-7 >> 1`) are constants to go/types and are admitted. The 14 Cases: the
 eight 2026-10-13 rows (calls, an index, the two spec-unsequenced pairs, the recovered index panic — gc's answers
 stand as their expectations; the two membership rows are strict now, a refused literal having no realization to
 sample), the four gc-drop shapes (`negative-shift` gc 2, `interface-compare` gc 2, `nested-pure-wrapper` gc 9,
 `composite-operand` — the Codex pass's own F1 program, gc 7: a composite literal at an interface-typed blank field is
 not an admitted operand, so the headline program now refuses by name instead of answering), and the two package-level
-rows (`pkg-init-call` gc 20, `pkg-init-shift` gc 2). The ledger §5.1 item 9 carries the «maybe later»; `docs/release.md`
-§4 states the limit.
+rows (`pkg-init-call` gc 20, `pkg-init-shift` gc 2 — both WHOLE-EXPORT refusals, neither isolated). The ledger §5.1
+item 9 carries the «maybe later»; `docs/release.md` §4 states the limit.

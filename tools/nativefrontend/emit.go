@@ -1804,6 +1804,13 @@ func checkInitQuarantine(funcs, methods []any) error {
 // per-declaration quarantine; in init code (another initializer, an
 // init() body) it refuses the whole export, or cascades the
 // quarantine when the referencing initializer is itself eligible.
+// ONE exception, by construction (BUG-130, 2026-10-14): a plain read of
+// the variable as a positional struct literal's BLANK-field operand is
+// never emitted at all (`emitBlankFieldZero`: the field takes the zero
+// value, the operand is dropped), so it never reaches this choke point
+// and does not refuse — `T{poisoned, 4}` lowers and runs. Sound: gc
+// drops that read too (walk/complit.go `fixedlit`, staticinit.initplan),
+// so nothing the poison hides is observed.
 func (e *emitter) globalAddr(v *types.Var) (any, bool, error) {
 	if p, bad := e.quarantinedGlobals[v]; bad {
 		if p.typeName != "" {
@@ -7951,7 +7958,7 @@ func (e *emitter) blankFieldOperandAdmitted(x ast.Expr, fieldIdx int, litType ty
 	if e.plainVariableRead(x) {
 		return nil
 	}
-	return unsup("blank field _ (field %d of %s) at %s: operand %s (%s) refused — gc elides a side-effect-free blank operand with its run-time panic, and never evaluates a package-level literal's blank operand; the frontend refuses a blank-field operand that is not a constant, nil or a plain variable read — [USER] 2026-10-14",
+	return unsup("blank field _ (field %d of %s) at %s: operand %s (%s) refused — gc elides a side-effect-free blank operand with its run-time panic, and never evaluates a package-level literal's blank operand; the frontend refuses a blank-field operand that is not a constant, nil or a plain variable read — [USER] 2026-10-14; the way out: assign the operand to a variable first and use the variable (the program then evaluates it, in gc too)",
 		fieldIdx, litType, e.fset.Position(x.Pos()), types.ExprString(x), blankOperandShape(x))
 }
 

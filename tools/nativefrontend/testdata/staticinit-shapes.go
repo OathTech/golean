@@ -27,6 +27,14 @@ type I interface{ M() int }
 type MyInt int
 type R []rune
 
+// TB has a BLANK field: gc's initplan (staticinit/sched.go:545) skips it,
+// so its operand is never a plan entry — never work, whatever it is
+// (BUG-129/BUG-130, 2026-10-14; the classifier skips it alike).
+type TB struct {
+	_ int
+	X int
+}
+
 func (T) M() int { return 1 }
 
 func one() int { return 1 }
@@ -332,6 +340,13 @@ var (
 	_   = func() int { return two() }()
 	_   = func() {}
 	_   = []func(){func() {}}
+
+	// Blank fields (2026-10-14, lane frontend/blank-fields-1013): the blank
+	// operand has no plan entry (gc `none` whatever it is); its non-blank
+	// twin is work (two() is not a single-return body).
+	BlankCall = TB{two(), 2}
+	BlankTwin = TB{2, two()}
+	BlankVar  = TB{C, 2}
 
 	A2, B2 = pair()
 )

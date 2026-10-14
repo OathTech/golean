@@ -8,6 +8,9 @@
 #   interface comparisons, under pure wrappers) and never evaluates a package-level literal's blank operand (staticinit.initplan).
 #   WHY: the frontend now admits only a constant, nil or a plain variable read at a blank field (the zero value) and refuses the
 #   literal by name otherwise, on both lowering paths (emit.go emitBlankFieldZero; BUG-130, cause by-design/blank-field-operand).
+#   COUNT CHAIN: the 2026-10-13 block below ends at 4008 (3768 PASS / 240 FAIL) over the pre-train-10 main; the branch was REBASED
+#   2026-10-14 onto main 72a38ad1 (train 10, 3998 rows: 3754 PASS / 244 FAIL — the directives lane's +9 rows), and the 19 rows of
+#   the 2026-10-13 block over that body give 4017 (3773 PASS / 244 FAIL), the state this block starts from.
 #   4017 + 8 = 4025; PASS 3773 - 8 + 2 = 3767; FAIL 244 + 8 + 6 = 258. EIGHT PASS->FAIL flips, every one on BUG-130's Cases line
 #   (rows born PASS 2026-10-13 on the evaluating lowering; gc's answers stand as their expectations):
 #     structs/blank-field-eval-order/{effectful,boxed-effectful,sweep}            PASS -> FAIL/frontend-export by-design/blank-field-operand (a call at a blank field)
@@ -20,8 +23,10 @@
 #     structs/blank-field-pkg-init-plain PASS — 2: `var v = S{g, 2, g}` at package level lowers with the zero.
 #     structs/blank-field-pkg-init-call  FAIL/frontend-export by-design/blank-field-operand — gc 20 (no bump runs: initplan skips
 #       the field); a call at a package-level blank field refuses the export by name.
-#     structs/blank-field-pkg-init-shift FAIL/frontend-export by-design/blank-field-operand — gc 2; the shift poisons the var, its
-#       reader refuses by name.
+#     structs/blank-field-pkg-init-shift FAIL/frontend-export by-design/blank-field-operand — gc 2; a shift by a non-constant is not
+#       H-11 effect-isolated, so the WHOLE export refuses, as for the call (CORRECTED 2026-10-14 after the second review: the first
+#       text said «poisons the var» — that is the effect-isolated case only, e.g. `S{x + 1, 2}`, whose reader refuses and whose
+#       unread var runs).
 #     structs/blank-field-refused/{negative-shift (gc 2), interface-compare (gc 2), nested-pure-wrapper (gc 9)}
 #       FAIL/frontend-export by-design/blank-field-operand — the gc-drop classes, refused instead of answering a panic gc elides.
 #     structs/blank-field-refused/composite-operand FAIL/frontend-export by-design/blank-field-operand — gc 7: the Codex pass's own
