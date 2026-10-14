@@ -268,3 +268,32 @@ are individually dispositioned in the RD3 handoff. Full CI passed in 741s;
 the one red proof-premise inventory speedbump was fixed and rerun green.
 Exact acceptance and kernel replay passed; see the handoff for scope and
 commands. Logic can repin before merge and continue its Iris caller uptake.
+
+## RD3 uptake and RD4 readiness
+
+Logic's RD3 uptake is confirmed by the user and the coordinator's
+`2026-10-14_rd4-golean-brief.md`: implementation
+`4432ff2f66fd377031d29f876bc919501c3cc95d`, reviewed handoff
+`2941b012e84945467ced0400d4c90a33279bfed9`. Keep and Identity use the shared
+Iris rule over `SavedCaller.invoke`; all six compatibility obligations are
+discharged, and local frame, signal and traced-read plumbing is removed.
+The independent downstream review accepts this experimental finite-caller
+result. This is relayed uptake evidence, not a new upstream validation run
+or a claim of live CodeX integration.
+
+[USER] 2026-10-14: retain
+`95f1eb64ca3bfa3c39fd5aa0792d516e76a31089` as the audited semantic baseline.
+Logic now targets its existing guarded CodeX contracts for Set, then Keep
+through Set's contract. Iris/WP work remains downstream. No new semantic
+blocker is demonstrated: return ready for the first concrete RD4 request,
+without speculative APIs or repeating the completed audit. No merge, push
+or peer-worktree writes.
+
+The RD4 stage file `docs/2026-10-14_relational-codex-stage.md` was not yet
+present at this handoff update; no polling is scheduled. When the user
+relays an obligation, freeze and reproduce its failed use site in upstream
+scratch, first try existing exports, and otherwise implement the smallest
+reusable semantic capability. Return an audited immutable commit with exact
+export/adapter mapping and acceptance evidence, preserving domains, aliases,
+actual labels and the target's observation requirements. Upstream is ready
+for that request; this update changes documentation only.
