@@ -85,4 +85,26 @@ theorem ReadOnlyExpr.add_int {ctx : ProgramCtx} {fact : Store → Prop} {env : L
   exact ⟨_, Step.strictApply (ch := [])
     (by dsimp only; simp only [List.reverse_cons, List.reverse_nil, List.nil_append, List.cons_append]; rw [applyStrictOpPick_ok_of_none rfl applyOp]; rfl) rfl, rfl⟩
 
+/-- Less-than composes read-only integer operands. It compares the supplied
+values directly, without normalization or a representability premise. -/
+theorem ReadOnlyExpr.less_int {ctx : ProgramCtx} {fact : Store → Prop} {env : LocalEnv}
+    {left right : Expr} {a b : Int} (kind : IntKind)
+    (hl : ReadOnlyExpr ctx fact env left (.int a kind))
+    (hr : ReadOnlyExpr ctx fact env right (.int b kind)) :
+    ReadOnlyExpr ctx fact env (.lessCmp left right) (.bool (decide (a < b))) := by
+  intro k
+  apply (StorePath.pure (d := .evalE left env (.strictK .lessCmp [] [right] env k.toMachine))
+    (fun _ => ⟨Step.evalStrict rfl, rfl⟩) ⟨(by intro h; cases h), rfl⟩).trans
+  apply (hl _).trans
+  apply (StorePath.pure (d := .evalE right env (.strictK .lessCmp [.int a kind] [] env k.toMachine))
+    (fun _ => ⟨Step.strictShift, rfl⟩) ⟨(by intro h; cases h), rfl⟩).trans
+  apply (hr _).trans
+  refine .step ?_ ⟨(by intro h; cases h), rfl⟩ .refl
+  intro s _
+  have applyOp : applyStrictOp ctx s (projChainTarget ctx s k.toMachine) .lessCmp
+      [.int a kind, .int b kind] = .ok (.bool (decide (a < b)), s, []) := by
+    simp [applyStrictOp, valueLess, Bind.bind, Except.bind, pure, Except.pure]
+  exact ⟨_, Step.strictApply (ch := [])
+    (by dsimp only; simp only [List.reverse_cons, List.reverse_nil, List.nil_append, List.cons_append]; rw [applyStrictOpPick_ok_of_none rfl applyOp]; rfl) rfl, rfl⟩
+
 end GoLean.GoCore.Relational

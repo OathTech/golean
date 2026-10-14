@@ -95,4 +95,21 @@ theorem OperandPaths.values {ctx : ProgramCtx} {fact : Store → Prop} {env : Lo
   | nil => exact .nil
   | cons he _ ih => exact .cons (fun k => (he k).run s hf) ih
 
+/-- Any signal crosses one governing sequence without executing its remainder.
+This only removes the sequence boundary, not frames in the arbitrary tail. -/
+theorem sequence_signal_path (ctx : ProgramCtx) (rest : List Stmt)
+    (env : LocalEnv) (k : Continuation) (sg : Signal) :
+    StorePath ctx (fun _ => True) (.signal sg (sequence rest env k).toMachine)
+      (.signal sg k.toMachine) :=
+  StorePath.pure (fun _ => ⟨Step.signal rfl, rfl⟩) ⟨(by intro h; cases h), rfl⟩
+
+/-- Raise break and cross its governing sequence, preserving every intermediate
+store. The remaining statements are skipped and the final tail is unrestricted. -/
+theorem sequence_break_path (ctx : ProgramCtx) (rest : List Stmt)
+    (env : LocalEnv) (k : Continuation) :
+    StorePath ctx (fun _ => True)
+      (.exec .breakStmt env (sequence rest env k).toMachine) (.signal .brk k.toMachine) :=
+  (StorePath.pure (fun _ => ⟨Step.signalStmt rfl, rfl⟩)
+    ⟨(by intro h; cases h), rfl⟩).trans (sequence_signal_path ctx rest env k .brk)
+
 end GoLean.GoCore.Relational

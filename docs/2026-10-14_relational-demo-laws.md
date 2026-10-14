@@ -396,3 +396,16 @@ review R2. Kernel replay covers the exact 362-module acceptance/dependency set,
 and axiom checks use only the standard trio. The fresh independent audit
 accepts the candidate, with its report and dispositions linked from the
 composition handoff. No merge, push, live repin or peer write occurred.
+
+
+## RD5 residual E/F and C1 dispatch
+
+[The residual section of the composition handoff](2026-10-14_relational-composition-acceptance.md#residual-ef--full-add-acceptance)
+freezes logic implementation `8cf7c1652587366f324c1159a89d72cd0d297cf8`
+and reviewed handoff `57b677de9e76ca9c05de03d2b202910cabc660be`.
+`ReadOnlyExpr.less_int` supplies comparison; `sequence_signal_path` and
+`sequence_break_path` supply the missing sequence prefix. Exact adapters
+compile; full original Add acceptance and regressions are being checked.
+After the independently audited E/F handoff, the user has now dispatched C1
+local-outcome completeness, scoped to main and initialization local execution.
+It does not include the whole-program bridge or observation/locality work.
