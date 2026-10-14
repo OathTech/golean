@@ -1,5 +1,32 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 4017 (3773 PASS / 244 FAIL)
+# cases: 4025 (3767 PASS / 258 FAIL)
+# re-pinned: 2026-10-14 [AGENT], lane frontend/blank-fields-1013 — the [USER]'s ruling on the blank-field OPERAND (Mike 2026-10-14
+#   «agree on both», relayed by the [AGENT] coordinator; the recommendation agreed to, verbatim: «at a blank field, a constant, `nil`,
+#   or a plain variable read gives the zero value with nothing evaluated, and any other operand is refused by name»): the lane's
+#   pre-merge review had measured two classes where gc's observation lies outside an evaluating model's set — gc drops a
+#   side-effect-free blank operand WITH its run-time panic (walk/complit.go:231, staticinit.isSideEffect: negative shifts,
+#   interface comparisons, under pure wrappers) and never evaluates a package-level literal's blank operand (staticinit.initplan).
+#   WHY: the frontend now admits only a constant, nil or a plain variable read at a blank field (the zero value) and refuses the
+#   literal by name otherwise, on both lowering paths (emit.go emitBlankFieldZero; BUG-130, cause by-design/blank-field-operand).
+#   4017 + 8 = 4025; PASS 3773 - 8 + 2 = 3767; FAIL 244 + 8 + 6 = 258. EIGHT PASS->FAIL flips, every one on BUG-130's Cases line
+#   (rows born PASS 2026-10-13 on the evaluating lowering; gc's answers stand as their expectations):
+#     structs/blank-field-eval-order/{effectful,boxed-effectful,sweep}            PASS -> FAIL/frontend-export by-design/blank-field-operand (a call at a blank field)
+#     structs/blank-field-panic/{call-operand,index-operand,recovered-value}      PASS -> FAIL/frontend-export by-design/blank-field-operand (a call / an index)
+#     structs/blank-field-panic/{index-then-call-sweep,index-then-call-legacy}    PASS/membership -> FAIL/frontend-export by-design/blank-field-operand
+#       (the two membership rows are strict rows now: a refused literal has no realization to sample)
+#   No removal. NEW rows (8):
+#     structs/blank-field-equality/plain-variable-read PASS — 1110: an identifier, a value-field selector, an embedded VALUE's promoted
+#       field and a package-level variable at a blank field all give the zero value (the admitted non-constant shape).
+#     structs/blank-field-pkg-init-plain PASS — 2: `var v = S{g, 2, g}` at package level lowers with the zero.
+#     structs/blank-field-pkg-init-call  FAIL/frontend-export by-design/blank-field-operand — gc 20 (no bump runs: initplan skips
+#       the field); a call at a package-level blank field refuses the export by name.
+#     structs/blank-field-pkg-init-shift FAIL/frontend-export by-design/blank-field-operand — gc 2; the shift poisons the var, its
+#       reader refuses by name.
+#     structs/blank-field-refused/{negative-shift (gc 2), interface-compare (gc 2), nested-pure-wrapper (gc 9)}
+#       FAIL/frontend-export by-design/blank-field-operand — the gc-drop classes, refused instead of answering a panic gc elides.
+#     structs/blank-field-refused/composite-operand FAIL/frontend-export by-design/blank-field-operand — gc 7: the Codex pass's own
+#       F1 program; a composite literal at an interface-typed blank field is not admitted, so it refuses by name (99 at the base,
+#       7 on the 2026-10-13 lowering). Negative lane: no move (415/415). Measured by capped scripts/ci --diff at the lane tip (532 s).
 # re-pinned: 2026-10-13 [AGENT], lane frontend/blank-fields-1013 — release-readiness row 37 (the Codex zero-context pass's F1,
 #   «blank struct fields participate in equality and map-key identity»), RULED [USER] Mike 2026-10-13 «2 fix» (verbatim, relayed by
 #   the [AGENT] coordinator: evaluate the blank operand at its position, store the field type's zero value — gc's own treatment).
@@ -6044,16 +6071,24 @@ PASS	structs/blank-field-equality/pointer-literal	-	-
 PASS	structs/blank-field-equality/generic-instantiation	-	-
 PASS	structs/blank-field-equality/element-literals	-	-
 PASS	structs/blank-field-equality/conversion-copy	-	-
-PASS	structs/blank-field-eval-order/effectful	-	-
-PASS	structs/blank-field-eval-order/boxed-effectful	-	-
-PASS	structs/blank-field-eval-order/sweep	-	-
+PASS	structs/blank-field-equality/plain-variable-read	-	-
+FAIL	structs/blank-field-eval-order/effectful	frontend-export	by-design/blank-field-operand
+FAIL	structs/blank-field-eval-order/boxed-effectful	frontend-export	by-design/blank-field-operand
+FAIL	structs/blank-field-eval-order/sweep	frontend-export	by-design/blank-field-operand
 PASS	structs/blank-field-map-key/cardinality	-	-
 PASS	structs/blank-field-map-key/interface-blank	-	-
-PASS	structs/blank-field-panic/call-operand	-	-
-PASS	structs/blank-field-panic/index-operand	-	-
-PASS	structs/blank-field-panic/index-then-call-sweep	membership	-
-PASS	structs/blank-field-panic/index-then-call-legacy	membership	-
-PASS	structs/blank-field-panic/recovered-value	-	-
+FAIL	structs/blank-field-panic/call-operand	frontend-export	by-design/blank-field-operand
+FAIL	structs/blank-field-panic/index-operand	frontend-export	by-design/blank-field-operand
+FAIL	structs/blank-field-panic/index-then-call-sweep	frontend-export	by-design/blank-field-operand
+FAIL	structs/blank-field-panic/index-then-call-legacy	frontend-export	by-design/blank-field-operand
+FAIL	structs/blank-field-panic/recovered-value	frontend-export	by-design/blank-field-operand
+FAIL	structs/blank-field-pkg-init-call	frontend-export	by-design/blank-field-operand
+PASS	structs/blank-field-pkg-init-plain	-	-
+FAIL	structs/blank-field-pkg-init-shift	frontend-export	by-design/blank-field-operand
+FAIL	structs/blank-field-refused/negative-shift	frontend-export	by-design/blank-field-operand
+FAIL	structs/blank-field-refused/interface-compare	frontend-export	by-design/blank-field-operand
+FAIL	structs/blank-field-refused/nested-pure-wrapper	frontend-export	by-design/blank-field-operand
+FAIL	structs/blank-field-refused/composite-operand	frontend-export	by-design/blank-field-operand
 PASS	structs/comparable	-	-
 PASS	structs/copy-value	-	-
 PASS	structs/decl-order-reversed/array-equality	-	-
