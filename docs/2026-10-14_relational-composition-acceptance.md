@@ -479,6 +479,45 @@ Full `scripts/ci --diff` passes (586 seconds): 3,989 differential cases
 396 interpreter checks pass. All speedbumps are green. The CI run certifies
 the frozen working-tree source, subsequently matched to the immutable commit.
 Direct kernel replay passes exact sets of 86 GoLean and 206 dependency modules.
-Immutable-candidate full acceptance and final independent source confirmation
-follow below; the reviewer has already checked unconditional original Add and
-Alias/Pair/Set/Keep against the frozen source overlay.
+
+**Immutable E/F pin: `fc52512a6644c04996d327865919556107cf84ba`.**
+The exact candidate bootstrap verifies clean independent clones. All 95 frozen
+files were compared: only the scratch GoLean pin and the two added library
+targets differ; all frozen Lean requests, targets and proofs remain byte-identical.
+The source blocks above exactly match the checked harnesses.
+
+- GoLean-only adapters at the pin: PASS, 54 jobs; E/F and original E have only
+  standard axioms.
+- Full candidate-pinned acceptance: PASS, 352 jobs. Both `addTarget` and
+  `addFrozenTarget` close the original **AddTarget** without pending-law
+  arguments. Direct Alias, Pair, Set and Keep targets pass.
+- Frozen aggregate and all adapter/acceptance headline reports use only the
+  standard trio. The exhaustive frozen local audit checks 5,801 declarations;
+  with the current acceptance module, 5,807. The upstream exhaustive core
+  audit passes as part of CI.
+- Exact kernel replay: PASS, 176 upstream/local/harness modules plus 206
+  unchanged dependency modules, **382 total**, with exact names and
+  multiplicities and no missing/extra/duplicate modules.
+
+The [fresh independent E/F audit](2026-10-14-rd5-residual-independent-audit.md)
+accepts this exact immutable pin with no correctness or trust finding. Its
+separate public harness, exact adapters, both Add routes and regressions pass;
+its exhaustive imported closure covers 23,562 declarations, standard trio
+only, and its exact 382-module replay passes. Candidate source/configuration
+identity was checked explicitly. Report imported in documentation commit
+`6ac14df913cb43fc7d351f20946823f986bf62eb`.
+
+Disposition: the upstream semantic E/F gaps are discharged and full frozen Add
+acceptance is unconditional. This supersedes the earlier A–D intermediate-only
+Add status. Logic still owns its final repin, ordinary-rule uptake and R2/RD5
+milestone review. No claim of complete relational mirror, production readiness
+or live migration follows. The inherited Memory unused-`h` warning is reproduced;
+the separate live **35 NOT-PUBLIC** failure is neither rerun nor cleared.
+No new audit finding required a code change.
+
+The checked E/F pin remains independent of subsequent C1 work. Disposable
+E/F clones, logs, corpus output and reviewer scratch are removed after this
+handoff; the review report is committed and its dirty overlay is snapshot-ref
+preserved before removing the reviewer worktree. No merge, push, live repin,
+peer write or global-state change occurred. C1 begins from this exact response,
+under the user's newly dispatched bounded local-outcomes brief.
