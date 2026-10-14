@@ -58,5 +58,8 @@ theorem allocating_silence_is_not_pure {ctx : ProgramCtx} {decls : Array Param}
 #print axioms program_normal_of_run
 #print axioms Enters.transition
 #print axioms root_writes_commute
+#print axioms read_variable
+#print axioms sequence_splice
+#print axioms assign_pointer_variables
 
 end Tests.RelationalContracts

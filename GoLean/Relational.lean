@@ -1,6 +1,7 @@
 import GoLean.GoCore.Relational
 import GoLean.GoCore.RelationalSound
 import GoLean.GoCore.RelationalControl
+import GoLean.GoCore.RelationalAssignment
 import GoLean.GoCore.RelationalMemory
 import GoLean.GoCore.RelationalFault
 import GoLean.GoCore.RelationalOutcome

@@ -15,6 +15,9 @@ imported. The implementation request and provenance are recorded in
 | Determinism | `Transition.deterministic_by_picks`, `Run.deterministic_by_picks` | Equal per-step pick records imply equal successful endpoints and full labels. |
 | Pick-free progress | `PickFreeProgress.run` | Every reachable point is normal or has a pick-free step; every tape returns normally or exhausts fuel. No `MachineWf` assumption. This is a sufficient deterministic-fragment domain. |
 | Control | `Pure`, `.unique`, `PureFor.all_successors`, literal laws, `conditional`, sequence laws | Store preservation, silent base labels, existence and uniqueness, symbolic store and continuation. `PureFor` adds silence under the client's observation projection. |
+| Variable read | `read_variable` | Binding lookup and successful `loadRoot` imply the source transition, with its actual continuation-dependent trace, no picks/output and unchanged store. |
+| Sequence entry | `sequence_splice` | Pure entry of `.seqn ss` into a governing sequence with the same environment; preserves arbitrary tail, store and continuation. |
+| Pointer assignment | `assign_pointer_variables` | Source `*p = v` from symbolic variable lookup and read/write operation premises; arbitrary target `Loc`, including interior and aliasing cases; actual ordered labels, each pick-free and output-free. No general assignment claim. |
 | Block entry | `block_enter` | Allocation, heap growth, old-cell and outer-binding preservation. Silence does not imply purity. |
 | Memory | `PreservesOutside`, `write_support`, `allocate`, `write_read_root` | Whole-root write support, explicit normalization, allocation above the old bound. Separate from race instrumentation. |
 | Commutation | `root_writes_commute` | Two successful writes to different root cells, fixed normalized values, no allocation/output/control effects. Not an `unseq` theorem. |
@@ -33,6 +36,15 @@ imported. The implementation request and provenance are recorded in
 views and laws alone, checks finite realization, and checks allocation silence
 versus purity. This is an upstream semantic contract test. The representative
 Iris program proof remains downstream.
+
+The logic demo's three concrete requests are discharged by `read_variable`,
+`sequence_splice` and `assign_pointer_variables`, respectively. Their types
+match `ReadVariableLaw`, `SequenceSpliceLaw` and `AssignPointerVariablesLaw`
+without stronger premises. The GoLean-only downstream acceptance example
+checks with both law parameters supplied, proving its symbolic root-write,
+frame, normal-run and progress conclusions. This is still not an Iris
+ownership proof. Reproduction and precise scope:
+`2026-10-14_relational-demo-laws.md`.
 
 `Pure` concerns the store and `StepLabel` only. A client may observe control
 as well: `ReturnsDiscarded.pure` is the concrete example of a base-label

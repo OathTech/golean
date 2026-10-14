@@ -38,6 +38,7 @@ def requiredModules : List Name := [
     `GoLean.Relational,
     `GoLean.GoCore.Relational, `GoLean.GoCore.RelationalSound,
     `GoLean.GoCore.RelationalControl, `GoLean.GoCore.RelationalMemory,
+    `GoLean.GoCore.RelationalAssignment,
     `GoLean.GoCore.RelationalFault, `GoLean.GoCore.RelationalOutcome,
     `GoLean.GoCore.RelationalOutcomeSound, `GoLean.GoCore.RelationalEntry,
     `GoLean.GoCore.RelationalPhase, `GoLean.GoCore.RelationalPhaseSound,

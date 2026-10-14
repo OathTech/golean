@@ -77,6 +77,19 @@ theorem string_literal (ctx : ProgramCtx) (v : GoString) (env : LocalEnv)
     Pure ctx (expression (.stringLit v) env k s) (returned (.string v) k s) :=
   ⟨Step.evalStringLit, rfl⟩
 
+/-- A successful variable read preserves the store and records its actual
+access. The continuation may narrow that access to a projected leaf, so the
+trace is not asserted to be silent or fixed to the whole binding cell. -/
+theorem read_variable (ctx : ProgramCtx) (s : Store) (env : LocalEnv)
+    (k : Continuation) (id : VarId) (loc : Loc) (value : GoValue)
+    (lookup : LocalEnv.lookup env id = some loc)
+    (read : loadRoot ctx s loc = .ok value) :
+    ∃ tr, Transition ctx (expression (.var id) env k s)
+      ⟨tr, [], []⟩ (returned value k s) := by
+  refine ⟨[.access .read (.data (projChainTarget ctx s k.toMachine loc).canon)],
+    Step.evalVar lookup ?_⟩
+  simp [expression, Mem.loadBindingFor, read, Bind.bind, Except.bind, pure, Except.pure]
+
 /-- The observation-free branch selection, after a Boolean guard is read. -/
 def branch (yes no : Stmt) (env : LocalEnv) (k : Continuation) : Continuation :=
   ⟨.ifK yes no env k.toMachine⟩
@@ -110,6 +123,17 @@ theorem conditional {ctx : ProgramCtx} {guard : Expr} {yes no : Stmt}
 /-- The continuation of a list of statements in one lexical environment. -/
 def sequence (ss : List Stmt) (env : LocalEnv) (k : Continuation) : Continuation :=
   ⟨.seq ss env k.toMachine⟩
+
+/-- Enter a statement sequence under a governing sequence in the same
+environment. The statements splice into the existing tail without adding a
+scope or an extra continuation frame. -/
+theorem sequence_splice (ctx : ProgramCtx) (ss : Array Stmt) (rest : List Stmt)
+    (env : LocalEnv) (k : Continuation) (s : Store) :
+    Pure ctx (statement (.seqn ss) env (sequence rest env k) s)
+      (resumed (sequence (ss.toList ++ rest) env k) s) := by
+  refine ⟨?_, rfl⟩
+  simpa [Transition, statement, resumed, sequence, seqCont_seq] using
+    (Step.seqn (ctx := ctx) (ss := ss) (env := env) (k := .seq rest env k.toMachine) (s := s))
 
 theorem sequence_next (ctx : ProgramCtx) (body : Stmt) (rest : List Stmt)
     (env : LocalEnv) (k : Continuation) (s : Store) :
