@@ -259,3 +259,12 @@ instructions. Additional semantic callers use the same `invoke` rule for the
 existing Set body theorem and a nonempty-result explicit-return identity.
 The downstream Iris callers still require uptake and revalidation; no peer
 worktree was modified.
+
+RD3 immutable implementation pin: `95f1eb64ca3bfa3c39fd5aa0792d516e76a31089`.
+The [fresh independent RD3 audit](2026-10-14-rd3-independent-audit.md)
+found no defects, verified final committed source equality, and checked
+ordered aliases/interior destinations in both exit modes. Its conclusions
+are individually dispositioned in the RD3 handoff. Full CI passed in 741s;
+the one red proof-premise inventory speedbump was fixed and rerun green.
+Exact acceptance and kernel replay passed; see the handoff for scope and
+commands. Logic can repin before merge and continue its Iris caller uptake.
