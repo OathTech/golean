@@ -6,6 +6,8 @@
 `95f1eb64ca3bfa3c39fd5aa0792d516e76a31089` as the baseline. No merge,
 push, live pin change or logic-worktree writes.
 
+Implementation pin: `67f7d1c5ba6a96055a41802b978386d019e03c67`.
+
 ## Exports and exact compatibility
 
 All production exports are in `GoLean.GoCore.Relational`, through
@@ -143,6 +145,7 @@ to `.tmp`; dependency caches are copied by the frozen setup script only when
 source/configuration/toolchain match. Do not use writable shared cache links.
 
 ```sh
+set -euo pipefail
 mkdir -p .tmp/rd4 .tmp/rd4-phases/RelationalCodeX
 git -C /home/mike/projects/golean-logic/.claude/worktrees/relational-demo \
   archive a1ddc673e03d91060c51f451dc5cd274916f9a4f \
@@ -216,23 +219,92 @@ The GoLean replay set must equal its source module set, including `GoLean.lean`.
 Discard private scratch, caches and CI artifacts after checking; preserve the
 committed conclusions and these reproduction inputs, not generated logs.
 
-## Validation status at implementation freeze
+## Checked acceptance and CI
 
-The exact three semantic-only adapters build (50 jobs), with standard-trio
-axioms only. The unchanged frozen guarded package also rebuilds at the RD3
-baseline (307 jobs; 5,571 local declarations pass its exhaustive axiom audit).
-That baseline rebuild still has the three law premises: it is not the closed
-Set/Keep acceptance. Its pre-existing unused-variable warning in
-`GoLeanIris/Memory.lean:1625` is retained rather than editing frozen sources.
+The exact three GoLean-only adapters pass at the candidate (50 jobs), with
+standard-trio axioms only. The unchanged frozen guarded package was first
+rebuilt at the RD3 baseline (307 jobs; its three law premises still present).
+The candidate-pinned full package and wrappers then pass 313 jobs:
 
-Upstream headline axioms and the full core audit pass. Direct kernel replay
-passes for exactly 83 GoLean source modules, and separate replay passes for
-the 206 built frozen dependency modules (174 Iris, 18 Batteries, 14 Qq).
-Full `scripts/ci --diff` passed in 725s (198 build jobs, 396 eval tests,
-3,989 corpus cases: 3,749 passes and 240 baseline-known failures; all 405
-negative cases; no regression or red speedbump). This certifies the pre-commit
-worktree proof/runtime content. A later admission-docstring clarification
-was separately rebuilt with the contract/core audits. Fresh independent
-review is in progress. The
-immutable candidate pin and its closed guarded acceptance/replay results
-will be recorded here once checked; no final delivery claim is made yet.
+- `RD4Acceptance.setTarget : RelationalCodeX.SetTarget` is closed.
+- `RD4Acceptance.keepTarget : RelationalCodeX.KeepTarget` is closed.
+- Both targets and all three adapters depend only on `propext`,
+  `Classical.choice` and `Quot.sound`.
+- The frozen local audit checks 5,571 declarations; the wrapper's invocation
+  checks 5,573 including the two closed targets. The adapter dependencies
+  are included transitively in the headline theorem axiom checks.
+
+The sole downstream build warning is the pre-existing unused `h` at
+`GoLeanIris/Memory.lean:1625`, also reproduced at the RD3 baseline. The
+frozen source is unchanged. This is a reported linter warning, not a proof
+failure or an upstream warning waiver.
+
+Full `scripts/ci --diff` passed in 725s: warning-free 198-job build, exhaustive
+core axiom audit, 396 eval tests, frontend/wire checks, all 3,989 corpus cases
+(3,749 passes and 240 baseline-known failures), all 405 negative cases and
+whole-tape scheduler checks. No regression or red speedbump. CI ran on the
+pre-commit implementation worktree; its unchanged proof/runtime content is
+in the candidate. An admission docstring was clarified afterward and the
+affected modules, headline axioms and core audit were rebuilt successfully.
+
+Upstream replay passed for all 83 GoLean source modules. Separate replay
+passed for all 206 built frozen dependency modules (174 Iris, 18 Batteries,
+14 Qq), with exact built-module set equality. Candidate-pinned combined
+upstream/acceptance replay also passed: exactly 137 modules, comprising
+83 GoLean sources, 52 frozen local sources and both compatibility wrappers.
+The replayed set equals the source set with no missing, extra or duplicate
+module. No `sorryAx`, nonstandard axiom or kernel-replay failure remains.
+
+
+## Independent review and dispositions
+
+The [fresh independent audit](2026-10-14-rd4-independent-audit.md) checks
+`67f7d1c5ba6a96055a41802b978386d019e03c67` in a separate reviewer worktree
+and independently writable dependency copies. Its report is preserved
+verbatim from reviewer report commit
+`2694c74ea26c52e9f41e32b82c8404cb6f8fc585`. The reviewer freshly elaborated
+the changed sources, independently wrote adapters, closed both targets,
+ran the exhaustive axiom checks, and replayed the exact 137-module candidate
+closure plus the 206 built third-party dependency modules. No correctness,
+trust or acceptance defect was found; no fix or waiver is required.
+
+The six reviewed concerns are individually dispositioned:
+
+1. **Uniformity/preservation:** accepted; controls and finite paths do not
+   depend on the store, and write suffixes use `True`, not old read facts.
+2. **Labels/choices:** accepted; actual transitions retain their labels and
+   pick-free evidence. Observer silence is explicitly left downstream.
+3. **Admission:** accepted; evidence belongs to traversed sources, including
+   effects. No final-tail or final-body safety assumption is introduced.
+4. **Locations/aliases:** accepted with the documented domain qualification:
+   successful `loadRoot` restricts read bindings to roots. Write targets and
+   variable destinations remain arbitrary interior/aliased locations.
+5. **Entry:** accepted; zero and arbitrary nonzero argument lists are covered
+   from lookup, method exclusion, arity and successful `LocalEntry` alone.
+6. **Boundary/old laws:** accepted; no downstream/Iris production dependency;
+   the older, weaker `OperandValues` interface is preserved unchanged.
+
+The frozen unused-variable warning is reported above and does not require
+changing a downstream input. The reviewer used the toolchain's direct
+checker because this branch predates the newer replay wrapper script; its
+module-set and clean-candidate checks are explicit rather than silently
+skipping replay. The main lane's full CI is separately identified evidence.
+
+## Handoff
+
+Logic can repin the experimental dependency to
+`67f7d1c5ba6a96055a41802b978386d019e03c67`, consume the three exports above,
+remove its pending-law parameters, and migrate its phase vocabulary where
+appropriate. The original `SetTarget` and `KeepTarget` are closed in the
+frozen independent acceptance package; its `M.idx`, resources, observer
+obligations, lookup premises and Keep's logical Set-contract support are
+unchanged. This is acceptance of the existing downstream proof, not a new
+upstream Iris/WP API or a live-pin update.
+
+Unconditional RD4 completion still requires logic's own uptake and regression
+check, preserving RD3. General observer coverage, additional source constructs
+and other previously recorded relational gaps remain outside this batch.
+No merge, push, live repin or peer-worktree write occurred. Disposable scratch,
+clones, logs and corpus artifacts are removed after the checked conclusions
+and reproduction inputs are committed; the continuing implementation lane's
+pre-existing build cache remains available.

@@ -315,7 +315,19 @@ unchanged; RD3's weaker operand domain remains available.
 All three exact frozen propositions have GoLean-only compatibility proofs.
 The [RD4 phase handoff](2026-10-14_relational-phase-acceptance.md) preserves
 those adapters, the closed guarded wrapper, frozen hashes and reproduction
-instructions. At this implementation freeze, full CI has passed in 725s; candidate-pinned
-Set/Keep acceptance and the fresh independent audit are still completing;
-this is not yet the final immutable delivery. Logic uptake and removal of
-its pending-law parameters remain downstream, after that delivery.
+instructions. The audited immutable implementation is
+`67f7d1c5ba6a96055a41802b978386d019e03c67`. Full CI passed in 725s with
+unchanged baselines and no red speedbump. All three semantic adapters pass;
+the candidate-pinned guarded wrappers close both original `SetTarget` and
+`KeepTarget` (313 build jobs, standard axioms only). Kernel replay passes
+for the exact 137-module upstream/local source set and 206 built third-party
+dependency modules. The [fresh independent audit](2026-10-14-rd4-independent-audit.md)
+reproduces the closed targets and replay with no defect requiring fix or
+waiver; each reviewed concern is dispositioned in the phase handoff.
+
+The sole downstream warning is the unchanged frozen unused-variable warning
+in `GoLeanIris/Memory.lean:1625`. Read bindings remain subject to `loadRoot`;
+write targets support interiors and aliases. Logic can now repin, remove its
+three pending-law parameters, and recheck its original targets while
+preserving RD3. Unconditional RD4 completion still awaits that live uptake.
+No merge, push, live-pin change or logic-worktree write occurred.
