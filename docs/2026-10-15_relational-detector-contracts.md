@@ -1,6 +1,7 @@
 # D1 detector contracts
 
 Baseline: audited C1 `55ad72493061b59363e846341380a9edce12a2de`.
+Checked implementation: `9c6efcfcf9dc6f4b96cf6b2d8bb052f1fa4d9124`.
 Branch: `spike/relational-detector-contracts-1015`, isolated worktree
 `.claude/worktrees/relational-detector-contracts-1015`. Its `.lake`, experiment `.lake`, Go
 build cache and temporary files are private to this lane.
@@ -190,8 +191,9 @@ objects. No peer build state or writable cache was attached.
   An additional `Main --fresh` replay also passed.
 - Archived-C1 executable preservation controls: **PASS**, complete output
   matched byte-for-byte. The old-constant proof limitation remains as stated.
-- Fresh independent source review: complete; two documentation findings
-  fixed individually. Immutable commit identity verification is pending;
+- Fresh independent source review and immutable implementation identity
+  verification: **complete**, two documentation findings fixed individually,
+  no additional findings;
   [review and dispositions](2026-10-15_relational-detector-review.md).
 - Full `scripts/ci --diff`: **PASS**, 1,206 seconds under the deliberate
   cold-build 64 GB cap and two Lean threads. All default targets warning-free,
@@ -224,14 +226,15 @@ baseline does not contain main's newer replay script.
 The aggregate replays its whole closure from an empty environment; each
 separate entry module replays its own declarations into its imports, already
 covered by the aggregate. This avoids repeating the same dependency replay
-for every executable. An additional fresh replay of `Main` was also run.
+for every executable. The successful entry replay used the explicit eight-module
+list below. An additional fresh replay of `Main` was also run.
 
 ```sh
-python3 -c 'from pathlib import Path; root=Path("../.."); entries=["Main","Tests.GoCoreEval","Tests.DeclarationUnicode","Tests.DeclarationWire","Tests.UnseqWire","Tests.MethodIdentity","Tests.StrictJsonParse","Tests.UnseqScheduler"]; mods=["GoLean"]+[".".join(p.relative_to(root).with_suffix("").parts) for d in ["GoLean", "Tests"] for p in sorted((root/d).rglob("*.lean"))]+["Concurrency.Audit"]; Path(".lake/D1Replay.lean").write_text("\n".join("import "+m for m in mods if m not in entries)+"\n"); Path(".lake/D1Replay.entries").write_text("\n".join(entries)+"\n")'
+python3 -c 'from pathlib import Path; root=Path("../.."); entries=["Main","Tests.GoCoreEval","Tests.DeclarationUnicode","Tests.DeclarationWire","Tests.UnseqWire","Tests.MethodIdentity","Tests.StrictJsonParse","Tests.UnseqScheduler"]; mods=["GoLean"]+[".".join(p.relative_to(root).with_suffix("").parts) for d in ["GoLean", "Tests"] for p in sorted((root/d).rglob("*.lean"))]+["Concurrency.Audit"]; Path(".lake/D1Replay.lean").write_text("\n".join("import "+m for m in mods if m not in entries)+"\n")'
 LEAN_NUM_THREADS=2 capped lake env lean --root=.lake \
   -o .lake/build/lib/lean/D1Replay.olean .lake/D1Replay.lean
 LEAN_NUM_THREADS=2 capped lake env leanchecker --fresh --verbose D1Replay
-LEAN_NUM_THREADS=2 capped bash -c 'set -e; while IFS= read -r module; do lake env leanchecker --verbose "$module"; done < .lake/D1Replay.entries'
+LEAN_NUM_THREADS=2 capped bash -c 'set -e; for module in Main Tests.GoCoreEval Tests.DeclarationUnicode Tests.DeclarationWire Tests.UnseqWire Tests.MethodIdentity Tests.StrictJsonParse Tests.UnseqScheduler; do lake env leanchecker --verbose "$module"; done'
 ```
 
 The preserved experiment branch is untouched. Reproduction never builds in
@@ -240,3 +243,9 @@ into a new private temporary directory, builds its Race closure, runs the
 same controls against old/new code, and removes that temporary directory.
 No baseline was repinned and no corpus result is being waived as an expected
 effect of the repair.
+
+After validation and review, removed this lane's root `.lake`, `.tmp`,
+`artifacts`, private `deps`, experiment `.lake` and generated experiment
+manifest (about 11 GB). The branch/worktree and immutable commits remain;
+the historical experiment and primary checkout remain clean at their prior
+pins. No merge, push, live repin, peer write or global-state change occurred.
