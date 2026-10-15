@@ -80,3 +80,16 @@ def auditConcurrency : CoreM Unit := do
 #print axioms Concurrency.Sync.actual_driver
 #print axioms Concurrency.Sync.equal_comparison_loses_rejection
 #print axioms Concurrency.Sync.entry_driver
+#print axioms GoLean.GoCore.loc_compare_eq_iff
+#print axioms GoLean.GoCore.loc_compare_lt_trans
+#print axioms GoLean.GoCore.loc_compare_unfold
+#print axioms GoLean.GoCore.loc_comparison_unique
+#print axioms GoLean.GoCore.ShadowKey.compare_orderCode
+#print axioms GoLean.GoCore.Machine.shadowSet_ordered
+#print axioms GoLean.GoCore.Machine.ShadowOrdered.keys_nodup
+#print axioms GoLean.GoCore.Machine.shadowSet_lookup_self
+#print axioms GoLean.GoCore.Machine.shadowSet_lookup_other
+#print axioms GoLean.GoCore.Machine.PoolPrefix.shadow_ordered_empty
+#print axioms GoLean.GoCore.Machine.PoolPrefix.preserves_lookup
+#print axioms Concurrency.Sync.pre_pair_history
+#print axioms Concurrency.Sync.pre_pair_rejection

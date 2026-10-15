@@ -74,6 +74,33 @@ as well: `ReturnsDiscarded.pure` is the concrete example of a base-label
 pure step with a return event. Use `PureFor` with the chosen observation
 projection before deriving an observation-free logic rule.
 
+## Detector history contracts
+
+The same facade exports `GoLean.GoCore.LocationOrder`, `ShadowOrder` and
+`ShadowHistory` (module names under `GoLean/GoCore/`; declarations live
+in `GoLean.GoCore` and `GoLean.GoCore.Machine`). `Loc` and `ShadowKey` have checked `Std.LawfulEqOrd`
+and `Std.TransOrd` instances. Location comparison preserves the pinned
+derived constructor/component order for arbitrary base, field and index
+paths; `loc_compare_unfold` and `loc_comparison_unique` specify the source
+algorithm. They do not prove equality to the former opaque constant.
+
+`shadowSet_lookup_self`, `shadowSet_lookup_other` and `shadowSet_other_mem`
+give exact replacement/retention observations. `ShadowOrdered` is strict
+key order; `.keys_nodup` derives uniqueness. `shadowSet_ordered` preserves
+it, and `PoolPrefix.shadow_ordered_empty` establishes it for every actual
+detector-checked prefix from the empty detector. `PoolPrefix.preserves_lookup`
+retains a key's history across successful prefixes whose events avoid that
+exact key, including attributed accesses and HB actions. Different keys can
+overlap: the premise is key inequality, not memory separation, and detector
+success is still required. Canonicalization erases static field type spelling
+at emission; comparison itself is structural on all supplied keys.
+
+These are detector data-structure laws, not a general race-freedom or Iris
+ownership theorem. The two retained experimental executions and the now
+unconditional negative control are described in
+`2026-10-15_relational-detector-contracts.md`, including remaining implementation
+findings and the limits of old/new preservation evidence.
+
 ## Limits that matter to the demo
 
 The foundational `State` still contains machine control. `Continuation` and

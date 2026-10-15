@@ -30,8 +30,7 @@ def printEvent : StepEvent := ⟨0, .privateStep,
   ⟨[], [], [GoString.fromLeanString "false"]⟩⟩
 def doneEvent : StepEvent := ⟨0, .privateStep, ⟨[], [], []⟩⟩
 
-/-- Disjoint acceptance is independent of the opaque comparator's answer.
-This does NOT establish its ordering contract or preservation of shadow keys. -/
+/-- Actual detector acceptance, with the D1 total comparator. -/
 theorem detector_accepts : ∃ r, raceUpdate readEvent afterRead at22.2.2.1 = .ok r := by
   let r := at22.2.2.1
   let cell := ((r.shadow.find? (·.1 == .data x)).map (·.2)).getD {}
@@ -39,7 +38,6 @@ theorem detector_accepts : ∃ r, raceUpdate readEvent afterRead at22.2.2.1 = .o
     (cell.record .read 0 ((r.vcOf 0).get 0))) }, ?_⟩
   dsimp only [cell, r]
   cbv
-  cases h : instOrdLoc.ord (.base ⟨1⟩) (.base ⟨0⟩) <;> cbv
 
 noncomputable def readRace : RaceState := Classical.choose detector_accepts
 noncomputable def at25 : Certificate :=

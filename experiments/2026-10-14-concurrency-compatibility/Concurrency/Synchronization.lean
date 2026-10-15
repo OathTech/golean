@@ -33,7 +33,6 @@ def r28 := recorded at27.2.2.1 0 .read (.data (.base ⟨2⟩))
 
 theorem detector28 : raceUpdate step27.2.2 step27.1 at27.2.2.1 = .ok r28 := by
   cbv
-  cases h : instOrdLoc.ord (.base ⟨2⟩) (.base ⟨0⟩) <;> cbv
 
 def park := sample% certify ctx 1 step27.1 r28 step27.2.1
 def pairStep := sample% stepMulti ctx park.2.1 park.2.2.2
@@ -45,28 +44,14 @@ theorem actual_pair : stepMulti ctx park.2.1 park.2.2.2 =
     .ok (pairStep.1, pairStep.2.1, paired) := rfl
 
 theorem detector_pair : raceUpdate paired pairStep.1 park.2.2.1 = .ok r30 := by
-  cases h : instOrdLoc.ord (.base ⟨2⟩) (.base ⟨0⟩) <;>
-    cases h' : instOrdLoc.ord (.base ⟨2⟩) (.base ⟨2⟩)
-  all_goals (cbv; try simp only [*])
-  all_goals (cbv; try simp only [*])
-  all_goals (cbv; try simp only [*])
-  all_goals (cbv; try simp only [*])
-  all_goals (cbv; try simp only [*])
-  all_goals rfl
+  cbv
 
 def resume := sample% certify ctx 5 pairStep.1 r30 pairStep.2.1
 def step35 := sample% stepMulti ctx resume.2.1 resume.2.2.2
 def r36 := recorded resume.2.2.1 0 .read (.data x)
 
 theorem detector36 : raceUpdate step35.2.2 step35.1 resume.2.2.1 = .ok r36 := by
-  cases h : instOrdLoc.ord (.base ⟨2⟩) (.base ⟨0⟩) <;>
-    cases h' : instOrdLoc.ord (.base ⟨2⟩) (.base ⟨2⟩)
-  all_goals (cbv; try simp only [*])
-  all_goals (cbv; try simp only [*])
-  all_goals (cbv; try simp only [*])
-  all_goals (cbv; try simp only [*])
-  all_goals (cbv; try simp only [*])
-  all_goals rfl
+  cbv
 
 def finish := sample% certify ctx 2 step35.1 r36 step35.2.1
 
@@ -98,7 +83,7 @@ theorem accepted : CheckedPrefix ctx 38 initial finish.2.1 tape finish.2.2.2
     (PoolSound.poolPrefix_comp ctx 27 11 _ _ _ _ _ _ _ _ _ _ _ prefix27 read)
 
 /-- Concrete sender-to-receiver rendezvous ordering at a detector state reached from
-the actual spawn. Shadow state is retained, including the opaque ordering. -/
+the actual spawn. The detector's actual shadow state is retained. -/
 theorem transfer_boundary : TransferBoundary ctx park.2.1 pairStep.1
     park.2.2.1 r30 paired 1 0 := by
   refine ⟨PoolSound.stepML_sound ctx _ _ _ _ _ actual_pair, detector_pair, ?_⟩
@@ -127,29 +112,55 @@ its channel-handle read. This is not an invented schedulable pool step. -/
 theorem read_before_handoff_rejected :
     at13.2.2.1.events 0 [.access .read (.data x)] = .error .raceDetected := rfl
 
-/-- Stronger negative control remains a named obligation: the intervening
-opaque comparator can select the overwrite branch for distinct roots. -/
+/-- Negative detector control immediately before the reachable rendezvous. -/
 def PrePairRejection : Prop :=
   park.2.2.1.events 0 [.access .read (.data x)] = .error .raceDetected
 
-/-- A conditional countermodel for that stronger claim, not a runtime
-counterexample: the opaque comparator's equal branch drops the old root's
-shadow. A correct ordering contract would exclude this premise. -/
+/-- The real intervening 16 driver steps, including unrelated channel-handle
+accesses and receiver parking. This starts at the reached post-write state. -/
+def gap := sample% certify ctx 16 at13.2.1 at13.2.2.1 at13.2.2.2
+
+theorem gap_ends : gap.2.1 = park.2.1 ∧ gap.2.2.1 = park.2.2.1 := by cbv
+
+theorem gap_checked : PoolPrefix ctx 16 at13.2.1 at13.2.2.1 at13.2.2.2
+    gap.1 gap.2.1 gap.2.2.1 gap.2.2.2 := certify_sound (by cbv)
+
+theorem pre_pair_ordered : ShadowOrdered park.2.2.1.shadow := by
+  rw [← gap_ends.2]
+  exact gap_checked.shadow_ordered
+    ((certify_sound (show certify ctx 13 initial {} tape = .ok at13 from by cbv)).shadow_ordered_empty)
+
+/-- General prefix history preservation, instantiated without a final-state
+map invariant assumption. The accesses in the gap use different exact keys. -/
+theorem pre_pair_history : shadowLookup park.2.2.1.shadow (.data x) =
+    shadowLookup at13.2.2.1.shadow (.data x) := by
+  rw [← gap_ends.2]
+  apply gap_checked.preserves_lookup
+  simp [gap, StepEvent.trace, MemEvent.AvoidsKey, x]
+
+/-- Unconditional negative control. The old write's history survives by the
+general law, and that retained access conflicts with the receiver's clock. -/
+theorem pre_pair_rejection : PrePairRejection := by
+  let cell := ({} : ShadowCell).record .write 1 1
+  have found : shadowLookup park.2.2.1.shadow (.data x) = some cell := by
+    rw [pre_pair_history]
+    rfl
+  have rejected := RaceState.accessKey_reject_of_mem
+    (t := 0) (kind := AccessKind.read) (key := ShadowKey.data x)
+    (shadowLookup_mem found) (by decide) (by decide)
+  unfold PrePairRejection
+  simp [RaceState.events, RaceState.event, rejected, Bind.bind, Except.bind]
+
+/-- D1 refutes the old conditional countermodel's premise. -/
+theorem comparison_not_equal :
+    instOrdLoc.ord (.base ⟨2⟩) (.base ⟨0⟩) ≠ .eq := by decide
+
+/-- Historical conditional statement retained, now with an impossible premise.
+It no longer describes an open ordering obligation. -/
 theorem equal_comparison_loses_rejection
     (equal : instOrdLoc.ord (.base ⟨2⟩) (.base ⟨0⟩) = .eq) :
     ¬ PrePairRejection := by
-  have accepted : park.2.2.1.events 0 [.access .read (.data x)] =
-      .ok (recorded park.2.2.1 0 .read (.data x)) := by
-    cases self : instOrdLoc.ord (.base ⟨2⟩) (.base ⟨2⟩)
-    all_goals (cbv; try simp only [*])
-    all_goals (cbv; try simp only [*])
-    all_goals (cbv; try simp only [*])
-    all_goals (cbv; try simp only [*])
-    all_goals rfl
-  intro rejected
-  unfold PrePairRejection at rejected
-  rw [accepted] at rejected
-  cases rejected
+  exact False.elim (comparison_not_equal equal)
 
 theorem post_handoff_read : ∃ tr, StepML ctx resume.2.1
     ⟨resume.2.1.threads.setIfInBounds 0

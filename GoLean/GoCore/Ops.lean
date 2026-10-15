@@ -1,6 +1,7 @@
 import GoLean.GoCore.FloatBits
 import GoLean.GoCore.Store
 import GoLean.GoCore.ProgramCtx
+import GoLean.GoCore.LocationOrder
 
 namespace GoLean.GoCore
 
@@ -2692,10 +2693,8 @@ inductive SyncWordName where
 -- The shadow is kept in CANONICAL (sorted) key order, so the dedup
 -- engine's structural state equality is insensitive to the interleaving in
 -- which keys were first touched (`shadowSet`); the total order is the
--- derived one on the key's components.
-deriving instance Ord for Addr
-deriving instance Ord for TypeId
-deriving instance Ord for Loc
+-- constructor/component order. LocationOrder gives the recursive Loc
+-- component a total definition with the same generated comparison equations.
 deriving instance Ord for SyncKind
 
 /-- What one shadow cell is keyed by. -/
