@@ -31,6 +31,7 @@ imported. The implementation request and provenance are recorded in
 | Commutation | `root_writes_commute` | Two successful writes to different root cells, fixed normalized values, no allocation/output/control effects. Not an `unseq` theorem. |
 | Terminal boundaries | `Boundary`, `Completed`, `.realize`, `panic_run_iff`, `deadlock_run_iff`, `.rendering_refusal` | Exact panic/deadlock driver correspondences and sound rendering refusal; actual panic chain, terminal records and finishing cost 0/1. |
 | Fuel exhaustion | `Exhausted`, `exhaustion_iff` | Exactly the available number of transitions, ending somewhere that cannot finish at zero cost. A different choice may finish earlier. |
+| Complete local outcomes | `Local.OperationFailure`, `Local.Finish`, `Local.Execution`, `Local.Avoids`; `Local.Correspondence.main_coverage`, `.main_realization`, `.initialization_coverage`, `.initialization_realization` | Arbitrary supplied context/store/control/budget/tape. Normal, deadlock, admitted panic, every refusal, fatal and selected exhaustion. Exact successful labels, finishing selections and costs; no error-return tape/store invented. Separate refusal/fatal exclusion transfers. |
 | Selected faults | `LocalFault`, `.no_successor` | Unsupported statements, declarations, unbound locals/addresses, binding reads and Boolean conditions; actual stop cause. Not exhaustive. |
 | Local entry | `LocalEntry`, `.total`, `.deterministic`, `.layout`, `.declared` | Supplied store; ordered success/error cases for binding, allocation and pinning. Distinct-id, arity and non-interface-anchor premises explicit where needed. |
 | Local run | `LocalNormalRun`, `local_normal_iff` | Normal body completion with still-fallible readback; final values separate from return events. |
@@ -81,19 +82,21 @@ concrete configurations. This is not insulation from every representation
 change. Report where the demo needs raw control details so the next construct
 law can remove that dependency.
 
-`Boundary` is **not exhaustive**. Ordinary operation refusals and fatal
-failures still need an independent failure relation. `LocalFault` covers
-only its named sites; its absence does not establish safety. Existence of
-an arbitrary successful successor does not exclude refusing choices. Use
-the proved pick-free progress result only where its premises hold. Do not
-weaken a logic root or silently add `MachineWf`/`NoRefusal` to bypass this gap.
+`Boundary` alone and the older `LocalFault` remain non-exhaustive. The complete
+local interface is `Local.Execution`, using the concrete `Local.OperationFailure`
+for ordinary failures and `Boundary` for terminal finishes. Its classification
+needs no `MachineWf`, `NoRefusal` or successful-operation premise. Safety is a
+separate claim: `Local.Avoids` quantifies over every reachable admitted prefix
+and finishing alternative. Refusal exclusion covers operation, rendering and
+initialization refusals; fatal exclusion has its own premise. A successful
+successor does not establish either all-choice premise.
 
 `ProgramNormal` is the successful-program subset, not the requested
-all-outcome bridge. Setup failures, initializer failures, body faults,
-fuel exhaustion and readback failure still need unified relational program
-classification. Entry/readback errors are retained in the local API and the
-init-print boundary is proved separately. Existing internal driver proofs
-retain complete executable classification while that relation is built.
+all-outcome bridge. Local body and initialization results are now classified,
+but their composition with validation, global setup, activation and final
+readback into a single program outcome relation is still later work. Entry and
+readback errors remain in their local operation APIs. C1 does not supply
+whole-program adequacy.
 
 The observation API lacks a complete entry census theorem, general target
 writeback returns and panic-printing returns. It must not replace the
@@ -133,9 +136,14 @@ They retain store-uniform paths and source admission; less-than compares the
 supplied integer values and sequence propagation leaves the tail unrestricted.
 
 
-C1 local-outcome completeness is now in progress. The
-[compiled constraint checkpoint](2026-10-14_relational-outcome-completeness.md)
-is experimental and does not extend this facade yet. It makes ordinary-failure
-coverage, main/init realization and all-alternative refusal/fatal exclusion
-explicit obligations. The non-exhaustiveness and program/observer limits above
-remain until those obligations are discharged.
+The [C1 local-outcome handoff](2026-10-14_relational-outcome-completeness.md)
+records the exact public contracts and checks. Semantic declarations live in
+`Local`; tapes and drivers occur in `Local.Correspondence`. `OperationCheck`
+composes guard-ordered checks and `Selection` witnesses; passing a check means
+only absence of its failure, not a successful transition. Failed operations
+have semantic consultation witnesses, while actual error results erase the
+endpoint and suffix. Main and initialization coverage/realization are proved
+separately, preserving zero-cost normal/deadlock priority, one-step finishing
+cost for panic rendering/operation failure, and init-print-before-fuel refusal.
+`Tests/RelationalOutcomes.lean` is the facade-only classification, realization
+and exclusion client. No Iris or downstream module enters this interface.

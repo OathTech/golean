@@ -4,7 +4,7 @@ import GoLean.GoCore.RelationalOutcomeSound
 successful machine transition: it only says that this check did not reject.
 The failure relation records semantic selections without a choice tape.
 Executable interpretation is confined to the correspondence namespace. -/
-namespace GoLean.GoCore.Relational.C1
+namespace GoLean.GoCore.Relational.Local
 open Machine
 
 inductive OperationCheck where
@@ -145,4 +145,4 @@ theorem selections {check records cause} (h : Rejects check records cause)
 
 end Correspondence
 end OperationCheck
-end GoLean.GoCore.Relational.C1
+end GoLean.GoCore.Relational.Local

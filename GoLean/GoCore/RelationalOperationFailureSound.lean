@@ -1,6 +1,6 @@
-import OperationFailure
+import GoLean.GoCore.RelationalLocalExecution
 
-namespace GoLean.GoCore.Relational.C1
+namespace GoLean.GoCore.Relational.Local
 open Machine OperationCheck OperationCheck.Correspondence
 
 namespace FailureChecks.Correspondence
@@ -320,4 +320,43 @@ theorem atState_errors (ctx : ProgramCtx) (s : Store) (c : Config) (ch : Choices
     cases rest <;> simp_all
 
 end FailureChecks.Correspondence
-end GoLean.GoCore.Relational.C1
+namespace Correspondence
+open ExecutionStatement OperationCheck.Correspondence FailureChecks.Correspondence
+
+theorem operation_failure_coverage : OperationCoverage := by
+  intro ctx a ch cause hz ha he
+  have hb := blockedB_of_not_zeroCost (fun h => hz (Boundary.zero_cost_iff.mpr h))
+  have hh : (run (FailureChecks.atState ctx a) ch).1 = some cause.stop := by
+    rw [atState_errors ctx a.store a.control ch ha hb, he]
+    rfl
+  obtain ⟨hf, hr⟩ := run_coverage _ _ hh
+  exact ⟨_, _, hf, hr⟩
+
+theorem rejected_no_abort {ctx : ProgramCtx} {a : State} {records : List PickRecord}
+    {cause : FailureCause} (h : OperationFailure ctx a records cause) : a.control.abort? = none := by
+  cases ha : a.control.abort? with
+  | none => rfl
+  | some pair =>
+    obtain ⟨first, rest⟩ := pair
+    obtain ⟨hc, _⟩ := abort?_some ha
+    unfold OperationFailure FailureChecks.atState at h
+    rw [hc] at h
+    cases h
+
+theorem rejected_not_blocked {ctx : ProgramCtx} {a : State} {records : List PickRecord}
+    {cause : FailureCause} (h : OperationFailure ctx a records cause) : a.control.blockedB = false := by
+  obtain ⟨c, s⟩ := a
+  cases c <;> first | rfl | cases h
+
+theorem operation_failure_replay : OperationReplay := by
+  intro ctx a records cause h ch tail hr
+  have hx := OperationCheck.Correspondence.replay h hr
+  rw [atState_errors ctx a.store a.control ch (rejected_no_abort h) (rejected_not_blocked h)] at hx
+  cases he : stepFn ctx a.store a.control ch <;> simp_all [error?]
+
+theorem operation_failure_selections : OperationSelections := by
+  intro ctx a records cause h tail
+  exact OperationCheck.Correspondence.selections h tail
+
+end Correspondence
+end GoLean.GoCore.Relational.Local

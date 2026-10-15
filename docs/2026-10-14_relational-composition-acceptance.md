@@ -521,3 +521,13 @@ handoff; the review report is committed and its dirty overlay is snapshot-ref
 preserved before removing the reviewer worktree. No merge, push, live repin,
 peer write or global-state change occurred. C1 begins from this exact response,
 under the user's newly dispatched bounded local-outcomes brief.
+
+
+### Subsequent C1 local-outcome work
+
+The E/F pin above remains independently consumable. The subsequent bounded
+local-outcome implementation and its separate audit are recorded in
+[the C1 handoff](2026-10-14_relational-outcome-completeness.md). It changes no
+frozen RD5 request or logic dependency pin. C1 checks the frozen GoLean-only
+A–F adapters again; the E/F full Iris acceptance evidence above remains scoped
+to its audited E/F pin.

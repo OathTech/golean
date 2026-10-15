@@ -67,4 +67,4 @@ globs = ["Tests.UnseqWire"]
 # observer, and the post-import axiom audit over EVERY module under GoLean/
 # (classical trio only), with the panic-text renderer/member tests.
 name = "GoCoreAuditTests"
-globs = ["Tests.GoCoreContract", "Tests.PanicRendering", "Tests.StringPanicMembers", "Tests.RelationalContracts", "Tests.GoCoreAudit"]
+globs = ["Tests.GoCoreContract", "Tests.PanicRendering", "Tests.StringPanicMembers", "Tests.RelationalContracts", "Tests.RelationalOutcomes", "Tests.GoCoreAudit"]
