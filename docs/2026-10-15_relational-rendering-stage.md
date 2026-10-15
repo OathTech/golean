@@ -219,4 +219,45 @@ does not complete general locality, concurrent/infinite adequacy, parser/explore
 correspondence, or the full replacement reasoning interface. It introduces no
 Iris reasoning or extra consumer correctness premise.
 
-Final independent review and exact implementation/handoff pins: pending binding.
+Implementation pin: `ccc54f4f152b3e01603799526d0e3949e74a7a71`.
+CI and corpus checks ran **before this commit**: their metadata names the
+starting HEAD and marks the worktree **DIRTY**. No commit-clean CI run is claimed.
+The three production-file SHA256 values recorded during validation remained
+unchanged and were checked against this commit; every one of its 14 changed/new
+files matched its committed blob and working bytes at implementation commit
+creation. Subsequent handoff edits are documentation and verbatim preservation of the
+reviewer’s already-checked source probes; production sources
+remain identical to that pin. The three experiment
+proof/audit files also match the independently built private package exactly.
+Consumer source identity and replay multisets were checked separately as above.
+Final review requested this explicit precommit provenance statement; it is a
+reporting correction, not a changed source or a reason to reuse mismatched input.
+
+The fresh [independent review](2026-10-15_relational-rendering-review.md) accepts
+`ccc54f4f152b3e01603799526d0e3949e74a7a71` for this bounded handoff: no new
+semantic defect or preservation blocker. It independently checked affected
+elaboration/replay, source identities, module multisets and finding-name sets;
+its report distinguishes those checks from inspection of author CI/consumer
+runs. The report is saved verbatim. The reviewer’s two already-checked source
+probes are also copied byte-for-byte into
+`experiments/2026-10-15-rendering/review/` for source preservation; their original
+scratch copies remain. No production file or accepted target changes in the
+handoff commit. Remaining limits and unwaived failures are exactly those above.
+
+
+[USER] 2026-10-15: finish only this renderer candidate's validation, independent
+review and immutable handoff, then park while the relational architecture is
+reassessed. Preserve all source. No new increment, integration, merge or push.
+The owned branch/source worktree and private source inputs are retained; only
+reconstructible build outputs and logs may be removed after review is saved.
+
+
+Parked after this handoff. Removed this lane's root `.lake/build`, each private
+old/consumer/renderer-check package's `.lake/build` (including its independent
+dependency build directories), D1/U1 experiment `.lake/build`, `.tmp/gocache`,
+reviewer compiled outputs, validation logs and corpus execution outputs.
+Per the final source-preservation instruction, retained the source worktree,
+private old/consumer/dependency sources, reviewer source probes, and generated
+Go/lowered-input JSON sources. No source archive or peer checkout was deleted.
+The committed implementation, report and reproduction instructions are the
+handoff; no new increment, integration, repin, merge or push was performed.

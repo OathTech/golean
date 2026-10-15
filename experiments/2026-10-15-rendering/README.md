@@ -122,6 +122,9 @@ waiver. Compare exact finding sets to their frozen baseline, not merely counts.
 Run the existing D1 and U1 packages at this candidate (`capped lake build`,
 headline/exhaustive audits and exact `leanchecker` replay), and the existing
 alias control. No stronger consumer premises or modified frozen proof headers
-are allowed. Remove this lane's disposable archives, package clones, logs,
-`.lake` directories and generated artifacts after recording the checked
-conclusions and immutable pins. No merge, push, live repin or peer writes.
+are allowed. The final user instruction parks this candidate and preserves all source.
+Retain source archives, private consumer/dependency sources and reviewer probes;
+remove only rebuildable build outputs and execution logs after recording checked
+conclusions and immutable pins. The reviewer probes are preserved verbatim in
+`review/` as well as their original scratch paths. No new increment, integration,
+merge, push, live repin or peer writes.
