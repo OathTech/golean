@@ -15,6 +15,19 @@ I2 stays independently consumable at implementation
 handoff; its older frozen O1/U1 consumers are kept separately. Runtime sources
 and behavior are unchanged. No main merge, push, live pin or peer write.
 
+Implementation pin: **`82353580814b66399cdc472a4c4edf9044d0c097`**.
+The verbatim [independent review](2026-10-15_relational-observed-phases-review.md)
+is bound to that commit. It found no new semantic/acceptance blocker and
+independently matched all 4,398 final source/configuration hashes to the commit
+and worktree, as well as the exact 450/442 replay inventories and 21 finding
+names. This handoff changes documentation only after that implementation pin.
+
+All author/reviewer processes finished before cleanup. Removed only this
+lane's `.tmp`, `.lake` and `artifacts`, including both private consumer packages,
+copied caches and reviewer scratch. Pre-existing `deps/go` and `deps/goose`
+remain. Conclusions and reproduction are committed; disposable logs, dumps
+and build outputs are not retained.
+
 ## Decisions and source binding
 
 [USER] 2026-10-15, relayed in `2026-10-15_rd8-observed-phase-relay.md`:
