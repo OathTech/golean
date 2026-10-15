@@ -37,6 +37,7 @@ imported. The implementation request and provenance are recorded in
 | Local run | `LocalNormalRun`, `local_normal_iff` | Normal body completion with still-fallible readback; final values separate from return events. |
 | Initialization | `Initializes`, `initializes_iff`, `init_print_at_zero` | Exact successful guarded run. Printing refuses even at zero fuel. No premise that all alternative paths avoid printing. |
 | Program success | `ProgramNormal`, `.realize`, `program_normal_of_run` | Both directions for the successful sequential driver: validation, globals, initialization, entry and readback. Separate init/body fuel bounds. No pool/CLI claim. |
+| All sequential program outcomes | `ProgramExecution.Validation`, `Seeding`, `Initialization`, `ActivationPhase`, `Setup`, `Execution`, `History`; `ProgramExecution.Correspondence.coverage`, `.realization` | Arbitrary program/name/arguments/fuel/tape. Exact ordered failure phases and causes, separate initialization/body segments with full independent budgets, labels and finishing selections. Closed refusal/fatal exclusion transfers; no logical safety admission premise. |
 | Entry events | `EntrySite`, `Enters`, `.transition`, `.all_successors` | Seven sequential call/defer sites; resolved callee, supplied arguments, pre-store. Re-dispatch is not entry. |
 | Initial return events | `ReturnsDiscarded`, `.pure` | Normal exits without targets/results after cleanup drains, payload `[]`; includes deferred and top-level frames. |
 | Invariants | `WellFormed`, `Run.preserves_wellFormed`, `Run.heap_size_mono` | Address bound and heap normalization, with initial premise. Not typing or refusal freedom. |
@@ -91,12 +92,16 @@ and finishing alternative. Refusal exclusion covers operation, rendering and
 initialization refusals; fatal exclusion has its own premise. A successful
 successor does not establish either all-choice premise.
 
-`ProgramNormal` is the successful-program subset, not the requested
-all-outcome bridge. Local body and initialization results are now classified,
-but their composition with validation, global setup, activation and final
-readback into a single program outcome relation is still later work. Entry and
-readback errors remain in their local operation APIs. C1 does not supply
-whole-program adequacy.
+`ProgramExecution.Execution` composes validation, global setup, initialization,
+activation, body and final readback for all sequential driver outcomes.
+`Correspondence.coverage` and `.realization` preserve phase histories and exact
+choice replay. Initialization and body each get the entire supplied budget;
+the program driver returns neither a tape suffix nor an error endpoint.
+`normal_iff` establishes successful behavior-set compatibility with the existing
+`ProgramNormal` and separate label-length bounds; it does not assert identity
+of an arbitrary supplied original success history. The exact downstream
+initialized-program adequacy constraint is still pending. This is not an
+Iris adequacy theorem or an observation-completeness claim.
 
 The observation API lacks a complete entry census theorem, general target
 writeback returns and panic-printing returns. It must not replace the
@@ -147,3 +152,10 @@ separately, preserving zero-cost normal/deadlock priority, one-step finishing
 cost for panic rendering/operation failure, and init-print-before-fuel refusal.
 `Tests/RelationalOutcomes.lean` is the facade-only classification, realization
 and exclusion client. No Iris or downstream module enters this interface.
+
+The [C2 program-outcome stage](2026-10-15_relational-program-outcomes.md)
+records the independently consumable C1 baseline and early interface checkpoint.
+`Tests/RelationalProgramOutcomes.lean` checks the exact early obligations through
+the facade and exercises ordering, phase budgets and projection. Readback failure
+has a generic program composition law and an arbitrary-state component control;
+no concrete whole-program readback-failure reachability claim is made.

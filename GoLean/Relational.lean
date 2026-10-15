@@ -16,6 +16,7 @@ import GoLean.GoCore.RelationalEntry
 import GoLean.GoCore.RelationalPhase
 import GoLean.GoCore.RelationalPhaseSound
 import GoLean.GoCore.RelationalProgram
+import GoLean.GoCore.RelationalProgramOutcomeSound
 import GoLean.GoCore.RelationalObservation
 
 /-! The first-cut relational surface. See `docs/relational-interface.md` for

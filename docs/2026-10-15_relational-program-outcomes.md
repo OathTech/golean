@@ -11,7 +11,7 @@ Baseline implementation: `55ad72493061b59363e846341380a9edce12a2de`.
 Baseline audit/handoff: `cb8f2809b73edccddc5494a422e2c3b2b428180e`.
 The lane is `refactor/relational-surface-1013`; no baseline pin is rewritten.
 
-## Candidate interface
+## Interface and early checkpoint
 
 [AGENT] 2026-10-15: compose semantic phase carriers with C1 local executions.
 Retain separate optional initialization/body segments and an explicit failure
@@ -19,11 +19,18 @@ phase/cause. Keep tapes, successful executable prefixes and program-driver
 names in correspondence propositions/proofs. The common supplied budget is
 passed in full to each local phase, not split or subtracted across phases.
 
-The candidate lives in `experiments/2026-10-15-program-outcomes/` under
-`GoLean.GoCore.Relational.ProgramExecution`. It is not exported by the facade
-yet. `ProgramOutcomeConstraint.lean` contains the carriers and exact named
-coverage/realization/exclusion propositions; `ProgramOutcomeSound.lean` is the
-implementation draft. No axiom, hole or assumed instance supplies an obligation.
+Early checked interface checkpoint:
+`bd2e6c391778d3ca7cbac92fbafdfa7e586655c6`. At that pin the candidate carriers
+and named obligations live in `experiments/2026-10-15-program-outcomes/`.
+Its two theorem declarations compile, print standard axioms and replay exactly.
+
+The implementation now exports `GoLean.GoCore.Relational.ProgramExecution`
+through `GoLean.Relational`. Semantic carriers live in
+`GoLean/GoCore/RelationalProgramOutcome.lean`; bridge statements and closed
+proofs live in `RelationalProgramOutcomeSound.lean`. The experimental constraint
+is retained as a facade-only client of its exact original bridge propositions;
+`Tests/RelationalProgramOutcomes.lean` checks those same propositions in the
+default build. No axiom, hole or assumed instance supplies an obligation.
 
 - `Validation` preserves entry lookup, arity, then reserved-type-prefix order.
 - `Seeding` starts at the empty store and retains the actual post-seed validity
@@ -52,16 +59,125 @@ suffix; errors return neither endpoint nor labels either.
 
 ## Status and checks
 
-The early interface checkpoint compiles against the unchanged C1 facade. Its
-only two theorem declarations (`Seeding.invalid_unreachable` and
-`initialization_projection`) report only standard axioms, and exact kernel
-replay of `ProgramOutcomeConstraint` passes. The C1 dependency build passes
-54 jobs without warnings. The correspondence implementation is still a draft;
-no completed coverage, C2 completeness or consumer acceptance claim is made
-at this checkpoint. Full CI/differential checks belong to the implementation
-handoff, not this experimental interface checkpoint.
+The production modules, facade and clients compile warning-free. Closed laws
+are:
 
-Reproduce from this worktree:
+- `Correspondence.coverage : Coverage`: for every program, name, arguments,
+  fuel and selected tape, there exist history, outcome and semantic suffix with
+  `Execution`, exact `HistoryReplay`, and equality to the projected driver result.
+- `Correspondence.realization : Realization`: every admitted execution is
+  realizable with any prescribed final suffix, preserving the supplied history.
+- `Correspondence.initialization_coverage` / `.initialization_realization`:
+  component correspondence for arbitrary context, supplied store and budget,
+  retaining absent/malformed/executed initialization and exact wrapping.
+- `Correspondence.setup_coverage` / `.setup_realization`: ordered validation,
+  empty-store globals, initialization and activation, including every failure.
+- `Correspondence.initialization_projection`: `initStop e = markInitPhase e`.
+- `Correspondence.refusal_exclusion : RefusalExclusion` and
+  `.fatal_exclusion : FatalExclusion`: separate transfers from semantic
+  `Avoids` over all alternatives and budgets. Coverage has neither premise.
+- `normal_iff`: semantic successful existence is equivalent to the existing
+  `ProgramNormal` with independent initialization/body label-length bounds.
+  This is behavior-set compatibility, not equality of an arbitrarily supplied
+  original success history.
+
+The default facade client supplies the four exact early obligations, a generic
+selected-history realization, and the normal-body/readback composition law.
+Its controls cover lookup before invalid type prefix, arity before invalid
+prefix, malformed initializer before fuel, exact initialization wrapping and
+priority over main failure, ordinary initialization failure after the fuel
+guard, and three init steps plus three main steps succeeding with budget three.
+A valid print reaches the initialization guard with no remaining fuel and is
+refused before exhaustion. C1's existing local clients remain in the build.
+
+Full CI/differential and whole-project exhaustive axiom/replay checks pass.
+Fresh independent implementation review has completed with no concrete semantic
+or proof defect; exact-pin confirmation follows the implementation commit. No C2 completeness or consumer acceptance
+claim is made yet. C1's completed scope and audit remain at their unchanged pins;
+its success-only `ProgramNormal` and earlier RD5 contracts are retained.
+
+The exact downstream `closed_program_init_outcomes` constraint has not yet
+been relayed. It is required before final consumer acceptance; upstream work
+continues meanwhile. Do not infer an Iris migration or observed adequacy result
+from this semantic development.
+
+## Validation at the implementation source freeze
+
+- Default build: PASS, 220 jobs, warning-free; all 396 interpreter checks pass.
+  Existing core totality audit: PASS, covering all 92 `GoLean/` modules and
+  imported local declarations, including the new facade client.
+- All headline/client axiom reports contain only the standard trio.
+- Exact kernel replay: PASS for 93 GoLean modules including the root and the
+  four named Tests modules, 97 total. Requested and replayed name sets and
+  multiplicities agree: no missing, extra or duplicated module.
+- Frozen GoLean-only RD5 A–F adapters: PASS, 64 jobs; seven headline laws and
+  all 67 local request/adapter/audit declarations use standard axioms only.
+  Replay of all three request modules, two adapters and scratch audit passes.
+  The inputs are unchanged at logic `8cf7c1652587366f324c1159a89d72cd0d297cf8`.
+  No fresh downstream Iris result is claimed.
+- Independent implementation reviewer: separate rebuild/replay of the two
+  production modules, facade and client; all 281 owned declarations checked
+  with standard axioms only. Additional independent ordering, output and
+  inversion controls pass. No concrete semantic/proof defect found. This is
+  separate evidence from the author's full CI and RD5 regression.
+- `scripts/ci --diff`: PASS, 1,073 seconds. Fresh differential: 3,989 cases,
+  3,749 PASS and 240 tracked FAIL; all 405 negative cases pass. Both full
+  baseline comparisons report no regression. Scheduler whole-tape checks and
+  derived-artifact comparisons pass. The run certifies the precommit source
+  freeze; its metadata honestly records the dirty worktree, then the immutable
+  commit is compared with the reviewed source hashes.
+
+The first CI invocation's citation **speedbump failed** because it enumerated
+the tracked early constraint during its temporary relocation. The retained
+facade-only constraint restored that path; rerunning `scripts/check-spec-anchors`
+passes (1,108 spec, 262 memory and 26 Go documentation citations). No gate was
+waived or weakened. The original speedbump red is not relabeled as a pass.
+
+The shell supplied `TMPDIR=/home/mike/projects/golean/.tmp`; existing CI
+scripts used it for transient script-owned manifest scratch, then removed those
+files. Reproduction below explicitly scopes `TMPDIR` to the lane. No logic or
+concurrency worktree, tracked primary source or live pin was modified.
+
+## Preparatory review disposition
+
+The independent phase-interface review examined exact checkpoint `bd2e6c39`,
+compiled it and independent ordering/budget controls, and replayed both modules.
+It found no concrete carrier mismatch; this is not the final implementation
+review. The control source has been incorporated into the maintained facade
+client, where the author also rebuilds it.
+
+**R1 — readback reachability:** answered with explicit scope. Successful body
+execution does not make arbitrary supplied result locations readable: the
+component control combines a zero-cost normal execution with failing readback.
+The generic `after_normal_body` client also constructs the whole-program
+readback-failure case from an actual `Setup`, body execution and readback
+failure. Neither is presented as a concrete program reaching an invented bad
+store. Whole-program readback-failure reachability or impossibility has not
+been proved. The unrestricted coverage theorem retains this branch, without
+assuming readback success. This remains a limitation of the concrete control,
+not an established impossibility or a weakened program correspondence claim.
+
+## Reproduction
+
+From this worktree using the installed pinned Lean 4.32.2 toolchain:
+
+```sh
+TMPDIR="$PWD/.tmp" LEAN_NUM_THREADS=2 capped scripts/ci --diff
+LEAN_NUM_THREADS=2 capped lake env lean Tests/RelationalProgramOutcomes.lean
+TMPDIR="$PWD/.tmp" LEAN_NUM_THREADS=2 capped scripts/check-core-audit
+LEAN_NUM_THREADS=2 capped lake env leanchecker --verbose GoLean \
+  Tests.RelationalContracts Tests.RelationalOutcomes \
+  Tests.RelationalProgramOutcomes Tests.GoCoreAudit
+```
+
+The core audit discovers every `GoLean/` source module on disk and checks all
+imported local declarations, including generated/private declarations and the
+new facade client. The allowed axiom set remains `propext`, `Classical.choice`,
+`Quot.sound`. No newer `lake check` claim is made for this toolchain. Exact
+replay names and multiplicities are compared with the GoLean source set plus
+the four named Tests modules.
+
+The early checkpoint can be independently reproduced at `bd2e6c39` with:
 
 ```sh
 mkdir -p .tmp/c2
@@ -70,22 +186,29 @@ LEAN_NUM_THREADS=2 capped lake env lean -o .tmp/c2/ProgramOutcomeConstraint.olea
   experiments/2026-10-15-program-outcomes/ProgramOutcomeConstraint.lean
 LEAN_NUM_THREADS=2 LEAN_PATH="$PWD/.tmp/c2" capped lake env leanchecker \
   ProgramOutcomeConstraint
-``` C1's completed scope and audit remain at their
-unchanged pins; its success-only `ProgramNormal` and earlier RD5 contracts are
-retained.
+```
 
-The exact downstream `closed_program_init_outcomes` constraint has not yet
-been relayed. It is required before final consumer acceptance; upstream work
-continues meanwhile. Do not infer an Iris migration or observed adequacy result
-from this semantic development.
+The same commands at the implementation pin instead check the four completed
+facade bridge obligations. The original checkpoint remains independently
+consumable; it is not rewritten.
+
+Frozen RD5 semantic regression uses logic
+`8cf7c1652587366f324c1159a89d72cd0d297cf8` read-only. Follow the
+[RD5 reproduction](2026-10-14_relational-composition-acceptance.md#reproduction)
+in independent scratch, copying `CompositionRequests`, `ContinuationRequests`
+and `ResidualRequests`, and both documented exact adapters. Require this
+GoLean worktree by local path; build both adapters, print their headline axioms,
+audit all owned request/adapter declarations, and replay those five local
+modules. This is a GoLean-only A–F regression, not a new Iris acceptance run.
 
 ## Remaining work
 
-Check the interface checkpoint; finish all-outcome coverage/realization and
-phase/error/exclusion laws; preserve successful-program compatibility; export
-and test facade clients; consume the relayed initialized-program constraint;
-run required CI/differential, headline/exhaustive axioms and exact kernel replay;
-obtain fresh independent implementation review and disposition findings.
+Upstream implementation and author checks are complete. Exact-pin independent
+review confirmation is recorded with the handoff. Consumer acceptance remains
+pending the exact initialized-program constraint; consume it without changing
+its premises, observers or histories before declaring C2 complete. This is an
+upstream-only checkpoint. The readback control's reachability limitation above
+is retained.
 
 Sequential finite program correspondence remains distinct from full observed
 adequacy, CLI/frontend correctness, concurrency, infinite-run bisimilarity,
