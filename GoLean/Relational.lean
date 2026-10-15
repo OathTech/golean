@@ -20,6 +20,9 @@ import GoLean.GoCore.RelationalProgramOutcomeSound
 import GoLean.GoCore.RelationalEventSound
 import GoLean.GoCore.RelationalHistory
 import GoLean.GoCore.ShadowHistory
+import GoLean.GoCore.RelationalLocality
+import GoLean.GoCore.RelationalUnseqEntry
+import GoLean.GoCore.RelationalUnseqOperations
 
 /-! The developing relational reasoning surface. See `docs/relational-interface.md` for
 the supported contracts, separate correspondence theorems and explicit gaps.
