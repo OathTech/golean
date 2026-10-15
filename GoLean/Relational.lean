@@ -18,7 +18,8 @@ import GoLean.GoCore.RelationalPhaseSound
 import GoLean.GoCore.RelationalProgram
 import GoLean.GoCore.RelationalProgramOutcomeSound
 import GoLean.GoCore.RelationalObservation
+import GoLean.GoCore.ShadowHistory
 
-/-! The first-cut relational surface. See `docs/relational-interface.md` for
+/-! The developing relational reasoning surface. See `docs/relational-interface.md` for
 the supported contracts, separate correspondence theorems and explicit gaps.
 This import contains no Iris or client proof representation. -/

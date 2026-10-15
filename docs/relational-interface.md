@@ -1,8 +1,10 @@
 # Relational interface
 
 Import `GoLean.Relational`; open `GoLean.GoCore.Relational`. This is an
-initial surface for a small logic demo, not a replacement for all existing
-adequacy roots. Build semantic arguments over the contracts below, then use
+developing reasoning surface with checked construct laws and complete bounded
+local/sequential-program outcomes. Full replacement of the customer's finite
+non-concurrent reasoning interface remains the landing target; the current
+integration checkpoint does not establish it. Build semantic arguments over the contracts below, then use
 driver correspondence for executable conclusions. No Iris representation is
 imported. The implementation request and provenance are recorded in
 `2026-10-13_relational-surface-refactor.md`.
@@ -75,6 +77,33 @@ as well: `ReturnsDiscarded.pure` is the concrete example of a base-label
 pure step with a return event. Use `PureFor` with the chosen observation
 projection before deriving an observation-free logic rule.
 
+## Detector history contracts
+
+The same facade exports `GoLean.GoCore.LocationOrder`, `ShadowOrder` and
+`ShadowHistory` (module names under `GoLean/GoCore/`; declarations live
+in `GoLean.GoCore` and `GoLean.GoCore.Machine`). `Loc` and `ShadowKey` have checked `Std.LawfulEqOrd`
+and `Std.TransOrd` instances. Location comparison preserves the pinned
+derived constructor/component order for arbitrary base, field and index
+paths; `loc_compare_unfold` and `loc_comparison_unique` specify the source
+algorithm. They do not prove equality to the former opaque constant.
+
+`shadowSet_lookup_self`, `shadowSet_lookup_other` and `shadowSet_other_mem`
+give exact replacement/retention observations. `ShadowOrdered` is strict
+key order; `.keys_nodup` derives uniqueness. `shadowSet_ordered` preserves
+it, and `PoolPrefix.shadow_ordered_empty` establishes it for every actual
+detector-checked prefix from the empty detector. `PoolPrefix.preserves_lookup`
+retains a key's history across successful prefixes whose events avoid that
+exact key, including attributed accesses and HB actions. Different keys can
+overlap: the premise is key inequality, not memory separation, and detector
+success is still required. Canonicalization erases static field type spelling
+at emission; comparison itself is structural on all supplied keys.
+
+These are detector data-structure laws, not a general race-freedom or Iris
+ownership theorem. The two retained experimental executions and the now
+unconditional negative control are described in
+`2026-10-15_relational-detector-contracts.md`, including remaining implementation
+findings and the limits of old/new preservation evidence.
+
 ## Limits that matter to the demo
 
 The foundational `State` still contains machine control. `Continuation` and
@@ -101,8 +130,8 @@ the program driver returns neither a tape suffix nor an error endpoint.
 `ProgramNormal` and separate label-length bounds; it does not assert identity
 of an arbitrary supplied original success history. The validated-entry corollary
 `ProgramExecution.Correspondence.phase_projection` preserves the exact supplied
-tape and both full phase budgets; its exact RD6 consumer acceptance is being
-checked. Its entry premises do not narrow unrestricted coverage. This is not an
+tape and both full phase budgets; its exact RD6 consumer acceptance is checked
+at the immutable C2 pin. Its entry premises do not narrow unrestricted coverage. This is not an
 Iris adequacy theorem or an observation-completeness claim.
 
 The observation API lacks a complete entry census theorem, general target
@@ -171,3 +200,13 @@ unconditional all-program `coverage`. Both frozen phase and original program
 consumers compile with the law supplied; the program consumer still explicitly
 requires downstream Iris `InitAssembly`. `InitInvocation` is reused unchanged.
 See the stage's independent audit and exact private-package reproduction.
+
+The [development integration stage](2026-10-15_relational-integration-stage.md)
+records reconciliation with current main and D1, combined validation and the
+remaining landing obligations. Concurrent and infinite-run extensions must
+remain possible: transitions and compositional prefixes have no driver-fuel
+or termination premise. A store path is a sequence of steps, not an atomic
+pool action; read stability under interference requires preservation of its
+actual store fact. Access labels, observations, picks and registered scheduling
+boundaries remain available to pool reasoning. Selected concurrency controls
+do not prove all-schedule safety, fairness or infinite-run adequacy.

@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Finite executable controls, not an equivalence theorem. Both builds are
+# private; the historical experiment and peer worktrees are never written.
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/../.." && pwd -P)"
+BASELINE=55ad72493061b59363e846341380a9edce12a2de
+export LEAN_NUM_THREADS=2
+mkdir -p "$ROOT/.tmp"
+scratch="$(mktemp -d "$ROOT/.tmp/d1-preservation.XXXXXX")"
+trap 'rm -rf "$scratch"' EXIT
+mkdir "$scratch/old"
+git -C "$ROOT" archive "$BASELINE" | tar -x -C "$scratch/old"
+control="$ROOT/experiments/2026-10-14-concurrency-compatibility/DetectorControls.lean"
+(
+  cd "$scratch/old"
+  capped lake build GoLean.GoCore.Race
+  capped lake env lean --run "$control" > "$scratch/old.txt"
+)
+(
+  cd "$ROOT"
+  capped lake build GoLean.GoCore.Race
+  capped lake env lean --run "$control" > "$scratch/new.txt"
+)
+cmp "$scratch/old.txt" "$scratch/new.txt"
+echo "PASS: old/new comparator, shadow ordering and detector controls match byte-for-byte"
