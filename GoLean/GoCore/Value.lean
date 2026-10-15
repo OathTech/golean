@@ -1,4 +1,4 @@
-import GoLean.GoCore.Platform
+import GoLean.GoCore.Rendering
 
 namespace GoLean
 
@@ -596,7 +596,56 @@ inductive Ty where
   Zero value = the zero primitive (`GoValue.syncData`). Appended at the
   END of the inductive so positional case tags stay stable. -/
   | sync (kind : GoCore.SyncKind)
-  deriving Repr, Inhabited
+  deriving Inhabited
+
+mutual
+
+/-- Total form of the pinned derived renderer, retaining every constructor and precedence. -/
+def Ty.render : Ty → Nat → Std.Format
+  | .bool, prec =>
+      Rendering.app "GoLean.GoCore.Ty.bool" [] prec
+  | .int a0, prec =>
+      Rendering.app "GoLean.GoCore.Ty.int" [reprArg a0] prec
+  | .float a0, prec =>
+      Rendering.app "GoLean.GoCore.Ty.float" [reprArg a0] prec
+  | .string, prec =>
+      Rendering.app "GoLean.GoCore.Ty.string" [] prec
+  | .array a0 a1, prec =>
+      Rendering.app "GoLean.GoCore.Ty.array" [reprArg a0, Ty.render a1 max_prec] prec
+  | .slice a0, prec =>
+      Rendering.app "GoLean.GoCore.Ty.slice" [Ty.render a0 max_prec] prec
+  | .map a0 a1, prec =>
+      Rendering.app "GoLean.GoCore.Ty.map" [Ty.render a0 max_prec, Ty.render a1 max_prec] prec
+  | .chan a0 a1, prec =>
+      Rendering.app "GoLean.GoCore.Ty.chan" [reprArg a0, Ty.render a1 max_prec] prec
+  | .pointer a0, prec =>
+      Rendering.app "GoLean.GoCore.Ty.pointer" [Ty.render a0 max_prec] prec
+  | .funcType a0 a1 a2, prec =>
+      Rendering.app "GoLean.GoCore.Ty.funcType" [Rendering.list (Ty.renderItems a0), Rendering.list (Ty.renderItems a1), reprArg a2] prec
+  | .interface a0, prec =>
+      Rendering.app "GoLean.GoCore.Ty.interface" [reprArg a0] prec
+  | .defined a0, prec =>
+      Rendering.app "GoLean.GoCore.Ty.defined" [reprArg a0] prec
+  | .unsupported a0, prec =>
+      Rendering.app "GoLean.GoCore.Ty.unsupported" [reprArg a0] prec
+  | .sync a0, prec =>
+      Rendering.app "GoLean.GoCore.Ty.sync" [reprArg a0] prec
+
+def Ty.renderItems : List Ty → List Std.Format
+  | [] => []
+  | a :: rest => Ty.render a 0 :: Ty.renderItems rest
+
+end
+
+instance : Repr Ty := ⟨Ty.render⟩
+
+/-- The executed instance uses the total renderer at every precedence. -/
+theorem Ty.reprPrec_eq_render (v : Ty) (prec : Nat) :
+    reprPrec v prec = Ty.render v prec := rfl
+
+/-- The ordinary diagnostic rendering uses precedence zero. -/
+theorem Ty.repr_eq_render (v : Ty) : repr v = Ty.render v 0 := rfl
+
 
 /-! **Why `Ty` does NOT `deriving BEq`** (quorum pilot phase 4,
 2026-07-31). `Ty` is a NESTED inductive (`funcType` carries `List Ty`), and
@@ -918,7 +967,61 @@ inductive GoValue where
   sync struct lives (spec-parity slice 2, design note §3 — the VALUE
   model: copies carry state, probe p10). Contains no locations. -/
   | syncData (p : SyncPrim)
-  deriving Repr
+
+mutual
+
+/-- Total form of the pinned derived renderer, retaining every constructor and precedence. -/
+def GoValue.render : GoValue → Nat → Std.Format
+  | .unit, prec =>
+      Rendering.app "GoLean.GoValue.unit" [] prec
+  | .bool a0, prec =>
+      Rendering.app "GoLean.GoValue.bool" [reprArg a0] prec
+  | .int a0 a1, prec =>
+      Rendering.app "GoLean.GoValue.int" [reprArg a0, reprArg a1] prec
+  | .float a0 a1, prec =>
+      Rendering.app "GoLean.GoValue.float" [reprArg a0, reprArg a1] prec
+  | .string a0, prec =>
+      Rendering.app "GoLean.GoValue.string" [reprArg a0] prec
+  | .addr a0, prec =>
+      Rendering.app "GoLean.GoValue.addr" [reprArg a0] prec
+  | .nil, prec =>
+      Rendering.app "GoLean.GoValue.nil" [] prec
+  | .interface a0 a1, prec =>
+      Rendering.app "GoLean.GoValue.interface" [reprArg a0, GoValue.render a1 max_prec] prec
+  | .struct a0 a1, prec =>
+      Rendering.app "GoLean.GoValue.struct" [reprArg a0, Rendering.array (GoValue.renderFields a1.toList)] prec
+  | .array a0, prec =>
+      Rendering.app "GoLean.GoValue.array" [Rendering.array (GoValue.renderItems a0.toList)] prec
+  | .slice a0, prec =>
+      Rendering.app "GoLean.GoValue.slice" [reprArg a0] prec
+  | .map a0, prec =>
+      Rendering.app "GoLean.GoValue.map" [reprArg a0] prec
+  | .chan a0, prec =>
+      Rendering.app "GoLean.GoValue.chan" [reprArg a0] prec
+  | .funcVal a0 a1, prec =>
+      Rendering.app "GoLean.GoValue.funcVal" [reprArg a0, Rendering.list (GoValue.renderItems a1)] prec
+  | .syncData a0, prec =>
+      Rendering.app "GoLean.GoValue.syncData" [reprArg a0] prec
+
+def GoValue.renderItems : List GoValue → List Std.Format
+  | [] => []
+  | a :: rest => GoValue.render a 0 :: GoValue.renderItems rest
+
+def GoValue.renderFields : List (String × GoValue) → List Std.Format
+  | [] => []
+  | (key, value) :: rest => Rendering.pair (repr key) (GoValue.render value 0) :: GoValue.renderFields rest
+
+end
+
+instance : Repr GoValue := ⟨GoValue.render⟩
+
+/-- The executed instance uses the total renderer at every precedence. -/
+theorem GoValue.reprPrec_eq_render (v : GoValue) (prec : Nat) :
+    reprPrec v prec = GoValue.render v prec := rfl
+
+/-- The ordinary diagnostic rendering uses precedence zero. -/
+theorem GoValue.repr_eq_render (v : GoValue) : repr v = GoValue.render v 0 := rfl
+
 
 
 /-! ## Structural `GoValue` equality (arc-final audit, 2026-08-04)

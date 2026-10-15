@@ -1,0 +1,15 @@
+name = "RendererChecks"
+defaultTargets = ["RendererAudit"]
+
+[[require]]
+name = "GoLean"
+path = "../.."
+
+[[lean_lib]]
+name = "Derivation"
+
+[[lean_lib]]
+name = "SemanticLinks"
+
+[[lean_lib]]
+name = "RendererAudit"

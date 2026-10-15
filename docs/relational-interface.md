@@ -157,6 +157,20 @@ These are semantic payload/timing and projection theorems, not executed renderer
 correspondence or live trust-artifact migration. See the O1 stage for the exact
 renderer obligations and consumer validation status.
 
+The core diagnostic instances for `Ty`, `GoValue` and `Expr` now execute the
+transparent total `Ty.render`, `GoValue.render` and `Expr.render` definitions.
+Each exports `reprPrec_eq_render` and `repr_eq_render` through this facade.
+Nested containers and every constructor/precedence are covered; no client
+renderer-correctness premise is required. Checked constructor/container equations
+and the separately reviewed preservation argument against the old executed
+opaque bodies are recorded in
+[`2026-10-15_relational-rendering-stage.md`](2026-10-15_relational-rendering-stage.md).
+This does not assert a kernel equality to the former opaque constants or resolve
+unrelated statement/Declaration/seed renderers, derived equality, parser/explorer
+or downstream implementation findings. Semantic event completeness remains a
+distinct result from preservation of executed text formatting.
+
+
 Root support is deliberately coarse. Path non-overlap, context extension
 across allocator bounds, a whole-step effect census and general `unseq`
 sequentialization remain open. Primitive write commutation does not equate

@@ -341,7 +341,154 @@ inductive Expr where
   `docs/2026-07-25_unwinding-arc.md` §A1). -/
   | recoverCall
   | unsupported (feature : String)
-  deriving Repr, BEq, Inhabited
+  deriving BEq, Inhabited
+
+mutual
+
+/-- Total form of the pinned derived renderer, retaining every constructor and precedence. -/
+def Expr.render : Expr → Nat → Std.Format
+  | .var a0, prec =>
+      Rendering.app "GoLean.GoCore.Expr.var" [reprArg a0] prec
+  | .nil a0, prec =>
+      Rendering.app "GoLean.GoCore.Expr.nil" [reprArg a0] prec
+  | .intLit a0 a1, prec =>
+      Rendering.app "GoLean.GoCore.Expr.intLit" [reprArg a0, reprArg a1] prec
+  | .floatLit a0 a1 a2, prec =>
+      Rendering.app "GoLean.GoCore.Expr.floatLit" [reprArg a0, reprArg a1, reprArg a2] prec
+  | .stringLit a0, prec =>
+      Rendering.app "GoLean.GoCore.Expr.stringLit" [reprArg a0] prec
+  | .boolLit a0, prec =>
+      Rendering.app "GoLean.GoCore.Expr.boolLit" [reprArg a0] prec
+  | .convert a0 a1, prec =>
+      Rendering.app "GoLean.GoCore.Expr.convert" [reprArg a0, Expr.render a1 max_prec] prec
+  | .bytesFromString a0, prec =>
+      Rendering.app "GoLean.GoCore.Expr.bytesFromString" [Expr.render a0 max_prec] prec
+  | .stringFromByteSlice a0, prec =>
+      Rendering.app "GoLean.GoCore.Expr.stringFromByteSlice" [Expr.render a0 max_prec] prec
+  | .stringFromRune a0, prec =>
+      Rendering.app "GoLean.GoCore.Expr.stringFromRune" [Expr.render a0 max_prec] prec
+  | .add a0 a1, prec =>
+      Rendering.app "GoLean.GoCore.Expr.add" [Expr.render a0 max_prec, Expr.render a1 max_prec] prec
+  | .sub a0 a1, prec =>
+      Rendering.app "GoLean.GoCore.Expr.sub" [Expr.render a0 max_prec, Expr.render a1 max_prec] prec
+  | .mul a0 a1, prec =>
+      Rendering.app "GoLean.GoCore.Expr.mul" [Expr.render a0 max_prec, Expr.render a1 max_prec] prec
+  | .div a0 a1, prec =>
+      Rendering.app "GoLean.GoCore.Expr.div" [Expr.render a0 max_prec, Expr.render a1 max_prec] prec
+  | .mod a0 a1, prec =>
+      Rendering.app "GoLean.GoCore.Expr.mod" [Expr.render a0 max_prec, Expr.render a1 max_prec] prec
+  | .shiftLeft a0 a1, prec =>
+      Rendering.app "GoLean.GoCore.Expr.shiftLeft" [Expr.render a0 max_prec, Expr.render a1 max_prec] prec
+  | .shiftRight a0 a1, prec =>
+      Rendering.app "GoLean.GoCore.Expr.shiftRight" [Expr.render a0 max_prec, Expr.render a1 max_prec] prec
+  | .bitAnd a0 a1, prec =>
+      Rendering.app "GoLean.GoCore.Expr.bitAnd" [Expr.render a0 max_prec, Expr.render a1 max_prec] prec
+  | .bitOr a0 a1, prec =>
+      Rendering.app "GoLean.GoCore.Expr.bitOr" [Expr.render a0 max_prec, Expr.render a1 max_prec] prec
+  | .bitXor a0 a1, prec =>
+      Rendering.app "GoLean.GoCore.Expr.bitXor" [Expr.render a0 max_prec, Expr.render a1 max_prec] prec
+  | .bitClear a0 a1, prec =>
+      Rendering.app "GoLean.GoCore.Expr.bitClear" [Expr.render a0 max_prec, Expr.render a1 max_prec] prec
+  | .bitNeg a0, prec =>
+      Rendering.app "GoLean.GoCore.Expr.bitNeg" [Expr.render a0 max_prec] prec
+  | .neg a0, prec =>
+      Rendering.app "GoLean.GoCore.Expr.neg" [Expr.render a0 max_prec] prec
+  | .eqCmp a0 a1 a2, prec =>
+      Rendering.app "GoLean.GoCore.Expr.eqCmp" [reprArg a0, Expr.render a1 max_prec, Expr.render a2 max_prec] prec
+  | .neqCmp a0 a1 a2, prec =>
+      Rendering.app "GoLean.GoCore.Expr.neqCmp" [reprArg a0, Expr.render a1 max_prec, Expr.render a2 max_prec] prec
+  | .atMostCmp a0 a1, prec =>
+      Rendering.app "GoLean.GoCore.Expr.atMostCmp" [Expr.render a0 max_prec, Expr.render a1 max_prec] prec
+  | .atLeastCmp a0 a1, prec =>
+      Rendering.app "GoLean.GoCore.Expr.atLeastCmp" [Expr.render a0 max_prec, Expr.render a1 max_prec] prec
+  | .lessCmp a0 a1, prec =>
+      Rendering.app "GoLean.GoCore.Expr.lessCmp" [Expr.render a0 max_prec, Expr.render a1 max_prec] prec
+  | .greaterCmp a0 a1, prec =>
+      Rendering.app "GoLean.GoCore.Expr.greaterCmp" [Expr.render a0 max_prec, Expr.render a1 max_prec] prec
+  | .and a0 a1, prec =>
+      Rendering.app "GoLean.GoCore.Expr.and" [Expr.render a0 max_prec, Expr.render a1 max_prec] prec
+  | .or a0 a1, prec =>
+      Rendering.app "GoLean.GoCore.Expr.or" [Expr.render a0 max_prec, Expr.render a1 max_prec] prec
+  | .not a0, prec =>
+      Rendering.app "GoLean.GoCore.Expr.not" [Expr.render a0 max_prec] prec
+  | .ref a0, prec =>
+      Rendering.app "GoLean.GoCore.Expr.ref" [reprArg a0] prec
+  | .funcVal a0 a1, prec =>
+      Rendering.app "GoLean.GoCore.Expr.funcVal" [reprArg a0, Rendering.array (Expr.renderItems a1.toList)] prec
+  | .global a0, prec =>
+      Rendering.app "GoLean.GoCore.Expr.global" [reprArg a0] prec
+  | .deref a0 a1, prec =>
+      Rendering.app "GoLean.GoCore.Expr.deref" [Expr.render a0 max_prec, reprArg a1] prec
+  | .addrOfDeref a0, prec =>
+      Rendering.app "GoLean.GoCore.Expr.addrOfDeref" [Expr.render a0 max_prec] prec
+  | .structLit a0 a1, prec =>
+      Rendering.app "GoLean.GoCore.Expr.structLit" [reprArg a0, Rendering.array (Expr.renderItems a1.toList)] prec
+  | .fieldGet a0 a1 a2, prec =>
+      Rendering.app "GoLean.GoCore.Expr.fieldGet" [Expr.render a0 max_prec, reprArg a1, reprArg a2] prec
+  | .fieldAddr a0 a1 a2, prec =>
+      Rendering.app "GoLean.GoCore.Expr.fieldAddr" [Expr.render a0 max_prec, reprArg a1, reprArg a2] prec
+  | .arrayLit a0 a1 a2, prec =>
+      Rendering.app "GoLean.GoCore.Expr.arrayLit" [reprArg a0, reprArg a1, Rendering.array (Expr.renderFields a2.toList)] prec
+  | .defaultValue a0, prec =>
+      Rendering.app "GoLean.GoCore.Expr.defaultValue" [reprArg a0] prec
+  | .toInterface a0 a1 a2, prec =>
+      Rendering.app "GoLean.GoCore.Expr.toInterface" [reprArg a0, reprArg a1, Expr.render a2 max_prec] prec
+  | .typeAssert a0 a1 a2, prec =>
+      Rendering.app "GoLean.GoCore.Expr.typeAssert" [Expr.render a0 max_prec, reprArg a1, reprArg a2] prec
+  | .indexGet a0 a1, prec =>
+      Rendering.app "GoLean.GoCore.Expr.indexGet" [Expr.render a0 max_prec, Expr.render a1 max_prec] prec
+  | .indexAddr a0 a1, prec =>
+      Rendering.app "GoLean.GoCore.Expr.indexAddr" [Expr.render a0 max_prec, Expr.render a1 max_prec] prec
+  | .mapGet a0 a1 a2 a3, prec =>
+      Rendering.app "GoLean.GoCore.Expr.mapGet" [Expr.render a0 max_prec, Expr.render a1 max_prec, reprArg a2, reprArg a3] prec
+  | .slice a0 a1 a2 a3, prec =>
+      Rendering.app "GoLean.GoCore.Expr.slice" [Expr.render a0 max_prec, Expr.render a1 max_prec, Expr.render a2 max_prec, Rendering.option (Expr.renderOption a3) max_prec] prec
+  | .length a0 a1, prec =>
+      Rendering.app "GoLean.GoCore.Expr.length" [Expr.render a0 max_prec, reprArg a1] prec
+  | .capacity a0 a1, prec =>
+      Rendering.app "GoLean.GoCore.Expr.capacity" [Expr.render a0 max_prec, reprArg a1] prec
+  | .minOf a0, prec =>
+      Rendering.app "GoLean.GoCore.Expr.minOf" [Rendering.array (Expr.renderItems a0.toList)] prec
+  | .maxOf a0, prec =>
+      Rendering.app "GoLean.GoCore.Expr.maxOf" [Rendering.array (Expr.renderItems a0.toList)] prec
+  | .runeAt a0 a1, prec =>
+      Rendering.app "GoLean.GoCore.Expr.runeAt" [Expr.render a0 max_prec, Expr.render a1 max_prec] prec
+  | .runeSizeAt a0 a1, prec =>
+      Rendering.app "GoLean.GoCore.Expr.runeSizeAt" [Expr.render a0 max_prec, Expr.render a1 max_prec] prec
+  | .runesFromString a0, prec =>
+      Rendering.app "GoLean.GoCore.Expr.runesFromString" [Expr.render a0 max_prec] prec
+  | .stringFromRuneSlice a0, prec =>
+      Rendering.app "GoLean.GoCore.Expr.stringFromRuneSlice" [Expr.render a0 max_prec] prec
+  | .floatBits a0 a1, prec =>
+      Rendering.app "GoLean.GoCore.Expr.floatBits" [reprArg a0, Expr.render a1 max_prec] prec
+  | .recoverCall, prec =>
+      Rendering.app "GoLean.GoCore.Expr.recoverCall" [] prec
+  | .unsupported a0, prec =>
+      Rendering.app "GoLean.GoCore.Expr.unsupported" [reprArg a0] prec
+
+def Expr.renderItems : List Expr → List Std.Format
+  | [] => []
+  | a :: rest => Expr.render a 0 :: Expr.renderItems rest
+
+def Expr.renderFields : List (Int × Expr) → List Std.Format
+  | [] => []
+  | (key, value) :: rest => Rendering.pair (repr key) (Expr.render value 0) :: Expr.renderFields rest
+
+def Expr.renderOption : Option Expr → Option Std.Format
+  | none => none
+  | some a => some (Expr.render a max_prec)
+
+end
+
+instance : Repr Expr := ⟨Expr.render⟩
+
+/-- The executed instance uses the total renderer at every precedence. -/
+theorem Expr.reprPrec_eq_render (v : Expr) (prec : Nat) :
+    reprPrec v prec = Expr.render v prec := rfl
+
+/-- The ordinary diagnostic rendering uses precedence zero. -/
+theorem Expr.repr_eq_render (v : Expr) : repr v = Expr.render v 0 := rfl
+
 
 inductive Assignee where
   | var (id : VarId)
