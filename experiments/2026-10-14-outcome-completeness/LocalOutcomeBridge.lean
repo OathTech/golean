@@ -162,4 +162,170 @@ theorem main_realization_of_operation (failure : OperationFailure)
     rw [execStmtLoop_nonZero (stepFn_zeroCost_not_ok hstep), hstep]
     exact he
 
+theorem init_nonzero {ctx : ProgramCtx} {fuel : Nat} {s : Store} {c : Config}
+    {ch : Choices} (hz : ¬ ExecutionStatement.ZeroCost c) :
+    runInitConfig ctx fuel s c ch =
+      (match initPrintRefusal? c with
+       | some e => .error e
+       | none => match fuel with
+         | 0 => .error .fuelOut
+         | f + 1 => (stepFn ctx s c ch).bind fun r => runInitConfig ctx f r.2.1 r.1 r.2.2.1) := by
+  rw [runInitConfig.eq_def]
+  cases c <;> simp_all [ExecutionStatement.ZeroCost, Blocked]
+  all_goals rfl
+
+theorem print_not_zero {a : State} {bytes : GoString}
+    (hp : printOut? a.control = some bytes) : ¬ ExecutionStatement.ZeroCost a.control := by
+  rintro (hn | ⟨_, _, _, hn⟩ | ⟨_, _, _, _, _, hn⟩ | ⟨_, _, _, hn⟩ | ⟨_, _, _, _, hn⟩) <;>
+    rw [hn] at hp <;> cases hp
+
+theorem finish_admit_initialization {failure ctx a records o cost}
+    (h : C1.Finish failure .main ctx a records o cost)
+    (hp : Admitted .initialization a) : C1.Finish failure .initialization ctx a records o cost := by
+  cases h with
+  | boundary hb _ => exact .boundary hb (.inr hp)
+  | operation hz ha _ hf => exact .operation hz ha hp hf
+  | initializationPrint hm _ => cases hm
+
+theorem initialization_coverage_of_operation (failure : OperationFailure)
+    (coverage : OperationCoverage failure) : Coverage failure .initialization := by
+  intro ctx budget
+  induction budget with
+  | zero =>
+    intro a ch
+    by_cases hz : C1.ZeroCost ctx a
+    · obtain ⟨o, hx, he⟩ := zero_cost_coverage hz failure .initialization 0 ch
+      exact ⟨[], a, [], o, 0, ch, ch, hx, .done, rfl, he⟩
+    · cases hp : printOut? a.control with
+      | some bytes =>
+        refine ⟨[], a, [], .initializationPrint bytes, 0, ch, ch,
+          .finished (.initializationPrint rfl hp) (Nat.zero_le _), .done, rfl, ?_⟩
+        change runInitConfig ctx _ _ _ _ = _
+        rw [init_nonzero (print_not_zero hp), initialization_projection a bytes hp]
+        rfl
+      | none =>
+        refine ⟨[], a, [], .exhausted, 0, ch, ch, .exhausted hz hp, .done, rfl, ?_⟩
+        change runInitConfig ctx _ _ _ _ = _
+        rw [init_nonzero (fun h => hz (Boundary.zero_cost_iff.mpr h))]
+        simp [initPrintRefusal?, hp, observe, Outcome.stop?]
+  | succ budget ih =>
+    intro a ch
+    by_cases hz : C1.ZeroCost ctx a
+    · obtain ⟨o, hx, he⟩ := zero_cost_coverage hz failure .initialization (budget + 1) ch
+      exact ⟨[], a, [], o, 0, ch, ch, hx, .done, rfl, he⟩
+    · cases hp : printOut? a.control with
+      | some bytes =>
+        refine ⟨[], a, [], .initializationPrint bytes, 0, ch, ch,
+          .finished (.initializationPrint rfl hp) (Nat.zero_le _), .done, rfl, ?_⟩
+        change runInitConfig ctx _ _ _ _ = _
+        rw [init_nonzero (print_not_zero hp), initialization_projection a bytes hp]
+        rfl
+      | none =>
+        have hu := init_nonzero (ctx := ctx) (fuel := budget + 1) (s := a.store)
+          (ch := ch) (fun h => hz (Boundary.zero_cost_iff.mpr h))
+        simp only [initPrintRefusal?, hp] at hu
+        cases hs : stepFn ctx a.store a.control ch with
+        | error e =>
+          obtain ⟨records, o, tail, hf, hr, he⟩ := error_finish failure coverage hz hs
+          refine ⟨[], a, records, o, 1, ch, tail,
+            .finished (finish_admit_initialization hf hp) (Nat.succ_le_succ (Nat.zero_le _)),
+            .done, hr, ?_⟩
+          simpa only [driver, hs, Except.bind, ← he] using hu
+        | ok result =>
+          obtain ⟨c, s, nextCh, label⟩ := result
+          obtain ⟨ls, b, records, o, cost, middle, tail, hx, hpre, hr, he⟩ := ih ⟨c, s⟩ nextCh
+          refine ⟨label :: ls, b, records, o, cost + 1, middle, tail,
+            .step hp (stepFn_sound hs) hx, .step hs hpre, hr, ?_⟩
+          change runInitConfig ctx _ _ _ _ = _
+          rw [hu, hs]
+          exact he
+
+theorem boundary_initialization_realize {ctx : ProgramCtx} {a : State} {records : List PickRecord}
+    {ending : Ending} {cost budget : Nat} (h : Boundary ctx a records ending cost)
+    (enough : cost ≤ budget) (tail : Choices) :
+    ∃ ch, replays records ch tail ∧
+      driver .initialization ctx budget a ch = observe (.boundary ending) a tail := by
+  cases h with
+  | normal => exact ⟨tail, rfl, by simp [driver, runInitConfig, observe, Outcome.stop?]⟩
+  | send => exact ⟨tail, rfl, by simp [driver, runInitConfig, observe, Outcome.stop?]; rfl⟩
+  | recv => exact ⟨tail, rfl, by simp [driver, runInitConfig, observe, Outcome.stop?]; rfl⟩
+  | select => exact ⟨tail, rfl, by simp [driver, runInitConfig, observe, Outcome.stop?]; rfl⟩
+  | sync => exact ⟨tail, rfl, by simp [driver, runInitConfig, observe, Outcome.stop?]; rfl⟩
+  | panic ha hp hm =>
+    obtain ⟨ch, hc⟩ := hp.realize tail
+    refine ⟨ch, OperationCheck.Correspondence.consume_replays hc, ?_⟩
+    obtain ⟨ha, settled⟩ := abort?_some ha
+    cases budget with
+    | zero => omega
+    | succ budget =>
+      simp only [driver, ha]
+      rw [init_nonzero (by simp [ExecutionStatement.ZeroCost, Blocked])]
+      simp only [initPrintRefusal?, printOut?]
+      rw [stepFn_abort settled, hc]
+      simp only [hm, Except.bind]
+      rfl
+  | renderingRefusal ha hp hm =>
+    obtain ⟨ch, hc⟩ := hp.realize tail
+    refine ⟨ch, OperationCheck.Correspondence.consume_replays hc, ?_⟩
+    obtain ⟨ha, settled⟩ := abort?_some ha
+    cases budget with
+    | zero => omega
+    | succ budget =>
+      simp only [driver, ha]
+      rw [init_nonzero (by simp [ExecutionStatement.ZeroCost, Blocked])]
+      simp only [initPrintRefusal?, printOut?]
+      rw [stepFn_abort settled, hc]
+      simp only [hm, Except.bind]
+      rfl
+
+theorem finish_initialization_realize (failure : OperationFailure)
+    (replay : OperationReplay failure) (selections : OperationSelections failure)
+    {ctx : ProgramCtx} {a : State} {records : List PickRecord} {o : Outcome} {cost budget : Nat}
+    (h : C1.Finish failure .initialization ctx a records o cost)
+    (enough : cost ≤ budget) (tail : Choices) :
+    ∃ ch, replays records ch tail ∧ driver .initialization ctx budget a ch = observe o a tail := by
+  cases h with
+  | boundary hb _ => exact boundary_initialization_realize hb enough tail
+  | initializationPrint _ hp =>
+    refine ⟨tail, rfl, ?_⟩
+    change runInitConfig ctx _ _ _ _ = _
+    rw [init_nonzero (print_not_zero hp), initialization_projection a _ hp]
+    rfl
+  | operation hz _ hp hf =>
+    obtain ⟨ch, hr⟩ := selections _ _ _ _ hf tail
+    refine ⟨ch, hr, ?_⟩
+    have hs := replay _ _ _ _ hf ch tail hr
+    cases budget with
+    | zero => omega
+    | succ budget =>
+      change runInitConfig ctx _ _ _ _ = _
+      rw [init_nonzero (fun h => hz (Boundary.zero_cost_iff.mpr h))]
+      simp only [Admitted] at hp
+      simp only [initPrintRefusal?, hp, hs, Except.bind]
+      rfl
+
+theorem initialization_realization_of_operation (failure : OperationFailure)
+    (replay : OperationReplay failure) (selections : OperationSelections failure) :
+    Realization failure .initialization := by
+  intro ctx budget a ls b records o cost h tail
+  induction h with
+  | finished hf enough =>
+    obtain ⟨ch, hr, he⟩ := finish_initialization_realize failure replay selections hf enough tail
+    exact ⟨ch, ch, .done, hr, he⟩
+  | exhausted hz hp =>
+    refine ⟨tail, tail, .done, rfl, ?_⟩
+    change runInitConfig ctx _ _ _ _ = _
+    rw [init_nonzero (fun h => hz (Boundary.zero_cost_iff.mpr h))]
+    simp only [Admitted] at hp
+    simp [initPrintRefusal?, hp, observe, Outcome.stop?]
+  | step hp hs _ ih =>
+    obtain ⟨ch, middle, hpre, hr, he⟩ := ih
+    obtain ⟨start, oldTail, hstep⟩ := step_complete hs
+    obtain ⟨start, hstep⟩ := stepFn_any_residual hstep ch
+    refine ⟨start, middle, .step hstep hpre, hr, ?_⟩
+    change runInitConfig ctx _ _ _ _ = _
+    rw [init_nonzero (stepFn_zeroCost_not_ok hstep)]
+    simp only [Admitted] at hp
+    simpa only [driver, initPrintRefusal?, hp, hstep, Except.bind] using he
+
 end GoLean.GoCore.Relational.C1.Correspondence

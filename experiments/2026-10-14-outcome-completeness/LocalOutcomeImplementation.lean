@@ -59,5 +59,17 @@ theorem main_refusal_exclusion : RefusalExclusion ordinaryFailure .main :=
 theorem main_fatal_exclusion : FatalExclusion ordinaryFailure .main :=
   fatal_exclusion_of_coverage ordinaryFailure .main main_coverage
 
+theorem initialization_coverage : Coverage ordinaryFailure .initialization :=
+  initialization_coverage_of_operation ordinaryFailure ordinary_failure_coverage
+
+theorem initialization_realization : Realization ordinaryFailure .initialization :=
+  initialization_realization_of_operation ordinaryFailure ordinary_failure_replay ordinary_failure_selections
+
+theorem initialization_refusal_exclusion : RefusalExclusion ordinaryFailure .initialization :=
+  refusal_exclusion_of_coverage ordinaryFailure .initialization initialization_coverage
+
+theorem initialization_fatal_exclusion : FatalExclusion ordinaryFailure .initialization :=
+  fatal_exclusion_of_coverage ordinaryFailure .initialization initialization_coverage
+
 end Correspondence
 end GoLean.GoCore.Relational.C1
