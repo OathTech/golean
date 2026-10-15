@@ -1,5 +1,45 @@
 # C1 local outcome completeness — first constraint checkpoint
 
+## Checked main-mode implementation checkpoint (2026-10-15)
+
+The original constraint checkpoint below is retained as provenance. Main-mode
+implementation is now checked in the same experiment; initialization and public
+facade integration are still pending. Nothing in the E/F public surface changes.
+
+[AGENT] 2026-10-15: represent failed operations by compositional checks with
+guard-local `Selection` nodes. `ordinaryFailure` is `OperationCheck.Rejects`
+over the check at the supplied state, with the exact refusal/fatal cause. The
+relation contains no evaluator or tape. Check success is only absence of a
+failure at that check, not a claimed successful transition.
+
+The concrete `Correspondence.ordinary_failure_coverage`,
+`ordinary_failure_replay` and `ordinary_failure_selections` discharge the three
+operation obligations. `main_coverage` and `main_realization` instantiate the
+full bounded local correspondence without well-formedness or success premises.
+`main_refusal_exclusion` and `main_fatal_exclusion` are separate unconditional
+transfer laws from their explicitly quantified `Avoids` predicates. Structural
+`OperationCheck.Correspondence.replay_exact` retains the complete consultation
+witness, including the suffix, rather than only the resulting cause.
+
+Preparatory independent constraint review found that the original three
+operation obligations alone permit fabricated records on an unsupported
+expression; it also checked that `seqConsumption` can report an unseq choice
+even when a skipped-dependency guard refuses before that choice. Disposition:
+the implementation uses structural, guard-ordered check selections and does
+not use `seqConsumption` for failure records. Final implementation review and
+regression controls remain required; the preparatory review is not final audit.
+
+All six experimental source modules compile warning-free. Seven headline axiom
+prints and all 1,036 declarations defined by those modules use only the standard
+trio. Exact kernel replay of the six modules plus the disposable audit module
+passes. No CI or completed public-client claim is made at this intermediate
+experimental checkpoint. Build each module in this order with the command
+pattern below and `LEAN_PATH="$PWD/.tmp/c1"` after the first two modules:
+`LocalOutcomeConstraint`, `OperationCheck`, `OperationFailure`,
+`OperationFailureSound`, `LocalOutcomeBridge`, `LocalOutcomeImplementation`.
+`lake env leanchecker --verbose` takes precisely those module names. The final
+handoff will provide permanent public-client and exhaustive-audit reproduction.
+
 [USER] 2026-10-14: after audited residual RD5 E/F, begin C1 under
 `relational-demo-brief/docs/2026-10-14_mirror-outcomes-brief.md`.
 E/F is independently consumable at
