@@ -1,12 +1,16 @@
-import LocalOutcomeConstraint
-import OperationCheck
+import GoLean.GoCore.RelationalOperationFailureSound
 
-namespace GoLean.GoCore.Relational.C1.Correspondence
+namespace GoLean.GoCore.Relational.Local.Correspondence
 open Machine ExecutionStatement
 
-theorem zero_cost_coverage {ctx : ProgramCtx} {a : State} (hz : C1.ZeroCost ctx a)
-    (failure : OperationFailure) (mode : Mode) (budget : Nat) (ch : Choices) :
-    ∃ o, C1.Execution failure mode ctx budget a [] a [] o 0 ∧
+theorem initialization_projection (a : State) (bytes : GoString)
+    (hp : printOut? a.control = some bytes) : initPrintRefusal? a.control = some initializationStop := by
+  simp [initPrintRefusal?, hp, initializationStop]
+
+
+theorem zero_cost_coverage {ctx : ProgramCtx} {a : State} (hz : Local.ZeroCost ctx a)
+    (mode : Mode) (budget : Nat) (ch : Choices) :
+    ∃ o, Local.Execution mode ctx budget a [] a [] o 0 ∧
       driver mode ctx budget a ch = observe o a ch := by
   have hz := Boundary.zero_cost_iff.mp hz
   obtain ⟨c, s⟩ := a
@@ -23,10 +27,10 @@ theorem zero_cost_coverage {ctx : ProgramCtx} {a : State} (hz : C1.ZeroCost ctx 
   · refine ⟨.boundary .deadlock, .finished (.boundary .sync (.inl rfl)) (Nat.zero_le _), ?_⟩
     cases mode <;> simp [driver, execStmtLoop_unfold, runInitConfig, observe, Outcome.stop?] <;> rfl
 
-theorem error_finish (failure : OperationFailure) (coverage : OperationCoverage failure)
+theorem error_finish (coverage : OperationCoverage)
     {ctx : ProgramCtx} {a : State} {ch : Choices} {e : Stop}
-    (hz : ¬ C1.ZeroCost ctx a) (he : stepFn ctx a.store a.control ch = .error e) :
-    ∃ records o tail, C1.Finish failure .main ctx a records o 1 ∧
+    (hz : ¬ Local.ZeroCost ctx a) (he : stepFn ctx a.store a.control ch = .error e) :
+    ∃ records o tail, Local.Finish .main ctx a records o 1 ∧
       replays records ch tail ∧ observe o a tail = .error e := by
   obtain ⟨c, s⟩ := a
   have hz' : ¬ ExecutionStatement.ZeroCost c := fun h => hz (Boundary.zero_cost_iff.mpr h)
@@ -51,27 +55,27 @@ theorem error_finish (failure : OperationFailure) (coverage : OperationCoverage 
   · obtain ⟨records, tail, hf, hr⟩ := coverage ctx ⟨c, s⟩ ch (.fatal message) hz hab he
     exact ⟨records, .failed (.fatal message), tail, .operation hz hab trivial hf, hr, rfl⟩
 
-theorem main_coverage_of_operation (failure : OperationFailure)
-    (coverage : OperationCoverage failure) : Coverage failure .main := by
+theorem main_coverage_of_operation
+    (coverage : OperationCoverage) : Coverage .main := by
   intro ctx budget
   induction budget with
   | zero =>
     intro a ch
-    by_cases hz : C1.ZeroCost ctx a
-    · obtain ⟨o, hx, he⟩ := zero_cost_coverage hz failure .main 0 ch
+    by_cases hz : Local.ZeroCost ctx a
+    · obtain ⟨o, hx, he⟩ := zero_cost_coverage hz .main 0 ch
       exact ⟨[], a, [], o, 0, ch, ch, hx, .done, rfl, he⟩
     · refine ⟨[], a, [], .exhausted, 0, ch, ch, .exhausted hz trivial, .done, rfl, ?_⟩
       exact execStmtLoop_nonZero (fun h => hz (Boundary.zero_cost_iff.mpr h))
   | succ budget ih =>
     intro a ch
-    by_cases hz : C1.ZeroCost ctx a
-    · obtain ⟨o, hx, he⟩ := zero_cost_coverage hz failure .main (budget + 1) ch
+    by_cases hz : Local.ZeroCost ctx a
+    · obtain ⟨o, hx, he⟩ := zero_cost_coverage hz .main (budget + 1) ch
       exact ⟨[], a, [], o, 0, ch, ch, hx, .done, rfl, he⟩
     · have hu := execStmtLoop_nonZero (ctx := ctx) (fuel := budget + 1) (s := a.store)
         (ch := ch) (fun h => hz (Boundary.zero_cost_iff.mpr h))
       cases hs : stepFn ctx a.store a.control ch with
       | error e =>
-        obtain ⟨records, o, tail, hf, hr, he⟩ := error_finish failure coverage hz hs
+        obtain ⟨records, o, tail, hf, hr, he⟩ := error_finish coverage hz hs
         refine ⟨[], a, records, o, 1, ch, tail,
           .finished hf (Nat.succ_le_succ (Nat.zero_le _)), .done, hr, ?_⟩
         simpa only [driver, hs, Except.bind, ← he] using hu
@@ -123,10 +127,10 @@ theorem boundary_main_realize {ctx : ProgramCtx} {a : State} {records : List Pic
       simp only [hm, Except.bind]
       rfl
 
-theorem finish_main_realize (failure : OperationFailure)
-    (replay : OperationReplay failure) (selections : OperationSelections failure)
+theorem finish_main_realize
+    (replay : OperationReplay) (selections : OperationSelections)
     {ctx : ProgramCtx} {a : State} {records : List PickRecord} {o : Outcome} {cost budget : Nat}
-    (h : C1.Finish failure .main ctx a records o cost) (enough : cost ≤ budget) (tail : Choices) :
+    (h : Local.Finish .main ctx a records o cost) (enough : cost ≤ budget) (tail : Choices) :
     ∃ ch, replays records ch tail ∧ driver .main ctx budget a ch = observe o a tail := by
   cases h with
   | boundary hb _ => exact boundary_main_realize hb enough tail
@@ -142,13 +146,13 @@ theorem finish_main_realize (failure : OperationFailure)
       rw [execStmtLoop_nonZero (fun h => hz (Boundary.zero_cost_iff.mpr h)), hs]
       rfl
 
-theorem main_realization_of_operation (failure : OperationFailure)
-    (replay : OperationReplay failure) (selections : OperationSelections failure) :
-    Realization failure .main := by
+theorem main_realization_of_operation
+    (replay : OperationReplay) (selections : OperationSelections) :
+    Realization .main := by
   intro ctx budget a ls b records o cost h tail
   induction h with
   | finished hf enough =>
-    obtain ⟨ch, hr, he⟩ := finish_main_realize failure replay selections hf enough tail
+    obtain ⟨ch, hr, he⟩ := finish_main_realize replay selections hf enough tail
     exact ⟨ch, ch, .done, hr, he⟩
   | exhausted hz _ =>
     refine ⟨tail, tail, .done, rfl, ?_⟩
@@ -179,22 +183,22 @@ theorem print_not_zero {a : State} {bytes : GoString}
   rintro (hn | ⟨_, _, _, hn⟩ | ⟨_, _, _, _, _, hn⟩ | ⟨_, _, _, hn⟩ | ⟨_, _, _, _, hn⟩) <;>
     rw [hn] at hp <;> cases hp
 
-theorem finish_admit_initialization {failure ctx a records o cost}
-    (h : C1.Finish failure .main ctx a records o cost)
-    (hp : Admitted .initialization a) : C1.Finish failure .initialization ctx a records o cost := by
+theorem finish_admit_initialization {ctx a records o cost}
+    (h : Local.Finish .main ctx a records o cost)
+    (hp : Admitted .initialization a) : Local.Finish .initialization ctx a records o cost := by
   cases h with
   | boundary hb _ => exact .boundary hb (.inr hp)
   | operation hz ha _ hf => exact .operation hz ha hp hf
   | initializationPrint hm _ => cases hm
 
-theorem initialization_coverage_of_operation (failure : OperationFailure)
-    (coverage : OperationCoverage failure) : Coverage failure .initialization := by
+theorem initialization_coverage_of_operation
+    (coverage : OperationCoverage) : Coverage .initialization := by
   intro ctx budget
   induction budget with
   | zero =>
     intro a ch
-    by_cases hz : C1.ZeroCost ctx a
-    · obtain ⟨o, hx, he⟩ := zero_cost_coverage hz failure .initialization 0 ch
+    by_cases hz : Local.ZeroCost ctx a
+    · obtain ⟨o, hx, he⟩ := zero_cost_coverage hz .initialization 0 ch
       exact ⟨[], a, [], o, 0, ch, ch, hx, .done, rfl, he⟩
     · cases hp : printOut? a.control with
       | some bytes =>
@@ -210,8 +214,8 @@ theorem initialization_coverage_of_operation (failure : OperationFailure)
         simp [initPrintRefusal?, hp, observe, Outcome.stop?]
   | succ budget ih =>
     intro a ch
-    by_cases hz : C1.ZeroCost ctx a
-    · obtain ⟨o, hx, he⟩ := zero_cost_coverage hz failure .initialization (budget + 1) ch
+    by_cases hz : Local.ZeroCost ctx a
+    · obtain ⟨o, hx, he⟩ := zero_cost_coverage hz .initialization (budget + 1) ch
       exact ⟨[], a, [], o, 0, ch, ch, hx, .done, rfl, he⟩
     · cases hp : printOut? a.control with
       | some bytes =>
@@ -226,7 +230,7 @@ theorem initialization_coverage_of_operation (failure : OperationFailure)
         simp only [initPrintRefusal?, hp] at hu
         cases hs : stepFn ctx a.store a.control ch with
         | error e =>
-          obtain ⟨records, o, tail, hf, hr, he⟩ := error_finish failure coverage hz hs
+          obtain ⟨records, o, tail, hf, hr, he⟩ := error_finish coverage hz hs
           refine ⟨[], a, records, o, 1, ch, tail,
             .finished (finish_admit_initialization hf hp) (Nat.succ_le_succ (Nat.zero_le _)),
             .done, hr, ?_⟩
@@ -278,10 +282,10 @@ theorem boundary_initialization_realize {ctx : ProgramCtx} {a : State} {records 
       simp only [hm, Except.bind]
       rfl
 
-theorem finish_initialization_realize (failure : OperationFailure)
-    (replay : OperationReplay failure) (selections : OperationSelections failure)
+theorem finish_initialization_realize
+    (replay : OperationReplay) (selections : OperationSelections)
     {ctx : ProgramCtx} {a : State} {records : List PickRecord} {o : Outcome} {cost budget : Nat}
-    (h : C1.Finish failure .initialization ctx a records o cost)
+    (h : Local.Finish .initialization ctx a records o cost)
     (enough : cost ≤ budget) (tail : Choices) :
     ∃ ch, replays records ch tail ∧ driver .initialization ctx budget a ch = observe o a tail := by
   cases h with
@@ -304,13 +308,13 @@ theorem finish_initialization_realize (failure : OperationFailure)
       simp only [initPrintRefusal?, hp, hs, Except.bind]
       rfl
 
-theorem initialization_realization_of_operation (failure : OperationFailure)
-    (replay : OperationReplay failure) (selections : OperationSelections failure) :
-    Realization failure .initialization := by
+theorem initialization_realization_of_operation
+    (replay : OperationReplay) (selections : OperationSelections) :
+    Realization .initialization := by
   intro ctx budget a ls b records o cost h tail
   induction h with
   | finished hf enough =>
-    obtain ⟨ch, hr, he⟩ := finish_initialization_realize failure replay selections hf enough tail
+    obtain ⟨ch, hr, he⟩ := finish_initialization_realize replay selections hf enough tail
     exact ⟨ch, ch, .done, hr, he⟩
   | exhausted hz hp =>
     refine ⟨tail, tail, .done, rfl, ?_⟩
@@ -328,4 +332,28 @@ theorem initialization_realization_of_operation (failure : OperationFailure)
     simp only [Admitted] at hp
     simpa only [driver, initPrintRefusal?, hp, hstep, Except.bind] using he
 
-end GoLean.GoCore.Relational.C1.Correspondence
+theorem main_coverage : Coverage .main :=
+  main_coverage_of_operation operation_failure_coverage
+
+theorem main_realization : Realization .main :=
+  main_realization_of_operation operation_failure_replay operation_failure_selections
+
+theorem main_refusal_exclusion : RefusalExclusion .main :=
+  refusal_exclusion_of_coverage .main main_coverage
+
+theorem main_fatal_exclusion : FatalExclusion .main :=
+  fatal_exclusion_of_coverage .main main_coverage
+
+theorem initialization_coverage : Coverage .initialization :=
+  initialization_coverage_of_operation operation_failure_coverage
+
+theorem initialization_realization : Realization .initialization :=
+  initialization_realization_of_operation operation_failure_replay operation_failure_selections
+
+theorem initialization_refusal_exclusion : RefusalExclusion .initialization :=
+  refusal_exclusion_of_coverage .initialization initialization_coverage
+
+theorem initialization_fatal_exclusion : FatalExclusion .initialization :=
+  fatal_exclusion_of_coverage .initialization initialization_coverage
+
+end GoLean.GoCore.Relational.Local.Correspondence

@@ -2,6 +2,7 @@ import Tests.GoCoreContract
 import Tests.PanicRendering
 import Tests.StringPanicMembers
 import Tests.RelationalContracts
+import Tests.RelationalOutcomes
 import GoLean.GoCore.PanicText
 import GoLean.GoCore.Admission
 import GoLean.GoCore.Prefix

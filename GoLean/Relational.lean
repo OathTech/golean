@@ -10,6 +10,8 @@ import GoLean.GoCore.RelationalMemory
 import GoLean.GoCore.RelationalFault
 import GoLean.GoCore.RelationalOutcome
 import GoLean.GoCore.RelationalOutcomeSound
+import GoLean.GoCore.RelationalLocalExecution
+import GoLean.GoCore.RelationalLocalExecutionSound
 import GoLean.GoCore.RelationalEntry
 import GoLean.GoCore.RelationalPhase
 import GoLean.GoCore.RelationalPhaseSound

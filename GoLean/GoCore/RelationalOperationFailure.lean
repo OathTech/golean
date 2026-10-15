@@ -1,6 +1,15 @@
-import OperationCheck
+import GoLean.GoCore.RelationalOperationCheck
 
-namespace GoLean.GoCore.Relational.C1
+namespace GoLean.GoCore.Relational.Local
+/-- An ordinary failed operation; panic rendering has its separate boundary. -/
+inductive FailureCause where
+  | refusal (reason : Refusal)
+  | fatal (message : String)
+
+def FailureCause.stop : FailureCause → Stop
+  | .refusal reason => .refusal reason
+  | .fatal message => .terminal (.fatal message)
+
 open Machine
 open OperationCheck
 
@@ -392,4 +401,10 @@ def atState (ctx : ProgramCtx) (a : State) : OperationCheck :=
   | .blockedSend .. | .blockedRecv .. | .blockedSelect .. | .blockedSync .. => .passed
 
 end FailureChecks
-end GoLean.GoCore.Relational.C1
+/-- Ordinary operation failure. Its consultation records are derived by the
+ordered checks at the supplied control and store, without a tape or evaluator. -/
+def OperationFailure (ctx : ProgramCtx) (a : State) (records : List PickRecord)
+    (cause : FailureCause) : Prop :=
+  OperationCheck.Rejects (FailureChecks.atState ctx a) records cause.stop
+
+end GoLean.GoCore.Relational.Local

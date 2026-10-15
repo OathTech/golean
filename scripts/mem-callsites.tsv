@@ -98,3 +98,5 @@ GoLean/GoCore/SetupStatement.lean	runProgramSeededM_eq_stmt	loadMany	2	NO EXECUT
 GoLean/GoCore/SetupStatement.lean	seedCells_cell_stmt	Heap.lookup	1	NO EXECUTION — the pointwise seeding statement's cell reader (S2), a Prop
 GoLean/GoCore/RelationalCall.lean	WriteValues	storeLoc	1	NO EXECUTION — inductive ordered-write premise; actual delivery uses emitting storeTarget/Mem.store with retained labels
 GoLean/GoCore/RelationalStorePath.lean	OrderedWrites	storeLoc	1	NO EXECUTION — Prop-level ordered StoreEffect premise; actual delivery retains emitting storeTarget/Mem.store transition labels
+GoLean/GoCore/RelationalOperationFailure.lean	statementOperation	alloc	1	FRESH ALLOCATION — semantic failure view of append growth: new backing allocation precedes the emitting Mem.store; this check derives failure witnesses, not runtime accesses
+GoLean/GoCore/RelationalOperationFailure.lean	synchronization	syncCell	1	SYNCHRONIZATION — semantic failure view reads the same primitive state word as applySyncOp before its try-lock consultation; applyTryLock retains emitted accesses on successful transitions
