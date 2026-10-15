@@ -103,7 +103,7 @@ kernel-visible comparison equations. `Race.shadowSet` uses this comparator
 to insert or replace shadow entries. An axiom-only scan reports no axioms
 for the opaque constant and therefore misses this obstacle.
 
-`Concurrency.Obstruction.RootComparatorContract` compiles the missing
+`Concurrency.RootComparatorContract` compiles the missing
 root-comparison law without assuming it. `Obstruction` also checks the
 opaque/partial declaration classification. Checkpoint `69442fc1` records
 the discovery. No runtime counterexample or detector misbehavior is claimed:
@@ -220,5 +220,26 @@ coverage is reused as baseline evidence only, not freshly recertified here.
 
 ## Handoff
 
-Fresh independent review and final kernel replay result: pending at this
-implementation checkpoint. Retain the lane for handoff; no merge or push.
+Final validation on 2026-10-15: the isolated `lake build` passed (69 jobs),
+the standard-axiom audit passed for 20,349 declarations, and
+`lake env leanchecker --fresh --verbose Concurrency.Audit` exited 0 on the
+final built experiment and its recursive import closure. The fresh replay
+does not supply equations for opaque constants or repair the 17 reported
+implementation findings. The implementation scan remains **FAIL**.
+
+The [fresh independent review](2026-10-15_relational-concurrency-review.md)
+examined implementation commit `ea1341cf20941c2c91d6811fab1099476e05d975`.
+It independently re-elaborated both examples and the audit. Its medium
+ordering-contract finding remains open and is raised for user/upstream
+disposition. Both low wording findings are fixed and independently verified;
+the only subsequent Lean edit corrects a documentation comment. The final
+build, axiom audit and fresh replay above include that edit. Review text and
+each disposition are recorded in the linked review.
+
+Only experiment source, this stage record and its review are changed from
+the audited pin. Disposable logs and isolated build products are removed at
+handoff; the commands above rebuild them. Retain the reviewed branch and
+worktree. No runtime/public-API change, merge, push, live repin, peer write
+or global-state change was made. The result is two checked selected
+executions plus explicit outstanding contracts, not general concurrent
+Iris compatibility or a main-path gate.

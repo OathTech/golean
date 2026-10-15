@@ -97,7 +97,7 @@ theorem accepted : CheckedPrefix ctx 38 initial finish.2.1 tape finish.2.2.2
   simpa [CheckedPrefix, events, List.append_assoc, tailEmpty] using
     (PoolSound.poolPrefix_comp ctx 27 11 _ _ _ _ _ _ _ _ _ _ _ prefix27 read)
 
-/-- Concrete two-way rendezvous ordering at a detector state reached from
+/-- Concrete sender-to-receiver rendezvous ordering at a detector state reached from
 the actual spawn. Shadow state is retained, including the opaque ordering. -/
 theorem transfer_boundary : TransferBoundary ctx park.2.1 pairStep.1
     park.2.2.1 r30 paired 1 0 := by
