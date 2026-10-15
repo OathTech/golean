@@ -1,5 +1,16 @@
 # C1 local outcome completeness — first constraint checkpoint
 
+## Checked initialization checkpoint (2026-10-15)
+
+After checked main-mode commit `f87bd7bb229635150ee6318d71ea8096ee773ed5`,
+`initialization_coverage`, `initialization_realization` and the separate refusal
+and fatal exclusion laws are now proved in the experiment. All six modules
+compile warning-free; eleven headline laws and all 1,062 module-owned
+declarations use only the standard trio. Exact kernel replay passes for the six
+modules and disposable audit. Public integration, client acceptance, CI and
+final implementation review remain pending. The older checkpoint records below
+are historical, not the current completion claim.
+
 ## Checked main-mode implementation checkpoint (2026-10-15)
 
 The original constraint checkpoint below is retained as provenance. Main-mode
