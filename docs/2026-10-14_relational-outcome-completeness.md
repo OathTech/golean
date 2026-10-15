@@ -23,10 +23,12 @@ Initialization followed at `2fabfb1688ce616b25a9e86ec310823ad12cfa4a` (1,062
 declarations and eleven headlines). Those commits retain the experimental
 sources; their permanent replacements are the five public modules below.
 
-Public implementation and facade acceptance are complete and checked. The
-independent final-source review has found no concrete issue; its confirmation
-against this immutable implementation commit is the remaining handoff step.
-The successor audit record identifies the exact implementation pin.
+**Audited implementation pin: `55ad72493061b59363e846341380a9edce12a2de`.**
+C1 is complete at its bounded local scope. The
+[independent final audit](2026-10-15-c1-independent-audit.md) reports no findings
+and confirms that all seven independently rebuilt/replayed source files match
+this exact commit. This audit/handoff successor changes documentation only;
+consumers can pin the implementation without taking any unfinished C1 work.
 
 C1 covers **bounded local sequential execution from any supplied state** in
 main and initialization modes. It neither changes executable behavior nor
@@ -147,6 +149,9 @@ new raw-memory call sites. The fresh `--diff` run supplies the missing evidence;
 the inventory now records the append allocation and synchronization-word peek
 in the semantic failure view, with their reasons. No gate was waived or weakened.
 Source hashes were checked unchanged after validation and before committing.
+Disposable experiment, compatibility, review and CI outputs were removed after
+recording these conclusions; the active branch worktree is retained. Rebuild
+with the commands below rather than relying on retained artifact logs.
 
 ## Review dispositions
 
@@ -166,7 +171,9 @@ checkpoint and its dependencies, malformed-state controls and six-module
 kernel replay, with no concrete finding. That provisional result does not
 cover final initialization/facade integration. The subsequent final-source
 review, independent rebuild and replay cover both modes and the public client;
-confirmation against the immutable pin is pending in the audit successor.
+the reviewer subsequently confirmed all seven reviewed file hashes against
+`55ad72493061b59363e846341380a9edce12a2de`, with no findings. No final finding
+was waived. The separate audit records its own commands and exact scope.
 
 ## Reproduction
 
