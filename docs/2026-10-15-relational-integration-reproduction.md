@@ -69,7 +69,10 @@ confined to the new private package:
 - Build `GoLean RelationalCodeX C2Adapter C2Acceptance OriginalAcceptance`, run
   the aggregate/acceptance axiom reports, and replay the exact requested roots
   with `OriginalAcceptance` included. Check all source modules have outputs;
-  compare complete expected/replayed name multisets.
+  compare complete expected/replayed name multisets. Enumerate all source
+  modules for GoLean and the three local libraries/clients; for dependency
+  libraries enumerate the built dependency closure, not unrelated unbuilt
+  source modules.
 
 Dependencies must be exact independent clones without object alternates or
 writable cache symlinks. Compatible caches may be copied only after verifying
@@ -77,6 +80,46 @@ source identity. The aggregate includes original RD6 local adequacy, closed
 RD5 Add/Alias/Pair/Set/Keep, both frozen Add routes and the exact phase consumers.
 It is not RD7 or a live migration. Keep the inherited Memory warning and recorded
 live 35 NOT-PUBLIC failure visible; no fresh live gate is claimed.
+
+## Frozen RD7 acceptance
+
+Create a second private package from logic
+`f314a4f7ce69f8e5dc1c835298d4f1a2832a996f` (reviewed handoff
+`97426cab7c87ca52a5e3c480c9cb9b30ac534dde`):
+
+```sh
+mkdir -p .tmp/i1-rd7
+git -C /home/mike/projects/golean-logic archive \
+  f314a4f7ce69f8e5dc1c835298d4f1a2832a996f \
+  experiments/2026-10-14_relational-codex | \
+  tar -x --strip-components=2 -C .tmp/i1-rd7
+```
+
+As in the C2 recipe, change only the private `pins.json` GoLean revision to
+`5d8e53e9f1a046fb645fce49901de714591e0819`; set up the four exact independent
+clones and update the private Lake manifest with the local paths. Check all
+113 original files against the archived commit: only `pins.json` may differ.
+Keep the original `lakefile.toml` and all Lean files verbatim. With the same
+lane-local TMPDIR and `LEAN_NUM_THREADS=2`, run inside this private package:
+
+```sh
+capped lake build GoLean RelationalCodeX
+capped lake env lean RelationalCodeX.lean
+capped lake env leanchecker --verbose GoLean RelationalCodeX \
+  GoLeanIris GoLeanIrisExamples Iris Batteries Qq
+```
+
+`ProgramAcceptance.lean` supplies the exact original program header without
+pending laws or an `InitAssembly` parameter; RD7 proves the latter downstream.
+The aggregate checks 6,058 local declarations, standard axioms only. Replay
+must cover all 104 local modules, all 96 GoLean modules and the 206 built
+Iris/Batteries/Qq dependency modules, each exactly once (406 total). The RD6
+recipe above has 101 local modules including its three added clients, yielding
+403 total. Parse the complete `replaying <module>` output and compare multisets
+against on-disk `.olean` names; also require outputs for every source module
+in GoLean and the local libraries. This distinguishes the built dependency
+closure from unused dependency source files. Require successful exit, not just
+matching names. Preserve the Memory warning and recorded live failure.
 
 ## Dependency probe
 

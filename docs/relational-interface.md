@@ -197,9 +197,15 @@ against the frozen RD6 `RelationalCodeX.C2.ProgramPhases` request at logic
 independent phase budgets and exact errors under the request's original
 validation/seeding/total-activation premises. These premises do not restrict
 unconditional all-program `coverage`. Both frozen phase and original program
-consumers compile with the law supplied; the program consumer still explicitly
+consumers compile with the law supplied; the frozen RD6 program consumer explicitly
 requires downstream Iris `InitAssembly`. `InitInvocation` is reused unchanged.
 See the stage's independent audit and exact private-package reproduction.
+
+RD7's immutable logic implementation `f314a4f7` supplies that Iris assembly
+downstream and closes the original initialized-program contract without an
+assembly or pending-law parameter. Its unchanged acceptance also builds on
+the combined I1 pin. This is one customer program acceptance, not completion
+of the full replacement reasoning interface.
 
 The [development integration stage](2026-10-15_relational-integration-stage.md)
 records reconciliation with current main and D1, combined validation and the
