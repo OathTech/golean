@@ -73,6 +73,10 @@ are:
 - `Correspondence.setup_coverage` / `.setup_realization`: ordered validation,
   empty-store globals, initialization and activation, including every failure.
 - `Correspondence.initialization_projection`: `initStop e = markInitPhase e`.
+- `Correspondence.phase_projection`: selected-tape program decomposition under
+  the original validation/seeding and total activation premises, with exact
+  initialization/body/readback errors and each full phase budget. This is the
+  boundary corollary consumed by RD6, not a restriction of coverage.
 - `Correspondence.refusal_exclusion : RefusalExclusion` and
   `.fatal_exclusion : FatalExclusion`: separate transfers from semantic
   `Avoids` over all alternatives and budgets. Coverage has neither premise.
@@ -91,9 +95,9 @@ A valid print reaches the initialization guard with no remaining fuel and is
 refused before exhaustion. C1's existing local clients remain in the build.
 
 Full CI/differential and whole-project exhaustive axiom/replay checks pass.
-Fresh independent implementation review has completed with no concrete semantic
-or proof defect; exact-pin confirmation follows the implementation commit. No C2 completeness or consumer acceptance
-claim is made yet. C1's completed scope and audit remain at their unchanged pins;
+Fresh independent implementation review and exact-pin confirmation completed
+with no concrete semantic or proof defect. The relayed consumer batch is
+discharged below. C1's completed scope and audit remain at their unchanged pins;
 its success-only `ProgramNormal` and earlier RD5 contracts are retained.
 
 [USER] 2026-10-15: consume the exact RD6 `C2.ProgramPhases` batch from logic
@@ -105,7 +109,8 @@ proved and is not another request.
 
 The initial upstream implementation is
 `fcebf85ccabd4caae101ac656b3ae149caf02f70`, independently confirmed at that pin.
-The concrete consumer batch below is now being checked. Do not infer an Iris
+The concrete consumer batch below is checked at
+`626faca5a26f57fbf367aa9655e2aef08f20143a`. Do not infer an Iris
 initialization-assembly proof or live migration from this semantic development.
 
 ## Validation at the implementation source freeze
@@ -185,7 +190,7 @@ The activation function remains arbitrary and total on supplied stores, as in
 the frozen request; the downstream `entry_ready` derives that premise from
 its original typed argument/definition hypotheses, including captures and bases.
 
-The exact GoLean-only adapter already compiles:
+The exact GoLean-only adapter compiles:
 
 ```lean
 import RelationalCodeX.ProgramRequests
@@ -210,8 +215,39 @@ changing the carriers or executable semantics.
 law; no new upstream initialization wrapper is introduced. The private full
 acceptance supplies `phases` to `program_phase_acceptance` and to
 `closed_program_init_outcomes_conditional`. Its program target retains
-`(assembly : InitAssembly)` explicitly. Full aggregate/consumer validation and
-fresh independent consumer review are in progress.
+`(assembly : InitAssembly)` explicitly. The checked integration changes no
+original Lean source, observer, history, domain or hypothesis. The private pin
+and two appended library targets are the only changes to the 106 frozen inputs;
+two new acceptance clients supply the law. All four dependencies are clean,
+exact independent clones without object alternates or writable cache symlinks.
+
+- Private full package build: PASS, 407 jobs. The direct aggregate checks all
+  5,940 owned declarations with standard axioms only; the acceptance wrapper
+  checks 5,943. Both exact adapter theorems separately print standard axioms.
+- Full exact kernel replay: PASS, 399 modules (193 project/consumer modules
+  and 206 dependency modules). The expected and replayed names and multiplicities
+  agree, with no missing, extra or duplicate modules. All 193 source modules
+  have built outputs. This is author evidence; the reviewer's separate
+  six-module replay is described below.
+- Frozen RD6 local adequacy, and the aggregate's closed RD5 Add/Alias/Pair/Set/Keep
+  contracts, continue to compile unchanged. This is fresh experimental consumer
+  evidence, unlike the earlier GoLean-only A–F regression.
+- Fresh independent consumer review: PASS, no blocking finding or concrete
+  follow-up defect. It independently rebuilt the projection, request, adapter,
+  frozen conditional consumer, acceptance wrapper and original-header acceptance,
+  and replayed those six modules exactly. The original header was extracted
+  from logic `14cef5e62c7b42a1e0e1eae3a12c2d8674968c01`; its original `FS`
+  argument and other premises are preserved, with `InitAssembly` explicit.
+- The inherited `GoLeanIris/Memory.lean:1625` unused-variable warning remains
+  visible. The recorded live **35 NOT-PUBLIC** failure is still open; this run
+  is not a live gate or a claim that the live inputs were revalidated.
+
+The semantic request is complete. `InitInvocation` is reused, not reimplemented.
+`InitAssembly` remains the only pending parameter in the checked program
+acceptance; it is downstream Iris allocation/sequencing work, not supplied here.
+The [independent consumer review](2026-10-15-c2-consumer-audit.md) records its
+own evidence and limits. The [reproduction recipe](2026-10-15-c2-consumer-reproduction.md)
+contains the exact checked adapters and original-header compatibility client.
 
 ## Reproduction
 
@@ -259,11 +295,12 @@ modules. This is a GoLean-only A–F regression, not a new Iris acceptance run.
 
 ## Remaining work
 
-Initial upstream implementation and checks are complete and independently
-confirmed at `fcebf85c`. Finish the relayed consumer acceptance and its fresh
-review at an immutable pin. The downstream Iris `InitAssembly` remains a real
-premise and is not part of the upstream request. The readback control's
-reachability limitation above is retained.
+C2 semantic correspondence and the relayed RD6 semantic acceptance are complete
+at `626faca5a26f57fbf367aa9655e2aef08f20143a`, with fresh independent review.
+The downstream Iris `InitAssembly` remains a real premise: conditional program
+acceptance is not an unconditional program adequacy proof. The readback
+control's reachability limitation above is retained. No review finding is
+unanswered; R1's scope disposition is recorded above.
 
 Sequential finite program correspondence remains distinct from full observed
 adequacy, CLI/frontend correctness, concurrency, infinite-run bisimilarity,

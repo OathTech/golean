@@ -161,3 +161,13 @@ records the independently consumable C1 baseline and early interface checkpoint.
 the facade and exercises ordering, phase budgets and projection. Readback failure
 has a generic program composition law and an arbitrary-state component control;
 no concrete whole-program readback-failure reachability claim is made.
+
+C2 also exports `ProgramExecution.Correspondence.phase_projection`, checked
+against the frozen RD6 `RelationalCodeX.C2.ProgramPhases` request at logic
+`bbb372e2b97eec663f55a01ee4993f98be829e1b`. It keeps the supplied tape, full
+independent phase budgets and exact errors under the request's original
+validation/seeding/total-activation premises. These premises do not restrict
+unconditional all-program `coverage`. Both frozen phase and original program
+consumers compile with the law supplied; the program consumer still explicitly
+requires downstream Iris `InitAssembly`. `InitInvocation` is reused unchanged.
+See the stage's independent audit and exact private-package reproduction.

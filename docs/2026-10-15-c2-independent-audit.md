@@ -140,3 +140,10 @@ consumer acceptance remains pending the exact relayed constraint. The concrete
 readback control remains component-only; neither reachability nor impossibility
 of a whole-program readback failure is asserted. These limits remain visible in
 [the stage record](2026-10-15_relational-program-outcomes.md).
+
+
+The pending-consumer statement above describes this initial implementation
+review at `fcebf85c`. The subsequently relayed RD6 constraint is now checked at
+`626faca5a26f57fbf367aa9655e2aef08f20143a`; its fresh independent review is
+[recorded separately](2026-10-15-c2-consumer-audit.md). `InitAssembly` remains
+explicit downstream work.
