@@ -5,6 +5,23 @@ check the unchanged frozen RD8 consumers together and their observation-policy
 compatibility; obtain fresh independent review. No main merge, push, live repin,
 peer writes, operational refactor or new main rebase.
 
+## Immutable delivery
+
+Combined implementation: **`4731d491999e113e5016ad975d1747614d100bd4`**.
+The [fresh independent review](2026-10-15_relational-o1-u1-integration-review.md)
+is saved verbatim. It found no new integration correctness defect and independently
+bound all 4,385 tested source hashes to the implementation's committed blobs.
+Both the author and reviewer verified the original 4,363-entry freeze is unchanged.
+After setting only private pin metadata to this revision, all three acceptance
+packages build successfully at the clean committed candidate (RD8 446 jobs;
+RD6 and RD7 426 each). No source change or replay-input replacement occurred.
+
+The separate implementation scans remain **FAIL: 16 upstream / 21 combined**,
+all open and unwaived. This is an independently reviewed development integration
+pin, not permission to land the full replacement interface. Immutable audited
+inputs and historical experiment branches remain preserved. No main merge,
+push, live repin, peer-worktree write or global change was performed.
+
 ## Immutable inputs
 
 | Input | Pin |
