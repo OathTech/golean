@@ -7,11 +7,12 @@ The first entry contract covers the seven sequential call/defer entry sites.
 It preserves supplied arguments and the pre-store; resolved identity comes
 from actual body entry, not the syntactic callee. Re-dispatch is not entry.
 
-The first return contract covers targetless/resultless frames. It includes
+The foundational return contract covers targetless/resultless frames. It includes
 deferred-call and top-level frames: both report `[]`, independently of the
-function signature. Final driver readback is separate. Target writeback and
-panic-printing return events, and a complete census theorem, remain open;
-this module does not authorize replacing the downstream entry census.
+function signature. Final driver readback is separate.
+`RelationalEvent` adds all normal exit descriptors; `RelationalEventSound`
+proves exhaustive structural entry/exit coverage, and `RelationalHistory`
+composes finite successful histories. This module supplies their foundations.
 
 The semantic site inventory is adapted from the logic's `Call.lean` at
 `f0afcbf`, with all ownership, Iris and evaluator-equation dependencies removed.

@@ -1,6 +1,7 @@
 import Tests.GoCoreContract
 import Tests.PanicRendering
 import Tests.StringPanicMembers
+import Tests.RelationalObservations
 import Tests.RelationalContracts
 import Tests.RelationalOutcomes
 import Tests.RelationalProgramOutcomes

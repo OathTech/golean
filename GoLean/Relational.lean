@@ -17,7 +17,8 @@ import GoLean.GoCore.RelationalPhase
 import GoLean.GoCore.RelationalPhaseSound
 import GoLean.GoCore.RelationalProgram
 import GoLean.GoCore.RelationalProgramOutcomeSound
-import GoLean.GoCore.RelationalObservation
+import GoLean.GoCore.RelationalEventSound
+import GoLean.GoCore.RelationalHistory
 import GoLean.GoCore.ShadowHistory
 
 /-! The developing relational reasoning surface. See `docs/relational-interface.md` for

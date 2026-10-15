@@ -41,7 +41,9 @@ imported. The implementation request and provenance are recorded in
 | Program success | `ProgramNormal`, `.realize`, `program_normal_of_run` | Both directions for the successful sequential driver: validation, globals, initialization, entry and readback. Separate init/body fuel bounds. No pool/CLI claim. |
 | All sequential program outcomes | `ProgramExecution.Validation`, `Seeding`, `Initialization`, `ActivationPhase`, `Setup`, `Execution`, `History`; `ProgramExecution.Correspondence.coverage`, `.realization` | Arbitrary program/name/arguments/fuel/tape. Exact ordered failure phases and causes, separate initialization/body segments with full independent budgets, labels and finishing selections. Closed refusal/fatal exclusion transfers; no logical safety admission premise. |
 | Entry events | `EntrySite`, `Enters`, `.transition`, `.all_successors` | Seven sequential call/defer sites; resolved callee, supplied arguments, pre-store. Re-dispatch is not entry. |
-| Initial return events | `ReturnsDiscarded`, `.pure` | Normal exits without targets/results after cleanup drains, payload `[]`; includes deferred and top-level frames. |
+| Normal returns | `Boundary.ExitSite`, `Boundary.Returns`, `.transition`, `.all_successors`, `ReturnsDiscarded.observed` | All six exits: discarded results, snapshot before target evaluation, and preprint helper result. Exact successor/label and pre-store, no future-delivery premise. |
+| Complete boundary census | `BoundaryEvent`, `Boundary.events`, `Transition.boundary_cases`, `Boundary.entry_iff_depth`, `Boundary.return_iff_depth` | Arbitrary-state successful-step classification checked against actual activation pushes/pops; panic unwind is separate. Exact descriptor iff laws retain payloads, actual labels and proof/tape independence. |
+| Finite histories | `Boundary.project`, `Boundary.History`, `.coverage`, `.append_iff`, `.unique`, `.realize`, `.on_prefix` | Chronological generic observer histories on all finite successful runs/prefixes, including empty and unfinished prefixes. No safety, termination or fuel premise. |
 | Invariants | `WellFormed`, `Run.preserves_wellFormed`, `Run.heap_size_mono` | Address bound and heap normalization, with initial premise. Not typing or refusal freedom. |
 
 `Tests/RelationalContracts.lean` composes a symbolic conditional using source
@@ -134,10 +136,16 @@ tape and both full phase budgets; its exact RD6 consumer acceptance is checked
 at the immutable C2 pin. Its entry premises do not narrow unrestricted coverage. This is not an
 Iris adequacy theorem or an observation-completeness claim.
 
-The observation API lacks a complete entry census theorem, general target
-writeback returns and panic-printing returns. It must not replace the
-logic's audited observer/census yet. Panic unwinding is not normal return;
+O1 supplies the complete successful-step entry/normal-return census and finite
+histories through `GoLean.Relational`. The independent criterion extracts actual
+function frames from every control and proves their effects through every
+original operational rule and configuration-producing helper. The frozen observer
+bridge preserves existing `emit` on all states and `Safe.Obs` on successful
+prefixes; it is outside permanent upstream exports. Panic unwinding is separate;
 discarded-result frames report `[]` even with a result-bearing signature.
+These are semantic payload/timing and projection theorems, not executed renderer
+correspondence or live trust-artifact migration. See the O1 stage for the exact
+renderer obligations and consumer validation status.
 
 Root support is deliberately coarse. Path non-overlap, context extension
 across allocator bounds, a whole-step effect census and general `unseq`
