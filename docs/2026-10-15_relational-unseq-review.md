@@ -154,3 +154,33 @@ live repin, peer writes or global changes. The source worktree is retained;
 private dependency copies, caches, builds and logs are deleted after checks.
 The immutable implementation identifier is recorded in the subsequent handoff
 commit, which changes documentation only.
+
+
+## Immutable handoff
+
+Implementation: **82a2ff3139053c2a23d97cc90d8f21bb2400d96f**.
+Base: **5d8e53e9f1a046fb645fce49901de714591e0819**.
+Branch: `spike/relational-unseq-1015`.
+Source worktree: `/home/mike/projects/golean/.claude/worktrees/relational-unseq-1015`.
+This follow-up commit contains only this review/handoff update; the checked
+implementation and reviewed proof hashes are unchanged.
+
+The independent reviewer rechecked the documentation disposition after the
+implementation commit: "Documentation finding is fixed." It confirmed the
+summary faithfully distinguishes author validation from independent review and
+retains all five additional implementation findings individually open/unwaived.
+No further correction was requested.
+
+The first restricted U1 candidate now includes the general theorem, symbolic
+source instance, exact frozen RD8 semantic law and original closed guarded
+target. The alias behavior set remains distinct. This is ready for the user to
+relay to logic for downstream uptake; it neither merges nor repins their tree.
+The implementation scans remain FAIL (16 public / 21 combined); the inherited
+live logic failure and richer-interface obligations are not closed by this
+candidate. O1 is independent and unchanged.
+
+Cleanup completed in this lane only: root `.lake`, `.tmp`, `deps`, `artifacts`
+and the two local experiment `.lake` directories and untracked manifests were
+removed (about 11.5 GB total). No source, tracked manifest, historical worktree,
+peer build state or shared cache was removed. Reconstruct using the stage and
+adapter README commands; no disposable evidence dump is committed.
