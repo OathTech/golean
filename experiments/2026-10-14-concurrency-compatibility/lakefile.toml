@@ -1,0 +1,11 @@
+name = "concurrencyCompatibility"
+version = "0.1.0"
+defaultTargets = ["Concurrency"]
+
+[[require]]
+name = "GoLean"
+path = "../.."
+
+[[lean_lib]]
+name = "Concurrency"
+globs = ["Concurrency.+"]
