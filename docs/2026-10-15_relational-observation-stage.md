@@ -12,6 +12,27 @@ experimental observation definitions are read from immutable git objects;
 private extracts live in this lane's disposable scratch. The later frozen RD8
 constraint input and acceptance are recorded below.
 
+## Immutable delivery
+
+Implementation pin: `56168ed59da4c8972169bcaee778b767f35c6005`.
+The [fresh independent review](2026-10-15-relational-observation-review.md)
+is saved verbatim; it found no new defect and confirmed O1-R1 fixed. The
+[compatibility reproduction instructions](../experiments/2026-10-15-observation-compatibility/README.md)
+cover the exact frozen RD8 request and the retained RD6/RD7 acceptance.
+
+Both author and reviewer matched all 4,353 checked source hashes to this commit,
+and separately matched the reviewed modules and both compatibility adapters.
+After switching only the three private validation clones to this immutable pin,
+RD6, RD7 and RD8 incremental acceptance builds passed (416, 418 and 431 jobs).
+All 100 upstream module outputs in each remained byte-identical to the outputs
+already fully replayed. The original full CI run's dirty-tree qualification is
+retained below; this source binding does not relabel that invocation.
+
+This is the semantic O1 and exact RD8 O1-A delivery. It is not completion of the
+actual observed caller, U1, executed renderer correspondence or the full
+replacement landing. Existing immutable I1/C1/C2 and E/F inputs are preserved.
+No main merge, push, live repin or peer-worktree write was performed.
+
 ## Semantic census and review
 
 The existing seven `EntrySite` introduction cases and discarded-result exit
