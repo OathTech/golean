@@ -251,6 +251,42 @@ theorem setup_eq (fuel : Nat) (program : Program) (name : String)
     · simp [ha, wrongArity, throw, throwThe, MonadExceptOf.throw,
         Bind.bind, Except.bind]
 
+/-- Selected-tape phase projection for a validated, seeded entry with total
+semantic activation. This is a consumer boundary corollary; unrestricted
+`coverage` remains the primary all-program contract. Initialization and body
+retain their full separate budgets and every error propagates unchanged. -/
+theorem phase_projection (ctx : ProgramCtx) (fid : FuncId) (f : Func)
+    (args : List GoValue) (seeded : Store) (activation : Store → Activation)
+    (lookup : findFunctionIn? ctx.functions fid = some f)
+    (arity : f.args.size = args.length)
+    (reserved : ctx.program.typeDefs.hasReservedPrefix = true)
+    (globals : seedGlobals ctx {} ctx.program.globals = .ok seeded)
+    (entry : ∀ s, LocalEntry ctx f args s (.ok (activation s)))
+    (fuel : Nat) (choices : Choices) :
+    runProgramM fuel ctx.program fid.key args.toArray choices =
+      (runPkgInitM ctx fuel seeded choices).bind (fun (initialized, middle) =>
+        (Local.Correspondence.driver .main ctx fuel (activationPoint f (activation initialized)) middle).bind
+          (fun (final, _) => (loadMany ctx final (activation initialized).results).map
+            (fun values => ({ values := values.toArray } : Readout)))) := by
+  have hv : Validation ctx.program fid.key args.toArray (.ok f) :=
+    .ready lookup (by simpa using arity) reserved
+  have hs : Seeding ctx.program (.ok seeded) :=
+    .ready globals (SetupSound.seedGlobals_wf globals)
+  unfold runProgramM
+  rw [setup_eq, validation_sound hv]
+  simp only [forget, Except.bind]
+  rw [seeding_sound hs]
+  simp only [forget]
+  cases hi : runPkgInitM ctx fuel seeded choices with
+  | error e => rfl
+  | ok pair =>
+    obtain ⟨initialized, middle⟩ := pair
+    have ha := activation_sound (ActivationPhase.ready (entry initialized))
+    dsimp only
+    rw [ha]
+    simp [forget, setupResult, Local.Correspondence.driver, runConfig_eq_loop,
+      activationPoint, statement, Bind.bind, Except.bind, Except.map, pure, Except.pure]
+
 theorem setup_coverage (program : Program) (name : String) (args : Array GoValue)
     (fuel : Nat) (ch : Choices) :
     ∃ seg r tail, Setup program name args fuel seg r ∧ OptionalReplay ⟨program⟩ seg ch tail ∧

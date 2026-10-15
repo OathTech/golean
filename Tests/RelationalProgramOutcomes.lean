@@ -82,6 +82,7 @@ theorem after_normal_body {program name args fuel init ready seg e}
 #print axioms Correspondence.initialization_realization
 #print axioms Correspondence.setup_coverage
 #print axioms Correspondence.setup_realization
+#print axioms Correspondence.phase_projection
 #print axioms Correspondence.initialization_projection
 #print axioms Seeding.invalid_unreachable
 #print axioms normal_iff

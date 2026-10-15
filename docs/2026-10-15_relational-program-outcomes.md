@@ -96,10 +96,17 @@ or proof defect; exact-pin confirmation follows the implementation commit. No C2
 claim is made yet. C1's completed scope and audit remain at their unchanged pins;
 its success-only `ProgramNormal` and earlier RD5 contracts are retained.
 
-The exact downstream `closed_program_init_outcomes` constraint has not yet
-been relayed. It is required before final consumer acceptance; upstream work
-continues meanwhile. Do not infer an Iris migration or observed adequacy result
-from this semantic development.
+[USER] 2026-10-15: consume the exact RD6 `C2.ProgramPhases` batch from logic
+implementation `bbb372e2b97eec663f55a01ee4993f98be829e1b`, reviewed handoff
+`e584674d3b62042c5f082318dc8332ab96593b47`, under the existing charter. Preserve
+the exact supplied tape, budgets, errors and original premises. Retain
+`InitAssembly` as a downstream Iris parameter; `InitInvocation` is already
+proved and is not another request.
+
+The initial upstream implementation is
+`fcebf85ccabd4caae101ac656b3ae149caf02f70`, independently confirmed at that pin.
+The concrete consumer batch below is now being checked. Do not infer an Iris
+initialization-assembly proof or live migration from this semantic development.
 
 ## Validation at the implementation source freeze
 
@@ -157,6 +164,55 @@ been proved. The unrestricted coverage theorem retains this branch, without
 assuming readback success. This remains a limitation of the concrete control,
 not an established impossibility or a weakened program correspondence claim.
 
+## Concrete RD6 acceptance batch
+
+All 106 package files were copied from the immutable logic implementation
+before building into the lane's private `.tmp/c2-consumer`. Original request,
+consumer and target SHA-256 hashes:
+
+- `ProgramRequests.lean`: `b0c77eebeff8a50e2a597fb5b8ebe218d98580100bdaeb5a2f5301ba06ab9a91`.
+- `ProgramConditional.lean`: `a3f9c2579768f6f1049399ff5d9ff846294ebf528311b39b4934c4e6226857c7`.
+- `ProgramFrozen.lean`: `d9db7e3e008a1e455e9620e033a5152c80bd7acee0c55dc55b4647a926aeaeab`.
+
+`ProgramExecution.Correspondence.phase_projection` is the general checked
+boundary corollary. It consumes `Validation`, `Seeding` and `LocalEntry`
+soundness through the checked `setup_eq`; it does not narrow `coverage`.
+The original seeding equation derives the actual seeded-state guard internally.
+The full supplied fuel is retained in both local drivers, the supplied tape
+is unchanged, and init/body/readback errors propagate exactly. No successful
+initialization, no-refusal or additional well-formedness premise is introduced.
+The activation function remains arbitrary and total on supplied stores, as in
+the frozen request; the downstream `entry_ready` derives that premise from
+its original typed argument/definition hypotheses, including captures and bases.
+
+The exact GoLean-only adapter already compiles:
+
+```lean
+import RelationalCodeX.ProgramRequests
+namespace C2Acceptance
+open GoLean GoCore Relational
+theorem phases : RelationalCodeX.C2.ProgramPhases :=
+  ProgramExecution.Correspondence.phase_projection
+theorem invocation : RelationalCodeX.C2.InitInvocation := RelationalCodeX.C2.initInvocation
+#print axioms phases
+#print axioms invocation
+end C2Acceptance
+```
+
+Both print only standard axioms; exact replay of the request, adapter and
+updated correspondence module passes. After adding the theorem, upstream fast
+CI passes in 139 seconds, including the exhaustive core audit and all speedbumps.
+The fresh corpus evidence above is retained for the unchanged operational
+sources; the integration adds only this theorem and an axiom print, without
+changing the carriers or executable semantics.
+
+`invocation` checks the existing compatibility
+law; no new upstream initialization wrapper is introduced. The private full
+acceptance supplies `phases` to `program_phase_acceptance` and to
+`closed_program_init_outcomes_conditional`. Its program target retains
+`(assembly : InitAssembly)` explicitly. Full aggregate/consumer validation and
+fresh independent consumer review are in progress.
+
 ## Reproduction
 
 From this worktree using the installed pinned Lean 4.32.2 toolchain:
@@ -203,12 +259,11 @@ modules. This is a GoLean-only A–F regression, not a new Iris acceptance run.
 
 ## Remaining work
 
-Upstream implementation and author checks are complete. Exact-pin independent
-review confirmation is recorded with the handoff. Consumer acceptance remains
-pending the exact initialized-program constraint; consume it without changing
-its premises, observers or histories before declaring C2 complete. This is an
-upstream-only checkpoint. The readback control's reachability limitation above
-is retained.
+Initial upstream implementation and checks are complete and independently
+confirmed at `fcebf85c`. Finish the relayed consumer acceptance and its fresh
+review at an immutable pin. The downstream Iris `InitAssembly` remains a real
+premise and is not part of the upstream request. The readback control's
+reachability limitation above is retained.
 
 Sequential finite program correspondence remains distinct from full observed
 adequacy, CLI/frontend correctness, concurrency, infinite-run bisimilarity,

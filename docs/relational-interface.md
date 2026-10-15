@@ -99,8 +99,10 @@ choice replay. Initialization and body each get the entire supplied budget;
 the program driver returns neither a tape suffix nor an error endpoint.
 `normal_iff` establishes successful behavior-set compatibility with the existing
 `ProgramNormal` and separate label-length bounds; it does not assert identity
-of an arbitrary supplied original success history. The exact downstream
-initialized-program adequacy constraint is still pending. This is not an
+of an arbitrary supplied original success history. The validated-entry corollary
+`ProgramExecution.Correspondence.phase_projection` preserves the exact supplied
+tape and both full phase budgets; its exact RD6 consumer acceptance is being
+checked. Its entry premises do not narrow unrestricted coverage. This is not an
 Iris adequacy theorem or an observation-completeness claim.
 
 The observation API lacks a complete entry census theorem, general target
