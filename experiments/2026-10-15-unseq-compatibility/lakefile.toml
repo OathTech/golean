@@ -1,0 +1,11 @@
+name = "unseqCompatibility"
+version = "0.1.0"
+defaultTargets = ["U1"]
+
+[[require]]
+name = "GoLean"
+path = "../.."
+
+[[lean_lib]]
+name = "U1"
+globs = ["U1.+"]
