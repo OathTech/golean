@@ -22,6 +22,7 @@ imported. The implementation request and provenance are recorded in
 | Pointer assignment | `assign_pointer_variables` | Source `*p = v` from symbolic variable lookup and read/write operation premises; arbitrary target `Loc`, including interior and aliasing cases; actual ordered labels, each pick-free and output-free. No general assignment claim. |
 | Declared call/return | `SavedCaller`, `CallBoundary`, `NormalExit`, `SavedCaller.enter`, `.invoke`, `CallBoundary.deliver` | Store-preserving pick-free operands, bound-variable destinations, no pending defers. Entry, independent callee body and ordered readback/writeback compose without client frame/target/signal construction. |
 | Uniform store phases | `StorePath`, `.trans`, `.weaken`, `.run`, `StepAdmission`, `StoreEffect`, `OperandPaths` | Every traversed source is nonterminal and init-admitted; every path step preserves each store satisfying its fact. Actual labels remain pick-free, with no observer-silence claim. Final controls are unrestricted. |
+| Observed store phases | `StorePathFor`, `StoreEffectFor`, `OrderedWritesFor`, `OperandPathsFor`; `Observed.variable_assignment_phases`, `.variable_expression_phases`, `.pointer_rhs_phases`, `.SavedCaller.entry_phases`, `.CallBoundary.delivery_phases` | Shared source-policy carriers retain intermediate empty boundary events under the actual read/write facts. General operand-list preparation precedes exact `Enters`; delivery snapshots exact `Boundary.Returns` before all writes. Erasure and path composition remain available; arbitrary tails and callee bodies need not be silent. |
 | Restricted unseq sequentialization (U1 checkpoint) | `Unseq.Domain.all_schedules`, `.sequentialization`, `.enter`, `.canonical_entry`; `SafeUntil`, `SegmentPrefix` | Topologically indexed finite eval-only graphs, one fresh binder per occurrence, no regions or phase-2 stores. Uniform operational expression laws give progress on every tape, finite completion, intermediate heap/admission facts and canonical realization with exact labels. Actual entry checks/allocation remain. Shared reads and dependent consumers are supported. The arbitrary tail need not terminate. The frozen RD8 SimulationLaw and guarded target are discharged by a checked local adapter using the shared all-ready Traversal; see `2026-10-15_relational-unseq-stage.md`. |
 | Operational support and segment observations | `loadLoc_agrees`, `write_preserves_load`, `allocations_distinct_bounds`; `SafeUntil.observe_prefix`, `.output`, `.eventually` | Root agreement preserves full read results; distinct-root writes preserve reads. Unequal allocation bounds yield unequal fresh locations. Observation silence is parameterized over reachable real steps; byte-output silence is proved. No concurrent transport, general context extension or arbitrary projection silence is claimed. |
 | Assignment/entry phases | `pointer_assignment_phases`, `variable_assignment_phases`, `SavedCaller.entry_phases` | Existential write/activation boundaries independent of stores; successful operations justify the effect. Assignment suffixes require no pre-write read facts. Symbolic aliases/interiors and arbitrary argument lists retained. |
@@ -69,6 +70,13 @@ and invocation laws retain their original domains. A path's `StepAdmission`
 records terminal/init guards only; transition existence is supplied separately.
 Successful `loadRoot` premises restrict read bindings to root locations; write
 targets and variable destinations may be interior and aliased.
+The observed refinements reuse U1's `StorePathFor` and `ReadOnlyExprFor`;
+`Observed.ReadOnlyExpr` supplies variable/reference/integer-add composition.
+These are sufficient event-free operand laws, not a claim that every erased
+`ReadOnlyExpr` is event-free. Source policies cover traversed steps only.
+The old erased laws retain their original domains. Exact frozen observed
+assignment/entry/delivery and caller acceptance are recorded in
+`2026-10-15_relational-observed-phases-stage.md`.
 The three frozen phase requests and guarded Set/Keep acceptance are recorded in
 `2026-10-14_relational-phase-acceptance.md`. Client ownership updates and
 observer obligations remain downstream. RD5 delivery/expression/loop adapters
