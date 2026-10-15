@@ -62,8 +62,7 @@ open Lean Elab Term Meta in
 /-- Normalize witness data at elaboration time, refusing errors. The acceptance
 theorem separately checks the certificate equation through the kernel. -/
 elab "sample% " source:term : term => do
-  let e ← elabTerm source (some (mkApp2 (mkConst ``Except [0, 0])
-    (mkConst ``Stop) (mkConst ``Certificate)))
+  let e ← elabTerm source none
   let reduced ← Lean.Meta.Tactic.Cbv.cbvEntry e
   let result := match reduced with
     | .rfl .. => e
