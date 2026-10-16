@@ -1,6 +1,6 @@
 # What a release is (RULED 2026-10-12)
 
-**Status: RULED** — [USER] Mike 2026-10-12 «D2: agree as written» on the [AGENT] proposal of the release-readiness backlog
+**Status: RULED** — [USER] Mike 2026-10-12 (D2: agreed as written) on the [AGENT] proposal of the release-readiness backlog
 (`docs/2026-10-12_release-readiness.md` §0, §5). Nothing here is ruled until the [USER] says so; until then no
 `release/*` tag exists and `lakefile.toml`'s `version` stays where it is (a release is the [USER]'s act). Drafted by
 the records lane `docs/release-records-1012`, 2026-10-12, from the review's §0 proposal: the 2026-10-03 re-pin offer to
@@ -23,7 +23,7 @@ the logic team (`docs/changelog/61958f2e-WINDOW.md`, tag `logic-offer/2026-10-03
    first release starts from the offer commit `20d3946d` and FREEZES `docs/changelog/20d3946d-WINDOW.md` at the tag),
    rows in the existing convention — one row per landing train, newest first, each naming what a consumer of GoCore
    programs, the wire, the CLI or the raft subject can observe, the trusted surface touched, and its [USER] authority
-   (verbatim, relayed) — and a cumulative summary at the top measured against `git show <prev-tag>:<path>`, as the
+   (relayed) — and a cumulative summary at the top measured against `git show <prev-tag>:<path>`, as the
    offer's summary was.
 5. **A stated-limits section**, in that changelog, one place, each a limit and not a gap read as closed. The template is
    the offer's ten STATED LIMITS (`docs/changelog/61958f2e-WINDOW.md`, «STATED LIMITS of the offer»: the memory floor;
@@ -73,16 +73,15 @@ push rule). Pushing the tag is a separate sign-off.
 - **Pre-`main` aborts are outside the differential's observation scope** (BUG-107, five rows refusing
   by name): a package initializer that panics or deadlocks before `main` cannot be authenticated as a
   gc abort because the harness registers its crash channel from `main`. [USER] Mike 2026-10-12
-  (D3): «accept and state clearly».
+  (D3): (accepted and stated as a limit).
 - **Static-initialization-dependent programs** (BUG-061: gc folds some package-level initializations
-  into the data section; the model schedules them): [USER] 2026-10-12 (D1): «refused, if it's easy
-  to exclude» — the refusal by name is a lane; if no cheap exclusion exists, the release names the
+  into the data section; the model schedules them): [USER] 2026-10-12 (D1): (refuse the case if excluding it is easy) — the refusal by name is a lane; if no cheap exclusion exists, the release names the
   profile that excludes the shape and keeps the row as a known red.
 - **The abort window** (punch-list item 29, from the sched-boundary review 2026-10-12): a goroutine's
   output beside main's abort is not a scheduling boundary (`atBoundary_of_abort`; «B3, deferred»), so the
   machine never interleaves a child's `print` between main's last output and its panic — pinned gc does,
   dominantly (994 of 1000 runs at GOMAXPROCS=2 on the probe). A known admitted class, NAMED as a stated limit and not widened: [USER] Mike 2026-10-12
-  «1,3-6 approved» (item 3 of the ask = this limit; the [AGENT] coordinator read «approved» as approving the
+  (items 1 and 3-6 approved) (item 3 of the ask = this limit; the [AGENT] coordinator read the approval as approving the
   limit as written here, the ask having offered «name it, or widen»). Widening (a boundary at the abort) would
   touch `atBoundary_of_abort` and the driver's terminal-priority classification — a pinned-statement question
   left for a later ruling.
@@ -101,13 +100,11 @@ push rule). Pushing the tag is a separate sign-off.
   a channel element type of 64 KiB or more, an array larger than the address space, a struct or a function-argument
   list of 2^50 bytes or more is refused after type-check with gc's text — at EVERY mention of the type, including
   declarations and dead code gc would never size, so some programs gc builds are refused by name (the message says
-  so; 25 such shapes pinned as refused-by-design in `tools/nativefrontend/gclimits_test.go`). [USER] Mike 2026-10-13, verbatim, relayed: «I feel like this is
-  just opening the door to endless special-case nonsense. I'd prefer to just refuse this case, and maybe support it
-  later». A body-less user function is refused the same way (BUG-126).
+  so; 25 such shapes pinned as refused-by-design in `tools/nativefrontend/gclimits_test.go`). [USER] Mike 2026-10-13, relayed: (refuse the case rather than open the door to special-casing; support may come later). A body-less user function is refused the same way (BUG-126).
 - **A `package main` with no `func main` is refused** by the frontend's default mode, as gc refuses to build it
   (BUG-125, `tools/nativefrontend/entrymode.go`, the same ruling). The differential corpus exports its subjects with
   `--subject`, which skips only that rule; a consumer exporting a main-less package passes it too, or adds a `main`.
-  No whole-program mode for such packages — «maybe support it later».
+  No whole-program mode for such packages — later support left open.
 - **A variable-length `make` past the budget is a memory kill, not a refusal** (punch-list row 30's open half, row
   31(d)): a constant-length `make` whose count × element footprint exceeds the budget refuses by name at decode, but
   when the length is computed at run time the backing is built, and a count × footprint past the cap ends the run
@@ -120,7 +117,7 @@ push rule). Pushing the tag is a separate sign-off.
   race pragmas, unknown verbs gc ignores: all refused; no directive is modeled); the three allowed verbs only in the
   placements gc accepts (a directive after code on its line, a `//go:build` after the package clause, a
   `//go:noinline` no func or method declaration follows: refused as gc's «misplaced compiler directive»). [USER]
-  Mike 2026-10-13, relayed: «3, agree», under «I'd prefer to just refuse this case, and maybe support it later».
+  Mike 2026-10-13, relayed: (item 3 agreed), under (refuse the case now; support may come later).
   Rows `directives/*` (three red by design, five controls, nine negative).
 - **The model's runtime defaults** (F3, row 39; BUG-128): the semantics is Go 1.26's with the MODULE-mode runtime
   defaults — `panic(nil)` is `*runtime.PanicNilError`. No GODEBUG setting is modeled: `//go:debug` lines (any user
@@ -143,7 +140,7 @@ push rule). Pushing the tag is a separate sign-off.
   blank operand together with its run-time panic (`walk/complit.go:231` via `staticinit.isSideEffect` — a negative
   shift count, an interface comparison over an uncomparable dynamic type, under any pure wrapper: gc answers, an
   evaluating model panics) and never evaluates a package-level struct literal's blank operand at all, calls
-  included (`staticinit.initplan`). [USER] Mike 2026-10-14 «agree on both»; the mirror of gc's census is «maybe
-  later» (ledger §5.1 item 9). Rows `structs/blank-field-*` (13 PASS, 14 red by design, one negative).
+  included (`staticinit.initplan`). [USER] Mike 2026-10-14 (both halves agreed); the mirror of gc's census is deferred,
+  later support left open (ledger §5.1 item 9). Rows `structs/blank-field-*` (13 PASS, 14 red by design, one negative).
 - The ten limits of the 2026-10-03 offer (`docs/2026-10-03_offer-to-logic-team.md`) stand.
 

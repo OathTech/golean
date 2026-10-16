@@ -140,8 +140,7 @@ Optional lane columns (membership lane, arc slice 3,
   (2026-09-03): both `scripts/coverage-manifest` and the harness refuse
   it by name — the Go-side draw budget is no longer a per-row count.
 - **Membership sampling rule** ([USER]-ruled gate change, Mike
-  2026-09-03, relayed by the coordinator: "yeah, agree on the sampling
-  budget, go ahead as you propose" — adopting
+  2026-09-03, relayed by the coordinator: the sampling budget agreed as proposed — adopting
   `docs/2026-09-01_membership-depth.md` §4.3 / P2; implemented in
   `scripts/diff-coverage` `run_membership_case_rows`, budget constant
   `MEMBERSHIP_DRAWS`). Per membership row the oracle draws ALTERNATE
@@ -150,7 +149,7 @@ Optional lane columns (membership lane, arc slice 3,
   second, not sixth as under the old "5 plain then 5 race" order); the
   row STOPS EARLY once the distinct observations drawn reach its
   `members=` pin — but never before TWO draws (one plain, one `-race`)
-  have been taken ([USER] ruling 2026-09-03, relayed: «(d) this is a 'spirit of the ruling' vs. 'letter of the ruling' case - we should do option A which seems like the spirit of the ruling» —
+  have been taken ([USER] ruling 2026-09-03, relayed: (option A: the spirit of the ruling over its letter) —
   option A, the two-draw floor; such rows caption `draws=2 (floor; …)`),
   otherwise at the budget **K=32** (not a knob; the former `--slow`
   mode's K=80 went with the cached tier in the 2026-10-12 gate cull),
@@ -219,7 +218,7 @@ frontend-specific artifact paths can drift independently.
 
 Origin: the membership-depth lane's routing-rule proposal
 (`docs/2026-09-01_membership-depth.md` §5, P1 in §6). Ruling: [USER]
-(Mike, 2026-09-03) «(6) strict-lane, agree» to the coordinator's item
+(Mike, 2026-09-03) agreed to item (6), strict-lane, the coordinator's item
 "Strict-lane routing rule: adopting it turns eight scheduling rows red
 until routed. Recommendation: adopt, and route them in the same slice
 so nothing sits red" — relayed by the [AGENT] coordinator, cited here
@@ -251,7 +250,7 @@ stream is compared with its own default trajectory):
    the row carries `lane=confluent` (the enumerator certifies |set| = 1
    over all choice streams the row consumes — registry-point schedules
    and, since Stage D of the evaluation-order model (2026-09-20),
-   expression-order picks (`unseqNext`) — [USER] 2026-09-21 «yes, I agree»,
+   expression-order picks (`unseqNext`) — [USER] 2026-09-21 (agreed),
    relayed, on the Stage D audit's F3; the 3-stream check is then
    redundant with the certificate and the guard does not run) or, when
    the enumerated set has ≥ 2 members, `lane=membership` with
@@ -363,7 +362,7 @@ covered by the fixed streams):
   also closes (their declared sets reproduced exactly) are recorded, not moved.
 - The tracer's wall budget: `LEAN_TRACE_TIMEOUT_SECONDS` (default 8 ×
   `LEAN_TIMEOUT_SECONDS` = 480 s since 2026-10-07, 240 s before
-  — the single-run default moved 30 → 60 s, [USER] «Agree 1 / 2»,
+  — the single-run default moved 30 → 60 s, [USER] (items 1 and 2 agreed),
   relayed; the tracer makes eight interpreter
   passes where `native-json-run` makes one). The guard's first full
   run under the 30 s single-run budget timed out on four heavy
@@ -560,8 +559,7 @@ ONE cause — the first refusal the emitter hit — and fixing it may only
 reveal the next (the cedar-go census's FR-22 → FR-23 → FR-24 sequence,
 export fraction unchanged each time). [USER] direction (4) of
 `docs/language-coverage-ledger.md` §0 (2026-09-04, coordinator-relayed:
-«it'd be useful if we didn't just get stuck without any information
-about *why* it's happening») is served by `scripts/lower-diagnose <dir |
+(a stuck lowering should report why it is stuck)) is served by `scripts/lower-diagnose <dir |
 main.go> [--json] [--tsv] [--subject]` (`tools/lowerdiag`;
 `docs/2026-09-04_lower-diagnose.md`): it runs the real frontend for the
 first refusal (what a user sees today), then a STATIC go/types demand
@@ -586,8 +584,7 @@ row per case (`baselines/negative-full.tsv`: `result<TAB>id<TAB>stage`,
 judged with `--no-cause`); `scripts/coverage-baseline-diff`
 requires every case a run actually ran to reproduce its row exactly
 ("same set = no regression"). ONE relaxation exists, per row and
-[USER]-ruled per row (ruling (a), 2026-09-03 — «(1) the guard - agree
-with the redommendation, do (a)», relayed by the [AGENT] coordinator;
+[USER]-ruled per row (ruling (a), 2026-09-03 — (item (1), the guard: the recommendation agreed, option (a)), relayed by the [AGENT] coordinator;
 primary record `docs/assessment/decisions-2026-08-31.md`, 2026-09-03
 addendum): the stage column may be a
 `|`-separated ALTERNATION such as `nondet|differential`, and the observed
@@ -618,7 +615,7 @@ of the previous baseline must still be one, unless a header comment
 A FAIL row's stage alone let a crash, a timeout, a different refusal or
 (at `lean-observation`) a machine panic match a designed red at the same
 stage (`docs/2026-10-12_refusal-cause-pinning-design.md` §2 — it happened
-once, BUG-090). Since 2026-10-12 ([USER] «1,3-6 approved», D1-D6 of that
+once, BUG-090). Since 2026-10-12 ([USER] (items 1 and 3-6 approved), D1-D6 of that
 note) the differential baseline's fourth column pins a normalized CAUSE
 KEY, derived from the run's detail by `scripts/coverage-cause` and
 compared by `scripts/coverage-baseline-diff` (a changed key at the same

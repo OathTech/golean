@@ -301,8 +301,7 @@ Discipline notes, recorded up front:
   re-envelope decision above; (c) a latitude-inventory entry, since
   this ledger records faults and the envelope itself belongs there.
 - 2026-10-12 ([AGENT] lane `fix/bug061-refuse-1012`; [USER] Mike
-  2026-10-12 verbatim «D1: I think this should probably be refused, if
-  it's easy to exclude.», relayed): (a) is GUARDED BY NAME at the
+  2026-10-12, D1: refuse the case if excluding it is easy, relayed): (a) is GUARDED BY NAME at the
   frontend — `tools/nativefrontend/staticinit.go` sorts the non-constant
   initializers into the shapes `StaticAssign` certainly leaves as work
   and the shapes it may fold, and refuses the export iff some pruning of
@@ -599,9 +598,8 @@ Discipline notes, recorded up front:
   and `m3pairs/part-01/case_03079` seed 6,003,079 —
   `docs/2026-09-01_grossmith-campaign-3.md` §5.2/§5.0). For 27 days it
   was carried as latitude-inventory row **E5**, "both spec-legal";
-  **re-classified 2026-09-02 by [USER] ruling** (Mike, verbatim:
-  "agree we should mark as a gc deviation, and record in our gc bug
-  backlog"), on the campaign-3 verifier's analysis [AGENT] below. The
+  **re-classified 2026-09-02 by [USER] ruling** (Mike:
+  mark it as a gc deviation and record it in the gc bug backlog), on the campaign-3 verifier's analysis [AGENT] below. The
   third ledger entry where the ORACLE is the wrong side (L-014, L-015).
 - Sources: spec#Assignment_statements, the two-phase sentence, verbatim
   at the go1.26.5 pin: "The assignment proceeds in two phases. First,

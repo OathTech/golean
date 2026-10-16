@@ -2,9 +2,7 @@
 
 Moved here VERBATIM from `AGENTS.md` on 2026-09-07 — `AGENTS.md` is now a
 git-tracked symlink alias of `CLAUDE.md` ([USER] direction, Mike, relayed by
-the [AGENT] coordinator — cite as relayed: «can you make AGENTS.md a
-git-tracked alias for CLAUDE.md (add a note in CLAUDE.md to this effect) -
-this is so other agents can find our working instructions»). The body below
+the [AGENT] coordinator — cite as relayed: (make AGENTS.md a git-tracked alias of CLAUDE.md, noted in CLAUDE.md, so that other agents find the working instructions)). The body below
 is the old file from its "Plan of record" line on, unchanged.
 
 > **Alias caveat** ([AGENT] 2026-09-07). GitHub's RAW view of a git symlink
@@ -117,11 +115,10 @@ lane `HANDOFF.md` + design-note pattern it describes.
 
 ## Evidence on main
 
-[USER] rulings: 2026-09-07 (Mike, relayed): «The evidence blob should not
-land, and generally we should not dump big evidence bundles on main»;
+[USER] rulings: 2026-09-07 (Mike, relayed): (the evidence blob does not land; big evidence bundles are not dumped on main);
 2026-10-12 (Mike, firsthand): the global «Artifacts: rebuild or push, never
-hoard» rule «is intended to mean any such records should be useful with a
-high bar for evidence», and the triage of `docs/evidence/` under that bar
+hoard» rule means that any such records must be useful, with a high bar
+for evidence, and the triage of `docs/evidence/` under that bar
 (`docs/2026-10-12_gate-cull-plan.md` §9, D10).
 
 - A record is committed under `docs/evidence/` only if the commit message's

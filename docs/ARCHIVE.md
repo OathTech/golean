@@ -66,13 +66,12 @@ independent Verdi and etcd-proof packages.
   lands in reviewed chunks per
   `docs/2026-09-07_typed-sprint-landing-plan.md`, each squashed from
   this branch by path selection and crediting its commits by SHA.
-  Reason — [USER] ruling (Mike, 2026-09-07, verbatim as relayed by the
-  [AGENT] coordinator — cite as relayed): «The evidence blob should not
-  land, and generally we should not dump big evidence bundles on main
-  (they can't be easily hosted on GH for one). Can you make a plan to
-  land this work cleanly? We'll want to decompose and land in sane
-  chunks that can be reviewed. And where appropriate fix some of the
-  issues, eg. the choice tape stuff». The two landing audits that
+  Reason — [USER] ruling (Mike, 2026-09-07, as relayed by the
+  [AGENT] coordinator — cite as relayed): the evidence blob does not
+  land, big evidence bundles are not dumped on main (they cannot be
+  hosted on GitHub), and the work is to be landed cleanly by a plan,
+  decomposed into reviewable chunks, with some of the issues (the
+  choice tape among them) fixed where appropriate. The two landing audits that
   found the payload and the semantic blockers are landed by the plan's
   L6 chunk as `docs/2026-09-07_landing-audit-{A,B}.md`. Snapshot ref
   `snapshot/typed-sprint-before-uintptr-20260906` names the same tip.
@@ -100,7 +99,7 @@ independent Verdi and etcd-proof packages.
   (PENDING [USER] at the merge ask; one revert restores them). Deleted from main by lane
   `park-lane/typed-profiles-0916`; the note (inventory, what was re-homed,
   what stayed, how to revive) is `docs/2026-09-16_typed-profiles-parked.md`.
-  Future home per the [USER] ruling of 2026-09-16 (relayed; verbatim in the
+  Future home per the [USER] ruling of 2026-09-16 (relayed; recorded in the
   note): the reasoning repository under gitignored `deps/` (name
   provisional — «golean-reasoning»; the survey's `deps/reasoning-revival/
   golean-logic/`), consuming golean PINNED at that SHA. Revive with
@@ -137,4 +136,4 @@ the first payload kept off main under this rule is the typed-consumer
 sprint's, whose archive is the sprint branch itself (above) and whose
 manifest is `docs/evidence/2026-09-05_typed-consumer-sprint/`.
   (Landed on `main` by train r50, 2026-09-27, documentation only: release-check no inputs changed; fast
-  `scripts/ci` PASS; the adversarial audit waived — [USER] Mike, verbatim, relayed: «No, a review isn't needed».)
+  `scripts/ci` PASS; the adversarial audit waived — [USER] Mike, relayed: (the review waived).)

@@ -42,8 +42,7 @@ listed id to be FAIL, so a designed refusal that stops firing trips the gate
 
 **GUARDED BY NAME at the frontend (2026-10-12, [AGENT] lane
 `fix/bug061-refuse-1012`; release-readiness item 1 / §5 D1, [USER] Mike
-2026-10-12 verbatim «D1: I think this should probably be refused, if it's
-easy to exclude.», relayed by the [AGENT] coordinator).** The loader
+2026-10-12 verbatim (D1: refuse the case if excluding it is easy), relayed by the [AGENT] coordinator).** The loader
 (`tools/nativefrontend/staticinit.go`) now sorts every non-constant
 package-level initializer of a source package into the shapes
 `StaticAssign` certainly leaves as work (map literals, arithmetic,
@@ -1715,9 +1714,7 @@ alongside every `e.lifted` rollback (both paths).
   a fix would need the store held back, not panics linearized; its
   natural home is the BUG-025 retirement slice. A future pin in this
   shape must use the membership/envelope treatment, not strict
-  equality.) **CORRECTION (2026-09-02, [USER] ruling — Mike: "agree
-  we should mark as a gc deviation, and record in our gc bug
-  backlog"):** the early-STORE manifestation's "Both spec-legal"
+  equality.) **CORRECTION (2026-09-02, [USER] ruling — Mike: mark it as a gc deviation and record it in the gc bug backlog):** the early-STORE manifestation's "Both spec-legal"
   verdict just above is WITHDRAWN. spec#Assignment_statements' two-phase
   sentence is normative (every store after every operand evaluation);
   spec#Order_of_evaluation's list of ordered events governs the order
@@ -2333,8 +2330,7 @@ boundary).
   and stepFn carried the flag through frame exit/drain/panic paths,
   StateWf had wrapper-aware recoverResult lemmas, the WP frame laws
   generalized over the marker. All of it deleted at G-P S2; the frame's
-  last field is now the callee's `FuncId` ([USER] Mike 2026-09-28 «Agree
-  on (1)», relayed).
+  last field is now the callee's `FuncId` ([USER] Mike 2026-09-28 (option (1) agreed), relayed).
 - Pinned-by: differential
 - Cases: interfaces/recover-promoted-wrapper/silent-value-embed, interfaces/recover-promoted-wrapper/status-value-embed, interfaces/recover-promoted-wrapper/silent-pointer-embed, interfaces/recover-promoted-wrapper/silent-iface-embed
 - Discovered: 2026-08-06 (arc-final audit F1 — found by reading the
@@ -2951,7 +2947,7 @@ without re-running `step_complete_any_wf`'s mapIterNext case.
 
 **Unit 6b, 2026-10-03 ([AGENT] lane `core/panic-preprint-1003`; design note
 `docs/2026-09-30_bug004-item4-design.md` §2 (i), RULED [USER] Mike 2026-09-30
-«Yes, agree, do the fix inside this window», relayed; handoff
+(the fix agreed inside this window), relayed; handoff
 `docs/2026-10-03_panic-preprint-handoff.md`): ITEM 4 IS FIXED.** gc's
 `preprintpanics` CALLS the payload's `Error()`/`String()` — after every deferred
 call, before anything prints (`runtime/panic.go:702`–`:730` at the pin) — and
@@ -2978,13 +2974,13 @@ Three of this entry's four items move; the Cases line above is the result.**
   (`abortConsult`; `stepFn`'s `.panicking _ .stop` arm, the pool's tombstone
   arm) — slot 0 = the collapsed `… [recovered, repanicked]`, slot 1 = the
   two-line form's `… [recovered]`. Authority: an [AGENT] extension of
-  BUG-087's ruling SHAPE — «(2) panic-text, agree, demonic choice so both
-  are admitted» ([USER] 2026-09-03, relayed — `docs/2026-08-31_qrow-rulings.md`),
+  BUG-087's ruling SHAPE — item (2), panic text: a demonic choice admitting both
+  texts ([USER] 2026-09-03, relayed — `docs/2026-08-31_qrow-rulings.md`),
   ruled for ONE demonic choice at the nil arm (`nilValueMethodText`/R9a),
   NOT for this marker — to a demonic choice where gc's realization is
   toolchain-internal, under R-1's re-envelope authority (the rendered text
   is spec-silent, quotiented via membership; KIND and control flow stay
-  exact); [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (L3's
+  exact); [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 by the merge sign-off (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (L3's
   adversarial-audit fix round, 2026-09-07, R2 — the earlier wording "Ruling
   followed: BUG-087's" overclaimed). WHY latitude and not a pin, from gc at the pin
   (`runtime/panic.go:715`, `preprintpanics`): the marker is eface IDENTITY —
@@ -3003,7 +2999,7 @@ Three of this entry's four items move; the Cases line above is the result.**
   there; its `expected_reason` `orig` is kept — the substring both members
   share) and LEAVES this Cases line — a (c)→(a) re-classification by
   [AGENT] under R-1 that touches a [USER]-ratified C4 pin (triage §7,
-  2026-08-20, whose re-colorable list names C1/C5/E7/R6, not C4); [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (fix round R3; the move was kept
+  2026-08-20, whose re-colorable list names C1/C5/E7/R6, not C4); [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 by the merge sign-off (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (fix round R3; the move was kept
   pending the ruling and STANDS under it); the new
   `panic-recover/repanic-collapse/*` family (18 membership rows, gc drawing
   slot 0 on 11 and slot 1 on 7, both members gc-certified on the string,
@@ -3032,7 +3028,7 @@ Three of this entry's four items move; the Cases line above is the result.**
   observation holds no invalid byte; tagged `first_line_scope`, fix round
   R4d).
 - **Item 3's RESIDUE is the new red class, by name (landing decision D5 —
-  [AGENT] default applied per the coordinator's brief; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (plan §4 D5),
+  [AGENT] default applied per the coordinator's brief; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 by the merge sign-off (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (plan §4 D5),
   `docs/2026-09-07_typed-sprint-landing-plan.md` §4):** a string payload
   whose FIRST LINE is not valid UTF-8. gc writes the raw bytes
   (`printindented`; w35/w36/w37) and the `String`-valued
@@ -3057,7 +3053,7 @@ Three of this entry's four items move; the Cases line above is the result.**
   {error,stringer}` stay red here.
 - The sprint's `string-member` lane (a third comparison mode over the
   collapse and the escape member) is RETIRED unlanded (landing decision D2
-  — the plan's default; [AGENT] default applied per the coordinator's brief; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (plan §4 D2)): its
+  — the plan's default; [AGENT] default applied per the coordinator's brief; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 by the merge sign-off (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (plan §4 D2)): its
   functions are the membership lane, the strict lane and the named refusal
   above — EXCEPT its `Controls` role (control-byte payloads,
   `panic("a\x00\x01\t\r\nZ")`: NUL/SOH/TAB/CR preserved through the
@@ -4595,7 +4591,7 @@ the issue53619 family was wrong.
   the constant's docstring now states each number's path. RESIDUALS
   (2)/(3) FAIL-CLOSED BY NAME 2026-10-12, lane
   `core/bug078-nested-budget-1012` — release-readiness item 30, [USER]
-  Mike 2026-10-12 «30: can we fail-close until we fix?», relayed by the
+  Mike 2026-10-12 (item 30: fail-close until fixed), relayed by the
   [AGENT] coordinator: the decoder's NESTED bound `arrayFootprintBudget`
   (1<<24 scalar elements, the type's footprint through nesting, defined
   entries and struct fields) and BUG-090's `sliceCapBudget`; the
@@ -4662,13 +4658,12 @@ oversized nested value can still reach the wall clock: an honest
 kill, never a wrong answer, lifted by (1).
 
 **FAIL-CLOSED (2026-10-12, [AGENT] lane `core/bug078-nested-budget-1012`;
-release-readiness item 30 — [USER] Mike 2026-10-12 «30: can we fail-close
-until we fix?», relayed by the [AGENT] coordinator, whose answer this lane
+release-readiness item 30 — [USER] Mike 2026-10-12 (item 30: fail-close until fixed), relayed by the [AGENT] coordinator, whose answer this lane
 executes: a named refusal at the decoder's existing budget choke point.)**
 The residuals, RE-MEASURED on main's binary at c266ce6b (milner-oath,
 single runs under `capped -m 16G`, wall clock incl. ≈0.1 s process start;
 the probe programs were `.tmp/probes/*` — ephemeral; the gate's per-case
-wall is 60 s since 2026-10-07, [USER] «Agree 1 / 2», relayed):
+wall is 60 s since 2026-10-07, [USER] (items 1 and 2 agreed), relayed):
 
 *(1) is not what the paragraph above says it is.* `normalizeListWith` is
 LINEAR since C1 S1 (2026-09-18, the accumulator form — `Ops.lean`'s own
@@ -4795,8 +4790,7 @@ finding F2 of the zero-context fail-closed pass,
 unrelated subjects went `error`. Named and closed, but the frontend's
 per-declaration quarantine does not cover these budgets. Fix: apply them
 per declaration in the frontend.»; under [USER] Mike's 2026-10-12 backlog
-mandate «manage some agents working through the backlog, starting with
-the ones that require no input from me», relayed by the [AGENT]
+mandate (agents work through the backlog, starting with the items that need no input from the user), relayed by the [AGENT]
 coordinator.)** The three decoder refusals above were per WIRE: one
 over-budget declaration turned every subject of its package into
 `error`. The native frontend now applies the SAME rule per declaration
@@ -5016,8 +5010,7 @@ one-line chan-arm check — left to its own lane. (TAKEN 2026-10-13: release-rea
   only (`RaceAccess := Kind × Loc`; atomic↔atomic non-conflicting,
   atomic↔plain conflicting; recorded at the sync cell's path from
   `raceUpdate`'s sync arm). SCHEDULED [USER] 2026-09-02 (Q-row ruling
-  sheet row 2, ruled with the A′ ratification — "I agree with this
-  approach"): the fix lands as its OWN S–M slice, sequenced BEFORE
+  sheet row 2, ruled with the A′ ratification — agreed with the approach): the fix lands as its OWN S–M slice, sequenced BEFORE
   the atomics arc rather than riding it — TODO.md "BUG-080 detector
   atomic-access-kind slice"; the two costs named below are that
   slice's design checks. The sequencing paragraph that follows is the
@@ -5088,7 +5081,7 @@ by name. Frontend only, fail-closed-strengthening.
 ## BUG-081 — `make` past gc's maximum allocatable size ran on (materializing its backing toward the wall clock) where gc panics deterministically `makeslice: len/cap out of range` / `makechan: size out of range`: the allocation-limit panic class was unmodeled (observed ∉ modeled) [TRUST-ADJACENT: GoCore make/append arms]
 
 - Status: fixed (2026-09-02, t5-maxalloc — fidelity decision 5(b)
-  [USER] 2026-08-31 "the deterministic maxAlloc panic class modeled",
+  [USER] 2026-08-31 the deterministic maxAlloc panic class is modeled,
   landed as PINNED latitude R16: `maxAllocBytes` 2^48, `chanHeaderBytes`
   112, the gc linux/amd64 layout `tySizeAlign` (GoLean/GoCore/
   Ops.lean, R16 docstrings); gc's check ORDER and message texts at the
@@ -5146,8 +5139,7 @@ refuses); the gc probe append-growth-over-unsafe is its evidence.
 ## BUG-082 — the `make(map[K]V, hint)` HINT is not lowered: the native frontend emits `make-map` without it, so the hint expression's evaluation (its side effects) is dropped — and the machine arm's `makemap: size out of range` panic on a negative hint (a string gc no longer realizes) was dead code behind it
 
 - Status: fixed (2026-09-02, the `bug082-maphint` lane — [USER] Mike,
-  2026-09-02, relayed by the [AGENT] coordinator, NOT firsthand: «Issue
-  (2) sounds like a clear win, it's a bug fix right? do it», issue (2)
+  2026-09-02, relayed by the [AGENT] coordinator, NOT firsthand: (issue (2) approved as a clear win and a bug fix), issue (2)
   being the coordinator's "BUG-082 frontend fix: authorizes moving the
   twin-wire pin"; [AGENT]-executed inside that mandate. THE FIX
   [TRUST-ADJACENT: frontend lowering + decoder key list]:
@@ -5266,8 +5258,7 @@ this entry's evidence dir, §M1.
   cap(make(chan int, t[k]))`) and the THREE index/division/nil-deref-
   left shapes (`s[i] + …`, `1/z + …`, `*p + …`) that MATCHED gc — the
   trade this entry priced ("would newly refuse the pre-existing
-  slice/chan shapes"), taken under the relayed posture «break rather
-  than preserve incorrect behaviour»; SEVEN lower. On those three traded
+  slice/chan shapes"), taken under the relayed posture (break rather than preserve incorrect behaviour); SEVEN lower. On those three traded
   shapes gc's point IS the hoist's point (gc hoists the make too, so the
   hint's panic fires first on both sides) — the refusal there is
   defensible not because the machine was wrong but because the guard is
@@ -5314,8 +5305,7 @@ this entry's evidence dir, §M1.
   (3) forbids a FAIL row on a fixed differential entry).)
   **REFUSAL RETIRED INTO LATITUDE (2026-09-05, lane `e13-b` — E13
   option (b), RULED [USER] Mike 2026-09-05, relayed by the [AGENT]
-  coordinator: «we should do what the standard supports, and avoid
-  over-refusal if we can. That's what (b) means right?»; design
+  coordinator: (do what the standard supports and avoid over-refusal where possible — option (b)); design
   `docs/2026-09-05_e13-b-design.md`).** STATUS CHANGE with its reason:
   the shapes this entry filed were never a wrong answer in the sense of
   observed-∉-modeled-by-right — gc's realization (the assertion's panic
@@ -5457,7 +5447,7 @@ the records-only fix round).
   words" carries the per-entry derivation): each op records TSan's
   realized set ∪ go_mem's operation kind — THE UNION RULE, an [AGENT]
   READING inside the ruling (audit fix F3), not the ruling's words: the
-  [USER] said "follow go_mem exactly", and go_mem's operation-level
+  [USER] said that go_mem be followed exactly, and go_mem's operation-level
   list makes EVERY mutex lock read-like, `sync.Mutex.Lock` included.
   Literal go_mem would therefore RUN a lone copy beside `Mutex.Lock`;
   gc's `-race` build REFUSES it (the Lock is a CAS on `m.state`, which
@@ -5475,7 +5465,7 @@ the records-only fix round).
   `race.Disable`, so only go_mem's read-like lock kind applies —
   `race/free-sync/rw-copy-beside-{rlock,lock}`). The asymmetry is the
   oracle's, inherited on purpose; COUNTERSIGNED [USER] 2026-09-03 at the
-  round-5 merge sign-off («sounds good merge it», relayed to the
+  round-5 merge sign-off (relayed to the
   recording worker by the [AGENT] coordinator, not firsthand — record:
   `docs/2026-08-31_qrow-rulings.md` row-9 appendix, "Countersign of
   the two [AGENT] readings"; per-gc-word keying countersigned by the
@@ -5747,7 +5737,7 @@ lane, 2026-09-03 — see Status.)
 - Cases: maps/nan-key-range, maps/nan-key-range-aggregate/array, maps/nan-key-range-aggregate/struct, maps/nan-key-range-aggregate/interface
 - [USER] ratification of the E9 narrowing on irreflexive keys: RATIFIED
   [USER] 2026-09-03 (relayed quote — Mike, via the [AGENT] coordinator,
-  not firsthand: «(b) it sounds like this breaks an old ruling but ends up more accurate to real go - approved»; ruling record
+  not firsthand: option (b) approved as more accurate to real Go although it breaks an older ruling; ruling record
   `docs/2026-08-31_qrow-rulings.md`, "The E9 irreflexive-key ruling
   record (2026-09-03)"). History of the referral (audit fix round F1,
   2026-09-03 — the fix shrinks the
@@ -5897,8 +5887,8 @@ to the membership lane like every other R-row envelope; the three rows
 then move to `lane=membership` with `members=2`.
 
 **[USER] 2026-09-03: fix shape item (4) — the demonic choice at the nil arm
-— slice pending.** Ruling relayed by the [AGENT] coordinator («(2) panic-text,
-agree, demonic choice so both are admitted» — full quote and provenance
+— slice pending.** Ruling relayed by the [AGENT] coordinator (item (2), panic
+text: a demonic choice admitting both texts — provenance
 chain in `docs/2026-08-31_qrow-rulings.md`, 2026-09-03 ruling record):
 the re-envelope is item (4) above — one demonic choice between the two
 texts at `Ops.lean`'s nil arm, routed to the membership lane; the three
@@ -6032,7 +6022,7 @@ here.
   now coming from upstream text end to end (`strconv/format-parse/parse-uint-*`,
   `noodler/strings/parse-uint-edges`, `stdlib-source/strconv-parseuint/*`);
   `stdlib-source/frontier/atoi-error-path-clone` flipped too. No shim,
-  no compensating body: the [USER]'s "clean retirement" is complete for
+  no compensating body: the [USER]'s clean retirement is complete for
   ParseUint. Evidence: `docs/evidence/2026-09-03_stdlib-source-2/`;
   register `docs/stdlib-admission-register.md` (slice log 2026-09-03
   `stdlib-source-2`).)
@@ -6068,9 +6058,7 @@ name.
 shim constructing the real `*strconv.NumError` (a body change under the
 D-002 freeze plus a new shim→library import coupling, `stdlibShimImports`)
 and posed it as a D-002 exception. DENIED — [USER] Mike, 2026-09-03,
-relayed by the [AGENT] coordinator (cited as relayed): «(a) we're not
-running Raft right now, I think going red is simpler and safer, and lets
-us do a clean retirement». The shim and its plumbing are gone; the
+relayed by the [AGENT] coordinator (cited as relayed): (option (a): with Raft not running, going red is simpler and safer and allows a clean retirement). The shim and its plumbing are gone; the
 freeze is intact (no shim body changed); 15 shims remain.
 
 **Plan (closes this entry).** Slice 2's OVERLAY mechanism (memo §2.3.2,
@@ -6240,7 +6228,7 @@ A confirmation re-run of the same plan on the committed tree's gate-built binary
 consequences: the pinned row `strings/trimspace-repeat/repeat-bound-refused` did NOT flip and cannot: its own `cases.tsv` comment says it is RED BY DESIGN — outputs past the Repeat shim's modeled `1<<24` bound refuse by name (`goleanShimStringsRepeatBound`), independent of the machine's speed — so this entry's «runner-budget red (BUG-073)» description of it is STALE (corrected here, the row untouched: `Corpus/**` is a corpus lane's). Under `scripts/check-bugs.sh`'s symmetric rule a `Status: fixed` needs its `Cases:` row to PASS, so the status STAYS `open` although both mechanisms are closed; closing it is a corpus-lane follow-up: replace the pin by a performance witness that main's binary fails at budget and S3's passes (e.g. the 32k-allocation loop of `alloc_new`, 14 s → 0.8 s), re-size `stdlib-source/builder-fuzz` toward the asked 100k, and re-run the gotest lane's `fixedbugs/issue24419.go` (MACHINE-REFUSED at 30 s before) — owed, listed in the S3 handoff §6.
 
 **CORRECTED (2026-10-12, [AGENT] lane `fix/release-runtime-1012`; release-readiness punch list item 9, [USER] Mike
-2026-10-12 «starting with the ones that require no input from me», relayed).** The S3 paragraph's claim that the row
+2026-10-12 (starting with the items that need no input from the user), relayed).** The S3 paragraph's claim that the row
 `strings/trimspace-repeat/repeat-bound-refused` refuses by name through a helper `goleanShimStringsRepeatBound` was
 FALSE at the time it was written: that helper belonged to the retired `strings.Repeat` SHIM, gone since the
 stdlib-source-2 landing (2026-09-03) made `Repeat` source-through (`stdlib-source/builder-overlay/main.go` records the
@@ -6319,7 +6307,7 @@ the affected program are byte-identical; the row stays red on FR-21.
   `·N` (design note §2.2, decisions log). All three rows PASS.)
 - Pinned-by: differential
 - Cases: slices/sortfunc-cmp/cmp-compare-kinds, stdlib-source/cmp-compare/local-float-type, slices/sortfunc-cmp/sortfunc-local-type, generics/local-type-argument
-- Discovered: 2026-09-03 (stdlib source-through slice 2: retiring the desugar flipped `cmp-compare-kinds` red; the slice's STOP rule restored it and POSED the choice to the [USER]); DECIDED 2026-09-04 — [USER] Mike, relayed by the [AGENT] coordinator (cited as relayed): «(2) given we have a plan, I think this should be an honest red». Landed by lane `fr24`, checkpoint C (`docs/evidence/2026-09-04_fr24-fr25/`).
+- Discovered: 2026-09-03 (stdlib source-through slice 2: retiring the desugar flipped `cmp-compare-kinds` red; the slice's STOP rule restored it and POSED the choice to the [USER]); DECIDED 2026-09-04 — [USER] Mike, relayed by the [AGENT] coordinator (cited as relayed): (with a plan in hand, an honest red beats the desugar). Landed by lane `fr24`, checkpoint C (`docs/evidence/2026-09-04_fr24-fr25/`).
 
 WHAT: `cmp` is a source-through library unit and `cmp.Compare[T]` is the real
 generic at every type argument. A call whose type argument is a defined type
@@ -6403,7 +6391,7 @@ PLAN: ledger FR-29 (queue 29, M).
 - Expect: FAIL
 - Cases: builtins/float-bits/canonical-nan-refused, builtins/float-bits/nan-arith-payload-refused, builtins/float-bits/nan-arith-payload-refused/canonical-roundtrip, builtins/float-bits/neg-canonical-refused, builtins/float-bits/neg-canonical-refused/float32, builtins/float-bits/min-max-canonical-refused, builtins/float-bits/roundtrip-payloads
 
-PLAN (RULED [USER] 2026-09-19, «NaN: sounds good to me» = adopt [a]+[b]; record
+PLAN (RULED [USER] 2026-09-19, (the NaN plan accepted) = adopt [a]+[b]; record
 `docs/2026-08-31_qrow-rulings.md`, «The NaN latitude ruling record (2026-09-19)»): R7
 re-envelope per `docs/2026-09-18_nan-latitude-memo.md` §6 — a `ChoiceSite.nanBits` site over
 the quiet NaNs of the width, `Platform.gcAmd64` NaN fields as slot 0, the eleven `FloatBits`
@@ -6793,7 +6781,7 @@ lane's slice (a machine-model arc with its own probes of every fault's concrete
 type). Fix criterion: both Cases rows PASS; the `$runtime.Error` id is gone.
 
 **GUARDED BY NAME at the observation seam (2026-10-12, [AGENT] lane `fix/release-runtime-1012`; release-readiness
-punch list item 1, [USER] Mike 2026-10-12 «starting with the ones that require no input from me», relayed).** The
+punch list item 1, [USER] Mike 2026-10-12 (starting with the items that need no input from the user), relayed).** The
 `observed` row was the one channel still answering a plausible WRONG value (`{"dynamic":"Error", string}`, status `ok`,
 FAIL/differential) while its three siblings refused by name. Now the CLI's readout seam (`readoutObs` /
 `readoutRefusal?` / `runtimeErrorObserved?`, `GoLean/CLI.lean`) refuses before rendering any result value whose
@@ -7323,7 +7311,7 @@ standing pin of this limit. Until ruled, (iii) holds.
 - Pinned-by: differential
 - Cases: init/init-panic, noodler/initpanic/panic, noodler/initpanic/var-panic, noodler/initpanic/deadlock, init/quarantined-var-panicking/sibling
 
-**RULED 2026-10-12 ([USER] Mike, D3: «agree, accept and state clearly»): pre-`main` aborts are OUTSIDE the differential's observation scope — a stated limit of the release (`docs/release.md` §4); the five rows stay refusals by name.** (Posed 2026-09-07; re-posed in the release-readiness backlog D3 (`docs/2026-10-12_release-readiness.md` §5; note 2026-10-12, [AGENT] records lane).
+**RULED 2026-10-12 ([USER] Mike, D3: (accepted and stated as a limit)): pre-`main` aborts are OUTSIDE the differential's observation scope — a stated limit of the release (`docs/release.md` §4); the five rows stay refusals by name.** (Posed 2026-09-07; re-posed in the release-readiness backlog D3 (`docs/2026-10-12_release-readiness.md` §5; note 2026-10-12, [AGENT] records lane).
 
 MERGE-TRAIN NOTE ([AGENT] L4 worker, 2026-09-07): numbered against main's
 top BUG-104 at cut time. The landing plan (§4 D1) SUGGESTED reserving 107 for
@@ -7625,8 +7613,7 @@ frontend's refusal formats are classified for `scripts/lower-diagnose`
 (`tools/lowerdiag/causes.tsv` row `foreign-module-version`, by-design). The
 original fix sketch follows.
 
-Ruling ([USER] Mike 2026-09-11, verbatim, relayed: «Yes, refuse
-non-1.26»): this semantics implements the Go 1.26 language only. Fix: when
+Ruling ([USER] Mike 2026-09-11, relayed: (refuse non-1.26)): this semantics implements the Go 1.26 language only. Fix: when
 the lowered directory — or an imported source package — carries a `go.mod`
 whose `go` directive's language version (major.minor) is not 1.26, REFUSE
 by name at export (`go.mod declares go 1.21; GoLean implements the Go 1.26
@@ -7729,8 +7716,8 @@ malformed surrogates) driven through the CLI, not through an already-parsed
 ## BUG-111 — the race detector's conflict relation compares `.field` path steps STRUCTURALLY, static `typeId` included, so a struct-tag-compatible pointer alias (`p.f` vs `(*B)(p).f`, triage L7) yields two «disjoint» shadow keys for ONE memory word: an HB-unordered write through one alias and a read through the other is NOT a conflict — a MISSED RACE, fail-OPEN vs `go run -race` [fidelity; race detector conflict relation (`locPrefix`/`ShadowKey.overlap`, Race.lean); found by the C1 S0 frame-law spike]
 
 - Status: fixed (2026-09-18, lane `core/c1-memory-module-s2c-0918` — fix (i), canonical-path
-  keys at emission, RULED [USER] Mike 2026-09-18 (verbatim, relayed by the [AGENT]
-  coordinator: «(1) agree, (2) agree. Go ahead»; record `docs/2026-08-31_qrow-rulings.md`);
+  keys at emission, RULED [USER] Mike 2026-09-18 (relayed by the [AGENT]
+  coordinator: items (1) and (2) agreed, go-ahead given; record `docs/2026-08-31_qrow-rulings.md`);
   found 2026-09-18 by the C1 S0 spike (`spikes/c1-frame/Frame.lean`, evidence
   `docs/evidence/2026-09-18_c1-memory-module/README.md`, finding 1). `Loc.canon` (Ops.lean):
   every key the module EMITS — the `.data` paths (`Mem.*`), the `.syncWord` paths
@@ -8052,7 +8039,7 @@ was retired in the 2026-10-12 gate cull; the merge gate samples at K=32.
 ## BUG-116 — the legacy inline `len`/`cap`/`min`/`max` path realized the LEFT operand's panic where gc realizes the BUILT-IN's OPERAND's panic: a late-failing NON-CALL operand (index / slice expression / dereference / pointer-field read / division / shift / compound LOAD) left of an inline built-in whose own operand panics, CALL-FREE — main's strict singleton excluded gc's member (observed ∉ modeled) [frontend lowering; wrong answer; FIXED at Stage E6a by the refined trigger; found by the Stage E6a adversarial audit, F1, 2026-09-24]
 
 - Status: fixed ([AGENT] worker, the Stage E6a audit fix round 2026-09-24, lane `core/unseq-stage-e6a-0924`; the
-  disposition the [AGENT] coordinator's, disclosed at the merge ask: «every detected gap is rowed» — [USER] Mike
+  disposition the [AGENT] coordinator's, disclosed at the merge ask: every detected gap is rowed — [USER] Mike
   2026-09-03, relayed; the fix itself is E6a's refined observability trigger, RULED [USER] 2026-09-22 item 1, relayed)
 - Pinned-by: differential
 - Cases: builtins/e13-sibling-panic-order/idx-left-vs-min-operand, builtins/e13-sibling-panic-order/idx-left-vs-len-slice-expr, builtins/e13-sibling-panic-order/deref-left-vs-len-operand, builtins/e13-sibling-panic-order/ptr-field-left-vs-len-operand, builtins/e13-sibling-panic-order/div-left-vs-len-operand, builtins/e13-sibling-panic-order/shift-left-vs-len-operand, builtins/e13-sibling-panic-order/compound-load-vs-len-operand
@@ -8110,9 +8097,9 @@ is POSED in the E6a handoff §2 item 1, not this entry's to take.
 ## BUG-115 — the LEGACY multi-target emitter QUARANTINES a map element as an assignment target (`m[k], y = 7, f()`, `m[0], m[1] = m[1], m[0]`: `emit.go` `unsup("map element as assignment target outside a single assignment")`) — legal Go refused by name where gc runs it; since Stage E5 E5b the SAME source shape RUNS on the `unseq` graph path whenever the ratified observability trigger admits the sweep, so the refusal is TRIGGER-DEPENDENT [frontend lowering; coverage gap, not a wrong answer; the triage table's F6 → mini-slice A3 ((a)-queued) was the plan of record; found by the Stage E5 adversarial audit, F3, 2026-09-22; FIXED 2026-10-08, lane `fix/bug115-map-multiassign-1008` — the `=` statement's map-element target lowers to the machine's own map-element PLAN on both paths]
 
 - Status: fixed ([AGENT] fix worker, lane `fix/bug115-map-multiassign-1008`, 2026-10-08, under [USER] Mike
-  2026-10-08 «While things are calm, can we fix some bugs?», relayed by the [AGENT] coordinator; rowed open by
+  2026-10-08 (asked for bug fixes while things were calm), relayed by the [AGENT] coordinator; rowed open by
   the [AGENT] worker at the Stage E5 audit fix round 2026-09-22, lane `core/unseq-stage-e5-0922`, the
-  disposition the [AGENT] coordinator's, disclosed at the merge ask: «every detected gap is rowed» — [USER]
+  disposition the [AGENT] coordinator's, disclosed at the merge ask: every detected gap is rowed — [USER]
   Mike 2026-09-03, relayed)
 - Pinned-by: differential
 - Cases: evalorder/unseq-multi/map-target-nil-legacy-refusal, imported-goose/semantics/multiple-assign/multiple-assign-to-map, maps/tuple-assign-key-eval, maps/tuple-map-expr-targets, maps/tuple-rhs-before-target-write, maps/tuple-swap-values, noodler/maps/swap-with-missing, noodler/maps/tuple-map-and-var, noodler/maps/tuple-two-map-targets, maps/multi-target/rhs-call-effect, maps/multi-target/rhs-call-panics, maps/multi-target/nil-map-vs-rhs-panic, maps/multi-target/nil-map-second-target, maps/multi-target/map-and-slice-swap, maps/multi-target/nil-map-then-slice-oob, maps/multi-target/slice-oob-then-nil-map, maps/multi-target/key-panic-before-nil-store, maps/multi-target/multi-value-call, maps/multi-target/target-call-order, maps/multi-target/comma-ok-assert-map-target, maps/multi-target/comma-ok-lookup-map-target, maps/multi-target/interface-elem-tuple, maps/multi-target/select-recv-map-target, maps/multi-target/select-recv-map-iface-elem, maps/multi-target/paren-tuple-target, maps/multi-target/paren-single-target, maps/multi-target/paren-compound, maps/multi-target/paren-incdec
@@ -8211,8 +8198,8 @@ everywhere since E2).
 ## BUG-117 — `scripts/gen-inittask-table` is FAIL-OPEN: a build or `nm` failure for a std package is recorded as the silent `?`/unknown row instead of dying [apparatus; derived oracle artifact `tools/nativefrontend/inittask-std.tsv` (the gate's inittask re-derivation, `scripts/ci`); trusted surface #2; found by the FR-37 lane's gate run 1 and its adversarial audit (apparatus finding), 2026-10-07; FIXED 2026-10-07, lane `lane/field-offsets-inittask-1007`]
 
 - Status: fixed ([AGENT] build worker, lane `lane/field-offsets-inittask-1007`, 2026-10-07, under [USER] Mike
-  2026-10-07 «1-4 approved as proposed», item 4, relayed; rowed open by the [AGENT] train worker r71 the same day —
-  «every detected gap is rowed», [USER] Mike 2026-09-03, relayed. The fix lands with the lane's merge.)
+  2026-10-07 (items 1-4 approved as proposed), item 4, relayed; rowed open by the [AGENT] train worker r71 the same day —
+  every detected gap is rowed, [USER] Mike 2026-09-03, relayed. The fix lands with the lane's merge.)
 - Pinned-by: none (a transient tool failure under gate load, not a row state: seen ONCE — the FR-37 lane's gate run 1,
   `ci --slow` at `10270c5a`, the `crypto/hmac` row read `unknown`; NOT reproduced in 3+4 re-runs (four hand
   re-derivations at the same tree byte-identical; gate run 2 ok) — `docs/evidence/2026-10-07_fr37/ci-slow-run1.tail.txt`, removed from main by the 2026-10-12 evidence triage; in
@@ -8233,7 +8220,7 @@ WHERE: `scripts/gen-inittask-table` — `inittask_symbols` (`if r.returncode != 
 `not export_file` arm and the `defined is None` arm), and the `go list -export -e -f
 '{{.ImportPath}}\t{{.Export}}' std` format (no `.Error` field read).
 
-FIX PLAN (queued, [USER] approved 2026-10-07 «1-4 approved as proposed», item 4, relayed; batched with the field-offsets
+FIX PLAN (queued, [USER] approved 2026-10-07 (items 1-4 approved as proposed), item 4, relayed; batched with the field-offsets
 lane): die on `nm` non-zero, naming the package and `nm`'s stderr; add `{{if .Error}}{{.Error.Err}}{{end}}` to the
 `go list` format and die unless the error is of the known no-Go-files / build-constraints class (the legitimate
 no-archive directories the `?` arm documents). Fix criterion: a forced `nm` failure and a forced build error both
@@ -8259,8 +8246,7 @@ failure, a package error, a no-Go-files error on a buildable package, a dependen
 ## BUG-118 — `cap([]rune(s))` for a NON-LITERAL `s`: the machine's pinned singleton cap = len was OUTSIDE gc on almost every input — gc realizes the 32-rune conversion buffer (`[32]rune`, every non-literal operand of ≤ 32 runes, written or not) or roundupsize(4·len)/4 (escaping, or > 32 runes); len itself is a member only when 4·len is a size class [semantic core; wrong answer (observed ∉ modeled); FIXED by the R3 / b6 widening `ChoiceSite.convCap` (lane `lane/conv-cap-1007`, 2026-10-07); known since the 2026-08-19 rune arm's own comment («cap([]rune("héllo")) = 32», deliberately left unpinned), measured as a wrong answer by the b6 design note's 140-row envelope (`docs/evidence/2026-10-07_conv-cap-design/envelope.tsv`)]
 
 - Status: fixed ([AGENT] build worker, lane `lane/conv-cap-1007`, 2026-10-07; the widening ratified [USER] Mike
-  2026-10-07 «yeah agree, build now», relayed — design `docs/2026-10-07_conv-cap-design.md` D1–D8, under the
-  standing rule «semantic widenings must match real Go»: the envelope is EXACTLY gc's measured member set)
+  2026-10-07 (agreed; build approved), relayed — design `docs/2026-10-07_conv-cap-design.md` D1–D8, under the standing rule that semantic widenings must match real Go: the envelope is EXACTLY gc's measured member set)
 - Pinned-by: differential
 - Cases: strings/conv-cap/runes-var-nomut-5, strings/conv-cap/runes-var-esc-5, strings/conv-cap/runes-var-nomut-33, strings/conv-cap/runes-var-esc-33, strings/conv-cap/runes-var-nomut-100, strings/conv-cap/runes-var-esc-100
 - Discovered: 2026-08-19 as a transfer caveat (triage L1, the `runesFromString` arm's comment and latitude inventory
@@ -8296,12 +8282,11 @@ there too).
 
 ## BUG-119 — `golean coverage-observations --arg-int` is UNCHECKED against the entry parameters: an out-of-range literal wraps SILENTLY at its parameter's kind, and an `--arg-int` at a `bool`/`string`/interface parameter reaches the machine unchecked — `native-json-run` refuses both by name since train r73 [CLI; tool interface; PREDATES lane `lane/argbool-layout-1007` (the lane left `coverage-observations` unchanged by design); found by the lane's Opus adversarial audit (note), 2026-10-07; FIXED 2026-10-08, lane `fix/bug119-120-1008`]
 
-- Status: fixed ([AGENT] fix worker, lane `fix/bug119-120-1008`, 2026-10-08, under [USER] Mike 2026-10-08 «While
-  things are calm, can we fix some bugs?», relayed by the [AGENT] coordinator. The fix lands with the lane's merge.)
+- Status: fixed ([AGENT] fix worker, lane `fix/bug119-120-1008`, 2026-10-08, under [USER] Mike 2026-10-08 (asked for bug fixes while things were calm), relayed by the [AGENT] coordinator. The fix lands with the lane's merge.)
 - Pinned-by: none (a CLI-interface gap; no corpus row passes an out-of-range or ill-typed `--arg-int` to
   `coverage-observations`; the fix's controls are in `scripts/check-wire-boundary`)
 - Discovered: 2026-10-07, the argbool-layout lane's Opus adversarial audit (a note, not a blocking finding), as relayed
-  by the [AGENT] coordinator; rowed by the [AGENT] train worker r73 — «every detected gap is rowed», [USER] Mike
+  by the [AGENT] coordinator; rowed by the [AGENT] train worker r73 — every detected gap is rowed, [USER] Mike
   2026-09-03, relayed.
 
 WHAT: train r73 added `entryArgValues` (`GoLean/CLI.lean`), which type- and range-checks every entry argument against
@@ -8344,12 +8329,11 @@ int-at-bool, int-at-declared-bool, bool-at-int and arity refuse by name, exit 1)
 
 ## BUG-120 — a MISSING `--input` file makes `golean native-json-run` die with an UNCAUGHT IO exception instead of a named refusal [CLI; tool interface; PREDATES lane `lane/argbool-layout-1007`; found by the lane's Opus adversarial audit (note), 2026-10-07; FIXED 2026-10-08, lane `fix/bug119-120-1008`]
 
-- Status: fixed ([AGENT] fix worker, lane `fix/bug119-120-1008`, 2026-10-08, under [USER] Mike 2026-10-08 «While
-  things are calm, can we fix some bugs?», relayed by the [AGENT] coordinator. The fix lands with the lane's merge.)
+- Status: fixed ([AGENT] fix worker, lane `fix/bug119-120-1008`, 2026-10-08, under [USER] Mike 2026-10-08 (asked for bug fixes while things were calm), relayed by the [AGENT] coordinator. The fix lands with the lane's merge.)
 - Pinned-by: none (no corpus row runs a missing wire; the harness always writes the wire before running; the fix's
   controls are in `scripts/check-wire-boundary`)
 - Discovered: 2026-10-07, the argbool-layout lane's Opus adversarial audit (a note, not a blocking finding), as relayed
-  by the [AGENT] coordinator; rowed by the [AGENT] train worker r73 — «every detected gap is rowed», [USER] Mike
+  by the [AGENT] coordinator; rowed by the [AGENT] train worker r73 — every detected gap is rowed, [USER] Mike
   2026-09-03, relayed.
 
 WHAT: `native-json-run` reads the wire with `IO.FS.readBinFile input` outside any `try`; a missing or unreadable file
@@ -8379,13 +8363,13 @@ ONCE (`oneLine` drops Lean's own `file: <path>` line). Out of scope, open: the b
 
 - Status: open
 - Pinned-by: differential (PINNED 2026-10-12, lane `fix/release-runtime-1012`, release-readiness item 1 — [USER]
-  Mike 2026-10-12 «starting with the ones that require no input from me», relayed by the [AGENT] coordinator: the
+  Mike 2026-10-12 (starting with the items that need no input from the user), relayed by the [AGENT] coordinator: the
   rows below are the inline program as a strict-lane case, `Corpus/coverage/exec/strings/conv-identity/`; before
   this the entry had NO corpus row and its cited evidence file had been deleted by the evidence triage)
 - Cases: strings/conv-identity/ident-var, strings/conv-identity/ident-lit
 - Discovered: 2026-10-07, the conv-cap lane's Fable adversarial audit (verdict MERGE-CLEAN; this its item 1, a
   pre-existing wrong answer, not introduced by the lane), as relayed by the [AGENT] coordinator; rowed by the [AGENT]
-  train worker r74 — «every detected gap is rowed», [USER] Mike 2026-09-03, relayed.
+  train worker r74 — every detected gap is rowed, [USER] Mike 2026-09-03, relayed.
 
 WHAT: spec §Conversions to and from a string type gives a `[]byte(s)` result no freshness guarantee, and gc realizes
 sharing: under the zero-copy regime (`escape/escape.go` `OSTR2BYTESTMP`, a non-literal operand whose result is never
@@ -8412,24 +8396,21 @@ inventory rows the axis as R19.
 WHERE: `GoLean/GoCore/Machine.lean` `convCapApplyAt` (every conversion allocates a fresh backing); the latitude
 inventory R19.
 
-FIX PLAN (NOT scheduled; a widening is a future [USER] decision under the standing rule «semantic widenings must match
-real Go», [USER] Mike 2026-10-07, relayed): model the shared-backing member (an identity choice at the zero-copy
+FIX PLAN (NOT scheduled; a widening is a future [USER] decision under the standing rule that semantic widenings must match real Go, [USER] Mike 2026-10-07, relayed): model the shared-backing member (an identity choice at the zero-copy
 regime, read-only by construction), or keep the fresh-allocation pin and record the deviation as an R15-style
 version-tracked red row. Fix criterion: a corpus row over the program above PASSES with gc's `true` in the modeled set.
 
 ## BUG-122 — a failed WRITE of `golean choice-trace --batch`'s results file or its `--dump` file escapes as the runtime's UNCAUGHT IO exception instead of the subcommand's named refusal [CLI; tool interface; PREDATES lane `fix/bug119-120-1008` (outside BUG-120's read-side scope); found by the lane's Opus adversarial audit (informational note), 2026-10-08; FIXED 2026-10-12, lane `fix/release-runtime-1012` (release-readiness item 9)]
 
 - Status: fixed (2026-10-12, lane `fix/release-runtime-1012`, the commit «CLI + machine: two "fail-closed" stops that
-  were crashes» — release-readiness punch list item 9; [USER] Mike 2026-10-12 «starting with the ones that require no
-  input from me», relayed by the [AGENT] coordinator)
+  were crashes» — release-readiness punch list item 9; [USER] Mike 2026-10-12 (starting with the items that need no input from the user), relayed by the [AGENT] coordinator)
 - Pinned-by: none (no corpus row runs `choice-trace --batch` against an unwritable output; the repro is in
   `docs/evidence/2026-10-08_train-r75/repros.txt`, item 2; the standing controls are the two `unwritable-output`
   controls of `scripts/check-wire-boundary` — the results path and the dump path under a missing directory, each
   refused `choice-trace: <path>: cannot write output: <OS error>`, exit 1, no `uncaught`)
 
 - Discovered: 2026-10-08, the bug119-120 lane's Opus adversarial audit (verdict MERGE-CLEAN; an informational note,
-  not a blocking finding), as relayed by the [AGENT] coordinator; rowed by the [AGENT] train worker r75 — «every
-  detected gap is rowed», [USER] Mike 2026-09-03, relayed.
+  not a blocking finding), as relayed by the [AGENT] coordinator; rowed by the [AGENT] train worker r75 — every detected gap is rowed, [USER] Mike 2026-09-03, relayed.
 
 FIXED [AGENT] 2026-10-12: exactly the fix plan below — `CLI.writeOutputText` / `CLI.appendOutputLines`
 (`GoLean/CLI.lean`, beside `readInputText`) catch the OS error and refuse `<path>: cannot write output: <OS error>`
@@ -8456,8 +8437,8 @@ the subcommand's named refusal, exit 1, no `uncaught exception`.
 ## BUG-123 — two `len(ch)` reads in one registry-free segment could never observe a peer's send between them (and a goroutine's consecutive prints could never be interleaved by a peer's print): the channel-length read and the `print` apply opened NO scheduling boundary, so the pool's relation was narrower than gc on race-free programs [semantic core; wrong answer (observed ∉ modeled, no refusal); the Codex release-trust review's F1 and R2 (`docs/2026-10-12_release-trust-review.md`), relayed by the [USER] 2026-10-12; FIXED the same day, lane `core/sched-boundary-1012`]
 
 - Status: fixed ([AGENT] lane worker, lane `core/sched-boundary-1012`, 2026-10-12, under the [USER]'s 2026-10-12
-  backlog authority «starting with the ones that require no input from me» and the standing rule [USER] 2026-10-07
-  «semantic widenings must match real Go», relayed — every added member is gc-witnessed; design
+  backlog authority (starting with the items that need no input from the user) and the standing rule [USER] 2026-10-07
+  that semantic widenings must match real Go, relayed — every added member is gc-witnessed; design
   `docs/2026-10-12_sched-boundary-design.md`)
 - Pinned-by: differential
 - Cases: goroutines/sched-dependent/len-peer-send, builtins/print/goroutine-gap
@@ -8501,8 +8482,8 @@ check, so no result depends on it.
 ## BUG-124 — `uintptr` and `uint64` were ONE runtime type identity (the decoder mapped `uintptr` to `.uint64`): comma-ok assertions, interface equality, type switches, `map[any]` key counts and slice/pointer assertions over a boxed uintptr answered WRONGLY with status ok — FIXED 2026-10-12 by a DISTINCT `IntKind.uintptr` (lane `core/uintptr-repair-impl-1012`, the REPAIR half), after the same day's GUARD by name at the frontend (the REFUSE half, retired by the repair) [decoder + semantic core; wrong answer (observed ∉ modeled); KNOWN since the typed-consumer sprint's held L5 (`docs/2026-09-05_typed-consumer-sprint-handoff.md` decision 2, the parked `typed-uintptr-identity` branch) and absent from the release punch list until the release-trust review's R1 (`docs/2026-10-12_release-trust-review.md`); rowed and guarded by lane `fix/uintptr-refuse-1012`, release-readiness item 26]
 
 - Status: fixed ([AGENT] lane worker, lane `core/uintptr-repair-impl-1012`, 2026-10-12 — the REPAIR half, under
-  [USER] Mike 2026-10-12, verbatim: «D6: agree on both - refuse and repair asap.» and, for the repair's shape, [USER]
-  Mike 2026-10-12, verbatim: «1,3-6 approved» — item 4 of that ask = the design note's D1–D5, all as recommended
+  [USER] Mike 2026-10-12: (D6: both halves agreed — refuse now, repair soon) and, for the repair's shape, [USER]
+  Mike 2026-10-12: (items 1 and 3-6 approved) — item 4 of that ask = the design note's D1–D5, all as recommended
   (`docs/2026-10-12_uintptr-repair-design.md`: I1 a distinct `IntKind.uintptr`, W1 width `intBits`, O1 both
   observation seams keep refusing, D3 rows + `--diff` only, D4 the R1/J-8 amendments, D5 the five born rows); both
   rulings relayed by the [AGENT] coordinator)
@@ -8510,8 +8491,7 @@ check, so no result depends on it.
 - Cases: interfaces/uintptr-identity/assert, interfaces/uintptr-identity/equal, interfaces/uintptr-identity/switch, interfaces/uintptr-identity/map-key, interfaces/uintptr-identity/slice-assert, interfaces/uintptr-identity/pointer-assert, interfaces/uintptr-identity/method-param, interfaces/uintptr-identity/method-result, interfaces/uintptr-identity/array-assert, interfaces/uintptr-identity/wrap, interfaces/uintptr-identity/assert-panic
 - Discovered: the sprint's held L5 item (2026-09-05; the staged "BUG-107" that never reached main — this entry takes
   the next free number, as the handoff said it would); re-measured 2026-10-12 by the Codex release-trust review (R1,
-  six fresh probes, all `status: ok` with the wrong boolean or int); ruled [USER] Mike 2026-10-12, verbatim: «D6:
-  agree on both - refuse and repair asap.» (relayed by the [AGENT] coordinator). This entry: [AGENT] lane worker
+  six fresh probes, all `status: ok` with the wrong boolean or int); ruled [USER] Mike 2026-10-12: (D6: both halves agreed — refuse now, repair soon) (relayed by the [AGENT] coordinator). This entry: [AGENT] lane worker
   `fix/uintptr-refuse-1012`, 2026-10-12 — the REFUSE half.
 
 WHAT: spec#Numeric_types makes `uintptr` a distinct type («an unsigned integer large enough to store the uninterpreted
@@ -8600,7 +8580,7 @@ criterion: the six rows PASS against go1.26.5 with the gc values above; `width-o
 refusing shapes become lowering shapes with the gc answers.
 
 FIX (the REPAIR half, lane `core/uintptr-repair-impl-1012`, 2026-10-12; the design note `docs/2026-10-12_uintptr-repair-design.md`
-is the spec, its D1–D5 ruled as recommended — [USER] Mike 2026-10-12 «1,3-6 approved», item 4, relayed): the parked branch
+is the spec, its D1–D5 ruled as recommended — [USER] Mike 2026-10-12 (items 1 and 3-6 approved), item 4, relayed): the parked branch
 was the site-by-site GUIDE, not a rebase (its width arm `8 * p.wordBytes` and its un-refused seams were not taken). Commit A,
 the core: `GoLean/GoCore/Value.lean` gains the constructor `IntKind.uintptr` with `name` «uintptr», `bitsAt` = `p.intBits`
 (W1 — `Platform.lean`'s docstring already read «Width of `int`/`uint` (and `uintptr`)»; go/types sizes `Int`, `Uint` and
@@ -8657,9 +8637,7 @@ negative-corpus row `functions/main-undeclared` PASSes on the frontend leg (`fro
 whole-program refusal) with no exec-corpus row moving.
 
 FIX (2026-10-13, [AGENT] lane `frontend/main-undeclared-refuse-1013`), under the [USER]'s ruling on the options
-(a whole-program mode vs a refusal), Mike 2026-10-13, verbatim, relayed by the [AGENT] coordinator: «I feel like this
-is just opening the door to endless special-case nonsense. I'd prefer to just refuse this case, and maybe support it
-later». So the defect — the frontend LOWERED a program gc rejects — is fixed by refusing it, not by a mode:
+(a whole-program mode vs a refusal), Mike 2026-10-13, relayed by the [AGENT] coordinator: (refuse the case rather than open the door to special-casing; support may come later). So the defect — the frontend LOWERED a program gc rejects — is fixed by refusing it, not by a mode:
 - by default (no flag) the frontend refuses a `package main` whose checked package declares no `func main`, right
   after type-checking, as `nativefrontend: type-check: function main is undeclared in the main package (<dir>; …)`,
   exit 1, no wire (`tools/nativefrontend/entrymode.go`, one call in `load.go`). gc's text is its linker's
@@ -8676,7 +8654,7 @@ later». So the defect — the frontend LOWERED a program gc rejects — is fixe
   `$GOROOT/test` programs). `scripts/lower-diagnose` and `tools/lowerdiag report` gain the same `--subject` knob;
   the static judge applies the same rule (cause row `main-undeclared`, by-design, export scope).
 - NOT owed: a whole-program MODE (lowering such a package's other functions as gc never would run them) is the
-  ruling's «maybe later»; no further gc compilation-unit rules are mirrored on this account (ledger §5.1 item 7). Fix round (train 9, the lane's pre-merge review, MEDIUM-1): an `unsupported` refusal's «full blocker picture» pointer line, and the two doc sentences, carry `--subject` when the export did — without it `lower-diagnose`'s first refusal is this rule, not the blocker (demonstrated on `constants/typed-complex-binary`); NIT-2: `lowerdiag report`'s note for this key names the entry rule instead of the body/initializer boilerplate; LOW-1 (a `func main` only in a build-constraint-excluded file is refused by file selection first, under BUG-108's posture) recorded in `entrymode.go` and ledger item 7, not changed; LOW-2 (the `type-check:` label on a link-time error) kept as is, honest by its parenthetical.
+  ruling's deferred support; no further gc compilation-unit rules are mirrored on this account (ledger §5.1 item 7). Fix round (train 9, the lane's pre-merge review, MEDIUM-1): an `unsupported` refusal's «full blocker picture» pointer line, and the two doc sentences, carry `--subject` when the export did — without it `lower-diagnose`'s first refusal is this rule, not the blocker (demonstrated on `constants/typed-complex-binary`); NIT-2: `lowerdiag report`'s note for this key names the entry rule instead of the body/initializer boilerplate; LOW-1 (a `func main` only in a build-constraint-excluded file is refused by file selection first, under BUG-108's posture) recorded in `entrymode.go` and ledger item 7, not changed; LOW-2 (the `type-check:` label on a link-time error) kept as is, honest by its parenthetical.
 
 ## BUG-126 — the native frontend QUARANTINED a body-less user function per declaration and lowered the rest of the program, which gc rejects whole («missing function body») [frontend boundary; over-acceptance — a sibling subject was answered; found by the pre-merge review of lane `frontend/chan-elem-limit-1013` (MEDIUM-2, relayed by the [AGENT] coordinator), 2026-10-13; FIXED the same day in that lane]
 
@@ -8742,10 +8720,9 @@ a body): gc `7`, model `7`. The corpus rows on the same frontend: `directives/em
 gc `true`, model `false` (status ok); `directives/linkname-accepted`: gc 7, model 7; `directives/line-directive`:
 gc 1, model 1; the three negative rows: frontend exit 0 on each (`frontend-accepts`).
 
-FIX ([USER] Mike 2026-10-13, verbatim, relayed by the [AGENT] coordinator: «3, agree» — to refuse by name, at file
+FIX ([USER] Mike 2026-10-13, relayed by the [AGENT] coordinator: (item 3 agreed) — to refuse by name, at file
 selection, in every user unit, any `//go:` directive outside an allowlist and any line directive; the standing
-preference, Mike 2026-10-13 on BUG-125: «I feel like this is just opening the door to endless special-case nonsense.
-I'd prefer to just refuse this case, and maybe support it later»): `tools/nativefrontend/directives.go`, called from
+preference, Mike 2026-10-13 on BUG-125: (refuse the case rather than open the door to special-casing; support may come later)): `tools/nativefrontend/directives.go`, called from
 `selectPackageFiles` (fileselect.go) — the one site serving the root package and every case-local imported package
 (load.go parseLocal). Every comment of every selected file is scanned; the first directive outside the allowlist
 refuses the export as `native frontend unsupported: file selection in <dir>: <file>:<line>:<col> carries the
@@ -8835,7 +8812,7 @@ any directive: GOPATH mode (GO111MODULE=off, no go.mod), GODEBUG unset: `true` (
 `godebug panicnil=1` in go.mod: `true`. Main's frontend accepted a go.mod `godebug panicnil=1` line and a
 `godebug (` block silently (exit 0, a wire written); the lane's refuses both by name.
 
-FIX ([USER] Mike 2026-10-13 «3, agree», relayed): `//go:debug` is refused by the directive scan
+FIX ([USER] Mike 2026-10-13 (item 3 agreed), relayed): `//go:debug` is refused by the directive scan
 (`tools/nativefrontend/directives.go`) in ANY user unit at ANY position — the go command honours only package main's
 pre-package-clause lines; refusing the rest over-refuses by name — as `… carries the runtime-setting directive
 \`//go:debug …\` — GODEBUG settings are not modeled: the semantics is the Go 1.26 module defaults (panic(nil) raises
@@ -8882,9 +8859,9 @@ never the source.
 ## BUG-129 — BLANK struct fields were STORED and COMPARED: the lowering kept a positional literal's `_` operand in the value and the core's field-by-field equality read it, where Go compares non-blank fields only and gc never stores the operand — `S{1, 2} == S{9, 2}` answered false (gc true), a map keyed by two such values had two entries (gc one), an interface-typed blank holding a slice panicked «comparing uncomparable type» (gc never does) and hashed as «unhashable» (gc stores nil); duplicate `_` fields the same [native frontend lowering; wrong answer with status ok; the Codex zero-context release pass's F1 (`docs/2026-10-13_codex-zero-context-pass.md`), release-readiness row 37; FIXED 2026-10-13 in lane `frontend/blank-fields-1013` — the field holds the zero value; the OPERAND question (what a blank field's operand evaluates, where gc drops it) CLOSED 2026-10-14 by REFUSAL under the [USER]'s ruling: BUG-130] [numbered BUG-127 on the lane's branch; renumbered BUG-129 at train 10, the directives lane having landed BUG-127/128 first]
 
 - Status: fixed ([AGENT] lane worker, lane `frontend/blank-fields-1013`, 2026-10-13, under [USER] Mike 2026-10-13,
-  verbatim, relayed by the [AGENT] coordinator: «2 fix» — the field takes the zero value of its type, with no core
+  relayed by the [AGENT] coordinator: (item 2: fix) — the field takes the zero value of its type, with no core
   change. The Cases below are the zero-value class, all PASS; the blank field's OPERAND is BUG-130's entry — refused by
-  name beyond a constant, nil or a plain variable read, RULED [USER] Mike 2026-10-14 «agree on both», relayed.)
+  name beyond a constant, nil or a plain variable read, RULED [USER] Mike 2026-10-14 (both halves agreed), relayed.)
 - Pinned-by: differential
 - Cases: structs/blank-field-equality/differing-blanks, structs/blank-field-equality/duplicate-blanks, structs/blank-field-equality/interface-blank-slice-self, structs/blank-field-equality/interface-blank-recovered, structs/blank-field-equality/nested-literal, structs/blank-field-equality/pointer-literal, structs/blank-field-equality/generic-instantiation, structs/blank-field-equality/element-literals, structs/blank-field-equality/conversion-copy, structs/blank-field-equality/plain-variable-read, structs/blank-field-map-key/cardinality, structs/blank-field-map-key/interface-blank, structs/blank-field-pkg-init-plain
 - Discovered: the Codex zero-context release pass (F1, 2026-10-13, the [USER]'s own run, relayed), reproduced by the
@@ -8920,7 +8897,7 @@ blank operand together with its run-time panic, (F2) gc never evaluates a packag
 The disposition is the [USER]'s ruling of 2026-10-14 and the record is BUG-130's: the operand is NOT evaluated; a
 constant, nil or a plain variable read gives the zero value, anything else refuses the literal by name.
 
-## BUG-130 — a BLANK struct field's operand that is not a constant, `nil` or a plain variable read is REFUSED by name — gc's realization is not an evaluation: it elides a side-effect-free blank operand WITH its run-time panic (negative shifts, interface comparisons over an uncomparable dynamic type, under any pure wrapper) and never evaluates a package-level struct literal's blank operand at all, calls included [native frontend lowering; a REFUSAL BY RULING, «maybe later», not a coverage gap; found by the pre-merge review of lane `frontend/blank-fields-1013` (2026-10-13, relayed) on BUG-129's first lowering; RULED [USER] Mike 2026-10-14; the two classes were pre-existing wrong answers (observed ∉ modeled) at the branch base and on the 2026-10-13 lowering alike]
+## BUG-130 — a BLANK struct field's operand that is not a constant, `nil` or a plain variable read is REFUSED by name — gc's realization is not an evaluation: it elides a side-effect-free blank operand WITH its run-time panic (negative shifts, interface comparisons over an uncomparable dynamic type, under any pure wrapper) and never evaluates a package-level struct literal's blank operand at all, calls included [native frontend lowering; a REFUSAL BY RULING, support deferred, not a coverage gap; found by the pre-merge review of lane `frontend/blank-fields-1013` (2026-10-13, relayed) on BUG-129's first lowering; RULED [USER] Mike 2026-10-14; the two classes were pre-existing wrong answers (observed ∉ modeled) at the branch base and on the 2026-10-13 lowering alike]
 
 - Status: fixed
 - Expect: FAIL
@@ -8933,8 +8910,8 @@ constant, nil or a plain variable read gives the zero value, anything else refus
 - Cases: structs/blank-field-eval-order/effectful, structs/blank-field-eval-order/boxed-effectful, structs/blank-field-eval-order/sweep, structs/blank-field-panic/call-operand, structs/blank-field-panic/index-operand, structs/blank-field-panic/index-then-call-sweep, structs/blank-field-panic/index-then-call-legacy, structs/blank-field-panic/recovered-value, structs/blank-field-refused/negative-shift, structs/blank-field-refused/interface-compare, structs/blank-field-refused/nested-pure-wrapper, structs/blank-field-refused/composite-operand, structs/blank-field-pkg-init-call, structs/blank-field-pkg-init-shift
 - Discovered: the lane's pre-merge adversarial review (relayed by the [AGENT] coordinator, 2026-10-13) measured F1
   (shifts) and F2 against the 2026-10-13 lowering; the lane reproduced both at its tip from the reviewer's programs
-  and found the interface-comparison member of F1. Ruling: [USER] Mike 2026-10-14, verbatim, relayed by the [AGENT]
-  coordinator: «agree on both»; the recommendation agreed to, verbatim: «at a blank field, a constant, `nil`, or a
+  and found the interface-comparison member of F1. Ruling: [USER] Mike 2026-10-14, relayed by the [AGENT]
+  coordinator: (both halves agreed); the recommendation agreed to: «at a blank field, a constant, `nil`, or a
   plain variable read gives the zero value with nothing evaluated, and any other operand is refused by name». Entry:
   [AGENT] lane worker, 2026-10-14.
 
@@ -8996,7 +8973,7 @@ the whole initializer omits nothing gc runs (H-11's own argument, with the blank
 classifier (`staticinit.go`, the `*ast.CompositeLit` arm) skips blank-field elements as `initplan` does, pinned by the
 staticinit oracle (`testdata/staticinit-shapes.go` `BlankCall`/`BlankTwin`/`BlankVar`: gc `none`/`work`/`none`,
 re-recorded 2026-10-14, 128 shapes). Measured: `var v = S{x, 2}` lowers with the zero. THE RULING'S COST (inside its
-letter; the «maybe later» lane's to-do list, each a shape the 2026-10-13 evaluating lowering answered as gc did and the
+letter; the deferred support lane's to-do list, each a shape the 2026-10-13 evaluating lowering answered as gc did and the
 rule now refuses): `struct{}{}` at a `_ struct{}` field, `x + 1`, `len(xs)` of a slice, `int64(x)`, `arr[0]` with a
 constant index, a composite literal (`[]int{1}`, `Inner{1, 2}`) — every one side-effect free and panic-free, dropped
 by gc and refusable only because the rule names shapes, not effects; constant-folded forms (`len(arr)` of an array,

@@ -228,6 +228,12 @@ Everything else is untrusted tooling.
   branch-complete + audit-ask posed is the end state. **Named
   design gates are HARD STOPS**: a run that cannot stop EXITS
   rather than self-adjudicating the gate.
+- Decisions are recorded once, as a paraphrase with the [USER]/[AGENT]
+  tag and the date, in the commit message or the backlog row; a
+  quotation is for considered statements whose wording settles a
+  trade-off, never for conversational remarks or sign-offs, and code,
+  corpus, baselines, scripts and user-facing messages carry neither
+  quotations nor ruling citations ([USER] 2026-10-16, backlog row 44).
 - Reference checkouts in gitignored `deps/` (`scripts/setup-deps`;
   default set goose/raft/go — goose and go are gate-required —
   the rest opt-in by name) — consult before inventing.

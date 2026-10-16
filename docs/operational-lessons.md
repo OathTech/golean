@@ -9,10 +9,8 @@ lines only — the BRiCk lesson.)
 ## Memory: every lake/lean invocation goes through `capped`
 
 **Since 2026-10-11 the cap is the box-wide `capped`** (`/usr/local/bin/capped`,
-installed by oath-devbox on every Oath box; [USER] Mike, verbatim, relayed:
-«the global capped script is the correct one to use, here and on the new
-box (which has the same affordance)»; «D2: conform to the box default, of
-course raising it is allowed during execution when needed»). `scripts/capped`
+installed by oath-devbox on every Oath box; [USER] Mike 2026-10-11, relayed:
+the global capped script is the one to use, here and on the new box; D2: conform to the box default, raising it during execution when needed being allowed). `scripts/capped`
 is now a shim onto it (legacy `GOLEAN_MEM_MAX`/`GOLEAN_CAPPED` translated to
 `CAPPED_MEM_MAX`/`CAPPED_STATE`; the original wrapper body is the fallback
 where the box tool is absent, e.g. GitHub runners), `scripts/ci` accepts
@@ -339,7 +337,7 @@ streams hit the refusal) while gc=90 gives `FAIL/differential` (Lean=5,
 Go=90). The pinned row said `nondet`; a full `ci --diff` therefore drifted
 on that one row on whichever runs gc sampled 90 — a red that was FAIL
 either way, reported as a regression. Remedy ([USER] ruling (a),
-2026-09-03, a gate change — quote relayed by the [AGENT] coordinator,
+2026-09-03, a gate change — relayed by the [AGENT] coordinator,
 primary record `docs/assessment/decisions-2026-08-31.md` 2026-09-03
 addendum): the row's stage column carries the set
 `nondet|differential`, matched by membership, RESULT still exact, with a
@@ -500,7 +498,7 @@ record before the train is declared landed — an identical set
 refreshes the header only, a changed set is a finding reported before
 the train continues, never a silent re-pin. **ADOPTED [USER]
 2026-09-04** (Mike, relayed by the [AGENT] coordinator; cited as
-relayed): «Yeah, that make sense, let's adopt that» — adopting the
+relayed): (adopted) — adopting the
 proposal as written. Recorded as merge protocol step 5a, `CLAUDE.md`
 "The merge protocol".
 
@@ -548,8 +546,7 @@ coverage` echoed the failed receipt); the fresh re-run, started at
 decision; until then, re-run under lower load (check `uptime` first).
 Train r72 ([AGENT] train worker; the re-run-not-retune ruling [AGENT]
 coordinator, 2026-10-07).
-**Raised 180 → 360 s** in train r73 ([USER] Mike 2026-10-07 «Agree 1 /
-2», relayed). The budget is `run_logged`'s per-subprocess timeout, so
+**Raised 180 → 360 s** in train r73 ([USER] Mike 2026-10-07 (items 1 and 2 agreed), relayed). The budget is `run_logged`'s per-subprocess timeout, so
 it also governs the core-audit harness/poison compiles and the
 method-identity dispatch subprocesses. Measured alone 150–201 s, so
 360 s still catches a hang; under load, still check `uptime` first.
@@ -564,7 +561,7 @@ load 30/40/46) passed. A budget change is a [USER] decision. Train r72
 ([AGENT] train worker; the re-run ruling [AGENT] coordinator,
 2026-10-07).
 **Default raised 30 → 60 s** in train r73 ([USER] Mike 2026-10-07
-«Agree 1 / 2», relayed): only the default in `scripts/diff-coverage`;
+(items 1 and 2 agreed), relayed): only the default in `scripts/diff-coverage`;
 the derived tracer budget `LEAN_TRACE_TIMEOUT_SECONDS` (8 ×) moves
 240 → 480 s with it. map-20k measures 4.7–9.6 s alone, so 60 s still
 catches a hang.
@@ -594,8 +591,7 @@ oleans through the kernel into a fresh environment, so a metaprogram that skippe
 escape-hatch scan AND the axiom audit (a scratch `bogus : False :=
 True.intro` built that way printed «does not depend on any axioms»; only
 `leanchecker` refused it: «(kernel) declaration type mismatch»). Ruled
-[USER] Mike 2026-10-13, verbatim, relayed: «4 yes, critical finding, this
-is a core trust gap right? Fix it». Since lane `gate/kernel-replay-1013`
+[USER] Mike 2026-10-13, relayed: (item 4 agreed as a critical finding — a core trust gap — to be fixed). Since lane `gate/kernel-replay-1013`
 `scripts/check-kernel-replay` runs `lake env leanchecker --verbose GoLean`
 in both tiers after the build and fails on any nonzero exit (a kill
 included) and on a replayed set that is not the on-disk module set (the
