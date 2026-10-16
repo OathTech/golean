@@ -1,7 +1,7 @@
 """difftest_sec8.py — difftest.py SECTION 8: the route A exactness battery.
 
 ROUTE A (docs/2026-10-04_route-a-protobuf-design.md D9, acceptance §5; ratified
-[USER] Mike 2026-10-04 «Approved», relayed). Section 7 probes WELL-FORMED
+[USER] Mike 2026-10-04, relayed). Section 7 probes WELL-FORMED
 values, so it is blind to the three recorded deltas U-1/U-2/U-3. Section 8
 drives the subject's `proto` package and protobuf-go v1.36.11 over the SAME
 bytes and constructed values, and requires, per input:

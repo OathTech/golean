@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # scripts/capped — a SHIM onto the box-wide `capped` (/usr/local/bin/capped).
 #
-# [USER] Mike, 2026-10-11 (verbatim, relayed): «the global capped script is
-# the correct one to use, here and on the new box (which has the same
-# affordance)» and «D2: conform to the box default, of course raising it is
-# allowed during execution when needed». So, where the box tool exists, this
+# [USER] Mike, 2026-10-11 (relayed): the global capped script is the one to
+# use, here and on the new box (which has the same affordance); and D2:
+# conform to the box default, raising it during execution when needed being
+# allowed. So, where the box tool exists, this
 # script only translates the legacy environment and hands over:
 #
 #   GOLEAN_MEM_MAX  -> CAPPED_MEM_MAX   (only when the latter is unset)

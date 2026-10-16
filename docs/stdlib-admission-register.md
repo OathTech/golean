@@ -3,8 +3,7 @@
 **Status:** STANDING RULE for the standard-library boundary (memo
 `docs/2026-09-03_stdlib-boundary-design.md` §2.2 "the second shim, done
 right"; gate **G8 ruled AS RECOMMENDED** — [USER] Mike, 2026-09-03,
-relayed by the [AGENT] coordinator, cited as relayed: «(3) agree, go
-ahead with the plan»). Established by the first implementation slice
+relayed by the [AGENT] coordinator, cited as relayed: (the plan approved, item (3))). Established by the first implementation slice
 `stdlib-source-1` (2026-09-03, [AGENT]). It replaces the D-002 freeze as
 the rule of record for the classes below when the last injected
 declaration is gone; until then the freeze stays in force for the
@@ -32,7 +31,7 @@ column of the block made the check fail naming the line
 | substitution | one UPSTREAM file swapped for another UPSTREAM file of the same package (`*_native.go` + `.s` → `*_generic.go`); no text of ours | uncapped | every row names its upstream twin (`tools/nativefrontend/stdlib-substitutions.tsv`) |
 | overlay | OUR text at a library path: ONE pure-Go expression substituted for ONE unsafe (or runtime-implemented) expression at ONE named site, recorded in `tools/nativefrontend/stdlib-overlay.tsv` (package, file, line, the upstream bytes, the substitute, the semantic argument + its verified premise) and BYTE-CHECKED at every load — the recorded line must carry the recorded bytes exactly once or the unit refuses by site (slice 2, 2026-09-03: `internal/stringslite.Clone`, `errors.joinError.Error`, `strings.Builder.{String,copyCheck,grow}`). `internal/strconv`'s float-bits casts are NOT overlaid (see the slice log: a primitive admission, [USER]-gated) | **12** `expr` rows | [USER] re-ratification |
 | overlay-import | the consequential neutralization of an import a file no longer uses once its `expr` rows apply (`"unsafe"` -> `_ "unsafe"`); no semantics; admitted only for a file that has an `expr` row (parser-enforced); an `expr` row may NOT target an import line (audit fix round F2), and after the rows apply no LIVE binding to `unsafe`/`internal/abi` or to a neutralized path may survive (post-hoc check); the overlaid package must type-check (`--stdlib-overlay-check`, F3) | **8** (own cap, enforced by the dump; the NUMBER is [AGENT]-provisional pending [USER] — 5 today + headroom for bytes' MakeNoZero import) | [USER] re-ratification |
-| intercept | a source-through library member whose DIRECT CALL the frontend lowers to a machine op or a retained desugar instead of the library body. **EMPTY since 2026-09-04**: `cmp.Compare` → the kind desugar at integer/string type arguments RETIRED (lane `fr24`, per the [USER] ruling «(2) given we have a plan, I think this should be an honest red», relayed); `slices.Sort` → the `sortSlice` machine op RETIRED (lane `fr4-rowm`, memo §3 row M — the G1-G9 plan ruled «(3) agree, go ahead with the plan» [USER], relayed): the real generic at every ordered kind. ONE predicate (`interceptedLibraryCall`) still serves the reach walk and the emitter; `defer`/`go` of an intercepted member refuses by name (audit fix round F1) — dead code until a member is re-admitted, which is a widening of this frozen class | frozen at 0 (shrinks only) | n/a |
+| intercept | a source-through library member whose DIRECT CALL the frontend lowers to a machine op or a retained desugar instead of the library body. **EMPTY since 2026-09-04**: `cmp.Compare` → the kind desugar at integer/string type arguments RETIRED (lane `fr24`, per the [USER] ruling (with a plan in hand, an honest red beats the desugar), relayed); `slices.Sort` → the `sortSlice` machine op RETIRED (lane `fr4-rowm`, memo §3 row M — the G1-G9 plan ruled (the plan approved, item (3)) [USER], relayed): the real generic at every ordered kind. ONE predicate (`interceptedLibraryCall`) still serves the reach walk and the emitter; `defer`/`go` of an intercepted member refuses by name (audit fix round F1) — dead code until a member is re-admitted, which is a widening of this frozen class | frozen at 0 (shrinks only) | n/a |
 | primitive | a machine op of LIBRARY origin — `float-bits` (math's four bit-reinterpretation functions, [USER]-admitted 2026-09-04), `print-output` (print/println + the fd-2 output observable, gate G2) and, since window unit 5b (2026-09-30), `rand-intn` (math/rand.Intn + math/rand/v2.IntN as the `[0, n)` choice-tape draw, `Stmt.randIntn` / `ChoiceSite.intn` — the op [USER]-admitted by item 2 of the 2026-09-30 subject-delta ruling, relayed; design `docs/2026-09-30_intn-pick-design.md`); `sync` is memory-model and listed elsewhere, not counted; the `sortSlice` op is unreferenced since row M — its deletion is the hygiene arc's | **3** (was 2, FULL since slice 3; the move 2 → 3 is the 5b op's mechanical consequence, POSED for [USER] re-ratification at that lane's merge ask — design D5) | [USER] re-ratification |
 | shim | a RETAINED user-package injection (`stdlibshim.go` and the fmt desugar; the cmp.Compare kind-dispatch desugar `cmpshim.go`, retained by slice 2's STOP rule, RETIRED 2026-09-04 by [USER] ruling — 6 remain, all fmt) — frozen under D-002, retired row by row per memo §3 | frozen | n/a — shrinks only |
 | shadow-type | an E5-T shadow model (`importedmodel.go`); since slice 2 only the `sync/atomic` wrappers (the atomics arc's intrinsics) — `strings.Builder`/`bytes.Buffer` RETIRED onto source-through + overlay | frozen | n/a |
@@ -112,7 +111,7 @@ library-body `unsafe.` arm), so a row that failed to apply could never
 present as a lowered body. Red-first at landing: `TestStdlibOverlayMovedBytesRefuseByName`
 (a mutated Builder.String row refuses naming `strings/builder.go:47`),
 `TestStdlibOverlayTableRules` (one probe per parser rule).
-The primitive table is FULL (3/3) since window unit 5b (2026-09-30): `float-bits`, `print-output` and `rand-intn` (below); it was FULL at 2/2 from slice 3 to 5b, and the cap move 2 → 3 (design D5) was PENDING at the 5b lane's tip, RATIFIED [USER] Mike 2026-10-01 at train r58 — «agree, land it, ratify all including the harness fix» (relayed by the [AGENT] coordinator — cite as relayed). A fourth library-origin op refuses to render (`TestStdlibRegisterDumpCaps`).
+The primitive table is FULL (3/3) since window unit 5b (2026-09-30): `float-bits`, `print-output` and `rand-intn` (below); it was FULL at 2/2 from slice 3 to 5b, and the cap move 2 → 3 (design D5) was PENDING at the 5b lane's tip, RATIFIED [USER] Mike 2026-10-01 at train r58 — (landing agreed, everything ratified including the harness fix) (relayed by the [AGENT] coordinator — cite as relayed). A fourth library-origin op refuses to render (`TestStdlibRegisterDumpCaps`).
 
 ### Residual channels (recorded)
 
@@ -154,9 +153,7 @@ The primitive table is FULL (3/3) since window unit 5b (2026-09-30): `float-bits
   (a body change under the D-002 freeze plus a new shim→library import
   coupling, `stdlibShimImports`) and posed it as a D-002 exception. **The
   exception was DENIED** — [USER] Mike, 2026-09-03, relayed by the [AGENT]
-  coordinator (cited as relayed): «(a) we're not running Raft right now, I
-  think going red is simpler and safer, and lets us do a clean
-  retirement». ParseUint therefore lowers from source like the rest; its
+  coordinator (cited as relayed): (option (a): with Raft not running, going red is simpler and safer and allows a clean retirement). ParseUint therefore lowers from source like the rest; its
   ERROR-path rows are [USER]-directed designed reds on BUG-089's Cases
   line pending the slice-2 overlay for `Clone`; `stdlibShimImports` is
   GONE; the freeze is intact — no shim body changed. Other reached-
@@ -170,9 +167,7 @@ The primitive table is FULL (3/3) since window unit 5b (2026-09-30): `float-bits
 
 - **2026-09-03 `stdlib-source-2`** ([AGENT], within G1/G8/G9 as ruled
   and the 2026-09-03 ParseUint ruling — [USER] Mike, relayed by the
-  [AGENT] coordinator, cited as relayed: «(a) we're not running Raft
-  right now, I think going red is simpler and safer, and lets us do a
-  clean retirement»). **The OVERLAY mechanism landed**: `stdlib-overlay.tsv`,
+  [AGENT] coordinator, cited as relayed: (option (a): with Raft not running, going red is simpler and safer and allows a clean retirement)). **The OVERLAY mechanism landed**: `stdlib-overlay.tsv`,
   5 `expr` rows (of the cap of 12) + 5 consequential `import` rows,
   byte-checked at every load: `internal/stringslite.Clone` (`string(b)`
   — closes BUG-089's nine designed reds, FAIL→PASS), `errors.joinError.Error`
@@ -281,8 +276,7 @@ The primitive table is FULL (3/3) since window unit 5b (2026-09-30): `float-bits
   instance; a future one is a row here first. (B) FR-25: no table moved.
   (C) **cmp.Compare
   desugar RETIRED — [USER] Mike 2026-09-04, relayed by the [AGENT]
-  coordinator (cited as relayed): «(2) given we have a plan, I think this
-  should be an honest red».** `cmpshim.go` deleted with its three kind
+  coordinator (cited as relayed): (with a plan in hand, an honest red beats the desugar).** `cmpshim.go` deleted with its three kind
   shims (`goleanShimCmpCompare{Uint,Int,String}`), the `intercept` row and
   the `stdlibGenericDesugarInject` entry gone (table kept, EMPTY);
   `cmp.Compare` is the real generic at every type argument. Consequence,
@@ -299,9 +293,8 @@ The primitive table is FULL (3/3) since window unit 5b (2026-09-30): `float-bits
   changed.**
 
 - **2026-09-04 `fr4-rowm` — memo §3 row M DONE: the `slices.Sort` intercept
-  RETIRED** ([AGENT] worker; the G1-G9 stdlib plan ruled «(3) agree, go
-  ahead with the plan» [USER], relayed by the coordinator and cited as
-  relayed; posture «break rather than preserve incorrect behaviour»).
+  RETIRED** ([AGENT] worker; the G1-G9 stdlib plan ruled (the plan approved, item (3)) [USER], relayed by the coordinator and cited as
+  relayed; posture (break rather than preserve incorrect behaviour)).
   `emit.go`'s `emitSortStmt` and the ExprStmt intercept are gone; the
   `frontendInterceptedLibraryMembers` table is EMPTY (class frozen at 0,
   the predicate and the `defer`/`go` refusal kept as dead machinery); the
@@ -337,8 +330,7 @@ The primitive table is FULL (3/3) since window unit 5b (2026-09-30): `float-bits
   0/2 → **2/2**. (i) `float-bits` — `math.Float64bits`/`Float64frombits`/
   `Float32bits`/`Float32frombits` as one machine expression op (`Expr.floatBits`,
   `floatBitsApply`), ADMITTED [USER] 2026-09-04 (relayed by the [AGENT]
-  coordinator, cited as relayed: «so the question is whether to add this
-  as a primitive language operation? This sounds reasonable, do it»); the
+  coordinator, cited as relayed: (adding a primitive language operation found reasonable and approved)); the
   audit's condition (NaN payloads bit-exact, ±0, quiet/signalling probes)
   is met by construction — the machine's float IS its bit pattern — and
   pinned by rows `builtins/float-bits/*` (6 green at the slice; 7 after
@@ -351,7 +343,7 @@ The primitive table is FULL (3/3) since window unit 5b (2026-09-30): `float-bits
   `Stmt.print` with gc go1.26.5 `runtime/print.go` pinned for
   bool/integer/string (G2 RULED [USER] as recommended, relayed), the bytes
   an OUTPUT EVENT (`StepEvent.out`) folded by the driver into
-  `Readout.output` — G-OUT RULED [USER] «Program output is a per-step EVENT
+  `Readout.output` — G-OUT RULED [USER]; the gate's statement: «Program output is a per-step EVENT
   … folded by the driver into `Readout`, not a `Store` field; `Obs.terminal`
   carries the stderr prefix» — and compared byte-exactly through the new
   `output` observation field (both sides; the harness splits gc's fd 2,
@@ -419,7 +411,7 @@ count	shim	6 (frozen, D-002; retired by rows of memo §3)
 count	shadow-type	5
 count	init-callee	3 (H-11 pureUnmodeledCallees: unmodeled stdlib functions a package-level initializer may call and still be SKIPPED with its vars poisoned; each row states result-only + panic-free over the admitted argument shapes; a row is an admission, not a model)
 source-through	bytes	slice-2 target (Equal retired from shim; Buffer retired from the E5-T shadow model — pure Go, its growth idiom `append([]byte(nil), make([]byte, c)...)` is the overlay's model); ReadFrom/WriteTo reach `io` (export data only) and quarantine by name; init-pure: three errors.New sentinels + the asciiSpace table
-source-through	cmp	slice-2 target; Compare is the REAL generic at EVERY type argument since 2026-09-04 (lane fr24: the retained integer/string kind-dispatch desugar RETIRED per the [USER] ruling «(2) … an honest red», relayed — a function-local defined type argument now refuses at mono.go's C6 naming rule, rows slices/sortfunc-cmp/cmp-compare-kinds + stdlib-source/cmp-compare/local-float-type on FR-19's line; NaN arm included); pure, no imports; init-pure: no package-level state
+source-through	cmp	slice-2 target; Compare is the REAL generic at EVERY type argument since 2026-09-04 (lane fr24: the retained integer/string kind-dispatch desugar RETIRED per the [USER] ruling of 2026-09-04 that an honest red beats the desugar, relayed — a function-local defined type argument now refuses at mono.go's C6 naming rule, rows slices/sortfunc-cmp/cmp-compare-kinds + stdlib-source/cmp-compare/local-float-type on FR-19's line; NaN arm included); pure, no imports; init-pure: no package-level state
 source-through	encoding/binary	slice-2 target (LittleEndian.Uint64/PutUint64 retired from the package-variable method desugar — the exported vars and their unexported receiver types lower as ordinary library declarations); Read/Write/Size are reflect and refuse by name (export data); init-pure: two errors.New sentinels, zero-valued ByteOrder vars, a sync.Map (structSize, dataSize's cache) reached whenever Write/Read/Size is — its TYPE does not lower, so the var is POISONED per declaration (`$poisoned` cell; dataSize and every reader an H-3 stub naming the var, its type and the cause — ledger FR-24, PARTIALLY CLOSED 2026-09-04, lane fr24; the init-pure claim itself holds: the var has no initializer)
 source-through	errors	errors.New (slice 2: the user-facing SHIM retired — every errors.New is the real *errors.errorString), Join (its unsafe.String OVERLAID), Unwrap; Is/As reach internal/reflectlite and refuse by name (FR-21 → G6)
 source-through	internal/bytealg	the byte-search leaves strings.Index/Count/Split reach; assembly on amd64, swapped for the package's own *_generic.go twins by stdlib-substitutions.tsv; MakeNoZero (body-less) is overlaid away at its one strings caller
@@ -446,7 +438,7 @@ overlay-import	errors/join.go:8	`"unsafe"` -> `_ "unsafe"` — consequential: th
 overlay-import	strings/builder.go:8	`"internal/abi"` -> `_ "internal/abi"` — consequential: the file's only `abi.` use is the line-39 site.
 overlay-import	strings/builder.go:9	`"internal/bytealg"` -> `_ "internal/bytealg"` — consequential: the file's only `bytealg.` use is the line-67 site.
 overlay-import	strings/builder.go:11	`"unsafe"` -> `_ "unsafe"` — consequential: the file's `unsafe.` uses are the line-39 and line-47 sites.
-primitive	float-bits	math.Float64bits / Float64frombits / Float32bits / Float32frombits as ONE machine expression op with a direction/width tag (wire `float-bits`, GoCore `Expr.floatBits`/`floatBitsApply`; frontend floatbits.go): a bit reinterpretation the LANGUAGE has no operation for (math's bodies are `*(*uint64)(unsafe.Pointer(&f))`) over a representation that IS the bit pattern — identity both ways, NaN payloads (quiet and signalling), signed zero and the infinities BIT-EXACT (the audit's admission condition; rows builtins/float-bits/*). ADMITTED [USER] 2026-09-04 (relayed: «add this as a primitive language operation? This sounds reasonable, do it»). Anchor: deps/go/src/math/unsafe.go:21-41 @ go1.26.5 (the four doc comments — Float32bits :21-24, Float32frombits :26-30, Float64bits :32-35, Float64frombits :37-41; a file:line citation because math is NOT source-through and the pinned-manifest godoc: grammar of gate G3 covers source-through packages only — the runtime-source rows' convention). ONE fail-closed arm, [AGENT] disclosed: `*bits` of the machine's CANONICAL NaN (0x7FF8000000000000 / 0x7FC00000) refuses by name — inventory R7 narrows every machine-PRODUCED NaN to that pattern while gc/amd64 realizes hardware payloads, so the observation would be the narrowing presenting as a wrong answer (row builtins/float-bits/canonical-nan-refused; R7's re-envelope obligation). Unblocks internal/strconv's deps.go casts for a later slice.
+primitive	float-bits	math.Float64bits / Float64frombits / Float32bits / Float32frombits as ONE machine expression op with a direction/width tag (wire `float-bits`, GoCore `Expr.floatBits`/`floatBitsApply`; frontend floatbits.go): a bit reinterpretation the LANGUAGE has no operation for (math's bodies are `*(*uint64)(unsafe.Pointer(&f))`) over a representation that IS the bit pattern — identity both ways, NaN payloads (quiet and signalling), signed zero and the infinities BIT-EXACT (the audit's admission condition; rows builtins/float-bits/*). ADMITTED [USER] 2026-09-04 (relayed: adding it as a primitive language operation was found reasonable and approved). Anchor: deps/go/src/math/unsafe.go:21-41 @ go1.26.5 (the four doc comments — Float32bits :21-24, Float32frombits :26-30, Float64bits :32-35, Float64frombits :37-41; a file:line citation because math is NOT source-through and the pinned-manifest godoc: grammar of gate G3 covers source-through packages only — the runtime-source rows' convention). ONE fail-closed arm, [AGENT] disclosed: `*bits` of the machine's CANONICAL NaN (0x7FF8000000000000 / 0x7FC00000) refuses by name — inventory R7 narrows every machine-PRODUCED NaN to that pattern while gc/amd64 realizes hardware payloads, so the observation would be the narrowing presenting as a wrong answer (row builtins/float-bits/canonical-nan-refused; R7's re-envelope obligation). Unblocks internal/strconv's deps.go casts for a later slice.
 primitive	print-output	print / println (spec#Bootstrapping: «formatting of arguments is implementation-specific») as the `print` machine STATEMENT (wire `print`, GoCore `Stmt.print`/`StmtOp.print`/`renderPrint`; frontend emitPrintStmt) with gc's runtime/print.go @ go1.26.5 format PINNED for bool (`true`/`false`), every integer kind (decimal, `-` for negatives; a defined type prints as its underlying kind) and string (bytes verbatim); println = operands joined by ` ` + `
 `, print = concatenation. The bytes are the machine's OUTPUT EVENT (`StepEvent.out`, pool layer; folded by the driver into `Readout.output` — design gate G-OUT RULED [USER]), the differential's new `output` observation field, byte-compared against gc's fd 2 (the harness's stderr split). G2 RULED [USER] 2026-09-03 as recommended (relayed). REFUSED by name, permanently: pointer/chan/map/func/slice/interface/unsafe.Pointer operands (gc prints ADDRESSES — ledger §5.1 item 3). REFUSED by name THIS SLICE ([AGENT], disclosed): float/complex operands (gc: internal/strconv.AppendFloat 'g' -1, the shortest-repr algorithm, go1.26 commit 9035f7ae) and the zero-operand spellings (no nullary plan, A8) — ledger FR-29; print during $pkginit (the sequential init driver has no event fold — runInitConfig refuses). Latitude inventory R17 (format pin) / R18 (concurrent-print interleaving = L1, membership lane).
 primitive	rand-intn	math/rand.Intn(n) / math/rand/v2.IntN(n) — the package-level functions — as ONE machine STATEMENT, the `[0, n)` DRAW (wire `rand-intn` with a callee tag, GoCore `Stmt.randIntn`/`StmtOp.randIntn`, the choice site `ChoiceSite.intn`; frontend randintn.go; the decoder's `expandRandIntn`): the draw IS nondeterminism, so the semantics is the ENVELOPE reified on the choice tape — bound `n` exactly, every value of `[0, n)` a member, `n = 1` a bound-1 consult that pops nothing, a DATA pick (`Stmt.randIntn`'s docstring is the envelope statement; latitude inventory §0) — never a modeled generator. The callee's `n <= 0` guard, upstream's own `if n <= 0 { panic("invalid argument to Intn") }`, is EMITTED BY THE DECODER ahead of the draw as the language-level `panic(string)` it is (the payload class gc realizes: `recover().(string)` answers true; an apply-arm panic would box as `runtime.Error`), the text chosen per callee from a closed table — `invalid argument to Intn` / `invalid argument to IntN`; the machine op's domain is `n >= 1` and a bypassed guard is `stuck` by name (a forged wire). ADMITTED [USER] Mike 2026-09-30 (item 2 of «The raft-proofs team's subject-delta note (2026-09-30) — RULED», relayed: a GENERAL native `Intn`-style pick site, «a value in `[0, n)`, panic if `n ≤ 0`», not raft-specific); design docs/2026-09-30_intn-pick-design.md (D1–D8 RATIFIED [USER] Mike 2026-10-01 at train r58, relayed; the cap move 2 -> 3 is D5, ratified with them). Anchors: deps/go/src/math/rand/rand.go:176-181 @ go1.26.5 (Intn's doc comment + guard) and math/rand/v2/rand.go:189-193 (IntN) — file:line citations because neither package is source-through (the float-bits convention). NOT bound (kept on the by-name package quarantine): the method forms `(*rand.Rand).Intn`/`(*rand.Rand).IntN` (a `*Rand` needs `rand.New`, outside the modeled surface; a nil receiver dereferences in gc), every other member of the two packages, and `defer`/`go` of the function (refused by name, randintn.go). Rows: builtins/rand-intn/* (the membership row over Intn(5) with gc's draws inside, the n = 1 and n <= 0 controls with the exact texts, the recover payload-class control, the jitter shape); the raft twin's D-11 re-keyed onto this site (tools/raftsubject/derive.py).

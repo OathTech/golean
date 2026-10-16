@@ -1,6 +1,6 @@
 // THE ROUTE A CODEC SCHEDULES THROUGH RAWNODE (route A slice S2;
 // docs/2026-10-04_route-a-protobuf-design.md D9 + §5 «Through RawNode»;
-// [USER] Mike 2026-10-05 «Go ahead with Route A S2», relayed).
+// Route A S2 approved [USER] Mike 2026-10-05, relayed).
 //
 // Two hand schedules over the machine-twin harness (twin-lib.go: the
 // n=3 cluster, the message multiset, the stateless harness Logger), run

@@ -328,7 +328,7 @@ var (
 # RETIRED) ------------------------------------------------------------------
 #
 # ROUTE A slice S1 (docs/2026-10-04_route-a-protobuf-design.md D7; Q2 ruled
-# [USER] Mike 2026-10-04 «Approved», relayed: retire the overlay NOW):
+# [USER] Mike 2026-10-04, approved, relayed: retire the overlay NOW):
 # upstream raftpb/confstate.go is vendored as TEXT — its proto.Clone /
 # proto.Equal calls go to the subject-local proto package like every other
 # call site — and the ONE residue is D-3's: the two `fmt.Errorf` lines,
@@ -834,7 +834,7 @@ PLAINPB_HEADER = """// Code DERIVED from etcd-io/raft raftpb/raft.pb.go by
 # ------------------------------------- generated codec: route A, shape A1 ----
 #
 # ROUTE A slice S1 (design docs/2026-10-04_route-a-protobuf-design.md, D1-D8,
-# ratified [USER] Mike 2026-10-04 «Approved», relayed): a GENERATED,
+# ratified [USER] Mike 2026-10-04, relayed): a GENERATED,
 # reflection-free Go codec decomposed function-for-function after
 # protobuf-go v1.36.11's own `protowire` / `internal/impl` entry points, so
 # every generated function names its upstream twin by file:line (the doc

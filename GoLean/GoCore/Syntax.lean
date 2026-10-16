@@ -204,8 +204,8 @@ packages only, gate G3 — does not apply and the file:line citation is
 the one the runtime-source rows use) as ONE machine op with a
 direction/width tag — the `float-bits` PRIMITIVE (stdlib register class
 `primitive`, 1 of 2; ADMITTED [USER] 2026-09-04, relayed by the [AGENT]
-coordinator, cited as relayed: «so the question is whether to add this as
-a primitive language operation? This sounds reasonable, do it»). The
+coordinator, cited as relayed: adding it as a primitive language
+operation was found reasonable and approved). The
 language has no operation for "the bits of a float" — `math`'s own bodies
 are `*(*uint64)(unsafe.Pointer(&f))` — and the machine's float
 representation IS the bit pattern (`GoValue.float bits kind`,
@@ -437,7 +437,7 @@ inductive AtomicStmtOp where
 (the evaluation-order model v2.1, `docs/2026-09-16_evaluation-order-model-v2.md`
 §1/§3; Stage B, lane `core/unseq-scheduler-b-0916`, 2026-09-16). The mechanism
 ruling: [USER] Mike 2026-09-16, relayed by the [AGENT] coordinator — cite as
-relayed: «I think the Cerberus model is the correct one»
+relayed: the Cerberus model is the correct one
 (`docs/2026-08-31_qrow-rulings.md`, «The evaluation-order mechanism ruling
 record (2026-09-16)»). One statement's evaluation phase (a SWEEP) is a graph
 of OCCURRENCES — each produces zero, one or many results into predeclared
@@ -804,14 +804,14 @@ inductive Stmt where
   | atomicStmt (op : AtomicStmtOp) (kind : IntKind) (args : Array Expr) (targets : Array Assignee)
   /-- `print(args…)` / `println(args…)` — spec#Bootstrapping's two
   built-ins (stdlib slice 3, 2026-09-04; G2 RULED [USER] 2026-09-03 as
-  recommended, relayed by the [AGENT] coordinator: «print/println as
+  recommended, relayed by the [AGENT] coordinator; the recommendation: «print/println as
   machine built-ins with a stderr observable: accept with gc's pinned
   format for int/uint/bool/string, refuse address-printing kinds and
   initially floats»). `newline` selects `println` (space-separated,
   newline-terminated) over `print` (no separators). The statement writes
   the bytes gc's `runtime/print.go` writes to fd 2 — the machine's
   OUTPUT EVENT (`StepEvent.out`, pool layer; design gate G-OUT RULED
-  [USER]: «Program output is a per-step EVENT (`StepEvent.out`), folded
+  [USER] as recommended; the gate's statement: «Program output is a per-step EVENT (`StepEvent.out`), folded
   by the driver into `Readout`, not a `Store` field; `Obs.terminal`
   carries the stderr prefix»). Rides the wide-statement mold
   (`StmtOp.print`): operands evaluate left to right, then ONE apply step
@@ -942,8 +942,8 @@ structure MethodSetRecord where
 /-! ## Promotion records (G-P, native method promotion)
 
 Design note `docs/2026-09-28_gp-method-promotion-design.md` (G-P PASSED
-with its ten §6 decisions as recommended — [USER] Mike 2026-09-28, «Go
-ahead and land, and approve the decisions as proposed», relayed by the
+with its ten §6 decisions as recommended — [USER] Mike 2026-09-28
+approved landing with the decisions as proposed, relayed by the
 [AGENT] coordinator; cite as relayed). A promoted method-set entry of a
 struct type — a method reached through one or more EMBEDDED fields
 (spec#Selectors, spec#Struct_types) — is DATA: the carrier, the member,

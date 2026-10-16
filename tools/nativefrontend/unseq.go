@@ -38,7 +38,7 @@ package main
 // heads) — sends the WHOLE sweep to the legacy path, by name.
 //
 // STAGE E, family E1 (lane core/unseq-stage-e-0921, 2026-09-21; v2.1 §7 row
-// E; the width-of-P ruling «ALL mutable reads, STAGED» widened one kind):
+// E; the width-of-P ruling — all mutable reads, staged — widened one kind):
 // a PACKAGE-LEVEL VARIABLE — unqualified `g` or source-package qualified
 // `pkg.V` — of an admitted type is a mutable location: its read is a READ
 // occurrence (`deref(globaladdr)`, the frontend's spelling of a global

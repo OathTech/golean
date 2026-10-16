@@ -6,10 +6,9 @@ import (
 )
 
 // THE ENTRY RULE (BUG-125; [AGENT] lane frontend/main-undeclared-refuse-1013,
-// 2026-10-13, under the [USER]'s ruling, Mike 2026-10-13, verbatim, relayed:
-// «I feel like this is just opening the door to endless special-case
-// nonsense. I'd prefer to just refuse this case, and maybe support it
-// later»).
+// 2026-10-13, under the [USER]'s ruling, Mike 2026-10-13, relayed: refuse
+// the case rather than open the door to special-casing; support may come
+// later; release-readiness row 41).
 //
 // By default the frontend exports a PROGRAM, and gc refuses to build a
 // `package main` that declares no `func main` («function main is
@@ -40,7 +39,7 @@ import (
 //
 // This is the ONLY gc compilation-unit rule mirrored here — no
 // whole-program mode (supporting such packages as gc would build them) is
-// owed; the ruling's «maybe support it later».
+// owed; the ruling left later support open.
 //
 // Not applied to a non-main (library) package: gc requires no main there.
 // A `main` declared as something other than a function (`var main int`)

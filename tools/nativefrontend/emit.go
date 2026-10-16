@@ -3209,8 +3209,8 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 			// kinds (docs/2026-07-30_quorum-extern-policy.md; non-integer
 			// kinds refused by name). RETIRED 2026-09-04 (lane fr4-rowm,
 			// memo docs/2026-09-03_stdlib-boundary-design.md §3 row M —
-			// the G1-G9 plan ruled «(3) agree, go ahead with the plan»
-			// [USER], relayed): every `slices` member, Sort included,
+			// the G1-G9 plan approved [USER] 2026-09-03, item (3),
+			// relayed): every `slices` member, Sort included,
 			// lowers from the source-through unit through the ordinary
 			// call path below — `slices.Sort` → `pdqsortOrdered`
 			// stenciled per element type by mono.go, gc's exact member at
@@ -7897,7 +7897,7 @@ func (e *emitter) emitStructLit(cl *ast.CompositeLit, t types.Type, st *types.St
 // the operand (walk/complit.go `fixedlit` assigns it to `_`;
 // compare/compare.go skips blank fields) — so equality, map-key identity
 // and copies follow from the core's unchanged field-by-field comparison
-// ([USER] Mike 2026-10-13 «2 fix», relayed). Before this the operand was
+// ([USER] Mike 2026-10-13 ruled item 2 fixed, relayed). Before this the operand was
 // stored and compared: `S{1, 2} == S{9, 2}` answered false (gc true), a map
 // of two such keys had two entries (gc one), an interface-typed blank
 // holding a slice panicked «comparing uncomparable type» where gc does not.
@@ -7918,10 +7918,10 @@ func (e *emitter) emitStructLit(cl *ast.CompositeLit, t types.Type, st *types.St
 // entry and no init-time statement exists for it (`StaticAssign`'s
 // struct/array/slice/&-literal arms, sched.go:355–417; a map literal is
 // dynamic and keeps its effects): `var w = S{bump(), 2}` runs no bump in
-// gc. RULED [USER] Mike 2026-10-14 «agree on both» (relayed by the [AGENT]
-// coordinator; the recommendation agreed to, verbatim: «at a blank field,
+// gc. RULED [USER] Mike 2026-10-14, both halves agreed (relayed by the [AGENT]
+// coordinator; the recommendation agreed to: at a blank field,
 // a constant, `nil`, or a plain variable read gives the zero value with
-// nothing evaluated, and any other operand is refused by name»). So:
+// nothing evaluated, and any other operand is refused by name; BUG-129/BUG-130). So:
 //
 //	 (i)  a constant expression or `nil` → the zero value, nothing emitted;
 //	 (ii) a PLAIN VARIABLE READ (`plainVariableRead`, below) → the zero
@@ -7958,7 +7958,7 @@ func (e *emitter) blankFieldOperandAdmitted(x ast.Expr, fieldIdx int, litType ty
 	if e.plainVariableRead(x) {
 		return nil
 	}
-	return unsup("blank field _ (field %d of %s) at %s: operand %s (%s) refused — gc elides a side-effect-free blank operand with its run-time panic, and never evaluates a package-level literal's blank operand; the frontend refuses a blank-field operand that is not a constant, nil or a plain variable read — [USER] 2026-10-14; the way out: assign the operand to a variable first and use the variable (the program then evaluates it, in gc too)",
+	return unsup("blank field _ (field %d of %s) at %s: operand %s (%s) refused — gc elides a side-effect-free blank operand with its run-time panic, and never evaluates a package-level literal's blank operand; the frontend refuses a blank-field operand that is not a constant, nil or a plain variable read; the way out: assign the operand to a variable first and use the variable (the program then evaluates it, in gc too)",
 		fieldIdx, litType, e.fset.Position(x.Pos()), types.ExprString(x), blankOperandShape(x))
 }
 
@@ -8911,8 +8911,8 @@ func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
 		// (The H-14 package-variable method desugar and the W4.3
 		// slices.SortFunc generic desugar — RETIRED in stdlib
 		// source-through slice 2; cmp.Compare's kind dispatch —
-		// RETIRED 2026-09-04, lane fr24, per the [USER] ruling «(2) …
-		// an honest red» (relayed): those members lower from their
+		// RETIRED 2026-09-04, lane fr24, per the [USER] ruling that
+		// an honest red beats the desugar (relayed): those members lower from their
 		// library units through the qualified/method call paths below,
 		// the real generic at every type argument.)
 		// Qualified call into a SOURCE package (`tracker.F(x)` — W1.1):
@@ -9734,7 +9734,7 @@ func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, b
 					// so the quarantine stub's reason says what is owed.
 					hint := ""
 					if e.curFuncID == "internal/stringslite.Clone" {
-						hint = " — reached by every strconv Parse* error path (strconv.ParseUint/ParseInt/Atoi via syntaxError/rangeError): the ParseUint shim was RETIRED by [USER] ruling (D-002 exception denied, 2026-09-03; BUG-089), so these error paths refuse here pending the slice-2 overlay for stringslite.Clone"
+						hint = " — reached by every strconv Parse* error path (strconv.ParseUint/ParseInt/Atoi via syntaxError/rangeError): the ParseUint shim was RETIRED (the D-002 exception was denied 2026-09-03; BUG-089), so these error paths refuse here pending the slice-2 overlay for stringslite.Clone"
 					}
 					return nil, false, unsup("stdlib source-through: %s needs unsafe.%s (out of language — ledger row Package_unsafe; a library overlay is the planned remedy, memo §2.3.2 — slice 2)%s",
 						e.curFuncName, sel.Sel.Name, hint)
@@ -10171,7 +10171,7 @@ func (e *emitter) emitClearStmt(c *ast.CallExpr) (any, error) {
 // emitPrintStmt lowers `print(args…)` / `println(args…)` — spec#Bootstrapping's
 // two built-ins — to the `print` wire statement (stdlib slice 3, 2026-09-04;
 // gate G2 RULED [USER] 2026-09-03 as recommended, relayed by the [AGENT]
-// coordinator, cited as relayed: «print/println as machine built-ins with a
+// coordinator, cited as relayed; the recommendation: «print/println as machine built-ins with a
 // stderr observable: admit with gc's pinned format for int/uint/bool/string,
 // refuse address-printing kinds and initially floats»). The lowering ADMITS
 // exactly the operand kinds whose gc rendering is a pure function of the

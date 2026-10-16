@@ -6,8 +6,8 @@ Lean invocations run under scripts/capped (the shim onto the box-wide
 `capped`). Scratch is worktree-local under .tmp/: a PASSING run keeps only
 its own result as .tmp/admission-<label>-last (the previous last run is
 replaced); a FAILING run's scratch is retained under its random name and is
-never overwritten by a later green run ([USER] 2026-10-11, D5: «keep the
-last run only»). No gate accepts a poison fixture that failed to compile.
+never overwritten by a later green run ([USER] 2026-10-11, D5: keep the
+last run only). No gate accepts a poison fixture that failed to compile.
 """
 import hashlib
 import os

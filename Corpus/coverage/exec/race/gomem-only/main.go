@@ -4,7 +4,7 @@ import "sync"
 
 // go_mem-RACY, TSan-GREEN shapes — the DESIGNED divergence from the
 // `-race` oracle (Q-U4RESIDUAL, RULED [USER] 2026-09-02 option (A):
-// "follow go_mem exactly"; docs/2026-08-31_qrow-rulings.md row 9;
+// that go_mem be followed exactly; docs/2026-08-31_qrow-rulings.md row 9;
 // docs/BUGS.md BUG-084). Every subject performs a PLAIN access (a
 // whole-struct copy = read, a whole-struct overwrite = write) to a
 // primitive beside a sync op that gc's -race build runs under

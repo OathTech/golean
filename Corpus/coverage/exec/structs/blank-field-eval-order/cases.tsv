@@ -1,5 +1,5 @@
 # id	subject	args	expected_status	expected_reason	features
-# structs/blank-field-eval-order — RED BY DESIGN since 2026-10-14 (BUG-129, [USER] Mike «agree on both»):
+# structs/blank-field-eval-order — RED BY DESIGN since 2026-10-14 (BUG-129, [USER] Mike, both halves agreed):
 # a call at a blank field refuses the literal by name (by-design/blank-field-operand). The three rows were
 # born PASS 2026-10-13 (the call evaluated and its value discarded, both lowering paths); gc's expectations stand.
 effectful	blankOrderEffectful	-	ok	-	structs,fields,literals,evaluation_order,calls

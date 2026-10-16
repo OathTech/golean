@@ -1,5 +1,5 @@
 # id	subject	args	expected_status	expected_reason	features
-# structs/blank-field-refused — RED BY DESIGN (BUG-129, [USER] Mike 2026-10-14 «agree on both»): the gc-drop classes at a
+# structs/blank-field-refused — RED BY DESIGN (BUG-129, [USER] Mike 2026-10-14, both halves agreed): the gc-drop classes at a
 # blank field refuse by name (by-design/blank-field-operand); gc's answers are the expectations.
 negative-shift	blankRefNegativeShift	-	ok	-	structs,fields,literals,shifts,panic
 interface-compare	blankRefInterfaceCompare	-	ok	-	structs,fields,literals,comparability,interfaces,panic

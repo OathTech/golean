@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # The kernel replay gate (lane gate/kernel-replay-1013, 2026-10-13; the
 # zero-context review docs/2026-10-13_codex-zero-context-pass.md F4;
-# release-readiness row 40, [USER] Mike 2026-10-13, verbatim, relayed:
-# «4 yes, critical finding, this is a core trust gap right? Fix it»).
+# release-readiness row 40, [USER] Mike 2026-10-13, relayed: item 4 agreed
+# as a critical finding — a core trust gap — to be fixed).
 #
 # The toolchain's `leanchecker` (src/lean/LeanChecker.lean, `replayFromImports`)
 # re-reads every built olean whose module name starts with `GoLean`, imports

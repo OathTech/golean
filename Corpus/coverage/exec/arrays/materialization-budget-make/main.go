@@ -2,7 +2,7 @@ package main
 
 // RED BY DESIGN (BUG-078 residual (2b), the decoder's half, fail-closed
 // at the 2026-10-12 fix round — review MEDIUM-1 under [USER] Mike's
-// «30: can we fail-close until we fix?», relayed): a `make` whose
+// item-30 ruling, fail-close until fixed, relayed): a `make` whose
 // CONSTANT length (or cap) times the element type's footprint exceeds
 // the interpreter's materialization footprint budget (1<<24 scalar
 // elements, GoLean/NativeToIR.lean arrayFootprintBudget /

@@ -1,8 +1,8 @@
 # id	subject	args	expected_status	expected_reason	features	lane	why	params
 # builtins/e13-sibling-panic-order — latitude E13 option (b), lane e13-b
 # (2026-09-05; RULED [USER] Mike 2026-09-05, relayed by the [AGENT]
-# coordinator: «we should do what the standard supports, and avoid
-# over-refusal if we can. That's what (b) means right?»; design
+# coordinator: do what the standard supports and avoid over-refusal
+# where possible, which is option (b); design
 # docs/2026-09-05_e13-b-design.md). The §2 gc probe family as rows: a
 # spec-UNSEQUENCED panicky non-call operand LEFT of a sibling ordered
 # event. The machine offers BOTH orders (`ChoiceSite.unseqPanic`, bound

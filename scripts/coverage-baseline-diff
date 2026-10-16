@@ -14,7 +14,7 @@
 #   for the negative lane (a 3-column baseline: result,id,stage).
 #
 # THE CAUSE COLUMN (refusal-cause pinning, release-readiness item 8 /
-# gate-audit F9; [USER] Mike 2026-10-12 «1,3-6 approved» — D1-D6 of
+# gate-audit F9; [USER] Mike 2026-10-12 approved items 1 and 3-6 — D1-D6 of
 # docs/2026-10-12_refusal-cause-pinning-design.md as recommended): the
 # differential baseline's rows are result,id,stage,cause. `cause` is the
 # normalized key scripts/coverage-cause derives from a results row's

@@ -315,7 +315,7 @@ else echo "ok: check-bugs unrecognized Expect token fails closed (0)"; fi
 # and a fidelity/non-fidelity MIX fails (6), as does an EMPTY stage.
 BD="$TMP/baseline-diff"; mkdir -p "$BD"
 # The differential baseline carries the CAUSE column (refusal-cause pinning,
-# release-readiness item 8; [USER] 2026-10-12 «1,3-6 approved»): rows are
+# release-readiness item 8; [USER] 2026-10-12 approved items 1 and 3-6): rows are
 # result,id,stage,cause and results rows carry the detail scripts/coverage-cause
 # keys (it shells `go run ./tools/lowerdiag classify` for frontend texts — so
 # Part A4 needs go on PATH, like A2).
@@ -1140,9 +1140,8 @@ EOF
       # coupling pin: observation-eq TIMED OUT … coupling NOT decided").
       run_s S5-saturation-undecided ab "width=2,members=2,sites=8" FAIL \
         "sampling rule: observation-eq TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) comparing draw 2/32 against an earlier distinct draw — saturation NOT decided" "NOT in the machine's enumerated set" $'plain\nrace' "" eq-distinct
-      # S6 ([USER] ruling 2026-09-03, relayed: «this is a 'spirit of the
-      # ruling' vs. 'letter of the ruling' case - we should do option A
-      # which seems like the spirit of the ruling» — option A = a floor of
+      # S6 ([USER] ruling 2026-09-03, relayed: option A, the spirit of the
+      # ruling over its letter — option A = a floor of
       # two draws, one plain + one -race, before the early stop may fire):
       # a members=1 row (atomics/spin/flag-wait, singleton terminating set
       # {42}) with a fake oracle answering 42 in both modes must take

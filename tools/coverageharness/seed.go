@@ -2,7 +2,7 @@ package main
 
 // The SEEDED mode of the oracle generator (seeded-heap slice C, 2026-10-12;
 // design docs/2026-10-09_seeded-heap-design.md §7; [USER] Mike 2026-10-12
-// «Agree on the two strategic questions, let's do it», relayed — GO, with the
+// agreed to the two strategic questions, relayed — GO, with the
 // trusted-surface #2 change of this harness accepted).
 //
 // `--seed <file>` reads the SAME golean-seed-v1 file `golean native-json-run

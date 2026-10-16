@@ -1,5 +1,5 @@
 # id	subject	args	expected_status	expected_reason	features
-# structs/blank-field-panic — RED BY DESIGN since 2026-10-14 (BUG-129, [USER] Mike «agree on both»): a call or an
+# structs/blank-field-panic — RED BY DESIGN since 2026-10-14 (BUG-129, [USER] Mike, both halves agreed): a call or an
 # index at a blank field refuses the literal by name (by-design/blank-field-operand). Born PASS 2026-10-13: the two
 # index-then-call rows were MEMBERSHIP rows (the unseq scheduler's pick; the E13 probe's DEFER/RAISE pick, members=2,
 # gc drawing call-first); a refused literal has no realization to sample, so they are strict rows now with gc's own

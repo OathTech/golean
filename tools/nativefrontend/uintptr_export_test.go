@@ -4,8 +4,8 @@ package main
 // is a DISTINCT integer kind on the machine (`IntKind.uintptr`,
 // GoLean/GoCore/Value.lean), so the frontend's by-name refusal of every
 // identity-bearing position (the retired uintptrid.go — the REFUSE half of
-// [USER] Mike 2026-10-12 «D6: agree on both - refuse and repair asap»,
-// relayed; the repair's shape [USER] Mike 2026-10-12 «1,3-6 approved», item
+// [USER] Mike 2026-10-12's D6 — refuse now, repair soon —
+// relayed; the repair's shape [USER] Mike 2026-10-12, items 1 and 3-6 approved, item
 // 4 = docs/2026-10-12_uintptr-repair-design.md D1–D5, relayed) is gone.
 // This pins the retirement from the frontend's side: the release-trust
 // review's six R1 probe shapes and the method-set shapes EXPORT with a body

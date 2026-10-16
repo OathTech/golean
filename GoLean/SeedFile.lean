@@ -7,7 +7,7 @@ import GoLean.StrictJsonParse
 
 [AGENT worker, lane `cli/seeded-heap-b-1012`] 2026-10-12, slice B of the design note
 `docs/2026-10-09_seeded-heap-design.md` (§1 the grammar, §6 the flags; [USER] Mike 2026-10-12
-«Agree on the two strategic questions, let's do it», relayed — GO, three slices; gc-verified
+agreed to the two strategic questions, relayed — GO, three slices; gc-verified
 CONFIRMED D2/D3/D6/D7/D9/D10, the six deviations and the v1 value set the same day, relayed).
 
 OUTSIDE the semantic core: this module decodes the SHAPE of a seed file onto slice A's

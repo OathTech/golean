@@ -7,8 +7,8 @@ The five tables `ExecState` used to carry beside the heap (`types`,
 `functions`, `methods`, `methodSets`, `typeDisplays`) never change during a
 run: they are the decoded `Program`, copied verbatim at setup. B7 makes the
 type say so — the context is ONE record wrapping the program (D2 (b), [USER]
-2026-09-16, relayed: «Yes, let's go ahead with the D1-8 rulings as
-recommended»), read by every transition and written by none, so the
+2026-09-16, relayed: the D1-8 rulings approved as recommended), read by
+every transition and written by none, so the
 well-formedness network no longer re-proves at every step that the program
 did not change (`docs/2026-09-16_b7-context-store-charter.md` §1).
 

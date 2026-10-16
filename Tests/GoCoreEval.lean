@@ -2776,8 +2776,8 @@ private def labelShapeFacts : IO Bool := do
 /-! ## Seeded-heap slice B: the seed file, `--arg-ref`, the seeded observation
 
 [AGENT worker, lane `cli/seeded-heap-b-1012`] 2026-10-12 (design
-`docs/2026-10-09_seeded-heap-design.md` §1/§5/§6; [USER] Mike 2026-10-12 «Agree on the two
-strategic questions, let's do it», relayed). Their own do-block (`main`'s is at the elaborator's
+`docs/2026-10-09_seeded-heap-design.md` §1/§5/§6; [USER] Mike 2026-10-12 agreed to the two
+strategic questions, relayed). Their own do-block (`main`'s is at the elaborator's
 recursion-depth limit). The byte-level controls through the real CLI are
 `scripts/check-wire-boundary`'s seeded section; these pin the pieces. -/
 
@@ -2973,7 +2973,7 @@ private def seedFacts : IO Bool := do
 is at the compiler's limit). -/
 private def observationShapeFacts : IO Bool := do
   let mut passed := true
-  -- Release-readiness item 22 (2026-10-12; [USER] Mike «22: fix it», relayed; the decisions
+  -- Release-readiness item 22 (2026-10-12; [USER] Mike ruled item 22 fixed, relayed; the decisions
   -- [AGENT]). (a) The CLI-level `status:error` observation carries `output` (empty: no step ran)
   -- and decodes under the unchanged exact-keys rule for `error` (`message, output, schema,
   -- status`); the former key-less shape still refuses. (b) A func value is refused BY NAME at
@@ -3032,7 +3032,7 @@ private def observationShapeFacts : IO Bool := do
   passed := passed && (← expectStrEq "ITEM-22 (b): positive control — a func-free result still answers ok"
     (funcObs .bool (.bool true))
     "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"kind\":\"int\",\"tag\":\"int\",\"value\":7},{\"tag\":\"bool\",\"value\":true}]}")
-  -- Release-readiness item 22 (2026-10-12; [USER] Mike «22: fix it», relayed): a func value
+  -- Release-readiness item 22 (2026-10-12; [USER] Mike ruled item 22 fixed, relayed): a func value
   -- stored into a seed CELL refuses the whole seeded observation by name, like a func result.
   passed := passed && (← expectTrue "ITEM-22: a func value in a seed cell refuses the seeded observation by name (unsupported, no func tag, decodable)"
     (let o := CLI.seededObs ⟨#[], #[.int .int]⟩
@@ -3750,9 +3750,9 @@ def main : IO UInt32 := do
   -- machine carries the kind (`IntKind.uintptr`) and its encoder would
   -- spell `{"kind":"uintptr"}`, but `golean-observation-v1`'s kind set
   -- stays the ten concrete kinds and the Go observer refuses
-  -- `reflect.Uintptr` first ([USER] Mike 2026-10-12 «1,3-6 approved»,
-  -- item 4 = the repair note's D1–D5, D2 = O1 «keep both seams
-  -- refusing», relayed; `docs/2026-10-12_uintptr-repair-design.md` §2.4).
+  -- `reflect.Uintptr` first ([USER] Mike 2026-10-12 approved items 1 and 3-6,
+  -- item 4 = the repair note's D1–D5, D2 = O1, both seams keep
+  -- refusing, relayed; `docs/2026-10-12_uintptr-repair-design.md` §2.4).
   passed := passed && (← expectTrue "F15: decode accepts the machine encoder's kind-carrying output"
     (CLI.decodeObservation "left"
       (CLI.observationOfRun ⟨#[], #[.int .int8, .int .uint8]⟩ (.ok { values := #[.int (-5) .int8, .int 255 .uint8] })).compress).isOk)
@@ -3763,8 +3763,8 @@ def main : IO UInt32 := do
     (let enc := (CLI.observationOfRun ⟨#[], #[.int .uintptr]⟩ (.ok { values := #[.int 7 .uintptr] })).compress
      (enc.splitOn "\"kind\":\"uintptr\"").length == 2 && !(CLI.decodeObservation "left" enc).isOk))
   -- BUG-124 FIXED (2026-10-12, lane core/uintptr-repair-impl-1012; [USER]
-  -- Mike 2026-10-12 «D6: agree on both - refuse and repair asap» and
-  -- «1,3-6 approved» (item 4 = the repair note's D1–D5), relayed):
+  -- Mike 2026-10-12 agreed to D6's both halves — refuse now, repair soon —
+  -- and approved items 1 and 3-6 (item 4 = the repair note's D1–D5), relayed):
   -- `uintptr` is a DISTINCT integer kind, so the release-trust review's
   -- six identity-bearing shapes answer as gc does — every one through
   -- `Ty.eqb`'s structural equality (`.int k₁, .int k₂ => k₁ == k₂`), no

@@ -7,8 +7,8 @@ package main
 // pdqsortCmpFunc stenciled at the element type; cmp.Compare is the real
 // generic at every type argument — its integer/string kind-dispatch
 // desugar (the original landing-B mechanism) was RETIRED 2026-09-04 per
-// the [USER] ruling (Mike, relayed by the coordinator, cited as relayed:
-// «(2) given we have a plan, I think this should be an honest red»), so
+// the [USER] ruling (Mike 2026-09-04, relayed by the coordinator, cited as
+// relayed: with a plan in hand, an honest red beats the desugar), so
 // cmpCompareKinds — whose `index` is a FUNCTION-LOCAL defined type
 // argument — is red BY RULING on mono.go's C6 naming refusal (FR-19's
 // line: the scope-qualified TypeId key is the plan).

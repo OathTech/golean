@@ -7,8 +7,8 @@ package main
 // (pre-merge audit 2026-07-31, finding 12) when only `slices.Sort` AT
 // INTEGER ELEMENTS was modeled — the quorum-pilot `sortSlice` machine op —
 // so a silent widening of that surface would show as baseline drift. The
-// widening is now deliberate and ruled (the G1-G9 stdlib plan, [USER]
-// «(3) agree, go ahead with the plan», relayed); the id is kept so the
+// widening is now deliberate and ruled (the G1-G9 stdlib plan, approved
+// [USER] 2026-09-03, item (3), relayed); the id is kept so the
 // baseline records the FAIL→PASS flip by name. Wider string/float/named-
 // kind coverage: `slices/slices-sort-kinds/*`.
 

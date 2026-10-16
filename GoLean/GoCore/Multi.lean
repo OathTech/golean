@@ -453,7 +453,7 @@ def Config.atBoundary (c : Config) : Bool :=
   -- `core/sched-boundary-1012`; the Codex release-trust review's F1/R2
   -- relayed by the [USER] the same day; design note
   -- `docs/2026-10-12_sched-boundary-design.md`; under the standing rule
-  -- [USER] 2026-10-07 «semantic widenings must match real Go», relayed):
+  -- [USER] 2026-10-07, relayed, that semantic widenings must match real Go):
   -- a scheduling point is wherever a peer's action could be OBSERVED,
   -- and two operations observe shared state without being registry ops.
   -- (1) `len(ch)` — the `lengthOf` apply on a CHANNEL operand — reads the
@@ -2266,8 +2266,8 @@ inductive StepM : MultiConfig → MultiConfig → AccessTrace → Prop where
 
 /-- Per-goroutine well-formedness: a live goroutine's configuration is
 loc-bounded; a tombstone carries no location. Context-free since the B7
-fix round (2026-09-17, [USER] «We should delete the vacuous conjunct
-right? that's just a strict improvement», relayed): the former second
+fix round (2026-09-17, [USER] ruled the vacuous conjunct deleted as a
+strict improvement, relayed): the former second
 conjunct `Config.itersNormalized types c = true` — the pool-side twin of
 the conjunct D6 deleted from `MachineWf`, constantly `true` — is gone,
 and with it this predicate's `types` parameter. -/

@@ -37,8 +37,8 @@ func TestModuleGoDirectiveRefusal(t *testing.T) {
 		{"unparseable version", "module example.org/m\n\ngo banana\n", "cannot parse"},
 		{"go directive after a require block (blocks are skipped, the directive still found)", "module example.org/m\n\nrequire (\n\tgo.example/go v1.0.0\n)\n\ngo 1.21\n", "declares go 1.21"},
 		{"comment-only go token is not a directive", "module example.org/m\n// go 1.21\ngo 1.26\n", ""},
-		// BUG-128 (release-readiness row 39; RULED [USER] 2026-10-13 «3,
-		// agree», relayed): a godebug line or block is refused by name.
+		// BUG-128 (release-readiness row 39; RULED [USER] 2026-10-13, item 3
+		// agreed, relayed): a godebug line or block is refused by name.
 		// Before the fix the scanner skipped both silently (measured:
 		// `fields[0] != "go"` continued past the line; `godebug (` was
 		// taken for a block and its body skipped).

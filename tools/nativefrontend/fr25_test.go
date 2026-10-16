@@ -1,7 +1,7 @@
 package main
 
-// Unit tests for FR-25 (2026-09-04, lane fr24; the [USER]-approved rider —
-// «(3) yes, makes sense», relayed by the coordinator): an unlowerable BASIC
+// Unit tests for FR-25 (2026-09-04, lane fr24; the [USER]-approved rider,
+// item (3), relayed by the coordinator): an unlowerable BASIC
 // type (complex64/complex128, unsafe.Pointer) in a method/func SIGNATURE or
 // an interface REQUIREMENT list is an opaque `named <basic>` marker with an
 // existence-only `unsupported` TypeDef, so the declaration lowers (a stub /

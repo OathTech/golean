@@ -335,9 +335,9 @@ rendering and its refusal live in the observation layer, over `seedRelative? bas
 design §5, deviation (e)).
 
 `base` was added by RE-PIN 19 ([AGENT worker, lane `core/seeded-base-repin-1012`], 2026-10-12;
-[USER] Mike 2026-10-12 «1,3-6 approved», item 6 — «carrying the seed base in the core readout …
-changes BridgeSet rows 599 to 601, a customer-visible re-pin to notice to the logic team»,
-relayed by the [AGENT] coordinator): without it the CLI re-ran `runProgramSetupSeededM` after
+[USER] Mike 2026-10-12 approved items 1 and 3-6 of that ask; item 6 proposed carrying the seed
+base in the core readout, changing BridgeSet rows 599 to 601 — a customer-visible re-pin to
+notice to the logic team; relayed by the [AGENT] coordinator): without it the CLI re-ran `runProgramSetupSeededM` after
 the run to learn `b` from slot 0 — package init twice per seeded run (slice B's debt, review
 LOW-2). `b` is a RUN quantity (init may allocate), known only inside the setup; it travels as a
 `Nat` rather than the slot list because that list IS `seedLocs b n` (S2 `seedCells_locs`), one

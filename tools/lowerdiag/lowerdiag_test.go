@@ -721,8 +721,8 @@ func TestMachineSurfaceEqualsFrontendTables(t *testing.T) {
 }
 
 // TestFloatBitsPrimitiveIsSupplied — the float-bits half of the same stale
-// judgment (folded into this lane by [USER] Mike 2026-10-04 «Yes, approve
-// 1 / 2», relayed): since stdlib slice 3 the frontend binds a DIRECT call of
+// judgment (folded into this lane by [USER] Mike 2026-10-04, items 1 and 2
+// approved, relayed): since stdlib slice 3 the frontend binds a DIRECT call of
 // math.Float64bits / Float64frombits / Float32bits / Float32frombits to the
 // pure `float-bits` node, but the static pass judged every math key
 // stdlib-package-unmodeled. Pinned per declaration of testdata/calib (whose
@@ -816,8 +816,8 @@ func TestFloatBitsPrimitiveIsSupplied(t *testing.T) {
 
 // TestDeferGoStdlibAndSyncMethodValueVerdicts — the lowerdiag known
 // disagreements with the wire of 2026-10-04 (docs/2026-09-04_lower-
-// diagnose.md), items 1-3, fixed 2026-10-05 ([USER] Mike 2026-10-05 «Yes,
-// go ahead», relayed). Pinned per declaration of testdata/calib (whose wire
+// diagnose.md), items 1-3, fixed 2026-10-05 ([USER] Mike 2026-10-05 approved
+// the fix, relayed). Pinned per declaration of testdata/calib (whose wire
 // verdicts TestCalibrationAgainstWire checks against the real frontend):
 // defer/go of a non-source-through stdlib member refuses as
 // stdlib-value-position (the frontend lowers the callee as a value) while

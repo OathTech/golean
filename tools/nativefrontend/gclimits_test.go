@@ -16,10 +16,10 @@ import (
 //	                     scan sizes every MENTION, and gc's dead-code /
 //	                     local-declaration / constant-folding pruning is
 //	                     not implemented ([USER] Mike 2026-10-13, relayed:
-//	                     «I'd prefer to just refuse this case, and maybe
-//	                     support it later»); the refusal must carry
+//	                     refuse the case now, support may come later);
+//	                     the refusal must carry
 //	                     gcMentionsClause. These rows are the to-do list
-//	                     of a later «support it» lane;
+//	                     of a later support lane;
 //	want "<text>":       gc REJECTS with that text and the frontend must
 //	                     refuse with a `type-check: ` error carrying it.
 func TestGcSizeLimits(t *testing.T) {

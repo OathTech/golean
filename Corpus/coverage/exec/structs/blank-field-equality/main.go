@@ -4,8 +4,8 @@ package main
 // «corresponding non-blank field values»; gc compare/compare.go skips
 // them). BUG-129. At a blank field only a constant, nil or a plain
 // variable read is admitted (the zero value, nothing evaluated); any
-// other operand refuses the literal by name ([USER] Mike 2026-10-14
-// «agree on both») — so the operands here are constants and variables.
+// other operand refuses the literal by name ([USER] Mike 2026-10-14,
+// both halves agreed; BUG-129) — so the operands here are constants and variables.
 
 type blankEqS struct {
 	_ int

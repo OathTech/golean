@@ -471,13 +471,13 @@ func computeLibraryReach(units []*sourcePkg) error {
 //   - `slices.Sort` → the quorum-pilot `sortSlice` MACHINE OP at integer
 //     element kinds (emit.go emitSortStmt; non-integer kinds refused by
 //     name). RETIRED by memo §3 row M (lane fr4-rowm; the G1-G9 plan
-//     ruled «(3) agree, go ahead with the plan» [USER], relayed): the
+//     approved [USER] 2026-09-03, relayed): the
 //     real generic lowers at every ordered kind — rows slices/slices-sort*,
 //     slices/slices-sort-kinds/*, stdlib-source/sort-op-shapes/* (the
 //     defer/go shapes, green now that nothing is intercepted).
 //   - cmp.Compare's kind-dispatch desugar, RETIRED 2026-09-04 (lane fr24)
-//     per the [USER] ruling «(2) given we have a plan, I think this should
-//     be an honest red» (relayed): a function-local defined type argument
+//     per the [USER] ruling of 2026-09-04 (relayed) that, with a plan in
+//     hand, an honest red beats the desugar: a function-local defined type argument
 //     refuses at mono.go's C6 rule (rows slices/sortfunc-cmp/cmp-compare-
 //     kinds, stdlib-source/cmp-compare/local-float-type — FR-19's line).
 //

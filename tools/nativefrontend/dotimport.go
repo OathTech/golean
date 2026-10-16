@@ -1,7 +1,7 @@
 package main
 
 // FR-36 (2026-10-06, lane `lane/fr36-spin-bounds-1006`; [USER] Mike
-// 2026-10-06 «Yeah, let's do 3+4», relayed by the [AGENT] coordinator — cite
+// 2026-10-06 approved items 3 and 4, relayed by the [AGENT] coordinator — cite
 // as relayed): a DOT import of a stdlib package (`import . "math/rand"`;
 // `Intn(5)`) puts the package's members in the FILE block, so a call of one
 // is a bare IDENTIFIER, not a `pkg.Member` selector. Every stdlib binding
@@ -105,7 +105,7 @@ func (e *emitter) refuseDotImportedValue(fn *types.Func, pkg *types.Package) err
 }
 
 // FR-37 (2026-10-07, lane `lane/fr37-dot-var-1007`; [USER] Mike 2026-10-07
-// «We can run the FR-37 fix in a subagent right? Worth getting it done»,
+// asked for the FR-37 fix to be run in a subagent,
 // relayed by the [AGENT] coordinator — cite as relayed): a dot import also
 // puts the package's VARIABLES in the file block (`import . "os"`;
 // `len(Args)`). Such a `*types.Var` is no source package's global

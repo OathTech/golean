@@ -436,7 +436,7 @@ def exports : List Name := [
     ``GoLean.GoCore.ExecutionStatement.execStmtLoop_error,
     ``GoLean.GoCore.ExecutionStatement.noRefusal_step,
     ``GoLean.GoCore.Machine.stepFn_picks_none, ``GoLean.GoCore.Machine.stepFn_picks_some,
-    -- native method promotion (window row 3, G-P S2, 2026-09-28; [USER] «Agree on (1)», relayed):
+    -- native method promotion (window row 3, G-P S2, 2026-09-28; [USER] agreed to option (1), relayed):
     -- the frame names the function it runs at entry and at exit, and the direct path is the
     -- function-call rule
     ``GoLean.GoCore.Machine.Entry.callConfig_run, ``GoLean.GoCore.Machine.frame_exit_returns,
@@ -456,7 +456,7 @@ def exports : List Name := [
     ``GoLean.GoCore.receiverAt_ptr_nil, ``GoLean.GoCore.receiverAt_ptr_nil_deref,
     ``GoLean.GoCore.Machine.recoverResult_eq, ``GoLean.GoCore.Machine.recoverResult_frame,
     ``GoLean.GoCore.Machine.recoverResult_glue,
-    -- G-C3, `Cont := List Frame` (window row 4, packet C, 2026-09-29; [USER] «Agree with 1-4»,
+    -- G-C3, `Cont := List Frame` (window row 4, packet C, 2026-09-29; [USER] agreed to items 1-4,
     -- relayed; design D6): the walks as list laws, and the B3 algebra re-proved by list
     -- induction under its old names; BridgeSet rows 90–107
     ``GoLean.GoCore.Machine.Cont.sizeOf_tail_lt, ``GoLean.GoCore.Machine.Cont.withTail_tail,

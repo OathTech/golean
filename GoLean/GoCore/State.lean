@@ -83,8 +83,8 @@ abbrev Heap := Array HeapCell
 (renamed from `Result` in wave (iii) — `Result` is now the apply-boundary
 outcome, Value.lean), plus the program's OUTPUT — the bytes `print`/
 `println` wrote to fd 2, folded from the pool's `StepEvent.out` events in
-step order (stdlib slice 3, 2026-09-04; design gate G-OUT RULED [USER]:
-«Program output is a per-step EVENT (`StepEvent.out`), folded by the
+step order (stdlib slice 3, 2026-09-04; design gate G-OUT RULED [USER]
+as recommended; the gate's statement: «Program output is a per-step EVENT (`StepEvent.out`), folded by the
 driver into `Readout`, not a `Store` field»). `output` defaults to empty
 so the readout of a run that never prints is literally the old readout. -/
 structure Readout where
@@ -253,8 +253,8 @@ The sites and their consuming definitions:
                    `schedSlots`, issuer-first like postOp).
 * `nilValueMethodText` — the run-time panic TEXT when a VALUE-receiver
                    method is dispatched through an interface holding a
-                   nil `*T` (BUG-087, [USER] ruling 2026-09-03 «demonic
-                   choice so both are admitted», relayed — record in
+                   nil `*T` (BUG-087, [USER] ruling 2026-09-03: a demonic
+                   choice admitting both texts, relayed — record in
                    `docs/2026-08-31_qrow-rulings.md`): gc realizes two
                    `runtime.Error` texts for ONE source, decided by its
                    optimizer (devirtualized deref → the nil-dereference
@@ -299,8 +299,8 @@ The sites and their consuming definitions:
                    when a RECOVERED panic value is re-panicked with an
                    EQUAL payload (BUG-004 item 1; landing chunk L3,
                    `docs/2026-09-07_land-panic-text-tape.md`, under the
-                   BUG-087 panic-text ruling «demonic choice so both are
-                   admitted», [USER] 2026-09-03 relayed). gc decides the
+                   BUG-087 panic-text ruling, a demonic choice admitting
+                   both texts, [USER] 2026-09-03 relayed). gc decides the
                    marker by eface IDENTITY (`preprintpanics`,
                    runtime/panic.go:715 at the pin — the type word AND
                    the data pointer): `panic(r)` passes the recovered box
@@ -332,8 +332,8 @@ The sites and their consuming definitions:
                    model v2.1, `docs/2026-09-16_evaluation-order-model-v2.md`
                    §3.3/§3.5; Stage B, lane `core/unseq-scheduler-b-0916`,
                    2026-09-16; the mechanism RULED [USER] Mike 2026-09-16,
-                   relayed by the [AGENT] coordinator — «I think the Cerberus
-                   model is the correct one»): at a sweep frame's PICK
+                   relayed by the [AGENT] coordinator: the Cerberus
+                   model is the correct one): at a sweep frame's PICK
                    position `.next (.unseqK … .pick _)` with ≥ 2 READY
                    occurrences, WHICH ready occurrence runs next — slot j =
                    the j-th ready occurrence in canonical rank order
@@ -362,10 +362,10 @@ The sites and their consuming definitions:
                    envelope statement lives at `Stmt.randIntn` (Syntax.lean).
                    A DATA pick over a value, not a scheduling pick.
 * `convCap`      — THE CAPACITY of `[]byte(s)` / `[]rune(s)` (latitude R3 / the
-                   gc-verified project's b6, 2026-10-07; [USER] Mike «yeah agree,
-                   build now», relayed — design `docs/2026-10-07_conv-cap-design.md`
-                   D1–D8 under the standing rule «semantic widenings must match
-                   real Go»): spec §Conversions declares the capacity
+                   gc-verified project's b6, 2026-10-07; [USER] Mike agreed and
+                   approved the build, relayed — design `docs/2026-10-07_conv-cap-design.md`
+                   D1–D8 under the standing rule that semantic widenings must
+                   match real Go): spec §Conversions declares the capacity
                    implementation-specific; gc realizes FOUR regimes (literal → n;
                    zero-copy → n; the 32-element conversion buffer; size-class
                    `roundupsize`) decided by its optimizer, and the admitted set is

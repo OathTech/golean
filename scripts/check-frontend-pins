@@ -36,7 +36,7 @@
 #      SOLE structural change (enumerated by a JSON diff, evidence dir
 #      docs/evidence/2026-09-03_q-trylock/). Raft never calls TryLock;
 #      the move is the stub policy's, [USER]-ruled (A) 2026-09-03 —
-#      «we should break things rather than preserve incorrect behavior»
+#      break things rather than preserve incorrect behavior
 #      (relayed by the [AGENT] coordinator).
 #      Re-pin history: 2026-09-04 (lane stdlib-source-2, landed at the
 #      round-10 merge train) f2309df2… → 69a538de… — RE-DERIVED on the
@@ -52,8 +52,8 @@
 #      Re-pin history: 2026-09-04 (lane fr24, checkpoint C) 69a538de… →
 #      b4458244… — the cmp.Compare kind-dispatch desugar RETIRED per the
 #      [USER] ruling (Mike 2026-09-04, relayed by the coordinator, cited
-#      as relayed: «(2) given we have a plan, I think this should be an
-#      honest red»): the three dead injected shims
+#      as relayed: with a plan in hand, an honest red beats the
+#      desugar): the three dead injected shims
 #      quorum.goleanShimCmpCompare{Int,String,Uint} (planted by the
 #      file-presence scan for majority.go's cmp.Compare calls inside the
 #      H-3-quarantined MajorityConfig.Describe; referenced by no body)
@@ -61,7 +61,7 @@
 #      by a JSON diff, docs/evidence/2026-09-04_fr24-fr25/twin-repin-C/).
 #      Re-pin history: 2026-09-04 (lane fr4-rowm, memo §3 row M — the
 #      `slices.Sort` machine-op intercept RETIRED; the G1-G9 stdlib plan
-#      ruled «(3) agree, go ahead with the plan» [USER], relayed)
+#      approved [USER] 2026-09-03, item (3), relayed)
 #      b4458244… → 4ee39f73…: the twin's nine `slices.Sort` sites
 #      (quorum.MajorityConfig.{CommittedIndex,Slice,String},
 #      tracker.ProgressTracker.{LearnerNodes,Visit,VoterNodes},
@@ -122,8 +122,8 @@
 #      Expected classes only (fr19's fields, c2's order); nothing else.
 #      Re-pin history: 2026-09-05 (lane e13-b — latitude E13 option (b),
 #      RULED [USER] Mike 2026-09-05, relayed by the [AGENT] coordinator,
-#      cited as relayed: «we should do what the standard supports, and avoid
-#      over-refusal if we can. That's what (b) means right?») 4ee39f73… →
+#      cited as relayed: do what the standard supports and avoid
+#      over-refusal where possible, which is option (b)) 4ee39f73… →
 #      d531a225…: the frontend now emits an `unseq-probe` statement at the
 #      lexical position of every panicky non-call operand (here: 118
 #      `field-get` operands — pointer-selector reads such as `pr.Match`)
@@ -240,8 +240,8 @@ cd "$ROOT"
 # docs/evidence/2026-09-11_review-boundary/twin-repin/structural-diff.txt.
 # [AGENT] 2026-09-24, lane core/unseq-stage-e6a-0924 (Stage E6a of the
 # evaluation-order model v2.1; RULED [USER] 2026-09-22, the Stage E5 landing
-# record item 2 — WIDEN the whole-sweep grammar to non-main units, «the raft
-# twin re-pins with a written reason», relayed): e1a87725… -> 1c4e7038….
+# record item 2 — WIDEN the whole-sweep grammar to non-main units, the raft
+# twin re-pinning with a written reason, relayed): e1a87725… -> 1c4e7038….
 # The unit boundary of the graph grammar is GENERALIZED (tools/nativefrontend/
 # unseq.go: a callee of ANY source unit — bare or `pkg.F`-qualified — and a
 # method of any source unit's named struct; Stage C's «callee outside the main
@@ -279,7 +279,7 @@ cd "$ROOT"
 # [AGENT] 2026-09-28, lane core/method-promotion-0928, G-P S1 — native method
 # promotion, the ADDITIVE records slice (design docs/2026-09-28_gp-method-promotion-design.md
 # §4/§5 S1; G-P PASSED with all ten §6 decisions as recommended: [USER] Mike 2026-09-28
-# «Go ahead and land, and approve the decisions as proposed», relayed by the [AGENT]
+# approved landing with the decisions as proposed, relayed by the [AGENT]
 # coordinator — cite as relayed): 1c4e7038… -> 7e8c06e6…. The wire gains ONE program-level
 # key, the REQUIRED `promotions` array — 56 records = the twin's 53 synthesized promotion
 # wrappers + 3 promoted sync-primitive stubs (raft.MemoryStorage.{Lock,TryLock,Unlock}), one
@@ -302,7 +302,7 @@ cd "$ROOT"
 # v2 move (wrappers retired, `wrapper` refused) is S2's re-pin.
 # [AGENT] 2026-09-28, lane core/method-promotion-0928, G-P S2 — native method promotion, THE
 # SWITCH (design docs/2026-09-28_gp-method-promotion-design.md §4/§5 S2, decisions 4–9 ruled
-# [USER] Mike 2026-09-28 «Go ahead and land, and approve the decisions as proposed», relayed by the
+# [USER] Mike 2026-09-28, landing approved with the decisions as proposed, relayed by the
 # [AGENT] coordinator — cite as relayed): 7e8c06e6… -> 0b58402a…. The schema string moves to
 # `golean-native-v2`; the 53 synthesized promotion WRAPPERS and the 3 promoted sync-primitive
 # STUBS leave `methods` (537 -> 481 entries: every remaining entry is byte-identical to the S1
@@ -359,8 +359,8 @@ echo "check-frontend-pins: ok [hidden-dep-order] — realized deviation order ma
 # referenced across declarations), 230 `pos` line shifts in the `locals` tables of 60 later raft.go declarations (the file is
 # 7 lines shorter), 0 other. Schema golean-native-v3, funcs 450, methods 481, fileOrder 20 unchanged; no other statement,
 # expression or type node changed. 8a158eff… -> d5186f43…. Written reason and the classification script: the lane's handoff.
-# [AGENT S1 build worker, lane lane/route-a-s1-1004] 2026-10-04 twin re-pin: protobuf ROUTE A slice S1 ([USER] Mike
-# 2026-10-04 «Approved», relayed — design docs/2026-10-04_route-a-protobuf-design.md D1-D12; D12 names this re-pin). The
+# [AGENT S1 build worker, lane lane/route-a-s1-1004] 2026-10-04 twin re-pin: protobuf ROUTE A slice S1 (approved [USER] Mike
+# 2026-10-04, relayed — design docs/2026-10-04_route-a-protobuf-design.md D1-D12; D12 names this re-pin). The
 # subject's protobuf surface is now the generated route A codec: raftpb gains plain_wire.go (the protowire/impl twins),
 # plain_codec.go/plain_clone.go are regenerated (MarshalAppend/SizeMessage/UnmarshalMessage(b, depth)/ResetMessage/
 # IsNilMessage/ProtoClone/ProtoEqual/CloneMessage/mergeMessage/EqualMessage), every raftpb struct keeps `unknownFields

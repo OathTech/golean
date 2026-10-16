@@ -3,11 +3,11 @@ package main
 // directives.go — COMPILER DIRECTIVES in user units (release-readiness
 // rows 38 and 39; the Codex zero-context pass F2/F3,
 // docs/2026-10-13_codex-zero-context-pass.md; BUG-127, BUG-128; RULED
-// [USER] Mike 2026-10-13, verbatim, relayed by the [AGENT] coordinator:
-// «3, agree» — refuse by name, at file selection, every user unit; and
-// the standing preference, Mike 2026-10-13 on BUG-125: «I feel like this
-// is just opening the door to endless special-case nonsense. I'd prefer
-// to just refuse this case, and maybe support it later»; lane
+// [USER] Mike 2026-10-13, relayed by the [AGENT] coordinator: item 3
+// agreed — refuse by name, at file selection, every user unit; and
+// the standing preference, Mike 2026-10-13 on BUG-125: refuse the case
+// rather than open the door to special-casing, support may come later
+// (release-readiness rows 38, 39, 41); lane
 // frontend/directives-1013, [AGENT]).
 //
 // Before this file a `//go:embed data.txt` string was exported and
@@ -66,7 +66,7 @@ import (
 )
 
 // allowedDirectiveVerbs is THE ALLOWLIST ([AGENT] proposal ratified by
-// the [USER]'s «3, agree»): verb -> why it has no effect on the modeled
+// the [USER] 2026-10-13, item 3): verb -> why it has no effect on the modeled
 // program, in the placements gc accepts. Widening it is a ruling, not an
 // edit.
 var allowedDirectiveVerbs = map[string]string{
@@ -140,7 +140,7 @@ func (s *directiveScan) judge(c *ast.Comment) error {
 	body := directiveBody(c.Text)
 	switch {
 	case strings.HasPrefix(body, "line "):
-		return unsup("file selection in %s: %s carries the line directive `%s` — position rewriting is not modeled (gc honours //line at column 1 and /*line anywhere; both forms are refused wherever they appear); RULED [USER] 2026-10-13: refuse by name (fail closed)", s.dir, s.pos(c), firstLine(c.Text))
+		return unsup("file selection in %s: %s carries the line directive `%s` — position rewriting is not modeled (gc honours //line at column 1 and /*line anywhere; both forms are refused wherever they appear); refuse by name (fail closed)", s.dir, s.pos(c), firstLine(c.Text))
 	case strings.HasPrefix(c.Text, "/*"):
 		// A block `/*go:…*/` comment is prose to gc (scanner.go
 		// fullComment hands only `line` block comments to the pragma
@@ -149,10 +149,10 @@ func (s *directiveScan) judge(c *ast.Comment) error {
 	case strings.HasPrefix(body, "go:"):
 		verb := directiveVerb(body)
 		if verb == "go:debug" {
-			return unsup("file selection in %s: %s carries the runtime-setting directive `%s` — GODEBUG settings are not modeled: the semantics is the Go 1.26 module defaults (panic(nil) raises *runtime.PanicNilError; the differential oracle is pinned with GODEBUG=panicnil=0); RULED [USER] 2026-10-13: refuse by name (fail closed)", s.dir, s.pos(c), firstLine(c.Text))
+			return unsup("file selection in %s: %s carries the runtime-setting directive `%s` — GODEBUG settings are not modeled: the semantics is the Go 1.26 module defaults (panic(nil) raises *runtime.PanicNilError; the differential oracle is pinned with GODEBUG=panicnil=0); refuse by name (fail closed)", s.dir, s.pos(c), firstLine(c.Text))
 		}
 		if _, ok := allowedDirectiveVerbs[verb]; !ok {
-			return unsup("file selection in %s: %s carries the compiler directive `%s` — a //go: directive outside the allowlist (%s) is not modeled (gc may embed data, rename a symbol or change code generation on it, or ignore it; none of that is modeled); RULED [USER] 2026-10-13: refuse by name, no modelling (fail closed)", s.dir, s.pos(c), firstLine(c.Text), allowedDirectiveList)
+			return unsup("file selection in %s: %s carries the compiler directive `%s` — a //go: directive outside the allowlist (%s) is not modeled (gc may embed data, rename a symbol or change code generation on it, or ignore it; none of that is modeled); refuse by name, no modelling (fail closed)", s.dir, s.pos(c), firstLine(c.Text), allowedDirectiveList)
 		}
 		return s.judgePlacement(c, verb)
 	}

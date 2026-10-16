@@ -26,9 +26,9 @@ package main
 //     type: …», typePos on an unnamed type): a rejection either way.
 //
 // WHAT IS SIZED — MENTIONS, NOT gc's SIZED SET; OVER-REFUSAL BY DESIGN
-// ([USER] Mike 2026-10-13, relayed: «I feel like this is just opening
-// the door to endless special-case nonsense. I'd prefer to just refuse
-// this case, and maybe support it later»). Every type MENTIONED
+// ([USER] Mike 2026-10-13, relayed: refuse the case rather than open the
+// door to special-casing; support may come later; release-readiness
+// row 34). Every type MENTIONED
 // (reachable through array/slice/pointer/chan/map elements, struct
 // fields, signatures, interface methods, named types' underlying) by
 // any expression or declared object of every non-generic declaration of
@@ -42,7 +42,7 @@ package main
 // ACCEPTS and GoLean REFUSES, by name: the message appends
 // gcMentionsClause. The pruning is NOT implemented; TestGcSizeLimits
 // lists each such shape with both verdicts, the to-do list of a later
-// «support it» lane. In the other direction the scan is exact on the
+// support lane. In the other direction the scan is exact on the
 // generic boundary, which is not a pruning rule: uninstantiated generic
 // code is never sized (gc accepts `func f[T any]() { var c chan
 // [9000]T }` until something instantiates it at a type that makes the
@@ -89,8 +89,8 @@ const (
 	// gcMentionsClause: appended to every size-limit refusal. The scan
 	// sizes MENTIONS, not gc's sized set (see the file comment), so the
 	// refusal may be wider than gc's rejection; the clause says so
-	// ([USER] Mike 2026-10-13, relayed: «I'd prefer to just refuse this
-	// case, and maybe support it later»).
+	// ([USER] Mike 2026-10-13, relayed: refuse the case now, support may
+	// come later).
 	gcMentionsClause = " [GoLean sizes every mention of the type, including declarations and dead code that gc would not size; such a program is refused by name, not supported]"
 	gcRegSize        = 8 // amd64 RegSize: TFUNCARGS rounds the params' end to it
 )

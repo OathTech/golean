@@ -1,7 +1,7 @@
 # id	subject	args	expected_status	expected_reason	features
 # directives/generate-control — BUG-127 POSITIVE CONTROL ([AGENT], lane
 # frontend/directives-1013, 2026-10-13): `//go:generate` is on the
-# allowlist (RULED [USER] 2026-10-13 «3, agree»); gc returns 1; PASS
+# allowlist (RULED [USER] 2026-10-13, item 3 agreed); gc returns 1; PASS
 # before and after the directive refusal — a scan that over-refuses the
 # allowlist turns this red.
 -	generateControl	-	ok	-	functions,returns

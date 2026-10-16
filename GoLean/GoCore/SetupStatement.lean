@@ -7,8 +7,8 @@ import GoLean.GoCore.ExecutionStatement
 /-!
 # The SETUP EQUATIONS — statements (the logic team's G-R1–G-R4, 2026-10-05)
 
-[AGENT worker, lane `core/setup-equations-1005`] 2026-10-05, under [USER] Mike 2026-10-05 «(1) Go
-ahead» (relayed by the [AGENT] coordinator; scheduled after train r66). The request, verbatim:
+[AGENT worker, lane `core/setup-equations-1005`] 2026-10-05, under [USER] Mike 2026-10-05's go-ahead
+for item (1) (relayed by the [AGENT] coordinator; scheduled after train r66). The request:
 `docs/2026-10-05_note-from-logic-team-setup-equations.md`; the requesters' design: golean-logic
 branch `design/globals-init-1005`, `docs/2026-10-05_globals-init-design.md` §3.1, §5–§6, §9. The
 lane's note: `docs/2026-10-05_setup-equations.md`.

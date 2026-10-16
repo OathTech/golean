@@ -480,8 +480,8 @@ The frontend reads the number from `tools/nativefrontend/budgets.tsv`, which
 def arrayLenBudget : Nat := 1 <<< 16
 
 /-- The array-type NESTED materialization budget (BUG-078 residual (3),
-closed by refusal 2026-10-12 — [USER] Mike, release-readiness item 30,
-«30: can we fail-close until we fix?», relayed by the [AGENT]
+closed by refusal 2026-10-12 — [USER] Mike, release-readiness item 30:
+fail-close until fixed, relayed by the [AGENT]
 coordinator): the largest FOOTPRINT the decoder admits for one array
 type, in scalar elements — the product of its length and its element
 type's footprint, THROUGH nested arrays, defined types and struct
@@ -493,7 +493,7 @@ sum of fields is checked when its entry decodes.
 Derivation (measured 2026-10-12 on main's binary at c266ce6b, the
 `.tmp/probes` programs, single runs under `capped -m 16G`, wall clock
 incl. ≈0.1 s process start; the gate's per-case wall is
-`LEAN_TIMEOUT_SECONDS` = 60 s since 2026-10-07 ([USER] «Agree 1 / 2»,
+`LEAN_TIMEOUT_SECONDS` = 60 s since 2026-10-07 ([USER] approved items 1 and 2,
 relayed; 30 s before). The cost is ≈ LINEAR in the product on every
 path (the quadratic term is gone since C1 S1), so the shape does not
 matter, only the product — `[64][64][64]byte{}` (2^18) 0.21 s, a
@@ -1512,7 +1512,7 @@ private def unseqCheckConstSize (path what : String) (j : Json) : LowerM Unit :=
   | none => pure ()
 
 /-- BUG-078 residual (2b), the DECODER's half (fix round 2026-10-12, review MEDIUM-1 —
-the half the ruling «fail-close until we fix» reaches without the core): a `make([]T, len,
+the half the fail-close-until-fixed ruling reaches without the core): a `make([]T, len,
 cap)` whose CONSTANT length or cap `n` has `n × footprint(T)` past `arrayFootprintBudget`
 refuses by name — the backing materializes that many leaves, and `sliceCapBudget` (the
 element COUNT, Machine.lean) does not see the element type: the reviewer's reproduction

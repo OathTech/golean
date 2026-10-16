@@ -5,9 +5,9 @@ import "go/types"
 // THE ENTRY RULE, statically (BUG-125; the frontend's twin is
 // tools/nativefrontend/entrymode.go — [AGENT] lane
 // frontend/main-undeclared-refuse-1013, 2026-10-13, under the [USER]'s
-// ruling, Mike 2026-10-13, verbatim, relayed: «I feel like this is just
-// opening the door to endless special-case nonsense. I'd prefer to just
-// refuse this case, and maybe support it later»). Without --subject the
+// ruling, Mike 2026-10-13, relayed: refuse the case rather than open the
+// door to special-casing; support may come later; release-readiness row
+// 41). Without --subject the
 // frontend refuses a `package main` that declares no `func main` (gc's
 // «function main is undeclared in the main package»), so the static judge
 // records the same WHOLE-EXPORT refusal on a pseudo-declaration

@@ -43,8 +43,8 @@ and 15 re-pinned over the entry OUTCOME `Entry` (`run func frameEnv resultLocs |
 — a promotion path ending in an embedded interface field re-dispatches as a SEPARATE step, design
 §2 S5; the five-tuple `Func × LocalEnv × List Loc × Store × AccessTrace` became
 `Entry × Store × AccessTrace`); row 13 re-pinned: `Cont.frame`'s trailing `wrapper : Bool` field
-was DELETED and the frame's callee `FuncId` ADDED in its place ([USER] Mike 2026-09-28 «Agree on
-(1)», the logic team's request 6 option 1, relayed), so `stepFrameExit`'s `Bool` binder is a
+was DELETED and the frame's callee `FuncId` ADDED in its place ([USER] Mike 2026-09-28 agreed to
+option (1), the logic team's request 6 option 1, relayed), so `stepFrameExit`'s `Bool` binder is a
 `FuncId`. Rows 65–67 ADDED — `Entry.callConfig_run` (the frame a call position pushes names the
 resolved callee), `frame_exit_returns` (a frame exit reads «`fid` returned `vs`») and
 `enterFrame_declared` (a declared callee's entry IS the function-call rule: design §3, charter row 3).
@@ -60,7 +60,7 @@ recover rule (`recoverResult_eq`, `_frame`, `_glue`) and the domain-narrowing br
 2026-09-28, relayed; [AGENT] coordinator disposition). Row 67 (`enterFrame_declared`) confirmed.
 
 RE-PIN 5 — G-C3, `Cont := List Frame` ([AGENT packet C worker], lane core/continuations-0929,
-2026-09-29; G-C3 passed [USER] Mike 2026-09-29 «Agree with 1-4», relayed; design note
+2026-09-29; G-C3 passed [USER] Mike 2026-09-29, items 1-4 agreed, relayed; design note
 `docs/2026-09-29_gc3-continuations-design.md` D5/D6): rows 1–89 elaborate BYTE-IDENTICAL — every
 pinned statement mentions `Cont` and its constructors only through the type name and the
 `@[match_pattern]` views (`.stop`, `.frame …`, `.panicResumeK …`), which keep their names and
@@ -87,7 +87,7 @@ positions that became numeric (`Param.id`, `Expr.var`/`ref`, `Assignee.var`, `Sc
 (`LocalKind`, `LocalName`, `Func.locals`, `Func.localName?`), the decoder's checked predicate
 `Func.localsOk` with its two lemmas, the env-lookup laws, and the activation-slot lemmas
 (`bindParams_lookup`, `allocDecls_lookup`, `enterFrame_lookup_arg`/`_result`). FIX ROUND
-(2026-09-30, the audit's F1/F3; [USER] Mike «Agree, go ahead and fix, agree on all 6», relayed):
+(2026-09-30, the audit's F1/F3; [USER] Mike agreed to the fix and to all 6 items, relayed):
 row 116 re-pinned over the two-way check (`tableCovers && tableNamed && sigDistinct && argKinds &&
 resultKinds && recvFirst && bodyKinds`) with its three part equations; rows 126–132 ADDED — table ⊆
 tree, the kind lookup, the four kind lemmas, and the `unseqEnter` rule with its id-level entry
@@ -106,8 +106,8 @@ coverage proofs consume). The site records exactly like the others: `replay_cove
 `stepFn_picks_none` / `_some` (rows 62–63) hold unchanged.
 
 RE-PIN 8 — window row 6, C4 block-entry allocation ([AGENT worker, lane core/block-allocation-1001],
-2026-10-01; G-C4 PASSED [USER] Mike 2026-10-01 «Those costs seem fine to me. Go ahead with these decisions. You
-can work on block allocation on the basis of approving all of your recommendations.», relayed; design note
+2026-10-01; G-C4 PASSED [USER] Mike 2026-10-01, the costs accepted and every recommendation approved as the
+basis for block allocation, relayed; design note
 `docs/2026-10-01_gc4-block-allocation-design.md` §4 D8; handoff `docs/2026-10-01_block-allocation-handoff.md`):
 rows 1–131 and 133–135 BYTE-IDENTICAL (`Stmt.initialization` / `Step.initialization` were pinned nowhere; no
 pinned statement enumerates `Stmt`); row 132 RE-PINNED — decision 3, D3 (b): the `unseqEnter` rule allocates the
@@ -121,7 +121,7 @@ for BOTH entries, the block-entry rule `Step.block`, `blockEntry_shift` / `_look
 `frameEntry_fresh`, and the D7 pair `pushDefer_saves_values` / `funcVal_captures_locs` beside `Step.evalRef`.
 
 RE-PIN 9 — window unit 6b, BUG-004 item 4: the PREPRINT PHASE ([AGENT worker, lane core/panic-preprint-1003],
-2026-10-03; RULED [USER] Mike 2026-09-30 «Yes, agree, do the fix inside this window», relayed — design note
+2026-10-03; RULED [USER] Mike 2026-09-30, the fix agreed inside this window, relayed — design note
 `docs/2026-09-30_bug004-item4-design.md` §2 (i), all §5 decisions as recommended; handoff
 `docs/2026-10-03_panic-preprint-handoff.md`): NO pinned STATEMENT changes text — rows 1–154 BYTE-IDENTICAL; row 19
 (`Config.abort?`) keeps its type, its EQUATION gains the settled conjunct (`Config.abort?_some_iff`, row 155).
@@ -168,12 +168,12 @@ value at the canonical dynamic type `string`, read-only, trace-free), the law th
 (a callee's BOXED string panic unwinding past the caller's write) bottoms out in.
 
 RE-PIN 11 — pool grind M1 (Codex, `844e9393`, train r66; [AGENT train worker] 2026-10-05, merge sign-off
-[USER] Mike 2026-10-05 «(1) Go ahead, (2) merge once ready», relayed): rows 1–502 BYTE-IDENTICAL; rows 503–511
+[USER] Mike 2026-10-05, go-ahead for item (1) and merge once ready for item (2), relayed): rows 1–502 BYTE-IDENTICAL; rows 503–511
 ADDED (the nine M1 statements of `PoolStatement.lean`, proved in `PoolSound.lean`).
 
 RE-PIN 12 — the SETUP EQUATIONS, the logic team's G-R1–G-R3 ([AGENT worker, lane
-`core/setup-equations-1005`], 2026-10-05; [USER] Mike 2026-10-05 «(1) Go ahead», relayed; the request
-verbatim `docs/2026-10-05_note-from-logic-team-setup-equations.md`; the lane's note
+`core/setup-equations-1005`], 2026-10-05; [USER] Mike 2026-10-05's go-ahead for item (1), relayed; the request
+`docs/2026-10-05_note-from-logic-team-setup-equations.md`; the lane's note
 `docs/2026-10-05_setup-equations.md`): rows 1–511 BYTE-IDENTICAL; rows 512–520 ADDED — the nine
 `_stmt`s of `SetupStatement.lean` proved in `SetupSound.lean`, written out: G-R2 `seedGlobals_cells`
 (the seeded heap IS the zero cells in order, one `Except` equation), `seedGlobals_cell` (global `i` at
@@ -188,7 +188,7 @@ pinned, rows 521–527).
 
 RE-PIN 13 — G-R4 APPROVED and proved, with the logic team's four answers ([AGENT worker, lane
 `core/setup-equations-1005`], 2026-10-05; the golean-logic coordinator's reply of 2026-10-05, by
-cross-session message, relayed by the [AGENT] coordinator — verbatim in `docs/2026-10-05_setup-equations.md`
+cross-session message, relayed by the [AGENT] coordinator — recorded in `docs/2026-10-05_setup-equations.md`
 §3): rows 1–520 BYTE-IDENTICAL; rows 521–527 ADDED — row 521 `runInitConfig_eq_execStmtLoop` (G-R4 with the
 no-blocked premise DROPPED, answer (a); the guard spelling `initPrintRefusal? c' = none` and the bound
 `n ≤ fuel` kept, answer (b)); rows 522–525 the `run_*_iff` corollaries for the init loop under the no-print
@@ -198,12 +198,12 @@ as rows 44–47's sequential statements (answer (c)); rows 526–527 the `runPkg
 `Except.mapError markInitPhase`) and its success link `runPkgInitM_ok_iff`, the form G-R1's premise composes
 with (answer (d)). All proved in `SetupSound.lean`; statements in `SetupStatement.lean`.
 
-RE-PIN 14 — pool grind M2–M5 (Codex, `7626aa73`, train r70; [USER] «Agree on 1 / 2», relayed): rows 1–527
+RE-PIN 14 — pool grind M2–M5 (Codex, `7626aa73`, train r70; [USER] approved items 1 and 2, relayed): rows 1–527
 BYTE-IDENTICAL; rows 528–566 ADDED (the 39 M2–M5 statements of `PoolStatement.lean`, proved in
 `PoolSound.lean`); all 48 pool statements now pinned (503–511, 528–566).
 
 RE-PIN 15 — exported struct field offsets, the gc-verified team's request (a1) ([AGENT worker, lane
-`lane/field-offsets-inittask-1007`], 2026-10-07; [USER] Mike 2026-10-07 «1-4 approved as proposed»,
+`lane/field-offsets-inittask-1007`], 2026-10-07; [USER] Mike 2026-10-07 approved items 1-4 as proposed,
 relayed): rows 1–566 BYTE-IDENTICAL; rows 567–572 ADDED (`Ops.lean`, pure addition — no existing
 definition's body or statement changed): row 567 `structLayoutWith_sizeAlign` (the layout loop's
 `(size, align)` projection IS `structSizeAlignWith`, error included); row 568 `structLayoutWith_fields`
@@ -214,7 +214,7 @@ struct size); row 569 `structLayoutWith_disjoint` (non-overlap in field order); 
 `tyStructLayout_fields` (the entry point's per-field facts against `tySizeAlign` of each field's type).
 
 RE-PIN 16 — the r72 audit's layout follow-ups (f1)/(f2) ([AGENT worker, lane `lane/argbool-layout-1007`],
-2026-10-07; [USER] Mike 2026-10-07 «Agree», relayed): rows 1–572 BYTE-IDENTICAL; rows 573–579 ADDED
+2026-10-07; [USER] Mike 2026-10-07 agreed, relayed): rows 1–572 BYTE-IDENTICAL; rows 573–579 ADDED
 (`Ops.lean`, pure addition): row 573 `tyStructLayout_disjoint` (non-overlap at the entry point, against
 `tySizeAlign` of each field's type; (f1)); row 574 `structLayoutWith_align_ge` (the struct alignment is at
 least the seed and every field's oracle alignment — unconditional); row 575 `structLayoutWith_align_dvd`
@@ -227,7 +227,7 @@ satisfies it). «field alignment ∣ struct alignment» is FALSE without the pow
 platform: `struct{a int32; b int}` aligns at 6; the `Ops.lean` control), hence the premise in rows 575/578.
 
 RE-PIN 17 — R3 / b6, the `[]byte(s)` / `[]rune(s)` capacity envelope ([AGENT build worker, lane lane/conv-cap-1007],
-2026-10-07; [USER] Mike 2026-10-07 «yeah agree, build now», relayed; design note `docs/2026-10-07_conv-cap-design.md`,
+2026-10-07; [USER] Mike 2026-10-07 agreed and approved the build, relayed; design note `docs/2026-10-07_conv-cap-design.md`,
 D1–D8 ratified): rows 335–337 RE-PINNED with ONE hypothesis each — `op.convKind? = none`, a non-conversion head
 (the two conversion heads now apply through the stream-holding funnel `applyStrictOpPick`, so the three pure
 strict-apply equations hold verbatim for every other head; a downstream use discharges it by `rfl`); rows 1–334
@@ -244,8 +244,8 @@ slot 0 = len and runes slot 0 = roundupsize(4n)/4 — the default tape; the lite
 exactly like the others: `replay_coverage` (row 48), `stepFn_picks_none` / `_some` (rows 62–63) hold unchanged.
 
 RE-PIN 18 — the SEEDED-HEAP ENTRY, slice A (gc-verified's a2; [AGENT worker, lane
-`core/seeded-heap-a-1012`], 2026-10-12; [USER] Mike 2026-10-12 «Agree on the two strategic questions,
-let's do it» — GO and D4 (no runtime `StateWf` re-assert); gc-verified CONFIRMED the six deviations and
+`core/seeded-heap-a-1012`], 2026-10-12; [USER] Mike 2026-10-12 agreed to the two strategic
+questions — GO and D4 (no runtime `StateWf` re-assert); gc-verified CONFIRMED the six deviations and
 the v1 value set the same day, relayed; design `docs/2026-10-09_seeded-heap-design.md` §4): rows 1–590
 BYTE-IDENTICAL; rows 591–601 ADDED — the ten `_stmt`s of `SetupStatement.lean` proved in
 `SetupSound.lean`, written out, and the pool erasure of `SeedPool.lean`: S1 `runProgramSetupSeeded_init`
@@ -259,9 +259,9 @@ seeded run, unfolded), `runProgramSeededM_empty` and `runProgramPoolSeeded_empty
 erasures). G-R1–G-R4 and rows 397, 399–402 are UNCHANGED — the seeded entry is ADDITIVE.
 
 RE-PIN 19 — the seeded readout carries the seed's BASE ([AGENT worker, lane
-`core/seeded-base-repin-1012`], 2026-10-12; [USER] Mike 2026-10-12 «1,3-6 approved», item 6 of that
-ask — «carrying the seed base in the core readout … changes BridgeSet rows 599 to 601, a
-customer-visible re-pin to notice to the logic team», relayed by the [AGENT] coordinator; the debt
+`core/seeded-base-repin-1012`], 2026-10-12; [USER] Mike 2026-10-12 approved items 1 and 3-6 of that
+ask; item 6 proposed carrying the seed base in the core readout, changing BridgeSet rows 599 to 601, a
+customer-visible re-pin to notice to the logic team; relayed by the [AGENT] coordinator; the debt
 recorded at slice B, review LOW-2, `docs/2026-10-09_seeded-heap-design.md`): rows 1–598
 BYTE-IDENTICAL; rows 599–601 RE-PINNED, no row added. WHAT: `SeededReadout` gains `base : Nat` (the
 post-init allocator bound `b` the cells were placed from, `seedFinal[k]` being the final content of
@@ -279,8 +279,8 @@ The observation format is unchanged (the base is internal to the rendering); the
 
 RE-PIN 20 — the seeded base's HELPER ([AGENT worker, lane `core/followups-1012`], 2026-10-12; the
 seeded-base re-pin's review asked for it, recorded as owed in `docs/2026-10-09_seeded-heap-design.md`
-§4 by the train 6 records commit; under the standing mandate [USER] Mike 2026-10-12 «manage some
-agents working through the backlog, starting with the ones that require no input from me», relayed):
+§4 by the train 6 records commit; under the standing mandate [USER] Mike 2026-10-12, relayed: agents work
+through the backlog, starting with the items that need no input from the user):
 rows 1–601 BYTE-IDENTICAL; row 602 ADDED, added-only — `seedBase_seedLocs : 0 < n →
 seedBase (seedLocs b n) = .ok b` closes the chain S6 → S1 → S2 → base = s₁.heap.size for a
 non-empty seed: the setup's slot list IS `seedLocs s₁.heap.size seed.size` (S2 `seedCells_locs`,
@@ -730,7 +730,7 @@ example : ∀ {ctx : ProgramCtx} {s s' : Store} {c c' : Config} {ch₀ ch₀' : 
   @GoLean.GoCore.ExecutionStatement.noRefusal_step
 
 -- 65. `Machine.lean` — the frame a CALL position pushes names the resolved callee (RE-PIN 3;
--- [USER] 2026-09-28 «Agree on (1)», relayed)
+-- [USER] 2026-09-28 agreed to option (1), relayed)
 example : ∀ {plans : List (TargetShape × List Expr)} {env : LocalEnv} {k : Cont}
     {func : Func} {frameEnv : LocalEnv} {resultLocs : List Loc},
     Entry.callConfig plans env k (.run func frameEnv resultLocs)

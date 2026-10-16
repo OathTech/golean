@@ -2,9 +2,9 @@
 # check-agents-alias — refuse unless AGENTS.md is an alias of CLAUDE.md.
 #
 # [USER] direction (Mike, 2026-09-07, relayed by the [AGENT] coordinator —
-# cite as relayed): «can you make AGENTS.md a git-tracked alias for CLAUDE.md
-# (add a note in CLAUDE.md to this effect) - this is so other agents can find
-# our working instructions». The architecture rules AGENTS.md used to hold
+# cite as relayed): make AGENTS.md a git-tracked alias of CLAUDE.md, noted in
+# CLAUDE.md, so that other agents find the working instructions. The
+# architecture rules AGENTS.md used to hold
 # moved verbatim to docs/architecture-rules.md.
 #
 # Two shapes are accepted, and the verdict NAMES which one it found:

@@ -4,6 +4,6 @@
 # at main 2e69dd86 (an agreeing export): the row pins that a user
 # `//go:linkname` gc accepts is REFUSED BY DESIGN anyway (FAIL/
 # frontend-export, by-design/compiler-directive) — RULED [USER] Mike
-# 2026-10-13 «3, agree»; the gc-REJECTED linkname is the negative row
+# 2026-10-13, item 3 agreed; the gc-REJECTED linkname is the negative row
 # directives/linkname-invalid-reference.
 -	linknamedCall	-	ok	-	unsafe,functions,calls,returns

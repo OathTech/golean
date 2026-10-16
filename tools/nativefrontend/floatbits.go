@@ -8,8 +8,8 @@ package main
 // not cover it) — lower to ONE machine expression op
 // with a direction/width tag (`FloatBitsOp`, GoLean/GoCore/Syntax.lean;
 // `floatBitsApply`, Ops.lean). ADMITTED [USER] 2026-09-04 (relayed by the
-// [AGENT] coordinator, cited as relayed: «so the question is whether to add
-// this as a primitive language operation? This sounds reasonable, do it»),
+// [AGENT] coordinator, cited as relayed: adding it as a primitive language
+// operation was found reasonable and approved),
 // counted as 1 of the register's 2 library-origin primitives
 // (stdlibregister.go). Why a primitive and not source-through: the
 // language has no operation for "the bits of a float" — math's own bodies

@@ -17,13 +17,13 @@ private def observationSchema : String :=
 /-- One command-line ENTRY argument of `native-json-run`, in command-line
 order: `--arg-int <n>` and `--arg-bool <true|false>` interleave freely and
 bind the entry function's parameters POSITIONALLY in the order given
-(gc-verified's request, [USER] Mike 2026-10-07 «Agree», relayed). Each is
+(gc-verified's request, [USER] Mike 2026-10-07 agreed, relayed). Each is
 checked against its parameter's type before any step runs
 (`entryArgValues`): a mismatch refuses by name.
 
 The seeded-heap entry (slice B, 2026-10-12; design
-`docs/2026-10-09_seeded-heap-design.md` §6, [USER] Mike 2026-10-12 «Agree
-on the two strategic questions, let's do it», relayed) adds `--arg-ref
+`docs/2026-10-09_seeded-heap-design.md` §6, [USER] Mike 2026-10-12 agreed
+to the two strategic questions, relayed) adds `--arg-ref
 k(.f|[i])*` and `--arg-nil`: a reference into the `--seed` file's cells
 and a nil pointer. Both exist ONLY with `--seed` on `native-json-run`
 (`entrySeedArgs`); without it they are a usage error, and the enumerator
@@ -80,8 +80,8 @@ def entryParamUnderlying (types : GoCore.TypeEnv) : Nat → GoCore.Ty → Except
 
 /-- The entry function and the arity check of `entryArgValues`/`entrySeedArgs` (the unseeded
 text byte-identical to the pre-seed CLI's: the BUG-119 controls pin it). A missing `main` is
-the one named case (Codex F5, release-readiness row 41; RULED [USER] Mike 2026-10-13, verbatim,
-relayed: «Yes, do option (1)» — keep `main` unexported in every mode and make the refusal explain
+the one named case (Codex F5, release-readiness row 41; RULED [USER] Mike 2026-10-13,
+relayed: option (1) — keep `main` unexported in every mode and make the refusal explain
 itself): the frontend never exports `main` — in default mode it must exist (BUG-125), and a
 library-package wire or a `--subject` wire never had one — so `--function main` says why and names
 the way out on every wire it is printed for (fix round, review LOW-3); every other missing name
@@ -587,7 +587,7 @@ private def errorJson (error : Stop) (output : GoString := GoString.empty) : Jso
 argument or seed file — every one BEFORE any step runs; and, since the choice report (F1 of the
 2026-10-13 fail-closed pass), `native-json-run`'s refusal when the consumption accounting disagrees
 with the driver — the run's own observation is then withheld). Since release-readiness item 22
-(2026-10-12; [USER] Mike «22: fix it», relayed) it carries `output` like every other status: the
+(2026-10-12; [USER] Mike ruled item 22 fixed, relayed) it carries `output` like every other status: the
 empty string, which is exactly what the program wrote (it never ran). Before, the key was absent,
 so the strict decoder — `error` admits exactly `message, output, schema, status` — refused the
 CLI's own output, and `observation-eq` could not decode it. Additive: `golean-observation-v1`
@@ -636,8 +636,8 @@ decreasing_by
        try simp only [Prod.mk.sizeOf_spec] at this
        omega)
 
-/-- A FUNC-TYPED position in a TYPE (release-readiness item 22, 2026-10-12; [USER] Mike «22: fix
-it», relayed; the refusal is [AGENT]'s decision, the static half from the pre-merge review's
+/-- A FUNC-TYPED position in a TYPE (release-readiness item 22, 2026-10-12; [USER] Mike ruled item 22
+fixed, relayed; the refusal is [AGENT]'s decision, the static half from the pre-merge review's
 MEDIUM-1/2): the positions the Go observer's `reflect` walk reaches by STATIC kind — the type
 itself, array elements, the fields of a declared struct, a declared type's underlying type
 (`.defined` resolved through the table, `TypeEnv.resolve`'s descent, `bound`-structural) — where
@@ -1491,7 +1491,7 @@ The semantic core's consume sites and their accountant arms:
    arm and Multi.lean's `stepThread` tombstone arm, both through
    `abortConsult`/`repanicCollapseWidth` — BUG-004 item 1, landing chunk
    L3 2026-09-07, an [AGENT] extension of BUG-087's ruling SHAPE under
-   R-1 ([USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off)): bound 2 exactly at
+   R-1 ([USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 by the merge sign-off (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off)): bound 2 exactly at
    an abort whose head is a recovered entry with an EQUAL successor
    payload, COLLAPSE = ` [recovered, repanicked]` / two-line form =
    ` [recovered]`; bound 1 — no pop — at every other abort) → the
@@ -1515,8 +1515,8 @@ The semantic core's consume sites and their accountant arms:
    constructor + `canonicalSlot0` row are State.lean's.
 11. THE CONVERSION CAPACITY pick (Machine.lean's `applyStrictOpPick`, the
    strict apply's one stream-holding funnel — `ChoiceSite.convCap`, latitude
-   R3 / the gc-verified project's b6, [USER] Mike 2026-10-07 «yeah agree,
-   build now», relayed; design `docs/2026-10-07_conv-cap-design.md`): at the
+   R3 / the gc-verified project's b6, [USER] Mike 2026-10-07 agreed and
+   approved the build, relayed; design `docs/2026-10-07_conv-cap-design.md`): at the
    apply of `[]byte(s)` / `[]rune(s)` on a string operand, bound = the member
    count of gc's measured envelope `convCapMembers kind literal len`
    (Ops.lean: 1 to 3), a consult only at ≥ 2 → the `.strict` arm of

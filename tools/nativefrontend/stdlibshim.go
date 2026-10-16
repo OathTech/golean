@@ -68,9 +68,9 @@ import (
 // REDS pending the slice-2 overlay — BUG-089; the alternative (a
 // re-bodied shim constructing the real *strconv.NumError, which needed
 // a shim→library import coupling) was posed as a D-002 exception and
-// DENIED by the [USER] (Mike, 2026-09-03, relayed: «we're not running
-// Raft right now, I think going red is simpler and safer, and lets us do
-// a clean retirement»). The freeze is intact: no shim body changed.
+// DENIED by the [USER] (Mike, 2026-09-03, relayed: with Raft not running,
+// going red is simpler and safer and allows a clean retirement). The
+// freeze is intact: no shim body changed.
 //
 // RETIRED SHIMS (stdlib source-through slice 2 `stdlib-source-2`,
 // 2026-09-03; memo §3 rows 2, 5, 6, 7, 11–14, T1, T2): strings.Join,
@@ -84,8 +84,8 @@ import (
 // errors.Join and internal/stringslite.Clone are OVERLAID (stdlib-
 // overlay.tsv, byte-checked, cap 12). cmp.Compare's kind-dispatch
 // desugar, RETAINED by slice 2's STOP rule, was RETIRED 2026-09-04 (lane
-// fr24) per the [USER] ruling «(2) given we have a plan, I think this
-// should be an honest red» (relayed by the coordinator): cmpshim.go is
+// fr24) per the [USER] ruling of 2026-09-04 that, with a plan in hand,
+// an honest red beats the desugar (relayed by the coordinator): cmpshim.go is
 // deleted and slices/sortfunc-cmp/cmp-compare-kinds is red on FR-19's
 // line (mono.go's function-local-type naming refusal, C6).
 // What remains here is the fmt DESUGAR bundle (memo §2.3.3 / G5 —
@@ -153,7 +153,7 @@ var stdlibShimAllowlist = map[string]map[string]string{}
 // EMPTY since 2026-09-04 (lane fr24): the last entry, cmp.Compare's
 // kind-dispatch desugar (cmpshim.go, deleted), was RETIRED per the [USER]
 // ruling (Mike 2026-09-04, relayed by the coordinator, cited as relayed:
-// «(2) given we have a plan, I think this should be an honest red») —
+// with a plan in hand, an honest red beats the desugar) —
 // cmp.Compare is the real source-through generic at EVERY type argument;
 // a function-local defined type argument refuses at mono.go's C6 naming
 // rule (row slices/sortfunc-cmp/cmp-compare-kinds, red on FR-19's line).

@@ -1,5 +1,5 @@
-// FR-25 (2026-09-04, lane fr24; the [USER]-approved rider «(3) yes, makes
-// sense», relayed by the coordinator): an unlowerable BASIC type in a
+// FR-25 (2026-09-04, lane fr24; the [USER]-approved rider, item (3),
+// relayed by the coordinator): an unlowerable BASIC type in a
 // method/func SIGNATURE or an interface REQUIREMENT list — complex128 here,
 // FR-15's kind — is an opaque `named complex128` marker with an existence-
 // only `unsupported` TypeDef (FR-23's signature-opaque mode, widened), so

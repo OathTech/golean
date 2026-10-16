@@ -1122,8 +1122,8 @@ funnel** (B2, replacing `enterFrameStep`/`enterFrameDeferPanicking` and
 panic (dynamic dispatch on a nil interface; the auto-deref of a nil
 pointer box) is classified here (`toResult`) and, on the panic path
 ONLY, the `nilValueMethodText` site is consulted at bound
-`nilValueMethodWidth s fid args` (BUG-087, [USER] ruling 2026-09-03
-«demonic choice so both are admitted», relayed —
+`nilValueMethodWidth s fid args` (BUG-087, [USER] ruling 2026-09-03:
+a demonic choice admitting both texts, relayed —
 `docs/2026-08-31_qrow-rulings.md`): 2 exactly on the wrapper family
 (`nilValueMethodText?`, Ops.lean, the envelope statement), where slot 0
 keeps the nil-dereference text `enterFrame` raised and slot 1
@@ -3020,8 +3020,8 @@ completeness (a go_mem-racy program the `-race` build happens to run)
 never soundness; and every access TSan realizes is kept, so nothing
 the oracle refuses is run here (no HOLE cell opens). WHERE THIS
 DEPARTS FROM LITERAL go_mem: mem#model's operation-level list makes
-EVERY mutex lock read-like, `sync.Mutex.Lock` included, so "follow
-go_mem exactly" read literally would RUN a lone copy beside
+EVERY mutex lock read-like, `sync.Mutex.Lock` included, so the ruling
+to follow go_mem exactly, read literally, would RUN a lone copy beside
 `Mutex.Lock`. gc's `-race` build REFUSES it — the Lock is a CAS on
 `m.state`, reported by TSan as a Write (measured: `probes/u4gomem/
 mu-copy-vs-lock-only`, the copy unordered with the Lock op ALONE, gc
@@ -3312,7 +3312,7 @@ def atomicEvents (head : AtomicStmtOp) (loc : Loc) (stored : Bool) : AccessTrace
 /-- **The payload REWRITE gc's `preprintpanics` performs before printing**
 (BUG-004 item 4, window unit 6b, design note
 `docs/2026-09-30_bug004-item4-design.md` §2 (i), [USER] Mike 2026-09-30
-«Yes, agree, do the fix inside this window», relayed): a payload whose
+agreed to the fix inside this window, relayed): a payload whose
 dynamic type carries `Error() string` or `String() string` (the runtime's
 own two interfaces, `runtime/panic.go:723`–`:725` at the pin) is printed as
 the STRING that method returns — CALLED on the panicking goroutine after
@@ -3681,10 +3681,10 @@ LINKER dedup when both are literal constants — and every go ≤ 1.24
 printed the two-line form for all of them (the collapse is CL 645916,
 go1.25). The machine has no boxing identity, so here the marker is
 LATITUDE relative to its state and is reified on the tape (an [AGENT]
-extension of BUG-087's ruling SHAPE — «demonic choice so both are
-admitted», [USER] 2026-09-03 relayed, ruled for ONE choice at the nil
+extension of BUG-087's ruling SHAPE — a demonic choice admitting both
+texts, [USER] 2026-09-03 relayed, ruled for ONE choice at the nil
 arm/R9a — to this marker under R-1's re-envelope authority: the rendered
-text is spec-silent; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off)), never
+text is spec-silent; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 by the merge sign-off (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off)), never
 decided in evaluator recursion and never a single hard-coded member.
 
 Unit 6b (the preprint phase): a head whose rewrite is `.done` had its
@@ -3791,7 +3791,7 @@ inductive Frame where
   Ops.lean) and the target's own frame is the deferred frame (design note
   `docs/2026-09-28_gp-method-promotion-design.md` §2 S6) — so every frame
   is an ordinary frame and `recoverResult` needs no transparency.
-  ADDED in the same reshape ([USER] Mike 2026-09-28 «Agree on (1)» — the
+  ADDED in the same reshape ([USER] Mike 2026-09-28 agreed to option (1) — the
   logic team's request 6, option 1; relayed by the [AGENT] coordinator,
   cite as relayed): `fid`, the id of the FUNCTION WHOSE BODY THIS FRAME
   RUNS — the callee `enterFrame` resolves and enters (for a promoted
@@ -4084,7 +4084,7 @@ inductive Frame where
       (targets : List (VarId × TargetRef)) (env : LocalEnv) (phase : UnseqPhase)
   /-- **The preprint frame** (BUG-004 item 4, window unit 6b, design note
   `docs/2026-09-30_bug004-item4-design.md` §2 (i) 4; [USER] Mike 2026-09-30
-  «Yes, agree, do the fix inside this window», relayed): the unrecovered
+  agreed to the fix inside this window, relayed): the unrecovered
   panic chain `older ++ entry :: newer`, SUSPENDED at the empty continuation
   while gc's `preprintpanics` calls `entry`'s `Error()`/`String()` method
   (`runtime/panic.go:702`–`:730` at the pin — after every deferred call,
@@ -4112,7 +4112,7 @@ inductive Frame where
   | preprintK (older : List PanicEntry) (entry : PanicEntry) (newer : List PanicEntry)
 
 /-- The continuation: a stack of frames, innermost first (G-C3, packet C,
-[USER] 2026-09-29 «Agree with 1-4», relayed; design note
+[USER] 2026-09-29 agreed to items 1-4, relayed; design note
 `docs/2026-09-29_gc3-continuations-design.md`). `[]` is the end (`Cont.stop`).
 Every former constructor name survives as an `@[match_pattern]` view below,
 in its pre-C3 argument order, so patterns and terms elaborate unchanged. -/
@@ -4774,7 +4774,7 @@ def Entry.drainConfig (barrier : Cont) (requeue : GoValue → Config) : Entry �
 
 variable {ctx}
 /-- The frame a CALL position pushes on a RUN entry names the resolved
-callee (the `fid` field, [USER] 2026-09-28 «Agree on (1)», relayed):
+callee (the `fid` field, [USER] 2026-09-28 agreed to option (1), relayed):
 definitional. -/
 theorem Entry.callConfig_run {plans : List (TargetShape × List Expr)} {env : LocalEnv} {k : Cont}
     {func : Func} {frameEnv : LocalEnv} {resultLocs : List Loc} :
@@ -4912,7 +4912,7 @@ def abortLeftover (c : Config) (ch : Choices) : Choices :=
 /-! ## The preprint phase (BUG-004 item 4, window unit 6b)
 
 Design note `docs/2026-09-30_bug004-item4-design.md` §2 (i), RULED [USER]
-Mike 2026-09-30 («Yes, agree, do the fix inside this window», relayed by
+Mike 2026-09-30 (the fix agreed inside this window, relayed by
 the [AGENT] coordinator — cite as relayed; ledger «BUG-004 item 4
 (error/Stringer panic payloads) — placement and design RULED»). gc's
 `preprintpanics` (`runtime/panic.go:702`–`:730` at the pin) runs on the
@@ -5822,7 +5822,7 @@ THE ENVELOPE, per head, from the pre-step cell:
   tell them apart — the pick is therefore OFFERED there (acquirability =
   `!writer`, symmetric with RWMutex `TryLock`'s "pendingW
   notwithstanding" below): machine ⊇ gc on both phases — an [AGENT]
-  widening in the safe direction, RATIFIED [USER] 2026-09-03 («TryRLock decision sounds fine», relayed by the [AGENT] coordinator); the blocking `rlock` keeps R1's exclusion (it parks
+  widening in the safe direction, RATIFIED [USER] 2026-09-03 (the TryRLock decision accepted, relayed by the [AGENT] coordinator); the blocking `rlock` keeps R1's exclusion (it parks
   on `pendingW > 0`), which control D shows gc's blocking RLock does not
   honor either (`rwRLockQueuedWriter`) — R1's pre-existing half, fresh
   evidence recorded there. RWMutex `TryLock` fails while readers hold
@@ -7297,8 +7297,8 @@ inductive Step : Config → Store → Config → Store → StepLabel → Prop wh
       Step (.panicking chain (.probeK k)) s (.panicking chain k) s ⟨[], [⟨.unseqPanic, 2, 1⟩], []⟩
   -- **The `unseq` construct** (evaluation-order model v2.1 §3.3; Stage B,
   -- lane `core/unseq-scheduler-b-0916`, 2026-09-16; the mechanism RULED
-  -- [USER] Mike 2026-09-16 relayed — «the Cerberus model is the correct
-  -- one»). ENTER allocates the binder cells in a sweep-PRIVATE scope pushed
+  -- [USER] Mike 2026-09-16 relayed: the Cerberus model is the correct
+  -- one). ENTER allocates the binder cells in a sweep-PRIVATE scope pushed
   -- on the source environment (C4 D3 (b), 2026-10-01 — the continuation
   -- `.seq rest env k` is untouched: a `.seq` frame's environment is fixed);
   -- the graph's static shape is checked BY NAME (`UnseqGraph.wellFormed?`).
@@ -7491,8 +7491,8 @@ theorem enterFrame_declared {s : Store} {fid : FuncId} {argVals : List GoValue} 
   unfold enterFrame enterFrame.plan callee?
   simp [hf, hdd, harity, Bind.bind, Except.bind, pure, Except.pure]
 
-/-- **A frame exit reads «`fid` returned `vs`»** ([USER] Mike 2026-09-28 «Agree
-on (1)» — the logic team's request 6, option 1; relayed by the [AGENT]
+/-- **A frame exit reads «`fid` returned `vs`»** ([USER] Mike 2026-09-28 agreed
+to option (1) — the logic team's request 6, option 1; relayed by the [AGENT]
 coordinator, cite as relayed): the frame running `fid`'s body, at its exit —
 whether the body FELL OFF ITS END or RETURNED — reads its pinned result cells
 as `vs` and resumes the caller on its target plans with exactly those values

@@ -2,7 +2,7 @@ package main
 
 // Stage E of the evaluation-order model v2.1, family E1 (lane core/unseq-stage-e-0921,
 // 2026-09-21): PACKAGE-LEVEL VARIABLES as occurrences. The width-of-P ruling ([USER] Mike
-// 2026-09-19, relayed: «ALL mutable reads, STAGED») reaches the first kind beyond the
+// 2026-09-19, relayed: all mutable reads, staged) reaches the first kind beyond the
 // Stage C pilot's captured locals and slice elements: a package-level variable is a
 // mutable location, so its read beside a call is a READ occurrence spec-unsequenced
 // against the call (spec#Order_of_evaluation: «the order of those events compared to the

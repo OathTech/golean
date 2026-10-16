@@ -1,6 +1,6 @@
 // BUG-124 / FR-38 — `uintptr`'s runtime type IDENTITY (release-readiness
-// punch list item 26; [USER] Mike 2026-10-12 «D6: agree on both - refuse and
-// repair asap.»). spec#Numeric_types makes `uintptr` a distinct type. Before
+// punch list item 26; [USER] Mike 2026-10-12, D6: both halves agreed — refuse
+// now, repair soon). spec#Numeric_types makes `uintptr` a distinct type. Before
 // 2026-10-12 the decoder realized it as `uint64` (GoLean/NativeToIR.lean
 // intKindOfName), so the two types were ONE identity at runtime and the six
 // identity-bearing subjects below answered WRONGLY with status ok: gc
@@ -9,7 +9,7 @@
 // docs/2026-10-12_release-trust-review.md). The REFUSE half (lane
 // fix/uintptr-refuse-1012) made each a by-name frontend refusal the same
 // day; the REPAIR half (lane core/uintptr-repair-impl-1012; its shape [USER]
-// Mike 2026-10-12 «1,3-6 approved», item 4 = docs/2026-10-12_uintptr-repair-
+// Mike 2026-10-12, items 1 and 3-6 approved, item 4 = docs/2026-10-12_uintptr-repair-
 // design.md D1–D5) gives the machine a DISTINCT `IntKind.uintptr` of width
 // `intBits`, so every subject PASSes with gc's values through `Ty.eqb`'s
 // structural equality and the guard is retired. Born at the repair:

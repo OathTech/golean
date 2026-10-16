@@ -16,8 +16,8 @@ and `IntKind.bits?` read `platform`. What is NOT yet threaded: the
 `ProgramCtx` carries no platform field and `IntKind.normalize` reads the
 constant, so theorems are stated at `platform` (= `gcAmd64`), not
 `∀ p : Platform`. B7 (2026-09-17) split the state into `ProgramCtx`/`Store`
-WITHOUT threading the platform — D1 (a), [USER] 2026-09-16 (relayed: «go
-ahead with the D1-8 rulings as recommended»): `Platform` stays the A5
+WITHOUT threading the platform — D1 (a), [USER] 2026-09-16 (relayed: the D1-8
+rulings approved as recommended): `Platform` stays the A5
 global constant; threading it (`IntKind.bits?`, the Ops reads, `FloatBits`,
 the sync-layout literals) is ONE later all-at-once re-envelope lane
 (latitude R1/R16), never a partial field. [AGENT]
@@ -64,8 +64,8 @@ negative lane's acceptance.
   the panic boundary (`[]byte` from 2^48+1, `[]int64` from 2^45+1,
   `[]struct{int64; byte}` — 16 bytes with padding — from 2^44+1).
 * `maxAllocBytes = 2^48` — PINNED LATITUDE (inventory R16; fidelity
-  decision 5(b), [USER] 2026-08-31: "the deterministic maxAlloc panic
-  class modeled"). gc: `runtime.maxAlloc = 1 << heapAddrBits`
+  decision 5(b), [USER] 2026-08-31: the deterministic maxAlloc panic
+  class is modeled). gc: `runtime.maxAlloc = 1 << heapAddrBits`
   (malloc.go:220), `heapAddrBits = 48` on linux/amd64; the check is STRICT
   (`mem > maxAlloc`): exactly 2^48 bytes passes the check and then fails
   to ALLOCATE (`fatal: out of memory` — the true-OOM class, NOT modeled;

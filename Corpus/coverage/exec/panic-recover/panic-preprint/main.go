@@ -2,7 +2,7 @@ package main
 
 // THE PREPRINT PHASE (BUG-004 item 4, window unit 6b; design note
 // docs/2026-09-30_bug004-item4-design.md §2 (i), RULED [USER] Mike
-// 2026-09-30 — «Yes, agree, do the fix inside this window», relayed by the
+// 2026-09-30 — the fix agreed inside this window, relayed by the
 // [AGENT] coordinator; lane core/panic-preprint-1003). gc's `preprintpanics`
 // (runtime/panic.go:702–730 at the pin, go1.26.5) CALLS a panic payload's
 // `Error()` / `String()` on the panicking goroutine — after every deferred

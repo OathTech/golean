@@ -30,8 +30,8 @@ family's conclusions were extended with the step-level
 and the pool assembly below frames the FOREIGN threads through it: an
 untouched goroutine's `ConfigWf` transports along allocator
 monotonicity. `stepMulti_wf` is the preservation theorem the slice-2
-scaffold owed. B7 fix round (2026-09-17, [USER] «We should delete the
-vacuous conjunct right? that's just a strict improvement», relayed):
+scaffold owed. B7 fix round (2026-09-17, [USER] ruled the vacuous
+conjunct deleted as a strict improvement, relayed):
 `ThreadWf`/`MultiWf` lost their constantly-true `itersNormalized`
 conjunct (B7 had made `MultiWf m` context-free) and every `*_wf` lemma below
 lost its `Config.itersNormalized … = true` hypotheses/conjuncts

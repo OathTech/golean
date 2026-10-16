@@ -1,7 +1,7 @@
 # GoLean stdlib source-through — the OVERLAY table
 # (docs/2026-09-03_stdlib-boundary-design.md §2.3.2 item 3, §2.2 admission
 # rule; second slice stdlib-source-2, 2026-09-03 [AGENT]; gates G1/G8 ruled AS
-# RECOMMENDED by the [USER], relayed: «(3) agree, go ahead with the plan»).
+# RECOMMENDED by the [USER] 2026-09-03, relayed: the plan approved, item (3)).
 #
 # An overlay substitutes ONE pure-Go expression for ONE unsafe (or runtime-
 # implemented) expression at ONE named site of the pinned GOROOT source. It is

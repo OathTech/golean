@@ -439,8 +439,8 @@ def tySizeBytes (types : TypeEnv) (ty : Ty) : Except Stop Nat := do
 /-! ### Struct field offsets (gc-verified request (a1), 2026-10-07)
 
 The per-field offsets `structSizeAlignWith` computes and discards, EXPORTED
-(the gc-verified team's request (a1); [USER] Mike 2026-10-07 «1-4 approved as
-proposed», relayed). Pure addition: `structLayoutWith` is the SAME loop — the
+(the gc-verified team's request (a1); [USER] Mike 2026-10-07 approved items 1-4 as
+proposed, relayed). Pure addition: `structLayoutWith` is the SAME loop — the
 same field-size oracle, the same accumulators, the same final-field rule —
 that also returns each field's offset; `structLayoutWith_sizeAlign` proves its
 `(size, align)` projection IS `structSizeAlignWith` on every input (error
@@ -804,7 +804,7 @@ theorem tyStructLayout_fields {p : Platform} {types : TypeEnv} {i : TypeIdx} {id
 
 /-! #### Entry-point non-overlap and alignment divisibility (r72 audit follow-ups (f1)/(f2), 2026-10-07)
 
-[USER] Mike 2026-10-07 «Agree», relayed. (f1) `tyStructLayout_disjoint`:
+[USER] Mike 2026-10-07 agreed, relayed. (f1) `tyStructLayout_disjoint`:
 `structLayoutWith_disjoint` at the entry point, against `tySizeAlign` of each
 field type. (f2) «alignment ∣ size» holds on EVERY platform
 (`structLayoutWith_size_dvd`, `tyStructLayout_size_dvd`: the total is rounded
@@ -2652,7 +2652,7 @@ collides with a machine path's spelling. -/
 def TypeId.canon : TypeId := ⟨"$canon"⟩
 
 /-- **The CANONICAL key path of a memory path** (BUG-111, fix (i) — RULED [USER] Mike
-2026-09-18, relayed: «(2) agree»): a `.field` step's `typeId` is the STATIC type the
+2026-09-18, relayed: item (2) agreed): a `.field` step's `typeId` is the STATIC type the
 frontend recorded for the base expression — a spelling, not a component of the
 address — and after a pointer conversion between struct-tag-compatible types
 (`structTagCompatible`: identical `FieldDef` lists; `loadLoc`/`storeLoc` accept either
@@ -2851,8 +2851,8 @@ abbrev AccessTrace := List MemEvent
 def traceAccesses (tr : AccessTrace) : List Access := tr.filterMap MemEvent.access?
 
 /-- **The FULL event label of one machine step** (charter row 2, 2026-09-28;
-[USER] 2026-09-22/23 «the sequential step label becomes the full event label
-(access ⊕ pick ⊕ out)»; design note `docs/2026-09-28_step-label.md`): `Step`'s
+[USER] 2026-09-22/23: the sequential step label becomes the full event label,
+access ⊕ pick ⊕ out; design note `docs/2026-09-28_step-label.md`): `Step`'s
 fifth index, `stepFn`'s fourth component and the pool event's `label` — ONE
 label type at both layers. Three channels, each ORDERED within the step:
 
@@ -4099,7 +4099,7 @@ Version-tracked by the membership pins slices/append-spill-* (the three
 escaping regimes) and slices/full-slice-cap-zero (the formula point).
 Widen deliberately if a toolchain leaves this window; never narrow to
 one compiler mode. OVER-WIDTH NOTE (R3 / b6, 2026-10-07): under the
-standing rule «semantic widenings must match real Go» this INTERVAL
+standing rule that semantic widenings must match real Go this INTERVAL
 admits capacities gc never realizes; gc's size-class rounding is now in
 the core as `gcRoundupSize` (below, with the pinned tables), so a later
 lane can re-derive this envelope as gc's measured member set (latitude
@@ -4219,8 +4219,8 @@ theorem gcRoundupSize_ge (n : Nat) : n ≤ gcRoundupSize n := by
 /-! ### The conversion capacity envelope (R3 / b6, `ChoiceSite.convCap`)
 
 **THE ENVELOPE STATEMENT of `ChoiceSite.convCap`** (latitude inventory R3; design
-`docs/2026-10-07_conv-cap-design.md` §1, D2; [USER] Mike 2026-10-07 «yeah agree, build
-now», relayed). Spec §Conversions to and from a string type, both arms: «The capacity of
+`docs/2026-10-07_conv-cap-design.md` §1, D2; [USER] Mike 2026-10-07 agreed and
+approved the build, relayed). Spec §Conversions to and from a string type, both arms: «The capacity of
 the resulting slice is implementation-specific and may be larger than the slice length».
 gc go1.26.5 realizes FOUR regimes, decided by its typechecker, escape analysis and
 inlining — none a property of the program — and the admitted set is EXACTLY their union
@@ -4420,7 +4420,7 @@ def symbolKeyForMessage (typ : Ty) : String :=
   | other => goTypeNameForMessage ctx other
 
 /-- **The BUG-087 envelope statement** (latitude inventory R9a; [USER]
-ruling 2026-09-03 «demonic choice so both are admitted», relayed —
+ruling 2026-09-03: a demonic choice admitting both texts, relayed —
 record in `docs/2026-08-31_qrow-rulings.md`): `some text` exactly when
 a frame entry `fid args` would reach `dynamicDispatch?`'s nil-pointer
 arm below through gc's "simple `*T` wrapper around a `T` method" family

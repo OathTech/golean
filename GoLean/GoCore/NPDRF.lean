@@ -462,9 +462,9 @@ def RacyFine (m₀ : MultiConfig) : Prop :=
         footprintsConflict tri.trace trj.trace
 
 /-- **DEPRECATED — UNSOUND AS STATED (RULED [USER] Mike 2026-09-18,
-verbatim, relayed by the [AGENT] coordinator — cite as relayed: «We
-shouldn't delete, hard to revive that way. Can we just deprecate/ mark
-unsound for now?»; record `docs/2026-08-31_qrow-rulings.md`, «The
+relayed by the [AGENT] coordinator: keep the statement rather than
+delete it, since a deleted statement is hard to revive, and mark it
+deprecated/unsound; record `docs/2026-08-31_qrow-rulings.md`, «The
 on-deck decisions ruling record (2026-09-18)», ruling (4); C1 charter
 §7 D8).** The statement below is FALSE: `main` can exit with other
 goroutines mid-computation and `.done` compares the WHOLE joined store,

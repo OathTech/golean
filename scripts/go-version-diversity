@@ -2,10 +2,10 @@
 # go-version-diversity — REPORT-ONLY tooling, NOT a gate step: run the
 # differential and negative corpora with ONLY THE ORACLE on another Go
 # toolchain, and compare row by row with the recorded run of record (the
-# pinned oracle). Release-readiness item 32 — [USER] Mike 2026-10-13: «if we
-# wanted to add more Go version diversity, is there an easy way to do that?
-# I'm happy to install things», then «the go setup should support you calling
-# different go versions» (relayed by the [AGENT] coordinator; the plan on
+# pinned oracle). Release-readiness item 32 — [USER] Mike 2026-10-13 asked
+# for an easy way to add Go version diversity, offering to install toolchains,
+# and directed that the go setup support calling different go versions
+# (relayed by the [AGENT] coordinator; the plan on
 # row 32 is the coordinator's [AGENT] proposal, agreed in principle). Built by
 # the [AGENT] lane apparatus/go-diversity-1013. Supersedes
 # scripts/oracle-version-sweep (retired: it floated the frontend with the

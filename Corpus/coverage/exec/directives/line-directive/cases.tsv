@@ -5,5 +5,5 @@
 # gc returns 1 and so did the model at main 2e69dd86. RED BY DESIGN since
 # the fix: line directives refuse by name at file selection (FAIL/
 # frontend-export, by-design/compiler-directive) — RULED [USER] Mike
-# 2026-10-13 «3, agree».
+# 2026-10-13, item 3 agreed.
 -	lineDirected	-	ok	-	functions,returns

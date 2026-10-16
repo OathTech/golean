@@ -19,8 +19,8 @@ package main
 // multipkg/init-order-staticinit (zq's `var A = [3]int{1, 2, 3}` holds la
 // behind lb; gc 12, frontend 21).
 //
-// THE RULING. [USER] Mike 2026-10-12, release-readiness §5: «D1: I think
-// this should probably be refused, if it's easy to exclude.» This file
+// THE RULING. [USER] Mike 2026-10-12, release-readiness §5, D1: refuse
+// the case if excluding it is easy (backlog row 1). This file
 // is the exclusion; the staticinit model (a decision at a point where gc
 // is not single-valued — L-011) stays owed.
 //

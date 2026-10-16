@@ -1,6 +1,6 @@
 # id	subject	args	expected_status	expected_reason	features
 # H-1 codec guardrails (raft W4.1 item 1), re-born for protobuf route A slice S1
-# (docs/2026-10-04_route-a-protobuf-design.md D9, acceptance §5; [USER] Mike 2026-10-04 «Approved», relayed):
+# (docs/2026-10-04_route-a-protobuf-design.md D9, acceptance §5; approved [USER] Mike 2026-10-04, relayed):
 # the language shapes the GENERATED raftsubject codec runs on. wirepb/ and wireproto/ are derive.py's own
 # codec generator over a synthetic schema (derive.py --check keeps them in sync); the first five rows keep
 # their pre-route-A observations. Exactness vs protobuf-go is difftest.py section 8; the subject codec under

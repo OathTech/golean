@@ -4,7 +4,7 @@ import GoLean.GoCore.Multi
 # The LABELLED pool relation — FROZEN DEFINITIONS (the pool/registry half, spec packet)
 
 [AGENT design worker, lane `design/pool-relation-spec-1004`] 2026-10-04. Authority: [USER] Mike
-2026-10-04 «Great, launch it» (relayed by the [AGENT] coordinator — cite as relayed), approving the
+2026-10-04 approved the launch (relayed by the [AGENT] coordinator — cite as relayed), approving the
 plan: a spec packet (frozen definitions + exact statements + a `sorry`'d skeleton outside the build +
 a design note) as a NAMED DESIGN GATE, then a Codex grind under a tight brief. Design note:
 `docs/2026-10-04_pool-relation-spec.md`; the statements: `GoLean/GoCore/PoolStatement.lean`; the

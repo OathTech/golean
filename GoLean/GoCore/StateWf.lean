@@ -705,9 +705,8 @@ BUG-005 (L) surgery moved the check to `mapIterCandidates`' fail-closed
 pick-time validation and left the predicate constantly `true` (no
 constructor contributed a check; the `_true` lemmas proved it by
 structural induction). D6 deleted its `MachineWf` conjunct; the fix round
-deleted its `ThreadWf`/`MultiWf` twin ([USER] 2026-09-17, relayed: «We
-should delete the vacuous conjunct right? that's just a strict
-improvement») and, the predicates then being inert, the predicates and
+deleted its `ThreadWf`/`MultiWf` twin ([USER] 2026-09-17, relayed: the
+vacuous conjunct deleted as a strict improvement) and, the predicates then being inert, the predicates and
 every walk/transparency lemma about them (`seqCont_`, `pushDefer_`,
 `panicPassthrough_`, `recoverThroughWrappers_`, `recoverResult_`,
 `enterRecvTargets_`, `applyChanOp_`, `applySyncOp_`, `applyAtomicOp_`,
@@ -730,8 +729,8 @@ def ConfigWf (bound : Nat) (c : Config) : Prop :=
 
 variable (ctx) in
 /-- The bundled invariant `Step` preserves: loc-boundedness of state and
-configuration. B7 / D6 ([USER] 2026-09-16, relayed: «go ahead with the
-D1-8 rulings as recommended»): the former third conjunct
+configuration. B7 / D6 ([USER] 2026-09-16, relayed: the D1-8 rulings
+approved as recommended): the former third conjunct
 `Config.itersNormalized σ.types c = true` — constantly `true` since the
 BUG-005 (L) surgery (then certified by `Config.itersNormalized_true`;
 predicate and certificate deleted in the B7 fix round, tombstone above),

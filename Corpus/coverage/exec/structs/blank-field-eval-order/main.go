@@ -1,6 +1,6 @@
 package main
 
-// RED BY DESIGN since the 2026-10-14 ruling ([USER] Mike «agree on both»,
+// RED BY DESIGN since the 2026-10-14 ruling ([USER] Mike, both halves agreed,
 // BUG-129): a CALL at a blank field is not a constant, nil or a plain
 // variable read, so the literal refuses by name (FAIL/frontend-export,
 // by-design/blank-field-operand). Born 2026-10-13 as PASS rows pinning the

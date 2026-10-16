@@ -1,8 +1,8 @@
 # GoLean native-frontend full-corpus differential baseline
 # cases: 4025 (3767 PASS / 258 FAIL)
-# re-pinned: 2026-10-14 [AGENT], lane frontend/blank-fields-1013 — the [USER]'s ruling on the blank-field OPERAND (Mike 2026-10-14
-#   «agree on both», relayed by the [AGENT] coordinator; the recommendation agreed to, verbatim: «at a blank field, a constant, `nil`,
-#   or a plain variable read gives the zero value with nothing evaluated, and any other operand is refused by name»): the lane's
+# re-pinned: 2026-10-14 [AGENT], lane frontend/blank-fields-1013 — the [USER]'s ruling on the blank-field OPERAND (Mike 2026-10-14,
+#   both halves agreed, relayed by the [AGENT] coordinator; the recommendation agreed to: at a blank field, a constant, `nil`,
+#   or a plain variable read gives the zero value with nothing evaluated, and any other operand is refused by name): the lane's
 #   pre-merge review had measured two classes where gc's observation lies outside an evaluating model's set — gc drops a
 #   side-effect-free blank operand WITH its run-time panic (walk/complit.go:231, staticinit.isSideEffect: negative shifts,
 #   interface comparisons, under pure wrappers) and never evaluates a package-level literal's blank operand (staticinit.initplan).
@@ -33,7 +33,7 @@
 #       F1 program; a composite literal at an interface-typed blank field is not admitted, so it refuses by name (99 at the base,
 #       7 on the 2026-10-13 lowering). Negative lane: no move (415/415). Measured by capped scripts/ci --diff at the lane tip (532 s).
 # re-pinned: 2026-10-13 [AGENT], lane frontend/blank-fields-1013 — release-readiness row 37 (the Codex zero-context pass's F1,
-#   «blank struct fields participate in equality and map-key identity»), RULED [USER] Mike 2026-10-13 «2 fix» (verbatim, relayed by
+#   «blank struct fields participate in equality and map-key identity»), RULED [USER] Mike 2026-10-13, item 2 fixed (relayed by
 #   the [AGENT] coordinator: evaluate the blank operand at its position, store the field type's zero value — gc's own treatment).
 #   WHY: the native frontend now lowers a positional literal's `_` operand as evaluated-and-discarded on both lowering paths
 #   (emit.go `emitBlankFieldOperand`, unseq_lower.go `structLitHead`) and the field holds the zero value; GoLean/ untouched
@@ -67,8 +67,8 @@
 #   1 //go:generate and 1 //go:build are all in accepted placements, measured by this run). 3995 + 3 = 3998; PASS 3751 + 3 = 3754;
 #   FAIL 244. 0 PASS->non-PASS flips; no removal. Measured by scripts/diff-one and confirmed by capped scripts/ci --diff at the lane tip.
 # re-pinned: 2026-10-13 [AGENT], lane frontend/directives-1013 (off main 2e69dd86) — release-readiness rows 38 and 39 (the Codex
-#   zero-context pass F2/F3: unmodeled compiler directives accepted, //go:debug ignored), RULED [USER] Mike 2026-10-13, verbatim,
-#   relayed by the [AGENT] coordinator: «3, agree» — refuse by name, at file selection, in every user unit, any //go: directive
+#   zero-context pass F2/F3: unmodeled compiler directives accepted, //go:debug ignored), RULED [USER] Mike 2026-10-13,
+#   relayed by the [AGENT] coordinator, item 3 agreed — refuse by name, at file selection, in every user unit, any //go: directive
 #   outside the allowlist (//go:build, //go:noinline, //go:generate), any //line directive, //go:debug lines and go.mod godebug
 #   lines; state the runtime-defaults contract (docs/cli.md §1, docs/release.md §4). WHY: a directive is meaning gc reads from a
 #   comment the lowering never saw — a //go:embed string answered 0 where gc printed 5 (also with the file absent, where gc rejects),
@@ -83,8 +83,8 @@
 #   1 //go:build are all allowed (measured by this run). 3989 + 6 = 3995; PASS 3749 + 2 = 3751; FAIL 240 + 4 = 244. 0 PASS->non-PASS
 #   flips; no removal. Measured by scripts/diff-one and confirmed by capped scripts/ci --diff at the lane tip.
 # re-pinned: 2026-10-13 [AGENT], lane frontend/chan-elem-limit-1013 — release-readiness row 34 («gc's 64 KiB channel-element limit
-#   is not mirrored … the BUG-125 class (a program gc rejects, answered)»), under [USER] Mike's 2026-10-12 backlog mandate «manage
-#   some agents working through the backlog, starting with the ones that require no input from me», relayed. WHY: the native
+#   is not mirrored … the BUG-125 class (a program gc rejects, answered)»), under [USER] Mike's 2026-10-12 backlog mandate (agents work
+#   through the backlog, starting with the items that need no input from the user), relayed. WHY: the native
 #   frontend now mirrors gc's type-size rejections after type-check (tools/nativefrontend/gclimits.go: the channel element
 #   >= 1<<16, the array larger than the address space, the struct too large) as a whole-program `type-check:` rejection; these
 #   two rows are the ACCEPTED boundary control. 3987 + 2 = 3989; PASS 3747 + 2 = 3749; FAIL 240. No existing row moved; 0
@@ -106,8 +106,8 @@
 #       DESIGN, on BUG-078's Cases line (oracle truth `ok`, 70000): the reader of the poisoned `var p = &Big{}`.
 #     arrays/materialization-budget-quarantine-init/unrelated PASS — 30: the package with `var _ Sizer = (*Big)(nil)` exports.
 # re-pinned: 2026-10-13 [AGENT], lane frontend/decl-budgets-1013 — F2 of the zero-context fail-closed pass (docs/2026-10-13_fresh-eyes-
-#   fail-closed-pass.md on audit/freshpass-1013; punch-list row 33), under [USER] Mike's 2026-10-12 backlog mandate «manage some agents
-#   working through the backlog, starting with the ones that require no input from me», relayed. F2 verbatim: «a decode-time budget
+#   fail-closed-pass.md on audit/freshpass-1013; punch-list row 33), under [USER] Mike's 2026-10-12 backlog mandate (agents work through
+#   the backlog, starting with the items that need no input from the user), relayed. F2: «a decode-time budget
 #   refusal (`[70000]int` literal, `arrayLenBudget`) refuses the whole wire — 27 unrelated subjects went `error`. Named and closed, but
 #   the frontend's per-declaration quarantine does not cover these budgets. Fix: apply them per declaration in the frontend.» WHY: the
 #   native frontend now applies BUG-078's three budgets per declaration (tools/nativefrontend/budgets.go; numbers from
@@ -128,8 +128,8 @@
 #     make-maxalloc-control PASS — make([]byte, 1<<48+1): gc's own makeslice panic, recovered; never pre-empted by the budget.
 #     unrelated-sum, unrelated-small-array, unrelated-struct PASS — the unrelated subjects of the same package run (F2's point).
 #   Cause column: regenerated by scripts/coverage-cause --apply over the lane's full --diff run at its tip (the merge ask records it).
-# re-pinned: 2026-10-12 [AGENT], lane core/bug078-nested-budget-1012 FIX ROUND (review MEDIUM-1, under the same ruling — [USER] Mike
-#   «30: can we fail-close until we fix?», relayed): BUG-078 residual (2b)'s DECODER half — a `make` with a CONSTANT count whose
+# re-pinned: 2026-10-12 [AGENT], lane core/bug078-nested-budget-1012 FIX ROUND (review MEDIUM-1, under the same ruling — [USER] Mike,
+#   item 30: fail-close until fixed, relayed): BUG-078 residual (2b)'s DECODER half — a `make` with a CONSTANT count whose
 #   count × element footprint is past arrayFootprintBudget refuses by name (`checkMakeFootprint`, both make-slice arms; cause key
 #   error:make-footprint-budget, a sibling of array-footprint-budget). 3974 + 2 = 3976; PASS 3740 + 1 = 3741; FAIL 234 + 1 = 235.
 #   NO existing row moved; 0 PASS->non-PASS (no corpus `make` has a constant count whose footprint nears the budget).
@@ -145,7 +145,7 @@
 #   Cause column: hand-entered from scripts/coverage-cause over the lane's diff-one run; REGENERATED by --apply over the lane's
 #   full --diff run at its tip (the merge ask records the run and the summary line).
 # re-pinned: 2026-10-12 [AGENT], lane core/bug078-nested-budget-1012 — BUG-078 residuals (2)/(3) FAIL-CLOSED by name (release-readiness
-#   item 30, [USER] Mike 2026-10-12 «30: can we fail-close until we fix?», relayed by the [AGENT] coordinator): the decoder's NESTED
+#   item 30, [USER] Mike 2026-10-12: fail-close until fixed, relayed by the [AGENT] coordinator): the decoder's NESTED
 #   array-type bound `arrayFootprintBudget` = 1<<24 scalar elements (GoLean/NativeToIR.lean — the type's footprint through nested
 #   arrays, defined entries and struct fields; measured sweep in its docstring and docs/BUGS.md BUG-078 «FAIL-CLOSED (2026-10-12)»).
 #   3971 + 3 = 3974; PASS 3738 + 2 = 3740; FAIL 233 + 1 = 234. NO existing row moved; 0 PASS->non-PASS (no corpus array type is
@@ -171,8 +171,8 @@
 #   `cascade/quarantine-cascade` -> `FR-14/stdlib-package-unmodeled` — with the uintptr identity guard retired, the initializer `quarWriter` now fails for
 #   its real reason (`log.New`, package "log" unmodeled) where the guard's by-name refusal had masked it; result and stage unchanged (FAIL/frontend-export).
 # re-pinned: 2026-10-12 [AGENT], lane core/uintptr-repair-impl-1012 (off main 5c7ce3d3) — BUG-124 FIXED, the REPAIR half of
-#   release-readiness item 26 ([USER] Mike 2026-10-12, verbatim: «D6: agree on both - refuse and repair asap.»; the repair's
-#   shape [USER] Mike 2026-10-12, verbatim: «1,3-6 approved», item 4 of that ask = docs/2026-10-12_uintptr-repair-design.md
+#   release-readiness item 26 ([USER] Mike 2026-10-12, D6: both halves agreed — refuse now, repair soon; the repair's
+#   shape [USER] Mike 2026-10-12, items 1 and 3-6 approved, item 4 of that ask = docs/2026-10-12_uintptr-repair-design.md
 #   D1–D5 as recommended — both relayed by the [AGENT] coordinator). WHY: the machine now carries uintptr as a DISTINCT
 #   integer kind (GoLean/GoCore/Value.lean IntKind.uintptr, width intBits = 64 at the pin; the decoder's
 #   `"uintptr" => .uintptr`; the atomics kind sets Machine.lean atomicKindOk / NativeToIR.lean asAtomicOp? widened in
@@ -187,7 +187,7 @@
 #   3966 + 5 = 3971; PASS 3727 + 6 + 5 = 3738; FAIL 239 - 6 = 233. Measured by capped -m 64G -- scripts/ci --diff at the
 #   lane's tip (the merge ask records the run).
 # re-pinned: 2026-10-12 [AGENT], lane apparatus/refusal-cause-1012 — cause column introduced (release-readiness item 8 /
-#   gate-audit F9, [USER]-approved D1: [USER] Mike 2026-10-12 «1,3-6 approved», relayed by the [AGENT] coordinator — D1-D6 of
+#   gate-audit F9, [USER]-approved D1: [USER] Mike 2026-10-12 approved items 1 and 3-6, relayed by the [AGENT] coordinator — D1-D6 of
 #   docs/2026-10-12_refusal-cause-pinning-design.md as recommended); 0 result/stage moves; 239 FAIL rows keyed; the key grammar
 #   is that note's §3 (authoritative text: the header of scripts/coverage-cause). Columns are now result<TAB>id<TAB>stage<TAB>cause.
 #   The column is REGENERATED, never hand-maintained: scripts/coverage-cause --apply over the recorded full run at a3254440
@@ -204,8 +204,8 @@
 #   unseeded harness byte-identical (all 3953 unseeded rows, generator at 2f6f6581 vs the tip). Counts: 3965 + 1 = 3966; PASS 3726 + 1
 #   = 3727; FAIL 239. Measured by capped scripts/ci --diff at the fix round's tip.
 # re-pinned: 2026-10-12 [AGENT], lane cli/seeded-heap-c-1012 (stacked on train4/stage-1012 2f6f6581) — the SEEDED-HEAP ENTRY, slice C
-#   (differential; design docs/2026-10-09_seeded-heap-design.md §7; [USER] Mike 2026-10-12 «Agree on the two strategic questions, let's
-#   do it», relayed — GO, with the trusted-surface #2 change of tools/coverageharness accepted). WHY: corpus rows may now run their
+#   (differential; design docs/2026-10-09_seeded-heap-design.md §7; [USER] Mike 2026-10-12 agreed to the two strategic
+#   questions, relayed — GO, with the trusted-surface #2 change of tools/coverageharness accepted). WHY: corpus rows may now run their
 #   subject over a seeded heap (params seed=<file>, args tokens ref:k(.f|[i])* / nil; the Go twin tools/coverageharness --seed).
 #   BORN ROWS +12 PASS under seeded/ (alias/aliased, alias/distinct, array-cell/elem-arg, array-cell/elem-result, cycle/next-ptr,
 #   cycle/relink, init-control/empty, init-control/global-plus-cell, list/nil-terminated, list/nil-arg, list/nil-deref, swap-void):
@@ -214,8 +214,8 @@
 #   unseeded harness is byte-identical (generated source, stderr and exit, all 3953 unseeded rows, old vs new generator). Counts:
 #   3953 + 12 = 3965; PASS 3714 + 12 = 3726; FAIL 239. Measured by capped scripts/ci --diff at the lane's tip.
 # re-pinned: 2026-10-12 [AGENT], lane fix/bug061-refuse-1012 (off fix/release-runtime-1012 4365c313, itself off main) — BUG-061 GUARDED BY
-#   NAME (release-readiness item 1 / §5 D1; [USER] Mike 2026-10-12 verbatim «D1: I think this should probably be refused, if it's easy to
-#   exclude.», relayed by the [AGENT] coordinator). WHY: the frontend's pruning rule calls every non-constant package-level initializer
+#   NAME (release-readiness item 1 / §5 D1; [USER] Mike 2026-10-12, D1: refuse the case if excluding it is easy,
+#   relayed by the [AGENT] coordinator). WHY: the frontend's pruning rule calls every non-constant package-level initializer
 #   work, so a package gc's staticinit folds into the data section (zq's `var A = [3]int{1, 2, 3}`) stayed a node and held its importer
 #   la behind lb — a silently wrong order (Lean 21, Go 12, both ok). tools/nativefrontend/staticinit.go now classifies the shapes
 #   staticinit may fold, enumerates every pruning of the packages whose only work is of that kind, and REFUSES the export iff some
@@ -229,7 +229,7 @@
 #   PASS 3708 + 1 + 4 + 1 = 3714; FAIL 233 + 6 = 239. No row is touched by two lanes; verified by the train's scripts/ci --diff.
 # re-pinned: 2026-10-12 [AGENT], lane fix/uintptr-refuse-1012 LAST ROUND (the re-audit's cosmetic LOW-1 / NIT-1, relayed by the
 #   [AGENT] coordinator; verdict «shippable as the release's answer for item 26 until the repair lands»; same ruling [USER] Mike
-#   2026-10-12 «D6: agree on both - refuse and repair asap.»). WHY: (LOW-1) the refusal scanned a named type's type ARGUMENTS —
+#   2026-10-12, D6: both halves agreed — refuse now, repair soon). WHY: (LOW-1) the refusal scanned a named type's type ARGUMENTS —
 #   a red that was never a wrong answer (an instantiated named type is nominal: distinct TypeIds; its methods' collapse is the
 #   method-set scan's) — dropped; BORN ROW +1 PASS control interfaces/uintptr-identity/generic-nominal (gc 11111 = the machine).
 #   (NIT-1) defined-nominal-s re-scored 1111 → 11111 with a same-shaped second struct S2 as the nominal-vs-structural witness
@@ -237,7 +237,7 @@
 #   3711 + 1 = 3712; FAIL 239 (the data rows, awk-tallied). Pinned from the lane's direct runs and CONFIRMED by the lane's
 #   scripts/ci --diff at the last-round tip (the gate run recorded in the lane report).
 # re-pinned: 2026-10-12 [AGENT], lane fix/uintptr-refuse-1012 FIX ROUND (the pre-merge review's MEDIUM-1 / LOW-1, relayed by the
-#   [AGENT] coordinator; same ruling [USER] Mike 2026-10-12 «D6: agree on both - refuse and repair asap.»). WHY: the refusal was
+#   [AGENT] coordinator; same ruling [USER] Mike 2026-10-12, D6: both halves agreed — refuse now, repair soon). WHY: the refusal was
 #   over-reaching on two width-only shapes — (MEDIUM-1) generic code instantiated at uintptr (the template's result tuple read
 #   as an interface; now substituted in the scan) and (LOW-1) NAMED concrete types over uintptr (nominal on the machine — the
 #   wire's `defined` def, the decoder's `.defined idx`; the rule now enters a named type's METHOD SET only). BORN ROWS +4 PASS
@@ -246,8 +246,8 @@
 #   removal. Counts: 3946 + 4 = 3950; PASS 3707 + 4 = 3711; FAIL 239 (the data rows, awk-tallied). Pinned from the lane's direct
 #   runs and CONFIRMED by the lane's scripts/ci --diff at the fix-round tip (the gate run recorded in the lane report).
 # re-pinned: 2026-10-12 [AGENT], lane fix/uintptr-refuse-1012 (stacked on fix/release-runtime-1012 @ 4365c313, off main d92b95fd) —
-#   release-readiness punch list item 26, the REFUSE half ([USER] Mike 2026-10-12, verbatim: «D6: agree on both - refuse and repair
-#   asap.», relayed by the [AGENT] coordinator; docs/2026-10-12_release-readiness.md). WHY: `uintptr`'s runtime type IDENTITY is
+#   release-readiness punch list item 26, the REFUSE half ([USER] Mike 2026-10-12, D6: both halves agreed — refuse now, repair
+#   soon, relayed by the [AGENT] coordinator; docs/2026-10-12_release-readiness.md). WHY: `uintptr`'s runtime type IDENTITY is
 #   unmodeled — the decoder maps it to uint64 (NativeToIR.lean intKindOfName), so comma-ok assertions, interface equality, type
 #   switches, map[any] key counts and slice/pointer assertions over a boxed uintptr answered WRONGLY with status ok (the release-trust
 #   review's six R1 probes; BUG-124, ledger FR-38). The frontend now REFUSES BY NAME at every identity-bearing position
@@ -263,8 +263,8 @@
 #   were each measured off main d92b95fd and combine here: 3936 + 2 (sched-boundary) + 3 (release-runtime) = 3941; PASS 3705 + 2
 #   + 1 = 3708; FAIL 231 + 2 = 233. No row is touched by both lanes; verified by the train's scripts/ci --diff at the staged tip.
 # re-pinned: 2026-10-12 [AGENT], lane fix/release-runtime-1012 (off main d92b95fd) — release-readiness punch list item 1, the
-#   no-input parts ([USER] Mike 2026-10-12 «manage some agents working through the backlog, starting with the ones that
-#   require no input from me», relayed by the [AGENT] coordinator; docs/2026-10-12_release-readiness.md). WHY: (a) BUG-121
+#   no-input parts ([USER] Mike 2026-10-12's backlog mandate — agents work through the backlog, starting with the items
+#   that need no input from the user — relayed by the [AGENT] coordinator; docs/2026-10-12_release-readiness.md). WHY: (a) BUG-121
 #   (zero-copy aliasing of []byte(s): gc shares the backing, &b[0] == &c[0] TRUE; the machine always fresh-allocates,
 #   FALSE) had NO corpus row — BORN ROWS +3 strings/conv-identity/* (strict lane: gc's answer is the same on the default,
 #   -gcflags=-l and -race builds, verified 2026-10-12 `true true false`; the machine `false false false`): ident-var and
@@ -279,7 +279,7 @@
 #   scripts/ci --diff at the branch tip (the gate run recorded in the commit message).
 # re-pinned: 2026-10-12 [AGENT], lane core/sched-boundary-1012 (off main d92b95fd) — BUG-123 FIXED: the channel-length read and the
 #   print apply are registry boundaries (`Config.atBoundary`, Multi.lean). The Codex release-trust review's F1/R2 (relayed by the
-#   [USER] 2026-10-12; punch-list items 23/24) under the standing rule [USER] 2026-10-07 «semantic widenings must match real Go»
+#   [USER] 2026-10-12; punch-list items 23/24) under the standing rule [USER] 2026-10-07 that semantic widenings must match real Go
 #   (relayed); design docs/2026-10-12_sched-boundary-design.md. WHY: two `len(ch)` reads (or two prints) in one registry-free segment
 #   could never be separated by a peer's send (print) on the machine — gc separates them (go1.26.5: 0/1/11 at 9861/72/67 of 10,000
 #   under -race where the machine certified {0, 11}; ABC/ACB/BAC at 107/891/2 of 1,000 where it certified {ACB, BAC}). BORN ROWS: +2
@@ -289,7 +289,7 @@
 #   No pinned statement's text changed; no proof changed; no flip. 3936 + 2 = 3938 (3707 PASS / 231 FAIL). Enumeration cost and
 #   the --diff wall: the design note §7 (measured on this lane's gate run).
 # re-pinned: 2026-10-08 [AGENT], lane fix/bug115-map-multiassign-1008 (off main 6a90ba8d) — BUG-115 / triage F6 / mini-slice A3 FIXED
-#   ([USER] Mike 2026-10-08 «While things are calm, can we fix some bugs?», relayed by the [AGENT] coordinator). WHY: the LEGACY
+#   ([USER] Mike 2026-10-08 asked for bug fixes while things were calm, relayed by the [AGENT] coordinator). WHY: the LEGACY
 #   multi-target emitter quarantined a map element as an `=` target by name («map element as assignment target outside a single
 #   assignment») where gc runs it; since Stage E5 E5b the unseq GRAPH path ran the same shape as the machine's map-element PLAN, so
 #   the refusal was trigger-dependent. The fix (tools/nativefrontend/emit.go emitAssignTargetPhase1): the `=` statement's map-element
@@ -310,14 +310,14 @@
 #   FAIL/membership on it is the stale record, re-verified green by run 2. Measured by scripts/ci --slow at 7d61a5f6
 #   (docs/evidence/2026-10-08_bug115/ci-slow-run1.tail.txt: 3936 = 3704 / 232 at the run, the one extra FAIL the stale certified row).
 #   3917 + 19 = 3936; 3677 + 19 + 9 = 3705 PASS; 240 − 9 = 231 FAIL.
-# re-pinned: 2026-10-08 [AGENT], train r74 (landing lane/conv-cap-1007; [USER] Mike 2026-10-08 «merge it», relayed) — ONE row BORN
+# re-pinned: 2026-10-08 [AGENT], train r74 (landing lane/conv-cap-1007; merge sign-off [USER] Mike 2026-10-08, relayed) — ONE row BORN
 #   PASS, the control strings/conv-cap/bytes-named-operand-lit (`[]byte(MyS("hello"))`, a NAMED OPERAND type: the frontend emits the
 #   literal operand, cap = 5 under gc default/-l/-race and on the machine; the lane's Fable adversarial audit, item 5). Nothing else
 #   moved: 3916 + 1 = 3917; 3676 + 1 = 3677 PASS; 240 FAIL; no PASS→non-PASS. Measured by the train's scripts/ci --slow at the merged tip.
 # re-pinned: 2026-10-07 [AGENT], lane/conv-cap-1007 (rebased on main c605aa4c, train r72) — R3 / b6: the capacity of []byte(s) /
 #   []rune(s) is ChoiceSite.convCap, drawn at the strict apply over EXACTLY gc go1.26.5's measured member set per (kind, literal
-#   operand?, length) — convCapMembers, Ops.lean ([USER] Mike 2026-10-07 «yeah agree, build now», relayed; design
-#   docs/2026-10-07_conv-cap-design.md D1–D8; the standing rule «semantic widenings must match real Go»). WHY: BUG-118 — the
+#   operand?, length) — convCapMembers, Ops.lean ([USER] Mike 2026-10-07 agreed and approved the build, relayed; design
+#   docs/2026-10-07_conv-cap-design.md D1–D8; the standing rule that semantic widenings must match real Go). WHY: BUG-118 — the
 #   pre-widening rune singleton cap = len was observed ∉ modeled on almost every non-literal rune conversion (gc: the 32-rune
 #   conversion buffer at n ≤ 32, roundupsize(4n)/4 above or escaping); the byte singleton was gc's zero-copy member and keeps every
 #   byte row's default-tape observation. BORN ROWS: +26 strings/conv-cap/* (4 literal controls strict PASS; 22 latitude rows born
@@ -328,15 +328,15 @@
 #   showed 20 PASS→FAIL flips on pre-existing rows, none an observation change: the source-through strings.TrimSpace `range []byte(s)`
 #   (gc's zero-copy range temp, capacity unobservable) draws a bound-3 convCap on every call, exhausting the strict lane's 8–10-entry
 #   fixed streams (13 stdlib-source rows), refuting three membership rows' width=2 pins and one row's work budget — a named design
-#   gate, RULED [USER] Mike 2026-10-07 «Agree» (relayed): option (i), row metadata only (depth=w on the 13, width=3 ×3, work=400000
+#   gate, RULED [USER] Mike 2026-10-07, agreed (relayed): option (i), row metadata only (depth=w on the 13, width=3 ×3, work=400000
 #   ×1; docs/evidence/2026-10-07_conv-cap/option-i-row-metadata.tsv), conditional on the gate cost: this run 1484 s vs train r72's
 #   1487 s (−0.2%; r71's 1301 s +14% — r72 is the ruled reference). PASS→FAIL→PASS on those 17 rows with their observations
 #   identical throughout (the D4 certificate docs/evidence/2026-10-07_conv-cap/choice-trace-compare.txt: the default stream's only
 #   observation changes are the six BUG-118 rune rows). The certified row imported-goose/channel/google-search re-certified: unchanged
 #   set (provenance refresh, the 5a pair). Measured by scripts/ci --slow at 47c3972e (docs/evidence/2026-10-07_conv-cap/ci-slow-run2.tail.txt).
 #   3890 + 26 = 3916; 3650 + 26 = 3676 PASS; 240 FAIL.
-# re-pinned: 2026-10-07 [AGENT], lane/fr37-dot-var-1007 — FR-37 closed ([USER] Mike 2026-10-07 «We can run the FR-37 fix in a subagent
-#   right? Worth getting it done», relayed). WHY: a DOT-imported package-level VARIABLE of a non-source stdlib package (import . "os";
+# re-pinned: 2026-10-07 [AGENT], lane/fr37-dot-var-1007 — FR-37 closed ([USER] Mike 2026-10-07 asked for the FR-37 fix to be run in a
+#   subagent, relayed). WHY: a DOT-imported package-level VARIABLE of a non-source stdlib package (import . "os";
 #   len(Args)) now refuses BY NAME at the frontend (tools/nativefrontend/dotimport.go dotImportedStdlibVar / refuseDotImportedVar —
 #   'imported package-level variable os.Args has no seeded cell — reached through a dot import …; FR-37') instead of reaching the wire
 #   as a bare local ident the DECODER refused unnamed (B6 c3) for the WHOLE program. BORN ROWS ONLY: +2 stdlib-source/dot-import/* —
@@ -353,7 +353,7 @@
 #   selector spelling (the by-name refusal and lowerdiag's dot-import-float-bits calibration cause retired together — [AGENT] coordinator
 #   decision 2026-10-06: the FR-36 fix was approved whole, the refusal was a stand-in for the lane-ownership split). No other row moved.
 #   3888 cases; 3649 + 1 = 3650 PASS; 239 - 1 = 238 FAIL. Measured by scripts/diff-one, then the full gate.
-# re-pinned: 2026-10-06 [AGENT], lane/fr36-spin-bounds-1006 — FR-36 closed ([USER] Mike 2026-10-06 «Yeah, let's do 3+4», relayed; item 3)
+# re-pinned: 2026-10-06 [AGENT], lane/fr36-spin-bounds-1006 — FR-36 closed ([USER] Mike 2026-10-06 approved items 3 and 4, relayed; item 3)
 #   + spin bounds in loop iterations (item 4, docs/2026-10-06_spin-bounds.md). WHY: the frontend resolves a DOT-IMPORTED stdlib
 #   identifier through the SAME object-keyed binding as the selector spelling (tools/nativefrontend/dotimport.go): the primitives
 #   lower, a quarantined member refuses BY NAME (import form named), a source-through member lowers qualified. BORN ROWS ONLY: +4
@@ -367,7 +367,7 @@
 #   (measured: docs/evidence/2026-10-06_spin-bounds/measurements.txt); spin-until-trylock's work=500000 reverted to the default. A
 #   program with no dot import has a byte-identical wire. NO PASS→non-PASS flip; no existing row's result or stage moved. Measured by
 #   scripts/diff-one (4/4 spin PASS; dot-import 2 PASS + 2 red by design), then the full gate. 3884 + 4 = 3888; 3647 + 2 = 3649; 239 FAIL.
-# re-pinned: 2026-10-04 [AGENT], lane/route-a-s1-1004 — protobuf ROUTE A slice S1 ([USER] Mike 2026-10-04 «Approved», relayed;
+# re-pinned: 2026-10-04 [AGENT], lane/route-a-s1-1004 — protobuf ROUTE A slice S1 (approved [USER] Mike 2026-10-04, relayed;
 #   design docs/2026-10-04_route-a-protobuf-design.md D9 / acceptance §5). BORN ROWS ONLY, all PASS: +24
 #   multipkg/wire-codec/* — 22 strict (group-skip-nested declares depth=24: w=18 wide picks measured, the codec's appends) + 2
 #   membership (prefix-pick: len(err.Error()) in {44,45}; panic-abort-text: the two spellings) over the ONE init-time
@@ -384,7 +384,7 @@
 #   global-rand-locked membership {5..9} members=5, plus 20 gc draws plain/-race all inside). No code changed; no existing row's
 #   result or stage moved. Measured by scripts/diff-one (39/39 PASS), then the full gate. 3821 + 39 = 3860; 3584 + 39 = 3623; 237 FAIL.
 # re-pinned: 2026-10-03 [AGENT], core/panic-preprint-1003, window unit 6b — BUG-004 item 4 FIXED: the PREPRINT PHASE ([USER] Mike
-#   2026-09-30 «Yes, agree, do the fix inside this window», relayed; design docs/2026-09-30_bug004-item4-design.md §2 (i), all §5
+#   2026-09-30 agreed to the fix inside this window, relayed; design docs/2026-09-30_bug004-item4-design.md §2 (i), all §5
 #   decisions as recommended; handoff docs/2026-10-03_panic-preprint-handoff.md). WHY: gc's `preprintpanics` CALLS a panic payload's
 #   Error()/String() after every deferred call and before the terminal (runtime/panic.go:702–730 at the pin); the machine now runs the
 #   same calls as ordinary machine steps at the empty continuation (Machine.lean `Cont.preprintK`, the `preprint*` rules; a chain with a
@@ -397,7 +397,7 @@
 #   cannot — refused by name; on BUG-099's Cases line). NO PASS→non-PASS flip; no other row's result or stage moved. Wire unchanged; twin
 #   byte-identical. 3800 + 21 = 3821; 3563 + 2 + 19 = 3584 PASS; 237 − 2 + 2 = 237 FAIL.
 # re-pinned: 2026-10-01 [AGENT], prep/r58-0930, train r58 pre-landing — the oracle harness's assumed-name fix (audit F4 of
-#   docs/2026-10-01_intn-pick-audit.md; [USER] Mike 2026-10-01 «agree, land it, ratify all including the harness fix», relayed).
+#   docs/2026-10-01_intn-pick-audit.md; [USER] Mike 2026-10-01 agreed to land it, ratifying everything including the harness fix, relayed).
 #   WHY: tools/coverageharness/main.go `importName` assumed an UNALIASED import binds path.Base(path), so `import "math/rand/v2"`
 #   was taken to bind `v2`, pruned as unused, and the oracle build failed `undefined: rand` (fail-noisy). It now applies goimports'
 #   assumed-name rule (a major-version last element names the previous element). ONE row BORN PASS:
@@ -629,7 +629,7 @@
 # re-pinned: 2026-09-22 [AGENT], core/unseq-stage-e5-0922, the STAGE E5 AUDIT FIX ROUND (the adversarial audit
 #   docs/2026-09-22_unseq-stage-e5-audit.md returned FIX-FIRST on candidate 403cde75; dispositions the [AGENT] coordinator's,
 #   disclosed at the merge ask; design docs/2026-09-22_unseq-stage-e5-design.md «the audit fix round», handoff §5). THREE rows
-#   BORN in evalorder/unseq-multi, the audit's F3 («every detected gap is rowed»): map-target-key-vs-writer PASS/membership
+#   BORN in evalorder/unseq-multi, the audit's F3 (every detected gap is rowed): map-target-key-vs-writer PASS/membership
 #   {709, 79} (`m[k], y = 7, f()`, f writing k = 2 — a MAP-ELEMENT target in a multi-target assignment as a phase-1 sibling plan
 #   on the GRAPH path, the frozen key read before / after f; gc 79 on 20/20 under GOMAXPROCS 1/8, default and -N -l — the LEGACY
 #   path QUARANTINES this shape by name, so the widening is TRIGGER-DEPENDENT: rowed from both sides), map-target-nil-legacy-refusal
@@ -647,8 +647,8 @@
 #   235 + 1 = 236. No PASS -> non-PASS. The one 5a-class item (imported-goose/channel/google-search: STALE certification for the
 #   changed core/decoder inputs; the train installs the fresh candidate at step 5a) is not re-pinned here.
 # re-pinned: 2026-09-24 [AGENT], core/unseq-stage-e6a-0924, STAGE E6a of the evaluation-order model v2.1 — the first slice of the
-#   batched breaking window (docs/2026-09-23_batched-window-charter.md row E6a; RULED [USER] 2026-09-22 items 1–3/6 and 2026-09-24
-#   «I'm happy to go with your rec», relayed): (1) THE TRIGGER REFINED — a sweep enters the `unseq` graph iff some occurrence is
+#   batched breaking window (docs/2026-09-23_batched-window-charter.md row E6a; RULED [USER] 2026-09-22 items 1–3/6 and 2026-09-24,
+#   the recommendation accepted, relayed): (1) THE TRIGGER REFINED — a sweep enters the `unseq` graph iff some occurrence is
 #   unordered against an EFFECTFUL event OR some FAILING occurrence is unordered against an E1 participant's window that holds another
 #   failing occurrence or may itself fail (`make`'s size check) — panic identity is the observable (the event-mediated scope; the
 #   GENERAL «any two unordered failing occurrences» form is POSED, not taken — it would move E3/E4/E12's (b) pins as entries; its
@@ -710,7 +710,7 @@
 #   the run's ONE drift line is the 5a-class imported-goose/channel/google-search PASS->FAIL/membership (STALE certificate for GoLean/NativeToIR.lean;
 #   fresh re-certification «unchanged set»; PASS kept here for the train's 5a step); re-pin guard 0 PASS->non-PASS. 3705 = 3459 PASS / 246 FAIL.
 # re-pinned: 2026-09-19 [AGENT], core/unseq-stage-c-0919, STAGE C of the evaluation-order model v2.1 — the native `unseq` PILOT (C2: the lowering; design
-#   docs/2026-09-19_unseq-stage-c-design.md §3 predicted every line of this movement; rulings [USER] Mike 2026-09-19 «Agree, merge» relayed: width of
+#   docs/2026-09-19_unseq-stage-c-design.md §3 predicted every line of this movement; rulings [USER] Mike 2026-09-19, agreed and merge approved, relayed: width of
 #   P = all mutable reads STAGED, N1 SPLIT, N3 REFUSE). Recorded from a full scripts/capped scripts/ci --diff at the C2 tree (gate #2, 701 s;
 #   docs/evidence/2026-09-19_unseq-stage-c/c2-gate.txt). 13 rows ADDED, all born PASS: evalorder/unseq-pilot/{w1,w2,w3,w5,w6,r1,r2c-true,r2c-false,r4,r6}
 #   (membership; the v2.1 spike's exact sets) and {r2a-true,r2a-false,r2b} (strict singletons). FOUR FAIL -> PASS flips (each on a BUGS.md Cases line):
@@ -932,8 +932,8 @@
 #   NOTE on the previous (lane-tip) re-pin below: besides the flips it enumerates, it REORDERED ~61 pre-existing rows (a
 #   regeneration artifact; no result moved) — the header did not say so (audit R12); this re-pin moves none.
 # re-pinned: 2026-09-05 (e13-b lane — latitude E13 option (b), RULED [USER] Mike 2026-09-05, relayed by the [AGENT]
-#   coordinator, cited as relayed: «we should do what the standard supports, and avoid over-refusal if we can. That's
-#   what (b) means right?»; [AGENT] worker. The machine gains `Stmt.unseqProbe` / `Cont.probeK` / `ChoiceSite.unseqPanic`
+#   coordinator, cited as relayed: do what the standard supports and avoid over-refusal where possible, which is
+#   option (b); [AGENT] worker. The machine gains `Stmt.unseqProbe` / `Cont.probeK` / `ChoiceSite.unseqPanic`
 #   (a spec-UNSEQUENCED non-call operand's panic vs a sibling ordered event: DEFER / RAISE, bound 2 only when the operand
 #   panics early), the frontend emits `unseq-probe` at every such operand's lexical position, and the A6 unordered-panic
 #   guard family (BUG-032/BUG-062/BUG-083, FR-28) is DELETED — its refusals stood in for latitude. drift vs main's pin
@@ -1037,7 +1037,7 @@
 #   `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv` = PASS 3230 / FAIL 249. The lane's pre-rebase figure was 3447 (3210 PASS / 237 FAIL).]
 # re-pinned: 2026-09-05 (stdlib-slice-3 lane — print/println as machine built-ins with the `output` observation
 #   (StepEvent.out, G-OUT RULED [USER]) + the `float-bits` primitive ([USER]-admitted 2026-09-04); [AGENT] worker under
-#   the ruled stdlib plan G1-G9 («(3) agree, go ahead with the plan», relayed by the coordinator, cited as relayed).
+#   the ruled stdlib plan G1-G9 (approved 2026-09-03, item (3), relayed by the coordinator, cited as relayed).
 #   The `output` field is added to EVERY observation on both sides — a comparator-visible change on all 3402 prior rows,
 #   which is why this pin comes from a FULL run (scripts/capped scripts/ci --diff at the branch tip; the --slow
 #   re-certification of the one tier=slow row ran first and its record was updated in its own commit). drift vs the
@@ -1060,7 +1060,7 @@
 #   FR-28 PARTIALLY CLOSED (the A6 unordered-panic guard `hoistReordersPanic` wired into the `make` hoist —
 #   BUG-083 fixed AS A NAMED REFUSAL; nil-deref-only compositions and map reads order-transparent — cedar-go's
 #   lexer idiom lowers); [AGENT] worker under the [USER]-ratified frontier queue (slots 27/28) and the relayed
-#   posture «break rather than preserve incorrect behaviour» (cited as relayed). drift vs the previous pin =
+#   posture of breaking rather than preserving incorrect behaviour (cited as relayed). drift vs the previous pin =
 #   EXACTLY (a) ONE stage change on a row that stays FAIL: builtins/len-vs-call-order/hint-panicky-between
 #   FAIL/differential -> FAIL/frontend-export (the wrong answer became a refusal by name; BUG-083's Cases line,
 #   now Pinned-by: none + Expect: FAIL); (b) 31 born rows — 19 PASS (generics/qualified-instantiation/{call,
@@ -1095,7 +1095,7 @@
 #   + the stage-only move; the lane's pre-rebase figure was 3383 = 3173 / 210 on main 74ffe35a).
 # re-pinned: 2026-09-04 (fr4-rowm lane — FR-4 method-stencil quarantine per declaration + memo §3 row M, the
 #   slices.Sort machine-op intercept RETIRED; [AGENT] worker under the [USER]-ratified frontier queue (FR-4 =
-#   slot 4) and the ruled stdlib plan G1-G9 («(3) agree, go ahead with the plan», relayed by the coordinator,
+#   slot 4) and the ruled stdlib plan G1-G9 (approved 2026-09-03, item (3), relayed by the coordinator,
 #   cited as relayed). drift vs the previous pin = EXACTLY (a) 4 FAIL -> PASS flips: generics/stencil-quarantine/
 #   sibling (the FR-4 witness), slices/slices-sort-non-integer-refusal (the refusal no longer exists),
 #   stdlib-source/sort-op-shapes/{defer-sort,go-sort} (nothing is intercepted; go-sort declares strict depth=64);
@@ -1116,8 +1116,8 @@
 #   born (13 PASS / 7 FAIL) + 4 FAIL->PASS = 3402 (3189 PASS / 213 FAIL); tallied by row:
 #   `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv`]
 # re-pinned: 2026-09-04 (fr24 lane, checkpoint C — the cmp.Compare kind-dispatch desugar RETIRED:
-#   [USER] Mike 2026-09-04, relayed by the [AGENT] coordinator (cited as relayed): «(2) given we have
-#   a plan, I think this should be an honest red». cmpshim.go deleted; cmp.Compare is the real
+#   [USER] Mike 2026-09-04, relayed by the [AGENT] coordinator (cited as relayed): with a plan in
+#   hand, an honest red beats the desugar. cmpshim.go deleted; cmp.Compare is the real
 #   source-through generic at every type argument. drift vs the previous pin = EXACTLY ONE
 #   PASS -> FAIL flip, the RULED one: slices/sortfunc-cmp/cmp-compare-kinds (a FUNCTION-LOCAL
 #   `index` type argument -> mono.go's C6 naming refusal; FR-19's line; BUGS.md BUG-092 Cases line);
@@ -1130,7 +1130,7 @@
 #   FAIL) - 1 PASS + 1 FAIL = 3382 (3172 PASS / 210 FAIL); tallied by row:
 #   `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv`]
 # re-pinned: 2026-09-04 (fr24 lane, checkpoint B — FR-25 PARTIALLY CLOSED, the [USER]-approved rider
-#   (Mike 2026-09-04, relayed by the coordinator, cited as relayed: «(3) yes, makes sense»): an
+#   (Mike 2026-09-04, relayed by the coordinator, cited as relayed: item (3) agreed): an
 #   unlowerable BASIC type (complex64/complex128/unsafe.Pointer) in a method/func SIGNATURE or an
 #   interface REQUIREMENT list is an opaque `named <basic>` marker + existence-only `unsupported`
 #   TypeDef (the D5 marker shape; no wire-schema change) — the declaration lowers, satisfaction
@@ -1234,7 +1234,7 @@
 #   their own runs; the clean-tip ci --diff (gate-tail-fixround.txt) confirms the
 #   file. 3326 rows; 3130 PASS / 196 FAIL.
 #   REPLAYED at the ROUND-10 MERGE TRAIN 2026-09-04 ([AGENT], under the [USER] merge sign-off
-#   «go ahead and merge these» 2026-09-04) over main 1b8401c0: the audit fix round's 3 born
+#   (merge sign-off) 2026-09-04) over main 1b8401c0: the audit fix round's 3 born
 #   FAIL/frontend-export rows join the round-10 union (previous union figure 3347 = 3157 / 190;
 #   row deltas disjoint by id; manifest order). NO PASS->non-PASS flip. Figure re-derived
 #   from the data rows (the `# cases:` line). Twin wire pin RE-DERIVED on the rebased tree
@@ -1245,7 +1245,7 @@
 #   regression; drift vs main 1b8401c0 = exactly this lane's 79 ids (66 born, 12 FAIL->PASS,
 #   1 stage-only), 0 PASS->non-PASS (round10-drift-vs-main-1b8401c0.txt).
 #   REPLAYED at the ROUND-10 MERGE TRAIN 2026-09-04 ([AGENT], under the [USER] merge sign-off
-#   «go ahead and merge these» 2026-09-04 naming stdlib-source-2 -> slow-recert in that order)
+#   (merge sign-off) 2026-09-04 naming stdlib-source-2 -> slow-recert in that order)
 #   over main 1b8401c0 (= 221d8964 + round 9: bug087-paniktext, q-trylock, cedar-census):
 #   the rows are the UNION of main's pin (3284 = 3085 / 199) and this commit's row delta vs
 #   its lane parent 221d8964 (63 born rows + 12 FAIL->PASS flips + the repeat-bound-refused
@@ -1272,14 +1272,14 @@
 #   [AGENT]-executed; corpus rows + baseline + records only — no GoLean/,
 #   tools/nativefrontend or gate change.
 #   REPLAYED at the ROUND-9 MERGE TRAIN 2026-09-04 ([AGENT], under the [USER] merge sign-off
-#   «go ahead and merge» 2026-09-04) over main 8de57f64 = 312a4458 + q-trylock: the two
+#   (merge sign-off) 2026-09-04) over main 8de57f64 = 312a4458 + q-trylock: the two
 #   witness rows are born FAIL on FR-22/FR-23's Cases lines; no other row moved; no
 #   PASS->non-PASS flip. 3284 rows; 3085 PASS / 199 FAIL (re-derived from the data rows below).
 #   FULL ci --diff at the rebased clean tip 9b56b4fb: PASS, 3284/3284 no regression; drift vs main
 #   8de57f64 = exactly the two born-FAIL witness rows (docs/evidence/2026-09-03_cedar-census/
 #   round9-gate-tail.txt, round9-drift-vs-main-8de57f64.txt); twin wire f2309df29148... unchanged.
 # re-pinned: 2026-09-04 (ROUND-9 MERGE TRAIN — [AGENT], under the [USER] merge sign-off
-#   «go ahead and merge» 2026-09-04 naming bug087-paniktext -> q-trylock -> cedar-census in
+#   (merge sign-off) 2026-09-04 naming bug087-paniktext -> q-trylock -> cedar-census in
 #   that order): q-trylock (as amended at its audit fix round F1-F6, next entry) REBASED
 #   onto main 312a4458 = 221d8964 + bug087-paniktext. The rows are the UNION of the two
 #   lanes' pins — disjoint row sets, no row moved in the replay: bug087-paniktext's 3264
@@ -1295,15 +1295,15 @@
 # re-pinned: 2026-09-03 (q-trylock lane, as amended at its AUDIT FIX ROUND
 #   F1-F6 and REBASED onto main 221d8964 — Q-TRYLOCK, RULED [USER] 2026-08-31
 #   (docs/2026-08-31_qrow-rulings.md row 5; envelope pre-ruled), own-slice
-#   sequencing [USER] 2026-09-03 («(4) Atomics - agree», relayed), twin-pin
-#   move [USER] 2026-09-03 («we should break things», relayed); [AGENT]-
+#   sequencing [USER] 2026-09-03 (item (4), atomics, agreed, relayed), twin-pin
+#   move [USER] 2026-09-03 (break rather than preserve incorrect behaviour, relayed); [AGENT]-
 #   executed inside that brief. TryLock/TryRLock modeled with mem#locks'
 #   spurious-failure member as the width-2 `ChoiceSite.tryLock`
 #   (success-edge-only detector; frontend lowering for every spelling incl.
 #   `defer m.TryLock()`; F1: TryRLock acquirability widened to `!writer` —
 #   sync design §8 R1's value-observable half; an [AGENT] widening in the
-#   safe direction, RATIFIED [USER] 2026-09-03 («TryRLock decision sounds
-#   fine», relayed by the [AGENT] coordinator)).
+#   safe direction, RATIFIED [USER] 2026-09-03 (the TryRLock decision
+#   accepted, relayed by the [AGENT] coordinator)).
 #   FULL ci --diff at main 221d8964 + this lane's working tree (dirty: the
 #   slice + the fix round + these records, committed together; log tail in
 #   docs/evidence/2026-09-03_q-trylock/gate-tail-run3-dirty-prepin.txt;
@@ -1343,8 +1343,8 @@
 #   panic TEXT on a value-receiver method dispatched through an interface
 #   holding a nil *T is a width-2 DEMONIC choice, ChoiceSite.nilValueMethodText
 #   (State.lean; drawn in StepFn.lean's enterFrameStep/enterFrameDeferPanicking;
-#   envelope statement nilValueMethodText?, Ops.lean). [USER] ruling 2026-09-03
-#   «(2) panic-text, agree, demonic choice so both are admitted» — received by
+#   envelope statement nilValueMethodText?, Ops.lean). [USER] ruling 2026-09-03,
+#   item (2), panic text: a demonic choice admitting both texts — received by
 #   the [AGENT] coordinator and relayed to the lane (docs/2026-08-31_qrow-rulings.md,
 #   2026-09-03 record); latitude inventory R9a. FULL ci --diff at the lane tree
 #   (drift-run tail docs/evidence/2026-09-03_bug087-paniktext/transcripts/
@@ -1363,8 +1363,8 @@
 #   row moves replayed — 3260 rows; 3061 PASS / 199 FAIL (re-derived below).
 # re-pinned: 2026-09-03 (stdlib-source-1 — [USER] RULING: the D-002 exception for a
 #   re-bodied ParseUint shim is DENIED (Mike, 2026-09-03, relayed by the [AGENT]
-#   coordinator, cited as relayed: «(a) we're not running Raft right now, I think
-#   going red is simpler and safer, and lets us do a clean retirement»).
+#   coordinator, cited as relayed: option (a) — with Raft not running, going red
+#   is simpler and safer and allows a clean retirement).
 #   strconv.ParseUint RETIRED (source-through like the rest; stdlibShimImports
 #   removed; 15 shims remain; no shim body changed). FULL ci --diff at the ruling
 #   commit (clean tree; log tail in docs/evidence/2026-09-03_stdlib-source-1/
@@ -1437,8 +1437,8 @@
 #   [the bug086-shim-closure figure, kept as history:] # cases: 3195 (3001 PASS / 194 FAIL)
 #   [re-derived from the data rows at the bug086-shim-closure re-pin 2026-09-03 ([AGENT]: the round-6 union's 3195 (2999 PASS / 196 FAIL) with BUG-086's two Cases rows noodler/strconv-formatint/{edges,positive} flipped FAIL/frontend-export -> PASS; no other row moved; `awk -F'\t' '!/^#/{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv` = PASS 3001 / FAIL 194)]
 # re-pinned: 2026-09-03 (strict-routing lane — THE STRICT-LANE DEPTH GUARD,
-#   membership-depth memo P1 §5, [USER]-ruled 2026-09-03 («(6) strict-lane,
-#   agree», relayed by the [AGENT] coordinator — cited as relayed; scope
+#   membership-depth memo P1 §5, [USER]-ruled 2026-09-03 (item (6), strict-lane,
+#   agreed, relayed by the [AGENT] coordinator — cited as relayed; scope
 #   corrected by the coordinator mid-lane from "re-lane eight rows" to
 #   "implement P1 as written"). [AGENT]-executed: GATE CHANGE in
 #   scripts/diff-coverage + scripts/coverage-manifest (guard-strengthening:
@@ -1581,8 +1581,8 @@
 #   = 3143 (2943 PASS / 200 FAIL).]
 # previous re-pin: 2026-09-03 (atomics-w1 lane — THE ATOMICS ARC, WAVE 1:
 #   Q-ATOMIC RULED [USER] 2026-09-02 option A′ with this repo as owner
-#   (docs/2026-08-31_qrow-rulings.md row 2; Mike: "I agree with this
-#   approach", relayed by the [AGENT] coordinator, citation not
+#   (docs/2026-08-31_qrow-rulings.md row 2; Mike agreed with the
+#   approach, relayed by the [AGENT] coordinator, citation not
 #   firsthand); [AGENT]-executed inside that ruling per the dispatching
 #   brief. Design note docs/2026-09-03_atomics-w1-design.md; evidence
 #   docs/evidence/2026-09-03_atomics-w1/ (baseline-drift.txt = this
@@ -1623,7 +1623,7 @@
 #   (atomics/ops/{add-uintptr,swap-uintptr,swap-int64,swap-uint32,
 #   cas-uint64,cas-uintptr}) -> 2632 (2459 PASS / 173 FAIL).
 # previous re-pin: 2026-09-02 (q-u4-gomem lane — Q-U4RESIDUAL RULED [USER]
-#   2026-09-02 option (A) "follow go_mem exactly" (ruling sheet
+#   2026-09-02 option (A) that go_mem be followed exactly (ruling sheet
 #   docs/2026-08-31_qrow-rulings.md row 9 + appendix record; the quotes
 #   reached the recording worker by [AGENT]-coordinator relay);
 #   [AGENT]-executed inside that ruling. FULL ci --diff at this tip
@@ -1690,7 +1690,7 @@
 # previous re-pin: 2026-09-02 (bug082-maphint lane — BUG-082 FIX: the native
 #   frontend now lowers the `make(map[K]V, hint)` HINT. [USER] Mike,
 #   2026-09-02, relayed by the [AGENT] coordinator (not firsthand):
-#   «Issue (2) sounds like a clear win, it's a bug fix right? do it» —
+#   issue (2) approved as a clear win and a bug fix —
 #   issue (2) being "BUG-082 frontend fix: authorizes moving the
 #   twin-wire pin"; [AGENT]-executed inside that mandate. FULL ci --diff
 #   at this tip (docs/evidence/2026-09-02_bug082-maphint/README.md,
@@ -1725,7 +1725,7 @@
 #     gives 31 / 50 / -677 / 1 / 12341.
 #   Everything else: 2558 rows unchanged in result and stage.
 # previous re-pin: 2026-09-02 (t5-maxalloc lane — fidelity decision 5(b)
-#   [USER] 2026-08-31 "the deterministic maxAlloc panic class modeled";
+#   [USER] 2026-08-31: the deterministic maxAlloc panic class is modeled;
 #   [AGENT]-executed inside that mandate. FULL ci --diff at this tip
 #   (this lane's scratch ci-diff-2.log; 2548 rows run; drift = exactly
 #   the 15 NEW rows below; NO other row moved in result or stage; NO
@@ -2074,16 +2074,16 @@
 #   [the fr22-fr23 figure, kept as history:] # cases: 3365 (3165 PASS / 200 FAIL)
 #   [re-derived from the data rows at the fr22-fr23 re-pin 2026-09-04 ([AGENT]: main 415f959a's 3350 (3157 PASS / 193 FAIL) + 15 born rows (6 PASS / 9 FAIL) with 2 FAIL -> PASS flips; no other row moved; tallied by row: `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv` = PASS 3165 / FAIL 200)]
 #   [the round-10 merge-train union figure, kept as history:] # cases: 3350 (3157 PASS / 193 FAIL)
-#   [re-derived from the data rows at the round-10 merge-train rebase of stdlib-source-2 (lane commit 68b15964) onto main 1b8401c0 2026-09-04 ([AGENT], under the [USER] merge sign-off «go ahead and merge these» 2026-09-04): the previous figure 3347 (3157 PASS / 190 FAIL) + this commit's row delta vs its lane parent 74434494 (3 ids: 3 born, 0 changed) = 3350 (3157 PASS / 193 FAIL); counted, not summed by hand]
+#   [re-derived from the data rows at the round-10 merge-train rebase of stdlib-source-2 (lane commit 68b15964) onto main 1b8401c0 2026-09-04 ([AGENT], under the [USER] merge sign-off of 2026-09-04): the previous figure 3347 (3157 PASS / 190 FAIL) + this commit's row delta vs its lane parent 74434494 (3 ids: 3 born, 0 changed) = 3350 (3157 PASS / 193 FAIL); counted, not summed by hand]
 #   [the stdlib-source-2-over-221d8964 figure at this lane commit, kept as history:] # cases: 3326 (3130 PASS / 196 FAIL)
 #   [the previous round-10 union figure, kept as history:] # cases: 3347 (3157 PASS / 190 FAIL)
-#   [re-derived from the data rows at the round-10 merge-train rebase of stdlib-source-2 (commit 4176f7f1) onto main 1b8401c0 2026-09-04 ([AGENT], under the [USER] merge sign-off «go ahead and merge these» 2026-09-04): 3284 (3085 PASS / 199 FAIL) + this commit's row delta vs its lane parent 221d8964 (76 ids: 63 born, 13 changed) = 3347 (3157 PASS / 190 FAIL); counted, not summed by hand]
+#   [re-derived from the data rows at the round-10 merge-train rebase of stdlib-source-2 (commit 4176f7f1) onto main 1b8401c0 2026-09-04 ([AGENT], under the [USER] merge sign-off of 2026-09-04): 3284 (3085 PASS / 199 FAIL) + this commit's row delta vs its lane parent 221d8964 (76 ids: 63 born, 13 changed) = 3347 (3157 PASS / 190 FAIL); counted, not summed by hand]
 #   [the stdlib-source-2-over-221d8964 figure at this commit, kept as history:] # cases: 3323 (3130 PASS / 193 FAIL)
-#   [re-derived from the data rows at the round-9 merge-train rebase of cedar-census onto main 8de57f64 (= 312a4458 + q-trylock) 2026-09-04 ([AGENT], under the [USER] merge sign-off «go ahead and merge» 2026-09-04: the step-2 union's 3282 (3085 PASS / 197 FAIL) + TWO born-FAIL witness rows init/stdlib-initializer-call (FR-22) and generics/imported-generic-in-signature (FR-23) = 3284 (3085 PASS / 199 FAIL); no other row moved; tallied by row, not summed by hand)]
+#   [re-derived from the data rows at the round-9 merge-train rebase of cedar-census onto main 8de57f64 (= 312a4458 + q-trylock) 2026-09-04 ([AGENT], under the [USER] merge sign-off of 2026-09-04: the step-2 union's 3282 (3085 PASS / 197 FAIL) + TWO born-FAIL witness rows init/stdlib-initializer-call (FR-22) and generics/imported-generic-in-signature (FR-23) = 3284 (3085 PASS / 199 FAIL); no other row moved; tallied by row, not summed by hand)]
 #   [the cedar-census-over-6a163681 figure, kept as history:] # cases: 3201 (3005 PASS / 196 FAIL)
 #   [re-derived from the data rows at the cedar-census re-pin 2026-09-03 ([AGENT]: the round-8a tip's 3199 (3005 PASS / 194 FAIL) + TWO born-FAIL rows init/stdlib-initializer-call and generics/imported-generic-in-signature (FR-22/FR-23 witnesses, both frontend-export); no other row moved; `awk -F'\t' '!/^#/{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv` = PASS 3005 / FAIL 196)]
 #   [the round-9 step-2 (q-trylock over 312a4458) union figure, kept as history:] # cases: 3282 (3085 PASS / 197 FAIL)
-#   [re-derived from the data rows at the round-9 merge-train rebase of q-trylock (at its audit fix round F1-F6) onto main 312a4458 (= 221d8964 + bug087-paniktext) 2026-09-04 ([AGENT], under the [USER] merge sign-off «go ahead and merge» 2026-09-04: bug087-paniktext's 3264 (3065 PASS / 199 FAIL) + this slice's 18 born-PASS rows + its 2 FAIL->PASS flips = 3282 (3085 PASS / 197 FAIL); the two lanes' row sets are disjoint and no row moved in the replay; tallied by row, not summed by hand)]
+#   [re-derived from the data rows at the round-9 merge-train rebase of q-trylock (at its audit fix round F1-F6) onto main 312a4458 (= 221d8964 + bug087-paniktext) 2026-09-04 ([AGENT], under the [USER] merge sign-off of 2026-09-04: bug087-paniktext's 3264 (3065 PASS / 199 FAIL) + this slice's 18 born-PASS rows + its 2 FAIL->PASS flips = 3282 (3085 PASS / 197 FAIL); the two lanes' row sets are disjoint and no row moved in the replay; tallied by row, not summed by hand)]
 #   [the q-trylock-over-221d8964 figure, kept as history:] # cases: 3278 (3078 PASS / 200 FAIL)
 #   [re-derived from the data rows at the q-trylock audit-fix-round re-pin 2026-09-03 ([AGENT]: main 221d8964's round-8b union 3260 (3058 PASS / 202 FAIL) + 18 born-PASS rows + 2 FAIL->PASS flips = 3278 (3078 PASS / 200 FAIL)); re-derived from the data rows, not summed by hand]
 #   [the bug087-paniktext figure, kept as history:] # cases: 3264 (3065 PASS / 199 FAIL)
@@ -2196,8 +2196,8 @@
 # frontend: native (tools/nativefrontend)
 # Columns: result<TAB>id<TAB>stage<TAB>cause (manifest order; the cause column since 2026-10-12 — the refusal-cause re-pin entry above).
 # re-pinned: 2026-09-28 [AGENT], core/method-promotion-0928, G-P S0 — BORN PINS for native method promotion BEFORE any change
-#   (design note docs/2026-09-28_gp-method-promotion-design.md §5 S0, G-P PASSED [USER] 2026-09-28 «Go ahead and land, and approve the
-#   decisions as proposed», relayed; handoff docs/2026-09-28_method-promotion-handoff.md): 16 rows BORN, NO existing row moved — the
+#   (design note docs/2026-09-28_gp-method-promotion-design.md §5 S0, G-P PASSED [USER] 2026-09-28, landing approved with the
+#   decisions as proposed, relayed; handoff docs/2026-09-28_method-promotion-handoff.md): 16 rows BORN, NO existing row moved — the
 #   dynamic promotion surface (interface dispatch / interface method values / method expressions over PROMOTED methods) in the shapes
 #   the corpus did not pin, each observed under go1.26.5 plain and -race before the row was written. BORN PASS (13):
 #   embedding/promoted-dynamic-surface/{go-nil-ptr-embed,go-nil-iface-embed} PASS/confluent (the path is walked in the CHILD: the
@@ -2213,8 +2213,8 @@
 #   89792db1's frontend + binary — S0 changes no code); the full gate line is in the handoff. 3768 + 16 = 3784; 3532 + 13 = 3545;
 #   236 + 3 = 239. No PASS -> non-PASS flip.
 # re-pinned: 2026-09-29 [AGENT], core/method-promotion-0928, G-P S2 — native method promotion, THE SWITCH (design note
-#   docs/2026-09-28_gp-method-promotion-design.md §5 S2, decisions 1–10 as recommended — G-P PASSED [USER] Mike 2026-09-28 «Go
-#   ahead and land, and approve the decisions as proposed», relayed by the [AGENT] coordinator; handoff
+#   docs/2026-09-28_gp-method-promotion-design.md §5 S2, decisions 1–10 as recommended — G-P PASSED [USER] Mike 2026-09-28, landing
+#   approved with the decisions as proposed, relayed by the [AGENT] coordinator; handoff
 #   docs/2026-09-28_method-promotion-handoff.md §1 S2): a promoted method-set entry is a promotion RECORD resolved by the machine
 #   at dispatch (resolveMethod?/receiverAt/callee?), the synthesized forwarding wrappers and `Func.wrapper` are DELETED, the wire
 #   is golean-native-v2. NO row born, NO PASS -> non-PASS flip; FOUR FAIL -> PASS flips — the three the design predicted (each a red

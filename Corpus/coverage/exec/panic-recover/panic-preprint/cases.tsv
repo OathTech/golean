@@ -1,7 +1,7 @@
 # id	subject	args	expected_status	expected_reason	features
 # THE PREPRINT PHASE (BUG-004 item 4, window unit 6b; design note
-# docs/2026-09-30_bug004-item4-design.md §2 (i), RULED [USER] Mike 2026-09-30
-# «Yes, agree, do the fix inside this window», relayed by the [AGENT]
+# docs/2026-09-30_bug004-item4-design.md §2 (i), RULED [USER] Mike 2026-09-30,
+# the fix agreed inside this window, relayed by the [AGENT]
 # coordinator; lane core/panic-preprint-1003, 2026-10-03). gc calls a panic
 # payload's Error()/String() after every deferred call and before the
 # terminal (runtime/panic.go:702–730 at the pin); the machine runs the same

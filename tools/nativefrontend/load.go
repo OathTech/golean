@@ -345,8 +345,8 @@ func (l *loader) localImportsOf(files []*ast.File) []string {
 // through the `fns` half: a constant initializer generates no code and
 // an empty init body is dropped by gc too.
 //
-// Since 2026-10-12 (the BUG-061 guard, [USER] ruling D1 «refused, if
-// it's easy to exclude») the rule is computed by sourceInitWork
+// Since 2026-10-12 (the BUG-061 guard, [USER] ruling D1: refuse the case
+// if excluding it is easy) the rule is computed by sourceInitWork
 // (staticinit.go), which ALSO sorts the non-constant initializers into
 // the shapes staticinit certainly leaves as work and the shapes it may
 // fold. The node fact here is unchanged — "constant or nothing" prunes,

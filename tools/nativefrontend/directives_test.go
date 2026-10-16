@@ -1,8 +1,8 @@
 package main
 
 // Unit tests for the compiler-directive refusal (directives.go; BUG-127,
-// BUG-128; release-readiness rows 38 and 39; RULED [USER] Mike 2026-10-13
-// «3, agree», relayed by the [AGENT] coordinator). The corpus rows
+// BUG-128; release-readiness rows 38 and 39; RULED [USER] Mike 2026-10-13,
+// item 3 agreed, relayed by the [AGENT] coordinator). The corpus rows
 // (Corpus/coverage/exec/directives/*, negative/compile/directives/*) pin
 // the gc verdicts; this table pins the SCAN: every form gc recognizes,
 // the allowlist and its PLACEMENT rules (fix round, review HIGH-1), the

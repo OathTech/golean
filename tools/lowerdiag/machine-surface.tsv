@@ -5,7 +5,7 @@
 # the frontend source it transcribes; TestMachineSurfaceCitesSources checks
 # the cited files exist and mention the entry.
 # kind: sync-type | sync-op | atomic-op-prefix | atomic-kind | init-callee | rand-intn | float-bits
-# float-bits (2026-10-04, same lane [AGENT], folded in by [USER] Mike 2026-10-04 «Yes, approve 1 / 2»,
+# float-bits (2026-10-04, same lane [AGENT], folded in by [USER] Mike 2026-10-04, items 1 and 2 approved,
 # relayed): the four math functions the frontend binds to the `float-bits` node at a DIRECT call
 # (floatbits.go floatBitsOps under mathPkgPath); defer/go refuses as a value-position selector; a
 # dot-imported bare call LOWERS the same node since FR-36 (2026-10-06, dotimport.go emitPrimitiveCall —

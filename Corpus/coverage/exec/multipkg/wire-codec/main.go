@@ -2,7 +2,7 @@ package main
 
 // H-1 codec guardrails (raft W4.1 item 1), RE-BORN for protobuf route A
 // slice S1 (docs/2026-10-04_route-a-protobuf-design.md D9, acceptance §5;
-// [USER] Mike 2026-10-04 «Approved», relayed): the language shapes the
+// approved [USER] Mike 2026-10-04, relayed): the language shapes the
 // GENERATED raftsubject codec runs on, pinned differentially (go run vs the
 // machine). The local packages wirepb and wireproto are NOT hand-written:
 // they are tools/raftsubject/derive.py's own codec generator run over a

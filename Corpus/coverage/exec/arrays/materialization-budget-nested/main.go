@@ -1,8 +1,8 @@
 package main
 
 // RED BY DESIGN (BUG-078 residual (3), fail-closed 2026-10-12 — [USER]
-// Mike, release-readiness item 30, «30: can we fail-close until we
-// fix?», relayed): an array TYPE whose FOOTPRINT — its length times its
+// Mike, release-readiness item 30: fail-close until fixed,
+// relayed): an array TYPE whose FOOTPRINT — its length times its
 // element type's, through nested arrays, defined types and struct
 // fields — exceeds the interpreter's nested materialization budget
 // (1<<24 scalar elements, GoLean/NativeToIR.lean arrayFootprintBudget)

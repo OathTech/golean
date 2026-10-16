@@ -20,7 +20,7 @@ func main() {
 // tape (`ChoiceSite.repanicCollapse`, both members enumerated, gc's
 // draw checked ∈ set — PASS/membership; the (c)→(a) move awaited [USER]
 // ratification at the merge gate — RULED [USER] 2026-09-07 at merge train
-// round 24, «Go ahead with the merge», relayed by the [AGENT] coordinator,
+// round 24 by the merge sign-off, relayed by the [AGENT] coordinator,
 // the merge-ask naming the C4 (c)→(a) move among the four items ratified);
 // this row proves the forced half
 // (panic, repanic, same-value identity, deferred-call order) exactly,

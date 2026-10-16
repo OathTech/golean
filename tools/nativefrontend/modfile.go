@@ -1,8 +1,8 @@
 package main
 
 // modfile.go — the module's `go` directive (BUG-109; whole-project review
-// 2026-09-11 F2; RULED [USER] Mike 2026-09-11, verbatim, relayed by the
-// [AGENT] coordinator: «Yes, refuse non-1.26»; lane fix/review-boundary-0911).
+// 2026-09-11 F2; RULED [USER] Mike 2026-09-11, relayed by the
+// [AGENT] coordinator: refuse non-1.26; lane fix/review-boundary-0911).
 //
 // The `go` command sets a package's LANGUAGE version from the `go`
 // directive of the module that contains it (go.mod, found by walking up
@@ -32,7 +32,7 @@ package main
 // mode, it cannot switch toolchains). The directive is parsed by a small
 // strict scanner — stdlib only, no x/mod — that refuses anything it does
 // not understand rather than guess. Since 2026-10-13 (BUG-128, release-
-// readiness row 39; RULED [USER] Mike 2026-10-13 «3, agree», relayed)
+// readiness row 39; RULED [USER] Mike 2026-10-13, item 3 agreed, relayed)
 // the same scanner REFUSES a `godebug` line or block BY NAME: the go
 // command folds the main module's godebug settings into the binary's
 // defaults (cmd/go/internal/load/godebug.go defaultGODEBUG) and the
@@ -146,7 +146,7 @@ func goDirective(path string) (string, error) {
 		verb := fields[0]
 		switch {
 		case verb == "godebug":
-			return "", unsup("module directive: %s sets godebug (%s) — GODEBUG settings are not modeled: the semantics is the Go 1.26 module defaults (panic(nil) raises *runtime.PanicNilError; the differential oracle is pinned with GODEBUG=panicnil=0); RULED [USER] 2026-10-13: refuse by name (fail closed)", path, strings.TrimSpace(raw))
+			return "", unsup("module directive: %s sets godebug (%s) — GODEBUG settings are not modeled: the semantics is the Go 1.26 module defaults (panic(nil) raises *runtime.PanicNilError; the differential oracle is pinned with GODEBUG=panicnil=0); refuse by name (fail closed)", path, strings.TrimSpace(raw))
 		case verb == "go":
 			if len(fields) != 2 {
 				return "", unsup("module directive: %s has a malformed go directive %q — fail closed", path, strings.TrimSpace(line))
@@ -204,7 +204,7 @@ func refuseForeignModuleVersion(dir string) error {
 		return err
 	}
 	if lang != pinned {
-		return unsup("%s declares go %s; GoLean implements the Go %s language only (the module's language version changes the program's meaning — e.g. the go1.22 per-iteration loop variable; RULED [USER] 2026-09-11: refuse non-1.26)", modPath, strings.TrimPrefix(lang, "go"), strings.TrimPrefix(pinned, "go"))
+		return unsup("%s declares go %s; GoLean implements the Go %s language only (the module's language version changes the program's meaning — e.g. the go1.22 per-iteration loop variable); a module declaring another language version is refused — the way out is to declare the pinned version in go.mod", modPath, strings.TrimPrefix(lang, "go"), strings.TrimPrefix(pinned, "go"))
 	}
 	return nil
 }

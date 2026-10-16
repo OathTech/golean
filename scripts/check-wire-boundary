@@ -173,7 +173,7 @@ expect_refusal invalid-utf8       'JSON parse error' 'not valid UTF-8'
 expect_refusal over-depth         'JSON parse error' 'JSON nesting deeper than'
 
 # THE ENTRY RULE's two texts (Codex F5, release-readiness row 41; RULED [USER] Mike 2026-10-13,
-# verbatim, relayed: «Yes, do option (1)» — keep `main` unexported in every mode and make the
+# relayed: option (1) — keep `main` unexported in every mode and make the
 # refusal explain itself; GoLean/CLI.lean entryFunc). The fixture declares `func main` (the
 # frontend's default mode admits it, BUG-125) and the wire never holds it: `--function main`
 # refuses naming the cause and the way out — in words true on EVERY wire it is printed for, a
@@ -645,7 +645,7 @@ expect_42 et
 expect_42 et-operand-no-type
 expect_refusal et-blank-no-type  'expression node `binary`' 'rhs[0]' 'carries no `type`' 'never reconstructed'
 expect_refusal et-range-no-type  'expression node `ident`' '.collection' 'carries no `type`' 'never reconstructed'
-# ENTRY ARGUMENTS (`--arg-bool`, 2026-10-07; [USER] Mike «Agree», relayed — gc-verified's request): `--arg-int` and
+# ENTRY ARGUMENTS (`--arg-bool`, 2026-10-07; [USER] Mike agreed, relayed — gc-verified's request): `--arg-int` and
 # `--arg-bool` interleave and bind the entry's parameters POSITIONALLY, each checked against its parameter's type at
 # the CLI (`entryArgValues`, GoLean/CLI.lean) before any step. Fixture Tests/wire-boundary-argbool/main.go
 # (`pick(n int, b bool, f Flag, s Small)`, Flag/Small declared over bool/uint8). Two mixed positive calls (both bool
@@ -791,7 +791,7 @@ for eng in dfs dedup; do
   fi
   echo "ok [readout refusal $eng] the BUG-099 readout is the enumeration's refusal (exit 1), no member printed"
 done
-# Release-readiness item 22 (2026-10-12; [USER] Mike «22: fix it», relayed; the decisions [AGENT]). (b) A func-typed
+# Release-readiness item 22 (2026-10-12; [USER] Mike ruled item 22 fixed, relayed; the decisions [AGENT]). (b) A func-typed
 # position, static or dynamic, has no observation: `retFunc`/`retBoxed`/`retAny` (bare, a struct field, an interface box)
 # and the NIL shapes `retNilFunc`/`retNamedFuncNilBare`/`retNamedFuncNilBoxed`/`retNilFuncInStruct`/`retNilFuncInArray`
 # (fixture Tests/wire-boundary-readout/main.go; the pre-merge review's MEDIUM-1/2) refuse BY NAME at the readout —
@@ -895,7 +895,7 @@ if [[ $rc -ne 1 || "$out" != *"choice-trace: $nodir/dump.tsv: cannot write outpu
 fi
 echo "ok [choice-trace unwritable-dump] refused (exit 1), naming the dump path"
 # THE SEEDED-HEAP ENTRY (seeded-heap slice B, 2026-10-12; design docs/2026-10-09_seeded-heap-design.md §1/§5/§6; [USER] Mike
-# 2026-10-12 «Agree on the two strategic questions, let's do it», relayed): `native-json-run --seed <file>` with
+# 2026-10-12 agreed to the two strategic questions, relayed): `native-json-run --seed <file>` with
 # `--arg-ref`/`--arg-nil`. Fixture Tests/wire-boundary-seed/main.go (the design's P1/P2 shapes). Positive controls: inc
 # on a seeded int, addNaive aliased and distinct, sum3 over a two-cell CYCLE, a pointer RESULT into the seed rendered
 # seed-relative (`seedRef`), a reference into an array element of a struct cell (`0.a[1]`), a nil argument, and the

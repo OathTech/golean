@@ -7,7 +7,7 @@ package main
 //
 // RED AT THE FRONTEND since 2026-10-12 (FAIL/frontend-export, no longer
 // FAIL/differential): the BUG-061 guard (tools/nativefrontend/
-// staticinit.go; [USER] ruling D1 «refused, if it's easy to exclude»)
+// staticinit.go; [USER] ruling D1 2026-10-12: refuse the case if excluding it is easy)
 // refuses this export by name — zq's only initializer is of a shape
 // staticinit may fold, and the order of la and lb depends on whether it
 // does. The expected column still records the oracle's truth (12); the

@@ -1,6 +1,6 @@
 package main
 
-// RED BY DESIGN ([USER] Mike 2026-10-14 «agree on both»; BUG-129): the
+// RED BY DESIGN ([USER] Mike 2026-10-14, both halves agreed; BUG-129): the
 // classes gc DROPS at a blank field, refused by name. gc elides a
 // side-effect-free blank operand TOGETHER WITH its run-time panic
 // (walk/complit.go:231 via staticinit.isSideEffect — shifts, interface

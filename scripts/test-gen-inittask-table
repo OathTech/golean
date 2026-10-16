@@ -7,7 +7,7 @@
 # build cache is touched. Every case asserts the exit code AND that the verdict
 # names its cause; the positive controls assert the rows. The scratch dir is
 # DELETED on success and KEPT on failure, its path printed for inspection
-# (r72 audit follow-up (f3), 2026-10-07; [USER] Mike «Agree», relayed).
+# (r72 audit follow-up (f3), 2026-10-07; [USER] Mike agreed, relayed).
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 GEN="$ROOT/scripts/gen-inittask-table"

@@ -3,7 +3,7 @@ package main
 // cmp through the REAL source-through package (slice 2, 2026-09-03). The
 // kind-dispatch desugar for cmp.Compare at integer/string kinds, RETAINED
 // by the slice's STOP rule, was RETIRED 2026-09-04 (lane fr24, [USER]
-// ruling «(2) … an honest red», relayed): everything here is the real
+// ruling that an honest red beats the desugar, relayed): everything here is the real
 // generic — float kinds (the NaN arm), cmp.Less, cmp.Or, cmp.Compare at a
 // named float type. (`math` is not a source-through
 // package: NaN, ±Inf and -0 are produced by float arithmetic on
