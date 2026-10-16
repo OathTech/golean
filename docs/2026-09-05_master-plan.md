@@ -2229,7 +2229,7 @@ presumed):
 | D1 | `uintptr`: (a) record per w7 J-8 / latitude R1, red-first rows, observations stay refused; (b) fix with the records amended, third-lane review, real full + `--slow` | HELD — nothing built | plan §2.5, §4; handoff ledger #2 |
 | BUG-107 option | (a) keep the four pre-`main` rows RED; (b) a named pre-`main` exception classifying from raw bytes (auditor recommends against); (c) the variable-initializer hook over the fd-passed channel (RECOMMENDED [AGENT]) | (a) | `docs/BUGS.md` BUG-107; L4 note §3 |
 | D3 | the coverage worker count — no verbatim ruling of "2 workers" exists in any tracked file; the chunks ran at jobs 2 / 2 / 16 / 12 / ≤ 12 and recorded it | ≤ nproc/2, recorded per run | plan §4 |
-| D6 | record K4 («merges to main are always user-approved …») in `CLAUDE.md` at all? | not landed | plan §4; handoff ledger #7 |
+| D6 | record K4 (merges to main are always user-approved; feature branches may be merged to by agents under standing user approval) in `CLAUDE.md` at all? | not landed | plan §4; handoff ledger #7 |
 | D7 | the evidence caps: 256 KiB / file, 4 MiB / dir, no archives, no source copies — PROPOSED [AGENT] | in force as proposed (gate-enforced) | `scripts/check-evidence-size` header; L2 note §4 |
 
 RATIFIED / RULED by the merge sign-offs (relayed): **D4** — the

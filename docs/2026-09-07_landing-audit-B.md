@@ -250,7 +250,7 @@ merits; I own the claim that a ruling authorises it.)
 +standing approval for that work. …
 ```
 
-The quoted K4 clarification is about **approval authority** only: merges to
+The K4 clarification is about **approval authority** only: merges to
 main are always user-approved, while feature branches may be merged to by
 agents under standing user approval
 (`docs/2026-09-05_typed-consumer-sprint-charter.md:3–7`, §2). Retitling the

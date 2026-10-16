@@ -251,7 +251,7 @@ removed); the twin's method set has no RWMutex entry; pin
 `docs/evidence/2026-09-03_q-trylock/twin-pin/`; the history line in
 `scripts/check-frontend-pins`).
 
-### The E9 irreflexive-key ruling record (2026-09-03) — the tracked record behind "(b) … approved"
+### The E9 irreflexive-key ruling record (2026-09-03) — the tracked record behind the option-(b) approval
 
 RATIFIED [USER] 2026-09-03. Question posed by the [AGENT] coordinator
 at the `hygiene-b1-stamps` merge-ask (design-hygiene arc slice 1, B1
