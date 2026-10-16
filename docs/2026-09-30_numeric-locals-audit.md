@@ -191,7 +191,7 @@ C9 STALE line above and the pre-existing C13 doc-version note.
 
 [AGENT auditor] The fix round landed on `core/numeric-locals-0930` at `f11dad1f` (rebased onto `main` `90df0fe1`;
 the first round's commits are now `79b48a2e`/`8a383bae`; snapshot `refs/snapshots/b6-fix/pre-rebase` = `a6df705f`).
-D1–D6 RATIFIED ([USER] Mike 2026-09-30, relayed: (the fix and all 6 items agreed)). This
+D1–D6 RATIFIED ([USER] Mike 2026-09-30, relayed: the fix and all 6 items agreed). This
 branch was rebased onto `f11dad1f` (snapshot `refs/snapshots/audit-b6/pre-rebase`); `.lake` warmed from the lane
 worktree after a `diff -r` of the Lean sources (identical; binary sha256 `ce232262…`, lake-verified).
 `tools/nativefrontend` is unchanged since `79b48a2e`, so the twin pin and the certified row's wire are the first

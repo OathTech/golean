@@ -42,7 +42,7 @@ listed id to be FAIL, so a designed refusal that stops firing trips the gate
 
 **GUARDED BY NAME at the frontend (2026-10-12, [AGENT] lane
 `fix/bug061-refuse-1012`; release-readiness item 1 / §5 D1, [USER] Mike
-2026-10-12 verbatim (D1: refuse the case if excluding it is easy), relayed by the [AGENT] coordinator).** The loader
+2026-10-12 (D1: refuse the case if excluding it is easy), relayed by the [AGENT] coordinator).** The loader
 (`tools/nativefrontend/staticinit.go`) now sorts every non-constant
 package-level initializer of a source package into the shapes
 `StaticAssign` certainly leaves as work (map literals, arithmetic,
@@ -7311,7 +7311,7 @@ standing pin of this limit. Until ruled, (iii) holds.
 - Pinned-by: differential
 - Cases: init/init-panic, noodler/initpanic/panic, noodler/initpanic/var-panic, noodler/initpanic/deadlock, init/quarantined-var-panicking/sibling
 
-**RULED 2026-10-12 ([USER] Mike, D3: (accepted and stated as a limit)): pre-`main` aborts are OUTSIDE the differential's observation scope — a stated limit of the release (`docs/release.md` §4); the five rows stay refusals by name.** (Posed 2026-09-07; re-posed in the release-readiness backlog D3 (`docs/2026-10-12_release-readiness.md` §5; note 2026-10-12, [AGENT] records lane).
+**RULED 2026-10-12 ([USER] Mike, D3: accepted and stated as a limit): pre-`main` aborts are OUTSIDE the differential's observation scope — a stated limit of the release (`docs/release.md` §4); the five rows stay refusals by name.** (Posed 2026-09-07; re-posed in the release-readiness backlog D3 (`docs/2026-10-12_release-readiness.md` §5; note 2026-10-12, [AGENT] records lane).
 
 MERGE-TRAIN NOTE ([AGENT] L4 worker, 2026-09-07): numbered against main's
 top BUG-104 at cut time. The landing plan (§4 D1) SUGGESTED reserving 107 for
@@ -7613,7 +7613,7 @@ frontend's refusal formats are classified for `scripts/lower-diagnose`
 (`tools/lowerdiag/causes.tsv` row `foreign-module-version`, by-design). The
 original fix sketch follows.
 
-Ruling ([USER] Mike 2026-09-11, relayed: (refuse non-1.26)): this semantics implements the Go 1.26 language only. Fix: when
+Ruling ([USER] Mike 2026-09-11, relayed: refuse non-1.26): this semantics implements the Go 1.26 language only. Fix: when
 the lowered directory — or an imported source package — carries a `go.mod`
 whose `go` directive's language version (major.minor) is not 1.26, REFUSE
 by name at export (`go.mod declares go 1.21; GoLean implements the Go 1.26
@@ -8722,7 +8722,7 @@ gc 1, model 1; the three negative rows: frontend exit 0 on each (`frontend-accep
 
 FIX ([USER] Mike 2026-10-13, relayed by the [AGENT] coordinator: (item 3 agreed) — to refuse by name, at file
 selection, in every user unit, any `//go:` directive outside an allowlist and any line directive; the standing
-preference, Mike 2026-10-13 on BUG-125: (refuse the case rather than open the door to special-casing; support may come later)): `tools/nativefrontend/directives.go`, called from
+preference, Mike 2026-10-13 on BUG-125: refuse the case rather than open the door to special-casing; support may come later): `tools/nativefrontend/directives.go`, called from
 `selectPackageFiles` (fileselect.go) — the one site serving the root package and every case-local imported package
 (load.go parseLocal). Every comment of every selected file is scanned; the first directive outside the allowlist
 refuses the export as `native frontend unsupported: file selection in <dir>: <file>:<line>:<col> carries the
@@ -8984,4 +8984,4 @@ sample), the four gc-drop shapes (`negative-shift` gc 2, `interface-compare` gc 
 `composite-operand` — the Codex pass's own F1 program, gc 7: a composite literal at an interface-typed blank field is
 not an admitted operand, so the headline program now refuses by name instead of answering), and the two package-level
 rows (`pkg-init-call` gc 20, `pkg-init-shift` gc 2 — both WHOLE-EXPORT refusals, neither isolated). The ledger §5.1
-item 9 carries the «maybe later»; `docs/release.md` §4 states the limit.
+item 9 carries the deferred support; `docs/release.md` §4 states the limit.

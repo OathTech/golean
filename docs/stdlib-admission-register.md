@@ -3,7 +3,7 @@
 **Status:** STANDING RULE for the standard-library boundary (memo
 `docs/2026-09-03_stdlib-boundary-design.md` §2.2 "the second shim, done
 right"; gate **G8 ruled AS RECOMMENDED** — [USER] Mike, 2026-09-03,
-relayed by the [AGENT] coordinator, cited as relayed: (the plan approved, item (3))). Established by the first implementation slice
+relayed by the [AGENT] coordinator, cited as relayed: the plan approved, item (3)). Established by the first implementation slice
 `stdlib-source-1` (2026-09-03, [AGENT]). It replaces the D-002 freeze as
 the rule of record for the classes below when the last injected
 declaration is gone; until then the freeze stays in force for the
@@ -167,7 +167,7 @@ The primitive table is FULL (3/3) since window unit 5b (2026-09-30): `float-bits
 
 - **2026-09-03 `stdlib-source-2`** ([AGENT], within G1/G8/G9 as ruled
   and the 2026-09-03 ParseUint ruling — [USER] Mike, relayed by the
-  [AGENT] coordinator, cited as relayed: (option (a): with Raft not running, going red is simpler and safer and allows a clean retirement)). **The OVERLAY mechanism landed**: `stdlib-overlay.tsv`,
+  [AGENT] coordinator, cited as relayed: option (a): with Raft not running, going red is simpler and safer and allows a clean retirement). **The OVERLAY mechanism landed**: `stdlib-overlay.tsv`,
   5 `expr` rows (of the cap of 12) + 5 consequential `import` rows,
   byte-checked at every load: `internal/stringslite.Clone` (`string(b)`
   — closes BUG-089's nine designed reds, FAIL→PASS), `errors.joinError.Error`
@@ -294,7 +294,7 @@ The primitive table is FULL (3/3) since window unit 5b (2026-09-30): `float-bits
 
 - **2026-09-04 `fr4-rowm` — memo §3 row M DONE: the `slices.Sort` intercept
   RETIRED** ([AGENT] worker; the G1-G9 stdlib plan ruled (the plan approved, item (3)) [USER], relayed by the coordinator and cited as
-  relayed; posture (break rather than preserve incorrect behaviour)).
+  relayed; posture break rather than preserve incorrect behaviour).
   `emit.go`'s `emitSortStmt` and the ExprStmt intercept are gone; the
   `frontendInterceptedLibraryMembers` table is EMPTY (class frozen at 0,
   the predicate and the `defer`/`go` refusal kept as dead machinery); the
@@ -330,7 +330,7 @@ The primitive table is FULL (3/3) since window unit 5b (2026-09-30): `float-bits
   0/2 → **2/2**. (i) `float-bits` — `math.Float64bits`/`Float64frombits`/
   `Float32bits`/`Float32frombits` as one machine expression op (`Expr.floatBits`,
   `floatBitsApply`), ADMITTED [USER] 2026-09-04 (relayed by the [AGENT]
-  coordinator, cited as relayed: (adding a primitive language operation found reasonable and approved)); the
+  coordinator, cited as relayed: adding a primitive language operation found reasonable and approved); the
   audit's condition (NaN payloads bit-exact, ±0, quiet/signalling probes)
   is met by construction — the machine's float IS its bit pattern — and
   pinned by rows `builtins/float-bits/*` (6 green at the slice; 7 after

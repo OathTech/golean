@@ -240,7 +240,7 @@ cite as relayed: (the vacuous conjunct deleted as a strict improvement; the rewo
    `MultiWf ctx m`) — as posed: the same constantly-true predicate D6 deleted
    from `MachineWf`, kept because the ruling named `MachineWf`; deleting it is a
    restatement of `ThreadWf`/`MultiWf` + the proof sites in `MultiWfSound.lean`
-   and makes `MultiWf` context-free. **RULED delete** ((the vacuous conjunct deleted as a strict improvement)). **DONE**, runtime
+   and makes `MultiWf` context-free. **RULED delete** (the vacuous conjunct deleted as a strict improvement). **DONE**, runtime
    commit `1fafc9f2`: §4 «Fix round» lists every restated statement; 195 code
    lines naming the predicate → 0; first-round build, 0 warnings; gate at the
    same expected red set (§2).
@@ -253,10 +253,10 @@ cite as relayed: (the vacuous conjunct deleted as a strict improvement; the rewo
    no spike) — so **DONE**: the 16 declarations tombstoned in §4.
 3. The **`Store.updateCell` refusal text** still naming `ExecState.alloc`
    (byte-preserved per the charter; owed wording refresh — C1's seam) —
-   **RULED as landed** ((the rewordings accepted)): stays byte-preserved here;
+   **RULED as landed** (the rewordings accepted): stays byte-preserved here;
    the refresh remains C1's.
 4. The **setup refusal text** («… or function body …» dropped at both seams,
-   §7) — **RULED as landed** ((the rewordings accepted)): the disclosed
+   §7) — **RULED as landed** (the rewordings accepted): the disclosed
    wording stands; no revert.
 
 ## 9. What B7 leaves to C1 / C3 / P (the charter §5 item 4; `docs/2026-09-11_bug090-rediagnosis.md` §5)
@@ -380,7 +380,7 @@ everything else that differs is an interpolation ARGUMENT rename
    `CLI.enumSetup`, ×2): «seeded state ill-formed: a location in a global cell
    **or function body** dangles beyond the allocator bound» → «… in a global
    cell dangles …». **DISCLOSED** (§7, §8.4) and **RULED as landed** ([USER]
-   2026-09-17, relayed: (the rewordings accepted)). Reason: the check is
+   2026-09-17, relayed: the rewordings accepted). Reason: the check is
    heap-only now and a message naming an unperformed check would be a
    fail-noisy lie. STANDS.
 2. `Store.updateCell`'s `.internal` «allocation goes through `ExecState.alloc`

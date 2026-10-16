@@ -295,7 +295,7 @@ see the R15 entry below.
       family's vehicle (unsafe policy). Q-TRYLOCK's rider was NOT taken
       in wave 1: its pre-ruled envelope is a NEW `ChoiceSite` and the
       wave-1 brief said "zero new choice sites" — rule conflict posed to
-      the [USER] (design note §6) — RESOLVED [USER] 2026-09-03 ((item (4), atomics, agreed)): Q-TRYLOCK as its OWN slice, LANDED on lane
+      the [USER] (design note §6) — RESOLVED [USER] 2026-09-03 (item (4), atomics, agreed): Q-TRYLOCK as its OWN slice, LANDED on lane
       `q-trylock` 2026-09-03 (the item directly below). D-002
       not-shim-injection reading stated in the design note §2 — [USER]
       confirmation still owed.
@@ -327,7 +327,7 @@ see the R15 entry below.
       blocked (the `atomics/spin` shape) — recorded at the row.
       AUDIT FIX ROUND F1–F6 (2026-09-03): TryRLock acquirability
       widened to `!writer` (R1's value-observable half; an [AGENT]
-      widening in the safe direction, RATIFIED [USER] 2026-09-03 ((the TryRLock decision accepted), relayed by the [AGENT] coordinator); sync design §8 R1); `defer m.TryLock()`
+      widening in the safe direction, RATIFIED [USER] 2026-09-03 (the TryRLock decision accepted, relayed by the [AGENT] coordinator); sync design §8 R1); `defer m.TryLock()`
       lowered; detector table without absorbing arm; rebased onto
       221d8964 (twin pin 45cd882a… → f2309df2…, one entry). F5 (decoder)
       — DISCHARGED 2026-09-12 [AGENT] with BUG-110 (lane

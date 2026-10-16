@@ -710,7 +710,7 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
   leaves gc's TryRLock TRUE (`rwTryRLockQueuedWriter` 40/40 plain at
   GOMAXPROCS 1 and 8); the model's `pendingW` is one flag for both
   phases, so acquirability is `!writer` and the pick is offered in both
-  — machine ⊇ gc, an [AGENT] widening in the safe direction, RATIFIED [USER] 2026-09-03 ((the TryRLock decision accepted), relayed by the [AGENT] coordinator); the blocking
+  — machine ⊇ gc, an [AGENT] widening in the safe direction, RATIFIED [USER] 2026-09-03 (the TryRLock decision accepted, relayed by the [AGENT] coordinator); the blocking
   `rlock` keeps R1's exclusion; `RWMutex.TryLock` with no writer and no
   reader — the `wlock` immediate-acquire condition) → width 2: slot 0
   = ACQUIRE (the same state transition as Lock/RLock/write-Lock, the
@@ -932,7 +932,7 @@ gc's early store a deviation, L-016, 2026-09-02).
   load before / after the call that writes or deletes the entry — and the born
   `evalorder/unseq-ptr-field-map/{deref,field}-compound-redirect`, `map-compound-rebind`
   ({11100, 10101}: the frozen identities, no hybrid); BUG-104's `map-compound-index-key-vs-call`
-  is an observed-∉-modeled FIX (→ BUG-112), not latitude. Ratification posed at the merge ask (RATIFIED [USER] 2026-09-20, the Stage C landing — (landing approved)).
+  is an observed-∉-modeled FIX (→ BUG-112), not latitude. Ratification posed at the merge ask (RATIFIED [USER] 2026-09-20, the Stage C landing — landing approved).
   BUG-104's three remaining rows (a receive or a method call on the RHS) keep the (b) pin — E3's
   (FIXED there, the bullet above).
 
@@ -952,7 +952,7 @@ gc's early store a deviation, L-016, 2026-09-02).
 
 - STAGE C PILOT (2026-09-19, [AGENT], lane `core/unseq-stage-c-0919`; design
   `docs/2026-09-19_unseq-stage-c-design.md` §1/§3; the width-of-P ruling [USER]
-  Mike 2026-09-19 (agreed; merge approved), relayed — (all mutable reads, staged)): a
+  Mike 2026-09-19 (agreed; merge approved), relayed — all mutable reads, staged): a
   sweep inside the pilot grammar lowers as ONE `unseq` graph (v2.1 §3; the
   `unseqNext` site) in which a target's index operand is a READ occurrence
   spec-unsequenced against the RHS call — the VALUE axis is (a) ENVELOPED on

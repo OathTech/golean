@@ -13,7 +13,7 @@ footprint lie); the baseline delta is exactly 23 born / 22 changed / 0 PASS→no
 and 241 outside-family rows reproduce on this box; the census reproduces (127 / 136 of 108 074); the gates I
 could run are green (captured exits). Nothing in E5/E6 territory was touched (`emit.go` is not in the diff).
 
-[AGENT] auditor, 2026-09-21, ordered by [USER] Mike ((the audit dispatched as proposed), relayed by the
+[AGENT] auditor, 2026-09-21, ordered by [USER] Mike (the audit dispatched as proposed, relayed by the
 [AGENT] coordinator). Worktree `.claude/worktrees/audit-unseq-stage-e`, branch `review/unseq-stage-e-0921`
 at the candidate tip; the candidate's `.lake` copied at identical source (tree `0be0603a`), `scripts/capped
 lake build` EXIT=0; candidate frontend `go build` (sha256 `13fda379…`), main's frontend from `git archive

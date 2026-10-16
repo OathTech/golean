@@ -5,7 +5,7 @@
 procedure the Codex review prescribed (`docs/2026-09-23_batched-window-charter-review.md` F3: the
 pinned production frontend with an owned scratch `--out` per unit, recursive JSON statement counts,
 a failed export never reported as zero graphs, `lower-diagnose` for failures only). Authority:
-[USER] Mike 2026-09-24 ((the recommendation accepted)), relayed. Records only — no runtime code,
+[USER] Mike 2026-09-24 (the recommendation accepted), relayed. Records only — no runtime code,
 no baseline, no gate touched. Evidence:
 `docs/evidence/2026-09-24_customer-fixture-inventory/` (counts TSV, the walker, the generator
 reproduction, per-unit stderr, wire digests, the positive control); wires stay in scratch.

@@ -201,7 +201,7 @@ through RawNode. The probe's check 5 deliberately exposes that a typed-nil `Mars
 
 [USER] Mike 2026-10-04, relayed by the [AGENT] coordinator — cite as relayed: (approved). This ratifies decisions
 D1–D12 as recommended, and the open questions as the coordinator recommended (per-question outcomes as relayed by the [AGENT]
-coordinator, ratified by the [USER] (approved)):
+coordinator, ratified by the [USER] approved):
 
 - **Q1 (D5)** — the spelling pick uses the `intn` site (`rand.Intn(2)` on `ChoiceSite.intn`; index 0 = U+0020, 1 = U+00A0), not
   `mapIter`.

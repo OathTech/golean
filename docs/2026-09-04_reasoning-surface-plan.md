@@ -1668,9 +1668,9 @@ a recommendation, Mike replied, as relayed: the plan approved; the two top-level
 recommended below, plus the two top-level goals stated (carried
 forward into `CLAUDE.md`). Earlier the same day, the standing
 direction that frames the C-arc's move from deferred-in-principle
-to scheduled (`docs/2026-09-03_design-hygiene-arc.md` (v)): «I think
-we should try to do the disruptive thing if it'll result in a more
-useful reasoning surface».
+to scheduled (`docs/2026-09-03_design-hygiene-arc.md` (v)): the
+disruptive option is preferred where it yields a more useful
+reasoning surface.
 
 **Ruling record, 2026-09-05 (confirmation of the gate reading).**
 [AGENT] record; the [USER] quote was received by the [AGENT]

@@ -250,9 +250,9 @@ merits; I own the claim that a ruling authorises it.)
 +standing approval for that work. …
 ```
 
-The quoted K4 clarification is about **approval authority** only: "merges *to
-main* are always user-approved. Feature branches can be merged to by agents,
-when standign approval is given by the user"
+The quoted K4 clarification is about **approval authority** only: merges to
+main are always user-approved, while feature branches may be merged to by
+agents under standing user approval
 (`docs/2026-09-05_typed-consumer-sprint-charter.md:3–7`, §2). Retitling the
 whole numbered protocol "to main" scopes steps 2 ("gate green"), 3 ("the audit
 ask — never skipped"), 5 (`--ff-only`) and 6 ("clean, green") off feature-branch

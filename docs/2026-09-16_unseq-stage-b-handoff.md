@@ -256,7 +256,7 @@ not a re-pin). No wire file changed on this branch.
 
 [AGENT] Fix-round worker, same branch, worktree `.claude/worktrees/unseq-
 stage-b`, base = the records commit `ba8767da`. Authority: the adversarial
-audit ordered by [USER] Mike 2026-09-16 ((an auditor dispatched as proposed), relayed by the [AGENT] coordinator — cite as relayed)
+audit ordered by [USER] Mike 2026-09-16 (an auditor dispatched as proposed, relayed by the [AGENT] coordinator — cite as relayed)
 returned **FIX-FIRST** (`docs/2026-09-16_unseq-stage-b-audit.md`, branch
 `review/unseq-stage-b-0916` @ `2440278d`; its scratch graphs under
 `docs/evidence/2026-09-16_unseq-stage-b-audit/` there). No [USER] gate was

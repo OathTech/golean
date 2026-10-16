@@ -4,7 +4,7 @@
 `3fb4a0d1` (the window charter rev. 2 ruled). Dispatched by the [AGENT] coordinator under [USER] Mike's rulings
 of 2026-09-22 (the Stage E5 landing record, `docs/2026-08-31_qrow-rulings.md`: item 1 the trigger refinement
 ADOPTED, item 2 the grammar WIDENED to non-main units with the twin re-pinned, item 3 the decoder's R1
-follow-up, item 6 the named refusal for an `after` edge on a literal `allocate`) and 2026-09-24 ((the recommendation accepted) — the charter rev. 2 as the window of record, E6 dispatched starting with E6a, the split
+follow-up, item 6 the named refusal for an `after` edge on a literal `allocate`) and 2026-09-24 (the recommendation accepted — the charter rev. 2 as the window of record, E6 dispatched starting with E6a, the split
 E6a–E6e approved), relayed — cite as relayed. The window: `docs/2026-09-23_batched-window-charter.md` (row 1;
 the slice table E6a–E6e; §6 what happens if a slice is refused). Design of record for the model:
 `docs/2026-09-16_evaluation-order-model-v2.md` (v2.1); the families landed before this note:

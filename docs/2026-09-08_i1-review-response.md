@@ -120,8 +120,8 @@ N3 belongs to the existing coordinator-owned diagnostic classification,
 and N4 records small successful-fixture scratch retention. The reviewer
 requests no code change for these; this landing preserves the reviewed code.
 
-[USER] 2026-09-08, firsthand: “updated review landed. can you fix the
-remaining minor issue, then land it on main?” This authorizes the
+[USER] 2026-09-08, firsthand: the updated review landed; fix the
+remaining minor issue, then land on main. This authorizes the
 fast-forward after the N5 documentation fix and its checks, superseding
 the prior pause. Existing clean full gates certify the unchanged runtime;
 the final documentation checks and actual merge are recorded in the

@@ -598,7 +598,7 @@ ledger/README updates are the docs-only records commit on top of the
 gated tip; the tree is otherwise byte-identical to `4f985c69`.
 
 **Round-17 rebase onto `main` @ `cf858f0f` (2026-09-05, [AGENT]
-reconciler; [USER] sign-off (merge sign-off), relayed).** Two
+reconciler; [USER] merge sign-off, relayed).** Two
 landings sat between the lane's fork (`426af905`) and the train's main:
 `fr19-bug097` (identity vs display — `display`/`pkg` REQUIRED per wire
 TypeDef, `Program.typeDisplays`, the display renderers,

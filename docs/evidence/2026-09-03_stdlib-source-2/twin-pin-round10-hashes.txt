@@ -1,4 +1,4 @@
-# Round-10 merge train, 2026-09-04 ([AGENT], under the [USER] merge sign-off (merge sign-off)):
+# Round-10 merge train, 2026-09-04 ([AGENT], under the [USER] merge sign-off):
 # the twin wire pin RE-DERIVED on the rebased tree (stdlib-source-2 rebased onto main 1b8401c0), not taken
 # from either side of the rebase. Both sides had moved it from 45cd882a…: q-trylock -> f2309df2… (the
 # bodied sync.Mutex.TryLock stub, round 9) and this lane -> 6a9ef8bb… (6 shim bodies out, 18 library

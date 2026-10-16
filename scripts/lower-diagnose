@@ -4,8 +4,8 @@
 # refusal the frontend prints.
 #
 # LANE TOOLING, NOT A GATE (docs/2026-09-04_lower-diagnose.md). [USER]
-# direction 4 (Mike, 2026-09-04, coordinator-relayed): a stuck lowering must
-# report WHY it is stuck, not merely stop. Output is a REPORT, never a
+# direction 4 (Mike, 2026-09-04, coordinator-relayed): it would be useful if
+# a stuck lowering reported why, rather than just stopping. Output is a REPORT, never a
 # lowering: nothing here writes
 # a wire (the frontend's --out is /dev/null), every artifact opens with
 # "DIAGNOSTIC — NOT A LOWERING", and the output root is artifacts/lower-

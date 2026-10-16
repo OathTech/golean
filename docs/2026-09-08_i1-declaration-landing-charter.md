@@ -138,8 +138,8 @@ authorization guard. The optional N1 acceptance-boundary residual is named
 under R7 for resolution before a production consumer. Runtime code and pins
 are identical to the independently reviewed and gated source.
 
-[USER] 2026-09-08, firsthand in this session: “updated review landed. can
-you fix the remaining minor issue, then land it on main?” This supersedes
+[USER] 2026-09-08, firsthand in this session: the updated review landed; fix
+the remaining minor issue, then land on main. This supersedes
 the prior second-review stop and authorizes the fast-forward merge after
 the documentation checks. Push remains a separate sign-off. The
 [review response](2026-09-08_i1-review-response.md) records this disposition.

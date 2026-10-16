@@ -2,7 +2,7 @@
 # recorded: 2026-08-18  commit: f68a4d86+ (spec-truth P3 slice 2)  oracle: go build (rejection)  [header corrected 2026-08-31: the old "+ frontend fail-closed" conjunct claimed a check that does not exist — scripts/coverage-negative invokes no GoLean tool (p2-fact claim 5)]
 # manifest_cases: 415  pass: 415  fail: 0
 # re-pinned: 2026-10-13 [AGENT], lane frontend/blank-fields-1013 — release-readiness row 37 (BUG-127; RULED [USER] Mike
-#   2026-10-13, item 2 fixed, relayed by the [AGENT] coordinator): ONE BORN ROW, PASS at frontend=type-check:
+#   2026-10-13 (item 2: fix), relayed by the [AGENT] coordinator): ONE BORN ROW, PASS at frontend=type-check:
 #   structs/blank-field-keyed — a keyed struct literal naming a blank field (`S{_: 1, X: 2}`), rejected by gc and refused by
 #   go/types alike («unknown field _ in struct literal of type S»); the pin that the keyed form never reaches the blank-field
 #   lowering. No other row moves. Counts: 405 + 1 = 406 rows; PASS 405 + 1 = 406; FAIL 0. Measured by capped scripts/ci --diff

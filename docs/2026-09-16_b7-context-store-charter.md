@@ -164,7 +164,7 @@ fixture family and its 52 sites are not purely mechanical, or if `step_preserves
 
 ## 9. Decisions for the [USER] — posed, not ruled; [AGENT] recommendations marked
 
-**RULED [USER] 2026-09-16** ((the D1-8 rulings approved as recommended, D3 aside), relayed; record:
+**RULED [USER] 2026-09-16** (the D1-8 rulings approved as recommended, D3 aside, relayed; record:
 `docs/2026-08-31_qrow-rulings.md`, «The B7 charter rulings record (2026-09-16)»): D1 (a), D2 (b), D3 PARK (ruled separately),
 D4 (a), D5 (a), D6 delete, D7 delete-with-the-tag/note-treatment as a separate parking-lane commit ([AGENT] reading of «as
 recommended», disclosed), D8 REPLAY. The bullets below are kept as posed; this paragraph is the ruling.

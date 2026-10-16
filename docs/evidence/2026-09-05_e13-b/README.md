@@ -108,7 +108,7 @@ map-assign rule removed one — 7 funcs + 33 methods, 0 other changes).
   the `Step` rules (Machine.lean) and the catch-all `.internal` throw
   stands.
 
-## Round-17 rebase onto main 9343a310 (2026-09-05, [AGENT] reconciler; [USER] sign-off (merge sign-off), relayed)
+## Round-17 rebase onto main 9343a310 (2026-09-05, [AGENT] reconciler; [USER] merge sign-off, relayed)
 
 Design note §11 has the composition record; ledger §8t's round-17
 paragraph the baseline chain. Files here: `twin-repin/round17-hashes.txt`

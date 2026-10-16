@@ -9,7 +9,7 @@ boundary memo (`docs/2026-09-03_stdlib-boundary-design.md` §5) — «(a)
 commission a design memo (what `reflect` exposes of the type system vs of
 gc's layout; which of `fmt`, `errors.Is/As`, `sort.Slice`,
 `encoding/json`, `reflect.DeepEqual` it unblocks …)» — RULED [USER] Mike
-2026-09-03 as recommended ((the plan approved, item (3))), with the
+2026-09-03 as recommended (the plan approved, item (3)), with the
 timing set after the first two slices land; slices 1 and 2 landed 2026-09-03
 (`docs/stdlib-admission-register.md`, slice log). The coordinator's
 relayed framing for this memo (2026-09-04): the two top-level goals are

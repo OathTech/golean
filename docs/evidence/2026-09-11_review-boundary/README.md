@@ -100,7 +100,7 @@ Gates (all `GOLEAN_MEM_MAX=48G scripts/capped`, lock held), tree = `6264f152` + 
 - re-pin from run #3's `latest.tsv`: 3676 = 3428 PASS / 248 FAIL; body diff = exactly the 7 BUG-108 rows FAIL → PASS; `coverage-baseline-diff --full` 0, `check-alternation-survival` 0, `check-bugs.sh` 0 (BUG-108 fixed, its 7 cases PASS — the symmetric rule holds).
 - re-judge `scripts/ci` (fast) on the exact committed tree: see the gate table (S1b re-judge).
 
-## Stage S2 — BUG-109 fix (the module's `go` directive; RULED [USER] (refuse non-1.26))
+## Stage S2 — BUG-109 fix (the module's `go` directive; RULED [USER]: refuse non-1.26)
 
 Code: `tools/nativefrontend/modfile.go` (new; `findGoMod` walks up like the go command,
 `goDirective` strict scanner, `refuseForeignModuleVersion`), wired in `main.go` run() and

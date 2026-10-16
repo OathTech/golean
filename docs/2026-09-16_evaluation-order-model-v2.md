@@ -260,7 +260,7 @@ The lane handoff `docs/2026-09-16_unseq-stage-b-handoff.md` §2/§9 mirrors this
 
 ## 5. Decisions PENDING [USER] — posed, not ruled; recommendations only
 
-**RULED [USER] 2026-09-19** ((agreed; merge approved), relayed; record: `docs/2026-08-31_qrow-rulings.md`, «The C1 completion and Stage C
+**RULED [USER] 2026-09-19** (agreed; merge approved, relayed; record: `docs/2026-08-31_qrow-rulings.md`, «The C1 completion and Stage C
 rulings record (2026-09-19)»): width of P = (ii) ALL mutable reads, STAGED (the Stage C pilot carries the minimal P(ii) reads its
 fixtures need, then widens); N1 = SPLIT (base/header and index producers + one checked access); N3 = REFUSE by name on budget
 exhaustion, rows may go red. N4 (ladder position) was ruled 2026-09-18 (Stage C after C1). The items below are kept as posed;

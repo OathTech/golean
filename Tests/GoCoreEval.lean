@@ -2973,7 +2973,7 @@ private def seedFacts : IO Bool := do
 is at the compiler's limit). -/
 private def observationShapeFacts : IO Bool := do
   let mut passed := true
-  -- Release-readiness item 22 (2026-10-12; [USER] Mike ruled item 22 fixed, relayed; the decisions
+  -- Release-readiness item 22 (2026-10-12; [USER] Mike (item 22: fix), relayed; the decisions
   -- [AGENT]). (a) The CLI-level `status:error` observation carries `output` (empty: no step ran)
   -- and decodes under the unchanged exact-keys rule for `error` (`message, output, schema,
   -- status`); the former key-less shape still refuses. (b) A func value is refused BY NAME at
@@ -3032,7 +3032,7 @@ private def observationShapeFacts : IO Bool := do
   passed := passed && (← expectStrEq "ITEM-22 (b): positive control — a func-free result still answers ok"
     (funcObs .bool (.bool true))
     "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"kind\":\"int\",\"tag\":\"int\",\"value\":7},{\"tag\":\"bool\",\"value\":true}]}")
-  -- Release-readiness item 22 (2026-10-12; [USER] Mike ruled item 22 fixed, relayed): a func value
+  -- Release-readiness item 22 (2026-10-12; [USER] Mike (item 22: fix), relayed): a func value
   -- stored into a seed CELL refuses the whole seeded observation by name, like a func result.
   passed := passed && (← expectTrue "ITEM-22: a func value in a seed cell refuses the seeded observation by name (unsupported, no func tag, decodable)"
     (let o := CLI.seededObs ⟨#[], #[.int .int]⟩

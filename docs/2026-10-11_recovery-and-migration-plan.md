@@ -344,7 +344,7 @@ certified. The box's cap is silently replaced by the project's. Nothing is
 uncapped, but the box default is not honoured and no one is told. There is
 no `scripts/env.sh` here (cerberus-sl has the reference shape).
 
-**D2 RULED on the figure too** ([USER] Mike 2026-10-11: (D2: conform to the box default; raising it during execution when needed is allowed)). So: NO project default — the box's
+**D2 RULED on the figure too** ([USER] Mike 2026-10-11: D2: conform to the box default; raising it during execution when needed is allowed). So: NO project default — the box's
 `$CAPPED_MEM_MAX` (32 G) governs, no `scripts/env.sh` override; a job that
 needs more is raised per invocation (`capped -m 64G -- <cmd>`) with the
 reason stated where it is run. The one known case is the measured one

@@ -727,7 +727,7 @@ this round makes PENDING (verbatim tags as written in the records):
 All four were RULED at merge train round 24 (§7.2 below). The three tags
 above are the fix round's wording, kept verbatim here as history; every
 live record now reads «[USER] ratification — PENDING at the lane's tip,
-RULED [USER] 2026-09-07 at merge train round 24 — (merge sign-off) (…)» with the [AGENT]-default history left visible.
+RULED [USER] 2026-09-07 at merge train round 24 by the merge sign-off (…)» with the [AGENT]-default history left visible.
 
 | item | disposition |
 |---|---|
@@ -844,7 +844,7 @@ channel, the `invalid-*` first lines refused by name), the BUG-087-shape
 extension (the `repanicCollapse` envelope under R-1) and the C4 (c)→(a)
 move of `repanic-same-value-abort` — as what the sign-off would ratify.
 [USER] Mike, 2026-09-07, as relayed by the [AGENT] coordinator
-(this worker did not receive it firsthand — cite as relayed): (merge sign-off). The coordinator reads the sign-off as ratifying all four;
+(this worker did not receive it firsthand — cite as relayed): the merge sign-off. The coordinator reads the sign-off as ratifying all four;
 this worker records it so. Every PENDING tag this lane wrote now reads
 «[USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 by the merge sign-off (relayed by the [AGENT]
 coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and

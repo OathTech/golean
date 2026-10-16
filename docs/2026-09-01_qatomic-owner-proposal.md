@@ -239,7 +239,7 @@ are honest refusals).
 
 - **Ratify A′ with this owner** — the atomics arc as scoped in §4
   (fused SC steps, zero new sites — EXCEPT the [USER]-ruled `tryLock`
-  site, 2026-09-03 ((item (4), atomics, agreed), relayed by the [AGENT]
+  site, 2026-09-03 (item (4), atomics, agreed, relayed by the [AGENT]
   coordinator; the 2026-09-03 sitting record in
   `docs/2026-08-31_qrow-rulings.md`): Q-TRYLOCK became its OWN slice
   adding that one site, so the atomics' own ops stay at zero —

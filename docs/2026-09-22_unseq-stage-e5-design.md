@@ -109,7 +109,7 @@ string as a pure `bytes-from-string` head), then the `wide` occurrence `{"stmt":
 elems}` as the E1-ordered event (`wideAppend`, `wideOcc`); `copy` → the destination and source atoms (a string
 source as a `bytes-from-string` head), then `{"stmt": "copy", dst, src}` producing the count (`wideCopy`).
 
-**The machine** (TRUST SURFACE #1; [AGENT] choice, RATIFIED [USER] 2026-09-22 at the merge ask ((all recommendations agreed, landing approved), relayed)): **`WideSpec`**
+**The machine** (TRUST SURFACE #1; [AGENT] choice, RATIFIED [USER] 2026-09-22 at the merge ask (all recommendations agreed, landing approved, relayed)): **`WideSpec`**
 (`append (elem : Ty) (slice elems : Expr)` | `copy (dst src : Expr)`; `WideSpec.arity` = 1 for both) and
 **`UnseqBody.wide (binds : List String) (spec : WideSpec)`** — ONE statement-bodied occurrence kind over a
 CLOSED spec, mirroring `allocate`: `unseqWideStmt binds spec` is the hoisted wide statement with the binder

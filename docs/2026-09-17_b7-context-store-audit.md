@@ -7,7 +7,7 @@
 `5955e55f`: `66fe1092` S0 records, `73ad798d` the runtime commit, `a7fd0542`
 records, `1fafc9f2` the fix-round runtime commit, `d0e65182` fix-round records).
 Ordered by the [USER] (Mike, 2026-09-17, relayed by the [AGENT]
-coordinator — cite as relayed: (the audit agreed, launch approved after any relevant rulings)). Nothing here is adjudicated that is the [USER]'s:
+coordinator — cite as relayed: the audit agreed, launch approved after any relevant rulings). Nothing here is adjudicated that is the [USER]'s:
 dispositions are PROPOSED; items needing a ruling are marked PENDING [USER].
 Evidence (small receipts): `docs/evidence/2026-09-17_b7-context-store-audit/`
 (README there maps file → check). Binaries compared throughout: main

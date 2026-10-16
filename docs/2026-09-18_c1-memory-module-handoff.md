@@ -365,7 +365,7 @@ trace makes the same-root law a detector statement (S2b/S3).
 
 The pre-merge adversarial audit (`docs/2026-09-18_c1-memory-module-audit.md` on branch
 `review/c1-memory-module-0918`, commit `ba6b249c`; ordered by [USER] Mike 2026-09-18,
-relayed: (item (1) agreed, the audit ordered)) returned **FIX-FIRST (records-class)**: no WRONG-ANSWER,
+relayed: item (1) agreed, the audit ordered) returned **FIX-FIRST (records-class)**: no WRONG-ANSWER,
 FOOTPRINT-LIE, UNSOUND-PROOF, gate WEAKENING or FAIL-OPEN introduced. The coordinator's
 dispositions below are [AGENT], disclosed to the [USER] at the merge ask. Two commits: the
 RUNTIME commit `16029fa8` (gated) and the records commit on top of it.

@@ -33,7 +33,7 @@
 #       F1 program; a composite literal at an interface-typed blank field is not admitted, so it refuses by name (99 at the base,
 #       7 on the 2026-10-13 lowering). Negative lane: no move (415/415). Measured by capped scripts/ci --diff at the lane tip (532 s).
 # re-pinned: 2026-10-13 [AGENT], lane frontend/blank-fields-1013 — release-readiness row 37 (the Codex zero-context pass's F1,
-#   «blank struct fields participate in equality and map-key identity»), RULED [USER] Mike 2026-10-13, item 2 fixed (relayed by
+#   «blank struct fields participate in equality and map-key identity»), RULED [USER] Mike 2026-10-13 (item 2: fix; relayed by
 #   the [AGENT] coordinator: evaluate the blank operand at its position, store the field type's zero value — gc's own treatment).
 #   WHY: the native frontend now lowers a positional literal's `_` operand as evaluated-and-discarded on both lowering paths
 #   (emit.go `emitBlankFieldOperand`, unseq_lower.go `structLitHead`) and the field holds the zero value; GoLean/ untouched
@@ -1234,7 +1234,7 @@
 #   their own runs; the clean-tip ci --diff (gate-tail-fixround.txt) confirms the
 #   file. 3326 rows; 3130 PASS / 196 FAIL.
 #   REPLAYED at the ROUND-10 MERGE TRAIN 2026-09-04 ([AGENT], under the [USER] merge sign-off
-#   (merge sign-off) 2026-09-04) over main 1b8401c0: the audit fix round's 3 born
+#   of 2026-09-04) over main 1b8401c0: the audit fix round's 3 born
 #   FAIL/frontend-export rows join the round-10 union (previous union figure 3347 = 3157 / 190;
 #   row deltas disjoint by id; manifest order). NO PASS->non-PASS flip. Figure re-derived
 #   from the data rows (the `# cases:` line). Twin wire pin RE-DERIVED on the rebased tree
@@ -1245,7 +1245,7 @@
 #   regression; drift vs main 1b8401c0 = exactly this lane's 79 ids (66 born, 12 FAIL->PASS,
 #   1 stage-only), 0 PASS->non-PASS (round10-drift-vs-main-1b8401c0.txt).
 #   REPLAYED at the ROUND-10 MERGE TRAIN 2026-09-04 ([AGENT], under the [USER] merge sign-off
-#   (merge sign-off) 2026-09-04 naming stdlib-source-2 -> slow-recert in that order)
+#   of 2026-09-04 naming stdlib-source-2 -> slow-recert in that order)
 #   over main 1b8401c0 (= 221d8964 + round 9: bug087-paniktext, q-trylock, cedar-census):
 #   the rows are the UNION of main's pin (3284 = 3085 / 199) and this commit's row delta vs
 #   its lane parent 221d8964 (63 born rows + 12 FAIL->PASS flips + the repeat-bound-refused
@@ -1272,14 +1272,14 @@
 #   [AGENT]-executed; corpus rows + baseline + records only — no GoLean/,
 #   tools/nativefrontend or gate change.
 #   REPLAYED at the ROUND-9 MERGE TRAIN 2026-09-04 ([AGENT], under the [USER] merge sign-off
-#   (merge sign-off) 2026-09-04) over main 8de57f64 = 312a4458 + q-trylock: the two
+#   of 2026-09-04) over main 8de57f64 = 312a4458 + q-trylock: the two
 #   witness rows are born FAIL on FR-22/FR-23's Cases lines; no other row moved; no
 #   PASS->non-PASS flip. 3284 rows; 3085 PASS / 199 FAIL (re-derived from the data rows below).
 #   FULL ci --diff at the rebased clean tip 9b56b4fb: PASS, 3284/3284 no regression; drift vs main
 #   8de57f64 = exactly the two born-FAIL witness rows (docs/evidence/2026-09-03_cedar-census/
 #   round9-gate-tail.txt, round9-drift-vs-main-8de57f64.txt); twin wire f2309df29148... unchanged.
 # re-pinned: 2026-09-04 (ROUND-9 MERGE TRAIN — [AGENT], under the [USER] merge sign-off
-#   (merge sign-off) 2026-09-04 naming bug087-paniktext -> q-trylock -> cedar-census in
+#   of 2026-09-04 naming bug087-paniktext -> q-trylock -> cedar-census in
 #   that order): q-trylock (as amended at its audit fix round F1-F6, next entry) REBASED
 #   onto main 312a4458 = 221d8964 + bug087-paniktext. The rows are the UNION of the two
 #   lanes' pins — disjoint row sets, no row moved in the replay: bug087-paniktext's 3264

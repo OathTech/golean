@@ -289,7 +289,7 @@ runner-budget red whose colour depends on the box and
   `45cd882a6e09c8942fbc5f2f774480af26b6703bbc4ad246d4b609f123c5deda` →
   `6a9ef8bb5ba80c4c7346a0ff18f7b7dd5601bf30fb2bd4dfbf3802906d5e23e3`
   (10.35 MB → 10.72 MB). **ROUND-10 MERGE TRAIN 2026-09-04 ([AGENT], under the
-  [USER] merge sign-off (merge sign-off)):** both sides of the rebase
+  [USER] merge sign-off):** both sides of the rebase
   had moved this pin from `45cd882a…` (q-trylock → `f2309df2…`, the bodied
   `sync.Mutex.TryLock` stub; this lane → `6a9ef8bb…`), so neither side's bytes
   were taken — the pin was RE-EMITTED on the rebased tree: `f2309df2…` →
@@ -479,7 +479,7 @@ Rows added this round: 3 (all born red by name): `sort-op-shapes/{defer-sort,go-
   2, re-derived at the audit fix round as BUG-090), which bounds
   every Builder/Buffer row at ~1 KB and sized the fuzz.
 
-## Round-10 merge train landing (2026-09-04, [AGENT] under the [USER] sign-off (merge sign-off))
+## Round-10 merge train landing (2026-09-04, [AGENT] under the [USER] merge sign-off)
 
 - Rebased onto main `1b8401c0` (= `221d8964` + round 9: `bug087-paniktext`,
   `q-trylock`, `cedar-census`). Conflicts and their resolutions:

@@ -65,7 +65,7 @@ interns `$`-temporaries densely after the table (`tmp`); `declLocal` (c1/c2 at a
    14.88 → 14.62, MachineSound 59.79 → 60.27 (1.01×), StepErrors 202.82 → 203.78 (1.00×). The C3 1.5× stop rule is NOT
    triggered; `maxHeartbeats`/`maxRecDepth` settings: the same count pre and post, none new or raised.
 
-## 3. D1–D6 — RATIFIED ([USER] Mike 2026-09-30, relayed by the [AGENT] coordinator — cite as relayed: (the fix and all 6 items agreed)); the items as they were posed, for the record
+## 3. D1–D6 — RATIFIED ([USER] Mike 2026-09-30, relayed by the [AGENT] coordinator — cite as relayed: the fix and all 6 items agreed); the items as they were posed, for the record
 
 - D1 per-object declaration ids from the frontend, cross-checked by the decoder (alternatives: decoder-only
   per-spelling interning; decoder-only per-declaration split).

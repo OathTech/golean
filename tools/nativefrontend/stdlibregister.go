@@ -82,13 +82,13 @@ func stdlibRegisterDump() (string, error) {
 	}
 	overlayExpr, overlayImports := stdlibOverlayCount(overlays)
 	if overlayExpr > stdlibOverlayCap {
-		return "", unsup("stdlib admission register: %d overlay sites exceed the cap of %d (the cap is raised only by a recorded re-ratification in docs/stdlib-admission-register.md, never by an edit)", overlayExpr, stdlibOverlayCap)
+		return "", unsup("stdlib admission register: %d overlay sites exceed the cap of %d (the cap is raised only by a recorded re-ratification in docs/stdlib-admission-register.md, never by a bare edit)", overlayExpr, stdlibOverlayCap)
 	}
 	if overlayImports > stdlibOverlayImportCap {
-		return "", unsup("stdlib admission register: %d overlay import-neutralization rows exceed the cap of %d (the cap is raised only by a recorded re-ratification in docs/stdlib-admission-register.md, never by an edit)", overlayImports, stdlibOverlayImportCap)
+		return "", unsup("stdlib admission register: %d overlay import-neutralization rows exceed the cap of %d (the cap is raised only by a recorded re-ratification in docs/stdlib-admission-register.md, never by a bare edit)", overlayImports, stdlibOverlayImportCap)
 	}
 	if len(stdlibPrimitives) > stdlibPrimitiveCap {
-		return "", unsup("stdlib admission register: %d library-origin primitives exceed the cap of %d (the cap is raised only by a recorded re-ratification in docs/stdlib-admission-register.md, never by an edit)", len(stdlibPrimitives), stdlibPrimitiveCap)
+		return "", unsup("stdlib admission register: %d library-origin primitives exceed the cap of %d (the cap is raised only by a recorded re-ratification in docs/stdlib-admission-register.md, never by a bare edit)", len(stdlibPrimitives), stdlibPrimitiveCap)
 	}
 	var b strings.Builder
 	line := func(cols ...string) { b.WriteString(strings.Join(cols, "\t") + "\n") }

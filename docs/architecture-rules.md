@@ -2,7 +2,7 @@
 
 Moved here VERBATIM from `AGENTS.md` on 2026-09-07 — `AGENTS.md` is now a
 git-tracked symlink alias of `CLAUDE.md` ([USER] direction, Mike, relayed by
-the [AGENT] coordinator — cite as relayed: (make AGENTS.md a git-tracked alias of CLAUDE.md, noted in CLAUDE.md, so that other agents find the working instructions)). The body below
+the [AGENT] coordinator — cite as relayed: make AGENTS.md a git-tracked alias of CLAUDE.md, noted in CLAUDE.md, so that other agents find the working instructions). The body below
 is the old file from its "Plan of record" line on, unchanged.
 
 > **Alias caveat** ([AGENT] 2026-09-07). GitHub's RAW view of a git symlink

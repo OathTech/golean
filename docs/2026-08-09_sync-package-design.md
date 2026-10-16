@@ -376,7 +376,7 @@ unsupported shapes fail closed, never approximate.
   have been NARROWER than gc at the state level (masked per program:
   {0, 1} ⊇ {1}); the slice widened `tryAcquire`'s acquirability to
   `!writer` (machine ⊇ gc on both phases; an [AGENT] widening in the
-  safe direction, RATIFIED [USER] 2026-09-03 ((the TryRLock decision accepted), relayed by the [AGENT] coordinator)). The BLOCKING `RLock` keeps this entry's exclusion (it
+  safe direction, RATIFIED [USER] 2026-09-03 (the TryRLock decision accepted, relayed by the [AGENT] coordinator)). The BLOCKING `RLock` keeps this entry's exclusion (it
   parks on `pendingW > 0`) — and control D shows gc's blocking RLock does
   not honor it either for a queued writer (`rwRLockQueuedWriter`: main's
   RLock returned before the queued writer acquired 40/40 plain at both

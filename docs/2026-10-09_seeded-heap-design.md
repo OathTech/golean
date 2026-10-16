@@ -218,7 +218,7 @@ written reason) plus refusal controls in `check-wire-boundary` (bad seed file, o
 
 ## 10. Rulings (2026-10-12)
 
-[USER] Mike 2026-10-12, firsthand ((the two strategic questions agreed)), on the
+[USER] Mike 2026-10-12, firsthand (the two strategic questions agreed), on the
 [AGENT] classification that of D1–D10 two are strategic, six are the customer's interface, the rest
 engineering: **GO** — the entry is built, three slices, with the trusted-surface #2 change (the
 harness's `--seed` mode) and the new entry joining #1 accepted; **D4 RULED** — no runtime `StateWf`

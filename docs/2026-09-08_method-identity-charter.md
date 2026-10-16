@@ -9,8 +9,8 @@ the bounded method-identity part of F7.
 
 ## Authority and objective
 
-[USER] 2026-09-08, firsthand: "Endorsed, go ahead. Set up a charter and
-execute on this goal." The same message attaches four conditions: one I1
+[USER] 2026-09-08, firsthand: endorsed, with the go-ahead to set up a charter and
+execute on this goal. The same message attaches four conditions: one I1
 member-identity system; identity distinct from display; compatibility with
 future native promotion; three reviewable stages, with the BUG-098 guard
 retained until the final stage, fresh pins/certification and a Cedar census.

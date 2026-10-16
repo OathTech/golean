@@ -591,7 +591,7 @@ oleans through the kernel into a fresh environment, so a metaprogram that skippe
 escape-hatch scan AND the axiom audit (a scratch `bogus : False :=
 True.intro` built that way printed «does not depend on any axioms»; only
 `leanchecker` refused it: «(kernel) declaration type mismatch»). Ruled
-[USER] Mike 2026-10-13, relayed: (item 4 agreed as a critical finding — a core trust gap — to be fixed). Since lane `gate/kernel-replay-1013`
+[USER] Mike 2026-10-13, relayed: (item 4 ruled a critical finding and a core trust gap, to be fixed). Since lane `gate/kernel-replay-1013`
 `scripts/check-kernel-replay` runs `lake env leanchecker --verbose GoLean`
 in both tiers after the build and fails on any nonzero exit (a kill
 included) and on a replayed set that is not the on-disk module set (the

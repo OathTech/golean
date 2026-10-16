@@ -14,8 +14,7 @@ at-that-moment [USER] sign-off (`CLAUDE.md`, the merge protocol).
 > rebased tip — 3654 = 3403 / 251, 0 PASS→non-PASS; L3 note §7.2); L6 =
 > this chunk. Each merged
 > to main on a separate at-that-moment [USER] sign-off, relayed by the
-> coordinator («Go ahead and merge it» ×2, (merge sign-off), «Go ahead
-> with the merge» — the last, round 24, also ratifying D2, D5, the
+> coordinator (four merge sign-offs — the last, round 24, also ratifying D2, D5, the
 > BUG-087-shape extension and the C4 re-classification). L5 remains HELD
 > (D1 pending). Deviations from this plan, each disclosed in the chunk
 > notes and summarized in `docs/2026-09-05_master-plan.md` §7.8: the

@@ -2,7 +2,8 @@
 > 2026-09-07).** Below this preface is the sprint charter VERBATIM as
 > committed on branch `typed-consumer-sprint` at `7edc298f`
 > (`docs/2026-09-05_typed-consumer-sprint-charter.md`; sprint commits
-> `10fefeb3`, `5a4aca9e`); not a character of it is edited. Provenance of
+> `10fefeb3`, `5a4aca9e`); the body is as committed at `7edc298f` except that
+> its user quotations were paraphrased on 2026-10-16 under backlog row 44. Provenance of
 > its [USER] statements (landing audit B, R18): the approval of all five defaults and the K4 clarification that merges to main are always user-approved, while feature branches may be merged to by agents under standing user approval (§2) were received by the
 > [AGENT] coordinator on 2026-09-05 and RELAYED into this document — cite
 > as relayed, not firsthand; the status line's "The [USER] clarified K4:

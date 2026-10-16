@@ -791,7 +791,7 @@ for eng in dfs dedup; do
   fi
   echo "ok [readout refusal $eng] the BUG-099 readout is the enumeration's refusal (exit 1), no member printed"
 done
-# Release-readiness item 22 (2026-10-12; [USER] Mike ruled item 22 fixed, relayed; the decisions [AGENT]). (b) A func-typed
+# Release-readiness item 22 (2026-10-12; [USER] Mike (item 22: fix), relayed; the decisions [AGENT]). (b) A func-typed
 # position, static or dynamic, has no observation: `retFunc`/`retBoxed`/`retAny` (bare, a struct field, an interface box)
 # and the NIL shapes `retNilFunc`/`retNamedFuncNilBare`/`retNamedFuncNilBoxed`/`retNilFuncInStruct`/`retNilFuncInArray`
 # (fixture Tests/wire-boundary-readout/main.go; the pre-merge review's MEDIUM-1/2) refuse BY NAME at the readout —

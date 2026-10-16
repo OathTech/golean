@@ -587,7 +587,7 @@ private def errorJson (error : Stop) (output : GoString := GoString.empty) : Jso
 argument or seed file — every one BEFORE any step runs; and, since the choice report (F1 of the
 2026-10-13 fail-closed pass), `native-json-run`'s refusal when the consumption accounting disagrees
 with the driver — the run's own observation is then withheld). Since release-readiness item 22
-(2026-10-12; [USER] Mike ruled item 22 fixed, relayed) it carries `output` like every other status: the
+(2026-10-12; [USER] Mike (item 22: fix), relayed) it carries `output` like every other status: the
 empty string, which is exactly what the program wrote (it never ran). Before, the key was absent,
 so the strict decoder — `error` admits exactly `message, output, schema, status` — refused the
 CLI's own output, and `observation-eq` could not decode it. Additive: `golean-observation-v1`

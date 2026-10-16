@@ -839,7 +839,7 @@ debts.
 **Work items.**
 
 1. **E13 sibling panic order as latitude — option (b)** — RULED [USER]
-   2026-09-05 ((do what the standard supports and avoid over-refusal where possible — option (b)), relayed;
+   2026-09-05 (do what the standard supports and avoid over-refusal where possible — option (b), relayed;
    e13-b note §0); LANDED `2fb7d54d` + fix rounds `7a5cd534` /
    `42893297` / `e4d785de` (round-17 train, records `7677865a`). Adds
    site `ChoiceSite.unseqPanic` (the 12th) and `Stmt.unseqProbe`; retires the
@@ -923,7 +923,7 @@ debts.
 8. **Sampling and membership certification** — RULED [USER] 2026-09-03
    (K=32/K=80, alternate plain/`-race`, early stop at `members=` never
    before two draws — the spirit of the ruling, option A); strict-lane
-   depth guard RULED ((item (6), strict-lane, agreed), `docs/assessment/
+   depth guard RULED (item (6), strict-lane, agreed, `docs/assessment/
    decisions-2026-08-31.md` addendum :87; `membership-depth.md:452`): 3
    rows → confluent, 5
    scheduling + 15 capacity → `depth=N` (a FINDING: their state graphs
@@ -2029,7 +2029,7 @@ principles: the committed tip is the artifact, path selection never merge,
 one squashed commit per chunk crediting sprint SHAs, evidence per chunk =
 gate tails + small witnesses, no gate weakened). Rounds 20–24 executed it;
 each chunk merged to main on a separate at-that-moment [USER] sign-off,
-relayed — «Go ahead and merge it» (×2), (merge sign-off), (merge sign-off) (the last, round 24 = L3, also ruling D2, D5, the
+relayed — four merge sign-offs (the last, round 24 = L3, also ruling D2, D5, the
 BUG-087-shape extension and the C4 re-classification as the L3 note posed
 them — tracked in `docs/2026-08-31_qrow-rulings.md`, "The merge-train
 round-24 ruling record").
@@ -2239,7 +2239,7 @@ channel; invalid first lines red by name; the escape form never a member),
 **the BUG-087-SHAPE extension** (a demonic choice where gc's realization is
 toolchain-internal, applied to the `[recovered, repanicked]` marker under
 R-1) and **the C4 (c)→(a) re-classification** of `repanic-same-value-abort`
-— RULED [USER] 2026-09-07 at merge-train round 24, (merge sign-off) (relayed; the merge-ask listed exactly those four items). The
+— RULED [USER] 2026-09-07 at merge-train round 24 by the merge sign-off (relayed; the merge-ask listed exactly those four items). The
 tracked ruling record is `docs/2026-08-31_qrow-rulings.md`, "The
 merge-train round-24 ruling record"; every PENDING tag L3 wrote now reads
 RULED there and in the L3 note §7.2.

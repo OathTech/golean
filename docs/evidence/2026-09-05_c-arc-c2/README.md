@@ -136,7 +136,7 @@ row (design note §7, audit fix R9).
 ## Round-17 rebase (2026-09-05, [AGENT] reconciler)
 
 The branch was rebased onto `main` @ `cf858f0f` at merge train round 17
-([USER] sign-off (merge sign-off), relayed), over the `fr19-bug097`
+([USER] merge sign-off, relayed), over the `fr19-bug097`
 (TypeId identity vs display: REQUIRED `display`/`pkg` per wire TypeDef,
 `displayNameOf`/`typePkgForMessage`/`symbolKeyForMessage`,
 `typeAssertPanicMessage : Except Stop String`) and `c-arc-b4`

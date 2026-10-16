@@ -104,7 +104,7 @@ the offer comes after everything below, so you port your `stepFn` sites once. Na
 our 2026-09-03 design-hygiene arc (`G:docs/2026-09-03_design-hygiene-arc.md`; B7 = the `ProgramCtx`/`Store` split you
 already have; C1 = §1 item 1). Proposed landing order, with the dependency reasons:
 
-**(a) The full event label on the sequential relation** — [USER]-ruled ((the model as regular as possible)), first in the window, before C3. What: `Step`'s fifth argument and `stepFn`'s fourth component become
+**(a) The full event label on the sequential relation** — [USER]-ruled (the model as regular as possible), first in the window, before C3. What: `Step`'s fifth argument and `stepFn`'s fourth component become
 `StepLabel := { trace : AccessTrace, picks : List PickRecord, out : List GoString }` — the three fields the pool's
 `StepEvent` already carries (`G:Multi.lean:1009`: `who, action, picks, out, trace`), so the pool event becomes
 `{ who, action, label : StepLabel }` and there is ONE label type at both layers. `PickRecord = { site, bound, pick }`

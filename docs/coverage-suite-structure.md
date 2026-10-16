@@ -559,7 +559,7 @@ ONE cause — the first refusal the emitter hit — and fixing it may only
 reveal the next (the cedar-go census's FR-22 → FR-23 → FR-24 sequence,
 export fraction unchanged each time). [USER] direction (4) of
 `docs/language-coverage-ledger.md` §0 (2026-09-04, coordinator-relayed:
-(a stuck lowering should report why it is stuck)) is served by `scripts/lower-diagnose <dir |
+it would be useful if a stuck lowering reported why) is served by `scripts/lower-diagnose <dir |
 main.go> [--json] [--tsv] [--subject]` (`tools/lowerdiag`;
 `docs/2026-09-04_lower-diagnose.md`): it runs the real frontend for the
 first refusal (what a user sees today), then a STATIC go/types demand

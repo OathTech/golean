@@ -7897,7 +7897,7 @@ func (e *emitter) emitStructLit(cl *ast.CompositeLit, t types.Type, st *types.St
 // the operand (walk/complit.go `fixedlit` assigns it to `_`;
 // compare/compare.go skips blank fields) — so equality, map-key identity
 // and copies follow from the core's unchanged field-by-field comparison
-// ([USER] Mike 2026-10-13 ruled item 2 fixed, relayed). Before this the operand was
+// ([USER] Mike 2026-10-13 (item 2: fix), relayed). Before this the operand was
 // stored and compared: `S{1, 2} == S{9, 2}` answered false (gc true), a map
 // of two such keys had two entries (gc one), an interface-typed blank
 // holding a slice panicked «comparing uncomparable type» where gc does not.
