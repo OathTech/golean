@@ -1,9 +1,7 @@
 # NaN latitude memo — what fixes the bits of a produced NaN, and [a] vs [b] (2026-09-18, [AGENT])
 
 Records only, lane `records/nan-envelope-memo-0918` at main `68b261e6`; answers item (2) of the 2026-09-18 ruling record
-(`docs/2026-08-31_qrow-rulings.md`; [USER] Mike, verbatim, relayed by the [AGENT] coordinator — cite as relayed): «the
-choices I suppose are either [a] pass a parameter saying what the platform says, or [b] try to provide one uniform
-nondetermnism right? I think this depends on what hte Go standard says». Sites: inventory R7 and §11 (the two contracts;
+(`docs/2026-08-31_qrow-rulings.md`; [USER] Mike, relayed by the [AGENT] coordinator — cite as relayed): (the choices are [a] a parameter carrying what the platform says or [b] one uniform nondeterminism, depending on what the Go standard says). Sites: inventory R7 and §11 (the two contracts;
 `docs/2026-08-11_latitude-inventory.md`), BUG-094 (`docs/BUGS.md`). Probe evidence: `docs/evidence/2026-09-18_nan-latitude-memo/`
 (go1.26.5 linux/amd64, the oracle pin). Nothing below is applied; §6's text changes are PROPOSED, PENDING [USER].
 

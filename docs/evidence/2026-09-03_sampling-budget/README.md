@@ -9,8 +9,8 @@ about the caption…"), `docs/assessment/decisions-2026-08-31.md`
 ## Decision provenance
 
 [USER] ruling (Mike, 2026-09-03, relayed by the [AGENT] coordinator —
-cited as relayed, not firsthand): «yeah, agree on the sampling budget,
-go ahead as you propose.» — to the coordinator's proposal to adopt memo
+cited as relayed, not firsthand): the sampling budget agreed as
+proposed — to the coordinator's proposal to adopt memo
 §4.3: alternate plain and `-race` draws; stop early when the distinct
 observations reach the row's `members=` pin; otherwise stop at K; report
 `draws=` beside `exhibited=`; K=32 under `--diff` (the gate), K=80 under
@@ -51,7 +51,7 @@ the honest statement is "68–71 of 470 at K=32 across two runs".
 `race/atomics-free/cas-failure-acquires` stopped at draw 1 (the pin is
 reached at once) and never took a `-race` draw; flagged, not
 self-adjudicated. [USER] ruling (Mike, 2026-09-03, relayed by the
-coordinator — cited as relayed): «(d) this is a 'spirit of the ruling' vs. 'letter of the ruling' case - we should do option A which seems like the spirit of the ruling» — option A = a floor of two
+coordinator — cited as relayed): (option A: the spirit of the ruling over its letter) — option A = a floor of two
 draws (one plain, one `-race`) before the early stop may fire. Implemented
 (`scripts/diff-coverage`: early stop needs `draws >= 2 AND distinct >=
 members`; K unchanged; caption `draws=2 (floor; …)`). Re-run of the three

@@ -8,7 +8,7 @@ routed/annotated `cases.tsv` files, `baselines/native-full.tsv` header.
 
 ## Provenance
 
-- [USER] ruling (Mike, 2026-09-03): «(6) strict-lane, agree» to the
+- [USER] ruling (Mike, 2026-09-03): (item (6), strict-lane, agreed) to the
   coordinator's item "Strict-lane routing rule: adopting it turns eight
   scheduling rows red until routed. Recommendation: adopt, and route
   them in the same slice so nothing sits red." Relayed to this worker

@@ -9,7 +9,7 @@ follow-up records edit.
 [AGENT] auditor (Claude, Stage D auditor), branch `review/unseq-stage-d-0920`, worktree
 `.claude/worktrees/audit-unseq-stage-d`, checked out at the candidate tip `e34fc8ec` (`core/unseq-stage-d-0920`: runtime
 commit `95c6c052`, records `c253cadc`, addendum `e34fc8ec`) over main `10d2f2dc`. Ordered by [USER] Mike, 2026-09-20,
-verbatim, relayed by the [AGENT] coordinator — cited as relayed, not firsthand: «Great, launch the audit». Nothing on the
+relayed by the [AGENT] coordinator — cited as relayed, not firsthand: (the audit launched). Nothing on the
 candidate or on `main` was edited; nothing was merged or pushed. Evidence (small; 12 files, 67 KiB):
 `docs/evidence/2026-09-20_unseq-stage-d-audit/`. Every Lean/lake command ran through `scripts/capped`; every exit code
 below is the captured one; a killed run is reported as a refusal, never a result.

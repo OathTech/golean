@@ -34,7 +34,7 @@ our machine cannot, that is definitionally a bug somewhere — far more
 likely in GoLean than in Go. `observed ∉ modeled` is always
 red, never latitude.
 
-**Scheduling and fairness ([USER] 2026-09-02).** Mike, verbatim: "the
+**Scheduling and fairness ([USER] 2026-09-02).** Mike, 2026-09-02: "the
 semantics should admit unfair schedules, i.e scheduling is local and
 nondeterministic. Fairness is an assumption about the sequences that
 are chosen." The principle, named: **the weakest machine ADMITS every
@@ -411,7 +411,7 @@ write a bare "#6"/"#7".
    `maxAlloc` panic class is decision 5(b), Tier 5; the eventual
    honest model (memory bounded and very large, Cerberus-C-style, so
    arbitrary-context reasoning accounts for allocation failure while
-   execution runs essentially never see it — the [USER]'s verbatim
+   execution runs essentially never see it — the [USER]'s
    reasoning) is **discrepancy D-001** in
    `docs/discrepancy-backlog.md` (file lands with the
    fidelity-assessment branch; the id is stable).

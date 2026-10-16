@@ -226,7 +226,7 @@ violations, 0 mirror/accountant/sentinel/pick-record alarms, 0 driver-agreement 
 
 ## Merge train r45 — the 5a record ([AGENT] coordinator, 2026-09-21)
 
-[USER] Mike 2026-09-21, verbatim (relayed): «yes, I agree - go ahead». Pre-merge main `10d2f2dc` →
+[USER] Mike 2026-09-21 (relayed): agreed, go-ahead given. Pre-merge main `10d2f2dc` →
 `refs/snapshots/r45/main`; Stage D + the audit-records/caption commit (`5e3348be`) fast-forwarded; the audit
 branch rebased (`74d084ad`) and fast-forwarded. Under the lock at `74d084ad`: `scripts/build-certified`
 EXIT=0, 114 s (binary `0681abc69cf9…`); `release-check --base refs/snapshots/r45/main` EXIT=2

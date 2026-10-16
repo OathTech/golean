@@ -13,8 +13,7 @@ campaign-3 verifier on 2026-09-02 [AGENT] in the gitignored
 `artifacts/grossmith/2026-09-01/probe-e5/` (its outputs are copied
 here verbatim); the re-classification of what it shows — gc
 DEVIATION, not latitude — is the [USER] ruling of 2026-09-02 (Mike,
-verbatim: "agree we should mark as a gc deviation, and record in our
-gc bug backlog"), recorded at L-016. Nothing in this dir was
+verbatim: mark it as a gc deviation and record it in the gc bug backlog), recorded at L-016. Nothing in this dir was
 re-decided by the recording agent.
 
 ## The question

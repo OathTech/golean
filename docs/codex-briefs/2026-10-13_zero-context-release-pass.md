@@ -1,14 +1,14 @@
 # Codex brief — the zero-context release pass (2026-10-13)
 
 STATUS: **PREPARED** ([AGENT] coordinator, 2026-10-13; asked for by the [USER], Mike, 2026-10-13:
-«We should do another zero-context fresh eyes release pass with a Codex agent, check if we've
-missed anything»). The [USER] runs it. This brief is setup and the question; it does not limit
+another zero-context fresh-eyes release pass with a Codex agent, to check whether anything was
+missed). The [USER] runs it. This brief is setup and the question; it does not limit
 where you look or what you may say.
 
-## The question, verbatim ([USER] Mike, 2026-10-13)
+## The question ([USER] Mike, 2026-10-13, paraphrased)
 
-«It's particularly important the semantics is fail-closed in cases where we are not high-confidence.»
-And, for a first release: «check if we've missed anything».
+The semantics must be fail-closed wherever confidence is not high; and, for a first release, check whether
+anything was missed.
 
 ## Where things are
 

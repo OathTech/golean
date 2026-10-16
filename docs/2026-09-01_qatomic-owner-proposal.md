@@ -1,6 +1,6 @@
 # Q-ATOMIC owner proposal — the atomics arc, post-split (2026-09-01/02)
 
-> **RULING [USER] 2026-09-02** (Mike: "I agree with this approach" —
+> **RULING [USER] 2026-09-02** (Mike: agreed with the approach —
 > the approach as presented is recorded verbatim in
 > `docs/2026-08-31_qrow-rulings.md`, appendix "The row-2 ruling
 > record"; the quote was relayed to the recording worker by the [AGENT]
@@ -214,7 +214,7 @@ The atomics arc is LOWER-bound growth (five frontier reds; a forced
 SC point with a direct upper bound from the text) and shares no
 files with Tier 5's items except the inventory. Proposal:
 
-1. **After the gotest fix slice** (the [USER]'s "(2) agree" next
+1. **After the gotest fix slice** (the [USER]'s agreement to item (2), the next
    dispatch) and after this lane's merge — the detector-soundness
    runner is the arc's alignment check and should be on main first.
 2. **Before or alongside Tier 5's start**, as an independent lane:
@@ -239,7 +239,7 @@ are honest refusals).
 
 - **Ratify A′ with this owner** — the atomics arc as scoped in §4
   (fused SC steps, zero new sites — EXCEPT the [USER]-ruled `tryLock`
-  site, 2026-09-03 («(4) Atomics - agree», relayed by the [AGENT]
+  site, 2026-09-03 ((item (4), atomics, agreed), relayed by the [AGENT]
   coordinator; the 2026-09-03 sitting record in
   `docs/2026-08-31_qrow-rulings.md`): Q-TRYLOCK became its OWN slice
   adding that one site, so the atomics' own ops stay at zero —

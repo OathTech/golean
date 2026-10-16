@@ -2,7 +2,7 @@
 
 [AGENT] worker record, lane `park-lane/typed-profiles-0916` (branch off main `62fc8073`). Ruling record: branch `plan/b7-context-store-0916`, `docs/2026-08-31_qrow-rulings.md` «The typed-profile family ruling record (2026-09-16)» (B7 charter D3 = PARK). Coordinator context: `docs/2026-09-11_review-dispositions.md` §0/§2 (the «Interface.lean as a milestone» programme and the profile expansion were SET ASIDE 2026-09-11); the reasoning-migration survey `docs/2026-09-16_reasoning-archaeology.md` (branch `docs/reasoning-archaeology-0916`) §6, §9, §11.
 
-**The ruling** ([USER] Mike, 2026-09-16, verbatim, relayed by the [AGENT] coordinator — cite as relayed): «We're actually working on migrating reasoning to a new repo (see the notes on a branch that another agent put together, and the reasoning work in deps/ - gitgignored). So I think the correct home for this work is in a new repo in deps/ called golean-reasoning or something like that. Then we can pin these modules to the version of golean which they depend on and park them for future revival. Perhaps the right solution for you is to delete, but leave a note saying where this code lives in the git history (or make it an explicit tag / branch)».
+**The ruling** ([USER] Mike, 2026-09-16, relayed by the [AGENT] coordinator — cite as relayed): reasoning is migrating to a new repository under gitignored deps/ (a name like golean-reasoning), which is the correct home for this work: pin the modules to the golean version they depend on and park them for future revival; here, delete them but leave a note saying where the code lives in the git history, or an explicit tag or branch.
 
 ## 1. Inventory — by import graph, at main `62fc80731f0045c170634690bda1c26d1880f185` (the family's last main state)
 
@@ -26,8 +26,8 @@ Nothing the `ci` reads under `docs/` names the family (checked: `docs/BUGS.md`, 
 ## 2. Where the code lives; the pin; the destination; how to revive
 
 - **Preservation refs (created by the [AGENT] coordinator before this lane):** tag `typed-profiles/last-main-2026-09-16` and branch `park/typed-profiles-2026-09-16`, both = main **`62fc80731f0045c170634690bda1c26d1880f185`** (the family's last main state; `git show -s typed-profiles/last-main-2026-09-16`). Nothing in this lane rewrites them.
-- **The golean revision the family depends on** («pin these modules to the version of golean which they depend on»): that same SHA — the family compiles against exactly the `GoLean/GoCore/` of `62fc8073`; B7 will change that API.
-- **Destination (NAME PROVISIONAL — the [USER]'s words):** a new repository under gitignored `deps/` — «golean-reasoning or something like that»; the survey's proposal is `deps/reasoning-revival/golean-logic/` (`docs/2026-09-16_reasoning-archaeology.md` §9, branch `docs/reasoning-archaeology-0916`), consuming golean as a PINNED dependency. Not created by this lane (`deps/` is another agent's workspace).
+- **The golean revision the family depends on** (pin the modules to the golean version they depend on): that same SHA — the family compiles against exactly the `GoLean/GoCore/` of `62fc8073`; B7 will change that API.
+- **Destination (NAME PROVISIONAL — the [USER]'s words):** a new repository under gitignored `deps/` — a name like golean-reasoning; the survey's proposal is `deps/reasoning-revival/golean-logic/` (`docs/2026-09-16_reasoning-archaeology.md` §9, branch `docs/reasoning-archaeology-0916`), consuming golean as a PINNED dependency. Not created by this lane (`deps/` is another agent's workspace).
 - **Revive:** `git checkout typed-profiles/last-main-2026-09-16 -- GoLean/GoCore/Boolean*.lean GoLean/GoCore/Recovery*.lean GoLean/Interface.lean Tests/ scripts/ tools/` (then the nine `lakefile.toml` libraries, registry rows and ci steps from the same tag), or consume golean at the pin from the reasoning repository and move the 57 modules there.
 
 ## 3. What STAYED, what MOVED, what was re-wired (every core-guarding check survives)

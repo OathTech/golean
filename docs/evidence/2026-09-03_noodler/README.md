@@ -1,16 +1,14 @@
 # Noodler probe record — semantic-edge hunting across ~30 language areas (2026-09-03)
 
 [AGENT] Lane `noodler` ([USER]-directed 2026-09-03; the brief reached
-this lane by [AGENT]-coordinator relay, not firsthand — Mike, verbatim
-as relayed: «send off an agent briefed to be 'the noodler' - i.e to
-write new test cases which expose semantic edges we haven't already
-discovered. The noodler's job is to persistently poke and prod, find
-places that our semantics either (1) doesn't match what gc does, or
-(2) where our semantics does something the go semantics implies it
-shouldn't do. Broad brief in a worktree, making sure to rule out of
-scope all the seams we already know about. The noodler's test cases
-themselves should be rolled into our suite, whether or not they found
-new issues»). Consuming documents: `docs/2026-09-03_noodler-report.md`
+this lane by [AGENT]-coordinator relay, not firsthand — Mike, as
+relayed: an agent briefed as the noodler writes new test cases that
+expose semantic edges not already discovered, persistently probing
+for places where the semantics (1) does not match gc or (2) does
+something the Go semantics implies it should not; a broad brief in a
+worktree, with every known seam ruled out of scope; the noodler's
+cases are rolled into the suite whether or not they found new
+issues). Consuming documents: `docs/2026-09-03_noodler-report.md`
 (the lane report; cites this dir), `docs/BUGS.md` BUG-087 / BUG-086
 (cite the two probe sub-dirs), the corpus packages under
 `Corpus/coverage/exec/noodler/` (the rolled-in cases; every row is a

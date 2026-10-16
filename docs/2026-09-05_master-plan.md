@@ -18,13 +18,8 @@ and nothing here is one.
 
 ### 0.1 The commission
 
-[USER] Mike, 2026-09-05, verbatim as relayed by the [AGENT] coordinator
-(cited as relayed, not firsthand — the U0-incident convention): «I think
-it'd be good to write this all up in a dated 'master plan' doc, and then
-I can get another agent to do a whole-project review. … The plan should
-include the whole roadmap to making golean a 'good' go semantics (as we
-understand it now) broken down by technical packages and then broader
-goals if there are some we haven't decomposed yet».
+[USER] Mike, 2026-09-05, as relayed by the [AGENT] coordinator
+(cited as relayed, not firsthand — the U0-incident convention): write it all up as a dated master-plan document, for a whole-project review by another agent; the plan to include the whole roadmap to a good Go semantics as then understood, broken down by technical packages, then any broader goals not yet decomposed.
 
 Two readers: (a) the [USER]; (b) an independent whole-project review
 agent that will use this document as its map. Everything is therefore
@@ -125,11 +120,9 @@ corpus structure `docs/coverage-suite-structure.md`; `docs/BUGS.md`;
 
 ### 1.1 The two top-level goals
 
-[USER] Mike, 2026-09-04, verbatim as relayed by the [AGENT] coordinator
+[USER] Mike, 2026-09-04, as relayed by the [AGENT] coordinator
 (`CLAUDE.md` "What this repo is"; ruling record
-`docs/2026-09-04_reasoning-surface-plan.md` §5.4): «(1) to be a highly
-accurate go semantics, and (2) to support reasoning about go using an
-iris-lean layer (which we won't build, that's a customer)».
+`docs/2026-09-04_reasoning-surface-plan.md` §5.4): the two top-level goals: (1) a highly accurate Go semantics, (2) support for reasoning about Go through an iris-lean layer, which a customer builds.
 
 Goal (1) is this repo's product. Goal (2) is served by shipping the
 consumer interface the customer needs (`GoLean/Interface.lean`, plan
@@ -303,7 +296,7 @@ shadow-type=5 (the `sync/atomic` typed wrappers); init-callee=3
 (`os.Getenv`, `os.LookupEnv`, `time.Date`). Library pin
 `baselines/stdlib-pin.tsv` (69 lines). Shim history: 20 (freeze) → 14
 (slice 1) → 7 (slice 2) → 6 (cmp.Compare retired 2026-09-04,
-[USER] «(2) given we have a plan, I think this should be an honest red»,
+[USER] (with a plan in hand, an honest red beats the desugar),
 `docs/stdlib-admission-register.md:263-265`).
 
 ### 2.5 Downstream subjects
@@ -508,9 +501,8 @@ status column to `7677865a`.
 | 14 | pin offer — G-PIN | RULED [USER] 2026-09-04 (conditions plan §5.3) | plan §5.3 |
 
 Gate provenance: all nine gates (G-U, G-C5, G-C1, G-C2, G-P, G-C3, G-C4,
-G-OUT, G-PIN) RULED [USER] 2026-09-04 as recommended («let's move ahead
-with the plan», relayed) and the coordinator's per-gate reading
-CONFIRMED [USER] 2026-09-05 («(1) approved», relayed; plan §5.4 second
+G-OUT, G-PIN) RULED [USER] 2026-09-04 as recommended (the plan approved, relayed) and the coordinator's per-gate reading
+CONFIRMED [USER] 2026-09-05 (item (1) approved, relayed; plan §5.4 second
 ruling record, landed `426af905`). Disclosed ordering: G-U and G-OUT
 implementations landed before the confirmation arrived (plan §5.4).
 
@@ -735,7 +727,7 @@ pinned GOROOT source lowered through the frontend (source-through),
 with the residual `unsafe`/runtime sites handled by byte-checked
 overlays or named refusals, and language primitives capped and
 [USER]-admitted. Plan of record: `docs/2026-09-03_stdlib-boundary-design.md`
-(G1-G9 RULED [USER] 2026-09-03 «(3) agree, go ahead with the plan»,
+(G1-G9 RULED [USER] 2026-09-03 (the plan approved, item (3)),
 memo 894-900) + the register `docs/stdlib-admission-register.md` (G8).
 
 **Current state.** §2.4. Slices 1-3 LANDED (slice 1 `9acf0f43` +
@@ -847,8 +839,7 @@ debts.
 **Work items.**
 
 1. **E13 sibling panic order as latitude — option (b)** — RULED [USER]
-   2026-09-05 («we should do what the standard supports, and avoid
-   over-refusal if we can. That's what (b) means right?», relayed;
+   2026-09-05 ((do what the standard supports and avoid over-refusal where possible — option (b)), relayed;
    e13-b note §0); LANDED `2fb7d54d` + fix rounds `7a5cd534` /
    `42893297` / `e4d785de` (round-17 train, records `7677865a`). Adds
    site `ChoiceSite.unseqPanic` (the 12th) and `Stmt.unseqProbe`; retires the
@@ -931,15 +922,15 @@ debts.
    (doctrine register #1 residue (ii), verified 2026-08-31).
 8. **Sampling and membership certification** — RULED [USER] 2026-09-03
    (K=32/K=80, alternate plain/`-race`, early stop at `members=` never
-   before two draws — «spirit of the ruling», option A); strict-lane
-   depth guard RULED («(6) strict-lane, agree», `docs/assessment/
+   before two draws — the spirit of the ruling, option A); strict-lane
+   depth guard RULED ((item (6), strict-lane, agreed), `docs/assessment/
    decisions-2026-08-31.md` addendum :87; `membership-depth.md:452`): 3
    rows → confluent, 5
    scheduling + 15 capacity → `depth=N` (a FINDING: their state graphs
    do not close within 40 GB / 60M work), 16 noodler rows routed. Open:
    P3 pin `members=` on the 10 unpinned membership rows (PROPOSED,
    membership-depth §6); P4 periodic menu-invariant audit DEFERRED
-   ([USER] «others: lower priority for now?», `decisions-2026-08-31.md:
+   ([USER] deferred the others as lower priority, `decisions-2026-08-31.md:
    87, 102`); close the 16 `depth=N`
    rows to `confluent` (needs the reduction lane).
 9. **Census hygiene** — the §0 mirror's `file:line` cites are stale
@@ -997,7 +988,7 @@ the re-pin guard. Strict-lane depth guard LANDED `82f74922` (lane `strict-routin
 sampling budget LANDED `f98d4919` (lane `sampling-budget`; the
 two-draw floor as ruled). Step 5a (slow-tier re-cert
 after any train touching `wire.go`/`NativeToIR.lean`; [USER] 2026-09-04
-«Yeah, that make sense, let's adopt that», `operational-lessons.md:
+(adopted), `operational-lessons.md:
 435-484`) ran at rounds 13/14/15 (`ac45aedd`, `8fce7625`, `076f5eec`).
 Reconciler C9 at `7677865a` said the wire schema had moved after the
 last certification (6 commits, incl. `21bb79f7`, `7bc0f9ca`, `249dc607`
@@ -1025,7 +1016,7 @@ disagreement, empty stream, < 4 reports) = `nondet` FAIL, never a pass
    FINDING, never a re-pin; `CLAUDE.md` 5a). Nothing owed here at this
    tip.
 2. **Periodic legs cadence** — PROPOSED [AGENT] in each report, not
-   RULED (the [USER]'s 2026-09-03 «others: lower priority for now?»,
+   RULED (the [USER]'s 2026-09-03 deferral of the others as lower priority,
    `docs/assessment/decisions-2026-08-31.md:87, 102`, deferred them): gotest triage nightly-class + on fragment widening /
    eval-order change / oracle re-pin (`gotest-triage.md:291-296`);
    grossmith weekly 20k leg (~18-30 min), full two-leg per frontier
@@ -1042,8 +1033,7 @@ disagreement, empty stream, < 4 reports) = `nondet` FAIL, never a pass
 5. **Grossmith**: harden the `diff-coverage:1370` fan-out (trusted
    surface — recommended, not done); add `fatal`/`fuel-out` to the
    external adapter's status sets; the E13 string-slice axis probe row
-   owed; L-016 upstream filing pending a P5 policy ([USER]: «record in
-   our gc bug backlog», decision 0.12). Widening ladder (report §7):
+   owed; L-016 upstream filing pending a P5 policy ([USER]: record it in the gc bug backlog, decision 0.12). Widening ladder (report §7):
    non-observable defer form → pointers → floats → stdlib narrow slice →
    generics → concurrency.
 6. **gotest extensions** (report 291-296): statement-position print/
@@ -1226,8 +1216,7 @@ differentially validated, stage 4 replaying etcd's datadriven traces
 A-F: FR-9 (imported named types, raft-path, BUG-008); E7's re-envelope
 (init order — BUG-061 is raft's `staticinit` shape); the init-order
 deviation pin `baselines/pins/hidden-dep-order.observation.json` stays
-red by design until then. No lane live; the [USER] said 2026-09-03 «we're
-not running Raft right now» (register 136-139) — restart is a [USER]
+red by design until then. No lane live; the [USER] said 2026-09-03 that Raft is not being run now (register 136-139) — restart is a [USER]
 call.
 
 **cedar-go + cedar-access-control-for-k8s.** Refinement target
@@ -1361,7 +1350,7 @@ recommendation here is PROPOSED [AGENT]; none is a ruling.
    consumer asks; re-pose when the NPDRF proof investment is decided.
 2. **Runtime features: GC observability, finalizers, scheduler fairness,
    Goexit, timers.** Known: fairness is a hypothesis on the chosen sequence, not a machine
-   constraint ([USER] 2026-09-02 verbatim in the doctrine's "Scheduling
+   constraint ([USER] 2026-09-02 in the doctrine's "Scheduling
    and fairness" paragraph: «Fairness is an assumption about the
    sequences that are chosen»); `Goexit` is the memory model's one
    frontier section (Q-GOEXIT held, `TODO.md:359-362`); GC-dependent
@@ -1729,7 +1718,7 @@ and assurance architecture, not a recommendation to start over.» Of the
 four-lane wave in §5.2: «I would not launch the whole proposed four-lane
 wave unchanged.»
 
-The [USER]'s two statements on the review, verbatim as relayed:
+The [USER]'s two statements on the review, as relayed:
 
 - **Q1** (on F10, the home of the semantic relation): «I agree btw, that
   it makes sense for the relational semantics to live in this repo. In
@@ -1739,7 +1728,7 @@ The [USER]'s two statements on the review, verbatim as relayed:
   and proof. So we should build both in this repo, with a thin enough
   customer layer that we can feel confident we are building the right
   thing».
-- **Q2** (sequencing): «let's update the master plan first» — i.e. this
+- **Q2** (sequencing): update the master plan first — i.e. this
   document is amended (this addendum) BEFORE any lane of the revised
   wave launches. Q2 rules the order; it does not itself rule the wave's
   content (§7.4).
@@ -2026,7 +2015,7 @@ relayed, not firsthand. Everything not so marked is [AGENT].
 #### 7.8.1 The ruling, the plan, the sign-offs
 
 The sprint chartered on 2026-09-05 (`docs/2026-09-05_typed-consumer-sprint-charter.md`,
-K1–K5 «Agree with all 5», relayed) ran on branch `typed-consumer-sprint`
+K1–K5 all five approved, relayed) ran on branch `typed-consumer-sprint`
 (96 commits over `47195683`, tip `7edc298f`) and was PAUSED BY THE USER on
 2026-09-06 (`docs/2026-09-06_typed-sprint-pause-state.md`). Two independent
 landing audits (`docs/2026-09-07_landing-audit-{A,B}.md`) returned
@@ -2034,19 +2023,13 @@ DO-NOT-LAND as one train step: one semantic BLOCKER (A-R1, the
 `string-member` lane green on rows divergent from gc), a records BLOCKER
 (B-R7, the 114 MB evidence payload), the dirty tip (A-R7/B-R1), a latitude
 override (B-R13) and a standing-permission hunk (B-R5). The [USER] ruled
-(Mike, 2026-09-07, verbatim as relayed): «The evidence blob should not land,
-and generally we should not dump big evidence bundles on main (they can't
-be easily hosted on GH for one). Can you make a plan to land this work
-cleanly? We'll want to decompose and land in sane chunks that can be
-reviewed. And where appropriate fix some of the issues, eg. the choice tape
-stuff». The plan of record for the landing is
+(Mike, 2026-09-07, as relayed): the evidence blob does not land and big evidence bundles are not dumped on main (they cannot be hosted on GitHub); the work is to be landed cleanly by a plan, decomposed into reviewable chunks, with some of the issues (the choice tape among them) fixed where appropriate. The plan of record for the landing is
 `docs/2026-09-07_typed-sprint-landing-plan.md` (chunks L1–L6, L5 held;
 principles: the committed tip is the artifact, path selection never merge,
 one squashed commit per chunk crediting sprint SHAs, evidence per chunk =
 gate tails + small witnesses, no gate weakened). Rounds 20–24 executed it;
 each chunk merged to main on a separate at-that-moment [USER] sign-off,
-relayed — «Go ahead and merge it» (×2), «go ahead and merge», «Go ahead
-with the merge» (the last, round 24 = L3, also ruling D2, D5, the
+relayed — «Go ahead and merge it» (×2), (merge sign-off), (merge sign-off) (the last, round 24 = L3, also ruling D2, D5, the
 BUG-087-shape extension and the C4 re-classification as the L3 note posed
 them — tracked in `docs/2026-08-31_qrow-rulings.md`, "The merge-train
 round-24 ruling record").
@@ -2256,8 +2239,7 @@ channel; invalid first lines red by name; the escape form never a member),
 **the BUG-087-SHAPE extension** (a demonic choice where gc's realization is
 toolchain-internal, applied to the `[recovered, repanicked]` marker under
 R-1) and **the C4 (c)→(a) re-classification** of `repanic-same-value-abort`
-— RULED [USER] 2026-09-07 at merge-train round 24, «Go ahead with the
-merge» (relayed; the merge-ask listed exactly those four items). The
+— RULED [USER] 2026-09-07 at merge-train round 24, (merge sign-off) (relayed; the merge-ask listed exactly those four items). The
 tracked ruling record is `docs/2026-08-31_qrow-rulings.md`, "The
 merge-train round-24 ruling record"; every PENDING tag L3 wrote now reads
 RULED there and in the L3 note §7.2.
@@ -2288,10 +2270,10 @@ is the record. New fidelity bugs from the review: BUG-108 (file
 selection), BUG-109 (module `go` directive), BUG-110 (decoder fail-open =
 F9 of §7.2). Its §16 roadmap is NOT adopted (customer-framed).
 
-Scope: the [USER] ruling of 2026-09-11 (quoted verbatim in the note — the
+Scope: the [USER] ruling of 2026-09-11 (recorded in the note — the
 semantics is the product; no customer; state cleanup + regular structure +
 the relational definition + fidelity; limited validating spikes;
-«Everything else should be dropped») supersedes, wherever they conflict,
+everything else dropped) supersedes, wherever they conflict,
 §1.1's goal (2) as a programme, §1.6, §3.A's consumer-interface exit
 artifact, and §7.4's Gate A / G-PIN framing — the mapping to sections is
 the [AGENT] coordinator's reading, the ruling is the [USER]'s. The next

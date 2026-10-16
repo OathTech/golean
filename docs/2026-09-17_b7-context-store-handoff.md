@@ -3,12 +3,10 @@
 [AGENT] worker, lane `core/b7-context-store-0917` (branch of the same name, base
 main `7f1c1fe7`), 2026-09-17. The brief is the charter
 `docs/2026-09-16_b7-context-store-charter.md` with its §9 decisions ALL RULED
-([USER] Mike, 2026-09-16, verbatim, relayed by the [AGENT] coordinator — cite as
-relayed: «Yes, let's go ahead with the D1-8 rulings as recommended (aside from
-D3)»; D3 ruled separately the same day: PARK; record
+([USER] Mike, 2026-09-16, relayed by the [AGENT] coordinator — cite as
+relayed: (the D1-8 rulings approved as recommended, D3 aside); D3 ruled separately the same day: PARK; record
 `docs/2026-08-31_qrow-rulings.md`, «The B7 charter rulings record (2026-09-16)»).
-Dispatch authority: [USER] 2026-09-17, verbatim, relayed: «Great, land it, then
-launch B7». Evidence: `docs/evidence/2026-09-17_b7-context-store/README.md` (gate
+Dispatch authority: [USER] 2026-09-17, relayed: (landing approved, B7 to launch). Evidence: `docs/evidence/2026-09-17_b7-context-store/README.md` (gate
 lines, census, probe, warm measurement). Slice entries:
 `docs/hygiene-slice-log.md` (the B7 section at its tail); the landing-record row:
 `docs/2026-09-03_design-hygiene-arc.md`.
@@ -20,8 +18,8 @@ the SHAs named below are the PRE-rebase ones and map to `fc1aa228 → 66fe1092`
 (this handoff's first version); the Lean tree is byte-identical across the
 rebase (`git diff 2500b434 73ad798d -- GoLean Tests lakefile.toml
 lake-manifest.json lean-toolchain` empty). The fix round then landed the §8
-rulings ([USER] Mike, 2026-09-17, verbatim, relayed by the [AGENT] coordinator —
-cite as relayed: «We should delete the vacuous conjunct right? that's just a strict improvement. The rewordings sound fine. Agree with the audit, go ahead and launch (after the rulings if relevant)»): runtime commit
+rulings ([USER] Mike, 2026-09-17, relayed by the [AGENT] coordinator —
+cite as relayed: (the vacuous conjunct deleted as a strict improvement; the rewordings accepted; the audit agreed, launch approved after any relevant rulings)): runtime commit
 `1fafc9f2` (the pool-side `itersNormalized` conjunct and the predicate family
 deleted — §4 «Fix round», §8), gated at its tree (§2, fix-round row), followed
 by the records commit this text is part of.
@@ -234,32 +232,31 @@ rounds respectively, each a compiler-guided batch of destructuring-arity edits).
 
 ## 8. The handoff's [USER] items — RULED 2026-09-17, DONE in the fix round
 
-Ruling: [USER] Mike, 2026-09-17, verbatim, relayed by the [AGENT] coordinator —
-cite as relayed: «We should delete the vacuous conjunct right? that's just a strict improvement. The rewordings sound fine. Agree with the audit, go ahead and launch (after the rulings if relevant)». Record: `docs/2026-08-31_qrow-rulings.md`,
+Ruling: [USER] Mike, 2026-09-17, relayed by the [AGENT] coordinator —
+cite as relayed: (the vacuous conjunct deleted as a strict improvement; the rewordings accepted; the audit agreed, launch approved after any relevant rulings). Record: `docs/2026-08-31_qrow-rulings.md`,
 «The B7 handoff rulings record (2026-09-17)».
 
 1. **The pool-side `itersNormalized` conjunct** (`ThreadWf bound types t`, hence
    `MultiWf ctx m`) — as posed: the same constantly-true predicate D6 deleted
    from `MachineWf`, kept because the ruling named `MachineWf`; deleting it is a
    restatement of `ThreadWf`/`MultiWf` + the proof sites in `MultiWfSound.lean`
-   and makes `MultiWf` context-free. **RULED delete** («We should delete the
-   vacuous conjunct right? that's just a strict improvement»). **DONE**, runtime
+   and makes `MultiWf` context-free. **RULED delete** ((the vacuous conjunct deleted as a strict improvement)). **DONE**, runtime
    commit `1fafc9f2`: §4 «Fix round» lists every restated statement; 195 code
    lines naming the predicate → 0; first-round build, 0 warnings; gate at the
    same expected red set (§2).
 2. **`Cont.itersNormalized`/`Config.itersNormalized` and their `_true` lemmas** —
    as posed: inert once (1) lands, to be deleted with it. **RULED with (1)** —
-   the [AGENT] reading of «strict improvement» (relayed by the coordinator in
+   the [AGENT] reading of the strict-improvement ruling (relayed by the coordinator in
    the fix-round brief): dead predicates leave with the conjunct, UNLESS
    something outside the core still names them. Checked: `git grep -n
    itersNormalized -- ':!GoLean/GoCore'` names only docs (no `Tests/`, no tool,
    no spike) — so **DONE**: the 16 declarations tombstoned in §4.
 3. The **`Store.updateCell` refusal text** still naming `ExecState.alloc`
    (byte-preserved per the charter; owed wording refresh — C1's seam) —
-   **RULED as landed** («The rewordings sound fine»): stays byte-preserved here;
+   **RULED as landed** ((the rewordings accepted)): stays byte-preserved here;
    the refresh remains C1's.
 4. The **setup refusal text** («… or function body …» dropped at both seams,
-   §7) — **RULED as landed** («The rewordings sound fine»): the disclosed
+   §7) — **RULED as landed** ((the rewordings accepted)): the disclosed
    wording stands; no revert.
 
 ## 9. What B7 leaves to C1 / C3 / P (the charter §5 item 4; `docs/2026-09-11_bug090-rediagnosis.md` §5)
@@ -350,8 +347,8 @@ records-class**: `docs/2026-09-17_b7-context-store-audit.md` on branch
 evidence `docs/evidence/2026-09-17_b7-context-store-audit/`). Its verdict line:
 no finding at WRONG-ANSWER, UNSOUND-PROOF, WEAKENING, COHERENCE-GAP or
 FAIL-OPEN severity; no gate weakening. Authority to act: [USER] Mike,
-2026-09-17, verbatim, relayed by the [AGENT] coordinator — cite as relayed:
-«Agree with the audit, go ahead and launch». The dispositions below are
+2026-09-17, relayed by the [AGENT] coordinator — cite as relayed:
+(the audit agreed, launch approved). The dispositions below are
 [AGENT]'s (the coordinator's, disclosed to the [USER] at the merge ask) except
 where marked PENDING [USER].
 
@@ -383,7 +380,7 @@ everything else that differs is an interpolation ARGUMENT rename
    `CLI.enumSetup`, ×2): «seeded state ill-formed: a location in a global cell
    **or function body** dangles beyond the allocator bound» → «… in a global
    cell dangles …». **DISCLOSED** (§7, §8.4) and **RULED as landed** ([USER]
-   2026-09-17, relayed: «The rewordings sound fine»). Reason: the check is
+   2026-09-17, relayed: (the rewordings accepted)). Reason: the check is
    heap-only now and a message naming an unperformed check would be a
    fail-noisy lie. STANDS.
 2. `Store.updateCell`'s `.internal` «allocation goes through `ExecState.alloc`

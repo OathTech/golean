@@ -5,14 +5,12 @@
 (`review/eval-order-model-v2-0916` @ `b788e582`; evidence `docs/evidence/2026-09-16_eval-order-v2-review/`, `check.py`)
 — «Keep the graph architecture; revise the first implementation slice»: its R1–R6 and §2–§5 are applied below, marked
 where they changed; this note is its Stage A and the implementation handoff (§7, §9). It implements as a design the
-ruling of [USER] Mike, 2026-09-16, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Okay, so this feels
-like sort of a profound decision, but I think the Cerberus model is the correct one (they did a lot of work thinking
-through such issues). Can you go ahead with the next steps?» (record: `docs/2026-08-31_qrow-rulings.md`, «The
+ruling of [USER] Mike, 2026-09-16, relayed by the [AGENT] coordinator — cite as relayed: (a deliberate, profound decision: the Cerberus model is the correct one, that project having thought such issues through; the next steps approved) (record: `docs/2026-08-31_qrow-rulings.md`, «The
 evaluation-order mechanism ruling record (2026-09-16)»; sequence: `docs/2026-09-11_review-dispositions.md` §4 step 4).
 The v1 note (`design/eval-order-model-0915` @ `90dc66f0`, unmerged) keeps its §1 relation and doctrine rule
 (spec-ordered → structural ANF in the frontend; spec-unordered with an observable → a tape choice; the rest refuses by
 name); its endpoint probe-and-use mechanism is RETIRED. First review: `docs/2026-09-15_evaluation-order-model-review.md`
-(F1–F9). The mechanism is decided; nothing here re-opens it. Rulings are [USER] verbatim-as-relayed or PENDING [USER];
+(F1–F9). The mechanism is decided; nothing here re-opens it. Rulings are [USER] as relayed or PENDING [USER];
 everything else is [AGENT]. Code anchors verified at `433e7490`.
 
 ## 1. The relation, re-founded: a dependency graph over evaluation occurrences
@@ -262,7 +260,7 @@ The lane handoff `docs/2026-09-16_unseq-stage-b-handoff.md` §2/§9 mirrors this
 
 ## 5. Decisions PENDING [USER] — posed, not ruled; recommendations only
 
-**RULED [USER] 2026-09-19** («Agree, merge», relayed; record: `docs/2026-08-31_qrow-rulings.md`, «The C1 completion and Stage C
+**RULED [USER] 2026-09-19** ((agreed; merge approved), relayed; record: `docs/2026-08-31_qrow-rulings.md`, «The C1 completion and Stage C
 rulings record (2026-09-19)»): width of P = (ii) ALL mutable reads, STAGED (the Stage C pilot carries the minimal P(ii) reads its
 fixtures need, then widens); N1 = SPLIT (base/header and index producers + one checked access); N3 = REFUSE by name on budget
 exhaustion, rows may go red. N4 (ladder position) was ruled 2026-09-18 (Stage C after C1). The items below are kept as posed;

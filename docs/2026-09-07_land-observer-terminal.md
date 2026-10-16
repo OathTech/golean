@@ -13,10 +13,7 @@ landed), auditor A's R6/R8/R9/R10 and §1, auditor B's R14 and landability row
 the sprint wrote them.
 
 [USER] ruling (Mike, 2026-09-07, relayed by the [AGENT] coordinator — cite as
-relayed): «The evidence blob should not land, and generally we should not
-dump big evidence bundles on main (they can't be easily hosted on GH for
-one). … We'll want to decompose and land in sane chunks that can be reviewed.
-And where appropriate fix some of the issues, eg. the choice tape stuff».
+relayed): the evidence blob does not land and big evidence bundles are not dumped on main (they cannot be hosted on GitHub); the work is to be landed cleanly by a plan, decomposed into reviewable chunks, with some of the issues (the choice tape among them) fixed where appropriate.
 [USER] direction for this chunk (relayed, same day): land in reviewable
 chunks; fix where appropriate; DEFAULT for the open pre-`main` question is
 "stay RED, fail-closed, each on a `Cases:` line with the cause written", the

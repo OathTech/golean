@@ -2,8 +2,7 @@
 
 Successor of `docs/2026-09-18_c1-memory-module-s2c-handoff.md` (S2c + BUG-111, LANDED on main at
 train r42, `3b99f42f`/`0f114df6`). Authority: the C1 charter `docs/2026-09-17_c1-memory-module-charter.md`
-(§2 cost B, §6 S3's targets; §7 D1–D7/D9/D10 RATIFIED [USER] Mike 2026-09-18 «(1) agree, (2) agree. Go
-ahead», relayed by the [AGENT] coordinator — record `docs/2026-08-31_qrow-rulings.md`), and the sequencing
+(§2 cost B, §6 S3's targets; §7 D1–D7/D9/D10 RATIFIED [USER] Mike 2026-09-18 (items (1) and (2) agreed, go-ahead given), relayed by the [AGENT] coordinator — record `docs/2026-08-31_qrow-rulings.md`), and the sequencing
 ruling that S3 completes C1 before Stage C. Every decision below is [AGENT] unless marked [USER]. Base: main
 `0f114df6`. Worktree `.claude/worktrees/c1-s3`. Evidence `docs/evidence/2026-09-19_c1-memory-module-s3/`.
 Completion note: `docs/2026-09-19_c1-memory-module-completion.md`.
@@ -278,8 +277,7 @@ COHERENCE-GAP, FAIL-OPEN or SCOPE finding; the refusal-class change was probed u
 candidate = gc); the eight reordered W arms observationally silent (28 panic-path programs); the boundary rule's
 `rfl` confirmed and 183 concurrency rows enumerated byte-identical on both binaries; the four charter §6 targets
 reproduced MET, the two AFTER-2 by-the-letter misses shown to be jitter (0 of 42 ratio samples over the lines in
-six further runs); the five records claims reproduced. Authority for the round: [USER] Mike 2026-09-19 «Go ahead
-with the audit» (verbatim, relayed by the [AGENT] coordinator); the dispositions below are the coordinator's
+six further runs); the five records claims reproduced. Authority for the round: [USER] Mike 2026-09-19 (the audit launched) (relayed by the [AGENT] coordinator); the dispositions below are the coordinator's
 ([AGENT]) and are disclosed at the merge ask. Two commits: the docstring commit (gated — it touches `GoLean/`)
 and this records commit.
 

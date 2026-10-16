@@ -2,7 +2,7 @@
 
 Lane `core/method-promotion-0928`, worktree `.claude/worktrees/method-promotion`, off main `89792db1` (train r53 close).
 Specification: `docs/2026-09-28_gp-method-promotion-design.md` (G-P PASSED, all ten §6 decisions as recommended — [USER] Mike
-2026-09-28 «Go ahead and land, and approve the decisions as proposed», relayed by the [AGENT] coordinator; rulings ledger
+2026-09-28 (landing approved with the decisions as proposed), relayed by the [AGENT] coordinator; rulings ledger
 «G-P (native method promotion) passed»). Writer: [AGENT] worker. Any deviation from a ruled decision is a new design gate:
 posed in §3 below, that item STOPPED.
 
@@ -121,8 +121,8 @@ Design §5 S1, §4 (the wire), §2 S2 (b) (the validation). Every ruled decision
 ### S2 — the switch (the machine consumes the records; the wrappers are gone)
 
 Design §5 S2, §2 S1–S10, §3, §4 (decisions 1–10 as recommended, [USER] 2026-09-28 relayed); PLUS the coordinator's
-[USER]-ruled addition, quoted verbatim as relayed to this worker ([AGENT] lane worker → [AGENT] S2 sub-worker,
-2026-09-28): «Coordinator addition, [USER]-RULED ([USER] Mike 2026-09-28, verbatim, relayed: «Agree on (1)» — the logic
+[USER]-ruled addition, quoted as relayed to this worker ([AGENT] lane worker → [AGENT] S2 sub-worker,
+2026-09-28): «Coordinator addition, [USER]-RULED ([USER] Mike 2026-09-28, relayed: (option (1) agreed) — the logic
 team's request 6, option 1): frames record which function they belong to. In the same reshape where you delete
 `Cont.frame`'s `wrapper` field, add a field carrying the callee's `FuncId` (set by `enterFrame` from the `fid` it
 resolves), so a client can observe "f returned v" from the configuration at frame exit. It is a representation field
@@ -745,7 +745,7 @@ This section was written after that gate, records only, in the next commit.
 
 ## Merge train r55 — the 5a record ([AGENT] coordinator, 2026-09-29)
 
-[USER] Mike 2026-09-29 «sound good, acknowledged the move» (relayed; rulings ledger «Train r55»). Pre-merge main `4e7272b3` →
+[USER] Mike 2026-09-29 (acknowledged) (relayed; rulings ledger «Train r55»). Pre-merge main `4e7272b3` →
 `refs/snapshots/r55/main`; train tip `fb93f822` fast-forwarded. `release-check` EXIT=2 (EXPECTED — STALE,
 `build/files/GoLean/CLI.lean`). The first `ci --slow` (1033 s) was red on the 5a pair, but the slow-tier row refused BEFORE
 re-certifying: «certified record wire-sha256 missing, duplicated or STALE» — P's wire schema v2 changed the fixture's wire. JSON

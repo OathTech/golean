@@ -5,8 +5,7 @@ plan `docs/2026-09-03_design-hygiene-arc.md`; source proposals
 `docs/2026-09-03_grumpy-professor-review.md` §3(b) B2, B3, B8 and §3(a)
 A7 (folded in here per the A-series note §A7)). Provenance: [AGENT]
 execution inside the [USER]-ratified arc (Mike, 2026-09-03, relayed by
-the [AGENT] coordinator, not firsthand: «Great, let's do it as you
-propose … our aim is to get the *nicest* faithful go semantics»); every
+the [AGENT] coordinator, not firsthand: proceed as proposed; the aim is the nicest faithful Go semantics, so the bigger breaking changes are wanted too, scheduled later or now); every
 design choice below is [AGENT] unless marked. Evidence dir:
 `docs/evidence/2026-09-04_hygiene-wave3/`. Template: the A-series note.
 

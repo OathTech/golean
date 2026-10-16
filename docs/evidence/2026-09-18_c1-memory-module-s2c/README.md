@@ -101,8 +101,8 @@ main's certified binary `42b7bf1a…` (`.tmp/golean-main`, read-only copy).
 
 ## Merge train r42 — the 5a record ([AGENT] coordinator, 2026-09-19)
 
-[USER] Mike 2026-09-19, verbatim (relayed): «Great, merge it. Then is the next piece on NaN to just do an
-investigatory memo? If so do that». Pre-merge main `42023bd9` → `refs/snapshots/r42/main`; S2c + BUG-111
+[USER] Mike 2026-09-19 (relayed): the merge sign-off, with the NaN investigatory memo as the next
+piece. Pre-merge main `42023bd9` → `refs/snapshots/r42/main`; S2c + BUG-111
 + the ratification record (`ad594e0b`) fast-forwarded; the audit branch rebased (`8ca55b17`) and
 fast-forwarded; the NaN memo rebased (`3b99f42f`) and fast-forwarded (records). Under the lock at
 `3b99f42f`: `scripts/build-certified` EXIT=0, 118 s (binary `da7bb8376164…` — the fix
@@ -113,7 +113,7 @@ drift line `imported-goose/channel/google-search PASS→FAIL/membership`); 3686 
 negatives 394 no regression. Tail: `r42-ci-slow.tail.txt`. Candidate vs tracked record: `claim` and
 `observations` IDENTICAL; 18 input hashes differ (S2c's core files) and the receipt (clean `3b99f42f`,
 binary `da7bb837…`) — INSTALLED in this commit; a provenance refresh, not a re-pin. This commit also
-records the NaN ruling ([USER] «NaN: sounds good to me» = [a]+[b]): the rulings-ledger entry, R7's heading
+records the NaN ruling ([USER] (the NaN plan accepted) = [a]+[b]): the rulings-ledger entry, R7's heading
 corrected to the memo's pre-implementation text, BUG-094's PLAN.
 
 **Green re-run at the records commit `ede220cb`** ([AGENT] coordinator, 2026-09-19): full

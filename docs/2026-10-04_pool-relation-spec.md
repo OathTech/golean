@@ -1,11 +1,9 @@
 # The pool/registry half — the SPEC PACKET (a named design gate)
 
-[AGENT design worker, lane `design/pool-relation-spec-1004`] 2026-10-04. Authority: [USER] Mike 2026-10-04 «Great,
-launch it» (relayed by the [AGENT] coordinator — cite as relayed), approving: a spec packet — frozen definitions,
+[AGENT design worker, lane `design/pool-relation-spec-1004`] 2026-10-04. Authority: [USER] Mike 2026-10-04 (launch approved) (relayed by the [AGENT] coordinator — cite as relayed), approving: a spec packet — frozen definitions,
 exact statements, a `sorry`'d skeleton outside the build, this note — as a NAMED DESIGN GATE (a HARD STOP for
-[USER] review), then a Codex grind under a tight brief («Codex is good at tightly specified difficult 'grinds' on
-hard theorems. We would want to give enough flex it could build successfully, without giving too much space for
-drift» — [USER], same day). **Nothing here is proved and no grind has started.** Every decision below was [AGENT];
+[USER] review), then a Codex grind under a tight brief (Codex being suited to tightly specified hard-theorem grinds, with
+enough flex for the build to succeed and not so much that it drifts — [USER], same day). **Nothing here is proved and no grind has started.** Every decision below was [AGENT];
 the gate was RATIFIED by the [USER] on 2026-10-04 (§9) and the statements then passed an adversarial statement
 review whose findings are applied (§10).
 
@@ -168,7 +166,7 @@ baseline touched; the differential was not run (records and Prop definitions onl
 
 ## 9. Ratification
 
-[USER] Mike, 2026-10-04 (verbatim, relayed by the [AGENT] coordinator — cite as relayed): «Approved» — ratifying
+[USER] Mike, 2026-10-04 (relayed by the [AGENT] coordinator — cite as relayed): (approved) — ratifying
 §8's questions 1–7 as recommended, and ordering an adversarial statement review before the grind (§10). Outcomes:
 
 1. **Label** — `StepEvent` verbatim (`who`, `action`, the full `StepLabel`), as D1.

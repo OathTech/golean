@@ -9,11 +9,7 @@ every justification that named a downstream logic is re-justified below by the s
 
 ## 1. Authority and objective
 
-Authority ([USER] Mike, 2026-09-11, verbatim, relayed by the [AGENT] coordinator — cite as relayed): «okay, I am still concerned that we are not
-focusing our energy on actually making the *go semantics* as good as possible. We don't have as of now a customer. Our job is to make the Go seantics
-as good as we can make it. Nothing else. We can do limited spikes to try to validate our choices, but our top level goal is to make the semantics
-good. We should prioritize high value efforts, like cleaning up the handling of state, and making the semantics structure regular. We *can* provide a
-relational definition along with it too. Everything else should be dropped». Recorded in `docs/2026-09-11_review-dispositions.md` §4 step 3. The
+Authority ([USER] Mike, 2026-09-11, relayed by the [AGENT] coordinator — cite as relayed): the scope ruling — concentrate on making the Go semantics as good as possible, there being no customer as of then; limited spikes may validate choices, but the top-level goal is a good semantics; prioritize high-value work such as cleaning up the handling of state and making the semantics structure regular; a relational definition may be provided alongside; everything else is dropped. Recorded in `docs/2026-09-11_review-dispositions.md` §4 step 3. The
 boundary is CLAUDE.md's «What this repo provides, and does not» ([USER] 2026-09-16): a Go semantics via GoCore, a relational semantics provably
 equivalent to it, NO higher-level reasoning. Nothing in C1 is a points-to, a ghost heap or an ownership law; §5's law is a law OF THE MEMORY MODULE
 (disjoint writes that do not commute are a defect of the model), not a downstream ask.
@@ -170,7 +166,7 @@ reclaims). **Left to P**: the wrapper-hop narrowing (§3).
 
 ## 7. Decisions for the [USER] — posed, not ruled; [AGENT] recommendations marked
 
-**RATIFIED [USER] 2026-09-18** («(1) agree, (2) agree. Go ahead», relayed; record: `docs/2026-08-31_qrow-rulings.md`, «The C1
+**RATIFIED [USER] 2026-09-18** ((items (1) and (2) agreed, go-ahead given), relayed; record: `docs/2026-08-31_qrow-rulings.md`, «The C1
 charter ratification and BUG-111 ruling record (2026-09-18)»): D1–D7, D9, D10 are the lane's instructions by explicit ruling; D8 ruled
 separately (deprecate, not delete). BUG-111 → fix option (i), canonical-path keys, carried by the successor lane.
 
@@ -180,8 +176,7 @@ separately (deprecate, not delete). BUG-111 → fix option (i), canonical-path k
 D1–D7, D9, D10: the [AGENT] recommendations below were taken as the lane's brief on the **[AGENT] coordinator's reading of
 the [USER]'s 2026-09-18 non-objection to the triage** that classed them as doctrine-determined or gate-arbitrated defaults —
 NOT a [USER] ruling; **explicit [USER] ratification is REQUESTED at the merge ask (PENDING [USER])**, one line each or one for
-all, to be recorded verbatim in the qrow record and cited here. **D8** IS ruled — ruling (4), [USER] Mike 2026-09-18, verbatim,
-relayed: `NPDRFReduction` is DEPRECATED / marked unsound, NOT deleted, and restated after C1's trace exists — C1's S0 carries
+all, to be recorded in the qrow record and cited here. **D8** IS ruled — ruling (4), [USER] Mike 2026-09-18, relayed: `NPDRFReduction` is DEPRECATED / marked unsound, NOT deleted, and restated after C1's trace exists — C1's S0 carries
 the marker as a records-class core edit. **Sequencing after C1** (ruling (1), [USER]): Stage C of the evaluation-order plan,
 then P → C3 → C4 → B6.
 

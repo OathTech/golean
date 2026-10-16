@@ -38,10 +38,9 @@ first refusal classified. The raft twin pin MOVED as row M predicted
 ## Decisions ([AGENT] unless marked)
 
 - [USER] (relayed, cited as relayed): the frontier queue is ratified with
-  FR-4 at slot 4; the stdlib plan G1-G9 «(3) agree, go ahead with the
-  plan» — memo row M names this retirement; direction 3 (every detected
+  FR-4 at slot 4; the stdlib plan G1-G9 (the plan approved, item (3)) — memo row M names this retirement; direction 3 (every detected
   gap rowed with a plan), direction 4 (report every blocker — lower-diagnose
-  before/after); posture «break rather than preserve incorrect behaviour».
+  before/after); posture (break rather than preserve incorrect behaviour).
 - D1: a stencil stub classifies (tools/lowerdiag) by its INNER cause — the
   row whose plan unblocks it — with the FR-4 `stencil-refusal` row moved
   LAST as the fallback for a stencil whose inner cause no row knows (never

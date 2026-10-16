@@ -2,7 +2,7 @@
 
 STATUS: **BRANCH-COMPLETE, audit ask pending — nothing merged or pushed.** [AGENT packet C worker], lane
 `core/continuations-0929` (worktree `.claude/worktrees/continuations`), forked from `main` @ `883ebc36`. Authority:
-G-C3 PASSED, [USER] Mike 2026-09-29 «Agree with 1-4», relayed (ledger «G-C3 (continuations) passed — RULED
+G-C3 PASSED, [USER] Mike 2026-09-29 (items 1-4 agreed), relayed (ledger «G-C3 (continuations) passed — RULED
 (2026-09-29)»; design `docs/2026-09-29_gc3-continuations-design.md` §5). This file is also the brief's §7 report
 (`docs/codex-briefs/2026-09-24_packet-C-continuations.md`; [AGENT] reading: the lane brief names this handoff as the
 report, so no separate `docs/<date>_packet-C-report.md` is written). Evidence: `docs/evidence/2026-09-30_packet-c/`.
@@ -81,7 +81,7 @@ setting; and the new `stepFn_next_frame`'s `simp only [stepFn]` (+1.7 s in StepF
 
 ## Merge train r56 — the 5a record ([AGENT] coordinator, 2026-09-30)
 
-Continuations + the raft-delta records ([USER] Mike 2026-09-30 «Great, land both», relayed). Pre-merge main `883ebc36` →
+Continuations + the raft-delta records ([USER] Mike 2026-09-30 (both landings approved), relayed). Pre-merge main `883ebc36` →
 `refs/snapshots/r56/main`; train tip `20049982` fast-forwarded. `release-check` EXIT=2 (EXPECTED — STALE,
 `build/files/GoLean/GoCore/BridgeSet.lean`); `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` EXIT=1, 1086 s — red on
 EXACTLY the 5a pair; 3791 rows, 3553 PASS / 238 FAIL = the pin 3554 / 237 with the one 5a-class row red. Candidate: `claim`

@@ -1,6 +1,6 @@
 # The setup equations G-R1–G-R4 (lane `core/setup-equations-1005`)
 
-[AGENT worker, lane `core/setup-equations-1005`] 2026-10-05. Authority: [USER] Mike 2026-10-05 «(1) Go ahead»
+[AGENT worker, lane `core/setup-equations-1005`] 2026-10-05. Authority: [USER] Mike 2026-10-05 (go-ahead for item (1))
 (relayed by the [AGENT] coordinator; scheduled after train r66, main `7a0a1568`). The request, verbatim:
 `docs/2026-10-05_note-from-logic-team-setup-equations.md` (the golean-logic coordinator, «with Mike's approval»);
 the requesters' design (read-only): golean-logic branch `design/globals-init-1005`,
@@ -216,7 +216,7 @@ end of `SetupSound.lean`, each stating the pinned `{}` form verbatim and closing
   `setup_heap_size_from`) and RE-PIN 13, rows 521–527 (`runInitConfig_eq_execStmtLoop` — no blocked premise;
   `runInitConfig_ok_iff`/`_panic_iff`/`_deadlock_iff`/`_fuelOut_iff`; `runPkgInitM_some`, `runPkgInitM_ok_iff`);
   rows 1–511 and 397, 399–402 unchanged; two NO-EXECUTION rows in `scripts/mem-callsites.tsv`. [USER] Mike
-  2026-10-05 «(1) Go ahead», relayed; the logic team's approval of G-R4 relayed by the [AGENT] coordinator.»
+  2026-10-05 (go-ahead for item (1)), relayed; the logic team's approval of G-R4 relayed by the [AGENT] coordinator.»
 * Certificate provenance: STALE on this branch (it touches `GoLean/`); the train's step 5a refreshes it.
 * The G-R4 relay is CLOSED (approved and proved, §3); the logic team consumes rows 512–527 at the next additive
   re-pin.

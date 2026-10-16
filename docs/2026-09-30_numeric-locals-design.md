@@ -3,8 +3,8 @@
 [AGENT worker, lane `core/numeric-locals-0930`] 2026-09-30. Window row 5 (charter rev. 2, [USER]-RULED 2026-09-24,
 relayed; `docs/2026-09-23_batched-window-charter.md` §1 row 5; `docs/2026-09-24_window-plan.md` row 5). Conditions:
 the logic team's response §4 «B6 / numeric locals» (2026-09-23) and their 2026-09-28 request 3. No named design
-gate; D1–D6 below were [AGENT] choices posed at the merge ask and are **RATIFIED** — [USER] Mike 2026-09-30, verbatim,
-relayed by the [AGENT] coordinator (cite as relayed): «Agree, go ahead and fix, agree on all 6» — with a fix round
+gate; D1–D6 below were [AGENT] choices posed at the merge ask and are **RATIFIED** — [USER] Mike 2026-09-30,
+relayed by the [AGENT] coordinator (cite as relayed): (the fix and all 6 items agreed) — with a fix round
 before landing (audit `docs/2026-09-30_numeric-locals-audit.md` F1–F5; §5). Acceptance: ZERO behaviour change
 (the gate red only on the 5a pair; baseline unchanged; the whole-corpus choice trace byte-identical). Before =
 `main` @ `131a7313`; after = the lane tip.

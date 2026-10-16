@@ -107,7 +107,7 @@ The replayable edit script is `.tmp/fix2/replay.sh` (scratch, not tracked).
 
 ## Merge train r49 — the 5a record ([AGENT] coordinator, 2026-09-27)
 
-[USER] Mike 2026-09-27, verbatim (relayed): «(1) agree, (2) agree, …» — the landing of the documentation chain (window
+[USER] Mike 2026-09-27 (relayed): items (1) and (2) agreed — the landing of the documentation chain (window
 plan + briefs + customer-fixture inventory; audit waived) and E6a with its audit (MERGE-CLEAN after two fix rounds),
 plus the E6 re-scoping (rulings ledger «E6's shape, train r49 and the execution model — RULED (2026-09-27)»). Pre-merge
 main `58aa7dbe` → `refs/snapshots/r49/main`; the train branch (the chain + the eleven E6a/audit commits cherry-picked +

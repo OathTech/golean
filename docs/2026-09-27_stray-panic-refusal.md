@@ -61,7 +61,7 @@ Q2 and probe; the `--diff` moved no row). This is fail-closed hardening of an un
 
 ## Merge train r51 — the 5a record ([AGENT] coordinator, 2026-09-28)
 
-Landed with the prompt-audit edits and packet A ([USER] Mike 2026-09-28 «great, go ahead with both», relayed; rulings ledger
+Landed with the prompt-audit edits and packet A ([USER] Mike 2026-09-28 (both approved), relayed; rulings ledger
 «Train r51»). Pre-merge main `7d2a62e5` → `refs/snapshots/r51/main`; train tip `50b446ce` fast-forwarded. Under the lock:
 `scripts/build-certified` EXIT=0 (binary `c9f5822a…`); `release-check` EXIT=2 (EXPECTED — «STALE certification: changed
 dependency build/files/GoLean.lean»); `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` EXIT=1, 892 s — red on EXACTLY

@@ -12,15 +12,8 @@ worktree `professor-2` (branch of the same name) off `main` @
 Provenance. Every judgment here is [AGENT] unless marked [USER]. The
 mandate is Mike's, 2026-09-04, held BY RELAY from the [AGENT]
 coordinator, not firsthand (U0-incident convention: citation, never
-bare assertion): «One question is whether we need to do any major
-architectural reworking to fix any tech debt that might have built
-up. The professor audit yesterday pointed to some things that seemed
-potentially valuable but too disruptive. But I think we should try to
-do the disruptive thing if it'll result in a more useful reasoning
-surface». The earlier ratification of the C-items IN PRINCIPLE is
-also relayed [USER] 2026-09-03 («eventually we will want to do the
-bigger breaking changes as well … we can schedule those later or
-now», `docs/2026-09-03_design-hygiene-arc.md`). This document answers
+bare assertion): whether major architectural rework is needed to fix accumulated tech debt; the professor audit had pointed to valuable but disruptive items, and the direction is to do the disruptive thing where it yields a more useful reasoning surface. The earlier ratification of the C-items IN PRINCIPLE is
+also relayed [USER] 2026-09-03 (the bigger breaking changes wanted eventually, scheduled later or now, `docs/2026-09-03_design-hygiene-arc.md`). This document answers
 the relayed question with a specification of the surface (§1), a
 measurement of the distance (§2), a plan with gates (§3), the
 interactions with the other live lines (§4) and a sequence (§5).
@@ -461,7 +454,7 @@ menu's length and its slot names the goroutine that ran. `Fair` —
 "every goroutine runnable at infinitely many scheduling picks is
 picked at infinitely many" — is the reasoning side's to define and
 assume (doctrine `docs/2026-08-11_essence-of-go-doctrine.md:37-68`,
-[USER] verbatim: «the semantics should admit unfair schedules …
+[USER] 2026-09-02, the doctrine's statement: «the semantics should admit unfair schedules …
 Fairness is an assumption about the sequences that are chosen»);
 what we owe is that it is STATABLE over `StepEvent.picks` without a
 mirror. Today the width of a consultation is recomputed by three
@@ -1670,11 +1663,7 @@ is scheduled as such.
 received by the [AGENT] coordinator and RELAYED to the recording
 worker, so it is cited as relayed, not firsthand (U0-incident
 convention). Presented with this section's nine gates, each carrying
-a recommendation, Mike replied, verbatim as relayed: «Great, this
-sounds good - let's move ahead with the plan. Our top level goal
-here is (1) to be a highly accurate go semantics, and (2) to support
-reasoning about go using an iris-lean layer (which we won't build,
-that's a customer)» — read by the coordinator as: all nine gates
+a recommendation, Mike replied, as relayed: the plan approved; the two top-level goals: (1) a highly accurate Go semantics, (2) support for reasoning about Go through an iris-lean layer, which a customer builds — read by the coordinator as: all nine gates
 (G-U, G-C5, G-C1, G-C2, G-P, G-C3, G-C4, G-OUT, G-PIN) RULED as
 recommended below, plus the two top-level goals stated (carried
 forward into `CLAUDE.md`). Earlier the same day, the standing
@@ -1689,14 +1678,14 @@ coordinator in conversation and RELAYED to the recording worker (lane
 `rulings-0905`), so it is cited as relayed, not firsthand (U0-incident
 convention). The coordinator's reading above — all nine gates (G-U,
 G-C5, G-C1, G-C2, G-P, G-C3, G-C4, G-OUT, G-PIN) RULED as recommended
-by the 2026-09-04 «move ahead with the plan» reply — had been DISCLOSED
+by the 2026-09-04 reply approving the plan — had been DISCLOSED
 for confirmation or correction rather than asserted
 (`docs/2026-09-04_c-arc-gu-design.md` §0). On 2026-09-05 the
 coordinator put it to the [USER] EXPLICITLY, as item (1) of an
 eight-item list (1: this gate-provenance reading; 2: E13's four-way
 treatment, options (a)/(b)/(c), coordinator recommending (b); 3: push;
 4–8: G6-1 … G6-5, each with the memo's recommendation (a)). Mike's
-reply, verbatim as relayed: «(1) approved, (2) we should do what the standard supports, and avoid over-refusal if we can. That's what (b) means right? (3) done, (4-8) all approved as recommended». Item (1) CONFIRMS the
+reply, as relayed: (1) approved; (2) do what the standard supports and avoid over-refusal where possible, which is option (b); (3) done; (4-8) all approved as recommended. Item (1) CONFIRMS the
 reading: the nine gates stand RULED as recommended, at-the-gate, by
 the 2026-09-04 reply. **Ordering, disclosed:** TWO gates' implementations
 LANDED on 2026-09-04, BEFORE this confirmation arrived — G-U (lane
@@ -1745,7 +1734,7 @@ G6-5 as recommended (`docs/2026-09-04_g6-reflect-design.md` §6).
   well-founded by an `Accepted` clause decided at decode; the 14 fuel
   towers, `typeResolutionFuel` and the `irreducible` seal are
   deleted.» Rec: YES, parallel lane. RULED [USER] 2026-09-04 — as
-  recommended (relayed); CONFIRMED [USER] 2026-09-05 («(1) approved»,
+  recommended (relayed); CONFIRMED [USER] 2026-09-05 (item (1) approved,
   relayed). **BRANCH-COMPLETE 2026-09-05** (lane `c-arc-c2`, [AGENT];
   design note `docs/2026-09-05_c-arc-c2-design.md`, evidence
   `docs/evidence/2026-09-05_c-arc-c2/`): frontend dependency order +
@@ -1765,8 +1754,7 @@ G6-5 as recommended (`docs/2026-09-04_g6-reflect-design.md` §6).
 - **G-C3.** «`Cont := List Frame` with `@[match_pattern]` views for the
   31 constructor names; `Config := Mode × Cont`; `fill` is append; done
   before the pin, never after.» Rec: YES, after B4 and P. RULED [USER]
-  2026-09-04 — as recommended (relayed). AMENDED [USER] 2026-09-29 «Agree
-  with 1-4» (relayed; `docs/2026-09-29_gc3-continuations-design.md` §5,
+  2026-09-04 — as recommended (relayed). AMENDED [USER] 2026-09-29 (items 1-4 agreed) (relayed; `docs/2026-09-29_gc3-continuations-design.md` §5,
   ledger «G-C3 (continuations) passed — RULED (2026-09-29)»): G-C3 is
   `Cont := List Frame` ONLY — `Config := Mode × Cont` and «`fill` is
   append» are dropped (no context-fill law, no `recover` commutation
@@ -1852,8 +1840,7 @@ rewriting the text above:
   ledger; this plan only guarantees that when it does export, the
   proof does not have to fight the representation.
 - cerberus-lean-proj's most useful lesson is the one that costs
-  nothing: their [USER]'s «I feel like abstractions should do some work for us …
-  How much does this actually buy us?» (CERB `refined-
+  nothing: their [USER]'s view that abstractions must earn their keep (CERB `refined-
   cerberus/docs/DECISIONS.md:372-378`, the 2026-09-02 "PARAMETRIC
   INTERFACES NOT ADOPTED" ruling; KOI B9) led them to DEFER a parametric memory interface and prove rules
   directly against the step relation. §1.2's `Mem` is not that
@@ -1878,7 +1865,7 @@ the right side; the row is kept so nobody moves us off it.
 
 | # | Pitfall (as they hit it) | Their record (CERB) | Our exposure today (`aceb0dcb`) | Fixing item |
 |---|---|---|---|---|
-| L1 | Fuel exhaustion as an OPAQUE sentinel: no `∀ fuel` statement can classify an out-of-fuel run; a package-defined driver was built, then ruled out — «We should not be writing our own trusted driver code» | `docs/2026-09-02_request-cerberus-lean-fuel-exhaustion-outcome.md:32-58`; `docs/DECISIONS.md:630-645, 649-660, 1787-1800` | ✓ `Stop.fuelOut` is a transparent constructor (Value.lean:240-246); fuel is a parameter of `execProgLoop` (Multi.lean:1819) and `run_mono`-class lemmas exist (`execStmt_mono` MachineSound.lean:750). Exposure: FOUR drivers (StepFn.lean:834/882/903, Multi.lean:1876) | §1.5 one `run`; §1.6 `run_ok_iff_stepsM` |
+| L1 | Fuel exhaustion as an OPAQUE sentinel: no `∀ fuel` statement can classify an out-of-fuel run; a package-defined driver was built, then ruled out — no self-written trusted driver code | `docs/2026-09-02_request-cerberus-lean-fuel-exhaustion-outcome.md:32-58`; `docs/DECISIONS.md:630-645, 649-660, 1787-1800` | ✓ `Stop.fuelOut` is a transparent constructor (Value.lean:240-246); fuel is a parameter of `execProgLoop` (Multi.lean:1819) and `run_mono`-class lemmas exist (`execStmt_mono` MachineSound.lean:750). Exposure: FOUR drivers (StepFn.lean:834/882/903, Multi.lean:1876) | §1.5 one `run`; §1.6 `run_ok_iff_stepsM` |
 | L2 | Fuelled HELPERS whose exhaustion is the return type's `Inhabited` default — the run CONTINUES with a wrong value; their rule: every fuel'd function must be (A) structural, (B) absorbing-typed exhaustion, or (C) gate-checked unreachable | `docs/2026-09-04_review-of-fuel-parameter-design.md:57-100`; `DECISIONS.md:2118-2126`; KOI A5 (61 `panic!` arms read as defaults) | Our 14 fuel towers fail CLOSED (a `Refusal`, never a default — Ops.lean:14-28), i.e. already (B); but `typeResolutionFuel` (Ops.lean:29) is in every unfolding and 31 `set!`/`eraseIdx!` sites (Ops.lean:157,1454,2163; Machine.lean:274,980,2592,3139; Multi.lean:497,1023,1042,1065; …) are kernel-default-on-OOB ops guarded by convention, not by type | C2 (rule A: structural); the `!`-ops → `Array.set` under a bounds proof as A2's `updateCell` does (ride B5/C1); keep the ci escape-hatch scan |
 | L3 | A hand-written MIRROR relation beside the engine (1,943-line `Step`, 4,943-line one-directional `Soundness`): "a certified package projection of a selected Core", not "over Cerberus Core" | `docs/2026-09-01_cerberus-heaplang-skeptical-re-audit.md:298-322` (R-03); ARCHITECTURE glossary "the mirror … a proof device with no semantic authority" | ✓ two-sided: `stepFn_sound` (MachineSound.lean:44) AND `step_complete` (:393), `stepMulti_sound`/`stepM_complete` (MultiSound.lean:884/1059). Exposure: the relation is INTERLEAVED with the executable (review U14) and carries the 17 twins | B2 (twins); keep BOTH directions in §1.4; extraction after B2/B4, never before |
 | L4 | `Language.Context` is FALSE because a jump discards its frame (`Erun`): no `EctxLanguage`, bind proved by hand | `cerberus-heaplang/CerberusHeapLang/Lang.lean:94-100`; `DECISIONS.md:360-371` (parametric spike: "control mixin not an `EctxLanguage` instance because `Erun` discards its context") | Same disease, different cause: the two-step panic abort makes `primStep_fill` false, hence the park's `hdrain` premise (PARK `Laws/Bind.lean:22-34`); `goto` (FR-11/FR-20) could ADD their cause if lowered as a frame-discarding jump | B4 `Status` (panicked is a thread status) + C3 (`fill` is append); §4.2: `goto` lowers to `Signal` |

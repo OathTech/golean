@@ -6,9 +6,8 @@ record: `docs/2026-09-16_evaluation-order-model-v2.md` (v2.1) §7 row C; this la
 `docs/2026-09-19_unseq-stage-c-design.md` (the pilot grammar as the emitter's decision procedure,
 the census, the wire schema, the decoder spec, the lowering rules, the predictions — and its §10
 «as landed» addendum); evidence `docs/evidence/2026-09-19_unseq-stage-c/` (README with every gate
-line). Authority: the mechanism ruling [USER] Mike 2026-09-16 «the Cerberus model is the correct
-one» (relayed); Stage C directly after C1 — «(1) agreed» [USER] 2026-09-18 (relayed); the three
-Stage C rulings [USER] Mike 2026-09-19, verbatim «Agree, merge», relayed by the [AGENT]
+line). Authority: the mechanism ruling [USER] Mike 2026-09-16 (the Cerberus model is the correct one) (relayed); Stage C directly after C1 — (item (1) agreed) [USER] 2026-09-18 (relayed); the three
+Stage C rulings [USER] Mike 2026-09-19, (agreed; merge approved), relayed by the [AGENT]
 coordinator — cite as relayed (`docs/2026-08-31_qrow-rulings.md`, «The C1 completion and Stage C
 rulings record»): (3) width of P = ALL mutable reads, STAGED — the pilot carries the minimal
 P(ii) reads its fixtures need, then widens; (4) N1 = SPLIT; (5) N3 = REFUSE by name. No [USER]
@@ -255,7 +254,7 @@ round's 5a records commit and re-runs the gate green.
 `.claude/worktrees/unseq-stage-c`), over the candidate `2dac6a75` (main `6a7beb3d`, no drift). The
 audit returned FIX-FIRST — MERGE-CLEAN on the semantics of every emitted graph, three items to fix
 before the merge (F1–F3), one records claim (F4), nits (F6–F8), one note (F9). Authority: [USER]
-Mike 2026-09-20 «Great, launch the audit» (verbatim, relayed by the [AGENT] coordinator — cited as
+Mike 2026-09-20 (the audit launched) (relayed by the [AGENT] coordinator — cited as
 relayed); the dispositions below are the coordinator's ([AGENT]), disclosed at the merge ask. Two
 commits: the RUNTIME commit `e73c706f` [TRUST-SURFACE `GoLean/NativeToIR.lean`] (the decoder's
 D8/D12, the fixtures, the gate controls, the six corpus rows, BUG-113, the baseline) gated by the

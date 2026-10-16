@@ -34,9 +34,7 @@ the handoff predicted. Checkpoints B and C: see their sections below
 ## Decisions ([AGENT] unless marked)
 
 - [USER] (Mike, 2026-09-04, relayed by the [AGENT] coordinator — cited
-  as relayed): «(2) given we have a plan, I think this should be an
-  honest red» = RETIRE the cmp.Compare shim (checkpoint C); «(3) yes,
-  makes sense» = APPROVE the FR-25 rider (checkpoint B). Standing
+  as relayed): (with a plan in hand, an honest red beats the desugar) = RETIRE the cmp.Compare shim (checkpoint C); (item (3) agreed) = APPROVE the FR-25 rider (checkpoint B). Standing
   posture (relayed): break rather than preserve incorrect behaviour;
   every detected gap rowed with a plan.
 - D1 [AGENT]: USER-package vars of an unlowerable type poison the same
@@ -146,8 +144,7 @@ markers in their signatures.
 ## Checkpoint C — the cmp.Compare retirement (commit named in the Gate section)
 
 [USER] ruling (Mike 2026-09-04, relayed by the [AGENT] coordinator, cited
-as relayed): «(2) given we have a plan, I think this should be an honest
-red». Mechanism: `cmpshim.go` DELETED; `stdlibshim.go` loses the three
+as relayed): (with a plan in hand, an honest red beats the desugar). Mechanism: `cmpshim.go` DELETED; `stdlibshim.go` loses the three
 kind shims (`goleanShimCmpCompare{Uint,Int,String}`) and its
 `stdlibGenericDesugarInject` entry (the table stays, EMPTY — the one place
 a future entry lands, against the frozen count); `stdlibreach.go` loses

@@ -3,7 +3,7 @@
 [AGENT] Lane `core/unseq-stage-e5-0922` (worktree `.claude/worktrees/unseq-stage-e5`), branch off main
 `d76721bd` (train r46's 5a records; main gained the records-only close `dc5de785` after the branch —
 rebased at the lane's end). Dispatched by the [AGENT] coordinator under [USER] Mike's 2026-09-22
-sign-off «Agree on the judgements, go ahead» (relayed — cite as relayed), which landed Stage E E1–E4
+sign-off (the judgements agreed, go-ahead given) (relayed — cite as relayed), which landed Stage E E1–E4
 (`docs/2026-09-21_unseq-stage-e-design.md`) and ordered the E5/E6 lane. Design of record:
 `docs/2026-09-16_evaluation-order-model-v2.md` (v2.1) §7 row E; the Stage E handoff's §3 «Next families»
 is this lane's scope. THE RULINGS IN FORCE ([USER] 2026-09-22, the seven-item record in
@@ -109,7 +109,7 @@ string as a pure `bytes-from-string` head), then the `wide` occurrence `{"stmt":
 elems}` as the E1-ordered event (`wideAppend`, `wideOcc`); `copy` → the destination and source atoms (a string
 source as a `bytes-from-string` head), then `{"stmt": "copy", dst, src}` producing the count (`wideCopy`).
 
-**The machine** (TRUST SURFACE #1; [AGENT] choice, RATIFIED [USER] 2026-09-22 at the merge ask («Great, agree with all recommendations, land it», relayed)): **`WideSpec`**
+**The machine** (TRUST SURFACE #1; [AGENT] choice, RATIFIED [USER] 2026-09-22 at the merge ask ((all recommendations agreed, landing approved), relayed)): **`WideSpec`**
 (`append (elem : Ty) (slice elems : Expr)` | `copy (dst src : Expr)`; `WideSpec.arity` = 1 for both) and
 **`UnseqBody.wide (binds : List String) (spec : WideSpec)`** — ONE statement-bodied occurrence kind over a
 CLOSED spec, mirroring `allocate`: `unseqWideStmt binds spec` is the hoisted wide statement with the binder

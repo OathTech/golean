@@ -14,8 +14,7 @@ maps/make-map-{float,string,negative-const,overflow-const}-hint`.
 ## Authorization (provenance, rule 7)
 
 [USER] Mike, 2026-09-02, relayed to this worker by the [AGENT]
-coordinator — NOT firsthand: «Issue (2) sounds like a clear win, it's
-a bug fix right? do it», where issue (2) was the coordinator's item
+coordinator — NOT firsthand: (issue (2) approved as a clear win and a bug fix), where issue (2) was the coordinator's item
 "BUG-082 frontend fix: authorizes moving the twin-wire pin". The
 twin-wire pin move below is authorized for THIS reason only. All
 other decisions in this directory are [AGENT].

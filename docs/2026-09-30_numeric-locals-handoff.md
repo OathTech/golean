@@ -65,7 +65,7 @@ interns `$`-temporaries densely after the table (`tmp`); `declLocal` (c1/c2 at a
    14.88 → 14.62, MachineSound 59.79 → 60.27 (1.01×), StepErrors 202.82 → 203.78 (1.00×). The C3 1.5× stop rule is NOT
    triggered; `maxHeartbeats`/`maxRecDepth` settings: the same count pre and post, none new or raised.
 
-## 3. D1–D6 — RATIFIED ([USER] Mike 2026-09-30, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Agree, go ahead and fix, agree on all 6»); the items as they were posed, for the record
+## 3. D1–D6 — RATIFIED ([USER] Mike 2026-09-30, relayed by the [AGENT] coordinator — cite as relayed: (the fix and all 6 items agreed)); the items as they were posed, for the record
 
 - D1 per-object declaration ids from the frontend, cross-checked by the decoder (alternatives: decoder-only
   per-spelling interning; decoder-only per-declaration split).
@@ -79,7 +79,7 @@ interns `$`-temporaries densely after the table (`tmp`); `declLocal` (c1/c2 at a
 - Unnamed parameters/receivers respelled `""` → `$p{i}`/`$recv` (an env key only; never referenced).
 
 ## 3a. The fix round (2026-09-30; audit `docs/2026-09-30_numeric-locals-audit.md`, MERGE-CLEAN; [AGENT]
-coordinator dispositions; the [USER]'s «go ahead and fix»)
+coordinator dispositions; the [USER]'s go-ahead for the fix)
 
 - **F1** — the table is now checked in BOTH directions: (a) `decodeLocalsTable` refuses a `wire` whose base spelling
   (before the first `$`) is not `name`, or that equals `name`; `pos` must be `basename.go:line:col` (FORMAT — its
@@ -133,7 +133,7 @@ See the «Row 5 — B6» section and the tool-interface lines added there in thi
 
 ## Merge train r57 — the 5a record ([AGENT] coordinator, 2026-09-30)
 
-[USER] Mike 2026-09-30 «land it» (relayed). Pre-merge main `90df0fe1` → `refs/snapshots/r57/main`; train tip `bc91aa39`
+[USER] Mike 2026-09-30 (landing approved) (relayed). Pre-merge main `90df0fe1` → `refs/snapshots/r57/main`; train tip `bc91aa39`
 fast-forwarded (numeric locals + audit + the BUG-004 item 4 design branch + the rulings, with the certified row's `wire-sha256`
 moved dc232a8c… → f448d579… BEFORE the gate). `release-check` EXIT=2 (EXPECTED — STALE, `build/files/GoLean/GoCore.lean`);
 `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` EXIT=1, 1037 s — red on EXACTLY the 5a pair; 3791 rows, 3553 PASS / 238

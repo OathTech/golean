@@ -7,8 +7,8 @@ measures as a slow-down; an "oracle default" that the runner does not pin), and
 one BUG-110 claim is stronger than the code ("validated" = arity only). Correct
 those three texts, then merge; the code fixes themselves stand.
 
-[AGENT] auditor, 2026-09-15. Ordered by [USER] Mike 2026-09-15, verbatim, relayed
-by the [AGENT] coordinator — cite as relayed: «Go ahead and launch the autit».
+[AGENT] auditor, 2026-09-15. Ordered by [USER] Mike 2026-09-15, relayed
+by the [AGENT] coordinator — cite as relayed: (the audit launched).
 Worktree `.claude/worktrees/audit-review-boundary`, branch
 `review/review-boundary-0911` at `ef9eb4d9` (five commits over main `a461ed8b`).
 Toolchains: `go1.26.5 linux/amd64` (= oracle pin), Lean `v4.32.2`; post-fix

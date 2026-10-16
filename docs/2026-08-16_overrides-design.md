@@ -9,10 +9,10 @@ user's package before type-check — and immediately raised the question
 the north-star target will ask in earnest: *what do we do about library
 code we are not going to model?*
 
-**The user's ruling, verbatim:**
+**The user's ruling, paraphrased:**
 
-> "fine, but the injection mechanism is a bit of a wart and should be
-> retired as soon as we see another instance."
+> accepted for now, but the injection mechanism is a wart, to be retired
+> as soon as another instance appears.
 
 So E5 stands, and it stands **as a recorded wart with a retirement
 trigger**. The rest of this note separates the three things that get

@@ -1,23 +1,23 @@
 # The pool/registry half — the GRIND BRIEF (the design gate ratified 2026-10-04; LAUNCHED 2026-10-04)
 
 STATUS: **LAUNCHED** 2026-10-04 at input commit `a11f349f` (train r64 close; the spec packet landed as `7b068123` +
-`31bc27f2`). Spec: `docs/2026-10-04_pool-relation-spec.md` (§9 [USER] ratification «Approved», relayed; §10 the
-statement review, 48 statements). Authority for the shape: [USER] Mike 2026-10-04 «Great, launch it» (relayed) — «with
-enough flex it could build successfully, without giving too much space for drift». Provenance in the grind's commits:
+`31bc27f2`). Spec: `docs/2026-10-04_pool-relation-spec.md` (§9 [USER] ratification (approved), relayed; §10 the
+statement review, 48 statements). Authority for the shape: [USER] Mike 2026-10-04 (launch approved) (relayed) — enough
+flex for the build to succeed, not so much that it drifts. Provenance in the grind's commits:
 **[AGENT Codex, pool grind]**. The coordinator wires `scripts/check-pool-spec` into `scripts/ci` at the M1 landing train
 (until then it is run by hand per §8). Wired with milestone staging on branch `tools/pool-spec-milestones-1005` (2026-10-05; §8
 staging note).
-**CONTINUOUS RUN M2–M5 (supersedes the per-milestone stop; [USER] Mike 2026-10-05, verbatim, relayed by the [AGENT]
-coordinator: «We really want this to not be checked in at milestones. Codex excels at long-cycle, low oversight builds
-against a very clear objective»).** M1 is LANDED on `main` (train r66, `LANDED=M1`). The goal is now ONE run to the end
+**CONTINUOUS RUN M2–M5 (supersedes the per-milestone stop; [USER] Mike 2026-10-05, relayed by the [AGENT]
+coordinator: no check-ins at milestones — Codex is suited to long-cycle, low-oversight builds against a very
+clear objective).** M1 is LANDED on `main` (train r66, `LANDED=M1`). The goal is now ONE run to the end
 state: all 48 statements discharged, `python3 scripts/check-pool-spec --landed M5` exit 0. (1) Start a NEW branch
 `core/pool-grind-m2m5-<date>` off `main` @ `a46a1808` or later (NOT the old M1 branch — its commits are on `main` as
 cherry-picks). (2) `BridgeSet.lean` rows 1–527 are taken (503–511 = M1; 512–527 = the setup equations, train r67): your
 rows start at 528, rows 1–527 byte-identical. (3) Milestones are CHECKPOINTS, not stops: at each milestone commit, run that
 milestone's §8 acceptance, record it in the report, and CONTINUE without waiting — never ask for review mid-run. You may
-prove statements out of the §7 order. (4) A statement found FALSE or unprovable as written is NOT a stop (amended [USER] Mike 2026-10-05, verbatim, relayed:
-«a false / unprovable statement isn't a stop. Instead, *prove all provable statements* and for other statements
-*propose a repair*»). For each such statement: leave its frozen `_stmt` UNCHANGED and undischarged (never weaken it, never
+prove statements out of the §7 order. (4) A statement found FALSE or unprovable as written is NOT a stop (amended [USER] Mike 2026-10-05, relayed:
+a false or unprovable statement is not a stop — prove every provable statement and propose a repair for the
+others). For each such statement: leave its frozen `_stmt` UNCHANGED and undischarged (never weaken it, never
 patch the interpreter); write in `docs/specs/pool-relation/REPAIRS.md` the counterexample or obstruction (a concrete pool
 and tape, or the missing invariant), a PROPOSED repaired statement as exact Lean, and why it is the closest true
 statement; where you can, prove the repair as `theorem <name>_repaired` in a separate module

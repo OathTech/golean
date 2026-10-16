@@ -60,7 +60,7 @@ assessment (§7) and the cadence recommendation (§8) close the mandate.
 | 0.9 | Campaign 3's legs all live under `artifacts/grossmith/2026-09-01/` (the campaign date) — the `m3pairs` leg started after midnight and was pointed there explicitly with `GOLEAN_GROSSMITH_ARTIFACTS`; the tool's default tree is date-keyed per invocation. | [AGENT] |
 | 0.10 | The runner refuses to start a leg while the documented box-wide build lock (`artifacts/build-lock.d`, `docs/operational-lessons.md`) exists in this worktree or the primary checkout. Note: no script implements that lock today — the check is a courtesy against the convention, not a mechanism. | [AGENT] — coordinator's request; the first m3a failure was NOT load (§4.1) |
 | 0.11 | Triage auto-class `machine-bug-candidate` is overridden by hand to LATITUDE (recorded E5) for BOTH campaign-3 witnesses: `m3a-rerun/part-04/case_03110` (§5.2) AND `m3pairs/part-01/case_03079` (§5.0 — `artifacts/grossmith-m3pairs.log` ends with the pairs leg's `machine-bug-candidate 1`, and that row is case_03079). The first cut of this row logged only case_03110 (audit fix G-3). The rule stays as written: a wrong-answer candidate with a self-stable oracle defaults to OURS until a human clears it against the record; both overrides stand only as far as the E5 classification itself does — see the caveat at the head of §5. | [AGENT] |
-| 0.12 | The E5 classification under 0.11 is SUPERSEDED: E5 is a **gc DEVIATION** (spec-divergence-ledger L-016), not latitude — the two 0.11 overrides now read `machine-bug-candidate` → **gc-bug L-016** for case_03110 and case_03079. Reproducers moved out of the gitignored probe dir into `docs/evidence/2026-09-02_e5-gc-deviation/`. No corpus row (a strict row would pin gc's wrong answer), no BUGS.md entry (the machine is right), no code change. Upstream filing NOT done (a [USER] public action; pending the P5 filing-policy decision). | [USER] ruling 2026-09-02 (Mike: "agree we should mark as a gc deviation, and record in our gc bug backlog"); analysis [AGENT] (verifier, 2026-09-02) |
+| 0.12 | The E5 classification under 0.11 is SUPERSEDED: E5 is a **gc DEVIATION** (spec-divergence-ledger L-016), not latitude — the two 0.11 overrides now read `machine-bug-candidate` → **gc-bug L-016** for case_03110 and case_03079. Reproducers moved out of the gitignored probe dir into `docs/evidence/2026-09-02_e5-gc-deviation/`. No corpus row (a strict row would pin gc's wrong answer), no BUGS.md entry (the machine is right), no code change. Upstream filing NOT done (a [USER] public action; pending the P5 filing-policy decision). | [USER] ruling 2026-09-02 (Mike: mark it as a gc deviation and record it in the gc bug backlog); analysis [AGENT] (verifier, 2026-09-02) |
 
 ---
 
@@ -397,8 +397,7 @@ permitted. Both readings cannot hold of one sentence unless the
 assignment/return distinction is doing the work; until the [USER] rules,
 §5.0 and §5.2 are "latitude per the inventory as it stands", not
 settled, and the two decision-0.11 overrides carry the same caveat.
-**RESOLVED 2026-09-02 — [USER] ruling** (Mike, verbatim: "agree we
-should mark as a gc deviation, and record in our gc bug backlog"):
+**RESOLVED 2026-09-02 — [USER] ruling** (Mike: mark it as a gc deviation and record it in the gc bug backlog):
 E5 is re-labelled from latitude to **gc DEVIATION**. The machine sits
 on the FORCED spec point; gc's early store is recorded in the gc bug
 backlog as `docs/spec-divergence-ledger.md` **L-016** (gc-bug, UNFILED

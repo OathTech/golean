@@ -8,9 +8,7 @@ non-objection to the triage** — NOT a [USER] ruling (the record cited before,
 `docs/2026-08-31_qrow-rulings.md` «The on-deck decisions ruling record (2026-09-18)»,
 has no [USER] text on them; corrected at the audit fix round, F1 — the earlier wording
 here was «RULED by default acceptance»); **explicit [USER] ratification is REQUESTED at
-the merge ask, PENDING**. D8 RULED [USER] Mike 2026-09-18, verbatim,
-relayed by the [AGENT] coordinator — cite as relayed: «We shouldn't delete, hard to
-revive that way. Can we just deprecate/ mark unsound for now?». Sequencing ruling
+the merge ask, PENDING**. D8 RULED [USER] Mike 2026-09-18, relayed by the [AGENT] coordinator — cite as relayed: (deprecate and mark unsound rather than delete). Sequencing ruling
 (1): Stage C of the evaluation-order plan follows C1. Evidence:
 `docs/evidence/2026-09-18_c1-memory-module/README.md`. Slice entries: the C1 section
 at the tail of `docs/hygiene-slice-log.md`.
@@ -129,7 +127,7 @@ warnings. D10: `Store.updateCell`'s `.internal` names `Store.alloc`.
 
 ## 6. PENDING [USER]
 
-**RULED 2026-09-18** ([USER] Mike, verbatim, relayed: «(1) agree, (2) agree. Go ahead»; record `docs/2026-08-31_qrow-rulings.md`): item 1
+**RULED 2026-09-18** ([USER] Mike, relayed: (items (1) and (2) agreed, go-ahead given); record `docs/2026-08-31_qrow-rulings.md`): item 1
 BUG-111 → fix option (i) canonical-path keys at emission (successor lane, disclosed `Cases:` flip on the proposed red-first row); the
 D1–D7/D9/D10 ratification (audit F1) is now an explicit ruling. The original items follow as written.
 
@@ -367,7 +365,7 @@ trace makes the same-root law a detector statement (S2b/S3).
 
 The pre-merge adversarial audit (`docs/2026-09-18_c1-memory-module-audit.md` on branch
 `review/c1-memory-module-0918`, commit `ba6b249c`; ordered by [USER] Mike 2026-09-18,
-relayed: «(1) Agree, run the audit.») returned **FIX-FIRST (records-class)**: no WRONG-ANSWER,
+relayed: (item (1) agreed, the audit ordered)) returned **FIX-FIRST (records-class)**: no WRONG-ANSWER,
 FOOTPRINT-LIE, UNSOUND-PROOF, gate WEAKENING or FAIL-OPEN introduced. The coordinator's
 dispositions below are [AGENT], disclosed to the [USER] at the merge ask. Two commits: the
 RUNTIME commit `16029fa8` (gated) and the records commit on top of it.

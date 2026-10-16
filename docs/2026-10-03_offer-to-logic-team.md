@@ -1,8 +1,8 @@
 # The re-pin offer to the GoLean logic team (2026-10-03)
 
 [AGENT] unit 7b worker, branch `docs/repin-offer-1003` (window plan `docs/2026-09-24_window-plan.md` row 7b; charter
-`docs/2026-09-23_batched-window-charter.md` row 7). Authority: [USER] Mike 2026-10-03, verbatim, relayed by the [AGENT]
-coordinator — cite as relayed: «prepare the offer, do the dry run». The [USER] is the user of all three teams: this is DESIGN
+`docs/2026-09-23_batched-window-charter.md` row 7). Authority: [USER] Mike 2026-10-03, relayed by the [AGENT]
+coordinator — cite as relayed: prepare the offer and do the dry run. The [USER] is the user of all three teams: this is DESIGN
 COMMUNICATION, not a negotiation. Nothing here merges, tags or pushes — the tag is the coordinator's at landing and stays
 LOCAL (no push has ever been authorized). Evidence: `docs/evidence/2026-10-03_repin-offer/`.
 

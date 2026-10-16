@@ -6,11 +6,7 @@ into reviewable chunks. Inputs: `CLAUDE.md`, `AGENTS.md`, auditor A's and
 auditor B's landing reviews (sprint worktree `.tmp/landing-review/`).
 
 [USER] ruling (Mike, 2026-09-07, relayed by the [AGENT] coordinator — cite
-as relayed): «The evidence blob should not land, and generally we should
-not dump big evidence bundles on main (they can't be easily hosted on GH
-for one). … We'll want to decompose and land in sane chunks that can be
-reviewed. And where appropriate fix some of the issues, eg. the choice
-tape stuff».
+as relayed): the evidence blob does not land and big evidence bundles are not dumped on main (they cannot be hosted on GitHub); the work is to be landed cleanly by a plan, decomposed into reviewable chunks, with some of the issues (the choice tape among them) fixed where appropriate.
 
 Method: path selection from the committed sprint tip
 (`git checkout typed-consumer-sprint -- <paths>`, every hunk read), never a

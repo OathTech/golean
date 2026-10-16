@@ -2,9 +2,9 @@
 
 [AGENT] writer, GoLean semantics repo, lane `docs/roadmap-customer-alignment-0922`. Addressed to the team building the
 program logic in `golean-logic` (surveyed READ-ONLY at your `main` `b2c37c1`, «Merge F2 scoped cleanup»; nothing there was
-modified, built or run). Ordered by [USER] Mike, 2026-09-23, verbatim, relayed by the [AGENT] coordinator — cite as
-relayed: «Can you write a note addressed at the logic team, proposing your updated design, then we'll get their review».
-Provenance: [USER] = Mike's rulings (verbatim, relayed); [AGENT] = our proposals; **[inf]** = an inference about your
+modified, built or run). Ordered by [USER] Mike, 2026-09-23, relayed by the [AGENT] coordinator — cite as
+relayed: (write a note to the logic team proposing the updated design, for their review).
+Provenance: [USER] = Mike's rulings (relayed); [AGENT] = our proposals; **[inf]** = an inference about your
 code or plans that you should correct. The analysis behind this note is `docs/2026-09-22_roadmap-customer-alignment.md`
 (rev. 2); the rulings are in `docs/2026-08-31_qrow-rulings.md`, «The roadmap review under the customer framing».
 Paths `G:` are ours; `L:` are yours. Nothing here is decided for you: §6 lists what we ask you to answer.
@@ -14,7 +14,7 @@ Paths `G:` are ours; `L:` are yours. Nothing here is decided for you: §6 lists 
 We propose to land the remaining shape-breaking changes to the sequential machine in ONE window and to offer you ONE
 re-pin after it, with a changelog ([USER]-ruled). The window's contents, in our proposed order: (a) the sequential step
 label becomes the FULL event label (memory accesses ⊕ choice picks ⊕ output — the shape the pool already emits; [USER]:
-«as regular as possible»); (b) native method promotion (deletes `Func.wrapper`); (c) `Cont := List Frame`; (d) numeric
+the model as regular as possible); (b) native method promotion (deletes `Func.wrapper`); (c) `Cont := List Frame`; (d) numeric
 locals; (e) block-scoped allocation. Riding the label change we deliver the sequential half of the end-to-end statement
 we owe you — a terminal classification (a permitted panic is not «stuck»), output observable from the sequential
 relation, and the `execStmtLoop` bridge in both directions including the terminal case. We propose a stable interface in
@@ -97,16 +97,14 @@ rfl` and 6 `cbv` sites stay inside their heartbeat budgets once the label is in 
 
 ## 2. The proposal: one batched breaking window, one re-pin
 
-[USER] ruling (2026-09-22/23, verbatim, relayed): «I think we'll want to give them one repin after all the breaking
-changes have landed. Can we batch these together» — RULED: the remaining shape-breaking reshapes land in ONE window; you
+[USER] ruling (2026-09-22/23, relayed): (one re-pin after all the breaking changes have landed, batched together) — RULED: the remaining shape-breaking reshapes land in ONE window; you
 receive ONE re-pin offer after all of them, with a changelog; no breaking change lands outside the window without a
 separate ruling. Since you consume a pin, nothing on our `main` reaches you until you move it; «window» therefore means:
 the offer comes after everything below, so you port your `stepFn` sites once. Names: B7/C1/C3/C4/B6/P are the items of
 our 2026-09-03 design-hygiene arc (`G:docs/2026-09-03_design-hygiene-arc.md`; B7 = the `ProgramCtx`/`Store` split you
 already have; C1 = §1 item 1). Proposed landing order, with the dependency reasons:
 
-**(a) The full event label on the sequential relation** — [USER]-ruled («we should make the model as regular as
-possible»), first in the window, before C3. What: `Step`'s fifth argument and `stepFn`'s fourth component become
+**(a) The full event label on the sequential relation** — [USER]-ruled ((the model as regular as possible)), first in the window, before C3. What: `Step`'s fifth argument and `stepFn`'s fourth component become
 `StepLabel := { trace : AccessTrace, picks : List PickRecord, out : List GoString }` — the three fields the pool's
 `StepEvent` already carries (`G:Multi.lean:1009`: `who, action, picks, out, trace`), so the pool event becomes
 `{ who, action, label : StepLabel }` and there is ONE label type at both layers. `PickRecord = { site, bound, pick }`
@@ -154,7 +152,7 @@ proofs — the honest cost: allocation ORDER changes, so `Loc.base` ids differ f
 address-free (pointer `==` survives any bijective renaming), so this is semantics-preserving UP TO HEAP ISOMORPHISM,
 and we will disclose the exact shift in the changelog. After B6. Cost: 2 sessions + the twin re-pin.
 
-**Not in the window, and why.** NaN latitude (BUG-094; [USER]: «if this isn't in the target, we can defer it» — floats
+**Not in the window, and why.** NaN latitude (BUG-094; [USER]: (deferred as outside the target) — floats
 are outside your `ScalarTy`). The `unseq` DRF-confluence lemma (that every schedule of a data-race-free `unseq` sweep
 yields the same result) — additive, matters when you reach concurrency/F4; owed, not scheduled. The reduction of the
 machine's concurrency granularity to Go's access granularity (NPDRF) — restate-only as a design note; very high cost, no

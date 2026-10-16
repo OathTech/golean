@@ -383,8 +383,7 @@ already prints.
 ### 4.3 Proposed budget rule (measured) — ADOPTED [USER] 2026-09-03, IMPLEMENTED
 
 > **Status update (2026-09-03, [AGENT] recording a [USER] ruling as
-> relayed by the coordinator):** Mike ruled «yeah, agree on the sampling
-> budget, go ahead as you propose.» — the rule below is the gate as of
+> relayed by the coordinator):** Mike ruled the sampling budget agreed as proposed — the rule below is the gate as of
 > branch `sampling-budget` (`scripts/diff-coverage`
 > `run_membership_case_rows`, budget constant `MEMBERSHIP_DRAWS`: K=32
 > on the gate path, K=80 under `--slow`; `draws=` in the PASS detail;
@@ -393,7 +392,7 @@ already prints.
 > before/after table and fixture logs:
 > `docs/evidence/2026-09-03_sampling-budget/`; lane paragraph:
 > `docs/coverage-suite-structure.md`. **Two-draw floor** ([USER], Mike
-> 2026-09-03, relayed: «(d) this is a 'spirit of the ruling' vs. 'letter of the ruling' case - we should do option A which seems like the spirit of the ruling» — option A): the early stop may fire only
+> 2026-09-03, relayed: (option A: the spirit of the ruling over its letter) — option A): the early stop may fire only
 > after at least two draws (one plain, one `-race`), so a `members=1` row
 > is never a single plain draw; caption `draws=2 (floor; …)`.
 
@@ -449,7 +448,7 @@ so K) / 28 s (pin 3 not reached: 2 of 3).
 Provenance chain, exactly: the [AGENT] coordinator put to the [USER] the
 item "Strict-lane routing rule: adopting it turns eight scheduling rows
 red until routed; recommendation: adopt and route them in the same
-slice"; the [USER] replied «(6) strict-lane, agree» (quote received by
+slice"; the [USER] replied (item (6), strict-lane, agreed) (quote received by
 the coordinator, RELAYED to the recording worker in lane
 `guard-stage-alt`; cited as relayed, not firsthand; full reply in
 `docs/2026-08-31_qrow-rulings.md`, 2026-09-03 ruling record). SCOPE, as
@@ -542,11 +541,11 @@ mode stays invisible.
 
 | # | change | evidence | cost | status |
 |---|---|---|---|---|
-| P1 | Strict-lane depth guard (§5): refuse strict PASS when any adversarial stream run reports `wideAfterExhaustion > 0` without `confluent`/`depth=`; seeded streams of declared length | §2.3: 23 rows (8 scheduling, 15 capacity) outrun the fixed streams; blast radius under this rule = those 23 (a `wide > 8` threshold would hit 25, incl. two covered rows — §5) | gate change (diff-coverage) + 23 manifest rows to route/declare | ADOPTED [USER] 2026-09-03 («(6) strict-lane, agree», relayed by the [AGENT] coordinator — provenance and the 23-row scope note in §5); **IMPLEMENTED 2026-09-03** by the implementing lane `strict-routing` (scope corrected mid-lane by the coordinator from "re-lane eight rows" to "P1 as written"): the guard is in `scripts/diff-coverage` (tracer-backed `wideAfterExhaustion` refusal, `depth=N` seeded streams, variant-stream refusals reported as refusals) with red-first fixtures in `scripts/test-lane-validation`; the 23 rows dispositioned — §10 below; SHA in the lane's commit / `docs/evidence/2026-09-03_strict-routing/` |
-| P2 | Membership sampling rule (§4.3): alternate plain/race, stop at `members=`, K=32 (`--diff`) / K=80 (`--slow`), print `draws=` | §4.2: 6 of 22 ten-draw rows point-mass at the gate budget in at least one of two runs (8 under-report); saturation up to 52–66 when reached, and two rows never moved in one run's 80 draws | +6.5 min on `--diff`; membership-lane code only | **ADOPTED [USER] 2026-09-03** («yeah, agree on the sampling budget, go ahead as you propose», relayed by the coordinator) + **IMPLEMENTED** (branch `sampling-budget`; `docs/evidence/2026-09-03_sampling-budget/`); **two-draw floor before early stop ADOPTED [USER] 2026-09-03** (spirit-of-the-ruling call, relayed) |
+| P1 | Strict-lane depth guard (§5): refuse strict PASS when any adversarial stream run reports `wideAfterExhaustion > 0` without `confluent`/`depth=`; seeded streams of declared length | §2.3: 23 rows (8 scheduling, 15 capacity) outrun the fixed streams; blast radius under this rule = those 23 (a `wide > 8` threshold would hit 25, incl. two covered rows — §5) | gate change (diff-coverage) + 23 manifest rows to route/declare | ADOPTED [USER] 2026-09-03 ((item (6), strict-lane, agreed), relayed by the [AGENT] coordinator — provenance and the 23-row scope note in §5); **IMPLEMENTED 2026-09-03** by the implementing lane `strict-routing` (scope corrected mid-lane by the coordinator from "re-lane eight rows" to "P1 as written"): the guard is in `scripts/diff-coverage` (tracer-backed `wideAfterExhaustion` refusal, `depth=N` seeded streams, variant-stream refusals reported as refusals) with red-first fixtures in `scripts/test-lane-validation`; the 23 rows dispositioned — §10 below; SHA in the lane's commit / `docs/evidence/2026-09-03_strict-routing/` |
+| P2 | Membership sampling rule (§4.3): alternate plain/race, stop at `members=`, K=32 (`--diff`) / K=80 (`--slow`), print `draws=` | §4.2: 6 of 22 ten-draw rows point-mass at the gate budget in at least one of two runs (8 under-report); saturation up to 52–66 when reached, and two rows never moved in one run's 80 draws | +6.5 min on `--diff`; membership-lane code only | **ADOPTED [USER] 2026-09-03** (the sampling budget agreed as proposed, relayed by the coordinator) + **IMPLEMENTED** (branch `sampling-budget`; `docs/evidence/2026-09-03_sampling-budget/`); **two-draw floor before early stop ADOPTED [USER] 2026-09-03** (spirit-of-the-ruling call, relayed) |
 | P3 | Pin `members=` on the 10 unpinned membership rows (B13) | needed for P2's early stop; 4 `slices/*` rows should pin the enumerated width, `maps/*` their certified sets | manifest rows only | PROPOSED |
-| P4 | Run `scripts/choice-trace-corpus` as a periodic (non-gate) audit; keep zero violations/alarms as the standing expectation | §3.2 | ~12 min wall at `--jobs 6` | landed as tooling; periodic scheduling DEFERRED — lower priority ([USER] 2026-09-03 «others: lower priority for now?», relayed by the [AGENT] coordinator; record: `docs/assessment/decisions-2026-08-31.md` 2026-09-03 addendum) |
-| P5 | Report the variant run's status in the strict invariance check (D-10 item 2) | §2.4 the one VARIES row is a refusal labelled `nondet` | one-line gate change | IMPLEMENTED 2026-09-03 with P1 (item 4, lane `strict-routing`): `beside-loop`'s variant-stream refusal now lands at FAIL/lean-observation (the row's [USER]-ruled (a) stage alternation with `differential` for the gc=90 draw stands — `lean-observation|differential`, `# reason:` block in the baseline), detail names the refusing stream. The SEPARATE filing had been marked lower priority ([USER] 2026-09-03 «others: lower priority for now?», relayed by the [AGENT] coordinator; record: `docs/assessment/decisions-2026-08-31.md` 2026-09-03 addendum) — moot, landed inside P1 (round-8a merge train, [AGENT] union of the two lanes' rows) |
+| P4 | Run `scripts/choice-trace-corpus` as a periodic (non-gate) audit; keep zero violations/alarms as the standing expectation | §3.2 | ~12 min wall at `--jobs 6` | landed as tooling; periodic scheduling DEFERRED — lower priority ([USER] 2026-09-03 deferred the others as lower priority, relayed by the [AGENT] coordinator; record: `docs/assessment/decisions-2026-08-31.md` 2026-09-03 addendum) |
+| P5 | Report the variant run's status in the strict invariance check (D-10 item 2) | §2.4 the one VARIES row is a refusal labelled `nondet` | one-line gate change | IMPLEMENTED 2026-09-03 with P1 (item 4, lane `strict-routing`): `beside-loop`'s variant-stream refusal now lands at FAIL/lean-observation (the row's [USER]-ruled (a) stage alternation with `differential` for the gc=90 draw stands — `lean-observation|differential`, `# reason:` block in the baseline), detail names the refusing stream. The SEPARATE filing had been marked lower priority ([USER] 2026-09-03, the others deferred as lower priority, relayed by the [AGENT] coordinator; record: `docs/assessment/decisions-2026-08-31.md` 2026-09-03 addendum) — moot, landed inside P1 (round-8a merge train, [AGENT] union of the two lanes' rows) |
 
 ---
 

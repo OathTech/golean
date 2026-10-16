@@ -15,8 +15,7 @@ class change not disclosed. Everything else is NIT or pre-existing.
 
 Auditor: [AGENT] (Fable), worktree `.claude/worktrees/audit-c1-memory-module`, branch
 `review/c1-memory-module-0918` at the candidate tip `a8ada3cc` (main `68b261e6`). Ordered by
-[USER] Mike 2026-09-18, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «(1) Agree,
-run the audit.» Nothing merged, pushed, or edited on the candidate or main. Every logged decision
+[USER] Mike 2026-09-18, relayed by the [AGENT] coordinator — cite as relayed: (item (1) agreed, the audit ordered) Nothing merged, pushed, or edited on the candidate or main. Every logged decision
 below is [AGENT]; items that are the user's are marked PENDING [USER]. Evidence (small):
 `docs/evidence/2026-09-18_c1-memory-module-audit/`.
 
@@ -49,7 +48,7 @@ Frontend: `tools/nativefrontend` at the tip (unchanged on the branch), `go1.26.5
 - Where the claim lives: charter `docs/2026-09-17_c1-memory-module-charter.md:173` («RULED [USER] 2026-09-18 (record: … «The on-deck decisions ruling record (2026-09-18)»): the coordinator's triage classed D1–D7, D9, D10 as … defaults and the [USER] raised no objection»), already on main at `68b261e6` ([AGENT] coordinator's commit); the handoff §0 and the slice log repeat it; the handoff §5 table then treats D1–D7 as the lane's brief.
 - Why it matters: the global charter says failing to distinguish [AGENT] from [USER] decisions «is by definition a critical trust failure»; D1 (root cells), D2 (dense array), D3 (`HeapNormal` + `alloc` normalizes — a candidate BEHAVIOUR change), D5 (label on `Step`/`StepM`), D6 (theorem + audit), D7 (BUG-041 stays FAIL), D9 (S2c's shape) are [AGENT] recommendations that are recorded as [USER] rulings on the strength of silence. This is the pattern memory already flagged (2026-09-07 L3 audit: «user decisions never briefed as defaults»).
 - Not the lane's edit (the header is the coordinator's, on main) — but the branch is not a mergeable unit until the rulings it implements are the user's.
-- Proposed disposition: at the merge sign-off the [USER] ratifies D1–D7, D9, D10 explicitly (one line each or one line for all), the coordinator adds that verbatim to the qrow record, and the charter §7 header is re-tagged to cite it. Until then the header should read PENDING [USER] ratification. [AGENT]
+- Proposed disposition: at the merge sign-off the [USER] ratifies D1–D7, D9, D10 explicitly (one line each or one line for all), the coordinator adds that to the qrow record, and the charter §7 header is re-tagged to cite it. Until then the header should read PENDING [USER] ratification. [AGENT]
 
 ### F2 — RECORDS-CLAIM (misdiagnosis) + PRE-EXISTING TOOLING BUG: the detector-soundness gc side did NOT die in TSan — the lane runner never creates the crash-hook files, so every `-race` harness exits 78 by design; the HOLE cell IS judgeable here
 

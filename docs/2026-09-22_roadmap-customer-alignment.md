@@ -6,10 +6,8 @@ file/theorem/lesson or are marked **[inf]** (this worker's inference). Rev. 2 (s
 [USER] named after rev. 1: `/home/dev/projects/golean-logic/` (git, main `5801c71`, origin `OathTech/golean-logic`),
 READ-ONLY — nothing there was modified, built or run. Paths `L:…` below are relative to that repo; `G:…` to this one.
 
-**The question** ([USER] Mike, 2026-09-22, verbatim, relayed by the [AGENT] coordinator — cite as relayed): «Our ultimate
-aim here is to support the GoLean logic that we're building in a different repo. That's our upstream customer. Which of
-the things that we're building are actually useful for those customer proofs and is our prioritization right?». This
-revises the 2026-09-11 «we don't have as of now a customer» ruling; the 2026-09-16 «what this repo provides» statement
+**The question** ([USER] Mike, 2026-09-22, relayed by the [AGENT] coordinator — cite as relayed): the ultimate aim is to support the GoLean logic being built in another repository — the upstream customer; which of the things being built are useful for those proofs, and is the prioritization right?. This
+revises the 2026-09-11 no-customer-yet ruling; the 2026-09-16 «what this repo provides» statement
 (`G:CLAUDE.md`) and the F10 boundary (relation + coherence here; Iris resources/WP/proofs downstream) stand and are assumed.
 
 ## 0. The customer, first-order (rev. 2) — and the proxies rev. 1 used

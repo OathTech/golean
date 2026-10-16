@@ -137,7 +137,7 @@ and the stop reason).
 * `k80-vs-k32-exhibition.tsv` — the joined exhibition table.
 * `ci-diff-gate-clean-tip.log` — the clean-tip fast gate after the commit (added by the follow-up evidence commit).
 
-## Round-10 merge train landing (2026-09-04, [AGENT] under the [USER] sign-off «go ahead and merge these»)
+## Round-10 merge train landing (2026-09-04, [AGENT] under the [USER] sign-off (merge sign-off))
 
 - Rebased onto main `415f959a` (= `1b8401c0` + `stdlib-source-2`, landed first
   on this train); no conflicts (this lane touches only the certified record,

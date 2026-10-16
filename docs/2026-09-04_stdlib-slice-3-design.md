@@ -7,12 +7,10 @@ tracked figure is in §8's last bullet). **Status:**
 branch complete, gate PASS (§8), NO merge — the audit ask is the
 coordinator's. **Provenance:** [AGENT] worker under three [USER]
 rulings relayed by the [AGENT] coordinator (cited as relayed
-throughout): stdlib gates G1–G9 as recommended («(3) agree, go ahead
-with the plan»; G2 = «print/println as machine built-ins with a stderr
+throughout): stdlib gates G1–G9 as recommended ((the plan approved, item (3)); G2 = «print/println as machine built-ins with a stderr
 observable: admit with gc's pinned format for int/uint/bool/string,
 refuse address-printing kinds and initially floats»); the `float-bits`
-primitive («so the question is whether to add this as a primitive
-language operation? This sounds reasonable, do it», 2026-09-04, with
+primitive ((adding a primitive language operation found reasonable and approved), 2026-09-04, with
 the audit's condition: NaN payloads bit-exact, ±0 and quiet/signalling
 probes); design gate G-OUT («Program output is a per-step EVENT
 (`StepEvent.out`), folded by the driver into `Readout`, not a `Store`

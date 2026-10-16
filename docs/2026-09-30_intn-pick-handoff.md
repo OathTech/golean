@@ -5,7 +5,7 @@
 2026-09-30, item 2 of «The raft-proofs team's subject-delta note (2026-09-30) — RULED» (relayed): a GENERAL native pick
 site, «a value in `[0, n)`, panic if `n ≤ 0`», inside the window before the single re-pin. Design note (read first):
 `docs/2026-09-30_intn-pick-design.md` — decisions D1–D8 are [AGENT]; PENDING [USER] ratification at the merge ask, RATIFIED [USER] Mike 2026-10-01 at train r58 —
-«agree, land it, ratify all including the harness fix» (relayed by the [AGENT] coordinator — cite as relayed); option B not taken (§3).
+(landing agreed, everything ratified including the harness fix) (relayed by the [AGENT] coordinator — cite as relayed); option B not taken (§3).
 
 ## 1. What landed (the design as built)
 
@@ -99,7 +99,7 @@ touched modules) — a provenance refresh at the train (the r55/r57 precedent), 
 
 ## 3. PENDING [USER] at the merge ask — RULED 2026-10-01
 
-RATIFIED [USER] Mike 2026-10-01 — «agree, land it, ratify all including the harness fix» (relayed by the [AGENT] coordinator — cite as relayed): items 1 and 3 ratified
+RATIFIED [USER] Mike 2026-10-01 — (landing agreed, everything ratified including the harness fix) (relayed by the [AGENT] coordinator — cite as relayed): items 1 and 3 ratified
 as posed (D1–D8, the cap 3, both re-pins); item 2, option B, NOT taken; the §4a harness fix included (train r58 prep, audit
 F4). The list as posed at the lane's tip:
 
@@ -126,8 +126,8 @@ clause (`rand`); goimports' assumed-name convention strips a major-version suffi
 element. The two v2 rows spell the import with the explicit alias `rand "math/rand/v2"` (legal Go, honoured by
 `importName`'s `spec.Name` branch) and say why in a comment. The fix (the assumed-name rule in `importName`) is a
 one-liner on the DIFFERENTIAL APPARATUS and therefore not this lane's to make — posed for the coordinator.
-**FIXED 2026-10-01** [AGENT], train r58 prep (branch `prep/r58-0930`, [USER]-ratified with the lane — «… including the
-harness fix», relayed): `assumedImportName` applies goimports' rule; born row `builtins/rand-intn/v2-membership-unaliased`
+**FIXED 2026-10-01** [AGENT], train r58 prep (branch `prep/r58-0930`, [USER]-ratified with the lane — the harness fix
+included, relayed): `assumedImportName` applies goimports' rule; born row `builtins/rand-intn/v2-membership-unaliased`
 (red-first + gc evidence `docs/evidence/2026-10-01_r58-harness-fix/`). The two aliased v2 rows keep their alias as coverage of
 the aliased spelling.
 
@@ -167,7 +167,7 @@ rebases onto `main` before its gate run so the merge is `--ff-only`.
 
 ## Merge train r58 — the 5a record ([AGENT] coordinator, 2026-10-01)
 
-[USER] Mike 2026-10-01 «agree, land it, ratify all including the harness fix» (relayed). Pre-merge main `ac6baa31` →
+[USER] Mike 2026-10-01 (landing agreed, everything ratified including the harness fix) (relayed). Pre-merge main `ac6baa31` →
 `refs/snapshots/r58/main`; train tip `723939b3` fast-forwarded. The first `ci --slow` (1253 s) was red on the 5a pair PLUS
 `declaration boundary` and `executed library coverage`: the primary checkout's `.lake/build` held 55 files naming
 `.claude/worktrees/continuations/…` (an r56 warm copy by the coordinator; that worktree's `.lake` was later pruned) — a

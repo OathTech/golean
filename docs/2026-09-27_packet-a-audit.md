@@ -116,8 +116,7 @@ records its awk. Add the command (CLAUDE.md: numbers derivation-anchored).
 The scanner `next`s past the header line, «a type mentioning an op is not a call». A one-line `def f … :=
 loadMany …` is therefore invisible. Probe: appending `def scratchExec (…) := GoLean.GoCore.Machine.loadMany ctx s
 l` on one line → PASS (EXIT 0). The same body on a second line → FAIL naming the site (EXIT 1). This is a fail-open
-in an existing gate, predating this packet, and the packet's row is unaffected by it. Per «every detected gap is
-rowed», it wants a row: scan the text after `:=` on the header line.
+in an existing gate, predating this packet, and the packet's row is unaffected by it. Per every detected gap is rowed, it wants a row: scan the text after `:=` on the header line.
 
 ## Attack record (what held)
 

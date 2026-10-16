@@ -452,7 +452,7 @@ block below). The row was [USER]-ratified as a (c) pin in §7 (2026-08-20)
 and §7's re-colorable list names C1/C5/E7/R6 — not C4 — so the move
 touches a ratified pin and awaited [USER] ratification at the merge gate.
 Until the ruling this row read "3 ratified, 1 provisionally moved", the move
-kept pending it. RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off): the move STANDS and the count 3 → 2 is no longer provisional.
+kept pending it. RULED [USER] 2026-09-07 at merge train round 24 by the merge sign-off (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off): the move STANDS and the count 3 → 2 is no longer provisional.
 
 Two distinct impossibilities, both in gc's abort-line output (which the
 spec does not describe at all — this is `preprintpanics` behavior):
@@ -481,17 +481,17 @@ stops at an embedded `\n` — used to sit in this row. It is no longer a
 impossibility 1 is RE-ENVELOPED, not decided** — `ChoiceSite.repanicCollapse`
 draws the marker at the abort (bound 2 on the recovered-equal shape; slot 0
 = collapse, slot 1 = the two-line form), as an [AGENT] extension of
-BUG-087's ruling SHAPE («demonic choice so both are admitted», [USER]
+BUG-087's ruling SHAPE (a demonic choice admitting both texts, [USER]
 2026-09-03, relayed — ruled for ONE choice at the nil arm/R9a, not this
-marker) under R-1's re-envelope authority — [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (fix round R2);
+marker) under R-1's re-envelope authority — [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 by the merge sign-off (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (fix round R2);
 gc's draw is eface identity the machine does not model (`runtime/panic.go:715`),
 and both members are gc-realized at the pin (`panic(r)` vs `panic(r.(string))`;
 every go ≤ 1.24 printed the two-line form). `repanic-same-value-abort` leaves
 this row for the membership lane (PASS) — a (c)→(a) re-classification by
-[AGENT] under R-1 that touches this [USER]-ratified pin; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (fix round R3, the dated line above); C4 keeps
+[AGENT] under R-1 that touches this [USER]-ratified pin; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 by the merge sign-off (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (fix round R3, the dated line above); C4 keeps
 impossibility 2's two rows.
 A7 (L12b) is FIXED in the same chunk; its residue — a first line that is not
-valid UTF-8 — is RED by name under landing decision D5 ([AGENT] default applied per the coordinator's brief; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (plan §4 D5); three
+valid UTF-8 — is RED by name under landing decision D5 ([AGENT] default applied per the coordinator's brief; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 by the merge sign-off (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (plan §4 D5); three
 `panic-recover/panic-text/invalid-*` rows on BUG-004's Cases line), not a
 (c) claim: it is an observation-channel limit, not a machine impossibility.
 
@@ -585,7 +585,7 @@ taken — see §7 for the ruling and its framing.**
 | --- | --- | --- |
 | C1 hidden-dep init order | 1 | the spec says the order between hidden-dependency variables "is unspecified"; go/types and gc realize two DIFFERENT conforming orders and we hold the spec-shaped one |
 | C2 BUG-061 staticinit residual | 1 | the un-chaseable flavor is one where `go run` and `go run -gcflags=-N -l` disagree — there is no single gc answer to match, only an optimizer artifact |
-| *(note beside C2, 2026-09-03 — not a (c) row)* BUG-087 panic text on a nil `*T` value-method dispatch | 0 | the SAME argument shape as C2 — `go run` and `go run -gcflags=-l` disagree on one source (devirtualized nil-deref text vs the `(*T).M` wrapper's `panicwrap` text) — but resolved the OTHER way: not a pinned red, an ENVELOPE. Both realizations are conforming `runtime.Error` texts at a spec-open point (R9), so the machine admits both as a width-2 demonic choice (`ChoiceSite.nilValueMethodText`; latitude inventory R9a; [USER] 2026-09-03 «demonic choice so both are admitted», relayed — `docs/2026-08-31_qrow-rulings.md`) and the five rows sit in the membership lane. C2 stays a red because ITS observable (init order) has no in-machine choice point yet; BUG-087's had one arm to widen |
+| *(note beside C2, 2026-09-03 — not a (c) row)* BUG-087 panic text on a nil `*T` value-method dispatch | 0 | the SAME argument shape as C2 — `go run` and `go run -gcflags=-l` disagree on one source (devirtualized nil-deref text vs the `(*T).M` wrapper's `panicwrap` text) — but resolved the OTHER way: not a pinned red, an ENVELOPE. Both realizations are conforming `runtime.Error` texts at a spec-open point (R9), so the machine admits both as a width-2 demonic choice (`ChoiceSite.nilValueMethodText`; latitude inventory R9a; [USER] 2026-09-03 ruled a demonic choice admitting both texts, relayed — `docs/2026-08-31_qrow-rulings.md`) and the five rows sit in the membership lane. C2 stays a red because ITS observable (init order) has no in-machine choice point yet; BUG-087's had one arm to widen |
 | C3 BUG-059 panic-message qualifier | 1 | no one key string can be both path-injective (identity) and byte-equal to gc's deliberately ambiguous name-qualified message |
 | C4 BUG-004 abort rendering | 3 | the collapse is eface ALLOCATION identity and the rewrite requires CALLING a method at abort time — both outside what the machine's terminal rule can express (the flagged weak point was RULED: `panic-newline-abort` split out to (a)/L12b/A7) |
 | C5 float→int out of range | 2 | the spec declares the result implementation-dependent and gc's own ports disagree (amd64 wrap vs arm64 saturate); a refusal is the honest resolution of an unoracleable point |

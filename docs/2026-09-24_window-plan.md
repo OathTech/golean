@@ -1,7 +1,7 @@
 # The batched window — the execution plan (2026-09-24)
 
 [AGENT] planning writer, lane `docs/window-plan-0924` (worktree `.claude/worktrees/window-plan-0924`, off `main` @ `3fb4a0d1`). The charter
-rev. 2 (`docs/2026-09-23_batched-window-charter.md`) is the window of RECORD ([USER] Mike 2026-09-24, «I'm happy to go with your rec»,
+rev. 2 (`docs/2026-09-23_batched-window-charter.md`) is the window of RECORD ([USER] Mike 2026-09-24, (the recommendation accepted),
 relayed — `docs/2026-08-31_qrow-rulings.md`, «The window charter (rev. 2) and the Codex packaging — RULED (2026-09-24)»). This file is its
 EXECUTION TABLE: every unit of work in order, with owner kind, the charter row it executes, what must have landed first, gate class, audit,
 the [USER] touchpoints and the session estimate. **Standing rule: nothing here re-decides a ruling** — a unit that appears to need one
@@ -101,6 +101,6 @@ claim. Cost: C4 slips by the unit's 1–2 sessions; the window total ≈ +1–2.
 | `fmt/percent-plus-sharp-v` (D-3) | `%+#v` over the ConfState structs — the `raftpb/confstate.go` overlay's fixed errors back to upstream's `fmt.Errorf` dumps; AFTER route A, since the struct shape (`unknownFields`) is what `%+#v` prints | depends on route A's struct shape | `--diff` (+ `--slow` if the overlay retires) |
 | `frontend/writer-typed-globals` (D-12 / H-20) | the isolation/effect story for writer-typed package-level globals (`docs/raft-w42-log.md`, H-20 — the honest alternative, «D-12 is cheap and may as well be permanent», stays on the table); until then the raft-proofs note's «Logger installed» premise | frontend-lane work, «not small» (W4.2) | `--diff` + `--slow` |
 
-**Unit 6b added ([USER] 2026-09-30, «Yes, agree, do the fix inside this window»).** BUG-004 item 4, the preprint phase for error/Stringer panic payloads (`docs/2026-09-30_bug004-item4-design.md`), after C4 and before packet D; ≈3.5–5 sessions; Fable S1–S2, Opus S3; the G-C3 stop rule. Packet D states its abort and frame-exit equations over the phase's arms.
+**Unit 6b added ([USER] 2026-09-30, (the fix agreed inside this window)).** BUG-004 item 4, the preprint phase for error/Stringer panic payloads (`docs/2026-09-30_bug004-item4-design.md`), after C4 and before packet D; ≈3.5–5 sessions; Fable S1–S2, Opus S3; the G-C3 stop rule. Packet D states its abort and frame-exit equations over the phase's arms.
 
-**Whole-window review and packet D landing ([USER] 2026-10-03, «agree on 1-4»).** The independent review `docs/2026-10-03_window-review.md` stands as the whole-window review; packet D and the CL1–CL5 disposition land at train r61; additive BridgeSet pin rows are exempt from the G-C3 stop rule. Remaining: unit 7b, the re-pin offer.
+**Whole-window review and packet D landing ([USER] 2026-10-03, (items 1-4 agreed)).** The independent review `docs/2026-10-03_window-review.md` stands as the whole-window review; packet D and the CL1–CL5 disposition land at train r61; additive BridgeSet pin rows are exempt from the G-C3 stop rule. Remaining: unit 7b, the re-pin offer.

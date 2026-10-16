@@ -5,7 +5,7 @@ design note of 2026-10-09 against your `2026-10-09_mem0-probes.md` §6.1–6.3).
 `CLAUDE.md` (fail closed with named refusals; a total core; the trusted surface is the interpreter, the
 frontend and the differential apparatus).
 
-## 1. Ruled on our side ([USER] Mike 2026-10-12, «Agree on the two strategic questions, let's do it»)
+## 1. Ruled on our side ([USER] Mike 2026-10-12, (the two strategic questions agreed))
 
 - **Go.** We build the seeded entry: a driver entry beside `runProgramSetupM`, a seeded readout, the
   `--seed` / `--arg-ref` / `--arg-nil` flags, and a `--seed` mode of our Go observation harness. It is

@@ -1,6 +1,6 @@
 # G-C3 design note — `Cont := List Frame` (window row 4, packet C)
 
-STATUS: **RULED — G-C3 PASSED with the four §5 decisions as recommended ([USER] Mike 2026-09-29 «Agree with 1-4»,
+STATUS: **RULED — G-C3 PASSED with the four §5 decisions as recommended ([USER] Mike 2026-09-29 (items 1-4 agreed),
 relayed by the [AGENT] coordinator; ledger `docs/2026-08-31_qrow-rulings.md` «G-C3 (continuations) passed — RULED
 (2026-09-29)»). Executed by lane `core/continuations-0929` (handoff `docs/2026-09-29_continuations-handoff.md`).** Was:
 PROPOSED — HARD-STOP design gate. [AGENT] design writer, 2026-09-29, branch `docs/gc3-design-0929` forked from `train/r55` @ `fb93f822`, with P landed.

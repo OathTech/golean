@@ -6,9 +6,8 @@
 `review/b7-context-store-0917` at `d0e65182` (five commits over main
 `5955e55f`: `66fe1092` S0 records, `73ad798d` the runtime commit, `a7fd0542`
 records, `1fafc9f2` the fix-round runtime commit, `d0e65182` fix-round records).
-Ordered by the [USER] (Mike, 2026-09-17, verbatim, relayed by the [AGENT]
-coordinator — cite as relayed: «Agree with the audit, go ahead and launch (after
-the rulings if relevant)»). Nothing here is adjudicated that is the [USER]'s:
+Ordered by the [USER] (Mike, 2026-09-17, relayed by the [AGENT]
+coordinator — cite as relayed: (the audit agreed, launch approved after any relevant rulings)). Nothing here is adjudicated that is the [USER]'s:
 dispositions are PROPOSED; items needing a ruling are marked PENDING [USER].
 Evidence (small receipts): `docs/evidence/2026-09-17_b7-context-store-audit/`
 (README there maps file → check). Binaries compared throughout: main
@@ -36,7 +35,7 @@ No finding at WRONG-ANSWER, UNSOUND-PROOF, WEAKENING, COHERENCE-GAP or FAIL-OPEN
 - **What I did.** Extracted every string literal (comments stripped, whole files) from the 34 changed `GoLean/`/`Tests/` files at `5955e55f` and at `d0e65182` and compared the multisets (`.tmp/lits.py`; `literal-changes.txt`). Everything else that differs is an interpolation ARGUMENT rename (`{goTypeNameForMessage state X}` → `{goTypeNameForMessage ctx X}` / `{… X}`, `{state.types.size}` → `{ctx.types.size}`) whose rendered bytes are unchanged.
 - **What happened.** Exactly THREE literals changed in content: (1) «seeded state ill-formed: a location in a global cell or function body dangles beyond the allocator bound» → «… in a global cell dangles …» (×2, both seams — DISCLOSED, handoff §7/§8.4, RULED); (2) `Store.updateCell`'s «allocation goes through ExecState.alloc only» — UNCHANGED (as ruled); (3) **`GoLean/GoCore/Machine.lean:3734`** in `applySyncOpCore`: `throw (.internal "try-lock heads apply through applySyncOp ctx (the choice-taking entry), never the core")` — was `"… through applySyncOp (the choice-taking entry) …"` at `5955e55f:GoLean/GoCore/Machine.lean:3700`. A mechanical `applySyncOp ` → `applySyncOp ctx ` rewrite hit the inside of a string literal. Not in the handoff §7 table, not in §8, not in the slice log; the commit message and handoff say «two refusal texts changed wording».
 - **Reachability.** `applySyncOp` (`Machine.lean:3896–3908`) intercepts every try head (`op.tryTargets?` = `some _`) and calls `applySyncOpCore` only under `none`; `applySyncOpCore` has no other code caller (`grep applySyncOpCore GoLean/GoCore/{Machine,StepFn,Multi}.lean` → prose + line 3907). The arm is a defensive `.internal`, unreachable from `stepFn`; NOT observation-bearing (the 261-row trace subset and the 39 wire runs below are byte-identical). The differential cannot see it.
-- **Why it matters.** The charter (§5 items 2–3) and the handoff's own claim structure rest on «every text change disclosed»; the ruling «The rewordings sound fine» covered two texts, not this one. The new text is also garbled (it names a Lean application, «applySyncOp ctx», in a message meant for a human).
+- **Why it matters.** The charter (§5 items 2–3) and the handoff's own claim structure rest on «every text change disclosed»; the ruling (the rewordings accepted) covered two texts, not this one. The new text is also garbled (it names a Lean application, «applySyncOp ctx», in a message meant for a human).
 - **Proposed disposition.** Revert the literal to its old bytes (one line, records-class, no proof touches the string — `grep "try-lock heads" GoLean` finds only this site) and note it in the handoff §7; OR disclose it as a third rewording and re-pose. PENDING [USER] which; the revert is the [AGENT] recommendation (byte-preservation is the charter's default).
 
 ### F2 — RECORDS-CLAIM: the runtime-commit delta is misstated

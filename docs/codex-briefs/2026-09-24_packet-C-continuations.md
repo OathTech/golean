@@ -1,7 +1,7 @@
 # Codex packet C — CONTINUATIONS: `Cont := List Frame`
 
 STATUS: **EXECUTING — lane `core/continuations-0929` (worktree `.claude/worktrees/continuations`), [AGENT packet C worker], an
-Opus 5.5 subagent, forked from `main` @ `883ebc36` (P landed, train r55). G-C3 PASSED ([USER] Mike 2026-09-29 «Agree with 1-4», relayed;
+Opus 5.5 subagent, forked from `main` @ `883ebc36` (P landed, train r55). G-C3 PASSED ([USER] Mike 2026-09-29 (items 1-4 agreed), relayed;
 ledger `docs/2026-08-31_qrow-rulings.md` «G-C3 (continuations) passed — RULED (2026-09-29)»; design `docs/2026-09-29_gc3-continuations-design.md`,
 whose §3 is this brief's acceptance and whose §4 stop rule binds). Refreshed 2026-09-29 by the lane (the design note's two stale-detail
 findings corrected: `frame`'s field order after P; the helpers P deleted).** [AGENT] planning writer 2026-09-24. Ruling: the packaging of 2026-09-24 («C continuations

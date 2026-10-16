@@ -9,7 +9,7 @@ at `7edc298f`, selected by path and checked against today's landed modules.
 
 ## Authority and objective
 
-[USER] 2026-09-08, firsthand: “Approved, go ahead and build this.” The
+[USER] 2026-09-08, firsthand: approved, with the go-ahead to build. The
 same instruction supplies the seven refinements below and reserves the
 adversarial review to the user. This authorizes implementation and CI
 widening; measured cost is presented for acceptance at the handoff.

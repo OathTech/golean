@@ -7,17 +7,7 @@ findings were filtered through the [USER]'s 2026-09-11 scope ruling, the
 [USER] decisions taken on it the same day, and the next sequence the [USER]
 agreed. Proposals here are [AGENT]; decisions are tagged.
 
-**The scope ruling this note applies** ([USER] Mike, 2026-09-11, verbatim,
-relayed by the [AGENT] coordinator — cite as relayed): «okay, I am still
-concerned that we are not focusing our energy on actually making the *go
-semantics* as good as possible. We don't have as of now a customer. Our job
-is to make the Go seantics as good as we can make it. Nothing else. We can
-do limited spikes to try to validate our choices, but our top level goal is
-to make the semantics good. We should prioritize high value efforts, like
-cleaning up the handling of state, and making the semantics structure
-regular. We *can* provide a relational definition along with it too.
-Everything else should be dropped». Earlier the same day: «We are not
-building a reasoning system, that's for others to do».
+**The scope ruling this note applies** ([USER] Mike, 2026-09-11, relayed by the [AGENT] coordinator — cite as relayed): concentrate on making the Go semantics as good as possible, there being no customer as of then; limited spikes may validate choices, but the top-level goal is a good semantics; prioritize high-value work such as cleaning up the handling of state and making the semantics structure regular; a relational definition may be provided alongside; everything else is dropped. Earlier the same day: (a reasoning system is for others to build).
 
 ## 1. Verdict on the review
 
@@ -60,23 +50,20 @@ plan. The roadmap is NOT adopted; the findings are dispositioned below.
 | §11 Cedar functional driver as acceptance | SET ASIDE — Cedar is a coverage subject only ([USER] 2026-09-11) | — |
 | §15 "Customer utility" axis | SET ASIDE | — |
 
-## 3. [USER] decisions, 2026-09-11 (verbatim, relayed)
+## 3. [USER] decisions, 2026-09-11 (relayed)
 
-1. **F2 policy** — «Yes, refuse non-1.26». → BUG-109's fix: a lowered
+1. **F2 policy** — (refuse non-1.26). → BUG-109's fix: a lowered
    directory (or an imported source package) whose `go.mod` `go` directive
    names a language version other than 1.26 is REFUSED by name at export.
    [AGENT] detail: a directory with no `go.mod` keeps the pinned 1.26 (the
    corpus's mode today — zero `go.mod` files under `Corpus/`; unchanged).
-2. **`NPDRFReduction`** — «unsure right now, probably restate». → PENDING
+2. **`NPDRFReduction`** — (unsure for now, probably restate). → PENDING
    [USER]. No proof work starts against the current statement; a short
    design note poses restate-vs-delete with the observable-state shape
    (allocation renaming, `main` exit) before any lane.
-3. **Worktrees/branches** — «keep the worktrees for potential future
-   reference». → No pruning.
-4. **The sequence** — «Agree on the sequence: make sure this is captured
-   properly». → §4.
-5. **Evaluation-order mechanism** (2026-09-16) — «I think the Cerberus model is the
-   correct one». → an explicit `unseq` construct in the core; the v1 note's
+3. **Worktrees/branches** — (keep the worktrees for future reference). → No pruning.
+4. **The sequence** — (the sequence agreed, to be captured properly). → §4.
+5. **Evaluation-order mechanism** (2026-09-16) — (the Cerberus model is the correct one). → an explicit `unseq` construct in the core; the v1 note's
    endpoint scheme retired; record and consequences in
    `docs/2026-08-31_qrow-rulings.md`, «The evaluation-order mechanism ruling
    record (2026-09-16)»; v2 lane `design/eval-order-model-v2-0916`.

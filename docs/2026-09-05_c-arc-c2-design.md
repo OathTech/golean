@@ -11,10 +11,9 @@ Evidence: `docs/evidence/2026-09-05_c-arc-c2/`. Records touched: §10.
 
 ## 0. Gate provenance (disclosed, as relayed)
 
-G-C2 was RULED [USER] 2026-09-04 as recommended («let's move ahead with
-the plan», the nine gates individually presented — the coordinator's
+G-C2 was RULED [USER] 2026-09-04 as recommended (the plan approved, the nine gates individually presented — the coordinator's
 reading, disclosed in `docs/2026-09-04_c-arc-gu-design.md` §0) and
-CONFIRMED [USER] 2026-09-05 («(1) approved» — item (1) of the
+CONFIRMED [USER] 2026-09-05 (item (1) approved — item (1) of the
 eight-item list the coordinator put to the [USER]; the ruling record
 is `docs/2026-09-04_reasoning-surface-plan.md` §5.4, «Ruling record,
 2026-09-05 (confirmation of the gate reading)», landed on `main` at
@@ -599,7 +598,7 @@ ledger/README updates are the docs-only records commit on top of the
 gated tip; the tree is otherwise byte-identical to `4f985c69`.
 
 **Round-17 rebase onto `main` @ `cf858f0f` (2026-09-05, [AGENT]
-reconciler; [USER] sign-off «great do the merge», relayed).** Two
+reconciler; [USER] sign-off (merge sign-off), relayed).** Two
 landings sat between the lane's fork (`426af905`) and the train's main:
 `fr19-bug097` (identity vs display — `display`/`pkg` REQUIRED per wire
 TypeDef, `Program.typeDisplays`, the display renderers,

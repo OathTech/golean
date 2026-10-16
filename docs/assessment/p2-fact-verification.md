@@ -521,15 +521,10 @@ methods `func (e *goleanShimErrorString) Error()` (`:350`) and
 `func (e *goleanShimStrconvError) Error()` (`:975`), which that table's
 own comment explains are covered transitively. 43 + 2 = 45.
 
-**The [USER] ruling, verbatim** —
-`docs/2026-08-16_overrides-design.md:12-16`:
-
-```
-**The user's ruling, verbatim:**
-
-> "fine, but the injection mechanism is a bit of a wart and should be
-> retired as soon as we see another instance."
-```
+**The [USER] ruling** (paraphrased; the record is
+`docs/2026-08-16_overrides-design.md:12-16`): the injection mechanism,
+accepted for now, is a wart to be retired as soon as another instance
+appears.
 
 Operationalized at `:45-47`:
 

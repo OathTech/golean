@@ -2,7 +2,7 @@
 
 [AGENT] worker, 2026-09-24. Worktree `.claude/worktrees/unseq-stage-e6a`, branch `core/unseq-stage-e6a-0924`, based on
 main `3fb4a0d1` (the window charter rev. 2 ruled). Brief: the [AGENT] coordinator's E6a dispatch under [USER] Mike's
-rulings of 2026-09-22 (the Stage E5 landing record items 1, 2, 3, 6) and 2026-09-24 («I'm happy to go with your rec»),
+rulings of 2026-09-22 (the Stage E5 landing record items 1, 2, 3, 6) and 2026-09-24 ((the recommendation accepted)),
 relayed — cite as relayed; the window: `docs/2026-09-23_batched-window-charter.md` (row 1, the slice table's E6a row, §6).
 Design: `docs/2026-09-24_unseq-stage-e6-design.md` §E6a (every [AGENT] choice with its alternatives). Evidence:
 `docs/evidence/2026-09-24_unseq-stage-e6a/`. NOT merged, NOT pushed. Scratch under the worktree's `.tmp/` only.

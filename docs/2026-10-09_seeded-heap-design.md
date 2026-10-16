@@ -1,12 +1,12 @@
 # Seeded-heap entry for function-level runs (gc-verified's a2): design note — a named design gate, HARD STOP
 
 [AGENT] design worker, lane `design/seeded-heap-1009` (worktree `.claude/worktrees/seeded-design`, off `main` @ `8b53af43`), 2026-10-09
-(the worktree clock reads 2026-10-08). Authority: [USER] Mike 2026-10-09, verbatim, relayed by the [AGENT] coordinator — cite as relayed:
-«Approved» — for a DESIGN NOTE FIRST; no implementation; every decision below is [AGENT], PENDING [USER]. The request: gc-verified session
+(the worktree clock reads 2026-10-08). Authority: [USER] Mike 2026-10-09, relayed by the [AGENT] coordinator — cite as relayed:
+(approved) — for a DESIGN NOTE FIRST; no implementation; every decision below is [AGENT], PENDING [USER]. The request: gc-verified session
 gc-verified-e8's [USER]-approved draft (read-only for us: `~/projects/gc-verified/worktrees/integration/next/docs/ai/2026-10-09_mem0-probes.md`
 §6.1–6.3; their `docs/ai/2026-10-07_golean-coordination.md` row a2 already says «[USER-GoLean]: trusted surface»). Standing rules: CLAUDE.md
 (fail closed with named refusals; total core; latitude on the tape; trusted surface = interpreter + frontend + differential apparatus);
-[USER] 2026-10-07 «semantic widenings only if they match real Go» — this request is NON-semantic: `stepFn`, the relation, the drivers'
+the standing rule [USER] 2026-10-07 that semantic widenings must match real Go — this request is NON-semantic: `stepFn`, the relation, the drivers'
 loops and every pinned statement are untouched; it adds a DRIVER ENTRY beside `runProgramSetupM`, a readout, two CLI flags and a harness
 mode. Evidence (11 KB): `docs/evidence/2026-10-09_seeded-heap-design/`.
 
@@ -218,7 +218,7 @@ written reason) plus refusal controls in `check-wire-boundary` (bad seed file, o
 
 ## 10. Rulings (2026-10-12)
 
-[USER] Mike 2026-10-12, firsthand («Agree on the two strategic questions, let's do it»), on the
+[USER] Mike 2026-10-12, firsthand ((the two strategic questions agreed)), on the
 [AGENT] classification that of D1–D10 two are strategic, six are the customer's interface, the rest
 engineering: **GO** — the entry is built, three slices, with the trusted-surface #2 change (the
 harness's `--seed` mode) and the new entry joining #1 accepted; **D4 RULED** — no runtime `StateWf`
@@ -362,9 +362,8 @@ the sign of zero lost), so a kind-specific refusal would need a core change — 
 kind, by name (`SeedFile.badNumberTok`, eval pins `SEED-C`). LOW-2: `gofmt`. NIT-3/NIT-5 recorded in the list above; NIT-4 (the
 seeded tracer's agreement is on the readout) is stated in `docs/cli.md` §2.4.
 
-**The `base` re-pin landed (2026-10-12, [AGENT worker, lane `core/seeded-base-repin-1012`]; [USER] Mike 2026-10-12 «1,3-6
-approved», item 6 of that ask — «carrying the seed base in the core readout … changes BridgeSet rows 599 to 601, a
-customer-visible re-pin to notice to the logic team», relayed by the [AGENT] coordinator).** `SeededReadout` gains `base : Nat`
+**The `base` re-pin landed (2026-10-12, [AGENT worker, lane `core/seeded-base-repin-1012`]; [USER] Mike 2026-10-12 (items 1 and 3-6 approved), item 6 of that ask — carrying the seed base in the core readout, which changes BridgeSet rows 599 to 601, a
+customer-visible re-pin to notice to the logic team; relayed by the [AGENT] coordinator).** `SeededReadout` gains `base : Nat`
 (the post-init bound `b`; `seedFinal[k]` is the final content of `.base ⟨base + k⟩`), set by `runProgramSeededM` and
 `runProgramPoolSeededOutM` from the setup's slot list through the new `seedBase : Array Loc → Except Stop Nat` (slot 0's
 address; 0 for the empty seed, which has no slot and nothing to be relative to; a non-base slot — impossible by S2

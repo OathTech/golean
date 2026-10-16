@@ -17,8 +17,7 @@ no lake/lean run; no push, no merge. Worktree
   items cross-referenced to existing sites (R1/R16, R4/R7, R2, R15,
   C1–C4/C6) or entered new (the finite `List Nat` tape). Plus a one-
   paragraph pointer at the end of the doctrine's «The two bounds».
-  Authority: dispositions §4 step 2(ii), [USER] 2026-09-11 «Great, go
-  ahead and land this, then launch the lanes» (relayed).
+  Authority: dispositions §4 step 2(ii), [USER] 2026-09-11 (landing approved, lanes to launch) (relayed).
 - This file (commit 2). NOTE [AGENT]: main's root `HANDOFF.md` at
   `a461ed8b` was the 2026-09-05 A2/BUG-103 integration handoff (last
   touched at `47195683`), the parking note of a programme SET ASIDE by

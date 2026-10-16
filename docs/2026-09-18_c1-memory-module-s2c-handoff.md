@@ -1,8 +1,8 @@
 # C1 S2c/S3 handoff — the synchronization emissions move into the module (D9), the one fold, BUG-111, the rollback (lane `core/c1-memory-module-s2c-0918`, opened 2026-09-18)
 
 Successor of `docs/2026-09-18_c1-memory-module-handoff.md` (S0–S2b and the audit fix round, landed on
-main at `f901c46c` / train r41 close `42023bd9`). Authority: [USER] Mike, 2026-09-18, verbatim, relayed
-by the [AGENT] coordinator — cite as relayed: «(1) agree, (2) agree. Go ahead» — (1) ratifies the C1
+main at `f901c46c` / train r41 close `42023bd9`). Authority: [USER] Mike, 2026-09-18, relayed
+by the [AGENT] coordinator — cite as relayed: (items (1) and (2) agreed, go-ahead given) — (1) ratifies the C1
 charter's D1–D7, D9, D10 (`docs/2026-09-17_c1-memory-module-charter.md` §7), (2) rules BUG-111's fix =
 option (i), canonical-path keys at emission (record: `docs/2026-08-31_qrow-rulings.md`, «The C1 charter
 ratification and BUG-111 ruling record (2026-09-18)»). Every decision below is [AGENT] unless marked
@@ -172,7 +172,7 @@ detector-soundness matrix say so).
 ## Audit fix round (2026-09-19) — the audit's F1–F10 dispositions, applied
 
 The adversarial audit of this branch (`docs/2026-09-19_c1-s2c-audit.md`, on `review/c1-memory-module-s2c-0918`
-@ `41bef7bc`; ordered by [USER] Mike 2026-09-19 «Go ahead with the audit», relayed) returned **FIX-FIRST,
+@ `41bef7bc`; ordered by [USER] Mike 2026-09-19 (the audit launched), relayed) returned **FIX-FIRST,
 records and coverage class** — no WRONG-VERDICT, no UNSOUND-PROOF / COHERENCE-GAP, no FAIL-OPEN introduced, no
 gate weakening, scope clean. Dispositions [AGENT] coordinator, disclosed at the merge ask; applied by the
 [AGENT] fix-round worker in ONE gated corpus/tests commit **`967712a3`** and ONE records commit —

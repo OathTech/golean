@@ -64,7 +64,7 @@ the call reading (a) says it is; E12's own «call-first» half predicts gc here,
 BUG-083's fix-round text recorded the same three left shapes as «MATCHED gc» for the HOISTED `make` — the inline
 built-ins were never measured. The candidate retires the defect as a side effect of marking the load / deref /
 division / shift / index occurrences FAILING; nothing in the design, the handoff, BUGS.md or the ledger says a
-wrong-answer class died here, and no row pins the fix («every detected gap is rowed», [USER] 2026-09-03).
+wrong-answer class died here, and no row pins the fix (every detected gap is rowed, [USER] 2026-09-03).
 
 Disposition (small). (i) A BUG-032 amendment (or a new entry cross-referencing it): the class, the fifteen witnesses
 with gc's draw, «fixed at Stage E6a by the refined trigger (the legacy path still realizes the lexical order for the

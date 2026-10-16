@@ -115,7 +115,7 @@ fresh merged-tip slow certification even though the branch has its own.
 
 [AGENT] The independent adversarial review (2026-09-09, the coordinator's
 Opus auditor) returned **MERGE-CLEAN → small fixes and land**; the [USER]
-pre-authorized «(1) make small fixes and land». The small fixes are
+pre-authorized small fixes and landing (item (1)). The small fixes are
 records-only and are this commit: the charter's 5a wording and provenance
 tag (R2a/R3), the design note's review addendum (R1/R4/R6/R8, with R7
 disclosed), and this line. Nothing in the certificate's input inventory was

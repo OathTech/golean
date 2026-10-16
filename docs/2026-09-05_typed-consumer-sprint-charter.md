@@ -3,10 +3,7 @@
 > committed on branch `typed-consumer-sprint` at `7edc298f`
 > (`docs/2026-09-05_typed-consumer-sprint-charter.md`; sprint commits
 > `10fefeb3`, `5a4aca9e`); not a character of it is edited. Provenance of
-> its [USER] statements (landing audit B, R18): the approval «Agree with
-> all 5» and the K4 clarification «merges *to main* are always
-> user-approved. Feature branches can be merged to by agents, when standign
-> approval is given by the user» (§2, typo included) were received by the
+> its [USER] statements (landing audit B, R18): the approval of all five defaults and the K4 clarification that merges to main are always user-approved, while feature branches may be merged to by agents under standing user approval (§2) were received by the
 > [AGENT] coordinator on 2026-09-05 and RELAYED into this document — cite
 > as relayed, not firsthand; the status line's "The [USER] clarified K4:
 > …" is the coordinator's paraphrase of that same relayed statement. The
@@ -78,11 +75,11 @@ are not completion criteria for this block.
 
 ## 2. Critical decisions to settle once, before kickoff
 
-The [USER] approved all five defaults: “Agree with all 5.” This authorizes
+The [USER] approved all five defaults. This authorizes
 the bounded sprint, including parallel agent work and the specified
-independent reviews. K4 was clarified in the same message: “merges *to main*
-are always user-approved. Feature branches can be merged to by agents, when
-standign approval is given by the user”. The table below records the approved
+independent reviews. K4 was clarified in the same message: merges to main are always
+user-approved, while feature branches may be merged to by agents under standing
+user approval. The table below records the approved
 defaults; its recommendation explanations are retained as rationale.
 
 | Decision | Recommended ruling | Why it belongs at kickoff |

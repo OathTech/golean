@@ -62,7 +62,7 @@ scripts/detector-soundness --select in-scope --jobs 6 --out artifacts/detector-s
 
 ## Merge train r43 — the 5a record ([AGENT] coordinator, 2026-09-19)
 
-[USER] Mike 2026-09-19, verbatim (relayed): «Agree, merge» (ratifying C1-complete-modulo-owed-list, the B(c)
+[USER] Mike 2026-09-19 (relayed): (agreed; merge approved) (ratifying C1-complete-modulo-owed-list, the B(c)
 row supersession and the three Stage C rulings). Pre-merge main `0f114df6` → `refs/snapshots/r43/main`; S3 +
 the ratification record (`9b05d12c`) fast-forwarded; the audit branch rebased (`cb823535`) and fast-forwarded.
 Under the lock at `cb823535`: `scripts/build-certified` EXIT=0, 123 s (binary `a014183b0dfa…` —

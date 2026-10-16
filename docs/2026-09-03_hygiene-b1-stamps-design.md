@@ -5,7 +5,7 @@ Status: LANDED on branch `hygiene-b1-stamps` (design-hygiene arc slice
 `docs/2026-09-03_grumpy-professor-review.md` §3 B1 / §5 item 1, the
 second design audit's Q11). Provenance: [AGENT] execution inside the
 [USER]-ratified arc (Mike, 2026-09-03, relayed by the coordinator:
-«Great, let's do it as you propose …»); every design choice below is
+proceed as proposed; the aim is the nicest faithful Go semantics, so the bigger breaking changes are wanted too, scheduled later or now); every design choice below is
 [AGENT] unless marked. Evidence dir:
 `docs/evidence/2026-09-03_hygiene-b1-stamps/`.
 
@@ -215,7 +215,7 @@ whether that shrinkage is a bug fix or a re-envelope is the [USER]'s,
 not this slice's. Status: [AGENT]-made by construction, DISCLOSED
 (here, inventory §E9, arc plan, BUG-088), REFERRED TO THE [USER] for
 ratification at the merge sign-off — and **RATIFIED [USER] 2026-09-03**
-(Mike, relayed by the [AGENT] coordinator, not firsthand): «(b) it sounds like this breaks an old ruling but ends up more accurate to real go - approved». The
+(Mike, relayed by the [AGENT] coordinator, not firsthand): option (b) approved as more accurate to real Go although it breaks an older ruling. The
 narrowing on irreflexive keys therefore supersedes the 2026-08-19 E9
 no-narrowing ruling for irreflexive keys only; the rest of the E9
 envelope is unchanged. Ruling record: `docs/2026-08-31_qrow-rulings.md`.

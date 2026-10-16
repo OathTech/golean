@@ -1,9 +1,9 @@
 # Protobuf route A — the faithful codec: DESIGN (2026-10-04) — a named design gate, HARD STOP
 
 [AGENT] design worker, lane `design/route-a-protobuf-1004` (worktree `.claude/worktrees/route-a-design`, off `main` @ `450412a7`).
-Authority: [USER] Mike 2026-10-04, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Great, launch it» — a design
-note for route A, a NAMED DESIGN GATE: nothing below is built before [USER] review. Standing rulings: [USER] 2026-09-30 «Yes, I
-also prefer A, as long as it could be made faithful» (relayed; `docs/2026-08-31_qrow-rulings.md`, subject-delta note item 3,
+Authority: [USER] Mike 2026-10-04, relayed by the [AGENT] coordinator — cite as relayed: (launch approved) — a design
+note for route A, a NAMED DESIGN GATE: nothing below is built before [USER] review. Standing rulings: [USER] 2026-09-30, route A
+preferred provided it can be made faithful (relayed; `docs/2026-08-31_qrow-rulings.md`, subject-delta note item 3,
 route-A dispositions 1–4). This note BUILDS ON the feasibility study `docs/2026-09-30_protobuf-route-a.md` (verdict
 FAITHFUL-FEASIBLE, conditions C1–C5 — not redone here) and carries the logic team's requirements
 (`docs/2026-09-30_note-from-logic-team-route-a.md` §5, disposition 2's required content) and the raft-proofs findings U-1–U-3
@@ -199,9 +199,9 @@ through RawNode. The probe's check 5 deliberately exposes that a typed-nil `Mars
 
 ## 7. Ratification (2026-10-04)
 
-[USER] Mike 2026-10-04, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Approved». This ratifies decisions
+[USER] Mike 2026-10-04, relayed by the [AGENT] coordinator — cite as relayed: (approved). This ratifies decisions
 D1–D12 as recommended, and the open questions as the coordinator recommended (per-question outcomes as relayed by the [AGENT]
-coordinator, ratified by the [USER] «Approved»):
+coordinator, ratified by the [USER] (approved)):
 
 - **Q1 (D5)** — the spelling pick uses the `intn` site (`rand.Intn(2)` on `ChoiceSite.intn`; index 0 = U+0020, 1 = U+00A0), not
   `mapIter`.
@@ -282,19 +282,19 @@ by cross-session message relayed by the [AGENT] coordinator, verbatim:
   used by our proofs, though recording it is welcome.» → **the D6 loop reading above is ACCEPTED by the consumer**; no
   generator change (adversarial audit Minor-1 closed by this answer).
 
-**The recursion-edge row — [USER] ruling (i), a STATED LIMIT.** [USER] Mike 2026-10-04, verbatim, relayed by the [AGENT]
-coordinator — cite as relayed: «agree to (i)». The `recursion-depth-10000-vs-10001` corpus row is NOT born. Its stand-in:
+**The recursion-edge row — [USER] ruling (i), a STATED LIMIT.** [USER] Mike 2026-10-04, relayed by the [AGENT]
+coordinator — cite as relayed: option (i) agreed. The `recursion-depth-10000-vs-10001` corpus row is NOT born. Its stand-in:
 `codeccheck.py` checks 48–51 (both oracles, the machine leg at raised fuel 3e8) and `difftest.py` section 8 (exact vs
 protobuf-go). Stated limit: the differential baseline itself does not exercise the 10000/10001 recursion edges (each edge
 decode costs 10M–40M machine steps, past the strict lane's fixed 10M fuel); options (ii) (a strict-lane fuel parameter, an
 apparatus change) and (iii) (a born-red row) are not taken.
 
-**Landing.** Merge sign-off [USER] Mike 2026-10-04, verbatim, relayed: «merge it and share» — train r65 (Fable adversarial
+**Landing.** Merge sign-off [USER] Mike 2026-10-04, relayed, with the note to be shared — train r65 (Fable adversarial
 audit MERGE-CLEAN; Minor-1 closed above, Minor-2 by the post-offer changelog `docs/changelog/20d3946d-WINDOW.md`).
 
 ## 9. S2 build record (2026-10-05) — [AGENT] S2 build worker, lane `lane/route-a-s2-1005`
 
-Authority: [USER] Mike 2026-10-05, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Go ahead with Route A S2».
+Authority: [USER] Mike 2026-10-05, relayed by the [AGENT] coordinator — cite as relayed: (Route A S2 approved).
 Off `main` @ `72e309c2`. Delivered against §8's «S2 keeps the RawNode twin schedules (`runprobe.py`)» — §5's «Through
 RawNode» item of D9; nothing else in the slice plan is assigned to S2 (§3's S2 cost row also named the differential
 instruments and corpus rows; S1 delivered those, §8). No change to the subject, `GoLean/`, the trusted surface, the stdlib
@@ -342,7 +342,7 @@ item 4 final wording, the `--slow` re-pin only if S3 moves the twin wire (S2 doe
 
 ## 10. S3 record and «Route A complete» (2026-10-05) — [AGENT] S3 build worker, lane `lane/route-a-s3-lowerdiag-1005`
 
-Authority: [USER] Mike 2026-10-05, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Yes, go ahead» (route A
+Authority: [USER] Mike 2026-10-05, relayed by the [AGENT] coordinator — cite as relayed: (approved) (route A
 S3 and the lowerdiag defer/go fix as one lane). Off `main` @ `a3e18ff5`. S3 delivered the rest of D12 as records only — no
 subject, generator, `GoLean/`, frontend, baseline or trusted-surface change; the twin wire does not move, so there is no
 `--slow` re-pin:
@@ -376,7 +376,7 @@ stays, as STATED LIMITS:
   while `fmt.Errorf` carries the injected shim type (`stdlibshim.go`, the fmt desugar's `goleanShimErrorsNew`) — narrowable,
   not Q4-permanent: it closes when the fmt desugar routes `Errorf` onto the real `errors.New`.
 - **The recursion-edge row** — `recursion-depth-10000-vs-10001` is not a corpus row; `codeccheck.py` 48–51 and `difftest.py`
-  section 8 stand in ([USER] «agree to (i)», §8).
+  section 8 stand in ([USER] option (i) agreed, §8).
 - **`errors.Is`** — refused on the machine by name (FR-14/G6), a machine limit, not a subject delta (D10); the `Unwrap`
   chain is checked directly.
 - **Prototext** — `String()`/`Descriptor()`/`EnumDescriptor()`/`UnmarshalJSON` stay fail-closed stubs; enum `String()` is

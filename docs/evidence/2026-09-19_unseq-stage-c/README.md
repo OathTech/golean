@@ -162,7 +162,7 @@ answer: BUG-113, rowed red-first (`evalorder/legacy-logical-vs-call/`), fix owed
 
 ## Merge train r44 — the 5a record ([AGENT] coordinator, 2026-09-20)
 
-[USER] Mike 2026-09-20, verbatim (relayed): «land it». Pre-merge main `6a7beb3d` → `refs/snapshots/r44/main`;
+[USER] Mike 2026-09-20 (relayed): (landing approved). Pre-merge main `6a7beb3d` → `refs/snapshots/r44/main`;
 Stage C + the ratification record (`e18164b2`) fast-forwarded; the audit branch rebased (`f14a05e5`) and
 fast-forwarded. Under the lock at `f14a05e5`: `scripts/build-certified` EXIT=0, 16 s (binary
 `90024323dbe0…` — the fix round's `--slow` binary, warm); `release-check --base refs/snapshots/r44/main`

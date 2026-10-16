@@ -1,7 +1,7 @@
 # R3 — the capacity of `[]byte(s)` / `[]rune(s)`: design note (b6; a named design gate — HARD STOP)
 
 [AGENT] design worker, lane `design/b6-conv-cap-1007` (off `main` @ `0642b3e3`), 2026-10-07. Authority: [USER] Mike
-2026-10-07, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «1-4 approved as proposed», item 3: the
+2026-10-07, relayed by the [AGENT] coordinator — cite as relayed: (items 1-4 approved as proposed), item 3: the
 gc-verified project's (b6) cap widening as a DESIGN NOTE FIRST, settling whether the append-spill choice site can be
 reused; under the standing rule of the same day, «the semantic widenings should only be allowed if they match real Go»
 (`docs/2026-08-31_qrow-rulings.md`: a widening admits only what the spec permits AND the pinned gc realizes,
@@ -152,7 +152,7 @@ itself wider than gc's realized set under the standing rule; `gcRoundupSize` wou
   `convCapMembers`' lemmas in the core audit's required list. Rows 331–334 (expression entry/shift) BYTE-IDENTICAL.
 - **D7** Dedup engine refuses the site; default enumerator carries it (intn D8).
 - **D8** Timing — a [USER] call: the window's offer `20d3946d` is FROZEN (`logic-offer/2026-10-03`) and the logic team
-  is porting to it; D6's re-pinned rows make b6 a SECOND-batch item under ruling 1 («one window, one re-pin»). Posed:
+  is porting to it; D6's re-pinned rows make b6 a SECOND-batch item under ruling 1 (one window, one re-pin). Posed:
   build now behind the offer, ship with the next batched offer (default), or hold until the port completes.
 
 ## 5. Cost and acceptance
@@ -167,7 +167,7 @@ listed with their deltas; core audit green; elaboration inside G-C3's 1.5× rule
 
 ## 6. Ratification (2026-10-07)
 
-[USER] Mike, 2026-10-07, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «yeah agree, build now».
+[USER] Mike, 2026-10-07, relayed by the [AGENT] coordinator — cite as relayed: (agreed; build approved).
 D1–D8 RATIFIED as recommended: option (B), a new `ChoiceSite.convCap` (D1); the envelope EXACTLY §1's measured member
 sets, `gcRoundupSize` as pinned gc data (D2); the literal bit on the `StrictOp` head from `Expr.stringLit` (D3); the
 default tape bytes slot 0 = n, runes slot 0 = R(4n)/4 (D4); the membership rows of D5 born red-first; BridgeSet rows
@@ -191,7 +191,7 @@ unchanged set). STOPPED at the gate as the brief requires; the evidence README p
 (ii) a bound-1 consult where the capacity is unobservable (the range-temp shape — a frontend/decoder mark D3 excluded,
 or a machine-side recognition of the range desugar), (iii) both.
 
-**RULED** [USER] Mike 2026-10-07, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Agree» — to the
+**RULED** [USER] Mike 2026-10-07, relayed by the [AGENT] coordinator — cite as relayed: (agreed) — to the
 coordinator's recommendation: option (i), semantics exactly as ratified, row metadata only (depth for the 13 strict
 rows, `width=3` ×3, `work` ×1, then a re-pin with a written reason), CONDITIONAL on measured gate cost: if the full
 `ci --slow` wall time grows by more than ~10% vs `main`'s latest close (r71: 1301 s; r72's time if available), STOP

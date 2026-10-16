@@ -1,12 +1,11 @@
 # Scheduling boundaries at the observable operations — design note (2026-10-12)
 
 Lane `core/sched-boundary-1012` (worktree `.claude/worktrees/sched-boundary-1012`, off `main`
-@ `d92b95fd`). Authority: [USER] Mike 2026-10-12 «manage some agents working through the
-backlog, starting with the ones that require no input from me» (the release punch list
+@ `d92b95fd`). Authority: [USER] Mike 2026-10-12 (agents work through the backlog, starting with the items that need no input from the user) (the release punch list
 `docs/2026-10-12_release-readiness.md`, items 23 and 24); the Codex release-trust review
 `docs/2026-10-12_release-trust-review.md` §F1 and §R2, relayed by the [USER] the same day;
-the standing rule [USER] 2026-10-07 «Yeah, the semantic widenings should only be allowed if
-they match real Go» (`docs/2026-08-31_qrow-rulings.md`, relayed). Every decision below is
+the standing rule [USER] 2026-10-07 that semantic widenings must match real Go
+(`docs/2026-08-31_qrow-rulings.md`, relayed). Every decision below is
 [AGENT] unless marked.
 
 ## 1. The defect, reproduced at the base tip

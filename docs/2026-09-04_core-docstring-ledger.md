@@ -191,8 +191,7 @@ exactly") the detector records the UNION of both — the UNION itself
 being an [AGENT] READING of the ruling (audit fix F3; the paragraph
 "Why the union" below says where it departs from the literal words and
 why) — both the union and the per-gc-word keying were COUNTERSIGNED
-[USER] 2026-09-03 at the round-5 merge sign-off («sounds good merge
-it», relayed to the recording worker by the [AGENT] coordinator, not
+[USER] 2026-09-03 at the round-5 merge sign-off (relayed to the recording worker by the [AGENT] coordinator, not
 firsthand; record: `docs/2026-08-31_qrow-rulings.md`, row-9 appendix,
 "Countersign of the two [AGENT] readings"):
 ```

@@ -1,8 +1,8 @@
 # Spin bounds in loop iterations, not raw steps (2026-10-06)
 
-[AGENT] worker, lane `lane/fr36-spin-bounds-1006`. Authority: [USER] Mike 2026-10-06, verbatim,
-relayed by the [AGENT] coordinator — cite as relayed: «Yeah, let's do 3+4» (item 4 = this note); the
-follow-up it discharges is train r59's «spin bounds in loop iterations, not raw steps»
+[AGENT] worker, lane `lane/fr36-spin-bounds-1006`. Authority: [USER] Mike 2026-10-06,
+relayed by the [AGENT] coordinator — cite as relayed: (items 3 and 4 approved) (item 4 = this note); the
+follow-up it discharges is train r59's: spin bounds in loop iterations, not raw steps
 (`docs/2026-08-31_qrow-rulings.md`, the C4 ruling; `docs/2026-10-01_block-allocation-handoff.md` §4).
 Design written BEFORE the change; §4 holds the measurements taken after it.
 

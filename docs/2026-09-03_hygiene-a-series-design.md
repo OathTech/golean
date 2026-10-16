@@ -4,8 +4,7 @@ Status: BRANCH-COMPLETE on `hygiene-a-series` (2026-09-04; not merged — audit-
 (ii); plan `docs/2026-09-03_design-hygiene-arc.md`; source proposals
 `docs/2026-09-03_grumpy-professor-review.md` §3(a) A1–A10). Provenance:
 [AGENT] execution inside the [USER]-ratified arc (Mike, 2026-09-03,
-relayed by the [AGENT] coordinator, not firsthand: «Great, let's do it as
-you propose … our aim is to get the *nicest* faithful go semantics»);
+relayed by the [AGENT] coordinator, not firsthand: proceed as proposed; the aim is the nicest faithful Go semantics, so the bigger breaking changes are wanted too, scheduled later or now);
 every design choice below is [AGENT] unless marked. Evidence dir:
 `docs/evidence/2026-09-03_hygiene-a-series/`. Template: the B1 note
 (`docs/2026-09-03_hygiene-b1-stamps-design.md`).

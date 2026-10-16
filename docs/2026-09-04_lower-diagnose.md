@@ -16,9 +16,7 @@ cedar-go the census (`docs/2026-09-03_cedar-go-coverage-census.md`) hit
 `iter.Seq2` in a method signature (FR-23); the `fr22-fr23` lane fixed
 both and met `sync.Map` under `encoding/binary.Write` (FR-24) — the
 export fraction 5/34 unchanged each time. Mike, 2026-09-04, relayed by
-the [AGENT] coordinator (cited as relayed, not firsthand): «Right, I
-agree - it'd be useful if we didn't just get stuck without any
-information about *why* it's happening». The census already had the
+the [AGENT] coordinator (cited as relayed, not firsthand): (a stuck lowering should report why it is stuck). The census already had the
 answer's shape — its §3.4 STATIC demand census (892/1085 declarations
 demanding nothing refused) beside the frontend's first-kill view — as a
 cedar-only private tool. This lane generalizes it into
@@ -60,7 +58,7 @@ scripts/lower-diagnose <go package dir | main.go> [--json] [--tsv] [--include pk
      the `rand-intn` primitive's direct-call callees — route-A review Q7,
      approved [USER] Mike 2026-10-04, relayed; [AGENT] fix lane
      `fix/lowerdiag-intn-1004` — and the `float-bits` primitive's, folded
-     into the same lane by [USER] Mike 2026-10-04 «Yes, approve 1 / 2»,
+     into the same lane by [USER] Mike 2026-10-04 (items 1 and 2 approved),
      relayed). Test-checked for
      SET EQUALITY, both ways, against the frontend's own tables derived
      with go/ast from `syncOpFor`/`syncValueOpFor`/`emitSyncOpStmt`,
@@ -388,7 +386,7 @@ wire and the machine are unaffected); queued as a small lowerdiag follow-up fix:
    (lowerdiag over-strict). **FIXED 2026-10-05** (below).
 
 **Fixed 2026-10-05** ([AGENT] build worker, lane `lane/route-a-s3-lowerdiag-1005`; [USER] Mike
-2026-10-05, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Yes, go ahead»).
+2026-10-05, relayed by the [AGENT] coordinator — cite as relayed: approved).
 Diagnosis-tool changes only (`tools/lowerdiag/`); no frontend, wire or machine change.
 - Items 1–2, one rule mirroring the frontend: `emit.go`'s `DeferStmt`/`GoStmt` arms refuse an
   intercepted member and the rand-intn callee by name, then lower the callee with `emitExpr` — as a

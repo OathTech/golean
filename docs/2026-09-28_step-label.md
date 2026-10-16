@@ -1,7 +1,6 @@
 # The step label — `StepLabel := { trace, picks, out }` (window row 2a)
 
-[AGENT worker, lane `core/step-label-0928`] 2026-09-28. Authority: [USER] Mike 2026-09-22/23 «the sequential step
-label becomes the full event label (access ⊕ pick ⊕ out)», «we should make the model as regular as possible»
+[AGENT worker, lane `core/step-label-0928`] 2026-09-28. Authority: [USER] Mike 2026-09-22/23 (the sequential step label becomes the full event label: access ⊕ pick ⊕ out), (the model as regular as possible)
 (relayed); the batched window charter rev. 2 row 2 (RULED 2026-09-24); the logic team's response §3. Base `main` @
 `84f0a9e4`. Handoff: `docs/2026-09-28_step-label-handoff.md`. Changelog row: `docs/changelog/61958f2e-WINDOW.md`.
 

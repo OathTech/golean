@@ -267,7 +267,7 @@ opening sentence now says "outside the five files itemised below" rather than
 
 > **NARROWED 2026-10-04/05 (protobuf route A, S1 + S3 close-out —
 > `docs/2026-10-04_route-a-protobuf-design.md` D12; [USER] 2026-10-04
-> «Approved», relayed).** `unknownFields []byte` is KEPT under upstream's
+> (approved), relayed).** `unknownFields []byte` is KEPT under upstream's
 > name (retention, re-encoding, `Size`, `Clone`, `Equal` — the generated
 > route A codec); `state` and `sizeCache` stay stripped. Final record: `docs/raft-w42-log.md`,
 > the 2026-10-05 route A S3 ledger continuation.
@@ -301,7 +301,7 @@ nil `AutoLeave` as false, compare — is upstream's, transcribed.
 
 > **NARROWED 2026-10-04/05 (protobuf route A, S1 + S3 close-out —
 > `docs/2026-10-04_route-a-protobuf-design.md` D12; [USER] 2026-10-04
-> «Approved», relayed).** The overlay is RETIRED: upstream text plus a
+> (approved), relayed).** The overlay is RETIRED: upstream text plus a
 > recorded exact-text patch on the two `fmt.Errorf` lines (`errors.New`
 > over the fixed text); the `%+#v` dumps are a PERMANENT stated
 > inexactness ([USER] Q4). Final record: `docs/raft-w42-log.md`,
@@ -317,7 +317,7 @@ in §6 instead of being papered over.
 
 > **RETIRED 2026-10-04/05 (protobuf route A, S1 + S3 close-out —
 > `docs/2026-10-04_route-a-protobuf-design.md` D12; [USER] 2026-10-04
-> «Approved», relayed).** `raftpb/confchange.go` is upstream VERBATIM
+> (approved), relayed).** `raftpb/confchange.go` is upstream VERBATIM
 > (import path rewritten); `MarshalConfChange` calls the subject-local
 > `proto`. Final record: `docs/raft-w42-log.md`,
 > the 2026-10-05 route A S3 ledger continuation.

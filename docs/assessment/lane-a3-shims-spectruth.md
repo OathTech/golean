@@ -36,9 +36,9 @@ totality, C2 lower bound, C3 upper bound, C4 validation credibility.
 ### A3-S1 — the shim-injection mechanism vs its own [USER] retirement ruling — ESCALATE
 
 - **WHAT.** `docs/2026-08-16_overrides-design.md:12-15` records the
-  [USER] ruling verbatim: *"fine, but the injection mechanism is a bit
-  of a wart and should be retired as soon as we see another
-  instance."* The named retirement trigger (`:45`): **the second shim
+  [USER] ruling: the injection mechanism, accepted for now, is a wart
+  to be retired as soon as another instance appears. The named
+  retirement trigger (`:45`): **the second shim
   instance**, in favour of a linked registry of pre-lowered Funcs
   (`:46-62`). The note's own prediction (`:41-43`): "At five it would
   be a small compiler pass nobody designed, with the injected text as
@@ -611,7 +611,7 @@ retires several rows at once rather than one more lane beside them.
 ## Unanticipated findings (outside the assigned rows)
 
 1. **The overrides-design note is orphaned** — zero inbound citations
-   for a document carrying a verbatim [USER] ruling (A3-S1). Whatever
+   for a document carrying a [USER] ruling (A3-S1). Whatever
    S1's outcome, decision-carrying docs need the same inbound-link
    hygiene the spec anchors get.
 2. **BUGS.md does not carry the dot-import defect** (A3-S4) — a

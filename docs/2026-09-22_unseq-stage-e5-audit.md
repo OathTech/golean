@@ -91,7 +91,7 @@ in nil map» = gc's; main `unsupported`. `nilMapTargetVsCall` (`m[1], y = 1, wit
 observable) — tip AND main `unsupported`, while gc runs it (`wit 1` · panic). So the same source shape now answers or
 refuses depending on the observability trigger; the answers are spec-correct (phase-1 key read unordered against f;
 the nil-map store's panic in phase 2 after `wit`). Nothing in design §E5b, the handoff or the language ledger says the
-quarantine is bypassed on the graph path, and no corpus row exercises it («every detected gap is rowed», [USER]
+quarantine is bypassed on the graph path, and no corpus row exercises it (every detected gap is rowed, [USER]
 2026-09-03).
 
 Disposition. One paragraph in §E5b and the ledger naming the widening and its trigger-dependent boundary; two rows

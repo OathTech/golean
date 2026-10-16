@@ -207,8 +207,7 @@ thing».
 
 Consequences for this document:
 
-- The 2026-08-31 follow-up ruling above («I would see the relational
-  semantics … as living on the reasoning side») is SUPERSEDED by the
+- The 2026-08-31 follow-up ruling above (that the relational semantics would live on the reasoning side) is SUPERSEDED by the
   2026-09-05 ruling. The "Known-owed item (named): the GoCore
   relational modules" paragraph and the "[AGENT]-owed work" bullet
   "The GoCore relational-module extraction slice" are WITHDRAWN as

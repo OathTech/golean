@@ -5,7 +5,7 @@ Date: 2026-09-03 · Lane: cedar-census (worktree
 @ 6a163681 — the brief named main @ 2aad3545; main had advanced five
 docs/gate commits by launch, and the census was run at the tip) ·
 [AGENT]-executed to the coordinator's relay of the [USER] question
-«(1) if our semantics covers this example today» — MEASURED, nothing
+whether the semantics covers this example today — MEASURED, nothing
 fixed. Lane tooling only: this document, `scripts/cedar-census`,
 `tools/cedarcensus/`, the drivers and stand-in under
 `Corpus/challenges/cedar-go/`, the tracked evidence under
@@ -724,8 +724,7 @@ landing records.
 ## 10. Addendum 2026-09-04 — FR-24 / FR-25 landed, cmp.Compare retired: re-measured [AGENT]
 
 Lane `fr24` (worker under the [AGENT] coordinator; the rowing rule is
-[USER] direction 3 and the posture «break rather than preserve incorrect
-behaviour» — both relayed, cited as relayed; the two rulings this lane
+[USER] direction 3 and the posture (break rather than preserve incorrect behaviour) — both relayed, cited as relayed; the two rulings this lane
 lands are quoted in §10.1). Method: §1's drivers, re-run with each
 checkpoint's frontend over the SAME assembled copy (`artifacts/cedar/
 cases/*`, 34 cases) plus `scripts/lower-diagnose artifacts/cedar/cases/all`
@@ -739,8 +738,8 @@ machine-side pipeline unchanged. Full record:
 |---|---|---|
 | FR-24 `var structSize sync.Map` (encoding/binary, reached through `binary.Write` → `dataSize`) — whole export at `collectGlobals` | 29/34 cases refused on `package-level var encoding/binary.structSize: its TYPE does not lower (sync.Map …) — FR-24 …` | GONE as a kill (checkpoint A): the var is POISONED per declaration (`$poisoned` cell, gid kept); `dataSize` is an H-3 stub naming `encoding/binary.structSize`, `sync.Map` and the cause; the rest of the package lowers (`wires-B/init_library-var-type-poisoned.wire.json`). |
 | (new, the handoff's kill #1) the H-3 residue: `reflect.Value` recorded in the D5 method-set table by `binary.Write`'s body BEFORE the body refused | masked behind FR-24 | GONE (A): the registration rides the mono journal and rolls back with the refused body (`monoLogImportedNamed`) — independently witnessed by a user `reflect.ValueOf(x).Len()` program (a whole-export kill on main; now an H-3 stub, `methods/quarantine-imported-type-residue`). |
-| FR-25 `complex128` in `reflect.Type`'s requirement list (`OverflowComplex`), reached from the now-lowering `encoding/binary.sizeof(t reflect.Type)` — whole export in the interface pass; and `reflect.Value`'s D5 stubs (`Complex() complex128`) skipping whole | masked behind FR-24 on cedar-go; measured on the corpus rows at A (`init/library-var-type-poisoned/*`: `basic type complex128`) | GONE (checkpoint B, the [USER]-approved rider «(3) yes, makes sense»): the opaque `named complex128` marker + existence-only `unsupported` TypeDef; `reflect.Value` gets its marker + full stub set. The FR-24 witness `init/library-var-type-unlowerable` flipped PASS only here — two checkpoints deep, as the handoff predicted. |
-| the `cmp.Compare` kind desugar (D-002's last non-fmt shim) | retained by slice 2's STOP rule | RETIRED (checkpoint C, [USER] ruling «(2) given we have a plan, I think this should be an honest red»): no cedar-go effect (cedar-go's `cmp.Compare` calls are at package-level types); the corpus row `slices/sortfunc-cmp/cmp-compare-kinds` is the honest red (FR-19's line). |
+| FR-25 `complex128` in `reflect.Type`'s requirement list (`OverflowComplex`), reached from the now-lowering `encoding/binary.sizeof(t reflect.Type)` — whole export in the interface pass; and `reflect.Value`'s D5 stubs (`Complex() complex128`) skipping whole | masked behind FR-24 on cedar-go; measured on the corpus rows at A (`init/library-var-type-poisoned/*`: `basic type complex128`) | GONE (checkpoint B, the [USER]-approved rider (item (3) agreed)): the opaque `named complex128` marker + existence-only `unsupported` TypeDef; `reflect.Value` gets its marker + full stub set. The FR-24 witness `init/library-var-type-unlowerable` flipped PASS only here — two checkpoints deep, as the handoff predicted. |
+| the `cmp.Compare` kind desugar (D-002's last non-fmt shim) | retained by slice 2's STOP rule | RETIRED (checkpoint C, [USER] ruling (with a plan in hand, an honest red beats the desugar)): no cedar-go effect (cedar-go's `cmp.Compare` calls are at package-level types); the corpus row `slices/sortfunc-cmp/cmp-compare-kinds` is the honest red (FR-19's line). |
 
 ### 10.2 What did NOT move — the next kills, measured (checkpoints A, B and C agree)
 
@@ -803,9 +802,8 @@ trust-surface claim is made here beyond the lane's own landing records.
 
 Lane `fr4-rowm` (worker under the [AGENT] coordinator; the frontier queue
 is [USER]-ratified with FR-4 at slot 4; the stdlib plan G1-G9 is ruled
-«(3) agree, go ahead with the plan» [USER] and its memo row M names this
-retirement; [USER] directions 3 and 4 and the posture «break rather than
-preserve incorrect behaviour» — all relayed by the coordinator, cited as
+(the plan approved, item (3)) [USER] and its memo row M names this
+retirement; [USER] directions 3 and 4 and the posture (break rather than preserve incorrect behaviour) — all relayed by the coordinator, cited as
 relayed). Method: §1's drivers re-run with the lane's frontend over the
 SAME assembled copy (34 cases) plus `scripts/lower-diagnose
 artifacts/cedar/cases/all` before and after, both on this worktree (main
@@ -889,7 +887,7 @@ trust-surface claim is made here beyond the lane's own landing records.
 
 Lane `fr27-fr28` (worker under the [AGENT] coordinator; the frontier queue is
 [USER]-ratified with FR-27/FR-28 at slots 27/28; [USER] directions 3 and 4
-and the posture «break rather than preserve incorrect behaviour» — relayed
+and the posture (break rather than preserve incorrect behaviour) — relayed
 by the coordinator, cited as relayed). Method: §1's drivers re-run with the
 lane's frontend over a fresh assembly of the SAME 34 cases plus
 `scripts/lower-diagnose artifacts/cedar-<before|after>/cases/all --tsv`,

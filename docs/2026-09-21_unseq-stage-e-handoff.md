@@ -45,7 +45,7 @@ the grammar by design — the shim helpers are never probed). The residue counts
 
 ## 2. RATIFIED [USER] 2026-09-22 (posed at the merge ask 2026-09-21 — none self-adjudicated)
 
-RULED: [USER] Mike, 2026-09-22, verbatim, relayed by the [AGENT] coordinator: «Agree on the judgements, go ahead» — every item
+RULED: [USER] Mike, 2026-09-22, relayed by the [AGENT] coordinator: (the judgements agreed, go-ahead given) — every item
 below as the [AGENT] judgement posed it (item 5's reading (a) included); the ruling record is
 `docs/2026-08-31_qrow-rulings.md` «The Stage E landing ratification record (2026-09-22)». The items stay
 as posed, for the record.
@@ -73,7 +73,7 @@ as posed, for the record.
    (spec#Built-in_functions «called like any other function»; Stage C's `len` rule; gc's `order.go` call class) — under
    it `make-len-vs-call` is a FORCED singleton and `min`/`max`/`copy`/`append` are ordered calls too (E5's item); (b)
    only user calls are «function calls» — under it the row is a (b) pin of gc's order ({6, 8} the set). The [AGENT]
-   choice is (a); ratification of the reading posed with this item — RATIFIED (a) [USER] 2026-09-22 («Agree on the judgements, go ahead», relayed).
+   choice is (a); ratification of the reading posed with this item — RATIFIED (a) [USER] 2026-09-22 ((the judgements agreed, go-ahead given), relayed).
 6. **The `allocate` body kind** ([AGENT], design §E4): ONE constructor over `AllocSpec` (the frontend's five hoist
    shapes) rather than a general `exec` statement body — alternative named there.
 
@@ -131,8 +131,7 @@ E4: `choice-trace-main-vs-e4.txt`: 3692 ids — 3613 byte-identical, 56 DIFFER, 
 ## 5. Audit fix round (2026-09-21)
 
 The Stage E adversarial audit (`docs/2026-09-21_unseq-stage-e-audit.md`, candidate `3649b7db`, verdict FIX-FIRST;
-evidence `docs/evidence/2026-09-21_unseq-stage-e-audit/`) was dispatched by [USER] Mike 2026-09-21 («Dispatch the audit
-as you propose», relayed); the dispositions below are the [AGENT] coordinator's, disclosed at the merge ask; the design
+evidence `docs/evidence/2026-09-21_unseq-stage-e-audit/`) was dispatched by [USER] Mike 2026-09-21 ((the audit dispatched as proposed), relayed); the dispositions below are the [AGENT] coordinator's, disclosed at the merge ask; the design
 record is §E4 «the audit fix round». The round changes the frontend (`unseq.go`, `unseq_lower.go`) and the decoder
 (`NativeToIR.lean`) — no core module, no legacy arm, no theorem.
 

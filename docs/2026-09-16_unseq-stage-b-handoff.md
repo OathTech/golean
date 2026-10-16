@@ -5,12 +5,10 @@
 `docs/2026-09-16_evaluation-order-model-v2.md` (v2.1) — §3 the construct,
 §7 row B this stage's exit evidence; second review
 `docs/2026-09-16_evaluation-order-model-v2-review.md` (R1–R6, §2 row B, §4
-proof obligations). Authority: [USER] Mike 2026-09-16, verbatim, relayed by
-the [AGENT] coordinator — cite as relayed: «Great, merge it, then execute on
-the planned work» (of the v2.1 plan); the reading that Stage B proceeds now,
+proof obligations). Authority: [USER] Mike 2026-09-16, relayed by
+the [AGENT] coordinator — cite as relayed: (merge sign-off; the planned work to proceed) (of the v2.1 plan); the reading that Stage B proceeds now,
 before B7 (the note's N4 recommendation), is the coordinator's [AGENT]. The
-mechanism ruling: [USER] 2026-09-16 «I think the Cerberus model is the
-correct one» (`docs/2026-08-31_qrow-rulings.md`, «The evaluation-order
+mechanism ruling: [USER] 2026-09-16 (the Cerberus model is the correct one) (`docs/2026-08-31_qrow-rulings.md`, «The evaluation-order
 mechanism ruling record (2026-09-16)»). No [USER] gate was ruled by this
 lane; the three PENDING items (width of P, N1 read granularity, N3 budget
 refusal) stay PENDING — the design keeps both N1 shapes expressible (a header
@@ -258,8 +256,7 @@ not a re-pin). No wire file changed on this branch.
 
 [AGENT] Fix-round worker, same branch, worktree `.claude/worktrees/unseq-
 stage-b`, base = the records commit `ba8767da`. Authority: the adversarial
-audit ordered by [USER] Mike 2026-09-16 («Great, send off an auditor as
-proposed», verbatim, relayed by the [AGENT] coordinator — cite as relayed)
+audit ordered by [USER] Mike 2026-09-16 ((an auditor dispatched as proposed), relayed by the [AGENT] coordinator — cite as relayed)
 returned **FIX-FIRST** (`docs/2026-09-16_unseq-stage-b-audit.md`, branch
 `review/unseq-stage-b-0916` @ `2440278d`; its scratch graphs under
 `docs/evidence/2026-09-16_unseq-stage-b-audit/` there). No [USER] gate was

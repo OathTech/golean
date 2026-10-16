@@ -8,7 +8,7 @@ merge, and squashed into ONE landing commit (disclosed in §8).
 Ruling context ([USER] Mike, 2026-09-07, relayed by the [AGENT] coordinator
 in the landing brief — cite as relayed): land the sprint in reviewable
 chunks; evidence bundles do NOT land; fix the issues where appropriate,
-«eg. the choice tape stuff». This chunk is the ADDITIVE layer only: NO
+the choice tape among them. This chunk is the ADDITIVE layer only: NO
 behavioural change to the shipped machine. Every excluded hunk is named in
 §4 with its destination chunk.
 
@@ -502,9 +502,9 @@ removal left a coherent spike.
   plus the six restated files and `GoLean/GoCore.lean`. `git log` will not
   show the sprint's per-lane history for these paths.
 - **Approval chain, as relayed:** the sprint's K1–K5 defaults were approved
-  by [USER] Mike on 2026-09-05 («Agree with all 5»; K4 clarified: «merges
-  *to main* are always user-approved. Feature branches can be merged to by
-  agents, when standign approval is given by the user»), recorded verbatim
+  by [USER] Mike on 2026-09-05 (all five approved; K4 clarified: merges to
+  main are always user-approved, while feature branches may be merged to by
+  agents under standing user approval), recorded
   by the [AGENT] coordinator in `docs/2026-09-05_typed-consumer-sprint-charter.md`
   §2 (on branch `typed-consumer-sprint`; that charter lands with the records
   chunk) — cite as relayed. The 2026-09-07 chunked-landing ruling is quoted

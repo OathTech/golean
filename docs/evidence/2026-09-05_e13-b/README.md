@@ -1,10 +1,8 @@
 # Evidence — lane `e13-b`: latitude E13 option (b), the sibling panic order as a choice site (2026-09-05)
 
 Design of record: `docs/2026-09-05_e13-b-design.md`. Ruling: E13 option (b)
-RULED [USER] Mike 2026-09-05, verbatim as relayed by the [AGENT]
-coordinator (cited as relayed, not firsthand): «we should do what the
-standard supports, and avoid over-refusal if we can. That's what (b) means
-right?». Worker [AGENT]. Tree: branch `e13-b` off main `b77f3298`. Host:
+RULED [USER] Mike 2026-09-05, as relayed by the [AGENT]
+coordinator (cited as relayed, not firsthand): (do what the standard supports and avoid over-refusal where possible — option (b)). Worker [AGENT]. Tree: branch `e13-b` off main `b77f3298`. Host:
 linux/amd64 (shared build box, other lanes active — no timing-sensitive
 numbers here). Toolchain: `go version go1.26.5 linux/amd64` =
 `baselines/go-oracle-pin`; golean from `scripts/capped lake build golean`
@@ -110,7 +108,7 @@ map-assign rule removed one — 7 funcs + 33 methods, 0 other changes).
   the `Step` rules (Machine.lean) and the catch-all `.internal` throw
   stands.
 
-## Round-17 rebase onto main 9343a310 (2026-09-05, [AGENT] reconciler; [USER] sign-off «great do the merge», relayed)
+## Round-17 rebase onto main 9343a310 (2026-09-05, [AGENT] reconciler; [USER] sign-off (merge sign-off), relayed)
 
 Design note §11 has the composition record; ledger §8t's round-17
 paragraph the baseline chain. Files here: `twin-repin/round17-hashes.txt`

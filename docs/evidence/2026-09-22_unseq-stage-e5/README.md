@@ -199,7 +199,7 @@ UnseqWireTests` EXIT=0 (122 s under the lock — the core rebuilt for the F2 doc
 
 ## Merge train r47 — the 5a record ([AGENT] coordinator, 2026-09-22)
 
-[USER] Mike 2026-09-22, verbatim (relayed): «Great, agree with all recommendations, land it» — the merge sign-off for
+[USER] Mike 2026-09-22 (relayed): all recommendations agreed, landing approved — the merge sign-off for
 Stage E5 (E5a–E5e + the audit fix round) with the seven ratification items RULED as recommended (rulings ledger «The
 Stage E5 landing ratification record (2026-09-22)»). Pre-merge main `dc5de785` → `refs/snapshots/r47/main` (also
 `refs/snapshots/r47/{core-pre-train,review-pre-rebase}`); one train branch fast-forwarded: the lane

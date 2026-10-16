@@ -201,7 +201,7 @@ explicit sign-off after the review; no merge or push has occurred.
 [AGENT] 2026-09-08. The mandatory adversarial review of tip `35fab3e3`
 ([AGENT] coordinator's independent Opus auditor, relayed by the coordinator;
 the ids R1-R7 below are the review's) returned **MERGE-CLEAN with small
-fixes**. [USER] pre-authorized «land with small fixes» (relayed). This
+fixes**. [USER] pre-authorized landing with small fixes (relayed). This
 section records the fixes applied here (one non-behavioural tooling line
 plus records) and rows every residual the review named; the master plan
 carries them as one combined owed row (`docs/2026-09-07_master-plan-v2.md`

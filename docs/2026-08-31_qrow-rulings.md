@@ -21,8 +21,7 @@ recorded post-hoc at the audit's C5, countersign requested at the
 merge ask). Row 2 (Q-ATOMIC) is [USER]-RULED 2026-09-02 — option A′
 with THIS repo (the semantics product) as owner, plus BUG-080's
 detector-kind slice pulled forward — per the owner proposal
-`docs/2026-09-01_qatomic-owner-proposal.md` (Mike: "I agree with this
-approach"; the approach as presented is recorded verbatim in the
+`docs/2026-09-01_qatomic-owner-proposal.md` (Mike: agreed with the approach; the approach as presented is recorded verbatim in the
 appendix; the quote was received by the [AGENT] coordinator
 in-session and RELAYED to the recording worker — citation, not
 firsthand, per the U0-incident convention). Rows 1–8 are ruled (reds
@@ -31,20 +30,19 @@ question), posed 2026-09-02 by the bug080-atomic-kind audit fix round
 (G2 F10), was RULED [USER] the same day — option (A), implemented on
 the `q-u4-gomem` lane (see the row and the appendix record); the two
 [AGENT] readings inside the implementation (per-gc-word keying, the
-union rule) were COUNTERSIGNED [USER] 2026-09-03 at the round-5 merge
-sign-off («sounds good merge it», relayed — see the appendix).
+union rule) were COUNTERSIGNED [USER] 2026-09-03 at the round-5 merge sign-off (the sign-off relayed — see the appendix).
 
 | # | row (reds) | status | ruling / state |
 |---|---|---|---|
 | 1 | **Q-INITSPAWN** (1) | **RULED [USER] 2026-08-31** | Envelope ruled as recommended: init-spawned children are ordinary goroutines from the spawn boundary (L1, zero new sites; during-init execution probed 40/40 — deferred-release models foreclosed). VEHICLE REFRESH: the memo's "rider on slice 3(a)" is dead (that W3.2 slice never ran; arc parked) — implementation is a standalone `$pkginit` item on this product's backlog (re-homed per fidelity decision 6), sequenced with the next init-phase surgery. Ruling binds any future implementer now. |
-| 2 | **Q-ATOMIC** (5) | **RULED [USER] 2026-09-02 — option A′, owner = THIS repo (the semantics product); BUG-080's detector-kind slice PULLED FORWARD** ("I agree with this approach" to the approach presented — recorded verbatim in the appendix below; quote relayed to the recording worker by the [AGENT] coordinator, citation not firsthand) | The atomics arc is RATIFIED as scoped in `docs/2026-09-01_qatomic-owner-proposal.md` §4/§6 (A′): mem#atomic as a forced SC point stands; fused single-step registry ops, zero new choice sites, TSan-realized detector edges; integer core → `mp-litmus` → `atomic.Value`; spin-wait rows carried under `nonterm=` membership accounting with NO termination claim. OWNER: this repo's backlog — a named worktree lane ("atomics arc") dispatched from TODO.md, sequenced into Tier 5 with the proposal §5 ordering constraints carried (after the gotest fix slice and the t4-detector merge; after the frontend-touching Q-row items; ~3–5 sessions, L). PULLED FORWARD as its OWN S–M slice, sequenced BEFORE the arc rather than riding its detector wave (supersedes the [AGENT] sequencing judgment of audit fix S4): BUG-080's fix — the atomic access KIND in `Race.lean` (`RaceAccess := Kind × Loc`; atomic↔atomic non-conflicting, atomic↔plain conflicting; recorded at the sync cell's path from `raceUpdate`'s sync arm), with the two named costs CHECKED IN THAT SLICE: (i) one `syncData` cell per primitive vs the `locPrefix` over-refusal (the `disjoint-field-vs-lock` control must stay green) and the `wgSemaAccess` plain-pair carve-out; (ii) gc's per-primitive instrumentation differences (WaitGroup under `race.Disable` + the `wg.sema` pair vs Mutex's state CAS), so the per-op recorded set is derived primitive by primitive from `-race`'s realized set. OUT OF SCOPE: FairStream / the `Fair`-quantified claim class — reasoning-side FUTURE WORK TO BE BUILT, NOT part of the arc (proposal §2; the fairness doctrine ruled the same sitting is the doctrine's "Scheduling and fairness" paragraph). Q-TRYLOCK rides as a wave-1 rider per its pre-ruled envelope (row 5). Refreshes (a)/(b) below are discharged by the proposal. SLICE LANDED 2026-09-02 on branch `bug080-atomic-kind` (merge pending audit + sign-off; BUGS.md BUG-080 carries the fix record and two residuals — the sketch's three kinds became four, atomic READS being non-conflicting with plain reads). SUPERSEDED PRE-RULING STATE: mem#atomic as a forced SC point stands; the atomics-arc design memo is still the recommendation. TWO REFRESHES before ruling: (a) "FairStream tier bundled" must read as future work TO BE BUILT (FairStream has never been a Lean definition — assessment finding); (b) the arc has NO live owner post-split — ratifying requires naming one. Decision shape: ratify-with-owner / ratify-with-FairStream-split (A′) / defer the family (Q-TRYLOCK's implementation and the liveness story inherit the wait). |
-| 3 | **Q-SELSEL** (2) | **RULED [USER] 2026-09-01 — option (A) with an implementation slot** ("(1) agree" to the tracked two-item menu — recorded VERBATIM in the appendix below; menu recorded post-hoc from the session at the audit's C5, [USER] countersign requested at the merge ask; prereq discharged same day): the asymmetric-arrival envelope adopted — its structure is leg (1) of the refreshed C7 argument; the falsified commit-by-waking-event wording is NOT part of the adopted envelope (the owed wording correction lands at implementation); the idiom is ordinary Go, not raft-specific, so the slot lives on this product's backlog despite the original consumer being parked | SUPERSEDED PRE-RULING STATE: Do not rule as written: the scheduling driver ("before the raft node layer") is parked with the reasoning product, and the envelope rides C7's pairing argument whose re-argue trigger ALREADY FIRED (B1/B2 changed the wake machinery; the promised re-argument was never recorded — p2-keeps-a1 A1-14), with an unprobed corner (two clauses on one channel, woken by close). PREREQ (S): refresh C7's argument + run the close-wake probe; then re-present. **RE-PRESENTATION (2026-09-01 [AGENT], C7-refresh lane):** both prerequisites ran. (i) The close-wake probe (`docs/evidence/2026-09-01_c7-close-wake-probe/`): gc commits EITHER same-channel clause from one close wake (~half each over 800 runs incl. a park-first isolate), falsifying the old "committed by the EVENT that wakes it" wording — but observed ∈ modeled HOLDS (machine-certified {1,2} ⊇ gc's {1,2}; the second member rides the always-realizable close-before-entry schedule + entry L2 draw). The envelope does NOT need widening. (ii) C7's argument is re-recorded post-B1/B2 as two legs (inventory C7 + §8 e12): partner wakes = L4 clause-INDIVIDUAL pairing at the arrival intercept; close wakes = the entry-path mask. Consequence for this row: recommendation (A)'s envelope survives UNCHANGED — its structure (each matching parked clause a distinct L4 candidate, memo option (B)'s own decomposition) is exactly leg (1) and never leaned on the falsified wording; one wording correction owed at implementation: the memo's "C7's commit-by-waking-event argument extended verbatim" must read "the parked side's matched clause is the L4 candidate's clause". The close corner is irrelevant to select↔select rendezvous (closes never pair). Remaining for the [USER]: the vehicle — (A)'s implementation slot post-split (the raft node-layer driver is parked with the reasoning product; the 2 reds stand in this repo's baseline either way) — i.e. rule (A)-with-a-slot or (C) defer-with-dependency-recorded. |
+| 2 | **Q-ATOMIC** (5) | **RULED [USER] 2026-09-02 — option A′, owner = THIS repo (the semantics product); BUG-080's detector-kind slice PULLED FORWARD** (agreement with the approach presented — recorded in the appendix below; the agreement relayed to the recording worker by the [AGENT] coordinator, citation not firsthand) | The atomics arc is RATIFIED as scoped in `docs/2026-09-01_qatomic-owner-proposal.md` §4/§6 (A′): mem#atomic as a forced SC point stands; fused single-step registry ops, zero new choice sites, TSan-realized detector edges; integer core → `mp-litmus` → `atomic.Value`; spin-wait rows carried under `nonterm=` membership accounting with NO termination claim. OWNER: this repo's backlog — a named worktree lane ("atomics arc") dispatched from TODO.md, sequenced into Tier 5 with the proposal §5 ordering constraints carried (after the gotest fix slice and the t4-detector merge; after the frontend-touching Q-row items; ~3–5 sessions, L). PULLED FORWARD as its OWN S–M slice, sequenced BEFORE the arc rather than riding its detector wave (supersedes the [AGENT] sequencing judgment of audit fix S4): BUG-080's fix — the atomic access KIND in `Race.lean` (`RaceAccess := Kind × Loc`; atomic↔atomic non-conflicting, atomic↔plain conflicting; recorded at the sync cell's path from `raceUpdate`'s sync arm), with the two named costs CHECKED IN THAT SLICE: (i) one `syncData` cell per primitive vs the `locPrefix` over-refusal (the `disjoint-field-vs-lock` control must stay green) and the `wgSemaAccess` plain-pair carve-out; (ii) gc's per-primitive instrumentation differences (WaitGroup under `race.Disable` + the `wg.sema` pair vs Mutex's state CAS), so the per-op recorded set is derived primitive by primitive from `-race`'s realized set. OUT OF SCOPE: FairStream / the `Fair`-quantified claim class — reasoning-side FUTURE WORK TO BE BUILT, NOT part of the arc (proposal §2; the fairness doctrine ruled the same sitting is the doctrine's "Scheduling and fairness" paragraph). Q-TRYLOCK rides as a wave-1 rider per its pre-ruled envelope (row 5). Refreshes (a)/(b) below are discharged by the proposal. SLICE LANDED 2026-09-02 on branch `bug080-atomic-kind` (merge pending audit + sign-off; BUGS.md BUG-080 carries the fix record and two residuals — the sketch's three kinds became four, atomic READS being non-conflicting with plain reads). SUPERSEDED PRE-RULING STATE: mem#atomic as a forced SC point stands; the atomics-arc design memo is still the recommendation. TWO REFRESHES before ruling: (a) "FairStream tier bundled" must read as future work TO BE BUILT (FairStream has never been a Lean definition — assessment finding); (b) the arc has NO live owner post-split — ratifying requires naming one. Decision shape: ratify-with-owner / ratify-with-FairStream-split (A′) / defer the family (Q-TRYLOCK's implementation and the liveness story inherit the wait). |
+| 3 | **Q-SELSEL** (2) | **RULED [USER] 2026-09-01 — option (A) with an implementation slot** (agreement to the tracked two-item menu — recorded in the appendix below; menu recorded post-hoc from the session at the audit's C5, [USER] countersign requested at the merge ask; prereq discharged same day): the asymmetric-arrival envelope adopted — its structure is leg (1) of the refreshed C7 argument; the falsified commit-by-waking-event wording is NOT part of the adopted envelope (the owed wording correction lands at implementation); the idiom is ordinary Go, not raft-specific, so the slot lives on this product's backlog despite the original consumer being parked | SUPERSEDED PRE-RULING STATE: Do not rule as written: the scheduling driver ("before the raft node layer") is parked with the reasoning product, and the envelope rides C7's pairing argument whose re-argue trigger ALREADY FIRED (B1/B2 changed the wake machinery; the promised re-argument was never recorded — p2-keeps-a1 A1-14), with an unprobed corner (two clauses on one channel, woken by close). PREREQ (S): refresh C7's argument + run the close-wake probe; then re-present. **RE-PRESENTATION (2026-09-01 [AGENT], C7-refresh lane):** both prerequisites ran. (i) The close-wake probe (`docs/evidence/2026-09-01_c7-close-wake-probe/`): gc commits EITHER same-channel clause from one close wake (~half each over 800 runs incl. a park-first isolate), falsifying the old "committed by the EVENT that wakes it" wording — but observed ∈ modeled HOLDS (machine-certified {1,2} ⊇ gc's {1,2}; the second member rides the always-realizable close-before-entry schedule + entry L2 draw). The envelope does NOT need widening. (ii) C7's argument is re-recorded post-B1/B2 as two legs (inventory C7 + §8 e12): partner wakes = L4 clause-INDIVIDUAL pairing at the arrival intercept; close wakes = the entry-path mask. Consequence for this row: recommendation (A)'s envelope survives UNCHANGED — its structure (each matching parked clause a distinct L4 candidate, memo option (B)'s own decomposition) is exactly leg (1) and never leaned on the falsified wording; one wording correction owed at implementation: the memo's "C7's commit-by-waking-event argument extended verbatim" must read "the parked side's matched clause is the L4 candidate's clause". The close corner is irrelevant to select↔select rendezvous (closes never pair). Remaining for the [USER]: the vehicle — (A)'s implementation slot post-split (the raft node-layer driver is parked with the reasoning product; the 2 reds stand in this repo's baseline either way) — i.e. rule (A)-with-a-slot or (C) defer-with-dependency-recorded. |
 | 4 | **Q-RACEPATH** (1) | **RULED [USER] 2026-08-31 — IMPLEMENTED 2026-09-02 [AGENT]** (Tier-4 detector-soundness lane) | Constant-index narrowing (S) as recommended: extend the shipped fieldGet-chain narrowing to evaluated-index indexGet frames; dynamic-index residual stays in O1 with its trigger. VEHICLE REFRESH: "next footprint-touching slice" = the Tier-4 detector-soundness leg (the natural co-located work). IMPLEMENTATION RECORD: `projChainTarget` (Race.lean) — the narrowing fires for `indexGet` frames whose pending index is an `intLit` AND whose base cell is an ARRAY (slice/string headers stay whole-cell), composing with `fieldGet` in either order; `race/free/array-read-write` flipped FAIL→PASS (confluent), +2 chain-form green guards, +2 must-stay-racy racy-lane guards, +1 born-FAIL residual pin (`race/free/array-dyn-index-read-write`, on BUG-041's Cases line). Ruling text carried to inventory C10/O1, ledger §6, BUG-041. |
-| 5 | **Q-TRYLOCK** (1) | **RULED [USER] 2026-08-31 via the killable-set approval; per-row CONFIRMED [USER] 2026-09-01 ("the 4 confirmations all seem like reasonable interpretations… agree on all of the above")** (auditor D3-2 resolved) | Deferred WITH the envelope pre-ruled, as recommended: when modeled, TryLock takes mem#locks' spurious-failure member as a real width-2 choice site (success-edge-only detector; the fairness-claim class); the always-succeeds pin is off the menu permanently. Implementation inherits Q-ATOMIC's arc decision. **IMPLEMENTATION RULED [USER] 2026-09-03: own slice adding the `tryLock` site (the A′ zero-new-sites sentence is amended by this ruling for TryLock only)** — resolves `docs/2026-09-03_atomics-w1-design.md` §6 item 1; quote relayed by the [AGENT] coordinator, see the 2026-09-03 ruling record in the appendix. **IMPLEMENTED 2026-09-03 [AGENT] on lane `q-trylock`** (SHA = the lane's commit; the twin-pin move RULED [USER] 2026-09-03 — its appendix record). IMPLEMENTATION RECORD: `ChoiceSite.tryLock` (State.lean; `consumeAtOne := false` at the time — the flag was deleted by G-U 2026-09-04, the bound-1 no-pop being the uniform rule since; slot 0 = acquire — gc's realized point, so the strict lane's uncontended TryLock matches the oracle — slot 1 = the spurious false; width 2 at an acquirable cell, bound 1 = no pop at a held one: `tryLockWidth`/`tryAcquire`, Machine.lean); `SyncOp.tryLock/tryRLock/tryWLock` (result target ≤ 1) applied by `applyTryLock` — the envelope statement, with the pre-commit discipline for the ∀-streams kit (the acquired cell is stored before the pick applies; the spurious member returns the pre-store state) — through the choice-taking `applySyncOp` over the choices-free `applySyncOpCore` (the `applyStmtOp`/`applyStmtOpCore` mold; `Step.syncStApply` quantifies the stream); DETECTOR (Race.lean `syncEntryKinds` + an `acquired` flag re-derived by `raceUpdate` from the pre/post cells, per gc word from the pinned sources — Mutex TryLock on an unlocked cell → `.atomicWrite @state` on BOTH members (the state CAS at internal/sync/mutex.go:85, realized by TSan whether it wins or loses — the lost CAS IS gc's realization of the spurious false; an [AGENT] reading in the row-9 refusal-permitted direction), on a held cell → NOTHING (the plain early return :77-79, uninstrumented; go_mem: "no synchronizing effect at all" — no kind); RWMutex TryRLock/TryLock → `.read @w` on EVERY outcome (`race.Read(&rw.w)` precedes `race.Disable`, rwmutex.go:89/:171) + `.atomicRead @readerCount` on success only (the go_mem lock kind — "equivalent to a call to l.RLock/l.Lock"); the acquire EDGE on success only — the success-edge-only detector as ruled); FRONTEND: statement discard, hoisted expression node (`{"expr":"sync-op",…}`, admitted where `atomic-op` is), bodied stubs for method values / interface dispatch, the promoted receiver — one `syncValueOpFor` table (identity principle: every spelling reaches the one site or refuses); ROWS: 12 `sync/trylock/*`, +2 racy (`race/negative-sync/{overwrite-vs-trylock,failed-trylock-no-edge}`), +3 DRF (`race/free-sync/{trylock-publish,rw-trylock-publish,rw-tryrlock-acquire}`); the two frontier reds `sync/out-of-scope-trylock/trylock-uncontended` and `sync/promoted-mutex/trylock-expr` FLIPPED FAIL→PASS as MEMBERSHIP rows over {acquired, spurious} (a strict pin is impossible — the width-2 draw fails strict's stream invariance; gc exhibits only the success member, 20/20 at GOMAXPROCS 1 and 8: unexhibited-but-permitted, `docs/evidence/2026-09-03_q-trylock/`); spin rows under `nonterm=`, NO termination claim. The dedup engine / kernel checkers REFUSE a TRY-head apply (fail closed; `consumesTryLock`), the CLI enumerator carries such rows. AUDIT FIX ROUND F1–F6 (2026-09-03, [AGENT]): F1 — `tryAcquire`'s TryRLock arm WIDENED from `!writer ∧ pendingW = 0` to `!writer`: the model's `pendingW` is one flag for a writer queued behind `rw.w` (rwmutex.go:150; gc's TryRLock TRUE there, 40/40) and one past `readerCount.Add(-max)` (:152; gc false) — sync design §8 R1's value-observable half — so the pick is offered whenever no writer HOLDS (machine ⊇ gc; an [AGENT] widening in the safe direction, RATIFIED [USER] 2026-09-03 («TryRLock decision sounds fine», relayed by the [AGENT] coordinator); per-program sets unchanged, {0, 1} at `rw-tryrlock-pending-writer`; the blocking RLock keeps R1); F2 — `defer m.TryLock()` lowered through the deferred wrapper (result discarded), row `sync/trylock/defer-trylock`; F3 — gc-unexhibited members named at the rows; F4 — the detector table's kind-mismatch arms enumerated by name, no absorbing default; F5 — `resultTypes` accepted-but-unchecked on the `sync-op`/`atomic-op` expression nodes recorded as owed (TODO.md); F6 — rebased onto main 221d8964: twin pin re-derived `45cd882a…` → `f2309df2…`, still exactly ONE entry (`sync.Mutex.TryLock`, now methods[518]); `trylock-false-then-lock` routed to the confluent lane per main's new strict-lane depth guard. |
-| 6 | **Q-SYNCVAL** (5) | **RULED [USER] 2026-08-31 — implement** | Identity principle ratified (indirection consumes the same C8 site or refuses — never variant semantics) and P-S2-6 green-lit (real stub bodies over EXISTING sync machine ops; frontend-only; flips all 5 reds). D-002 FREEZE INTERACTION — [AGENT] interpretation, CONFIRMED [USER] 2026-09-01 ("the 4 confirmations all seem like reasonable interpretations… agree on all of the above"): this lift is NOT shim injection — it adds no hand-modeled stdlib semantics; it plumbs values to already-modeled machine ops, and the identity principle is precisely the anti-variant-semantics rule the freeze exists to enforce. Any deviation from that shape during implementation is a STOP-and-ask. |
+| 5 | **Q-TRYLOCK** (1) | **RULED [USER] 2026-08-31 via the killable-set approval; per-row CONFIRMED [USER] 2026-09-01 (the four confirmations accepted as reasonable interpretations, all agreed)** (auditor D3-2 resolved) | Deferred WITH the envelope pre-ruled, as recommended: when modeled, TryLock takes mem#locks' spurious-failure member as a real width-2 choice site (success-edge-only detector; the fairness-claim class); the always-succeeds pin is off the menu permanently. Implementation inherits Q-ATOMIC's arc decision. **IMPLEMENTATION RULED [USER] 2026-09-03: own slice adding the `tryLock` site (the A′ zero-new-sites sentence is amended by this ruling for TryLock only)** — resolves `docs/2026-09-03_atomics-w1-design.md` §6 item 1; quote relayed by the [AGENT] coordinator, see the 2026-09-03 ruling record in the appendix. **IMPLEMENTED 2026-09-03 [AGENT] on lane `q-trylock`** (SHA = the lane's commit; the twin-pin move RULED [USER] 2026-09-03 — its appendix record). IMPLEMENTATION RECORD: `ChoiceSite.tryLock` (State.lean; `consumeAtOne := false` at the time — the flag was deleted by G-U 2026-09-04, the bound-1 no-pop being the uniform rule since; slot 0 = acquire — gc's realized point, so the strict lane's uncontended TryLock matches the oracle — slot 1 = the spurious false; width 2 at an acquirable cell, bound 1 = no pop at a held one: `tryLockWidth`/`tryAcquire`, Machine.lean); `SyncOp.tryLock/tryRLock/tryWLock` (result target ≤ 1) applied by `applyTryLock` — the envelope statement, with the pre-commit discipline for the ∀-streams kit (the acquired cell is stored before the pick applies; the spurious member returns the pre-store state) — through the choice-taking `applySyncOp` over the choices-free `applySyncOpCore` (the `applyStmtOp`/`applyStmtOpCore` mold; `Step.syncStApply` quantifies the stream); DETECTOR (Race.lean `syncEntryKinds` + an `acquired` flag re-derived by `raceUpdate` from the pre/post cells, per gc word from the pinned sources — Mutex TryLock on an unlocked cell → `.atomicWrite @state` on BOTH members (the state CAS at internal/sync/mutex.go:85, realized by TSan whether it wins or loses — the lost CAS IS gc's realization of the spurious false; an [AGENT] reading in the row-9 refusal-permitted direction), on a held cell → NOTHING (the plain early return :77-79, uninstrumented; go_mem: "no synchronizing effect at all" — no kind); RWMutex TryRLock/TryLock → `.read @w` on EVERY outcome (`race.Read(&rw.w)` precedes `race.Disable`, rwmutex.go:89/:171) + `.atomicRead @readerCount` on success only (the go_mem lock kind — "equivalent to a call to l.RLock/l.Lock"); the acquire EDGE on success only — the success-edge-only detector as ruled); FRONTEND: statement discard, hoisted expression node (`{"expr":"sync-op",…}`, admitted where `atomic-op` is), bodied stubs for method values / interface dispatch, the promoted receiver — one `syncValueOpFor` table (identity principle: every spelling reaches the one site or refuses); ROWS: 12 `sync/trylock/*`, +2 racy (`race/negative-sync/{overwrite-vs-trylock,failed-trylock-no-edge}`), +3 DRF (`race/free-sync/{trylock-publish,rw-trylock-publish,rw-tryrlock-acquire}`); the two frontier reds `sync/out-of-scope-trylock/trylock-uncontended` and `sync/promoted-mutex/trylock-expr` FLIPPED FAIL→PASS as MEMBERSHIP rows over {acquired, spurious} (a strict pin is impossible — the width-2 draw fails strict's stream invariance; gc exhibits only the success member, 20/20 at GOMAXPROCS 1 and 8: unexhibited-but-permitted, `docs/evidence/2026-09-03_q-trylock/`); spin rows under `nonterm=`, NO termination claim. The dedup engine / kernel checkers REFUSE a TRY-head apply (fail closed; `consumesTryLock`), the CLI enumerator carries such rows. AUDIT FIX ROUND F1–F6 (2026-09-03, [AGENT]): F1 — `tryAcquire`'s TryRLock arm WIDENED from `!writer ∧ pendingW = 0` to `!writer`: the model's `pendingW` is one flag for a writer queued behind `rw.w` (rwmutex.go:150; gc's TryRLock TRUE there, 40/40) and one past `readerCount.Add(-max)` (:152; gc false) — sync design §8 R1's value-observable half — so the pick is offered whenever no writer HOLDS (machine ⊇ gc; an [AGENT] widening in the safe direction, RATIFIED [USER] 2026-09-03 ((the TryRLock decision accepted), relayed by the [AGENT] coordinator); per-program sets unchanged, {0, 1} at `rw-tryrlock-pending-writer`; the blocking RLock keeps R1); F2 — `defer m.TryLock()` lowered through the deferred wrapper (result discarded), row `sync/trylock/defer-trylock`; F3 — gc-unexhibited members named at the rows; F4 — the detector table's kind-mismatch arms enumerated by name, no absorbing default; F5 — `resultTypes` accepted-but-unchecked on the `sync-op`/`atomic-op` expression nodes recorded as owed (TODO.md); F6 — rebased onto main 221d8964: twin pin re-derived `45cd882a…` → `f2309df2…`, still exactly ONE entry (`sync.Mutex.TryLock`, now methods[518]); `trylock-false-then-lock` routed to the confluent lane per main's new strict-lane depth guard. |
+| 6 | **Q-SYNCVAL** (5) | **RULED [USER] 2026-08-31 — implement** | Identity principle ratified (indirection consumes the same C8 site or refuses — never variant semantics) and P-S2-6 green-lit (real stub bodies over EXISTING sync machine ops; frontend-only; flips all 5 reds). D-002 FREEZE INTERACTION — [AGENT] interpretation, CONFIRMED [USER] 2026-09-01 (the four confirmations accepted as reasonable interpretations, all agreed): this lift is NOT shim injection — it adds no hand-modeled stdlib semantics; it plumbs values to already-modeled machine ops, and the identity principle is precisely the anti-variant-semantics rule the freeze exists to enforce. Any deviation from that shape during implementation is a STOP-and-ask. |
 | 7 | **Q-SYNCLIT** (2) | **RULED [USER] 2026-08-31 — implement** | The S lowering as recommended (spec forces empty-literal-only cross-package ≡ zero value ≡ var/new; copy question already answered by sync design §3/p10) — rider on the Q-SYNCVAL slice. |
-| 8 | **Q-COND** (3) | **RULED [USER] 2026-08-31 via the killable-set approval; per-row CONFIRMED [USER] 2026-09-01 ("the 4 confirmations all seem like reasonable interpretations… agree on all of the above")** (auditor D3-2 resolved) | Deferred WITH the envelope pre-ruled from the docs text, as recommended: NO spurious wakeups (documented upper bound), Signal = any-waiter, Broadcast = forced-all folding into C8, TSan-realized HB, copy = detected panic. Zero demand; pure frontier. |
-| 9 | **Q-U4RESIDUAL** (0 reds; detector alignment) | **RULED [USER] 2026-09-02 — option (A): the race detector follows go_mem exactly** (posed 2026-09-02 [AGENT], the bug080-atomic-kind audit fix round G2 F10; ruled the same day — verbatim quotes in the appendix record below, RELAYED to the recording worker by the [AGENT] coordinator, citation not firsthand; IMPLEMENTED 2026-09-02 [AGENT] on lane `q-u4-gomem`: `Race.lean` `syncEntryKinds`/`syncReleaseTailKinds` record TSan's realized set ∪ go_mem's operation kind, each at its gc WORD (`syncWord`) — RLock/Lock → `.atomicRead @readerCount`, RUnlock/Unlock → `.atomicWrite @readerCount` (each keeping its realized `.read @w`), WaitGroup Add/Done → `.atomicWrite @state`, Wait → `.atomicRead @state` (the realized `wg.sema` pair kept at its own word), Mutex Lock's CAS `.atomicWrite` stays and Mutex Unlock's tail stays — THE UNION RULE (TSan's realized set ∪ go_mem's kind) IS AN [AGENT] READING of "follow go_mem exactly", flagged at audit fix F3 for [USER] countersign — COUNTERSIGNED [USER] 2026-09-03 at the round-5 merge sign-off («sounds good merge it», given to the coordinator's consolidated merge-ask that presented both [AGENT] readings — per-gc-WORD keying and the UNION rule with its lone-copy-beside-`sync.Mutex.Lock` consequence; the quote was received by the [AGENT] coordinator in-session and RELAYED to the recording worker, not firsthand — citation, never bare assertion, the U0-incident convention) — literal reading, for the record: literal go_mem makes every mutex lock read-like, `sync.Mutex.Lock` included, and would RUN a lone copy beside it where gc's `-race` build REFUSES (the CAS on `m.state` is a TSan Write — measured `probes/u4gomem/mu-copy-vs-lock-only` gc RACE 20/20 at GOMAXPROCS 1 and 8, machine RACE, agree-race); the [AGENT] kept the realized atomicWrite (mem#model: a CAS "is both read-like and write-like") so no HOLE cell opens against the oracle — consequence: a lone copy beside `sync.Mutex.Lock` refuses while one beside `sync.RWMutex.Lock`/`RLock` runs (its RMW is under `race.Disable`, only the read-like lock kind applies); the over-refusal rows appear classified BY DESIGN — born-FAIL corpus pins `race/gomem-only/*` on BUG-084's Cases line, probe cells `over-refusal` in `docs/evidence/2026-09-02_q-u4-gomem/` (six u4kind subjects move, the four WaitGroup ones AND `rw-copy-vs-{rlock,lock}`; audit fix F1: the slice's sixth gomem-only corpus row `wg-overwrite-vs-add-nonzero` was NOT TSan-green — gc red when the racing overwrite lands first (the reset counter makes the Add the counter-off-0 case; 20/20 in the sampler) yet green when the Add lands first (the full gate's sample) — gc-schedule-dependent, machine RACE-ALL, pinnable in no lane: deleted from the corpus, probe only (`u4gomem/wg-overwrite-vs-add-nonzero`), whose shapes pair the lock with its unlock unordered with the copy and refuse THROUGH the write-like unlock; the row's "a copy beside RLock/Lock is NOT a race" holds for the lock OP — isolated by `probes/u4gomem/rw-copy-vs-{rlock,lock}-only` and the born-PASS guards `race/free-sync/rw-copy-beside-{rlock,lock}`); BUG-080 residual (a) CLOSED by this ruling). RATIONALE, as ruled: the machine is the substrate for a verification tool — refusal-freedom is the proof obligation (the DRF-guarantee shape: a program proved refusal-free on every path is go_mem-DRF, hence SC), so over-refusal costs COMPLETENESS (correct programs that are racy-by-go_mem-but-TSan-green cannot be verified — vet's `copylocks` flags every such shape) and never SOUNDNESS, while under-refusal (running a go_mem-racy program to a value) would be unsound. go_mem's racy semantics is BOUNDED, not C-style UB (mem#restrictions: report-and-terminate always permitted; else word-sized racy reads observe an actually-written value, multiword values may tear, no out-of-thin-air) — the machine's refusal is the permitted report-and-terminate branch; the bounded-VALUE branch stays deliberately unmodeled (register #4's existing scoping, now explicitly recorded with this ruling at register #13). | THE QUESTION (as posed): for the sync ops gc's `-race` build performs under `race.Disable` — RWMutex `RUnlock`/`Unlock`'s counter RMWs, WaitGroup `Add`/`Done`'s state RMW, `Wait`'s counter read — should the detector record the go_mem-faithful access kinds (making a plain access beside them a REFUSAL) or stay aligned with TSan's realized set (record nothing; RUN them)? The BUG-080 slice chose alignment ([AGENT], residual (a), inside a brief that said "no new over-refusal rows"). THE RESIDUAL PRECISELY (G2 F10 corrected the first statement): a plain access beside a WRITE-LIKE op (`RUnlock`, RWMutex `Unlock`, WaitGroup `Add`/`Done`) or a plain OVERWRITE beside `Wait` at counter 0. NOT the residual: a plain COPY beside `RLock`/`Lock` — mem#model lists mutex lock as read-like and a copy is read-like, so no write-like operand and no race; `rw-copy-vs-{rlock,lock}` agree-DRF is the correct verdict. THE AUDITOR'S PROPOSED TABLE: `RLock`/`Lock` → `atomicRead`; `RUnlock`/`Unlock` → `atomicWrite`; WaitGroup `Add`/`Done` → + `atomicWrite` (beside the realized `wg.sema` pair); `Wait` → + `atomicRead`; both RWMutex halves move together (each RWMutex op keeps its realized plain `race.Read(&rw.w)` and adds its counter RMW's go_mem kind). FOR: the register of record is go_mem, not TSan — by mem#model's read-write/write-write definitions a plain write beside `RUnlock` IS a data race, and a racy program has no defined value semantics, so running it to a value is a fail-OPEN cell against the doctrine's own upper bound; no race-free program's verdict moves (vet's `copylocks` flags every shape); the table derives from mem#model's read-like/write-like lists without per-primitive source archaeology. AGAINST: the racy lane's oracle is `-race` (register #13) — each refusal is a NEW over-refusal row (machine RACE, gc DRF-in-N: the three-way rule's investigation cell) on `wg-copy-vs-done`, `wg-overwrite-vs-done`, `wg-overwrite-vs-wait-at-0` (+ a copy beside `RUnlock`/`Unlock`, UNPROBED — the family has no such subject); the differential's lower bound (observed ∈ modeled) is untouched either way (misuse-only), so this is a DOCTRINE question — which register wins where go_mem and TSan disagree — not an evidence question; and recording more than gc realizes departs from the primitive-by-primitive derivation-from-source discipline the slice's check (ii) was ruled on. AUDITOR'S RECOMMENDATION: rule first, then take the table in ITS OWN S slice (`syncEntryKinds`/`syncReleaseTailKinds` + the u4kind family's expected cells + BUGS.md/doctrine text + probes for the unprobed copy-beside-RUnlock/Unlock shapes), never inside the BUG-080 slice, whose correctness the audit confirmed under its brief. DECISION SHAPE: (A) adopt the table — go_mem register wins, the over-refusal rows appear classified BY DESIGN; (B) keep alignment — TSan register wins, residual (a) becomes a recorded [USER] doctrine decision rather than an [AGENT] choice; (C) split — adopt only the write-like halves (`RUnlock`/`Unlock`/`Add`/`Done` → `atomicWrite`, `Wait` → `atomicRead`), the minimal set that closes the fail-open cell. |
+| 8 | **Q-COND** (3) | **RULED [USER] 2026-08-31 via the killable-set approval; per-row CONFIRMED [USER] 2026-09-01 (the four confirmations accepted as reasonable interpretations, all agreed)** (auditor D3-2 resolved) | Deferred WITH the envelope pre-ruled from the docs text, as recommended: NO spurious wakeups (documented upper bound), Signal = any-waiter, Broadcast = forced-all folding into C8, TSan-realized HB, copy = detected panic. Zero demand; pure frontier. |
+| 9 | **Q-U4RESIDUAL** (0 reds; detector alignment) | **RULED [USER] 2026-09-02 — option (A): the race detector follows go_mem exactly** (posed 2026-09-02 [AGENT], the bug080-atomic-kind audit fix round G2 F10; ruled the same day — the ruling in the appendix record below, RELAYED to the recording worker by the [AGENT] coordinator, citation not firsthand; IMPLEMENTED 2026-09-02 [AGENT] on lane `q-u4-gomem`: `Race.lean` `syncEntryKinds`/`syncReleaseTailKinds` record TSan's realized set ∪ go_mem's operation kind, each at its gc WORD (`syncWord`) — RLock/Lock → `.atomicRead @readerCount`, RUnlock/Unlock → `.atomicWrite @readerCount` (each keeping its realized `.read @w`), WaitGroup Add/Done → `.atomicWrite @state`, Wait → `.atomicRead @state` (the realized `wg.sema` pair kept at its own word), Mutex Lock's CAS `.atomicWrite` stays and Mutex Unlock's tail stays — THE UNION RULE (TSan's realized set ∪ go_mem's kind) IS AN [AGENT] READING of that go_mem be followed exactly, flagged at audit fix F3 for [USER] countersign — COUNTERSIGNED [USER] 2026-09-03 at the round-5 merge sign-off (the sign-off given to the coordinator's consolidated merge-ask that presented both [AGENT] readings — per-gc-WORD keying and the UNION rule with its lone-copy-beside-`sync.Mutex.Lock` consequence; the quote was received by the [AGENT] coordinator in-session and RELAYED to the recording worker, not firsthand — citation, never bare assertion, the U0-incident convention) — literal reading, for the record: literal go_mem makes every mutex lock read-like, `sync.Mutex.Lock` included, and would RUN a lone copy beside it where gc's `-race` build REFUSES (the CAS on `m.state` is a TSan Write — measured `probes/u4gomem/mu-copy-vs-lock-only` gc RACE 20/20 at GOMAXPROCS 1 and 8, machine RACE, agree-race); the [AGENT] kept the realized atomicWrite (mem#model: a CAS "is both read-like and write-like") so no HOLE cell opens against the oracle — consequence: a lone copy beside `sync.Mutex.Lock` refuses while one beside `sync.RWMutex.Lock`/`RLock` runs (its RMW is under `race.Disable`, only the read-like lock kind applies); the over-refusal rows appear classified BY DESIGN — born-FAIL corpus pins `race/gomem-only/*` on BUG-084's Cases line, probe cells `over-refusal` in `docs/evidence/2026-09-02_q-u4-gomem/` (six u4kind subjects move, the four WaitGroup ones AND `rw-copy-vs-{rlock,lock}`; audit fix F1: the slice's sixth gomem-only corpus row `wg-overwrite-vs-add-nonzero` was NOT TSan-green — gc red when the racing overwrite lands first (the reset counter makes the Add the counter-off-0 case; 20/20 in the sampler) yet green when the Add lands first (the full gate's sample) — gc-schedule-dependent, machine RACE-ALL, pinnable in no lane: deleted from the corpus, probe only (`u4gomem/wg-overwrite-vs-add-nonzero`), whose shapes pair the lock with its unlock unordered with the copy and refuse THROUGH the write-like unlock; the row's "a copy beside RLock/Lock is NOT a race" holds for the lock OP — isolated by `probes/u4gomem/rw-copy-vs-{rlock,lock}-only` and the born-PASS guards `race/free-sync/rw-copy-beside-{rlock,lock}`); BUG-080 residual (a) CLOSED by this ruling). RATIONALE, as ruled: the machine is the substrate for a verification tool — refusal-freedom is the proof obligation (the DRF-guarantee shape: a program proved refusal-free on every path is go_mem-DRF, hence SC), so over-refusal costs COMPLETENESS (correct programs that are racy-by-go_mem-but-TSan-green cannot be verified — vet's `copylocks` flags every such shape) and never SOUNDNESS, while under-refusal (running a go_mem-racy program to a value) would be unsound. go_mem's racy semantics is BOUNDED, not C-style UB (mem#restrictions: report-and-terminate always permitted; else word-sized racy reads observe an actually-written value, multiword values may tear, no out-of-thin-air) — the machine's refusal is the permitted report-and-terminate branch; the bounded-VALUE branch stays deliberately unmodeled (register #4's existing scoping, now explicitly recorded with this ruling at register #13). | THE QUESTION (as posed): for the sync ops gc's `-race` build performs under `race.Disable` — RWMutex `RUnlock`/`Unlock`'s counter RMWs, WaitGroup `Add`/`Done`'s state RMW, `Wait`'s counter read — should the detector record the go_mem-faithful access kinds (making a plain access beside them a REFUSAL) or stay aligned with TSan's realized set (record nothing; RUN them)? The BUG-080 slice chose alignment ([AGENT], residual (a), inside a brief that said "no new over-refusal rows"). THE RESIDUAL PRECISELY (G2 F10 corrected the first statement): a plain access beside a WRITE-LIKE op (`RUnlock`, RWMutex `Unlock`, WaitGroup `Add`/`Done`) or a plain OVERWRITE beside `Wait` at counter 0. NOT the residual: a plain COPY beside `RLock`/`Lock` — mem#model lists mutex lock as read-like and a copy is read-like, so no write-like operand and no race; `rw-copy-vs-{rlock,lock}` agree-DRF is the correct verdict. THE AUDITOR'S PROPOSED TABLE: `RLock`/`Lock` → `atomicRead`; `RUnlock`/`Unlock` → `atomicWrite`; WaitGroup `Add`/`Done` → + `atomicWrite` (beside the realized `wg.sema` pair); `Wait` → + `atomicRead`; both RWMutex halves move together (each RWMutex op keeps its realized plain `race.Read(&rw.w)` and adds its counter RMW's go_mem kind). FOR: the register of record is go_mem, not TSan — by mem#model's read-write/write-write definitions a plain write beside `RUnlock` IS a data race, and a racy program has no defined value semantics, so running it to a value is a fail-OPEN cell against the doctrine's own upper bound; no race-free program's verdict moves (vet's `copylocks` flags every shape); the table derives from mem#model's read-like/write-like lists without per-primitive source archaeology. AGAINST: the racy lane's oracle is `-race` (register #13) — each refusal is a NEW over-refusal row (machine RACE, gc DRF-in-N: the three-way rule's investigation cell) on `wg-copy-vs-done`, `wg-overwrite-vs-done`, `wg-overwrite-vs-wait-at-0` (+ a copy beside `RUnlock`/`Unlock`, UNPROBED — the family has no such subject); the differential's lower bound (observed ∈ modeled) is untouched either way (misuse-only), so this is a DOCTRINE question — which register wins where go_mem and TSan disagree — not an evidence question; and recording more than gc realizes departs from the primitive-by-primitive derivation-from-source discipline the slice's check (ii) was ruled on. AUDITOR'S RECOMMENDATION: rule first, then take the table in ITS OWN S slice (`syncEntryKinds`/`syncReleaseTailKinds` + the u4kind family's expected cells + BUGS.md/doctrine text + probes for the unprobed copy-beside-RUnlock/Unlock shapes), never inside the BUG-080 slice, whose correctness the audit confirmed under its brief. DECISION SHAPE: (A) adopt the table — go_mem register wins, the over-refusal rows appear classified BY DESIGN; (B) keep alignment — TSan register wins, residual (a) becomes a recorded [USER] doctrine decision rather than an [AGENT] choice; (C) split — adopt only the write-like halves (`RUnlock`/`Unlock`/`Add`/`Done` → `atomicWrite`, `Wait` → `atomicRead`), the minimal set that closes the fail-open cell. |
 
 ## Execution
 
@@ -74,7 +72,7 @@ sign-off («sounds good merge it», relayed — see the appendix).
 
 ### B6 numeric locals — D1–D6 ratified, fix round (2026-09-30)
 
-[USER] Mike 2026-09-30, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Agree, go ahead and fix, agree on all 6» — on the B6 audit
+[USER] Mike 2026-09-30, relayed by the [AGENT] coordinator — cite as relayed: (the fix and all 6 items agreed) — on the B6 audit
 (`docs/2026-09-30_numeric-locals-audit.md`, MERGE-CLEAN, three LOW + two TRIVIAL) and the six [AGENT] choices of
 `docs/2026-09-30_numeric-locals-design.md`: D1 per-object declaration ids from the frontend cross-checked by the decoder's
 lexical walk; D2 `$`-temporaries interned by the decoder per spelling per function; D3 `Func.locals : Array LocalName`
@@ -122,11 +120,9 @@ harvest wants a fix slice next (the four bugs + the two suspicious
 refusals) — I'll queue it as the next dispatch after this round
 lands.»
 
-The user replied «(1) agree, (2) agree». So "(1) agree" = adopt the
-recommended (A)-with-a-slot (the row-3 ruling above); "(2) agree" =
-the gotest fix slice is the next dispatch after this round lands.
+The user replied, agreeing to both items. Agreement on (1) = adopt the recommended (A)-with-a-slot (the row-3 ruling above); agreement on (2) = the gotest fix slice is the next dispatch after this round lands.
 
-### The row-2 ruling record (2026-09-02) — the tracked record behind "I agree with this approach"
+### The row-2 ruling record (2026-09-02) — the tracked record behind the agreement with the approach
 
 [AGENT] record. Provenance chain: the [USER] quote was received by the
 [AGENT] coordinator in-session and RELAYED to the recording worker in
@@ -143,8 +139,7 @@ vs locPrefix over-refusal + wgSemaAccess carve-out; gc's per-primitive
 instrumentation differences) rather than waiting 3–5 sessions.
 FairStream/fairness = reasoning-side future work, NOT part of the arc.»
 
-The user replied «I agree with this approach». The same sitting
-produced the fairness doctrine ruling (verbatim in the doctrine's
+The user replied, agreeing with the approach. The same sitting produced the fairness doctrine ruling (recorded in the doctrine's
 "Scheduling and fairness" paragraph,
 `docs/2026-08-11_essence-of-go-doctrine.md`), which is why FairStream's
 exclusion from the arc is a doctrine consequence, not merely a scoping
@@ -157,30 +152,14 @@ received by the [AGENT] coordinator in-session and RELAYED to the
 recording worker (the `q-u4-gomem` lane) in its brief; the worker did
 not receive them firsthand (citation, never bare assertion — the
 U0-incident convention). The question presented was the row's
-decision shape (A)/(B)/(C) with the auditor's table. The user ruled,
-verbatim as relayed:
-
-«Right, we want to follow go_mem exactly I think. It's a weird
-situation, but maybe this is analogous to UB in C, where the compiler
-can do anything it wants when there are races?»
+decision shape (A)/(B)/(C) with the auditor's table. The user ruled, as relayed: follow go_mem exactly, likening racy programs to C's undefined behaviour, where the compiler may do anything.
 
 The coordinator then explained that go_mem gives racy programs a
 BOUNDED semantics rather than C-style UB — report-and-terminate is
 always permitted (mem#restrictions); otherwise word-sized reads observe
 some actually-written value, multiword values may tear, no
 out-of-thin-air — so a refusal is a permitted implementation behaviour,
-and over-refusal costs completeness, never soundness. The user
-replied:
-
-«That's okay if we imagine this as the substrate for a verification
-tool right? We're 'failing more' which means we can only verify code
-that is correct»
-
-and, closing:
-
-«Indeed. All good with me, go ahead».
-
-So the ruling is option (A) — the go_mem register wins where go_mem
+and over-refusal costs completeness, never soundness. The user replied that this is acceptable for a verification substrate — failing more means only correct code is verified — and closed with a go-ahead. So the ruling is option (A) — the go_mem register wins where go_mem
 and TSan disagree — with the verification-substrate rationale recorded
 in the row: refusal-freedom is the proof obligation (DRF-guarantee
 shape); over-refusal = incompleteness, under-refusal = unsoundness.
@@ -203,12 +182,7 @@ for countersign: (i) per-gc-WORD keying of the sync accesses
 (`syncWord`); (ii) the UNION rule — TSan's realized set ∪ go_mem's
 operation kind — with its stated consequence that a lone copy beside
 `sync.Mutex.Lock` refuses (gc-agreed, `probes/u4gomem/mu-copy-vs-lock-only`
-RACE 20/20) while one beside `sync.RWMutex.Lock`/`RLock` runs. The
-user replied, verbatim as relayed:
-
-«sounds good merge it»
-
-So both readings stand as [USER]-countersigned; neither was
+RACE 20/20) while one beside `sync.RWMutex.Lock`/`RLock` runs. The user replied, as relayed, with the merge sign-off. So both readings stand as [USER]-countersigned; neither was
 overruled. The consuming records (`GoLean/GoCore/Race.lean` section
 docstring "The sync primitives' OWN state words"; `docs/BUGS.md`
 BUG-084) cite this paragraph.
@@ -232,9 +206,7 @@ injection under D-002; (5) the noodler gaps; (6) the strict-lane routing
 rule (`docs/2026-09-01_membership-depth.md` §5), the eight scheduling
 rows routed in the same slice; others = the periodic legs and the P5
 filing (the membership sampling budget, P2, was ruled SEPARATELY the same
-day — see below). The user replied, verbatim as relayed:
-
-«Re decisions on deck (1) the guard - agree with the redommendation, do (a); (2) panic-text, agree, demonic choice so both are admitted; (3) agree, go ahead with the plan; (4) Atomics - agree; (5) noodler gaps - already addressed; (6) strict-lane, agree; others: lower priority for now?»
+day — see below). The user replied, as relayed, on the decisions on deck: (1) the guard — the recommendation agreed, option (a); (2) panic text — agreed, a demonic choice admitting both texts; (3) the plan agreed, go ahead; (4) atomics — agreed; (5) noodler gaps — already addressed; (6) strict-lane — agreed; the others lower priority for now.
 
 So: (1) (a) adopted — gate change, [USER]-ruled; (2) demonic choice,
 both texts admitted (BUG-087 fix shape item (4), separate lane — LANDED as lane `bug087-paniktext` — implementation commit d8fea185 pre-rebase, squashed with its records into dc0ffe0b on rebase onto 221d8964, audit fix round F1–F3 on top — 2026-09-03: `ChoiceSite.nilValueMethodText`, latitude inventory R9a, five membership rows; evidence `docs/evidence/2026-09-03_bug087-paniktext/`); (3) G1–G9
@@ -245,16 +217,14 @@ pending (separate lane); the "others" are LOWER PRIORITY for now —
 periodic legs and P5 filing deferred (record:
 `docs/assessment/decisions-2026-08-31.md`, 2026-09-03 addendum).
 Membership sampling budget (membership-depth §6 P2): NOT among the
-"others" — ruled ADOPTED the same day in a separate exchange, relayed
-by the [AGENT] coordinator as «yeah, agree on the sampling budget, go
-ahead as you propose» (alternate plain/race, early stop at `members=`,
+"others" — ruled ADOPTED the same day in a separate exchange, relayed by the [AGENT] coordinator as agreed as proposed (alternate plain/race, early stop at `members=`,
 K=32 `--diff` / K=80 `--slow`; the budget BEFORE this ruling is the
 implicit 10 draws; implementing lane `sampling-budget`). An earlier
 version of this paragraph said "K=32 stays the default" — false on both
 counts (K=32 never was the default; P2 was adopted, not deferred);
 corrected at the lane's audit fix round.
 
-### The row-5 twin-pin record (2026-09-03) — the tracked record behind «we should break things»
+### The row-5 twin-pin record (2026-09-03) — the tracked record behind (break rather than preserve incorrect behaviour)
 
 [AGENT] record. Provenance chain: the [USER] quote was received by the
 [AGENT] coordinator in-session and RELAYED to the implementing worker
@@ -271,12 +241,7 @@ never calls TryLock/TryRLock (verified: zero hits in `raftsubject/`,
 `raftharness/`, `deps/raft`); the only byte-preserving path keeps a
 FALSE cause string in the wire. Options presented: (A) a deliberate twin
 re-pin whose structural diff is exactly that entry gaining a body; (B)
-anything preserving the bytes. The user ruled, verbatim as relayed:
-
-«(c) another case where we should break things rather than preserve
-incorrect behavior, right? We should break things»
-
-— option (A) APPROVED, with the instruction to enumerate exactly which
+anything preserving the bytes. The user ruled, as relayed: option (c), break things rather than preserve incorrect behaviour — option (A) APPROVED, with the instruction to enumerate exactly which
 entries change (RWMutex entries too if present; nothing else may).
 OUTCOME: the JSON diff of the pinned vs fresh emit shows ONE changed
 entry — `methods[515] sync.Mutex.TryLock` (`body` added: the `sync-op
@@ -296,9 +261,7 @@ each entry produced exactly once, where the retired key-set frame
 admitted any number of productions and an immediate stop — against the
 2026-08-19 E9 ruling that rejected narrowings (BUG-088; rows
 `maps/nan-key-range`, `maps/nan-key-range-aggregate/{array,struct,
-interface}`, gc-matching, fuel-out on main). The user replied,
-verbatim as relayed to the recording worker by the coordinator (not
-firsthand — citation, never bare assertion): «(b) it sounds like this breaks an old ruling but ends up more accurate to real go - approved». Effect: the
+interface}`, gc-matching, fuel-out on main). The user replied, as relayed to the recording worker by the coordinator (not firsthand — citation, never bare assertion): option (b) approved as more accurate to real Go although it breaks an older ruling. Effect: the
 2026-08-19 no-narrowing ruling is SUPERSEDED for irreflexive keys only;
 the rest of the E9 envelope stands. Consuming records: latitude
 inventory §E9 (IRREFLEXIVE KEYS bullet), `docs/BUGS.md` BUG-088,
@@ -315,24 +278,12 @@ design gates — G-U, G-C5, G-C1, G-C2, G-P, G-C3, G-C4, G-OUT, G-PIN,
 each carrying a recommendation — for the same reason this sheet
 exists: a design gate is a HARD STOP the coordinator does not
 self-adjudicate (CLAUDE.md, autonomous arcs), whether it is a Q-row
-or a plan §5.4 gate. Mike replied, verbatim as relayed:
-
-«Great, this sounds good - let's move ahead with the plan. Our top
-level goal here is (1) to be a highly accurate go semantics, and (2)
-to support reasoning about go using an iris-lean layer (which we
-won't build, that's a customer)»
-
-— read as: all nine gates RULED as recommended, plus the two
+or a plan §5.4 gate. Mike replied, as relayed: the plan approved, with the two top-level goals stated — (1) a highly accurate Go semantics, (2) support for reasoning about Go through an iris-lean layer built by a customer, not here — read as: all nine gates RULED as recommended, plus the two
 top-level goals stated (now carried in `CLAUDE.md` "What this repo
 is"). Earlier the same day, in a separate exchange, the standing
 direction that frames the C-arc's move from deferred-in-principle
 (2026-09-03 ratification, `docs/2026-09-03_design-hygiene-arc.md`
-(v)) to scheduled:
-
-«I think we should try to do the disruptive thing if it'll result in
-a more useful reasoning surface»
-
-Effect: G-U and G-P — previously on `docs/2026-09-03_design-hygiene-
+(v)) to scheduled: do the disruptive thing where it yields a more useful reasoning surface. Effect: G-U and G-P — previously on `docs/2026-09-03_design-hygiene-
 arc.md`'s "not this arc's to decide" list (`consumeAtOne`
 uniformization and native method promotion) — are RULED IN and
 scheduled in the C-arc order; the other seven gates (all C1-C5-family
@@ -344,7 +295,7 @@ each is reached, per the plan's §5.1 order. Consuming records:
 arc's to decide" list, `docs/assessment/decisions-2026-08-31.md`
 2026-09-04 addendum, `TODO.md` (the C-arc section).
 
-### The merge-train round-24 ruling record (2026-09-07) — the tracked record behind «Go ahead with the merge» (chunk L3 `land/panic-text-tape`: D2, D5, the BUG-087-shape extension, the C4 (c)→(a) move)
+### The merge-train round-24 ruling record (2026-09-07) — the tracked record behind (merge sign-off) (chunk L3 `land/panic-text-tape`: D2, D5, the BUG-087-shape extension, the C4 (c)→(a) move)
 
 [AGENT] record (the round-24 rebase-reconciliation worker, lane
 `land-panic-text`). Provenance chain: the [USER] quote was received by
@@ -364,21 +315,19 @@ stay red on BUG-004's `Cases:` line (plan §4 D5 option (i); the [AGENT]
 applied the default); (3) the BUG-087-shape extension — the
 `[recovered, repanicked]` marker of an equal re-panic reified as
 `ChoiceSite.repanicCollapse` (bound 2), an [AGENT] extension of this
-sheet's 2026-09-03 BUG-087 ruling's SHAPE («demonic choice so both are
-admitted», ruled for ONE choice at the nil arm/R9a) to a second marker
+sheet's 2026-09-03 BUG-087 ruling's SHAPE (a demonic choice admitting both texts, ruled for ONE choice at the nil arm/R9a) to a second marker
 under R-1's re-envelope authority (latitude inventory R10a); (4) the C4
 (c)→(a) re-classification — `panic-recover/repanic-same-value-abort`,
 a [USER]-ratified category-(c) pin (triage §7, 2026-08-20), moved to
-the membership lane (PASS, `members=2`). Mike replied, verbatim as
+the membership lane (PASS, `members=2`). Mike replied, as
 relayed:
 
-«Go ahead with the merge»
+(merge sign-off)
 
 — read by the coordinator, and recorded here, as RATIFYING all four
 items (the merge-ask named exactly these four as what the sign-off
 would ratify). Effect: every PENDING tag the lane wrote now reads
-«[USER] ratification — PENDING at the lane's tip, RULED [USER]
-2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed
+«[USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 by the merge sign-off (relayed
 by the [AGENT] coordinator; the merge-ask listed D2, D5, the
 BUG-087-shape extension and the C4 (c)→(a) move as the four items
 ratified by this sign-off)», with the [AGENT]-default history left
@@ -397,12 +346,9 @@ lane note §7 R2). Not ruled here: D4 (ratified by L4's own sign-off,
 `docs/2026-09-07_land-observer-terminal.md` §3), BUG-107's three
 options (open, L4), D1/L5 (held).
 
-### The evaluation-order mechanism ruling record (2026-09-16) — the tracked record behind «the Cerberus model is the correct one»
+### The evaluation-order mechanism ruling record (2026-09-16) — the tracked record behind (the Cerberus model is the correct one)
 
-[USER] Mike, 2026-09-16, verbatim, relayed by the [AGENT] coordinator — cite
-as relayed: «Okay, so this feels like sort of a profound decision, but I think
-the Cerberus model is the correct one (they did a lot of work thinking through
-such issues). Can you go ahead with the next steps?»
+[USER] Mike, 2026-09-16, relayed by the [AGENT] coordinator — cite as relayed: a profound decision in the user's judgement — the Cerberus model is the correct one, on the strength of Cerberus's prior work on such issues; go ahead with the next steps.
 
 **What was decided.** The evaluation-order model's MECHANISM is an explicit
 unsequenced construct in the CORE, in the shape of Cerberus Core's `unseq`:
@@ -431,14 +377,7 @@ ladder in that note — [AGENT] recommendation owed there, PENDING [USER].
 
 ### The typed-profile family ruling record (2026-09-16) — B7 charter D3: park via the reasoning repository
 
-[USER] Mike, 2026-09-16, verbatim, relayed by the [AGENT] coordinator — cite as
-relayed: «We're actually working on migrating reasoning to a new repo (see the
-notes on a branch that another agent put together, and the reasoning work in
-deps/ - gitgignored). So I think the correct home for this work is in a new repo
-in deps/ called golean-reasoning or something like that. Then we can pin these
-modules to the version of golean which they depend on and park them for future
-revival. Perhaps the right solution for you is to delete, but leave a note saying
-where this code lives in the git history (or make it an explicit tag / branch)».
+[USER] Mike, 2026-09-16, relayed by the [AGENT] coordinator — cite as relayed: the reasoning work is migrating to a new repository under gitignored `deps/` (golean-reasoning or similar), where these modules are pinned to the golean version they depend on and parked for revival; deleting them here with a note pointing at their place in the git history, or an explicit tag/branch, is acceptable.
 
 **What was decided.** B7 charter D3 = (b) PARK: the `Boolean*`/`Recovery*`/
 `Interface.lean` family (56 modules, 8,197 lines, and its `Tests` libraries) is
@@ -464,9 +403,7 @@ at the merge ask — PENDING [USER]. B7's S5 no longer migrates the family.
 
 ### The B7 charter rulings record (2026-09-16) — D1, D2, D4–D8
 
-[USER] Mike, 2026-09-16, verbatim, relayed by the [AGENT] coordinator — cite as
-relayed: «Yes, let's go ahead with the D1-8 rulings as recommended (aside from
-D3)» (D3 was ruled separately the same day: PARK — the record above).
+[USER] Mike, 2026-09-16, relayed by the [AGENT] coordinator — cite as relayed: the D1-8 rulings approved as recommended, aside from D3 (D3 was ruled separately the same day: PARK — the record above).
 
 **What was decided** (the charter's recommendations, `docs/2026-09-16_b7-context-store-charter.md` §9):
 - **D1 (a)** — `Platform` stays the A5 global constant in B7; threading it is
@@ -483,8 +420,7 @@ D3)» (D3 was ruled separately the same day: PARK — the record above).
   recommendation; the coordinator had proposed (2026-09-16, to the [USER])
   deleting `spikes/gate-a1` and `spikes/iris-customer` under the SAME
   tag/note treatment as the parked family, as a SEPARATE commit of the
-  parking lane. [AGENT] reading of «as recommended»: that proposal is
-  accepted; the commit stays separate so the [USER] can still drop it at the
+  parking lane. [AGENT] reading of the as-recommended approval: that proposal is accepted; the commit stays separate so the [USER] can still drop it at the
   merge ask — disclosed as a reading, not a quote.
 - **D8** — REPLAY the design slice by slice with the snapshot `85f9abd7` open
   as the reference (not REBASE-AND-REPAIR).
@@ -495,8 +431,7 @@ writer; both touch `GoLean.lean`/`lakefile.toml`/`scripts/ci`).
 
 ### The B7 handoff rulings record (2026-09-17)
 
-[USER] Mike, 2026-09-17, verbatim, relayed by the [AGENT] coordinator — cite as
-relayed: «We should delete the vacuous conjunct right? that's just a strict improvement. The rewordings sound fine. Agree with the audit, go ahead and launch (after the rulings if relevant)». This rules the four PENDING items of
+[USER] Mike, 2026-09-17, relayed by the [AGENT] coordinator — cite as relayed: the vacuous conjunct deleted as a strict improvement; the rewordings accepted; the audit agreed and the launch approved (after the rulings where relevant). This rules the four PENDING items of
 `docs/2026-09-17_b7-context-store-handoff.md` §8. **What changed** ([AGENT]
 fix-round worker, lane `core/b7-context-store-0917`, runtime commit `1fafc9f2`):
 (1) the pool-side `itersNormalized` conjunct DELETED from `ThreadWf`/`MultiWf` —
@@ -504,11 +439,9 @@ fix-round worker, lane `core/b7-context-store-0917`, runtime commit `1fafc9f2`):
 `MultiWfSound.lean` theorems restated without the constantly-true
 hypotheses/conjuncts (none weakened); (2) the then-inert `Cont.itersNormalized`/
 `Config.itersNormalized`, their `_true` certificates, the 11 walk/transparency
-lemmas and `spawnPlan_iters` DELETED (16 declarations tombstoned) — the [AGENT]
-reading of «strict improvement» (dead predicates leave with the conjunct),
+lemmas and `spawnPlan_iters` DELETED (16 declarations tombstoned) — the [AGENT] reading of the strict-improvement call (dead predicates leave with the conjunct),
 conditional on nothing outside the core naming them (checked: docs only);
-(3) the `Store.updateCell` refusal text and (4) the setup refusal text STAND as
-landed («The rewordings sound fine»). Gate at the fix-round tree: `ci --diff`
+(3) the `Store.updateCell` refusal text and (4) the setup refusal text STAND as landed (the rewordings accepted). Gate at the fix-round tree: `ci --diff`
 EXIT=1 (934 s), the same two expected 5a-class items, zero other drift.
 
 ### The B7 audit fix round — two items PENDING [USER] (2026-09-17)
@@ -516,9 +449,7 @@ EXIT=1 (934 s), the same two expected 5a-class items, zero other drift.
 The pre-merge adversarial audit of `core/b7-context-store-0917`
 (`docs/2026-09-17_b7-context-store-audit.md`, branch
 `review/b7-context-store-0917` at `b51bc5c4`) returned FIX-FIRST, narrow and
-records-class. Authority to act on it: [USER] Mike, 2026-09-17, verbatim,
-relayed by the [AGENT] coordinator — cite as relayed: «Agree with the audit, go
-ahead and launch». Eight of the ten findings were dispositioned by the [AGENT]
+records-class. Authority to act on it: [USER] Mike, 2026-09-17, relayed by the [AGENT] coordinator — cite as relayed: the audit agreed, the launch approved. Eight of the ten findings were dispositioned by the [AGENT]
 coordinator and applied (handoff §13). **TWO remain the [USER]'s:**
 
 - **F1's alternative — the third refusal text.** `GoLean/GoCore/Machine.lean:
@@ -546,12 +477,7 @@ both are posed at the merge ask.
 
 ### The on-deck decisions ruling record (2026-09-18) — sequencing, NaN, portability, NPDRF
 
-[USER] Mike, 2026-09-18, verbatim, relayed by the [AGENT] coordinator — cite as
-relayed: «(1) agreed, (2) the choices I suppose are either [a] pass a parameter
-saying what the platform says, or [b] try to provide one uniform nondetermnism
-right? I think this depends on what hte Go standard says, (3) We'll do this
-eventually but not now, (4) We shouldn't delete, hard to revive that way. Can we
-just deprecate/ mark unsound for now?» — answering the coordinator's triage of
+[USER] Mike, 2026-09-18, relayed by the [AGENT] coordinator — cite as relayed: (1) agreed; (2) the choice is either [a] a parameter saying what the platform does or [b] one uniform nondeterminism, depending on what the Go standard says; (3) eventually, not now; (4) deprecate and mark unsound rather than delete, a deleted statement being hard to revive — answering the coordinator's triage of
 the same day.
 
 **What was decided.**
@@ -561,14 +487,12 @@ the same day.
   P → C3 → C4 → B6. One core writer throughout.
 - **(2) NaN payload latitude (latitude R7, BUG-094) — DEFERRED to a memo:** the
   choice is [a] a platform parameter carrying what the target does vs [b] one
-  uniform nondeterminism over what IEEE 754 / the Go spec permit; «depends on
-  what the Go standard says». A short records memo establishes what the pinned
+  uniform nondeterminism over what IEEE 754 / the Go spec permit; the Go standard decides, per the ruling. A short records memo establishes what the pinned
   spec and IEEE 754 fix, what gc/amd64 realizes, what `FloatBits` does today,
   and how the two-contracts framing (latitude inventory §11: Contract A =
   language, Contract B = target instance) maps onto [a]/[b]; the ruling follows
   the memo.
-- **(3) A 32-bit oracle host / second `Platform` instance — DEFERRED:**
-  «eventually but not now». Recorded; no lane.
+- **(3) A 32-bit oracle host / second `Platform` instance — DEFERRED:** eventually, not now. Recorded; no lane.
 - **(4) `NPDRFReduction` — RULED: DEPRECATE / MARK UNSOUND, do not delete.**
   The proposition (`GoLean/GoCore/NPDRF.lean`, false as stated per its own
   docstring) stays in the tree with an explicit machine-visible marker
@@ -596,16 +520,14 @@ STOP), D9 (sync/chan/atomic emissions in the module), D10 (`Store.updateCell`'s
 wording) as doctrine-determined or gate-arbitrated defaults, the [USER] did not
 object, and the lane proceeded on the **[AGENT] coordinator's reading of that
 non-objection**. That reading is not a ruling. **Explicit [USER] ratification
-of D1–D7, D9, D10 is REQUESTED at the C1 merge ask — PENDING [USER]**; the
-answer is to be recorded here verbatim (relayed) and the charter §7 header
+of D1–D7, D9, D10 is REQUESTED at the C1 merge ask — PENDING [USER]**; the answer is to be recorded here (relayed, paraphrased) and the charter §7 header
 re-tagged to cite it. Until then every C1 record says «[AGENT] reading of the
 non-objection, ratification PENDING». D8 (ruling (4) above) is the one C1
 decision with [USER] text.
 
 ### The C1 charter ratification and BUG-111 ruling record (2026-09-18)
 
-[USER] Mike, 2026-09-18, verbatim, relayed by the [AGENT] coordinator — cite as
-relayed: «(1) agree, (2) agree. Go ahead», answering the coordinator's merge ask
+[USER] Mike, 2026-09-18, relayed by the [AGENT] coordinator — cite as relayed: items (1) and (2) agreed, go-ahead given, answering the coordinator's merge ask
 of the same day, which posed (1) «the C1 charter's recommendations D1 to D7, D9
 and D10 as the lane's instructions» and (2) «BUG-111's fix: canonical-path keys at
 emission, recommended, or type-tag normalization».
@@ -632,9 +554,7 @@ emission, recommended, or type-tag normalization».
 
 ### The BUG-111 canonicalization-scope ratification record (2026-09-19)
 
-[USER] Mike, 2026-09-19, verbatim, relayed by the [AGENT] coordinator — cite as
-relayed: «Great, merge it. Then is the next piece on NaN to just do an investigatory
-memo? If so do that» — answering the coordinator's merge ask of the same day, which
+[USER] Mike, 2026-09-19, relayed by the [AGENT] coordinator — cite as relayed: merge approved; the next NaN piece to be an investigatory memo — answering the coordinator's merge ask of the same day, which
 posed for ratification: the BUG-111 fix canonicalizes EVERY emitted location
 (`.data`, `.syncWord`, `.chanObj` keys and the `HbAction` clock-table locations), wider
 than the 2026-09-18 ruling's letter («canonical-path keys» for the `.data` accesses),
@@ -645,21 +565,20 @@ the fix round); and two lane calls — the WaitGroup alias row reshaped to a
 RACE-ALL program (no lane pins a some-schedules race honestly) and the nested-mutex
 copy row placed on BUG-080's `Cases:` line (the class it pins).
 
-**What was decided.** RATIFIED by the merge («Great, merge it.»): the wider
+**What was decided.** RATIFIED by the merge sign-off: the wider
 canonicalization scope and both lane calls. C1 S2c + BUG-111 land (train r42).
 The NaN question: the investigatory memo already exists
 (`docs/2026-09-18_nan-latitude-memo.md`, branch `records/nan-envelope-memo-0918`,
-reported 2026-09-18); «If so do that» is read by the coordinator as: land the memo
+reported 2026-09-18); the memo given its go-ahead is read by the coordinator as: land the memo
 (records). The memo's RULING — option [a]+[b] recommended — remains PENDING [USER].
 
 ### The NaN latitude ruling record (2026-09-19) — R7 / BUG-094: adopt [a]+[b]
 
-[USER] Mike, 2026-09-19, verbatim, relayed by the [AGENT] coordinator — cite as
-relayed: «NaN: sounds good to me» — answering the coordinator's question of the same
+[USER] Mike, 2026-09-19, relayed by the [AGENT] coordinator — cite as
+relayed: (the NaN plan accepted) — answering the coordinator's question of the same
 day, «adopt [a]+[b] as the memo recommends?», the memo being
 `docs/2026-09-18_nan-latitude-memo.md` (§5–§6), which itself answered the 2026-09-18
-ruling-record item (2) («[a] pass a parameter saying what the platform says, or [b] try
-to provide one uniform nondetermnism … depends on what the Go standard says»).
+ruling-record item (2) ([a] a platform parameter or [b] one uniform nondeterminism, depending on the Go standard).
 
 **What was decided.** [a]+[b]: the relation ENVELOPES the produced NaN over every quiet
 NaN of the width at a named choice site (`ChoiceSite.nanBits`) — Contract A, the weakest
@@ -676,8 +595,8 @@ the adopted text replaces it when the lane lands.
 
 ### The C1 completion and Stage C rulings record (2026-09-19)
 
-[USER] Mike, 2026-09-19, verbatim, relayed by the [AGENT] coordinator — cite as
-relayed: «Agree, merge» — answering the coordinator's merge ask of the same day,
+[USER] Mike, 2026-09-19, relayed by the [AGENT] coordinator — cite as
+relayed: (agreed; merge approved) — answering the coordinator's merge ask of the same day,
 which posed five numbered items.
 
 **What was decided.**
@@ -701,8 +620,8 @@ NaN [a]+[b] lane, then P → C3 → C4 → B6.
 
 ### The Stage C landing ratification record (2026-09-20)
 
-[USER] Mike, 2026-09-20, verbatim, relayed by the [AGENT] coordinator — cite as
-relayed: «land it» — answering the coordinator's merge ask for Stage C of the
+[USER] Mike, 2026-09-20, relayed by the [AGENT] coordinator — cite as
+relayed: (landing approved) — answering the coordinator's merge ask for Stage C of the
 evaluation-order plan (`core/unseq-stage-c-0919` at `6886fe00`, audit + re-verification
 MERGE-CLEAN at `1494f742`), which posed two items for ratification.
 
@@ -724,8 +643,7 @@ and Stage E (migration; the BUG-113 fix; legacy probe retirement; twin re-pin).
 
 ### The confluent-caption ruling record (2026-09-21) — Stage D audit F3
 
-[USER] Mike, 2026-09-21, verbatim, relayed by the [AGENT] coordinator — cite as relayed:
-«yes, I agree - go ahead» — to the coordinator's question whether to amend the `confluent`
+[USER] Mike, 2026-09-21, relayed by the [AGENT] coordinator — cite as relayed: agreed, go ahead — to the coordinator's question whether to amend the `confluent`
 lane's caption in `docs/coverage-suite-structure.md` (a certificate «over all registry-point
 schedules») to say it ranges over ALL choice streams the row consumes — registry-point
 schedules and, since Stage D, expression-order picks — because `continue-label`'s certificate
@@ -735,8 +653,7 @@ stage-d-0920`, audit MERGE-CLEAN at `5922ece7`) with the audit's F1/F2/F5 record
 
 ### The Stage E landing ratification record (2026-09-22) — seven items
 
-[USER] Mike, 2026-09-22 (the ask posed 2026-09-21), verbatim, relayed by the [AGENT]
-coordinator — cite as relayed: «Agree on the judgements, go ahead» — answering the coordinator's
+[USER] Mike, 2026-09-22 (the ask posed 2026-09-21), relayed by the [AGENT] coordinator — cite as relayed: the judgements agreed, go ahead — answering the coordinator's
 merge ask for Stage E, families E1–E4, of the evaluation-order plan (`core/unseq-stage-e-0921`
 at `bcf0b371` after the audit fix round; audit FIX-FIRST at `e957700f` → re-verification
 MERGE-CLEAN at `22b64a42`, rebased onto the fixed tip as `f5f84595`/`2e3a011b`), which posed
@@ -791,11 +708,10 @@ lane, then P → C3 → C4 → B6.
 
 ### The Stage E5 landing ratification record (2026-09-22) — seven items
 
-[USER] Mike, 2026-09-22, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Great, agree with all recommendations, land it»
-— answering the coordinator's merge ask for Stage E5 of the evaluation-order plan (`core/unseq-stage-e5-0922` at
+[USER] Mike, 2026-09-22, relayed by the [AGENT] coordinator — cite as relayed: all recommendations agreed, landing approved — answering the coordinator's merge ask for Stage E5 of the evaluation-order plan (`core/unseq-stage-e5-0922` at
 `28919dd6` after the audit fix round; audit FIX-FIRST at `bb79c34a` → re-verification MERGE-CLEAN at `0125f5ad`,
 rebased onto the fixed tip as `0a390343`), which posed seven items with the coordinator's recommendation on each.
-«land it» is the merge sign-off (train r47) and the dispatch of the E6 lane.
+(landing approved) is the merge sign-off (train r47) and the dispatch of the E6 lane.
 
 **What was decided (RATIFIED by the landing — every item as recommended).**
 1. **The trigger refinement — ADOPTED, executed in the E6 lane.** The Stage E trigger («a sweep enters the graph iff
@@ -829,12 +745,7 @@ then the NaN [a]+[b] lane, then P → C3 → C4 → B6.
 
 ### Roadmap review requested (2026-09-22) — statement received, review PENDING
 
-[USER] Mike, 2026-09-22, verbatim, relayed by the [AGENT] coordinator — cite as relayed (received during train r47,
-before its close): «Can we pause once the merge is done and then talk about the overall roadmap for this project. Our
-ultimate aim here is to support the GoLean logic that we're building in a different repo. That's our upstream customer.
-Which of the things that we're building are actually useful for those customer proofs and is our prioritization right?»
-
-Effect ([AGENT] reading, no ruling taken): the 2026-09-11 «We don't have as of now a customer» framing is REVISED by
+[USER] Mike, 2026-09-22, relayed by the [AGENT] coordinator — cite as relayed (received during train r47, before its close): a request to pause after the merge and review the project's roadmap — the ultimate aim is to support the GoLean logic being built in another repository, the upstream customer; which of the things being built serve those customer proofs, and is the prioritisation right. Effect ([AGENT] reading, no ruling taken): the 2026-09-11 no-customer-yet framing is REVISED by
 the [USER] — the customer is the GoLean logic (a program logic over GoCore, built in a separate repository that will
 consume this one at a pin); the 2026-09-16 «what this repo provides» statement and the 2026-09-05 F10 boundary stand.
 The coordinator PAUSED after train r47's close: the E6 lane (ruled 2026-09-22 at the Stage E5 landing) is NOT
@@ -847,40 +758,29 @@ be recorded here when taken.
 
 Context: the [USER]'s 2026-09-22 request («Roadmap review requested (2026-09-22)» above); the coordinator's
 assessment rested on the analysis memo `docs/2026-09-22_roadmap-customer-alignment.md` (rev. 2, surveying the
-customer repo `~/projects/golean-logic/`, which the [USER] named: «The draft logic is in ~/projects/golean-logic/»).
-The coordinator posed seven decisions; [USER] Mike answered, verbatim, relayed by the [AGENT] coordinator — cite as
-relayed: «I think we'll want to give them one repin after all the breaking changes have landed. Can we batch these
-together. (2) agree, we should make the model as regular as possible (3) litigate depending on the rest? (4) I don't
-understand this point? (5) yes, if this isn't in the target, we can defer it, (6) the decision on all this is what
-would be needed by the logic, (7) same answer. Can you write a note addressed at the logic team, proposing your
-updated design, then we'll get their review».
+customer repo `~/projects/golean-logic/`, which the [USER] named as the draft logic's home).
+The coordinator posed seven decisions; [USER] Mike answered, relayed by the [AGENT] coordinator — cite as relayed: (1) one re-pin after all the breaking changes have landed, batched; (2) agreed, the model as regular as possible; (3) decided by the rest; (4) not understood as posed; (5) yes, deferrable if not in the target; (6) decided by what the logic needs; (7) the same; and a note addressed to the logic team proposing the updated design, for their review.
 
 **RULED.**
 1. **Re-pin cadence — BATCH.** The remaining breaking reshapes of the core (the sequential `Step`/`stepFn` label,
    C3 `Cont := List Frame`, P native method promotion, B6 numeric locals, C4 block-scoped allocation) land in ONE
    window; the customer receives ONE re-pin offer after all of them, with a changelog. No breaking change lands
    outside the window without a separate ruling.
-2. **The sequential step label — the FULL EVENT LABEL** (memory accesses ⊕ choice picks ⊕ output), matching the
-   pool's `StepEvent` shape: «we should make the model as regular as possible». Executed inside the batched window,
+2. **The sequential step label — the FULL EVENT LABEL** (memory accesses ⊕ choice picks ⊕ output), matching the pool's `StepEvent` shape: the model as regular as possible. Executed inside the batched window,
    before C3 (its shape is part of the re-pin).
-5. **NaN [a]+[b] — DEFERRED**: floats are outside the customer's target («if this isn't in the target, we can defer
-   it»). The 2026-09-19 slot (after Stage E) is vacated; BUG-094's plan stands as a fidelity item without a lane.
+5. **NaN [a]+[b] — DEFERRED**: floats are outside the customer's target (deferrable if not in the target). The 2026-09-19 slot (after Stage E) is vacated; BUG-094's plan stands as a fidelity item without a lane.
 
-**NOT RULED — referred to the customer's review** (the [USER]: «the decision on all this is what would be needed
-by the logic»): 3. the timing of the records lane (the changelog + the simulation statement note) — «litigate
-depending on the rest»; 6. the drops (no GoLean-side `Language` spike; the `unseq` confluence lemma deferred; NPDRF
+**NOT RULED — referred to the customer's review** (the [USER]: the logic's needs decide): 3. the timing of the records lane (the changelog + the simulation statement note) — decided by the rest; 6. the drops (no GoLean-side `Language` spike; the `unseq` confluence lemma deferred; NPDRF
 restate-only; typed profiles parked); 7. weighting the differential corpus toward the customer's feature list.
 Item 4 (the FORM of the stable interface: named bridge theorems + a per-pin changelog, optionally per-arm `stepFn`
 equation lemmas as a supported `simp` surface, rather than a re-export module) was not understood as posed and is
 re-explained in the proposal note.
 
-**Direction.** [USER]: «Can you write a note addressed at the logic team, proposing your updated design, then we'll
-get their review» → the proposal note `docs/2026-09-23_proposal-to-logic-team.md` ([AGENT], on this branch; the
+**Direction.** [USER]: a note addressed to the logic team proposing the updated design, then their review → the proposal note `docs/2026-09-23_proposal-to-logic-team.md` ([AGENT], on this branch; the
 customer's review decides items 3/4/6/7 and the contents of the window). The E6 lane (ruled 2026-09-22) stays
 undispatched until the note is out; whether it precedes the window is part of the proposal.
 
-Addendum (2026-09-23). Item 4 re-explained and RULED — [USER] Mike, verbatim, relayed: «Right, I agree regarding
-item 4, let's see what that team asks for». The stable interface for the logic team is (i) a NAMED stable set of
+Addendum (2026-09-23). Item 4 re-explained and RULED — [USER] Mike, relayed: item 4 agreed; the logic team's asks decide. The stable interface for the logic team is (i) a NAMED stable set of
 bridge declarations with pinned statements, gated fail-closed, and (ii) a per-pin changelog, plus (iii) per-arm
 `stepFn` equation lemmas if the logic team asks for them; a re-export facade module is NOT wanted. The exact set and
 the (iii) question are the logic team's to answer in their review of `docs/2026-09-23_proposal-to-logic-team.md`.
@@ -889,7 +789,7 @@ continuation frame and a choice site — a removal is breaking for a downstream 
 item INSIDE the batched window (the window opens with it), not as a change outside it; the single re-pin still comes
 after everything. Posed to the [USER] for a nod with the note's summary.
 
-Addendum (2026-09-23, later). [USER] Mike, verbatim, relayed: «We can leave it on a branch while they look at it» —
+Addendum (2026-09-23, later). [USER] Mike, relayed: the material stays on a branch while the logic team reviews it —
 the proposal note, the analysis memo and these records STAY on branch `docs/roadmap-customer-alignment-0922`
 (unmerged, unpushed; worktree `.claude/worktrees/roadmap-0922`) while the logic team reviews the note. The merge of the
 branch and the window's dispatch (E6 first) follow their answers; the [USER]'s audit-trim/waiver for this
@@ -954,7 +854,7 @@ on the charter, the records lane, the branch landing and the E6 dispatch are pos
 Source: branch `review/batched-window-charter-0923` @ `28b12c50` (`docs/2026-09-23_batched-window-charter-review.md`
 + evidence `docs/evidence/2026-09-23_batched-window-review/{FuelBoundary.lean,validation.json}`; candidate = the charter
 at `e8758442`; production code identical to main `9269912e`; the fuel witness freshly checked under `scripts/capped`).
-[USER] Mike: «Window charter review landed from codex». Verdict: «support the direction; revise three points before
+[USER] Mike relayed the Codex window-charter review. Verdict: «support the direction; revise three points before
 treating this as an execution-ready charter».
 
 **F1 (P1) — E6's retirement exit is broader than its listed work.** The E5 handoff's residue names FIVE shape emitters
@@ -984,10 +884,8 @@ charter's §7 stay posed, with F1's split added as its own decision.
 
 ### The window charter (rev. 2) and the Codex packaging — RULED (2026-09-24)
 
-[USER] Mike, 2026-09-24, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «I'm happy to go with your
-rec. What remains that *needs* my judgement?» — answering the coordinator's eleven decisions on the charter
-(`docs/2026-09-23_batched-window-charter.md` §7, each posed with a recommendation) and the coordinator's answer to
-«Could we reasonably batch all of these into a single plan and then send a Codex worker to do it all?» (2026-09-23/24):
+[USER] Mike, 2026-09-24, relayed by the [AGENT] coordinator — cite as relayed: the recommendations accepted, asking what still needs the user's judgement — answering the coordinator's eleven decisions on the charter
+(`docs/2026-09-23_batched-window-charter.md` §7, each posed with a recommendation) and the coordinator's answer to the user's question whether all of these could be batched into one plan for a single Codex worker (2026-09-23/24):
 NOT as one project — one plan cut into Codex-shaped packets (A contract: the stable-set file, the execution-statement
 note as checked Lean statements, the changelog draft; B bridges: the prefix closure, composition/erasure/executable
 agreement, choice-replay coverage, the fuel-out and terminal bridges; C continuations `Cont := List Frame`; D the
@@ -1011,7 +909,7 @@ up, the launch of each Codex packet, and any push or tag the re-pin offer needs.
 
 ### E6's shape, train r49 and the execution model — RULED (2026-09-27)
 
-[USER] Mike, 2026-09-27, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «(1) agree, (2) agree, (3) we're going to change plans here a bit, and run the build through you and subagents on this thread. We just upgraded to the Opus 5.5. model so you can use that (rather than legacy-fable)» — answering the
+[USER] Mike, 2026-09-27, relayed by the [AGENT] coordinator — cite as relayed: (1) agreed, (2) agreed, (3) a change of plan — the build runs through the coordinator and subagents on this thread, on the newly available Opus 5.5 model — answering the
 coordinator's three items (posed 2026-09-24, restated 2026-09-27).
 
 **RULED.** (1) **E6 re-scoped by measurement**: E6a lands; the remaining slices E6b–E6d and the retirement E6e LEAVE the
@@ -1032,9 +930,7 @@ unchanged.
 
 ### Train r51 — the stray-panic fix, packet A and the prompt-audit edits — RULED (2026-09-28)
 
-[USER] Mike, verbatim, relayed by the [AGENT] coordinator — cite as relayed: 2026-09-28 «Great, go ahead with all of these»
-(the prompt-audit diff: seven edits to `CLAUDE.md` and the packet briefs; four low-confidence flags left unedited) and
-«great, go ahead with both» — the landing of the documentation branch `docs/prompt-audit-0928` (the adversarial audit
+[USER] Mike, relayed by the [AGENT] coordinator — cite as relayed: 2026-09-28 all approved (the prompt-audit diff: seven edits to `CLAUDE.md` and the packet briefs; four low-confidence flags left unedited) and both approved — the landing of the documentation branch `docs/prompt-audit-0928` (the adversarial audit
 WAIVED as proposed with the ask: documentation only) and of train r51's two audited branches: `core/stray-panic-refusal-0927`
 (audit MERGE-CLEAN) and `window/packet-a-contract-0927` (audit FIX-FIRST → re-verification MERGE-CLEAN, conditional on the
 stray-panic lane). Disclosed [AGENT] coordinator dispositions RATIFIED by the landing: (1) the six stray-panic sites become a
@@ -1046,8 +942,7 @@ a machine-checked «no stray panic at a non-abort configuration» lemma as packe
 
 ### Train r52 — the step label + the execution bridges, and the charter wording — RULED (2026-09-28)
 
-[USER] Mike, 2026-09-28, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «D1: approved, D2: approved. Go
-ahead». D1: land the label reshape (`core/step-label-0928`, audit MERGE-CLEAN) and window packet B (`window/packet-b-bridges-0928`,
+[USER] Mike, 2026-09-28, relayed by the [AGENT] coordinator — cite as relayed: D1 and D2 approved, go ahead. D1: land the label reshape (`core/step-label-0928`, audit MERGE-CLEAN) and window packet B (`window/packet-b-bridges-0928`,
 audit MERGE-CLEAN; the pre-landing round F1/F2/F6/F7 done), with the disclosed [AGENT] items: the pool event's pick list
 now includes picks previously unrecorded (no observation reads it); the core audit's required list strengthened (85 theorems,
 five modules). D2: `CLAUDE.md`'s item (2) of «What this repo provides» replaced by the approved wording — the sequential
@@ -1076,8 +971,7 @@ whose `picks` now records the `unseqPanic` consultation as `⟨.unseqPanic, 2, p
 
 ### G-P (native method promotion) passed, and the documentation landing — RULED (2026-09-28)
 
-[USER] Mike, 2026-09-28, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Go ahead and land, and approve the
-decisions as proposed». (a) The named design gate G-P is PASSED with all ten decisions of
+[USER] Mike, 2026-09-28, relayed by the [AGENT] coordinator — cite as relayed: (landing approved with the decisions as proposed). (a) The named design gate G-P is PASSED with all ten decisions of
 `docs/2026-09-28_gp-method-promotion-design.md` §6 as recommended: the core handles promotion only for interface dispatch,
 interface satisfaction and method expressions, static selectors unchanged (amending the literal 2026-09-04 G-P wording); the
 embedding path shipped as a `go/types` promotion record, checked by the decoder; the path walked at call start (in the child
@@ -1118,7 +1012,7 @@ Dispositions ([AGENT] coordinator; item 6 PENDING [USER] — it would change the
 9. The single-goroutine embedding without `seqOpCount = 0` → already owed (packet B audit F5 area); low priority, before the
    offer if cheap, else a stated limit.
 
-RULED ([USER] Mike, 2026-09-28, verbatim, relayed): «Agree on (1). Agree on landing». Item 6: option 1 — frames record their
+RULED ([USER] Mike, 2026-09-28, relayed): option (1) agreed; landing agreed. Item 6: option 1 — frames record their
 callee's `FuncId` as a field, added in the P lane's S3 reshape in place of the deleted `wrapper` field, with entry/exit
 lemmas pinned; the `StepLabel` shape is unchanged (a call/return label channel NOT taken). This branch lands, documentation
 only, the adversarial audit waived.
@@ -1127,7 +1021,7 @@ Landed on `main` by train r54 (documentation only): release-check no inputs chan
 
 ### Train r55 — native method promotion (P) landed — RULED (2026-09-29)
 
-[USER] Mike, 2026-09-29, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «sound good, acknowledged the move» —
+[USER] Mike, 2026-09-29, relayed by the [AGENT] coordinator — cite as relayed: the merge sign-off, the move acknowledged —
 the merge sign-off for `core/method-promotion-0928` (audit FIX-FIRST → fix round → re-verification R1 → the FR-23 nil-box row
 added; the final row not re-audited, disclosed at the ask) and the acknowledgement that the unlisted FAIL→PASS of
 `noodler/frontier/promoted-method-expression-ptr` is covered by G-P decision 5 (the lane recorded it instead of stopping, as
@@ -1137,7 +1031,7 @@ FR-35 opened for the pre-existing sync-stub dispatch refusal; baseline 3791 = 35
 
 ### G-C3 (continuations) passed — RULED (2026-09-29)
 
-[USER] Mike, 2026-09-29, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Agree with 1-4». The named design
+[USER] Mike, 2026-09-29, relayed by the [AGENT] coordinator — cite as relayed: (items 1-4 agreed). The named design
 gate G-C3 is PASSED with the four decisions of `docs/2026-09-29_gc3-continuations-design.md` §5 as recommended:
 (1) G-C3 is `Cont := List Frame` ONLY — the 2026-09-04 ruled text's `Config := Mode × Cont` and «`fill` is append» are
 dropped (no context-fill law, no `recover` commutation claim); (2) the logic team's request-7 unwinding equations stay in
@@ -1162,8 +1056,7 @@ protobuf-go, or (2) a GoLean-native executable definition (the logic team's pref
 convenient; their 26-entry malformed-bytes corpus and Lean mirror as reference evidence; any delta that must stay recorded with its
 justification as an explicit premise (their §4).
 
-The [AGENT] coordinator posed four items. RULED [USER] Mike, 2026-09-30, verbatim, relayed by the [AGENT] coordinator — cite as
-relayed: «Yes, I also prefer A, as long as it could be made faithful».
+The [AGENT] coordinator posed four items. RULED [USER] Mike, 2026-09-30, relayed by the [AGENT] coordinator — cite as relayed: route A preferred, provided it can be made faithful.
 1. Record U-1/U-2/U-3 and correct the codec comment — YES. Landed on branch `records/raft-deltas-0930`: the 2026-09-30 ledger
    continuation in `docs/raft-w42-log.md` (each with upstream behaviour, subject behaviour, the observable difference through
    RawNode, plan = route A; why no corpus row can witness them today), the dated JC-14 correction in `docs/raft-w41-log.md`,
@@ -1191,7 +1084,7 @@ offline from the module cache and PASSES (72 values, nine types) — a dated dis
 
 ### Train r56 — continuations and the raft-delta records landed — RULED (2026-09-30)
 
-[USER] Mike, 2026-09-30, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Great, land both» — the merge
+[USER] Mike, 2026-09-30, relayed by the [AGENT] coordinator — cite as relayed: both landings approved — the merge
 sign-off for `core/continuations-0929` (G-C3, audit MERGE-CLEAN, `Cont := List Frame`, zero behaviour change, core audit 144)
 and `records/raft-deltas-0930` (the raft-proofs note, U-1–U-3 recorded, the `plain_codec` comment corrected — twin wire
 unchanged — the native `Intn` pick site placed as window unit 5b between B6 and C4, route A found FAITHFUL-FEASIBLE with its
@@ -1208,12 +1101,11 @@ discharged once against the lowered body, refining raft-proofs' functional decod
 (their `cluster3` census shows raft itself needs loops, slices, integer kinds/shifts, recursion, error interfaces and initialized globals,
 so route A adds only codec-specific invariants — their estimate 3–6 sessions); they now PREFER route A.
 
-The [USER]'s clarification, 2026-09-30, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «btw, I'm the user for all three
-teams so this is more a design tradeoff question than a user negotiation question». The three teams' notes are DESIGN INPUT to one
+The [USER]'s clarification, 2026-09-30, relayed by the [AGENT] coordinator — cite as relayed: being the user of all three teams, this is a design trade-off question, not a negotiation between users. The three teams' notes are DESIGN INPUT to one
 user's tradeoff, not positions to negotiate; this record and the design note below are written in that light.
 
 Dispositions ([AGENT] design writer, inside the standing ruling; nothing here re-decides it):
-1. Route A is CONFIRMED. The [USER]'s condition — «Yes, I also prefer A, as long as it could be made faithful» (2026-09-30, relayed;
+1. Route A is CONFIRMED. The [USER]'s condition — route A provided it can be made faithful (2026-09-30, relayed;
    the previous record, item 3) — is met by `docs/2026-09-30_protobuf-route-a.md`'s FAITHFUL-FEASIBLE verdict (landed with train r56 @
    `20049982`), and the logic side now prefers A. Its lane stays POST-window (`docs/2026-09-24_window-plan.md` §4, `subject/protobuf-route-a`);
    its go-ahead at dispatch remains the separate [USER] decision the previous record names.
@@ -1236,8 +1128,7 @@ Dispositions ([AGENT] design writer, inside the standing ruling; nothing here re
 
 ### BUG-004 item 4 (error/Stringer panic payloads) — placement and design RULED (2026-09-30)
 
-[USER] Mike, 2026-09-30, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Yes, agree, do the fix inside this
-window» — answering the coordinator's recommendation on `docs/2026-09-30_bug004-item4-design.md`: the fix lands INSIDE the
+[USER] Mike, 2026-09-30, relayed by the [AGENT] coordinator — cite as relayed: (the fix agreed inside this window) — answering the coordinator's recommendation on `docs/2026-09-30_bug004-item4-design.md`: the fix lands INSIDE the
 batched window as unit 6b (after C4, before packet D), so the logic side takes one re-pin and `panic(err)` renders before the
 offer; with the note's decisions as recommended — design (i), the preprint phase (payload methods run as ordinary machine steps
 after all defers, before the terminal classification; `Finish` stays a cost-1 terminal); the two-field `PanicEntry` encoding
@@ -1248,7 +1139,7 @@ only) NOT taken.
 
 ### Train r57 — numeric locals (B6) and the BUG-004 item 4 design landed — RULED (2026-09-30)
 
-[USER] Mike, 2026-09-30, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «land it» — the merge sign-off for
+[USER] Mike, 2026-09-30, relayed by the [AGENT] coordinator — cite as relayed: (landing approved) — the merge sign-off for
 `core/numeric-locals-0930` (D1–D6 ratified; audit MERGE-CLEAN after the fix round: the name table checked in both directions,
 `unseqEntryCheck?` at `unseq` ENTER; core audit 158; wire schema v3; twin `8a158eff…`) and `docs/bug004-item4-design-0930`
 (the design note, the logic side's route-A reply and its dispositions, unit 6b ruled inside the window). The certified row's
@@ -1256,16 +1147,14 @@ only) NOT taken.
 
 ### Train r58 — the native Intn pick site and the harness fix landed — RULED (2026-10-01)
 
-[USER] Mike, 2026-10-01, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «agree, land it, ratify all including
-the harness fix. Then move to next steps» — the merge sign-off for `core/intn-pick-0930` (window unit 5b; audit MERGE-CLEAN),
+[USER] Mike, 2026-10-01, relayed by the [AGENT] coordinator — cite as relayed: landing agreed, everything ratified including the harness fix, then the next steps — the merge sign-off for `core/intn-pick-0930` (window unit 5b; audit MERGE-CLEAN),
 its D1–D8 RATIFIED (option B, upstream's verbatim `crypto/rand`/`math/big` body, NOT taken), and the coverage harness's
 `/vN` import-name fix (trusted surface #2; a new unaliased `math/rand/v2` row). Baseline 3800 = 3563 / 237; FR-36 opened for
 dot imports of quarantined/primitive-bound packages.
 
 ### G-C4 (block-entry allocation) passed — RULED (2026-10-01)
 
-[USER] Mike, 2026-10-01, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Those costs seem fine to me. Go
-ahead with these decisions. You can work on block allocation on the basis of approving all of your recommendations.» — the
+[USER] Mike, 2026-10-01, relayed by the [AGENT] coordinator — cite as relayed: (the costs accepted and every recommendation approved) — the
 named design gate G-C4 PASSED with all nine recommendations of `docs/2026-10-01_gc4-block-allocation-design.md` §7 (branch
 `docs/gc4-design-1001` @ `b8c44973`): (1) G-C4 in the scoped form (an injection with private cells + stuttering over the stated
 observable domain; the address-sensitive-escape audit's verdicts as the discharged precondition); (2) D2 = W1 — wire
@@ -1282,7 +1171,7 @@ G-C3's elaboration stop rule (any module > 1.5× slower or a new/raised `maxHear
 
 ### C4 budget-row flip (`sync/trylock/spin-until-trylock`) — RULED (2026-10-03)
 
-[USER] Mike, 2026-10-03, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «yeah, agree with 1, land it» — the one item the C4 lane
+[USER] Mike, 2026-10-03, relayed by the [AGENT] coordinator — cite as relayed: option 1 agreed, landing approved — the one item the C4 lane
 (`core/block-allocation-1001`, window row 6) STOPPED under G-C4 decision 7: the membership row's enumeration exceeded
 its pinned work cap (200000) after block-entry allocation because its `nonterm=200` is a per-branch STEP budget and
 C4 shortens each spin iteration by two steps, so more iterations fit before a branch is cut; the observation set
@@ -1296,7 +1185,7 @@ into the handoff, the changelog row and the design note at landing.
 
 ### Train r59 — block-entry allocation (C4) landed — RULED (2026-10-03)
 
-[USER] Mike, 2026-10-03, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «yeah, agree with 1, land it» — the
+[USER] Mike, 2026-10-03, relayed by the [AGENT] coordinator — cite as relayed: option 1 agreed, landing approved — the
 merge sign-off for `core/block-allocation-1001` (G-C4; audit MERGE-CLEAN), with the STOPPED budget row
 `sync/trylock/spin-until-trylock` resolved by option 1 (its work cap raised to 500000; the observation set unchanged) and the
 audit's records corrections folded in. Landed: the decoder hoist (wire unchanged), `Stmt.initialization` deleted (45 → 44
@@ -1305,14 +1194,14 @@ constructors, 128 → 127 rules), the `unseq` sweep-private scope, `entrySlot` +
 
 ### Train r60 — the panic preprint phase (BUG-004 item 4) landed — RULED (2026-10-03)
 
-[USER] Mike, 2026-10-03, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Great, land it» — the merge sign-off
+[USER] Mike, 2026-10-03, relayed by the [AGENT] coordinator — cite as relayed: landing approved — the merge sign-off
 for `core/panic-preprint-1003` (window unit 6b; audit MERGE-CLEAN, 68 extra gc probes), acknowledging the three internal
 statement changes (`Prefix.abort?_some`, `Prefix.stepFn_abort`, `MachineSound.step_abort_elim` gain the settled-chain premise;
 the pinned `_stmt`s byte-identical). Baseline 3821 = 3584 / 237. Follow-ups in the lane handoff §7.
 
 ### Train r61 — packet D, the corpus lanes, the window review — RULED (2026-10-03)
 
-[USER] Mike, 2026-10-03, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «agree on 1-4» — on the coordinator's
+[USER] Mike, 2026-10-03, relayed by the [AGENT] coordinator — cite as relayed: items 1-4 agreed — on the coordinator's
 four items: (1) re-check packet D's window-review fixes, then land packet D (`window/packet-d-equations-1003` @ `d8529ab7`:
 293 per-arm `stepFn` equations, the setup equation `runProgramSetup_noInit`, the pool projections, the fold-back, the
 equation client and `scripts/check-equations`; the re-check (Fable) found the gate's import boundary open — closed before
@@ -1327,9 +1216,7 @@ lanes). Next: the re-pin OFFER (window unit 7b).
 
 ### Train r62 — the re-pin OFFER (window unit 7b) landed — RULED (2026-10-04)
 
-[USER] Mike, verbatim, relayed by the [AGENT] coordinator — cite as relayed: 2026-10-03 «prepare the offer, do the dry run»;
-«yes, review, then merge if nothing comes back requiring fixes. I can relay to the logic team»; 2026-10-04 «merge» (the
-at-that-moment sign-off, given after the audit returned NEEDS-FIX and the fixes were applied). Landed:
+[USER] Mike, relayed by the [AGENT] coordinator — cite as relayed: 2026-10-03 the offer to be prepared and the dry run done; then review, and merge if nothing comes back needing fixes, the user relaying to the logic team; 2026-10-04 the merge sign-off (the at-that-moment sign-off, given after the audit returned NEEDS-FIX and the fixes were applied). Landed:
 `docs/repin-offer-1003` @ `3d1a3e21` (records only; `git diff 20d3946d 3d1a3e21 -- GoLean tools scripts baselines` empty):
 the offer note `docs/2026-10-03_offer-to-logic-team.md`, the frozen changelog summary + ten stated limits, the evidence
 `docs/evidence/2026-10-03_repin-offer/` (fixture inventory 31/31 lowered, 0 `unseq`/probes; isolated dry run — GoLean clean,
@@ -1342,8 +1229,7 @@ change no code); local annotated tag `logic-offer/2026-10-03` on `20d3946d`, NOT
 
 ### The logic team's `Intn` note (2026-10-04) — RULED
 
-[USER] Mike, 2026-10-04, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Yes, let's go with your approach.
-I'll share the note»; merge sign-off «merge it». The note (`docs/2026-10-04_note-from-logic-team-intn.md`, their branch
+[USER] Mike, 2026-10-04, relayed by the [AGENT] coordinator — cite as relayed: the approach approved, the user sharing the note; merge sign-off (merge sign-off). The note (`docs/2026-10-04_note-from-logic-team-intn.md`, their branch
 `docs/golean-intn-note-1004` @ `dfc46ae`) accepts the offer (acceptance in progress on their criteria) and asked to bind the
 method form of `Intn` for raft's `(*lockedRand).Intn`. [AGENT] finding: already covered at `20d3946d` — D-11 was re-keyed at
 r58 onto a direct `math/rand.Intn` inside the user method, so the draw is `ChoiceSite.intn`; their note read the old pin's
@@ -1353,10 +1239,10 @@ delta; option B stays not taken. Reply `docs/2026-10-04_reply-to-logic-team-intn
 
 ### Train r64 — the pool/registry spec packet and the lowerdiag primitive fix — RULED (2026-10-04)
 
-[USER] Mike, 2026-10-04, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Great, launch it» (the
-spec-packet + Codex-grind plan for the pool/registry half); «Approved» (spec Q1–Q7 as recommended, and the statement review
+[USER] Mike, 2026-10-04, relayed by the [AGENT] coordinator — cite as relayed: (launch approved) (the
+spec-packet + Codex-grind plan for the pool/registry half); (approved) (spec Q1–Q7 as recommended, and the statement review
 before the grind; the same word approved route A's design D1–D12 / Q1–Q7 — route A's BUILD is a separate lane, NOT in this
-train); «Yes, approve 1 / 2» (item 1 = merge sign-off for this train; item 2 = folding float-bits into the lowerdiag fix).
+train); (items 1 and 2 approved) (item 1 = merge sign-off for this train; item 2 = folding float-bits into the lowerdiag fix).
 Landed: (a) `design/pool-relation-spec-1004` @ `185db6d8` — the pool/registry SPEC PACKET (the labelled pool relation over
 `StepEvent`, the pool deadlock's own predicate, the driver carriers, the frozen `_stmt`s, a sorry'd skeleton OUTSIDE the
 build, `scripts/check-pool-spec`, the design note and the grind brief); the adversarial statement review returned NEEDS-FIX
@@ -1366,7 +1252,7 @@ than scoped out, [AGENT] coordinator decision), M1–M5 — all fixed at `185db6
 primitive (`math.Float64bits` & siblings); Opus audit MERGE-CLEAN. Train: lowerdiag tip, the spec packet cherry-picked in
 order (linear history).
 
-The lowerdiag fix worker's four further disagreements with the wire — rowed here [AGENT] per «every detected gap is rowed»:
+The lowerdiag fix worker's four further disagreements with the wire — rowed here [AGENT] per every detected gap is rowed:
 (1) defer/go of a package-level `sync/atomic` function — lowerdiag says lowers, the wire refuses («stdlib-qualified
 selector … in value position»); (2) defer/go of a `fmt` member — lowerdiag says lowers (shim), the wire refuses (the
 calibration test skips fmt-calling decls, so this went unseen); (3) a sync-op method value (`return mu.Lock`) — lowerdiag
@@ -1390,9 +1276,9 @@ the pool/registry spec packet and the lowerdiag primitive fix are on main; the p
 
 ### Train r65 — route A slice S1 landed — RULED (2026-10-04)
 
-[USER] Mike, 2026-10-04, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «merge it and share» (merge
+[USER] Mike, 2026-10-04, relayed by the [AGENT] coordinator — cite as relayed: the merge sign-off, the note to be shared (merge
 sign-off for `lane/route-a-s1-1004` @ `7ed733c1`, route A slice S1 — the faithful protobuf codec for the raft subject, its
-design `docs/2026-10-04_route-a-protobuf-design.md`); «agree to (i)» (the recursion-edge corpus row is NOT born; `codeccheck.py`
+design `docs/2026-10-04_route-a-protobuf-design.md`); option (i) agreed (the recursion-edge corpus row is NOT born; `codeccheck.py`
 checks 48–51 — both oracles, raised fuel 3e8 — and `difftest.py` section 8 stand in; recorded in the design note §8 as a
 STATED LIMIT). Audit: Fable adversarial audit MERGE-CLEAN with two minor records findings, both folded in at this train's
 records commit: Minor-1 (the D6 «indexed loops» reading — condition-only `for len(b) > 0` loops — not yet confirmed by the
@@ -1406,8 +1292,7 @@ DISPATCH_FORM as is.» → Q5 RESOLVED (keep). (b) «Condition-only loops `for l
 needed. … "plain indexed loops" in our note was an example of supported shape, not a requirement. Our logic is
 partial-correctness … the termination measure isn't used by our proofs, though recording it is welcome.» → the D6 loop
 reading ACCEPTED. The logic team acknowledged the init pick (their closed-program theorems assume no package initializer —
-their planned package-init support); raft-proofs was notified 2026-10-04 by the [AGENT] coordinator at the [USER]'s request
-(«share»). Train: `train/r65` = the lane rebased onto main `032b5f97` (linear; one provenance-only conflict on the
+their planned package-init support); raft-proofs was notified 2026-10-04 by the [AGENT] coordinator at the [USER]'s request to share. Train: `train/r65` = the lane rebased onto main `032b5f97` (linear; one provenance-only conflict on the
 google-search certified record, resolved [AGENT] to main's version — claim and observations identical on both sides; step
 5a re-certifies).
 
@@ -1427,9 +1312,8 @@ route A slice S1 (the faithful protobuf codec) is on main; S2/S3 are separate la
 
 ### Train r66 — route A S2, pool grind M1, staged pool-spec check — RULED (2026-10-05)
 
-[USER] Mike, 2026-10-05, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Go ahead with Route A S2» (the
-lane `lane/route-a-s2-1005`, design `docs/2026-10-04_route-a-protobuf-design.md` D9 / §5 / §9); «(1) Go ahead, (2) merge once
-ready» — (1) = the setup-equations lane G-R1–G-R4 for the logic team, scheduled AFTER this train; (2) = the merge sign-off
+[USER] Mike, 2026-10-05, relayed by the [AGENT] coordinator — cite as relayed: (Route A S2 approved) (the
+lane `lane/route-a-s2-1005`, design `docs/2026-10-04_route-a-protobuf-design.md` D9 / §5 / §9); (go-ahead for item (1); merge once ready for item (2)) — (1) = the setup-equations lane G-R1–G-R4 for the logic team, scheduled AFTER this train; (2) = the merge sign-off
 for ONE train carrying three branches: (a) `lane/route-a-s2-1005` @ `a82b3ab6`; (b) `core/pool-grind-2026-10-05` @
 `844e9393` (the Codex pool grind, milestone M1); (c) `tools/pool-spec-milestones-1005` @ `300e4f6f` (one commit on top of
 (b): the milestone-staged `scripts/check-pool-spec`, `docs/specs/pool-relation/{MILESTONES,LANDED}` at LANDED=M1, wired
@@ -1475,7 +1359,7 @@ provenance refresh. Tail: `docs/evidence/2026-10-05_train-r66/r66-ci-slow.tail.t
 baseline diff FULL 3884/3884 (3647 / 237, no regression), certificate provenance ok, semantic equations ok, pool spec
 freeze + discharge ok (LANDED=M1), frontend pins ok. Round 66 closed: route A S2 and pool grind M1 (with the staged
 pool-spec check in the gate) are on main; the Codex grind continues on `core/pool-grind-2026-10-05` (M2–M5); the
-setup-equations lane (G-R1–G-R4) is next ([USER] «(1) Go ahead», relayed).
+setup-equations lane (G-R1–G-R4) is next ([USER] (go-ahead for item (1)), relayed).
 
 Coordinator follow-up to train r66 ([AGENT], 2026-10-05): (1) the M1 grind commit `844e9393` had appended a «Pool grind
 milestone record» section to the FROZEN offer changelog `docs/changelog/61958f2e-WINDOW.md` (its brief predated the
@@ -1483,13 +1367,13 @@ post-offer changelog and pointed there) — removed; its M1 content is the r66 M
 the grind brief §6 re-pointed to the post-offer changelog before M2. (2) The staged pool-spec check
 (`tools/pool-spec-milestones-1005`) had NO separate adversarial audit — an [AGENT] call: gate tooling that only tightens
 acceptance, exercised by its own self-tests and the green r66 gate (rule: gates are speedbumps, not audit targets);
-the [USER]'s sign-off «merge once ready» covered it.
+the [USER]'s sign-off to merge once ready covered it.
 
 ### Train r67 — the setup equations G-R1–G-R4 for the logic team — RULED (2026-10-05)
 
-[USER] Mike, 2026-10-05, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «(1) Go ahead» (the lane
+[USER] Mike, 2026-10-05, relayed by the [AGENT] coordinator — cite as relayed: (go-ahead for item (1)) (the lane
 `core/setup-equations-1005`, the golean-logic team's request G-R1–G-R4 of 2026-10-05, recorded verbatim with the
-coordinator's reply in `docs/2026-10-05_note-from-logic-team-setup-equations.md`; ruled under train r66); «merge it» — the
+coordinator's reply in `docs/2026-10-05_note-from-logic-team-setup-equations.md`; ruled under train r66); (merge sign-off) — the
 merge sign-off for `core/setup-equations-1005` @ `d4651a5f` (two commits: `36e0b302` G-R1–G-R3 proved, G-R4 stated for
 review; `d4651a5f` G-R4 approved and proved).
 
@@ -1540,9 +1424,9 @@ G-R1–G-R4 (BridgeSet rows 512–527) are on main for the logic team's next add
 
 ### Train r68 — route A complete (S3) and the lowerdiag defer/go + sync-method-value fix — RULED (2026-10-06)
 
-[USER] Mike, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Yes, go ahead» (2026-10-05 — the lane
+[USER] Mike, relayed by the [AGENT] coordinator — cite as relayed: (approved) (2026-10-05 — the lane
 `lane/route-a-s3-lowerdiag-1005`: route A S3, the records completing route A, plus the lowerdiag defer/go and
-sync-method-value fix); «merge it» (2026-10-06 — the merge sign-off for `lane/route-a-s3-lowerdiag-1005` @ `682073db`).
+sync-method-value fix); (merge sign-off) (2026-10-06 — the merge sign-off for `lane/route-a-s3-lowerdiag-1005` @ `682073db`).
 
 Audit (as relayed by the [AGENT] coordinator): one Opus adversarial audit, NEEDS-FIX — three wording items, all fixed in
 `76def698` (docs/comments only): (1) D-3's two residues separated — the `%+#v` dumps PERMANENT (per Q4), the nil-input
@@ -1585,9 +1469,8 @@ continues on `lane/fr36-spin-bounds-1006` and the Codex grind on `core/pool-grin
 
 ### Train r69 — FR-36 (dot-import binding) and spin bounds in loop iterations — RULED (2026-10-06)
 
-[USER] Mike, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Yeah, let's do 3+4» (2026-10-06 — item 3 =
-FR-36, the dot-imported stdlib member binding; item 4 = the spin bounds in loop iterations, train r59's C4 follow-up);
-«merge» (2026-10-06 — the merge sign-off for `lane/fr36-spin-bounds-1006` @ `4a9c73dc`).
+[USER] Mike, relayed by the [AGENT] coordinator — cite as relayed: (items 3 and 4 approved) (2026-10-06 — item 3 =
+FR-36, the dot-imported stdlib member binding; item 4 = the spin bounds in loop iterations, train r59's C4 follow-up); the merge sign-off (2026-10-06 — the sign-off for `lane/fr36-spin-bounds-1006` @ `4a9c73dc`).
 
 [AGENT] coordinator decision (2026-10-06, as relayed): the lane's first landing attempt split on ownership — the FR-36
 fix retired the dot-imported float-bits refusal, but `tools/lowerdiag`'s calibration cause `dot-import-float-bits`
@@ -1648,13 +1531,10 @@ re-entries (`iters=`) on main; FR-37 (the dot-imported variable, queue slot 37) 
 
 ### Train r70 — the pool/registry half complete (Codex M2–M5) and the CLAUDE.md item (2) update — RULED (2026-10-06)
 
-[USER] Mike, verbatim, relayed by the [AGENT] coordinator — cite as relayed:
-- 2026-10-05, the continuous-run ruling (superseding the per-milestone stop of the grind brief): «We really want this to
-  not be checked in at milestones. Codex excels at long-cycle, low oversight builds against a very clear objective»
+[USER] Mike, relayed by the [AGENT] coordinator — cite as relayed: - 2026-10-05, the continuous-run ruling (superseding the per-milestone stop of the grind brief): the grind runs continuously, not checked at milestones — Codex does well on long, low-oversight builds against a clear objective
   (`docs/2026-10-04_pool-relation-grind-brief.md`, the CONTINUOUS RUN M2–M5 paragraph).
-- 2026-10-05, the repairs-not-stops amendment: «a false / unprovable statement isn't a stop. Instead, *prove all provable
-  statements* and for other statements *propose a repair*» (same paragraph, item (4)).
-- 2026-10-06: «Agree on 1 / 2» — (1) the merge sign-off for `core/pool-grind-m2m5-2026-10-05` @ `7626aa73`; (2) approval
+- 2026-10-05, the repairs-not-stops amendment: a false or unprovable statement is not a stop — prove every provable statement and propose a repair for the rest (same paragraph, item (4)).
+- 2026-10-06: (items 1 and 2 agreed) — (1) the merge sign-off for `core/pool-grind-m2m5-2026-10-05` @ `7626aa73`; (2) approval
   of the CLAUDE.md item (2) amendment text below.
 
 The run (Codex, one continuous run, checkpoints M2–M5 recorded in `docs/2026-10-05_pool-grind-report.md`): all 39 M2–M5
@@ -1674,7 +1554,7 @@ dangling pointer, NOT editable without a re-freeze, noted in the changelog row.
 `docs/specs/pool-relation/LANDED`: `M1` → `M5` (the landing train's job per its header); `python3
 scripts/check-pool-spec` EXIT=0 — LANDED=M5, all 48 statements of M1..M5 discharged, 0 early, 0 owed.
 
-CLAUDE.md item (2) ([USER]-approved text, «Agree on 1 / 2», relayed; first word adjusted only to start a sentence): the
+CLAUDE.md item (2) ([USER]-approved text, (items 1 and 2 agreed), relayed; first word adjusted only to start a sentence): the
 span «Still OWED, kept in step with the interpreter (priority (c) of the 2026-09-11 ruling): the pool/registry half — …
 Proved 2026-10-03 (`GoLean/GoCore/PoolProjection.lean`): the single-goroutine output agreement … and at EQUAL fuel when
 no reachable step opens a registry boundary.» (the pool half as OWED, with only the 2026-10-03 projection proved) is
@@ -1687,7 +1567,7 @@ with terminal priority; the fuel bridges; replay by record; and the single-gorou
 (`PoolProjection.lean`). Not a theorem: the run-level converse «every relational run is some tape's prefix» is FALSE as
 a bare statement (the relation steps past an aborted goroutine, the driver classifies it first); it holds per step and
 for runs that pass the driver's gate.» The «Limits: …» sentence is unchanged; the paragraph's closing provenance
-parenthetical gains «, and its 2026-10-06 update, «Agree on 1 / 2», relayed». `scripts/check-agents-alias` PASS.
+parenthetical gains «, and its 2026-10-06 update, (items 1 and 2 agreed), relayed». `scripts/check-agents-alias` PASS.
 
 Reconciler C5 tidy (r69's report-only findings; [AGENT train worker], records only): FR-36's reds cell now reads «4 born
 (3 PASS + 1 red by design)». The reconciler reads the cell's LEADING integer as the red count, so finding [04] (claims 4,
@@ -1731,8 +1611,7 @@ reconciler reads it.
 
 ### Semantic widenings must match real Go — RULED (2026-10-07)
 
-[USER] Mike, 2026-10-07, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Yeah, the semantic widenings
-should only be allowed if they match real Go» — in reply to the gc-verified project's questions (session gc-verified-99,
+[USER] Mike, 2026-10-07, relayed by the [AGENT] coordinator — cite as relayed: semantic widenings are allowed only where they match real Go — in reply to the gc-verified project's questions (session gc-verified-99,
 2026-10-07: candidate GoLean changes for compiler validation, incl. widenings R15 zero-size pointer identity and R3
 `[]byte(s)`/`[]rune(s)` cap). Standing rule: a latitude widening admits only behaviours the Go spec permits AND the
 pinned gc realizes (differentially witnessed), never a wider machine; a choice site that would let one execution observe
@@ -1743,9 +1622,9 @@ PENDING [USER] on the queue. The reply (answers to a1–a4, b5–b6, the gap not
 
 ### Train r71 — FR-37 (dot-imported variables refuse by name) — RULED (2026-10-07)
 
-[USER] Mike, 2026-10-07, verbatim, relayed by the [AGENT] coordinator — cite as relayed:
-- «We can run the FR-37 fix in a subagent right? Worth getting it done» (the lane's authority).
-- «1-4 approved as proposed» — (1) the merge sign-off for `lane/fr37-dot-var-1007` @ `07659c43`; (2) the gc-verified
+[USER] Mike, 2026-10-07, relayed by the [AGENT] coordinator — cite as relayed:
+- (asked for the FR-37 fix to be run in a subagent) (the lane's authority).
+- (items 1-4 approved as proposed) — (1) the merge sign-off for `lane/fr37-dot-var-1007` @ `07659c43`; (2) the gc-verified
   project's (a1) field offsets: build now; (3) the gc-verified project's (b6) cap widening: a design note first (whether
   the append-spill choice site can be reused to be assessed in it; the standing rule «Semantic widenings must match real
   Go», above, applies); (4) the `scripts/gen-inittask-table` fail-open fix (BUG-117), batched with (a1).
@@ -1801,10 +1680,10 @@ per item (4), batched with the gc-verified (a1) field-offsets lane; items (2)–
 
 ### Train r72 — exported struct field offsets (gc-verified a1) and BUG-117 fixed — RULED (2026-10-07)
 
-[USER] Mike, 2026-10-07, verbatim, relayed by the [AGENT] coordinator — cite as relayed:
-- «1-4 approved as proposed» (recorded under Train r71, above) — items (2) the gc-verified project's (a1) field offsets:
+[USER] Mike, 2026-10-07, relayed by the [AGENT] coordinator — cite as relayed:
+- (items 1-4 approved as proposed) (recorded under Train r71, above) — items (2) the gc-verified project's (a1) field offsets:
   build now, and (4) the `scripts/gen-inittask-table` fail-open fix (BUG-117), batched with (a1): the lane's authority.
-- «merge it» — the merge sign-off for `lane/field-offsets-inittask-1007` @ `4ea281da`, option (A): merge now, the
+- (merge sign-off) — the merge sign-off for `lane/field-offsets-inittask-1007` @ `4ea281da`, option (A): merge now, the
   audit's follow-ups queued (below).
 
 The lane (3 commits): `GoLean/GoCore/Ops.lean` gains `structLayoutWith` / `tyStructLayoutAt` / `tyStructLayout` /
@@ -1879,10 +1758,10 @@ inittask-std.tsv re-derivation ok, negative baseline no regression. Both timeout
 
 ### Train r73 — `--arg-bool` (gc-verified), layout lemmas, gate budget raises — RULED (2026-10-07)
 
-[USER] Mike, 2026-10-07, verbatim, relayed by the [AGENT] coordinator — cite as relayed:
-- «Agree» — the lane's authority: `golean native-json-run --arg-bool` (the gc-verified project's request, session
+[USER] Mike, 2026-10-07, relayed by the [AGENT] coordinator — cite as relayed:
+- (agreed) — the lane's authority: `golean native-json-run --arg-bool` (the gc-verified project's request, session
   gc-verified-e8), the r72 audit's follow-ups (f1)–(f3) batched with it.
-- «Agree 1 / 2» — (1) the merge sign-off for `lane/argbool-layout-1007` @ `0a9db639`, with the audit's one-sentence
+- (items 1 and 2 agreed) — (1) the merge sign-off for `lane/argbool-layout-1007` @ `0a9db639`, with the audit's one-sentence
   changelog fix made by this train; (2) raise two gate time budgets that fail closed under shared-box load.
 
 The lane (3 commits): `native-json-run --arg-bool <true|false>`, positional with `--arg-int`; the new CLI check
@@ -1907,7 +1786,7 @@ the draft row did not say that an unknown entry function and an arity mismatch c
 FIXED in this train's records commit: the r73 row of `docs/changelog/20d3946d-WINDOW.md` now reads «; an unknown entry
 function and an arity mismatch now refuse at the CLI as `status:error` (previously the machine's `status:stuck`
 «GoCore function not found» / «expected N argument(s), got M»)». The audit's two notes, both PREDATING the lane, are
-rowed open in `docs/BUGS.md` ([AGENT], «every detected gap is rowed»): **BUG-119** (`coverage-observations` still
+rowed open in `docs/BUGS.md` ([AGENT], every detected gap is rowed): **BUG-119** (`coverage-observations` still
 takes `--arg-int` unchecked, so an out-of-range value wraps silently; `native-json-run` now refuses it) and
 **BUG-120** (a missing `--input` file makes `native-json-run` throw an uncaught exception instead of a named
 refusal). [AGENT] numbering: id 118 is reserved by the unmerged lane `lane/conv-cap-1007` (its fixed `cap([]rune(s))`
@@ -1957,22 +1836,21 @@ default 60 s); BUG-119 and BUG-120 open.
 
 ### Train r74 — `[]byte(s)`/`[]rune(s)` capacity widening (R3, gc-verified b6) — RULED (2026-10-08)
 
-[USER] Mike, verbatim, relayed by the [AGENT] coordinator — cite as relayed:
-- 2026-10-07, the standing rule: «the semantic widenings should only be allowed if they match real Go» — a widening
+[USER] Mike, relayed by the [AGENT] coordinator — cite as relayed: - 2026-10-07, the standing rule: semantic widenings are allowed only where they match real Go — a widening
   admits only what the spec permits AND gc go1.26.5 realizes.
-- 2026-10-07, «yeah agree, build now» — the design `docs/2026-10-07_conv-cap-design.md`, D1–D8 ratified as
+- 2026-10-07, (agreed; build approved) — the design `docs/2026-10-07_conv-cap-design.md`, D1–D8 ratified as
   recommended: a new `ChoiceSite.convCap` (D1); the envelope EXACTLY the measured member sets, `gcRoundupSize` as
   pinned gc data (D2); the literal bit on the `StrictOp` head from `Expr.stringLit` (D3); default tape bytes slot 0 = n,
   runes slot 0 = roundupsize(4n)/4 (D4); the membership rows born red-first (D5); BridgeSet rows 335–337 re-pinned with
   `op.convKind? = none` (D6); the dedup engine refuses the site (D7); build now behind the frozen offer `20d3946d`,
   shipped with the next re-pin batch (D8).
-- 2026-10-07, «Agree» — the coordinator's recommendation on the build's DESIGN GATE: D4's «no pre-existing row moves»
+- 2026-10-07, (agreed) — the coordinator's recommendation on the build's DESIGN GATE: D4's «no pre-existing row moves»
   was contradicted (20 PASS→FAIL flips, none an observation change — `strings.TrimSpace`'s `range []byte(s)` range
   temp now draws a bound-3 `convCap` on every call, outrunning the strict rows' depth guard and three membership
   widths); option (i), ROW METADATA ONLY (17 rows: 13 strict `depth=`, three e13 widths 2 → 3, one work cap), the
   semantics as ratified, CONDITIONAL on the measured gate cost ≤ ~10% vs main's latest close. Measured: `ci --slow`
   1484 s vs train r72's close 1487 s, **−0.2%** (`docs/evidence/2026-10-07_conv-cap/timing.tsv`).
-- 2026-10-08, «merge it» — the merge sign-off for `lane/conv-cap-1007` @ `e241987c`.
+- 2026-10-08, (merge sign-off) — the merge sign-off for `lane/conv-cap-1007` @ `e241987c`.
 
 Audit (as relayed by the [AGENT] coordinator): one Fable adversarial audit, **MERGE-CLEAN**, with five minor records
 items, all made in this train's records commit ([AGENT] train worker):
@@ -2039,10 +1917,10 @@ closed: `ChoiceSite.convCap` (R3 / gc-verified b6) is on main — BUG-118 fixed,
 
 ### Train r75 — BUG-115, BUG-119, BUG-120 fixed — RULED (2026-10-08)
 
-[USER] Mike, verbatim, relayed by the [AGENT] coordinator — cite as relayed:
-- 2026-10-08, «While things are calm, can we fix some bugs?» — the authority for both fix lanes
+[USER] Mike, relayed by the [AGENT] coordinator — cite as relayed:
+- 2026-10-08, (asked for bug fixes while things were calm) — the authority for both fix lanes
   (`fix/bug119-120-1008`, `fix/bug115-map-multiassign-1008`), each off main `6a90ba8d`.
-- 2026-10-08, «merge it» — the merge sign-off for BOTH branches: `fix/bug119-120-1008` @ `9e9eba25` and
+- 2026-10-08, (merge sign-off) — the merge sign-off for BOTH branches: `fix/bug119-120-1008` @ `9e9eba25` and
   `fix/bug115-map-multiassign-1008` @ `57f84e0e`.
 
 Audits (as relayed by the [AGENT] coordinator):
@@ -2056,7 +1934,7 @@ Audits (as relayed by the [AGENT] coordinator):
   `withFile … .append` calls) escapes as the runtime's uncaught exception: still exit non-zero (fail closed), but not as
   the subcommand's own named refusal (re-checked at this train: Lean's rendering does carry the path on its `file:`
   line — `docs/evidence/2026-10-08_train-r75/repros.txt` item 2) — rowed OPEN as **BUG-122** (precedent: BUG-119/120/121, audit notes rowed as their own entries,
-  «every detected gap is rowed», [USER] Mike 2026-09-03, relayed).
+  every detected gap is rowed, [USER] Mike 2026-09-03, relayed).
 - (b) `fix/bug115-map-multiassign-1008` — one Fable adversarial audit, **MERGE-CLEAN**, two notes, both
   comment/records only, handled in this train's records commit: (1) the `.mapElem` assignee comments
   (`GoLean/GoCore/Syntax.lean`, `GoLean/NativeToIR.lean`) still said «consumed only by the channel-receive delivery
@@ -2100,14 +1978,10 @@ edits) and `files` `scripts/check-wire-boundary` (lane (a)'s controls); the rece
 «Recertification required since pre-merge tip: inputs: changed dependency build/files/GoLean/CLI.lean» — the
 protocol's trigger for this very run, recorded. Tail: `docs/evidence/2026-10-08_train-r75/r75-ci-slow.tail.txt`.
 
-**The box-wide `capped`, D2 and D5 — RULED (2026-10-11)** ([USER] Mike, verbatim, relayed by the [AGENT]
-recovery worker; the full ruling set D1–D9 with quotes is `docs/2026-10-11_recovery-and-migration-plan.md` §9):
-«Note the global capped script is the correct one to use, here and on the new box (which has the same
-affordance)»; «D2: conform to the box default, of course raising it is allowed during execution when needed»;
-«D5: keep the last run only». Landed by train capped-1011: `scripts/capped` a shim onto `/usr/local/bin/capped`,
+**The box-wide `capped`, D2 and D5 — RULED (2026-10-11)** ([USER] Mike, relayed by the [AGENT] recovery worker; the full ruling set D1–D9 is `docs/2026-10-11_recovery-and-migration-plan.md` §9):
+the global capped script is the one to use, here and on the new box; D2: conform to the box default, raising it during execution when needed being allowed; D5: keep the last run only. Landed by train capped-1011: `scripts/capped` a shim onto `/usr/local/bin/capped`,
 `scripts/ci` accepting either token and scaling threads from the effective cap, admission scratch kept as the last
-passing run. Also that day: «D3, these are all minor, you can drop them» (no charter additions from the old
-auto-memory); «we're not going to packrat everything. If it's important we push it. If it isn't, we throw it out»
+passing run. Also that day: D3 — all minor, dropped (no charter additions from the old auto-memory); and no packratting — what matters is pushed, the rest is thrown out
 (the migration to milner-oath is push-and-clone; nothing is bundled or copied box to box).
 
 **Merge train capped-1011 — the 5a record** ([AGENT] recovery worker, 2026-10-11). Pre-merge main `6a5a4083` →
@@ -2121,16 +1995,7 @@ PASS → FAIL membership; 3936 run, no other drift; negative 394 no regression).
 INSTALLED; `check-records` PASS; `release-check` EXIT=1 «Recertification required since pre-merge tip» — the
 trigger for this run, recorded. Tail: `docs/evidence/2026-10-11_train-capped-1011/ci-slow.tail.txt`.
 
-**The fresh-clone trial on milner-oath — RULED (2026-10-11)** ([USER] Mike, verbatim, relayed by the [AGENT]
-recovery worker): «Fix the issue, land fixes on main. Then let me know when you're ready for me to push»; on the
-dependency table's «no public URL» rows for covmap and grossmith: «wrong, both of these are publicly available»; on
-the gate paging on a tty: «The capped scripts/ci ends by opening an editor. Why?»; on the certificate binding the
-interpreter (Python 3.14.4 there vs 3.12.3 here): «Why do we need to couple on this exact python version? The repo
-is supposed to be rebuildable by people with a reasonable setup», «Can you fix this so that anyone who downloads
-the repo gets a reasonable experience?», «We're actually trying to build software people will use»; on gating
-before the list was complete: «You probably shouldn't rerun the gate if we haven't pinned down all the issues?»;
-and for the restart: «an early priority for this project's restart is a gate cull to conform to the gate cruft
-rules» (the global `~/.claude/CLAUDE.md` «Gates and speedbumps»). Landed by train fresh-clone-1011 (below);
+**The fresh-clone trial on milner-oath — RULED (2026-10-11)** ([USER] Mike, relayed by the [AGENT] recovery worker): fix the issue and land the fixes on main, then tell the user when ready for the push; the dependency table's «no public URL» rows for covmap and grossmith were wrong — both are publicly available; the gate must not page on a tty (it ended by opening an editor); the certificate must not bind the exact Python version — the repository is to be rebuildable by anyone with a reasonable setup, since the software is meant to be used; the gate is not to be re-run before all the issues are pinned down; and an early priority for the restart is a gate cull conforming to the gate-cruft rules (the global `~/.claude/CLAUDE.md` «Gates and speedbumps»). Landed by train fresh-clone-1011 (below);
 design amendment in `docs/2026-09-09_certificate-provenance-design.md` (2026-10-11); the restart note in
 `docs/2026-10-11_recovery-and-migration-plan.md` §7.
 
@@ -2158,7 +2023,7 @@ named refusals for unreadable input files, the path named once), BUG-122 open.
 
 ### The seeded-heap entry (gc-verified a2) — the two strategic questions RULED (2026-10-12)
 
-[USER] Mike 2026-10-12, firsthand: «Agree on the two strategic questions, let's do it». (1) GO: the
+[USER] Mike 2026-10-12, firsthand: (the two strategic questions agreed). (1) GO: the
 seeded entry is built (`docs/2026-10-09_seeded-heap-design.md`, three slices), including the change to
 trusted surface #2 (the observation harness's `--seed` mode) and the new driver entry joining #1.
 (2) D4: no runtime `StateWf` re-assert after seeding; the theorem `seedCells_wf` is the check. The
@@ -2170,11 +2035,7 @@ the v1 value set CONFIRMED; S0 not needed; slice A starts (`docs/2026-10-09_seed
 
 ### Release readiness — the six decisions RULED (2026-10-12)
 
-[USER] Mike 2026-10-12, firsthand, on the release-readiness backlog's D1–D6
-(`docs/2026-10-12_release-readiness.md` §5): «D1: I think this should probably be refused, if it's easy to
-exclude. D2: agree as written. D3: agree, accept and state clearly. D4, so this is kind of fossil evidence
-from a previous era? Leave as is, low priority. D5: agree, but remember CLAUDE.md is a praxis / playbook
-doc, not a dump for decisions. D6: agree on both - refuse and repair asap.» So: BUG-061's shape is refused
+[USER] Mike 2026-10-12, firsthand, on the release-readiness backlog's D1–D6 (`docs/2026-10-12_release-readiness.md` §5): D1 — refuse the case if excluding it is easy; D2 — agreed as written; D3 — agreed, accept and state the limit clearly; D4 — fossil evidence from an earlier era, left as is, low priority; D5 — agreed, with the reminder that CLAUDE.md is a praxis/playbook document, not a dump for decisions; D6 — both halves agreed, refuse now and repair soon. So: BUG-061's shape is refused
 by name if a cheap exclusion exists, else the release names the profile; `docs/release.md` is the release
 definition; BUG-107 is a stated limit; the tag-only parked branch stays as is; the charter's «Pointers»
 line is updated to the living documents and nothing more; `uintptr` is refused by name in identity-bearing

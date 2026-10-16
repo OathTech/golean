@@ -3,7 +3,7 @@
 [AGENT] worker, 2026-09-22. Worktree `.claude/worktrees/unseq-stage-e5`, branch `core/unseq-stage-e5-0922`,
 based on main `d76721bd` (train r46's 5a records) and REBASED onto main's records-only close `dc5de785` at the lane's end
 (a clean rebase; the five commits' hashes below are post-rebase — the evidence files cite the pre-rebase ones, map in §6). Brief: the Stage E handoff §3 (`docs/2026-09-21_unseq-stage-e-handoff.md`)
-under the seven rulings of 2026-09-22 ([USER] Mike «Agree on the judgements, go ahead», relayed —
+under the seven rulings of 2026-09-22 ([USER] Mike (the judgements agreed, go-ahead given), relayed —
 `docs/2026-08-31_qrow-rulings.md`); the family plan and every [AGENT] choice:
 `docs/2026-09-22_unseq-stage-e5-design.md`; evidence `docs/evidence/2026-09-22_unseq-stage-e5/`. The adversarial audit
 (`docs/2026-09-22_unseq-stage-e5-audit.md`, FIX-FIRST on `403cde75`) and its fix round (§5, 2026-09-22) followed. NOT merged,
@@ -25,7 +25,7 @@ nothing else; the train installs the candidate at step 5a, this lane does not).
 
 ## 2. RATIFIED [USER] 2026-09-22 (posed at the merge ask, never self-adjudicated)
 
-RULED: [USER] Mike, 2026-09-22, verbatim, relayed by the [AGENT] coordinator: «Great, agree with all recommendations, land it» — every item as the
+RULED: [USER] Mike, 2026-09-22, relayed by the [AGENT] coordinator: (all recommendations agreed, landing approved) — every item as the
 coordinator recommended it: item 1 the one closed `wide` kind; item 2 the trigger refinement ADOPTED (executed in the E6
 lane — a change to the Stage E ratified trigger); item 3 WIDEN the grammar to non-main units in the next lane (the twin
 re-pins with a written reason), E6's zero condition stays whole-corpus + twin, re-scoping NOT taken; item 4 the named

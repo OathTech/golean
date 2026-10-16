@@ -4,8 +4,7 @@
 `f14a05e5` → rebased onto `10d2f2dc`). Authority: `docs/2026-09-16_evaluation-order-model-v2.md` §3.5–3.6 (the
 enumeration route: β = the default DFS explorer, α = certify the `unseqNext` pick in the dedup engine), §6 (what a real
 cost measurement reports), §7 row D; review R1 (no ordering reduction — none is made here), R5 (one measured route;
-unique states beside paths). Sequencing [USER] 2026-09-18 «(1) agreed», relayed; Stage C landed 2026-09-20 ([USER] «land
-it», relayed). No new [USER] decision is needed by this stage; the one open choice it poses is §5. Numbers: the evidence
+unique states beside paths). Sequencing [USER] 2026-09-18 (item (1) agreed), relayed; Stage C landed 2026-09-20 ([USER] (landing approved), relayed). No new [USER] decision is needed by this stage; the one open choice it poses is §5. Numbers: the evidence
 README `docs/evidence/2026-09-20_unseq-stage-d/README.md` (every figure copied from a named log; regeneration commands
 there). Engine facts stated here are read from `GoLean/EnumDedup.lean` / `GoLean/GoCore/EnumDedupCheck.lean` at the
 lane tip.

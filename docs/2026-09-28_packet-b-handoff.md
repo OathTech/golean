@@ -141,8 +141,7 @@ Gates of this round: `scripts/capped lake build` EXIT=0 (warning-free); `scripts
 
 ## Merge train r52 — the 5a record ([AGENT] coordinator, 2026-09-28)
 
-The label reshape, packet B, both audits and the approved `CLAUDE.md` wording landed ([USER] Mike 2026-09-28 «D1: approved,
-D2: approved. Go ahead», relayed). Pre-merge main `fd1135ff` → `refs/snapshots/r52/main`; train tip `d640a5ac` fast-forwarded.
+The label reshape, packet B, both audits and the approved `CLAUDE.md` wording landed ([USER] Mike 2026-09-28 (D1 and D2 approved, go-ahead given), relayed). Pre-merge main `fd1135ff` → `refs/snapshots/r52/main`; train tip `d640a5ac` fast-forwarded.
 Under the lock: `scripts/build-certified` EXIT=0 (binary `476cd29f…`); `release-check` EXIT=2 (EXPECTED — «STALE
 certification: changed dependency build/files/GoLean.lean»); `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` EXIT=1,
 983 s — red on EXACTLY the 5a pair (`certificate provenance`; the one drift line `imported-goose/channel/google-search

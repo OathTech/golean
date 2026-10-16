@@ -5,8 +5,7 @@ plan of record until the gates in §5 are ruled. Docs only: no code, no
 corpus, no baseline change rides with this note.
 
 **Provenance.** [USER]-directed lane (Mike, 2026-09-03, relayed by the
-[AGENT] coordinator — not firsthand: «let's launch an agent to figure
-out the stdlib design»). Every judgment below is [AGENT] unless marked
+[AGENT] coordinator — not firsthand: launch an agent to work out the stdlib design). Every judgment below is [AGENT] unless marked
 [USER]; every number is measured at `main @ b5abacc1` (worktree
 `stdlib-design`) or cited to the tracked record that measured it. The
 two ad-hoc census programs this memo ran (a GOROOT purity census and a
@@ -894,8 +893,7 @@ grounds. None was decided at writing.
 **RULED [USER] 2026-09-03 — G1–G9 each as recommended.** The quote,
 relayed by the [AGENT] coordinator to the recording worker (citation,
 not firsthand; full text and provenance chain in
-`docs/2026-08-31_qrow-rulings.md`, 2026-09-03 ruling record): «(3)
-agree, go ahead with the plan». Each gate below carries the ruling
+`docs/2026-08-31_qrow-rulings.md`, 2026-09-03 ruling record): (the plan approved, item (3)). Each gate below carries the ruling
 line; the first implementation slice (§6) is implemented by a separate
 lane.
 
@@ -1010,9 +1008,7 @@ surface — the right order is mechanism first, observable second. RULED [USER] 
 > gate forbids), so the lane first kept the shim re-bodied to construct
 > the REAL `*strconv.NumError` (the delta this memo called "unobservable"
 > was observable: `*strconv.NumError` is exported) and posed that as a
-> D-002 exception. DENIED — [USER] Mike, 2026-09-03, relayed: «we're not
-> running Raft right now, I think going red is simpler and safer, and
-> lets us do a clean retirement». ParseUint is therefore source-through
+> D-002 exception. DENIED — [USER] Mike, 2026-09-03, relayed: with Raft not running, going red is simpler and safer and allows a clean retirement. ParseUint is therefore source-through
 > like the rest; its error-path rows are designed reds on BUG-089 pending
 > the slice-2 overlay for `Clone`. Frontier rows:
 > `stdlib-source/frontier/atoi-error-path-clone` and BUG-089's Cases;

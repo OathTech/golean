@@ -1,6 +1,6 @@
 # Evidence — BUG-115 fixed: a map element as an `=` target outside the single-assignment fast path (lane `fix/bug115-map-multiassign-1008`, 2026-10-08)
 
-[AGENT] fix worker, under [USER] Mike 2026-10-08 «While things are calm, can we fix some bugs?» (relayed by the [AGENT]
+[AGENT] fix worker, under [USER] Mike 2026-10-08 (asked for bug fixes while things were calm) (relayed by the [AGENT]
 coordinator). Consuming records: `docs/BUGS.md` BUG-115 (the fix record), `docs/2026-08-19_triage-table.md` F6 / A3,
 `docs/language-coverage-ledger.md` §2 `Assignment_statements` + §8 buckets + §8au, `docs/2026-08-11_latitude-inventory.md`
 (the two Stage E5 F3 notes), `docs/changelog/20d3946d-WINDOW.md` (the draft row). Oracle go1.26.5 (`go version go1.26.5

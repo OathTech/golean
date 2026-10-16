@@ -1,10 +1,9 @@
 # Review-boundary fix lane (BUG-108/109/110) — gate lines, red-first records, measurements (2026-09-11)
 
 [AGENT] lane `fix/review-boundary-0911`, worktree `.claude/worktrees/fix-review-boundary`,
-cut from main `a461ed8b`. Authority: [USER] Mike 2026-09-11, verbatim, relayed by the [AGENT]
-coordinator — cite as relayed: «Great, go ahead and land this, then launch the lanes», on the
-sequence of `docs/2026-09-11_review-dispositions.md` §4 step 1; BUG-109's policy: «Yes, refuse
-non-1.26». Consuming docs: `docs/BUGS.md` BUG-108/109/110, the lane handoff
+cut from main `a461ed8b`. Authority: [USER] Mike 2026-09-11, relayed by the [AGENT]
+coordinator — cite as relayed: land this, then launch the lanes, on the
+sequence of `docs/2026-09-11_review-dispositions.md` §4 step 1; BUG-109's policy: (refuse non-1.26). Consuming docs: `docs/BUGS.md` BUG-108/109/110, the lane handoff
 `docs/2026-09-12_review-boundary-handoff.md` (moved there by the fix round below), the
 baseline header of `baselines/native-full.tsv`.
 
@@ -101,7 +100,7 @@ Gates (all `GOLEAN_MEM_MAX=48G scripts/capped`, lock held), tree = `6264f152` + 
 - re-pin from run #3's `latest.tsv`: 3676 = 3428 PASS / 248 FAIL; body diff = exactly the 7 BUG-108 rows FAIL → PASS; `coverage-baseline-diff --full` 0, `check-alternation-survival` 0, `check-bugs.sh` 0 (BUG-108 fixed, its 7 cases PASS — the symmetric rule holds).
 - re-judge `scripts/ci` (fast) on the exact committed tree: see the gate table (S1b re-judge).
 
-## Stage S2 — BUG-109 fix (the module's `go` directive; RULED [USER] «Yes, refuse non-1.26»)
+## Stage S2 — BUG-109 fix (the module's `go` directive; RULED [USER] (refuse non-1.26))
 
 Code: `tools/nativefrontend/modfile.go` (new; `findGoMod` walks up like the go command,
 `goDirective` strict scanner, `refuseForeignModuleVersion`), wired in `main.go` run() and
@@ -232,7 +231,7 @@ not fabricate tails for runs it did not make.
 
 ## Merge train r33 — the 5a record (2026-09-15, [AGENT] coordinator)
 
-[USER] Mike 2026-09-15, verbatim (relayed): «Great, merge it». Pre-merge main
+[USER] Mike 2026-09-15 (relayed): the merge sign-off. Pre-merge main
 `d3a40317` recorded as `refs/snapshots/r33/main`; lane tip `5a7dfbb0` rebased onto it
 → `d0e234bd` (clean, `git merge-tree` reported no conflicts) and fast-forwarded.
 

@@ -2,8 +2,8 @@
 
 [AGENT] (Fable, a fresh-context release auditor), read-only on `main` @ `6d08b78b` (clean, gate green), in
 the worktree `.claude/worktrees/freshpass-1013` with the built binaries copied from `main`'s `.lake`.
-The owner's question, verbatim: «It's particularly important the semantics is fail-closed in cases where we
-are not high-confidence» — and «check if we've missed anything» for a first release.
+The owner's question ([USER] Mike 2026-10-13, paraphrased): the semantics must be fail-closed wherever
+confidence is not high — and, for a first release, check whether anything was missed.
 
 **Method.** I did not trust a record I did not re-verify. I wrote ~370 small Go subjects across 21 probe
 batches (arithmetic, strings/runes, maps/closures/loop variables, floats, slices, structs/interfaces/methods,

@@ -7,9 +7,7 @@ bounded first-fragment grammar), §3.2–§3.6, §7 row C; the second review
 `docs/2026-09-16_evaluation-order-model-v2-review.md` §2 row C / §3 (the acceptance matrix); the
 landed construct: `docs/2026-09-16_unseq-stage-b-handoff.md` (§2 representation choices, §5
 Stage C's entry point, §9 the fix round's named refusals). Authority: the mechanism ruling
-[USER] Mike 2026-09-16 «the Cerberus model is the correct one» (relayed); the sequencing «(1)
-agreed» [USER] 2026-09-18 (relayed); the three Stage C rulings, [USER] Mike 2026-09-19, verbatim
-«Agree, merge», relayed by the [AGENT] coordinator — cite as relayed
+[USER] Mike 2026-09-16 (the Cerberus model is the correct one) (relayed); the sequencing (item (1) agreed) [USER] 2026-09-18 (relayed); the three Stage C rulings, [USER] Mike 2026-09-19, (agreed; merge approved), relayed by the [AGENT] coordinator — cite as relayed
 (`docs/2026-08-31_qrow-rulings.md`, «The C1 completion and Stage C rulings record»): (3) width
 of P = ALL mutable reads, STAGED — the pilot carries the minimal P(ii) reads its fixtures need,
 then widens; (4) N1 = SPLIT — base/header and index producers plus ONE checked access; (5) N3 =

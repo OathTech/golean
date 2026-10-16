@@ -3,9 +3,9 @@
 [AGENT] Lane `bug087-paniktext`, implementing the [USER] ruling of
 2026-09-03 — received by the [AGENT] coordinator in-session and RELAYED
 to this lane in its brief; not firsthand here (citation, never bare
-assertion — the U0-incident convention). Verbatim as relayed: «(2)
-panic-text, agree, demonic choice so both are admitted». The tracked
-ruling record with the full quote and provenance chain is
+assertion — the U0-incident convention). As relayed: item (2),
+panic text — a demonic choice admitting both texts. The tracked
+ruling record with the provenance chain is
 `docs/2026-08-31_qrow-rulings.md` (2026-09-03 ruling record) and
 `docs/assessment/decisions-2026-08-31.md` (2026-09-03 addendum).
 

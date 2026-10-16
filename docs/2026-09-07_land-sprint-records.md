@@ -8,13 +8,9 @@ main `dd636996`, 2026-09-07. Plan of record:
 baseline, gate script or `docs/evidence/` file of any other chunk is
 touched; no runtime file changes.
 
-[USER] ruling (Mike, 2026-09-07, verbatim as relayed by the [AGENT]
-coordinator — cite as relayed): «The evidence blob should not land, and
-generally we should not dump big evidence bundles on main (they can't be
-easily hosted on GH for one). Can you make a plan to land this work cleanly?
-We'll want to decompose and land in sane chunks that can be reviewed. And
-where appropriate fix some of the issues, eg. the choice tape stuff». The
-sprint's charter approval (K1–K5, «Agree with all 5», 2026-09-05) and the
+[USER] ruling (Mike, 2026-09-07, as relayed by the [AGENT]
+coordinator — cite as relayed): the evidence blob does not land and big evidence bundles are not dumped on main (they cannot be hosted on GitHub); the work is to be landed cleanly by a plan, decomposed into reviewable chunks, with some of the issues (the choice tape among them) fixed where appropriate. The
+sprint's charter approval (K1–K5, all five approved, 2026-09-05) and the
 rounds 20–24 merge sign-offs are cited via the charter and the handoff, as
 relayed.
 

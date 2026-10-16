@@ -9,7 +9,7 @@ as relayed; `docs/2026-09-11_review-dispositions.md` §4), by gate-audit F6
 («preserving one panic axis does not preserve value capture or the ordering
 of effects … Do not presume that more local guards can establish the complete
 contract», `docs/2026-09-11_project-review.md`). Rulings are [USER]
-verbatim-as-relayed or PENDING [USER]; everything else is [AGENT].
+as relayed or PENDING [USER]; everything else is [AGENT].
 
 ## 0. The problem
 

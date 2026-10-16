@@ -474,7 +474,7 @@ Two distinct fuels; only one has a decision doc.
      candidate ruling (c) leaves "a number no gate can check";
      riding on it: the membership singleton-guard exemption and the
      send-then-spin wedge row's engine. Deliberately left for
-     [USER] (= the doctrine's M-9, "on Mike's desk" —
+     [USER] (= the doctrine's M-9, on the [USER]'s desk —
      nondeterminism-doctrine :145–151; note the duplicate
      identifier OQ5/M-9). ESCALATE.
 - **What fuel would falsify if misread:** nothing, today — the

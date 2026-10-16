@@ -1,7 +1,7 @@
 # gc probe matrix — the maxAlloc panic class (2026-09-02, t5-maxalloc)
 
 [AGENT] Tier-5 slice for fidelity decision 5(b) ([USER] 2026-08-31:
-"the deterministic maxAlloc panic class modeled"; the residual target
+the deterministic maxAlloc panic class is modeled; the residual target
 state is discrepancy D-001, `docs/discrepancy-backlog.md`). Consuming
 records: latitude inventory R16 (`docs/2026-08-11_latitude-inventory.md`),
 doctrine register #7 (`docs/2026-08-11_essence-of-go-doctrine.md`),

@@ -118,9 +118,9 @@ between sweeps (the reconciler's C12 checks row COUNT, not lines).
 | TryLock spurious failure (`tryLock`, Q-TRYLOCK 2026-09-03) | Machine.lean `applySyncOp` (the TRY-head arm; envelope statement at `applyTryLock`) | `tryLockWidth op pre` — 2 at an acquirable cell (`tryAcquire`), 1 at a held one | only width 2 (an acquirable cell; the held cell's bound-1 consult pops nothing — the uniform rule) | slot 0 = ACQUIRE (gc's realized point); slot 1 = the spurious false |
 | Unsequenced sibling panic order (`unseqPanic`, E13 option (b), lane e13-b 2026-09-05) | StepFn.lean, the `.panicking chain (.probeK k)` arm (the envelope statement is `Stmt.unseqProbe`'s docstring, Syntax.lean; projection arm in `seqConsumption`, Machine.lean) | 2, constant — and ONLY at a panic that reached an unsequenced-operand probe frame; a probe whose operand yields a value consults nothing | only when a probed operand PANICS at its lexical position ahead of a sibling ordered event (an `a[i] + f()` row whose `a[i]` never panics early pops nothing) | slot 0 = DEFER (the sibling events first; the operand is re-evaluated in the residual — the pre-change machine's only member, gc's for index/deref/division/shift/conversion); slot 1 = RAISE (the operand's panic first — gc's for type assertions, slice expressions, interface comparisons) |
 | Abort-line `[recovered, repanicked]` collapse (`repanicCollapse`, BUG-004 item 1 / R10a, landing chunk L3 2026-09-07) | Machine.lean `abortConsult` (the envelope statement is `repanicEqualNext`/`renderPanicHead`'s docstring), drawn by StepFn.lean's `.panicking _ .stop` arm and Multi.lean's `stepThread` tombstone arm (recorded in the abort `StepEvent`); projection arms in `seqConsumption` and `poolConsumption` | `repanicCollapseWidth` — 2 exactly at an abort whose head is recovered with an EQUAL successor payload, 1 at every other abort | only at THE ABORT of a recovered value re-panicked with an equal payload (a bound-1 consult pops nothing — every other abort consumes exactly as before) | slot 0 = COLLAPSE, the first line ends ` [recovered, repanicked]` (gc's line for `panic(r)`; the member the corpus pinned); slot 1 = ` [recovered]`, the two-line form's first line (gc's for a re-boxed equal value; every go ≤ 1.24's only form) |
-| The `[0, n)` draw (`intn`, window unit 5b, lane core/intn-pick-0930 2026-09-30; [USER] Mike, item 2 of «The raft-proofs team's subject-delta note (2026-09-30) — RULED», relayed — a GENERAL native `Intn`-style pick site; design `docs/2026-09-30_intn-pick-design.md`, decisions D1–D8 RATIFIED [USER] Mike 2026-10-01 at train r58 — «agree, land it, ratify all including the harness fix», relayed; PENDING at the lane's tip) | Machine.lean `applyStmtOp.plan`'s `.randIntn` arm (the envelope statement is `Stmt.randIntn`'s docstring, Syntax.lean; projection arm `stmtConsult?`/`intnBound?` in `seqConsumption`); reached from `math/rand.Intn` / `math/rand/v2.IntN` through the frontend's `rand-intn` primitive and the decoder's guard expansion (`GoLean/NativeToIR.lean` `expandRandIntn`) | `n` EXACTLY (the bound operand's value, `n ≥ 1`) — a consult only at `n ≥ 2` | at every `randIntn` apply with `n ≥ 2` (`n = 1` is a bound-1 consult and pops nothing; `n ≤ 0` never reaches the apply for a decoded program — the lowering's guard raises the callee's own `panic(string)` ahead of it, and a forged bound is `stuck` there); a DATA pick over a value, not a scheduling pick | slot `v` = the value `v` (the empty/exhausted tape draws 0, the least member; the singleton tape `[v]` realizes every member — `Choices.consumeAt_fst_singleton`) |
+| The `[0, n)` draw (`intn`, window unit 5b, lane core/intn-pick-0930 2026-09-30; [USER] Mike, item 2 of «The raft-proofs team's subject-delta note (2026-09-30) — RULED», relayed — a GENERAL native `Intn`-style pick site; design `docs/2026-09-30_intn-pick-design.md`, decisions D1–D8 RATIFIED [USER] Mike 2026-10-01 at train r58 — (landing agreed, everything ratified including the harness fix), relayed; PENDING at the lane's tip) | Machine.lean `applyStmtOp.plan`'s `.randIntn` arm (the envelope statement is `Stmt.randIntn`'s docstring, Syntax.lean; projection arm `stmtConsult?`/`intnBound?` in `seqConsumption`); reached from `math/rand.Intn` / `math/rand/v2.IntN` through the frontend's `rand-intn` primitive and the decoder's guard expansion (`GoLean/NativeToIR.lean` `expandRandIntn`) | `n` EXACTLY (the bound operand's value, `n ≥ 1`) — a consult only at `n ≥ 2` | at every `randIntn` apply with `n ≥ 2` (`n = 1` is a bound-1 consult and pops nothing; `n ≤ 0` never reaches the apply for a decoded program — the lowering's guard raises the callee's own `panic(string)` ahead of it, and a forged bound is `stuck` there); a DATA pick over a value, not a scheduling pick | slot `v` = the value `v` (the empty/exhausted tape draws 0, the least member; the singleton tape `[v]` realizes every member — `Choices.consumeAt_fst_singleton`) |
 | The `unseq` scheduler's pick (`unseqNext`, evaluation-order model v2.1 Stage B, lane core/unseq-scheduler-b-0916 2026-09-16; the mechanism RULED [USER] 2026-09-16 relayed) | StepFn.lean `stepUnseqNext`, the `.next (.unseqK … .pick _)` arm (the envelope statement is `Stmt.unseq`'s docstring, Syntax.lean; projection arm in `seqConsumption`, Machine.lean; the ONE `ready` computation is `UnseqGraph.ready`, Unseq.lean) | the number of READY occurrences, exactly — a consult only at ≥ 2 (a singleton ready set is a bound-1 consult and pops nothing) | at every pick position of a sweep frame with ≥ 2 ready occurrences (an ordinary sweep whose occurrences are forced by their edges never touches the stream); the legacy `unseqPanic` probe coexists until Stage E | slot 0 = the lowest canonical rank among the ready (the all-zero tape realizes the canonical order — today's ANF emission order); slot j = the j-th ready occurrence in declaration order |
-| The `[]byte(s)` / `[]rune(s)` capacity (`convCap`, latitude R3 / gc-verified b6, lane lane/conv-cap-1007 2026-10-07; design `docs/2026-10-07_conv-cap-design.md` D1–D8 RATIFIED [USER] Mike 2026-10-07 «yeah agree, build now», relayed; row added at train r74 — the lane added the constructor without this mirror row, reconciler C12) | Machine.lean `applyStrictOpPick` → `convCapApply` (the stream-holding funnel of the two conversion heads; the envelope statement is `convCapMembers`, Ops.lean; projection arm `strictConsult?` in `seqConsumption`) | `convCapWidth kind literal value` = the member count of `convCapMembers` — 1 to 3 (literal → 1; bytes non-literal `{n} ∪ {R(n)} ∪ {32 ∣ n ≤ 32}`; runes non-literal `{R(4n)/4} ∪ {32 ∣ n ≤ 32}`) | at every conversion apply with ≥ 2 members (a literal operand, or a length whose members coincide, is a bound-1 consult and pops nothing) | slot 0 = bytes: `n` (gc's zero-copy member, the pre-widening singleton); runes: `R(4n)/4` (the size-class member) |
+| The `[]byte(s)` / `[]rune(s)` capacity (`convCap`, latitude R3 / gc-verified b6, lane lane/conv-cap-1007 2026-10-07; design `docs/2026-10-07_conv-cap-design.md` D1–D8 RATIFIED [USER] Mike 2026-10-07 (agreed; build approved), relayed; row added at train r74 — the lane added the constructor without this mirror row, reconciler C12) | Machine.lean `applyStrictOpPick` → `convCapApply` (the stream-holding funnel of the two conversion heads; the envelope statement is `convCapMembers`, Ops.lean; projection arm `strictConsult?` in `seqConsumption`) | `convCapWidth kind literal value` = the member count of `convCapMembers` — 1 to 3 (literal → 1; bytes non-literal `{n} ∪ {R(n)} ∪ {32 ∣ n ≤ 32}`; runes non-literal `{R(4n)/4} ∪ {32 ∣ n ≤ 32}`) | at every conversion apply with ≥ 2 members (a literal operand, or a length whose members coincide, is a bound-1 consult and pops nothing) | slot 0 = bytes: `n` (gc's zero-copy member, the pre-widening singleton); runes: `R(4n)/4` (the size-class member) |
 
 The race detector consumes NOTHING and replays nothing (stage B, Q2:
 `raceUpdate` folds the step's emitted `StepEvent` — the old
@@ -710,7 +710,7 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
   leaves gc's TryRLock TRUE (`rwTryRLockQueuedWriter` 40/40 plain at
   GOMAXPROCS 1 and 8); the model's `pendingW` is one flag for both
   phases, so acquirability is `!writer` and the pick is offered in both
-  — machine ⊇ gc, an [AGENT] widening in the safe direction, RATIFIED [USER] 2026-09-03 («TryRLock decision sounds fine», relayed by the [AGENT] coordinator); the blocking
+  — machine ⊇ gc, an [AGENT] widening in the safe direction, RATIFIED [USER] 2026-09-03 ((the TryRLock decision accepted), relayed by the [AGENT] coordinator); the blocking
   `rlock` keeps R1's exclusion; `RWMutex.TryLock` with no writer and no
   reader — the `wlock` immediate-acquire condition) → width 2: slot 0
   = ACQUIRE (the same state transition as Lock/RLock/write-Lock, the
@@ -902,7 +902,7 @@ gc's early store a deviation, L-016, 2026-09-02).
   (spec#Built-in_functions «called like any other function»; gc's order.go call class agrees) —
   under which `make-len-vs-call` is a FORCED singleton; under READING (b) (only user calls) the
   same row is a (b) pin of gc's order ({6, 8}). Reading (a) is the [AGENT] choice, RATIFIED [USER]
-  2026-09-22 with the Stage E items («Agree on the judgements, go ahead», relayed); its consequence — `min`/`max`/`copy`/`append` are ordered
+  2026-09-22 with the Stage E items (the judgements agreed, go ahead; relayed); its consequence — `min`/`max`/`copy`/`append` are ordered
   calls too, today legacy by name (the legacy hoist realizes gc's early evaluation: `min(x, 100) +
   m()` → 1001 on gc and the machine) — is E5's. F1 of the same round: Go 1.26 `new(x)` is admitted
   as the same E1 participant with its argument an operand (the E4 candidate had dropped the
@@ -932,19 +932,18 @@ gc's early store a deviation, L-016, 2026-09-02).
   load before / after the call that writes or deletes the entry — and the born
   `evalorder/unseq-ptr-field-map/{deref,field}-compound-redirect`, `map-compound-rebind`
   ({11100, 10101}: the frozen identities, no hybrid); BUG-104's `map-compound-index-key-vs-call`
-  is an observed-∉-modeled FIX (→ BUG-112), not latitude. Ratification posed at the merge ask (RATIFIED [USER] 2026-09-20, the Stage C landing — «land it»).
+  is an observed-∉-modeled FIX (→ BUG-112), not latitude. Ratification posed at the merge ask (RATIFIED [USER] 2026-09-20, the Stage C landing — (landing approved)).
   BUG-104's three remaining rows (a receive or a method call on the RHS) keep the (b) pin — E3's
   (FIXED there, the bullet above).
 
 - STAGE E, FAMILY E1 (2026-09-21, [AGENT], lane `core/unseq-stage-e-0921`; design
-  `docs/2026-09-21_unseq-stage-e-design.md` §E1; the width-of-P ruling «ALL mutable
-  reads, STAGED» widened to PACKAGE-LEVEL VARIABLES): a package-level variable's read
+  `docs/2026-09-21_unseq-stage-e-design.md` §E1; the width-of-P ruling (all mutable reads, staged) widened to PACKAGE-LEVEL VARIABLES): a package-level variable's read
   beside a call is a READ occurrence of the `unseq` graph, and as a compound target its
   load is that same read — the VALUE axis is (a) ENVELOPED on exactly TWO more rows,
   `evalorder/unseq-globals/compound-vs-call` (`g += setG()`, setG writing g: {2, 11},
   gc 11 — the target's identity has no operands; the store lands in phase 2) and, on
   E12's side of the same family, `evalorder/unseq-globals/read-vs-call` ({1, 2}, gc 2);
-  ratification posed at the merge ask (RATIFIED [USER] 2026-09-22, the Stage E landing — «Agree on the judgements, go ahead») with the pilot's precedent. BUG-113's two rows
+  ratification posed at the merge ask (RATIFIED [USER] 2026-09-22, the Stage E landing — the judgements agreed, go ahead) with the pilot's precedent. BUG-113's two rows
   (`evalorder/legacy-logical-vs-call/{or-vs-call,and-vs-call}`) flip FAIL → PASS on the
   same widening but are NOT this entry's latitude: the `||`/`&&`-before-a-later-call
   order is spec-FORCED and the graph realizes it (BUG-113 fixed). Every other row of this
@@ -953,7 +952,7 @@ gc's early store a deviation, L-016, 2026-09-02).
 
 - STAGE C PILOT (2026-09-19, [AGENT], lane `core/unseq-stage-c-0919`; design
   `docs/2026-09-19_unseq-stage-c-design.md` §1/§3; the width-of-P ruling [USER]
-  Mike 2026-09-19 «Agree, merge», relayed — «ALL mutable reads, STAGED»): a
+  Mike 2026-09-19 (agreed; merge approved), relayed — (all mutable reads, staged)): a
   sweep inside the pilot grammar lowers as ONE `unseq` graph (v2.1 §3; the
   `unseqNext` site) in which a target's index operand is a READ occurrence
   spec-unsequenced against the RHS call — the VALUE axis is (a) ENVELOPED on
@@ -1111,8 +1110,7 @@ gc's early store a deviation, L-016, 2026-09-02).
 
 ### E5. Early store across the phase boundary — (c) FORCED; **gc DEVIATION** (L-016; re-labelled from (b) PINNED latitude 2026-09-02, [USER] ruling)
 
-- RULING ([USER] 2026-09-02, Mike, verbatim: "agree we should mark as
-  a gc deviation, and record in our gc bug backlog"). This row is NOT
+- RULING ([USER] 2026-09-02, Mike: mark it as a gc deviation and record it in the gc bug backlog). This row is NOT
   latitude. The machine sits on the spec point; gc's early store is a
   **deviation from the spec**, recorded in the gc bug backlog as
   `docs/spec-divergence-ledger.md` **L-016** (`gc-bug`; upstream
@@ -1502,8 +1500,7 @@ gc's early store a deviation, L-016, 2026-09-02).
   (the stamps have no way to express the old behaviour), is DISCLOSED
   here, in the design note §4, the arc plan and BUG-088, and was
   REFERRED TO THE [USER] FOR RATIFICATION at the merge sign-off.
-  **RATIFIED [USER] 2026-09-03** (Mike, relayed by the [AGENT]
-  coordinator — cite as relayed): «(b) it sounds like this breaks an old ruling but ends up more accurate to real go - approved». Effect: for IRREFLEXIVE KEYS
+  **RATIFIED [USER] 2026-09-03** (Mike, relayed by the [AGENT] coordinator — cite as relayed): option (b) approved as more accurate to real Go although it breaks an older ruling. Effect: for IRREFLEXIVE KEYS
   ONLY, this supersedes the 2026-08-19 E9 no-narrowing ruling — each
   entry is produced exactly once; every other point of the E9 envelope
   stands as ruled on 2026-08-19. Ruling record:
@@ -1732,7 +1729,7 @@ subexpressions of one binary operator).
   sweep now lowers as a graph the VALUE axis of this entry is (a) ENVELOPED: `evalorder/
   unseq-globals/read-vs-call` (`v := mut() + g`, mut writing g: {1, 2}, gc 2 — call-first)
   and `evalorder/unseq-globals/compound-vs-call` ({2, 11}, gc 11); ratification posed at
-  the merge ask, RATIFIED [USER] 2026-09-22 («Agree on the judgements, go ahead», relayed). The seven other sweeps the family admits in the corpus (`spec-examples-
+  the merge ask, RATIFIED [USER] 2026-09-22 (the judgements agreed, go ahead; relayed). The seven other sweeps the family admits in the corpus (`spec-examples-
   decl/select-forms` ×5, `panic-recover/repanic-collapse/index-two-faults`, `init/stdlib-
   initializer-dependent`) read globals no sibling call writes — every order agrees, no
   row moved (the strict rows carry 0–4 wide picks, covered by the fixed streams). The
@@ -1744,7 +1741,7 @@ subexpressions of one binary operator).
   entered the grammar through its field reads `p.n`/`q.s`) and the born `evalorder/unseq-ptr-field-
   map/{deref,field,mapread}-vs-call` ({1, 2}, gc 2); the noodler map compounds are E2's (above).
   The 12 other rows whose sweeps entered read locations no sibling call writes — no row moved.
-  Ratification posed at the merge ask (RATIFIED [USER] 2026-09-22, the Stage E landing — «Agree on the judgements, go ahead»). The (b) pin stands outside the widened grammar.
+  Ratification posed at the merge ask (RATIFIED [USER] 2026-09-22, the Stage E landing — the judgements agreed, go ahead). The (b) pin stands outside the widened grammar.
   STAGE E, FAMILY E3 (2026-09-21, [AGENT]; design §E3 — receives, method calls): a RECEIVE is an
   EVENT occurrence (E1-ordered among the calls) and the reads beside it are spec-unsequenced
   against it — the VALUE axis is (a) ENVELOPED on the born `evalorder/unseq-recv-method/recv-vs-
@@ -1756,7 +1753,7 @@ subexpressions of one binary operator).
   operand-order`, `race/negative-sync/overwrite-vs-trylock`, `sync/out-of-scope-cond`) read
   locations no sibling event writes — no set widened; `two-workers-own-chans` moved its ENGINE to
   dedup (route α certifies the singleton where the DFS blew its work cap). Ratification posed at
-  the merge ask (RATIFIED [USER] 2026-09-22, the Stage E landing — «Agree on the judgements, go ahead»). The (b) pin stands outside the widened grammar.
+  the merge ask (RATIFIED [USER] 2026-09-22, the Stage E landing — the judgements agreed, go ahead). The (b) pin stands outside the widened grammar.
   STAGE E, FAMILY E4 (2026-09-21, [AGENT]; design §E4 — conversions and allocations): a CONVERSION
   is a PURE OP over its operand's value and a composite literal an allocation node without E1
   edges, so the operand / payload READ is the occurrence spec-unsequenced against the sibling
@@ -1766,7 +1763,7 @@ subexpressions of one binary operator).
   {slice-literal-index-vs-call,struct-literal-var-vs-call}` ({15, 1005}, gc 1005),
   `noodler/latitude/conversion-index-vs-call` ({6, 105}, gc 105) and the born `evalorder/unseq-
   conv-alloc/{conv-read-vs-call ({98, 123}, gc 98),struct-lit-vs-call,addr-lit-vs-call,slice-lit-
-  vs-call ({6, 15}, gc 15)}`. Ratification posed at the merge ask (RATIFIED [USER] 2026-09-22, the Stage E landing — «Agree on the judgements, go ahead»). The (b) pin stands outside the
+  vs-call ({6, 15}, gc 15)}`. Ratification posed at the merge ask (RATIFIED [USER] 2026-09-22, the Stage E landing — the judgements agreed, go ahead). The (b) pin stands outside the
   widened grammar.
   THE AUDIT FIX ROUND (2026-09-21, [AGENT]; design §E4 «the audit fix round», F4): `string([]byte)`
   / `string([]rune)` READ the slice's backing array at the conversion — an occurrence of its own
@@ -1811,10 +1808,7 @@ of ONE binary operator against the calls in it; this entry is the order
 of a non-call operation's PANIC against ordered events that are its
 lexical SIBLINGS — other elements of the same RHS list, or other
 arguments of the same call. **RE-ENVELOPED 2026-09-05** — option (b)
-of the four-way treatment below, RULED [USER] Mike 2026-09-05, verbatim
-as relayed by the [AGENT] coordinator (cited as relayed): «we should do
-what the standard supports, and avoid over-refusal if we can. That's
-what (b) means right?» — design of record
+of the four-way treatment below, RULED [USER] Mike 2026-09-05, as relayed by the [AGENT] coordinator (cited as relayed): (do what the standard supports and avoid over-refusal where possible — option (b)) — design of record
 `docs/2026-09-05_e13-b-design.md` (the decision procedure §1, the
 machine construct §3, the frontend §4, the residuals §6).
 
@@ -1976,8 +1970,7 @@ machine construct §3, the frontend §4, the residuals §6).
     received by the [AGENT] coordinator in conversation and relayed to
     the recording worker (lane `rulings-0905`); cited as relayed, not
     firsthand. Posed as item (2) of an eight-item list with the
-    coordinator recommending (b), Mike replied, verbatim as relayed:
-    «(1) approved, (2) we should do what the standard supports, and avoid over-refusal if we can. That's what (b) means right? (3) done, (4-8) all approved as recommended». The coordinator's gloss [AGENT] of what (b)
+    coordinator recommending (b), Mike replied, as relayed: (1) approved; (2) do what the standard supports and avoid over-refusal where possible, which is what (b) means; (3) done; (4-8) all approved as recommended. The coordinator's gloss [AGENT] of what (b)
     means, answering the question in the reply: wherever the spec
     leaves the order of a non-call operation's panic and its sibling
     calls UNSEQUENCED (the omission above; I-2/L-013), the machine
@@ -1999,8 +1992,7 @@ machine construct §3, the frontend §4, the residuals §6).
     2026-09-05). The former NO-PIN bullet is replaced by the PINS ARE
     MEMBERSHIP ROWS bullet below, and this entry's heading tag moved
     from (b) PINNED to (a) ENVELOPED with the merge — per this
-    sub-bullet's own rule, never on the ruling alone. (Sub-bullet kept
-    verbatim as the ruling's provenance record; the "owed" sentence
+    sub-bullet's own rule, never on the ruling alone. (Sub-bullet kept as the ruling's provenance record; the "owed" sentence
     rewritten at the round-17 rebase, [AGENT].)
 - PINS ARE MEMBERSHIP ROWS NOW (replacing the former "NO PIN MAY BE
   TAKEN HERE"): the old rule existed because a STRICT row on either
@@ -2228,8 +2220,7 @@ row so the axis stops being invisible, nothing more.
   boundaries — the negative lane inherits the pin via go/types on the
   host), and `uintptr` — a DISTINCT integer kind since 2026-10-12
   (`IntKind.uintptr`, `GoLean/GoCore/Value.lean`; BUG-124 fixed, ledger
-  FR-38 retired; [USER] 2026-10-12 D6 «refuse and repair asap», the
-  repair's shape «1,3-6 approved», item 4 = the design note's D1–D5,
+  FR-38 retired; [USER] 2026-10-12 D6 — refuse now, repair soon — the repair's shape (items 1 and 3-6 approved), item 4 = the design note's D1–D5,
   `docs/2026-10-12_uintptr-repair-design.md`), whose WIDTH reads this pin
   (`IntKind.bitsAt`: `p.intBits`, as go/types sizes `Int`/`Uint`/`Uintptr`
   by the one `WordSize`); the identity was never latitude —
@@ -2271,8 +2262,7 @@ row so the axis stops being invisible, nothing more.
   XIMPL (gccgo/tinygo allocators) would stress the upper end.
 
 **OVER-WIDTH FINDING (R3 / b6 design, 2026-10-07 — a later R2 narrowing lane,
-PENDING [USER]).** Under the standing rule of 2026-10-07 («semantic widenings
-should only be allowed if they match real Go» — a widening admits only what the
+PENDING [USER]).** Under the standing rule of 2026-10-07 (semantic widenings are allowed only where they match real Go — a widening admits only what the
 spec permits AND the pinned gc realizes) this interval is TOO WIDE: it admits
 every capacity in `[newLen, max(32, 2·growth)]`, while gc realizes exactly one
 point per regime — the growth formula's `nextslicecap` rounded by
@@ -2316,9 +2306,7 @@ instance of R2.
   `{n}`; bytes non-literal → `{n} ∪ {R(n)} ∪ {32 | n ≤ 32}`; runes
   non-literal → `{R(4n)/4} ∪ {32 | n ≤ 32}`. Bound = the member count
   (1 to 3); a one-member list is a bound-1 consult that pops nothing.
-- EXACTLY gc's measured union, nothing in between (the standing rule of
-  2026-10-07, [USER] Mike «the semantic widenings should only be allowed if
-  they match real Go», relayed; design `docs/2026-10-07_conv-cap-design.md`
+- EXACTLY gc's measured union, nothing in between (the standing rule of 2026-10-07, [USER] Mike, relayed: semantic widenings are allowed only where they match real Go; design `docs/2026-10-07_conv-cap-design.md`
   D2): gc realizes FOUR regimes decided by its typechecker, escape analysis
   and inlining — literal → n; non-literal never written and non-escaping →
   n (zero-copy, the slice ALIASES the string — unobservable through writes; element-address identity is a separate, unmodelled axis — BUG-121;
@@ -2587,7 +2575,7 @@ instance of R2.
   {panicwrap text} — so the re-laning is necessary and the (later)
   depth-routing guard is not load-bearing there.
 - Ruling record: `docs/2026-08-31_qrow-rulings.md` (2026-09-03 record,
-  «(2) panic-text, agree, demonic choice so both are admitted» —
+  item (2), panic text: a demonic choice admitting both texts —
   received by the [AGENT] coordinator and relayed to the implementing
   lane; cited as relayed). Implementation: BUG-087 (fixed 2026-09-03).
 
@@ -2613,7 +2601,7 @@ instance of R2.
   [USER] owns (a bytes variant of `golean-observation-v1`), not a machine
   envelope.
 
-### R10a. The abort line's `[recovered, repanicked]` collapse on an equal re-panic — a two-member TEXT set, (a) ENVELOPED at width 2 (BUG-004 item 1; landing chunk L3, 2026-09-07 — an [AGENT] extension of BUG-087's ruling SHAPE under R-1, [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off)), each member (b)-pinned to a gc realization
+### R10a. The abort line's `[recovered, repanicked]` collapse on an equal re-panic — a two-member TEXT set, (a) ENVELOPED at width 2 (BUG-004 item 1; landing chunk L3, 2026-09-07 — an [AGENT] extension of BUG-087's ruling SHAPE under R-1, [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 by the merge sign-off (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off)), each member (b)-pinned to a gc realization
 
 - WHERE: the same spec point as R10 (spec#Handling_panics says only that
   the program terminates with "an error report including the panic
@@ -2651,11 +2639,10 @@ instance of R2.
   modelling the bits would be a gc-specific allocation/layout model of
   exactly the address-exposing kind doctrine register #6 forbids the
   observation surface to depend on — hence the demonic choice, the
-  BUG-087 SHAPE («(2) panic-text, agree, demonic choice so both are
-  admitted», [USER] 2026-09-03, relayed — `docs/2026-08-31_qrow-rulings.md`;
+  BUG-087 SHAPE (item (2), panic text: a demonic choice admitting both texts, [USER] 2026-09-03, relayed — `docs/2026-08-31_qrow-rulings.md`;
   that ruling covers ONE demonic choice at the nil arm/R9a, not this
   marker) extended to this marker by the [AGENT] under R-1's re-envelope
-  authority — [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (L3's
+  authority — [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 by the merge sign-off (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (L3's
   adversarial-audit fix round, 2026-09-07, R2).
 - MACHINE: `ChoiceSite.repanicCollapse` (State.lean) — width
   `repanicCollapseWidth first rest` (2 on the family, 1 elsewhere: unequal
@@ -2683,7 +2670,7 @@ instance of R2.
   `staticuint64s` layout — a (b)-pin, not the weakest machine.
 - ROWS: `panic-recover/repanic-same-value-abort` (FAIL → PASS/membership —
   a (c)→(a) re-classification by [AGENT] under R-1 that touches a
-  [USER]-ratified C4 pin, triage §7 2026-08-20; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off), fix round R3; the move was kept pending the ruling and STANDS under it)
+  [USER]-ratified C4 pin, triage §7 2026-08-20; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 by the merge sign-off (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off), fix round R3; the move was kept pending the ruling and STANDS under it)
   and `panic-recover/repanic-collapse/*` — `lane=membership`,
   `members=2`, `width=2`; gc's draw per row at K=32 alternating
   plain/`-race` (`docs/evidence/2026-09-07_land-panic-text-tape/gc-draws.tsv`):
@@ -2701,7 +2688,7 @@ instance of R2.
   `first` — the suffix lands on the payload's LAST line — so the set is a
   singleton and the strict invariance check certifies it).
 - The `string-member` lane the sprint built around this point is
-  RETIRED unlanded (landing decision D2 — [AGENT] default applied per the coordinator's brief; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (plan §4 D2);
+  RETIRED unlanded (landing decision D2 — [AGENT] default applied per the coordinator's brief; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 by the merge sign-off (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (plan §4 D2);
   `docs/2026-09-07_land-panic-text-tape.md` §2.4): its function is this
   membership envelope plus the strict lane — except its `Controls` role
   (control-byte payloads), DEFERRED to L4's `panic-controls` rows and
@@ -2712,8 +2699,7 @@ instance of R2.
 
 - UNIT 6b ADDENDUM (2026-10-03, [AGENT] lane `core/panic-preprint-1003`;
   BUG-004 item 4 FIXED — design note `docs/2026-09-30_bug004-item4-design.md`
-  §2 (i), decision 3 RULED [USER] Mike 2026-09-30 «Yes, agree, do the fix
-  inside this window», relayed): the SAME site is now also drawn by the
+  §2 (i), decision 3 RULED [USER] Mike 2026-09-30 (the fix agreed inside this window), relayed): the SAME site is now also drawn by the
   PREPRINT PHASE — gc's `preprintpanics` identity compare (`panic.go:715`)
   decides, for a payload whose `Error()`/`String()` the runtime calls,
   whether the method is CALLED at all (the older of an identical pair is
@@ -3075,8 +3061,7 @@ R-rows here at admission (register rule). Evidence for the slice-1 census: `docs
   `strings/conv-identity/{ident-var,ident-lit}` FAIL/differential by
   record, `ident-var-written` the fresh-on-both-sides control (PASS);
   strict lane — gc's answer is the same on all three builds.
-- RE-ENVELOPE: a future [USER] decision under the standing rule «semantic
-  widenings must match real Go» (BUG-121's fix plan); until then the
+- RE-ENVELOPE: a future [USER] decision under the standing rule that semantic widenings must match real Go (BUG-121's fix plan); until then the
   machine's fresh point is a known-≠-oracle deterministic point (§10).
 
 ## 4. Forced points — the compact list (class (c))
@@ -3643,7 +3628,7 @@ Nothing in this block is a class member by virtue of being named here.
 
 - **Stage C of the evaluation-order model v2.1 (2026-09-19, [AGENT] lane
   `core/unseq-stage-c-0919`; design `docs/2026-09-19_unseq-stage-c-design.md`;
-  the rulings [USER] Mike 2026-09-19 «Agree, merge», relayed: width of P = all
+  the rulings [USER] Mike 2026-09-19 (agreed; merge approved), relayed: width of P = all
   mutable reads STAGED, N1 SPLIT, N3 REFUSE): the `unseqNext` site (Stage B's
   census row above) is REACHED from native Go for the first time — the pilot
   grammar's sweeps (a same-package call beside a read of an address-taken
@@ -3683,7 +3668,7 @@ Nothing in this block is a class member by virtue of being named here.
   relabelled — an [AGENT] extension of BUG-087's ruling SHAPE under R-1,
   [USER] ratification PENDING (R2); its (c)→(a) move marked PENDING (R3);
   D2/D5 marked as [AGENT] defaults pending ratification (R1) — all four
-  RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off); the first-line
+  RULED [USER] 2026-09-07 at merge train round 24 by the merge sign-off (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off); the first-line
   observation scope recorded and measured (R4; ledger FR-32); control-byte
   payloads rowed (R5; FR-33). Counts unchanged: (a) 13 sites / 15 entries.
 
@@ -3805,8 +3790,7 @@ Nothing in this block is a class member by virtue of being named here.
 ## 11. The two contracts — what the semantics CLAIMS, and the review's gap list (added 2026-09-11, [AGENT])
 
 Records only, on `docs/2026-09-11_review-dispositions.md` §4 step 2(ii)
-([USER] Mike 2026-09-11 «Great, go ahead and land this, then launch the
-lanes», relayed by the [AGENT] coordinator — cite as relayed). Source:
+([USER] Mike 2026-09-11, landing approved and the lanes launched, relayed by the [AGENT] coordinator — cite as relayed). Source:
 review §6/§9 (`docs/2026-09-11_project-review.md`); §0's vocabulary;
 anchors read at `a461ed8b`; adds no site, moves no row.
 
@@ -3901,8 +3885,7 @@ verified at `a461ed8b`) or new entry; owning contract; what closes it;
    Claimed: maximal AT REGISTRY GRANULARITY (C1's words). Not claimed:
    sub-statement interleavings — doctrine register #5, the reduction
    line's territory. Close: the reduction statement; `NPDRFReduction`
-   restate-vs-delete is PENDING [USER] (dispositions §3 item 2, «unsure
-   right now, probably restate»).
+   restate-vs-delete is PENDING [USER] (dispositions §3 item 2: undecided, leaning restate).
 6. **A finite `List Nat` tape with a default after exhaustion, not an
    infinite fair scheduler** — `Choices := List Nat` (State.lean:202);
    `Choices.consume` yields 0 on exhaustion (State.lean:209–213); the

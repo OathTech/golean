@@ -376,7 +376,7 @@ touched; no module of `GoLean/` changed (no elaboration measurement owed).
 
 ## Merge train r61 — the 5a record ([AGENT] coordinator, 2026-10-03)
 
-[USER] Mike 2026-10-03 «agree on 1-4» (relayed). Pre-merge main `3bb8f4fc` → `refs/snapshots/r61/main`; train tip `44d99cdb`
+[USER] Mike 2026-10-03, items 1-4 agreed (relayed). Pre-merge main `3bb8f4fc` → `refs/snapshots/r61/main`; train tip `44d99cdb`
 fast-forwarded (packet D `d8529ab7`, its audit and re-check, the CL1–CL5 corpus disposition, the window review, the rulings and the
 `CLAUDE.md` update); fresh primary build (0 foreign references). `release-check` EXIT=2 (EXPECTED — STALE, `build/files/GoLean.lean`);
 `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` EXIT=1, 1232 s — red on EXACTLY the 5a pair; 3860 rows, 3622 PASS / 238 FAIL =

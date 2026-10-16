@@ -1,4 +1,4 @@
-# Option (i) — row metadata only, semantics as ratified ([USER] Mike 2026-10-07 «Agree», relayed; conditional on the gate-cost measurement in timing.tsv).
+# Option (i) — row metadata only, semantics as ratified ([USER] Mike 2026-10-07 (agreed), relayed; conditional on the gate-cost measurement in timing.tsv).
 # Every row's OBSERVATIONS are unchanged (the default-stream observation is identical before/after — choice-trace-compare.txt); the flips were the strict lane's depth guard and the enumerator's fail-closed width/work guards. Each value is the smallest that passes (depth = the default-stream wide count w, on the first try for all 13; width 2 → 3 = the new bound; work = the smallest round number above the measured 354088 steps).
 id	before (main)	after (lane tip)	why
 stdlib-source/builder-overlay/grow-contract	strict, params -	strict, depth=11	default-stream wide count w=11: 1 wide pick past the 10-entry fixed stream [9,8,…]

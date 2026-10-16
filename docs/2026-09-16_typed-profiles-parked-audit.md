@@ -10,8 +10,8 @@ at the merge ask, F1 self-resolves and the verdict is MERGE-CLEAN.
 
 [AGENT] auditor, branch `review/typed-profiles-parked-0916` @ candidate tip
 `bcee0c34` (five commits over main `94da420e`). Ordered by [USER] Mike,
-2026-09-16, verbatim, relayed by the [AGENT] coordinator — cite as relayed:
-«I agree, we should audit this». I did not merge, push, or edit the candidate
+2026-09-16, relayed by the [AGENT] coordinator — cite as relayed:
+(the audit agreed). I did not merge, push, or edit the candidate
 or `main`; I ran no `scripts/ci` (the box-wide lock is the coordinator's).
 Evidence: `docs/evidence/2026-09-16_typed-profiles-parked-audit/`.
 

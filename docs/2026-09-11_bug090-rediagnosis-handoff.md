@@ -3,8 +3,7 @@
 # HANDOFF — lane `records/bug090-rediagnosis-0911` (records only)
 
 [AGENT] 2026-09-11. Branch `records/bug090-rediagnosis-0911` off main
-`a461ed8b`. Authority: [USER] Mike 2026-09-11, «Great, go ahead and land
-this, then launch the lanes» (relayed), on `docs/2026-09-11_review-
+`a461ed8b`. Authority: [USER] Mike 2026-09-11, (landing approved, lanes to launch) (relayed), on `docs/2026-09-11_review-
 dispositions.md` §4 step 2(i). No fix, no runtime edit, no baseline change,
 no lake build (the primary's certified binary was copied and run read-only;
 sha256 `18beb979fbcc90fe3f13d5f659ed27c515c25840e3ad37db80c717c2bfea7ba4`).

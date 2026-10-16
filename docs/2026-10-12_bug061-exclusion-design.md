@@ -1,8 +1,7 @@
 # BUG-061 — the by-name exclusion (design note, 2026-10-12)
 
-[AGENT] lane `fix/bug061-refuse-1012`, under [USER] Mike 2026-10-12, verbatim
-(`docs/2026-10-12_release-readiness.md` §5): «D1: I think this should probably be
-refused, if it's easy to exclude.» Record only; the living statement is the
+[AGENT] lane `fix/bug061-refuse-1012`, under [USER] Mike 2026-10-12
+(`docs/2026-10-12_release-readiness.md` §5): (D1: refuse the case if excluding it is easy) Record only; the living statement is the
 BUG-061 entry in `docs/BUGS.md` and the header of
 `tools/nativefrontend/staticinit.go`.
 

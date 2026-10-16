@@ -1,4 +1,4 @@
-> Landing note ([AGENT] coordinator, 2026-09-10): this document was left untracked in the primary checkout by its author; landed on `main` on the [USER]'s instruction («Yeah, let's land the review doc.», Mike 2026-09-10, relayed), content unmodified below. While untracked it made the primary checkout's `ci --slow` run records `git_dirty=true` (rounds 29–30), which is why it lands as a records commit now. Its recommendations remain [AGENT] proposals, not rulings.
+> Landing note ([AGENT] coordinator, 2026-09-10): this document was left untracked in the primary checkout by its author; landed on `main` on the [USER]'s instruction to land the review doc (Mike 2026-09-10, relayed), content unmodified below. While untracked it made the primary checkout's `ci --slow` run records `git_dirty=true` (rounds 29–30), which is why it lands as a records commit now. Its recommendations remain [AGENT] proposals, not rulings.
 
 # Disk growth review and proposed recovery plan
 

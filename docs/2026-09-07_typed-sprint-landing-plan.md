@@ -14,7 +14,7 @@ at-that-moment [USER] sign-off (`CLAUDE.md`, the merge protocol).
 > rebased tip — 3654 = 3403 / 251, 0 PASS→non-PASS; L3 note §7.2); L6 =
 > this chunk. Each merged
 > to main on a separate at-that-moment [USER] sign-off, relayed by the
-> coordinator («Go ahead and merge it» ×2, «go ahead and merge», «Go ahead
+> coordinator («Go ahead and merge it» ×2, (merge sign-off), «Go ahead
 > with the merge» — the last, round 24, also ratifying D2, D5, the
 > BUG-087-shape extension and the C4 re-classification). L5 remains HELD
 > (D1 pending). Deviations from this plan, each disclosed in the chunk
@@ -42,13 +42,8 @@ main...typed-consumer-sprint` and `git log main..typed-consumer-sprint --
 
 ## 0. The ruling and the audit verdicts
 
-**[USER] ruling (Mike, 2026-09-07, verbatim as relayed by the [AGENT]
-coordinator — cite as relayed):** «The evidence blob should not land, and
-generally we should not dump big evidence bundles on main (they can't be
-easily hosted on GH for one). Can you make a plan to land this work
-cleanly? We'll want to decompose and land in sane chunks that can be
-reviewed. And where appropriate fix some of the issues, eg. the choice
-tape stuff».
+**[USER] ruling (Mike, 2026-09-07, as relayed by the [AGENT]
+coordinator — cite as relayed):** the evidence blob does not land and big evidence bundles are not dumped on main (they cannot be hosted on GitHub); the work is to be landed cleanly by a plan, decomposed into reviewable chunks, with some of the issues (the choice tape among them) fixed where appropriate.
 
 Two independent landing audits were read in full and are the source of
 every finding id below (`A-Rn` = auditor A, `B-Rn` = auditor B). Both live
@@ -749,11 +744,9 @@ the number as HELD.
 
 **Contents (5 paths + new files).**
 - `docs/2026-09-05_typed-consumer-sprint-charter.md` — landed trimmed to
-  what was ruled and executed; every [USER] quote relay-marked (B-R18: the
-  kickoff quote «Agree with all 5» and the K4 clarification «merges *to
-  main* are always user-approved. Feature branches can be merged to by
-  agents, when standign approval is given by the user» stay verbatim, typo
-  included, and gain "relayed by the [AGENT] coordinator — cite as
+  what was ruled and executed; every [USER] statement relay-marked (B-R18: the
+  kickoff approval of all five defaults and the K4 clarification that merges to main are always user-approved, while feature branches may be merged to by agents under standing user approval stay as recorded
+  and gain "relayed by the [AGENT] coordinator — cite as
   relayed").
 - `docs/2026-09-05_typed-consumer-sprint-handoff.md` — trimmed; the status
   line and the O1–O5 outcome table refreshed to the truth at landing

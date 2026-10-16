@@ -42,8 +42,7 @@ design). (B) FR-28: the A6 unordered-panic guard is `hoistReordersPanic`
 operand, so BUG-083's silent wrong answer (`iv.(int) + len(make([]int,
 t[k]))` realizing the hint's panic) is a named refusal — at the priced cost
 of refusing the M1 table's four gc-MATCHING index/division/nil-deref-left
-shapes too (conservative guard; posture «break rather than preserve
-incorrect behaviour», relayed). Two exact refinements narrow the refusal:
+shapes too (conservative guard; posture (break rather than preserve incorrect behaviour), relayed). Two exact refinements narrow the refusal:
 nil-deref-ONLY compositions are order-transparent (one runtime error,
 nothing effectful between the two tests) — cedar-go's lexer idiom `l.pos <
 len(l.src) && l.peek()` lowers; a map read with a non-interface key is
@@ -63,7 +62,7 @@ dynamic-pass judgements). Twin wire pin unchanged.
 - [USER] (relayed, cited as relayed): the frontier queue is ratified with
   FR-27/FR-28 at slots 27/28; direction 3 (rowed gaps fixed in queue order
   with plans), direction 4 (`scripts/lower-diagnose` before/after); posture
-  «break rather than preserve incorrect behaviour».
+  (break rather than preserve incorrect behaviour).
 - D1: the qualified base resolves ONLY for source packages
   (`isSourcePackage`); a non-source-through stdlib generic refuses by name
   with FR-14's `stdlib-qualified selector <pkg>.<F> in value position` text

@@ -9,8 +9,8 @@ boundary memo (`docs/2026-09-03_stdlib-boundary-design.md` §5) — «(a)
 commission a design memo (what `reflect` exposes of the type system vs of
 gc's layout; which of `fmt`, `errors.Is/As`, `sort.Slice`,
 `encoding/json`, `reflect.DeepEqual` it unblocks …)» — RULED [USER] Mike
-2026-09-03 as recommended («(3) agree, go ahead with the plan»), with the
-timing «after the first two slices land»; slices 1 and 2 landed 2026-09-03
+2026-09-03 as recommended ((the plan approved, item (3))), with the
+timing set after the first two slices land; slices 1 and 2 landed 2026-09-03
 (`docs/stdlib-admission-register.md`, slice log). The coordinator's
 relayed framing for this memo (2026-09-04): the two top-level goals are
 (1) a highly accurate Go semantics and (2) reasoning via an iris-lean
@@ -662,8 +662,8 @@ received by the [AGENT] coordinator in conversation and RELAYED to the
 recording worker (lane `rulings-0905`), so it is cited as relayed, not
 firsthand (U0-incident convention). The five gates below were put to
 the [USER] as items (4)–(8) of an eight-item list, each with its verbatim
-text and this memo's recommendation (a); Mike replied, verbatim as
-relayed: «(1) approved, (2) we should do what the standard supports, and avoid over-refusal if we can. That's what (b) means right? (3) done, (4-8) all approved as recommended» — «(4-8) all approved as recommended» rules
+text and this memo's recommendation (a); Mike replied, as
+relayed: (1) approved; (2) do what the standard supports and avoid over-refusal where possible, which is option (b); (3) done; (4-8) all approved as recommended — the (4-8) approval rules
 G6-1 … G6-5 each at option (a). Sequencing consequence: §4.5 is now the
 plan of record — T1 (`reflectlite`) after C2 in a parallel lane; T2+
 after G-P; the facility complete before G-PIN; `fmt` source-through after

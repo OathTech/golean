@@ -781,7 +781,7 @@ about the walk plan and is untouched.
   `proto` package — `proto` imports `raftpb`).
 
   > **Amended 2026-10-04 (route A S1, design D7; [USER] 2026-10-04
-  > «Approved», relayed).** The overlay is RETIRED: `proto` no longer
+  > (approved), relayed).** The overlay is RETIRED: `proto` no longer
   > imports `raftpb` (interface dispatch, D2), so `raftpb/confchange.go` is
   > upstream VERBATIM — its two `proto.Marshal` calls go to the subject-local
   > `proto` package like every other call site (the W2 overlay delta D-4
@@ -827,7 +827,7 @@ about the walk plan and is untouched.
   > Validated EXACTLY by `difftest.py` section 8.
 
   > **Final wording 2026-10-05 (route A complete, slice S3; [USER] 2026-10-05
-  > «Yes, go ahead», relayed).** JC-14 now reads: *Unmarshal semantics =
+  > (approved), relayed).** JC-14 now reads: *Unmarshal semantics =
   > protobuf-go v1.36.11's `impl`/`protowire` decoder over the 9 schemas, by
   > construction (the route A generator; each function names its twin) —
   > merge semantics, packed and unpacked acceptance (unpacked emitted),
@@ -841,7 +841,7 @@ about the walk plan and is untouched.
   > Stated limits, not deltas: `errors.Is` refused on the machine by name
   > (D10); the prefix spelling compared by membership (protobuf-go draws it
   > per binary); the 10000/10001 recursion edges covered by instruments, not
-  > a corpus row ([USER] «agree to (i)»). U-1/U-2/U-3 RETIRED
+  > a corpus row ([USER] option (i) agreed). U-1/U-2/U-3 RETIRED
   > (`docs/raft-w42-log.md`, the 2026-10-05 S3 continuation).
 - **JC-15: the byte-fidelity bar and where each half is validated.**
   Marshal emits fields in FIELD-NUMBER order (protobuf-go's table-driven

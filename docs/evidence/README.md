@@ -1,8 +1,8 @@
 # docs/evidence/ — what a committed record is, and is not
 
 [AGENT] convention of 2026-08-31, rewritten 2026-10-12 under the [USER]
-ruling that a committed record must be «useful with a high bar for
-evidence» (`docs/architecture-rules.md`, «Evidence on main»; the triage and
+ruling that a committed record must be useful, with a high bar for
+evidence (`docs/architecture-rules.md`, «Evidence on main»; the triage and
 its reasoning: `docs/2026-10-12_gate-cull-plan.md` §9, D10).
 
 ## The bar

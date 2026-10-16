@@ -7,10 +7,9 @@ statement family: BUG-101/104, assignment targets, guards, receivers, allocation
 `unseqProbe`/`probeK`/`unseqPanic` removed ONLY after all callers, tests and consumers moved;
 whole-sweep boundary, no fixture-name dispatch; EXIT: per-family full gate + `--diff`, named set
 changes, pins/ledgers updated». Rulings in force ([USER], `docs/2026-08-31_qrow-rulings.md`): width of
-P = ALL mutable reads, STAGED (2026-09-19 «Agree, merge», relayed); N1 = SPLIT; N3 = REFUSE by name;
-E2/E12 (b) → (a) on the pilot's rows (2026-09-20 «land it», relayed — extended here to every migrated
-row, each named); the confluent caption covers expression-order picks (2026-09-21 «yes, I agree — go
-ahead», relayed). Stage C's design (`docs/2026-09-19_unseq-stage-c-design.md`: the pilot grammar §1,
+P = ALL mutable reads, STAGED (2026-09-19 (agreed; merge approved), relayed); N1 = SPLIT; N3 = REFUSE by name;
+E2/E12 (b) → (a) on the pilot's rows (2026-09-20 (landing approved), relayed — extended here to every migrated
+row, each named); the confluent caption covers expression-order picks (2026-09-21 (agreed, go-ahead given), relayed). Stage C's design (`docs/2026-09-19_unseq-stage-c-design.md`: the pilot grammar §1,
 the wire §4, the decoder spec §5, the lowering §6) and Stage D's route α
 (`docs/2026-09-20_unseq-stage-d-design.md`) are extended, not restated: this note records what EACH
 FAMILY adds — the grammar widening, the decoder arm, the reference witnesses, the census before/after,
@@ -462,7 +461,7 @@ correction that `make`/`new` are E1 participants.
 The Stage E adversarial audit (`docs/2026-09-21_unseq-stage-e-audit.md`, candidate `3649b7db` over main `14006270`;
 verdict FIX-FIRST) returned one WRONG ANSWER, one decoder FAIL-OPEN, one minor decoder FAIL-OPEN class, one records
 claim and five records/nits. Dispositions ([AGENT], the coordinator's, disclosed at the merge ask; authority [USER]
-Mike 2026-09-21 «Dispatch the audit as you propose», relayed); the branch was rebased onto main `769bbf23` first (the
+Mike 2026-09-21 (the audit dispatched as proposed), relayed); the branch was rebased onto main `769bbf23` first (the
 r45 records commit; the pre-rebase SHAs of §E1–§E4 map to `a2c8a35f` E1, `d1db8a14` E2, `22ec98d5` E3, `d5363273` E4).
 
 **F1 — `new(expr)` LOWERED CORRECTLY (a wrong answer on the candidate).** Go 1.26's `new(x)` (spec#Allocation: «If the
@@ -517,7 +516,7 @@ rows `evalorder/unseq-conv-alloc/string-bytes-vs-call` and `string-runes-vs-call
 20/20; reference `enumerate.py` E4h; wires `e4strb.json` + `native-e4strb.json` (println-rooted). The `[]byte(s)` /
 `[]rune(s)` forms read a STRING (immutable) and stay pure (`e4bytesFromStr`, legacy by name).
 
-**F5 — the SPEC reading behind «`make`/`new` are E1 participants», named (RATIFIED (a) by [USER] Mike 2026-09-22 «Agree on the judgements, go ahead», relayed — posed with the six
+**F5 — the SPEC reading behind «`make`/`new` are E1 participants», named (RATIFIED (a) by [USER] Mike 2026-09-22 (the judgements agreed, go-ahead given), relayed — posed with the six
 items — handoff §2 item 5).** spec#Order_of_evaluation orders «all function calls, method calls, receive operations,
 and binary logical operations … in lexical left-to-right order»; spec#Built-in_functions: the built-ins «are called
 like any other function». READING (a): the built-ins are the sentence's «function calls» — `len`/`cap` (Stage C's

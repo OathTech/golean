@@ -1,8 +1,7 @@
 # `uintptr` runtime identity — the REPAIR half, design note and measured scope (2026-10-12)
 
 Lane `core/uintptr-repair-1012` (worktree `.claude/worktrees/uintptr-repair-1012`, off `main`
-@ `d4be5dca`). Authority: [USER] Mike 2026-10-12, verbatim: «D6: agree on both - refuse and
-repair asap.» (`docs/2026-10-12_release-readiness.md` §5 D6, item 26; relayed by the [AGENT]
+@ `d4be5dca`). Authority: [USER] Mike 2026-10-12: (D6: both halves agreed — refuse now, repair soon) (`docs/2026-10-12_release-readiness.md` §5 D6, item 26; relayed by the [AGENT]
 coordinator). The REFUSE half landed on `main` the same day (BUG-124, FR-38, lane
 `fix/uintptr-refuse-1012`). This lane is a NAMED DESIGN GATE — a hard stop: the deliverable is
 this note; nothing under `GoLean/` is touched here. Every decision below is [AGENT] unless marked.
@@ -317,10 +316,10 @@ supersession line for J-8).** What R1 says now (`docs/2026-08-11_latitude-invent
 the «Also entangled» clause): «`uintptr` (frontend maps to uint64; observations of it refused;
 since 2026-10-12 its runtime type IDENTITY — boxing into an interface, assertion / type-switch
 targets — is refused by name at the frontend too, `tools/nativefrontend/uintptrid.go`, BUG-124 /
-ledger FR-38, pending the parked `typed-uintptr-identity` repair ([USER] 2026-10-12 D6 «refuse
-and repair asap»); the width pin here is untouched)». What it would say: «`uintptr` — a DISTINCT
-integer kind since 2026-10-12 (`IntKind.uintptr`, BUG-124 fixed; [USER] 2026-10-12 D6 «refuse and
-repair asap»), whose width reads this pin (`IntKind.bitsAt`: `p.intBits`, as go/types sizes
+ledger FR-38, pending the parked `typed-uintptr-identity` repair ([USER] 2026-10-12 D6: refuse
+now, repair soon); the width pin here is untouched)». What it would say: «`uintptr` — a DISTINCT
+integer kind since 2026-10-12 (`IntKind.uintptr`, BUG-124 fixed; [USER] 2026-10-12 D6: refuse now,
+repair soon), whose width reads this pin (`IntKind.bitsAt`: `p.intBits`, as go/types sizes
 `Int`/`Uint`/`Uintptr` by the one `WordSize`); the identity was never latitude — spec#Numeric_types
 makes it a distinct type — only the width is; observations of it [O1: stay refused at both seams
 by name / O2: carry the kind]». What J-8 says (`docs/2026-08-21_w7-desugar-inventory.md:2740-2742`):

@@ -527,10 +527,10 @@ slice is still a net deletion of 547 lines of tree, with the 616-line
 
 Lane `core/b7-context-store-0917`, branch of the same name, base main
 `7f1c1fe7`; the brief is `docs/2026-09-16_b7-context-store-charter.md` with
-its §9 decisions RULED ([USER] 2026-09-16, verbatim, relayed: «Yes, let's go
-ahead with the D1-8 rulings as recommended (aside from D3)»; D3 PARK ruled
-separately); dispatch [USER] 2026-09-17, relayed: «Great, land it, then launch
-B7». Handoff: `docs/2026-09-17_b7-context-store-handoff.md`; evidence:
+its §9 decisions RULED ([USER] 2026-09-16, relayed: the D1-8 rulings
+approved as recommended, D3 aside; D3 PARK ruled
+separately); dispatch [USER] 2026-09-17, relayed: land it, then launch
+B7. Handoff: `docs/2026-09-17_b7-context-store-handoff.md`; evidence:
 `docs/evidence/2026-09-17_b7-context-store/`. The entries below are in this
 log's format (the coordinator's brief asked for them here; the arc's landing
 record `docs/2026-09-03_design-hygiene-arc.md` carries the row).
@@ -623,8 +623,8 @@ decoded programs (A4). The [USER] may prefer byte-preservation (handoff §8.4).
 
 ## Fix round — the pool-side `itersNormalized` conjunct (2026-09-17)
 
-[USER] Mike, 2026-09-17, verbatim, relayed by the [AGENT] coordinator — cite as
-relayed: «We should delete the vacuous conjunct right? that's just a strict improvement. The rewordings sound fine. Agree with the audit, go ahead and launch (after the rulings if relevant)». [AGENT] fix-round worker, runtime commit `1fafc9f2`
+[USER] Mike, 2026-09-17, relayed by the [AGENT] coordinator — cite as
+relayed: the vacuous conjunct deleted as a strict improvement; the rewordings accepted; the audit agreed and the launch approved (after the rulings where relevant). [AGENT] fix-round worker, runtime commit `1fafc9f2`
 (after a clean rebase onto main `5955e55f`: `2500b434 → 73ad798d`).
 **Theorem STATEMENTS changed (a restatement, flagged, as D6 required for
 `MachineWf`; nothing weakened — every deleted conjunct/hypothesis was
@@ -654,7 +654,7 @@ other row moved. Choice trace (the SAME main binary the lane used, re-run,
 vs the fix-round binary, plus the lane's original main dump): BYTE-IDENTICAL —
 23,679 records, one sha256 `5f901024…58b5a` on all three sides, `cmp` EXIT=0.
 Items (3)/(4) of the handoff §8 (the two refusal-text rewordings) RULED as
-landed («The rewordings sound fine») — no change.
+landed (the rewordings accepted) — no change.
 
 ## Audit fix round — the F1 literal revert and the F7 dead context (2026-09-17)
 
@@ -663,8 +663,8 @@ adversarial audit (`docs/2026-09-17_b7-context-store-audit.md`, branch
 `review/b7-context-store-0917` at `b51bc5c4`) returned **FIX-FIRST, narrow and
 records-class** — 10 findings, none at WRONG-ANSWER / UNSOUND-PROOF / WEAKENING
 / COHERENCE-GAP / FAIL-OPEN severity, none gate-weakening. Authority: [USER]
-Mike, 2026-09-17, verbatim, relayed by the [AGENT] coordinator — cite as
-relayed: «Agree with the audit, go ahead and launch». Dispositions in full:
+Mike, 2026-09-17, relayed by the [AGENT] coordinator — cite as
+relayed: the audit agreed and the launch approved. Dispositions in full:
 handoff §13; the two PENDING [USER] items in `docs/2026-08-31_qrow-rulings.md`
 («The B7 audit fix round»).
 
@@ -712,8 +712,8 @@ acknowledged rather than defended (F10); F8 posed PENDING [USER] with the
 Charter: `docs/2026-09-17_c1-memory-module-charter.md` (§7 D1–D7, D9, D10 taken as the brief on the
 [AGENT] coordinator's reading of the [USER]'s 2026-09-18 non-objection to the triage — NOT a ruling;
 explicit [USER] ratification REQUESTED at the merge ask, PENDING (corrected at the audit fix round, F1;
-the earlier text here said «RULED by default acceptance»); D8 RULED [USER] 2026-09-18 «deprecate/mark
-unsound, not delete»).
+the earlier text here said «RULED by default acceptance»); D8 RULED [USER] 2026-09-18: deprecate and mark
+unsound rather than delete).
 Evidence: `docs/evidence/2026-09-18_c1-memory-module/README.md`. Handoff:
 `docs/2026-09-18_c1-memory-module-handoff.md`.
 

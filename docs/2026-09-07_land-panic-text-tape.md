@@ -10,13 +10,11 @@ branch. Sections §1–§3 were written BEFORE the code (the brief's order);
 
 Ruling context ([USER] Mike, 2026-09-07, relayed by the [AGENT]
 coordinator in the landing brief — cite as relayed): land the sprint in
-reviewable chunks; «where appropriate fix some of the issues, eg. the
-choice tape stuff». Doctrine applied (CLAUDE.md): no semantic choice hides
+reviewable chunks; fixing some of the issues where appropriate, the choice tape among them. Doctrine applied (CLAUDE.md): no semantic choice hides
 in evaluator recursion — latitude is reified on the choice tape; fail
 closed BY NAME where the model cannot render; gc-visible texts are
 observations and are byte-exact when deterministic. The panic-text
-latitude precedent this chunk EXTENDS is BUG-087's ruling «(2) panic-text,
-agree, demonic choice so both are admitted» ([USER] 2026-09-03, relayed —
+latitude precedent this chunk EXTENDS is BUG-087's ruling item (2), panic text: a demonic choice admitting both texts ([USER] 2026-09-03, relayed —
 `docs/2026-08-31_qrow-rulings.md`) — whose scope is ONE demonic choice at
 the nil arm (`nilValueMethodText`/R9a; it does not cover the `[recovered,
 repanicked]` marker): this chunk applies the ruling's SHAPE (a demonic
@@ -24,7 +22,7 @@ choice where gc's realization is toolchain-internal) to that marker under
 R-1's re-envelope authority (`docs/2026-08-20_w32-re-envelope-charter.md`:
 the rendered TEXT is spec-silent latitude quotiented via membership; the
 payload's KIND and the control flow stay forced and exact). That extension
-is the [AGENT]'s; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off)
+is the [AGENT]'s; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 by the merge sign-off (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off)
 (adversarial audit R2 — §7 below; the wording "under BUG-087's ruling" in
 earlier drafts of these records overclaimed and is relabelled everywhere).
 
@@ -251,7 +249,7 @@ against gc's actual first line by the unchanged strict comparator.
   `fun_cases` tags are untouched because the `.stop` arm gains a plain
   `let`, not a new match arm (verified against the built `stepFn`, §4).
 
-### 2.3 (c) Invalid UTF-8 — REFUSE by name (D5 default (i) — [AGENT] default applied per the coordinator's brief; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (plan §4 D5))
+### 2.3 (c) Invalid UTF-8 — REFUSE by name (D5 default (i) — [AGENT] default applied per the coordinator's brief; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 by the merge sign-off (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (plan §4 D5))
 
 The compared observation is `golean-observation-v1` with a `String`
 message; a Lean `String` cannot carry the bytes gc writes, and a bytes
@@ -269,7 +267,7 @@ L1 consumer-free) is DELETED here: with D5(i) the escape form is never a
 member and a definition of a rejected member has no purpose in the
 semantic core (the interface audit's two export lines go with it).
 
-### 2.4 (d) The `string-member` lane — RETIRED ([AGENT] default applied per the coordinator's brief; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (plan §4 D2))
+### 2.4 (d) The `string-member` lane — RETIRED ([AGENT] default applied per the coordinator's brief; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 by the merge sign-off (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (plan §4 D2))
 
 Decision: RETIRE (the plan's recommended default; the [AGENT] applies it
 as the default because the brief delegates the choice and asks for the
@@ -315,7 +313,7 @@ the semantics'). Recorded; nothing landed.
 ### 2.5 (e) D5 default
 
 `invalid-*` rows red; the escape-form member is never a member; no byte
-channel is added by this chunk. Provenance class: [AGENT] default applied per the coordinator's brief; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (plan §4 D5).
+channel is added by this chunk. Provenance class: [AGENT] default applied per the coordinator's brief; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 by the merge sign-off (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (plan §4 D5).
 
 ## 3. Rows by class, deferred-module restatements (the plan; measured in §4)
 
@@ -639,16 +637,16 @@ citations, one frontier-table citation) — 0 HIGH, as at L1. `git status
 
 ## 6. Dispositions, deferred-module restatements, records, credits
 
-- **D2 (the `string-member` lane): RETIRED, unlanded — [AGENT] default applied per the coordinator's brief; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (plan §4 D2).**
+- **D2 (the `string-member` lane): RETIRED, unlanded — [AGENT] default applied per the coordinator's brief; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 by the merge sign-off (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (plan §4 D2).**
   Reason in §2.4. Nothing of it exists on main; the archive branch keeps
   it. The `Controls` role is DEFERRED to L4 (§2.4 correction; FR-33).
-- **D5 (byte channel): default (i) — [AGENT] default applied per the coordinator's brief; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (plan §4 D5)** —
+- **D5 (byte channel): default (i) — [AGENT] default applied per the coordinator's brief; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 by the merge sign-off (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (plan §4 D5)** —
   no byte channel; `invalid-*` rows red by name; the escape-form member is
   never a member (§2.3, §2.5).
 - **BUG-087 shape (audit fix round R2):** the envelope's authority is an
   [AGENT] extension of BUG-087's ruling SHAPE (a demonic choice where gc's
   realization is toolchain-internal) under R-1's re-envelope authority;
-  [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) — relabelled on all 18
+  [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 by the merge sign-off (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) — relabelled on all 18
   `repanic-collapse` `why` fields, `repanic-same-value-abort`'s, R10a, the
   triage table, BUGS.md, the corpus `main.go` header and the code docstrings
   (Machine.lean's envelope statement, CLI.lean's inventory row; the
@@ -658,7 +656,7 @@ citations, one frontier-table citation) — 0 HIGH, as at L1. `git status
   was a [USER]-ratified category-(c) pin (triage §7, 2026-08-20; §7's
   re-colorable list names C1/C5/E7/R6 — not C4). Its (c)→(a) move to the
   membership lane is by [AGENT] under R-1 and touches a ratified pin —
-  [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off); marked so in the triage
+  [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 by the merge sign-off (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off); marked so in the triage
   table (a dated line under the C4 entry), the ledger (§8 bucket table,
   §8w) and R10a. The move itself was KEPT pending the ruling and STANDS under it (§7.2).
 - **The brief's hard stop (implement exactly vs a site): a SITE.** The
@@ -729,8 +727,7 @@ this round makes PENDING (verbatim tags as written in the records):
 All four were RULED at merge train round 24 (§7.2 below). The three tags
 above are the fix round's wording, kept verbatim here as history; every
 live record now reads «[USER] ratification — PENDING at the lane's tip,
-RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the
-merge» (…)» with the [AGENT]-default history left visible.
+RULED [USER] 2026-09-07 at merge train round 24 — (merge sign-off) (…)» with the [AGENT]-default history left visible.
 
 | item | disposition |
 |---|---|
@@ -846,12 +843,10 @@ D2 (the `string-member` lane retired unlanded), D5 (option (i): no byte
 channel, the `invalid-*` first lines refused by name), the BUG-087-shape
 extension (the `repanicCollapse` envelope under R-1) and the C4 (c)→(a)
 move of `repanic-same-value-abort` — as what the sign-off would ratify.
-[USER] Mike, 2026-09-07, verbatim as relayed by the [AGENT] coordinator
-(this worker did not receive it firsthand — cite as relayed): «Go ahead
-with the merge». The coordinator reads the sign-off as ratifying all four;
+[USER] Mike, 2026-09-07, as relayed by the [AGENT] coordinator
+(this worker did not receive it firsthand — cite as relayed): (merge sign-off). The coordinator reads the sign-off as ratifying all four;
 this worker records it so. Every PENDING tag this lane wrote now reads
-«[USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at
-merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT]
+«[USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 by the merge sign-off (relayed by the [AGENT]
 coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and
 the C4 (c)→(a) move as the four items ratified by this sign-off)», the
 [AGENT]-default history left visible (they WERE applied as defaults first):

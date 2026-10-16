@@ -774,8 +774,8 @@ the tier-strength bound written into the handoff. Ride-along:
 [AGENT] worker, lane `records/raft-deltas-0930` (worktree `.claude/worktrees/raft-deltas`, off `main` @ `883ebc36`).
 Continuing D-1…D-12 (W2 §4, W3 §1, W4.1, this log's D-12 above). Source: the raft-proofs team's note
 `docs/2026-09-30_note-from-raft-proofs.md` (verbatim copy), whose §1 lists three behaviour differences absent from this
-ledger. RULED [USER] Mike 2026-09-30, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Yes, I also prefer A,
-as long as it could be made faithful» (`docs/2026-08-31_qrow-rulings.md`, «The raft-proofs team's subject-delta note
+ledger. RULED [USER] Mike 2026-09-30, relayed by the [AGENT] coordinator — cite as relayed: route A preferred,
+provided it can be made faithful (`docs/2026-08-31_qrow-rulings.md`, «The raft-proofs team's subject-delta note
 (2026-09-30) — RULED»): record them, correct the codec comment, resolve all three by protobuf route A
 (`docs/2026-09-30_protobuf-route-a.md`, verdict FAITHFUL-FEASIBLE). They are sub-deltas of D-1/D-2/D-9 (the strip, the
 generated clone/equality, the generated `proto` dispatch) under JC-14's decoding contract, which the dated correction in
@@ -813,7 +813,7 @@ application, a harness) and through prototext renderings (`String()`, D-1's fail
 **Plan:** route A restores retention (an `unknownFields []byte` per struct, kept by the strip), re-encoding, `Size`, `Clone`,
 `Equal` — validated by `difftest.py`.
 
-**Witness rows («every detected gap is rowed»).** A corpus differential row CANNOT witness U-1/U-2/U-3 today: both of the
+**Witness rows (every detected gap is rowed).** A corpus differential row CANNOT witness U-1/U-2/U-3 today: both of the
 differential's legs execute the SUBJECT codec and agree with each other — fixtures run `GO111MODULE=off`, stdlib only, so
 protobuf-go cannot be an oracle inside `Corpus/`. The subject-vs-upstream instrument is `tools/raftsubject/difftest.py` (both
 under `go run`), whose section 7 — the W4.1 «OWED with command» obligation — RUNS OFFLINE now:
@@ -830,12 +830,12 @@ S3. No BUGS.md entry: these are subject deltas (the subject vs upstream), not ma
 ## Subject-delta ledger continuation (2026-09-30, window unit 5b): D-11 RE-KEYED onto the native `intn` pick site
 
 [AGENT] worker, lane `core/intn-pick-0930` (worktree `.claude/worktrees/intn-pick`, off `main` @ `bc91aa39`). Authority:
-[USER] Mike 2026-09-30, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Yes, I also prefer A, as long as it
-could be made faithful», item 2 of `docs/2026-08-31_qrow-rulings.md` «The raft-proofs team's subject-delta note (2026-09-30) —
+[USER] Mike 2026-09-30, relayed by the [AGENT] coordinator — cite as relayed: route A preferred, provided it can
+be made faithful; item 2 of `docs/2026-08-31_qrow-rulings.md` «The raft-proofs team's subject-delta note (2026-09-30) —
 RULED»: a native `Intn`-style pick site — GENERAL (a value in `[0, n)`, a panic if `n ≤ 0`), not raft-specific — inside the
 window before the single re-pin; execution table `docs/2026-09-24_window-plan.md` §4 unit 5b; design
 `docs/2026-09-30_intn-pick-design.md` (decisions D1–D8 PENDING [USER] ratification at the merge ask — RATIFIED [USER] Mike
-2026-10-01 at train r58, «agree, land it, ratify all including the harness fix», relayed; option B not taken).
+2026-10-01 at train r58, (landing agreed, everything ratified including the harness fix), relayed; option B not taken).
 
 **D-11 `raft/raft.go`, `(*lockedRand).Intn` — RE-KEYED (D6).** Before (W4.1 item 3, JC-19): the draw was the first key of a
 range over a fresh `n`-key map — the map-iteration choice site, with a DISTRIBUTION delta under `go run` (Go's iteration
@@ -865,8 +865,8 @@ still meaningful: the body lowers through the new primitive.
 ## Subject-delta ledger continuation (2026-10-04, route A slice S1): U-1, U-2, U-3 RESOLVED; D-4 RETIRED; D-1, D-3 NARROWED
 
 [AGENT] S1 build worker, lane `lane/route-a-s1-1004` (worktree `.claude/worktrees/route-a-s1`, off the design branch
-`design/route-a-protobuf-1004` @ `04b659f0`). Authority: [USER] Mike 2026-10-04, verbatim, relayed by the [AGENT]
-coordinator — cite as relayed: «Approved» — ratifying `docs/2026-10-04_route-a-protobuf-design.md` D1–D12 and Q1–Q4, Q6, Q7 as
+`design/route-a-protobuf-1004` @ `04b659f0`). Authority: [USER] Mike 2026-10-04, relayed by the [AGENT]
+coordinator — cite as relayed: (approved) — ratifying `docs/2026-10-04_route-a-protobuf-design.md` D1–D12 and Q1–Q4, Q6, Q7 as
 recommended (Q5 PENDING; the note's §7 records the ruling). Slice S1 = the generator, the dispatch and the overlays (design §3
 cost row), plus — per the coordinator's brief — the D9 instruments red-first and the born corpus rows.
 
@@ -928,7 +928,7 @@ subject deltas, not machine-vs-gc fidelity bugs.
 
 ## Subject-delta ledger continuation (2026-10-05, route A slice S2): no delta changes; U-1/U-2 witnessed through RawNode
 
-[AGENT] S2 build worker, lane `lane/route-a-s2-1005` ([USER] Mike 2026-10-05 «Go ahead with Route A S2», relayed). The S1
+[AGENT] S2 build worker, lane `lane/route-a-s2-1005` ([USER] Mike 2026-10-05 (Route A S2 approved), relayed). The S1
 entry's forward reference («Through RawNode … is NOT in S1 — S2's») is discharged: two twin schedules via `runprobe.py`
 (`tools/raftsubject/twin-codec-lib.go`) — a malformed ConfChange proposal ABORTS on both legs with the U-1 text in either
 spelling (membership), an unknown-GROUP proposal is ACCEPTED, committed, applied and re-encoded byte-identical (U-2/U-3) —
@@ -939,8 +939,7 @@ delta opens, closes or narrows; the twin wire pin does not move.
 ## Subject-delta ledger continuation (2026-10-05, route A slice S3): route A CLOSED — U-1, U-2, U-3 and D-4 RETIRED; D-1, D-3 NARROWED (final)
 
 [AGENT] S3 build worker, lane `lane/route-a-s3-lowerdiag-1005` (worktree `.claude/worktrees/route-a-s3`, off `main` @
-`a3e18ff5`). Authority: [USER] Mike 2026-10-05, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Yes, go
-ahead» (route A S3 + the lowerdiag defer/go fix as one lane). S3 = «the rest of D12» (`docs/2026-10-04_route-a-protobuf-
+`a3e18ff5`). Authority: [USER] Mike 2026-10-05, relayed by the [AGENT] coordinator — cite as relayed: (approved) (route A S3 + the lowerdiag defer/go fix as one lane). S3 = «the rest of D12» (`docs/2026-10-04_route-a-protobuf-
 design.md` §4 D12, §8, §9 «Where S3 starts»). No subject change, no twin wire move, no baseline change on this slice; the
 records below CLOSE the entries the S1 continuation opened, against the witnesses now on `main`.
 
@@ -964,7 +963,7 @@ design D10 — raft never calls it; the `Unwrap` chain is checked directly, corp
 compared by MEMBERSHIP, never by a pinned byte (protobuf-go draws it per binary).
 
 **U-2 unknown groups — RETIRED.** RawNode witness: codec-unknown-group (accepted, where the pre-route-A subject aborted).
-Stated limit: the 10000/10001 recursion edges are not a corpus row ([USER] 2026-10-04 «agree to (i)», relayed; design §8) —
+Stated limit: the 10000/10001 recursion edges are not a corpus row ([USER] 2026-10-04, option (i) agreed, relayed; design §8) —
 covered by `codeccheck.py` 48–51 (machine leg at fuel 3e8) and section 8.
 
 **U-3 unknown fields — RETIRED.** RawNode witness: codec-unknown-group's application leg (each node decodes the committed

@@ -14,7 +14,7 @@ the baseline re-pin header of `baselines/native-full.tsv`, and
 ## Authorization (provenance, rule 7)
 
 [USER] Mike, 2026-09-03, relayed to this worker by the [AGENT]
-coordinator — NOT firsthand: «(3) agree, go ahead with the plan» —
+coordinator — NOT firsthand: (the plan approved, item (3)) —
 ruling the memo's gates G1 (hybrid), G3 (library docs pinned; `godoc:`
 anchors), G4 (library latitude as (b)-pins), G8 (admission register +
 caps), G9 (first slice = `strings`+`strconv`) AS RECOMMENDED. The twin-
@@ -26,9 +26,7 @@ retained ParseUint shim; the dropped-initializer rule) are argued in the
 memo's DONE marker and the register.
 
 **D-002 exception DENIED** — [USER] Mike, 2026-09-03, relayed by the
-[AGENT] coordinator (cited as relayed): «(a) we're not running Raft right
-now, I think going red is simpler and safer, and lets us do a clean
-retirement». The exception posed was the re-bodied `strconv.ParseUint`
+[AGENT] coordinator (cited as relayed): (option (a): with Raft not running, going red is simpler and safer and allows a clean retirement). The exception posed was the re-bodied `strconv.ParseUint`
 shim (a body change under the freeze + the `stdlibShimImports`
 shim→library coupling). Outcome, executed the same day: the ParseUint
 shim is RETIRED — `strconv.ParseUint` lowers from the pinned source like

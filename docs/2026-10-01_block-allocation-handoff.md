@@ -2,12 +2,10 @@
 
 [AGENT worker, lane `core/block-allocation-1001`] 2026-10-01. Window row 6 (charter rev. 2, [USER]-RULED
 2026-09-24, relayed). Design note `docs/2026-10-01_gc4-block-allocation-design.md` — G-C4 PASSED with all nine §7
-decisions ([USER] Mike 2026-10-01, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Those costs seem
-fine to me. Go ahead with these decisions. You can work on block allocation on the basis of approving all of your
-recommendations.»; ledger `docs/2026-08-31_qrow-rulings.md` «G-C4 (block-entry allocation) passed — RULED»). Before =
+decisions ([USER] Mike 2026-10-01, relayed by the [AGENT] coordinator — cite as relayed: (the costs accepted and every recommendation approved); ledger `docs/2026-08-31_qrow-rulings.md` «G-C4 (block-entry allocation) passed — RULED»). Before =
 `main` @ `52eddf4c`; after = the lane tip. Branch complete + the audit ask posed is this lane's end state; merge/push
 are the coordinator's and the [USER]'s. **The one STOPPED item (§4: a fuel-budget row flipped at its pinned work
-cap — decision 7) was RULED 2026-10-03 — option (a), raise the row's work cap:** [USER] Mike, 2026-10-03, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «yeah, agree with 1, land it». The row's `work=500000` is landed (§4);
+cap — decision 7) was RULED 2026-10-03 — option (a), raise the row's work cap:** [USER] Mike, 2026-10-03, relayed by the [AGENT] coordinator — cite as relayed: option 1 agreed, landing approved. The row's `work=500000` is landed (§4);
 the gate is red on the expected 5a pair only. The pre-merge audit (`docs/2026-10-02_block-allocation-audit.md`,
 branch `review/block-allocation-1001` @ `305afc95`) is MERGE-CLEAN; its records corrections F1–F6 are folded in below,
 each marked «(audit Fn)». Evidence: `docs/evidence/2026-10-01_block-allocation/`.
@@ -137,7 +135,7 @@ run-fuel budget (10 M) is nowhere near. The ONE budget that flips is an enumerat
 ## 4. The fuel-budget row flip (decision 7) — RULED 2026-10-03: option (a), the work cap raised
 
 **Row:** `sync/trylock/spin-until-trylock` (membership; params `width=4,sites=200,members=1,nonterm=200,backedge=1`;
-work cap 200000 — the manifest default). **RULING:** [USER] Mike, 2026-10-03, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «yeah, agree with 1, land it» — option (a). **Landed:** `work=500000` on the row
+work cap 200000 — the manifest default). **RULING:** [USER] Mike, 2026-10-03, relayed by the [AGENT] coordinator — cite as relayed: option 1 agreed, landing approved — option (a). **Landed:** `work=500000` on the row
 (`Corpus/coverage/exec/sync/trylock/cases.tsv`, with the reason in its `why`). Measured on the lane binary at
 `nonterm=200`: the enumeration needs 240834 work units (214263 steps + 26571 probes) — `--work-cap 240000` refuses
 («exceeded after 213499 step(s) + 26502 probe(s)»), 250000 / 300000 / 500000 pass with the identical tree; 500000 is
@@ -206,7 +204,7 @@ reference in `build-times-parallel.tsv`.
 
 ## Merge train r59 — the 5a record ([AGENT] coordinator, 2026-10-03)
 
-[USER] Mike 2026-10-03 «yeah, agree with 1, land it» (relayed). Pre-merge main `52eddf4c` → `refs/snapshots/r59/main`; train tip
+[USER] Mike 2026-10-03, option 1 agreed and landing approved (relayed). Pre-merge main `52eddf4c` → `refs/snapshots/r59/main`; train tip
 `cd043086` fast-forwarded; the primary's `.lake` built fresh (no warm copy; 0 foreign-worktree references). `release-check`
 EXIT=2 (EXPECTED — STALE, `build/files/GoLean/GoCore/AdmissionIndices.lean`); `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci
 --slow` EXIT=1, 1310 s — red on EXACTLY the 5a pair (the spin row PASS at its raised cap); 3800 rows, 3562 PASS / 238 FAIL =

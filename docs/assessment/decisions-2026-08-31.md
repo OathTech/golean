@@ -22,7 +22,7 @@ program's tiers.
    discrepancy backlog has it on the books." → entry D-002 in
    docs/discrepancy-backlog.md.
    **[AGENT] interim policy pending that design (fail-closed default;
-   CONFIRMED [USER] 2026-09-01 ("the 4 confirmations all seem like reasonable interpretations… agree on all of the above"), WITH the recorded revisit trigger: the freeze trades
+   CONFIRMED [USER] 2026-09-01 (the four confirmations accepted as reasonable interpretations, all agreed), WITH the recorded revisit trigger: the freeze trades
    away the cheapest lower-bound growth route — if the frontier
    re-ranking makes stdlib coverage urgent before the retirement
    design lands, the freeze is the first thing to revisit)**: until the retirement
@@ -43,13 +43,11 @@ program's tiers.
    gccgo / tinygo legs: deferred, needs a host-capability call
    (386 binaries currently abort in this sandbox).
 5. **Unbounded memory — (a)+(b) [USER], with the residual ON THE
-   BOOKS.** [USER] verbatim reasoning: "comparable to cerberus-C,
-   and there I think the answer is that memory is bounded and very
-   large, so any reasoning over arbitrary contexts has to account
-   for potential memory failures, but in execution runs it
-   essentially never happens. I think we should do (a) + (b) for
-   now, but log this as a discrepancy that should eventually be
-   retired." → (a) the allocation-succeeding-runs rider on
+   BOOKS.** [USER] reasoning: as in cerberus-C, memory is
+   bounded and very large, so reasoning over arbitrary contexts has
+   to account for potential memory failures, while in execution runs
+   they essentially never happen; (a) + (b) for now, logged as a
+   discrepancy to be retired eventually. → (a) the allocation-succeeding-runs rider on
    consumer-facing claims (Tier 2); (b) the deterministic
    maxAlloc panic class modeled (Tier 5); the residual
    (bounded-very-large memory as the eventual model, Cerberus-
@@ -81,10 +79,10 @@ scheduling rows red until routed; recommendation: adopt and route them
 in the same slice" — the memo's real blast radius is 23 rows, 8
 scheduling + 15 capacity; the coordinator has since disclosed this to
 the [USER]; see `docs/2026-09-01_membership-depth.md` §5); others = the
-periodic (non-gate) legs and the P5 filing. The reply, verbatim as
-relayed:
-
-«Re decisions on deck (1) the guard - agree with the redommendation, do (a); (2) panic-text, agree, demonic choice so both are admitted; (3) agree, go ahead with the plan; (4) Atomics - agree; (5) noodler gaps - already addressed; (6) strict-lane, agree; others: lower priority for now?»
+periodic (non-gate) legs and the P5 filing. The reply, as
+relayed: on the decisions on deck — (1) the guard: the recommendation agreed, option (a); (2) panic text:
+agreed, a demonic choice admitting both texts; (3) agreed, the plan approved; (4) atomics: agreed; (5) noodler
+gaps: already addressed; (6) strict-lane: agreed; the others lower priority for now.
 
 Where each ruling is recorded: (1) `scripts/coverage-baseline-diff` +
 `docs/coverage-suite-structure.md` (this lane); (2) BUGS.md BUG-087;
@@ -108,8 +106,8 @@ when the routing slice and the stdlib slice 1 have landed.
 
 **Membership sampling budget (membership-depth §6 P2) — ADOPTED [USER]
 2026-09-03**, a SEPARATE exchange the same day, relayed by the [AGENT]
-coordinator (not firsthand): «yeah, agree on the sampling budget, go
-ahead as you propose» — alternate plain/race draws, early stop at the
+coordinator (not firsthand): the sampling budget agreed as proposed
+— alternate plain/race draws, early stop at the
 `members=` pin, K=32 under `--diff` / K=80 under `--slow`. The budget
 before this ruling is the implicit 10 draws (memo §1 "Membership
 sampling today"); K=32 exists only inside P2. Implementing lane
@@ -122,8 +120,8 @@ Implementation record for that ruling, from lane `sampling-budget`
 train, [AGENT]; the lane's own wording follows):
 
 * **Membership sampling budget — APPROVED [USER]** (Mike, relayed by the
-  coordinator; cited as relayed): «yeah, agree on the sampling budget,
-  go ahead as you propose.» Adopts `docs/2026-09-01_membership-depth.md`
+  coordinator; cited as relayed): the sampling budget agreed as
+  proposed. Adopts `docs/2026-09-01_membership-depth.md`
   §4.3 / P2: alternate plain and `-race` draws, stop early at the
   `members=` pin, else at K; K=32 on the gate path (`--diff`), K=80
   under `--slow`; `draws=` reported beside `exhibited=`. Gate change,
@@ -141,16 +139,13 @@ train, [AGENT]; the lane's own wording follows):
   `docs/evidence/2026-09-03_sampling-budget/`. The flagged `members=1`
   finding (rows took exactly one plain draw under the rule as first
   ruled) was ruled the same day — **two-draw floor, APPROVED [USER]**
-  (Mike, relayed by the coordinator; cited as relayed): «(d) this is a
-  'spirit of the ruling' vs. 'letter of the ruling' case - we should do
-  option A which seems like the spirit of the ruling» — option A: the
+  (Mike, relayed by the coordinator; cited as relayed): (option A: the spirit of the ruling over its letter) — option A: the
   early stop fires only after one plain AND one `-race` draw; the three
   `members=1` rows re-run under it take exactly two draws, both in the
   set (caption `draws=2 (floor; …)`).
 
 **Addendum 2026-09-04 — standing post-train `--slow` re-cert, ADOPTED
-[USER]** (Mike, relayed by the coordinator; cited as relayed): «Yeah,
-that make sense, let's adopt that» — a merge train whose landed
+[USER]** (Mike, relayed by the coordinator; cited as relayed): (adopted) — a merge train whose landed
 branches touched `tools/nativefrontend/wire.go` or
 `GoLean/NativeToIR.lean` runs `scripts/ci --slow` at the merged tip and
 refreshes the certification record, with a changed certified set

@@ -20,7 +20,7 @@ No rush — we implement after our ownership redesign lands; until then nothing 
 
 ## The coordinator's reply (summary; [AGENT] coordinator, 2026-10-05)
 
-Acknowledged. G-R1–G-R4 are one lane, scheduled after merge train r66 ([USER] Mike 2026-10-05 «(1) Go ahead», relayed).
+Acknowledged. G-R1–G-R4 are one lane, scheduled after merge train r66 ([USER] Mike 2026-10-05 (go-ahead for item (1)), relayed).
 The statements are additive: the existing forms (`runProgramSetup_noInit`, the `{}`-store `setup_*` lemmas) are kept, as
 corollaries of the general ones. G-R4's exact statement is sent to the logic team for review before it is proved.
 

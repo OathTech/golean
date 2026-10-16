@@ -3,16 +3,15 @@
 **Status:** BRANCH-COMPLETE on lane `c-arc-b4` (SHAs in §9; not merged —
 the audit ask is the coordinator's to pose; merge/push are the [USER]'s).
 **Provenance:** design gate G-C5 RULED [USER] 2026-09-04 as recommended
-(relayed by the [AGENT] coordinator — «let's move ahead with the plan»,
+(relayed by the [AGENT] coordinator — the plan approved,
 cited as relayed, not firsthand; `docs/2026-09-04_reasoning-surface-plan.md`
 §5.4); the coordinator's per-gate reading of that ruling CONFIRMED [USER]
-2026-09-05 («(1) approved», relayed; `docs/2026-08-31_qrow-rulings.md`
+2026-09-05 (item (1) approved, relayed; `docs/2026-08-31_qrow-rulings.md`
 record of that date). B4 is arc step (iv) of the [USER]-ratified
 design-hygiene arc (`docs/2026-09-03_design-hygiene-arc.md`; review
 entry `docs/2026-09-03_grumpy-professor-review.md` §3(b) B4, C5). Every
 design choice below is [AGENT] unless marked; the standing [USER]
-directions this lane worked under (relayed): «do the disruptive thing if
-it'll result in a more useful reasoning surface»; break incorrect
+directions this lane worked under (relayed): do the disruptive thing where it yields a more useful reasoning surface; break incorrect
 behaviour rather than preserve it; every detected gap gets a frontier
 row; refusals name their cause. **Evidence:**
 `docs/evidence/2026-09-05_c-arc-b4/`. Template: the wave-(iii) note

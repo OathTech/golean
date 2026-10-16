@@ -1,8 +1,8 @@
 # Protobuf route A — feasibility and design (2026-09-30)
 
 [AGENT] worker, lane `records/raft-deltas-0930` (worktree `.claude/worktrees/raft-deltas`, off `main` @ `883ebc36`). The question
-the [USER] made the condition (Mike, 2026-09-30, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Yes, I also prefer
-A, as long as it could be made faithful»): can a Go codec in `raftsubject/`, lowered by our frontend, be FAITHFUL to protobuf-go
+the [USER] made the condition (Mike, 2026-09-30, relayed by the [AGENT] coordinator — cite as relayed: route A preferred,
+provided it can be made faithful): can a Go codec in `raftsubject/`, lowered by our frontend, be FAITHFUL to protobuf-go
 wherever raft can observe it? Inputs: protobuf-go **v1.36.11** — the version raft pins (`deps/raft/go.mod`), read from the Go module
 cache (`/home/dev/go/pkg/mod/google.golang.org/protobuf@v1.36.11`, no network); upstream raft @ `56e32004`; the raft-proofs note
 (`docs/2026-09-30_note-from-raft-proofs.md`) and its frozen corpus `fixtures/i6/malformed-conf-bytes.json` (26 entries, read-only

@@ -1,12 +1,12 @@
 # The native `Intn`-style pick site — design (window unit 5b)
 
 [AGENT] worker, lane `core/intn-pick-0930` (off `main` @ `bc91aa39`), 2026-09-30. Authority: [USER] Mike 2026-09-30,
-verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Yes, I also prefer A, as long as it could be made
-faithful», item (2) of `docs/2026-08-31_qrow-rulings.md` «The raft-proofs team's subject-delta note (2026-09-30) — RULED»:
+relayed by the [AGENT] coordinator — cite as relayed: route A preferred, provided it can be made
+faithful; item (2) of `docs/2026-08-31_qrow-rulings.md` «The raft-proofs team's subject-delta note (2026-09-30) — RULED»:
 a GENERAL native pick site — a value in `[0, n)`, a panic if `n ≤ 0` — inside the window, before the single re-pin;
 execution table `docs/2026-09-24_window-plan.md` §4 unit 5b. The three teams' notes are design input, not positions
 ([USER], same day). Every decision below is [AGENT]; PENDING [USER] ratification at the lane's tip, RATIFIED [USER] Mike 2026-10-01 at train
-r58 — «agree, land it, ratify all including the harness fix» (relayed by the [AGENT] coordinator — cite as relayed), all of D1–D8, option B (§2) NOT taken. None changes an
+r58 — (landing agreed, everything ratified including the harness fix) (relayed by the [AGENT] coordinator — cite as relayed), all of D1–D8, option B (§2) NOT taken. None changes an
 existing row's observations or takes a (b) pin (the whole-corpus choice trace is the check).
 
 ## 1. What Go says at the pin (go1.26.5, `deps/go/src`)
@@ -42,7 +42,7 @@ uniform draw in `[0, n)` (`rand.go:178–181`). `math/rand/v2.IntN` likewise, te
   ratified, B not taken; the re-keyed D-11 stands).
 - **C. A raft-specific native for `(*lockedRand).Intn`.** Excluded by the ruling (GENERAL, not raft-specific).
 
-## 3. Decisions (all [AGENT]; RATIFIED [USER] Mike 2026-10-01, train r58 — «agree, land it, ratify all including the harness fix», relayed; PENDING at the lane's tip)
+## 3. Decisions (all [AGENT]; RATIFIED [USER] Mike 2026-10-01, train r58 — (landing agreed, everything ratified including the harness fix), relayed; PENDING at the lane's tip)
 
 - **D1** Option A. `ChoiceSite.intn`, canonical slot 0 = the value 0 (the empty/exhausted tape draws 0; bound = `n`
   exactly; `n = 1` pops nothing; `n ≥ 2` always pops — a DATA pick, not a scheduling pick).

@@ -243,7 +243,7 @@ GOMAXPROCS {1, 8}; schedule-dependent subjects reported as ranges).
    census gains `tryLock` (A′'s "zero new sites" read as "zero new
    sites FOR THE ATOMICS"; one S slice, ~`applySyncOp` arm + site +
    membership rows), or (b) the rider moves off A′ to its own item.
-   **RESOLVED [USER] 2026-09-03** («(4) Atomics - agree», relayed — the
+   **RESOLVED [USER] 2026-09-03** ((item (4), atomics, agreed), relayed — the
    rulings sheet's 2026-09-03 sitting record): (a)+(b) together — its
    own slice adding the `tryLock` site, the A′ sentence amended for
    TryLock only; LANDED on lane `q-trylock` the same day (rulings row
@@ -267,7 +267,7 @@ GOMAXPROCS {1, 8}; schedule-dependent subjects reported as ranges).
    merely be asserted. A pin drift or a model edit that departs from
    upstream turns the argument red.
    **CONFIRMED [USER] 2026-09-03: the typed-wrapper shadow model is NOT
-   shim injection under D-002** («(4) Atomics - agree», relayed by the
+   shim injection under D-002** ((item (4), atomics, agreed), relayed by the
    [AGENT] coordinator; D-002's row in `docs/discrepancy-backlog.md`
    carries the same note).
 3. **Wave 2** (recorded in TODO.md): `atomic.Value` (interface slot;

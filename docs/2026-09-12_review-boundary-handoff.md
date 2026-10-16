@@ -4,10 +4,9 @@
 
 [AGENT] worker, 2026-09-12. Branch `fix/review-boundary-0911`, worktree
 `.claude/worktrees/fix-review-boundary`, cut from main `a461ed8b`. Authority:
-[USER] Mike 2026-09-11, verbatim, relayed by the [AGENT] coordinator — cite as
-relayed: «Great, go ahead and land this, then launch the lanes», on
-`docs/2026-09-11_review-dispositions.md` §4 step 1; BUG-109's policy: «Yes,
-refuse non-1.26». State: BRANCH-COMPLETE, parked on the branch; NOT merged, NOT
+[USER] Mike 2026-09-11, relayed by the [AGENT] coordinator — cite as
+relayed: (landing approved, lanes to launch), on
+`docs/2026-09-11_review-dispositions.md` §4 step 1; BUG-109's policy: (refuse non-1.26). State: BRANCH-COMPLETE, parked on the branch; NOT merged, NOT
 pushed (both are the [USER]'s separate sign-offs); the adversarial-audit ask is
 posed in the final report. Every gate line, transcript and measurement:
 `docs/evidence/2026-09-11_review-boundary/README.md` (corrected by the audit fix round, final section).
@@ -137,8 +136,8 @@ GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow      # fresh re-certificatio
 
 ## Audit fix round (2026-09-15)
 
-[AGENT] fix-round worker, 2026-09-15. Authority: [USER] Mike 2026-09-15, verbatim, relayed by
-the [AGENT] coordinator — cite as relayed: «Go ahead and launch the autit». The audit is
+[AGENT] fix-round worker, 2026-09-15. Authority: [USER] Mike 2026-09-15, relayed by
+the [AGENT] coordinator — cite as relayed: (the audit launched). The audit is
 `docs/2026-09-15_review-boundary-audit.md` (branch `review/review-boundary-0911`, `96d65e07`;
 its evidence dir is `docs/evidence/2026-09-15_review-boundary-audit/` on that branch).
 **Verdict: FIX-FIRST, RECORDS-ONLY** — no wrong answer, no fail-open with an observable effect;

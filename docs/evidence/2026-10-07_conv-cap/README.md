@@ -1,7 +1,6 @@
 # Evidence — R3 / b6, the `[]byte(s)` / `[]rune(s)` capacity envelope (lane `lane/conv-cap-1007`, 2026-10-07)
 
-[AGENT] build worker. Design `docs/2026-10-07_conv-cap-design.md` (D1–D8 ratified [USER] Mike 2026-10-07 «yeah agree,
-build now», relayed); the measured envelope itself is `docs/evidence/2026-10-07_conv-cap-design/`. Oracle go1.26.5
+[AGENT] build worker. Design `docs/2026-10-07_conv-cap-design.md` (D1–D8 ratified [USER] Mike 2026-10-07 (agreed; build approved), relayed); the measured envelope itself is `docs/evidence/2026-10-07_conv-cap-design/`. Oracle go1.26.5
 (`baselines/go-oracle-pin`). Bulk scratch (`.tmp/`: the wire exports, the per-consumption dumps, the coverage artifacts)
 was pruned at the lane's close; everything here regenerates from the commands below.
 
@@ -64,4 +63,4 @@ there would need the frontend/decoder to mark the range operand, i.e. a wire or 
 machine-side recognition of the range desugar) — a design change; (iii) both. Until ruled: the baseline is NOT
 re-pinned, the 17 pre-existing rows are untouched, and the lane tip's gate stands RED on the three steps named above.
 
-**Ruling on the finding** ([USER] Mike 2026-10-07 «Agree», relayed by the [AGENT] coordinator): option (i), conditional on the measured gate cost ≤ ~10% vs main's latest close — applied (`option-i-row-metadata.tsv`), measured (`timing.tsv`: −0.2% vs r72), re-pinned (`baselines/native-full.tsv` header, 2026-10-07 lane/conv-cap-1007). Every observation of every pre-existing row is identical before and after; the 17 rows' PASS→FAIL→PASS is a metadata story only.
+**Ruling on the finding** ([USER] Mike 2026-10-07 (agreed), relayed by the [AGENT] coordinator): option (i), conditional on the measured gate cost ≤ ~10% vs main's latest close — applied (`option-i-row-metadata.tsv`), measured (`timing.tsv`: −0.2% vs r72), re-pinned (`baselines/native-full.tsv` header, 2026-10-07 lane/conv-cap-1007). Every observation of every pre-existing row is identical before and after; the 17 rows' PASS→FAIL→PASS is a metadata story only.

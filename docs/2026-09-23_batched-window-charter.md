@@ -13,14 +13,14 @@ Nothing here is decided: §7 lists the decisions, all PENDING [USER].
 
 | Standing | What | Provenance |
 |---|---|---|
-| RULED | ONE window, ONE re-pin offer after it, with a changelog: «I think we'll want to give them one repin after all the breaking changes have landed. Can we batch these together» | [USER] Mike 2026-09-22/23, verbatim, relayed |
-| RULED | the sequential label is the FULL event label: «we should make the model as regular as possible» — inside the window, before C3 | [USER], same |
-| RULED | NaN [a]+[b] DEFERRED: «if this isn't in the target, we can defer it» | [USER], same |
-| RULED | item 4 — a named stable set + per-pin changelog, equation lemmas if asked, NO facade: «Right, I agree regarding item 4, let's see what that team asks for» | [USER] 2026-09-23, relayed |
-| RULED | the branch stays unmerged during their review: «We can leave it on a branch while they look at it» | [USER] 2026-09-23, relayed |
+| RULED | ONE window, ONE re-pin offer after it, with a changelog: (one re-pin after all the breaking changes have landed, batched together) | [USER] Mike 2026-09-22/23, relayed |
+| RULED | the sequential label is the FULL event label: (the model as regular as possible) — inside the window, before C3 | [USER], same |
+| RULED | NaN [a]+[b] DEFERRED: (deferred as outside the target) | [USER], same |
+| RULED | item 4 — a named stable set + per-pin changelog, equation lemmas if asked, NO facade: (item 4 agreed; wait for what that team asks for) | [USER] 2026-09-23, relayed |
+| RULED | the branch stays unmerged during their review: (the branch stays unmerged while they review it) | [USER] 2026-09-23, relayed |
 | ENDORSED | the batch; order **E6 → label + execution bridges → P → C3 → B6 → C4**; E6 inside as the first item; `{trace, picks, out}`; `BridgeSet.lean` + equation lemmas over the FINAL shape; records NOW; NaN/profiles/no-`Language`-spike deferrals | logic team §Recommendation, §3, §6, §7 Q1–Q8 |
 | REQUIRED | five corrections to the execution statement (`Prefix`/`Finish` primary, `LRun` derived); conditions on P/B6/C4/C1; the confluence claim withdrawn; NPDRF stays unusable; universal refusal exclusion retained on their side | §1, §2, §4, §7 tail |
-| REVIEWED | Codex review received ([USER]: «Window charter review landed from codex»): «support the direction; revise three points before treating this as an execution-ready charter» — F1 E6's exit accounting (P1), F2 the zero-cost classification predicate (P2), F3 the inventory procedure (P2); this rev. 2 applies all three; the review grants no authorization | review @ `28b12c50`; ledger record 2026-09-23 |
+| REVIEWED | Codex review received ([USER]: (the Codex review of the window charter received)): «support the direction; revise three points before treating this as an execution-ready charter» — F1 E6's exit accounting (P1), F2 the zero-cost classification predicate (P2), F3 the inventory procedure (P2); this rev. 2 applies all three; the review grants no authorization | review @ `28b12c50`; ledger record 2026-09-23 |
 | PROPOSED | everything below; the logic team's conditions and the review's revisions are adopted as [AGENT] proposals, PENDING [USER] (§7) | [AGENT] |
 
 ## 1. The window

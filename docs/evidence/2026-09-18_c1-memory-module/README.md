@@ -647,7 +647,7 @@ sha256 `bd48dac56d3e1fb1…`, `cmp` EXIT=0 — BYTE-IDENTICAL** (`choice-trace-s
 
 ## Merge train r41 — the 5a record ([AGENT] coordinator, 2026-09-18)
 
-[USER] Mike 2026-09-18, verbatim (relayed): «(1) agree, (2) agree. Go ahead». Pre-merge main `68b261e6` →
+[USER] Mike 2026-09-18 (relayed): items (1) and (2) agreed, go-ahead given. Pre-merge main `68b261e6` →
 `refs/snapshots/r41/main`; C1 S0–S2b + the ratification record (`2bedbc68`) fast-forwarded; the audit
 branch rebased (`f901c46c`) and fast-forwarded. Under the lock at `f901c46c`: `scripts/build-certified`
 EXIT=0, 117 s (binary `42b7bf1ab5f2…` — the fix round's official detector-soundness binary);

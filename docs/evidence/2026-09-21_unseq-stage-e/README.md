@@ -207,7 +207,7 @@ identical dump). The same standing exit-1 findings on both sides (  racy race/ne
 ## The audit fix round (2026-09-21) — F1–F4 closed, F5–F9 recorded
 
 The adversarial audit (`docs/2026-09-21_unseq-stage-e-audit.md`, candidate `3649b7db`, verdict FIX-FIRST; its evidence
-`docs/evidence/2026-09-21_unseq-stage-e-audit/`) dispatched by [USER] Mike («Dispatch the audit as you propose», relayed);
+`docs/evidence/2026-09-21_unseq-stage-e-audit/`) dispatched by [USER] Mike (the audit dispatched as proposed, relayed);
 dispositions in the handoff §5, the design §E4 «the audit fix round». The branch was rebased onto main `769bbf23` first
 (the family commits map E1 `0fe7bdce` → `a2c8a35f`, E2 `6960697f` → `d1db8a14`, E3 `c1c27f27` → `22ec98d5`, E4 `7f7e6b79` →
 `d5363273`).
@@ -245,7 +245,7 @@ doc version sites), none new.
 
 ## Merge train r46 — the 5a record ([AGENT] coordinator, 2026-09-22)
 
-[USER] Mike 2026-09-22, verbatim (relayed): «Agree on the judgements, go ahead» — the merge sign-off for Stage E
+[USER] Mike 2026-09-22 (relayed): the judgements agreed, go-ahead given — the merge sign-off for Stage E
 (E1–E4 + the audit fix round) with the seven ratification items RULED as posed (the ask 2026-09-21; rulings ledger
 «The Stage E landing ratification record (2026-09-22)»). Pre-merge main `769bbf23` → `refs/snapshots/r46/main`
 (also `refs/snapshots/r46/{core-pre-train,review-pre-rebase}`); one train branch fast-forwarded: the lane

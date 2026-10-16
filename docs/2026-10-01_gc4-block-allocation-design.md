@@ -1,8 +1,7 @@
 # G-C4 design note — block-entry allocation (window row 6, C4)
 
-STATUS: RULED 2026-10-01 — G-C4 PASSED with all nine §7 decisions as recommended ([USER] Mike, verbatim, relayed by the [AGENT]
-coordinator — cite as relayed: «Those costs seem fine to me. Go ahead with these decisions. You can work on block allocation on the
-basis of approving all of your recommendations.»; ledger record `docs/2026-08-31_qrow-rulings.md` «G-C4 (block-entry allocation)
+STATUS: RULED 2026-10-01 — G-C4 PASSED with all nine §7 decisions as recommended ([USER] Mike, relayed by the [AGENT]
+coordinator — cite as relayed: (the costs accepted and every recommendation approved); ledger record `docs/2026-08-31_qrow-rulings.md` «G-C4 (block-entry allocation)
 passed — RULED (2026-10-01)»; landing lane `core/block-allocation-1001`, handoff `docs/2026-10-01_block-allocation-handoff.md`).
 Was: PROPOSED — HARD-STOP design gate; the [USER] passes or amends §7. [AGENT] design writer, 2026-10-01, branch `docs/gc4-design-1001`
 off `main` @ `ac6baa31` (P, C3, B6 landed; the `Intn` pick site 5b still to run — nothing below depends on it). Inputs:

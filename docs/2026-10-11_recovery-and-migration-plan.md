@@ -2,13 +2,12 @@
 
 [AGENT] recovery worker, lane `docs/recovery-migration-1011` (worktree
 `.claude/worktrees/recovery-migration-1011`, off `main` @ `4e3aeb3d`, the
-train r75 close). Authority: [USER] Mike, 2026-10-11, verbatim from the
-session prompt: «We are recovering after a crash caused by box contention.
-[…] We have also disabled auto-memory which was causing erratic behavior.
-[…] Also note the changes to global policy. Our next concrete step is to
-migrate onto another box, so please make sure that all branches are either
-landed, or identified for pushing to the git remote. Figure out a plan for
-recovery then migration to the new box». Every decision below is an [AGENT]
+train r75 close). Authority: [USER] Mike, 2026-10-11, the
+session prompt: recovery after a crash caused by box contention; auto-memory
+disabled for its erratic behaviour; the global policy changed; the next
+concrete step is migration to another box, so every branch is to be landed
+or identified for pushing to the remote, and a plan for recovery then
+migration is to be made. Every decision below is an [AGENT]
 proposal **PENDING [USER]** unless marked otherwise. Nothing was pushed,
 merged, deleted or pruned by this lane; the only state change is §2 (local
 refs, reversible).
@@ -128,9 +127,9 @@ stays with this box until the box is retired (§7). The 27 landed-by-patch
 branches are deletable after the landing is verified (D1). The full table follows, then the D1 ruling that revises
 the table's PUSH column.
 
-**D1 RULED** ([USER] Mike 2026-10-11, verbatim: «D1: why not land the
-records branches? Otherwise, yes. We should push live working branches and
-branches containing meaningful features we might use»). Applied:
+**D1 RULED** ([USER] Mike 2026-10-11: land the records branches rather
+than push them; otherwise yes — push live working branches and branches
+holding meaningful features that may be used). Applied:
 
 - *Landed instead of pushed* — six of the eight records/design branches are
   docs-only and merge onto `main` with zero conflicts (checked by
@@ -318,9 +317,8 @@ box. Where this charter and its tooling diverge:
 
 **4.1 `scripts/capped` vs the box-wide `capped` — RULED on the direction,
 the figure and the tooling lane PENDING [USER] (D2).** [USER] Mike,
-2026-10-11, verbatim (mid-session, relayed): «Note the global capped
-script is the correct one to use, here and on the new box (which has
-the same affordance)». So `capped` (box-wide, `/usr/local/bin/capped`)
+2026-10-11 (mid-session, relayed): the global capped script is the one
+to use, here and on the new box (which has the same affordance). So `capped` (box-wide, `/usr/local/bin/capped`)
 is the invocation of record from today; the project wrapper and the gate
 must be made to honour it (below), and until that lane lands,
 `capped scripts/ci` still runs capped — at the project's 64 G, not the
@@ -346,9 +344,7 @@ certified. The box's cap is silently replaced by the project's. Nothing is
 uncapped, but the box default is not honoured and no one is told. There is
 no `scripts/env.sh` here (cerberus-sl has the reference shape).
 
-**D2 RULED on the figure too** ([USER] Mike 2026-10-11, verbatim: «D2:
-conform to the box default, of course raising it is allowed during
-execution when needed»). So: NO project default — the box's
+**D2 RULED on the figure too** ([USER] Mike 2026-10-11: (D2: conform to the box default; raising it during execution when needed is allowed)). So: NO project default — the box's
 `$CAPPED_MEM_MAX` (32 G) governs, no `scripts/env.sh` override; a job that
 needs more is raised per invocation (`capped -m 64G -- <cmd>`) with the
 reason stated where it is run. The one known case is the measured one
@@ -408,7 +404,7 @@ too. After the move the global note's box list is the [USER]'s to update
 holds standing rules only. No change.
 
 **4.6 Scratch retention is by design and unbounded — D5 RULED ([USER]
-Mike 2026-10-11: «D5: keep the last run only»).** Implementation: on a
+Mike 2026-10-11, D5: keep the last run only).** Implementation: on a
 PASSING run `tools/admission-check.py` replaces a single
 `.tmp/admission-audit-last/` with the run's scratch (and prints that
 path); a FAILING run's scratch is retained under its own name, as now, so
@@ -438,8 +434,8 @@ practices that exist NOWHERE in the repo** and that a fresh session would
 get wrong. The golean-logic memory (8 files) concerns that repo; its
 `single-user-across-projects` is the mirror of draft 3 and adds its caveat.
 
-**D3 CLOSED — nothing migrates.** [USER] Mike 2026-10-11, verbatim:
-«D3, these are all minor, you can drop them». The remainder below is
+**D3 CLOSED — nothing migrates.** [USER] Mike 2026-10-11, D3: all
+minor, dropped. The remainder below is
 DROPPED: no `CLAUDE.md` addition from the old memory, the
 `architecture-rules.md` `rm` wording stays as it is (the global file's
 removal rule governs), and the drafts are kept here only as the record of
@@ -447,8 +443,8 @@ what was reviewed and declined. The old memory directory stays outside
 the repo and is not copied to milner-oath.
 
 **The drafts as reviewed (declined) — D3 history.**
-[USER] 2026-10-11: «D3: Some of these have now landed in the global
-claude.md. What's left?» Against the global file as of today: its
+[USER] 2026-10-11, D3: some of these had landed in the global
+claude.md — what was left? Against the global file as of today: its
 «Practices that apply everywhere» now carry never-kill-by-pattern (the
 second half of draft 1) and the crash-snapshot rule; its box section
 carries the worktree/`.tmp`/`.lake` removal rule (the principle of draft 2)
@@ -481,9 +477,9 @@ ruling the memory recorded, re-cited as relayed:**
    the prune. Under the migration, «keeping the worktree» should become
    «removing the worktree, keeping the branch» (§4.2).
 3. *What this repo is*, after the 2026-09-22 customer quote — «The
-   customer's user is our user ([USER] Mike 2026-09-30, relayed: «I'm the
-   user for all three teams so this is more a design tradeoff question than
-   a user negotiation question»): notes from golean-logic and raft-proofs
+   customer's user is our user ([USER] Mike 2026-09-30, relayed: one user for all
+   three teams, so a design trade-off, not a negotiation between
+   users): notes from golean-logic and raft-proofs
    are design input to one tradeoff, decided on the merits and recorded
    verbatim with provenance, not positions to negotiate; a [USER] ruling
    recorded in another repo does not by itself authorize work here.»
@@ -495,9 +491,9 @@ ruling the memory recorded, re-cited as relayed:**
    reversal.»
 5. *The gates* — «Gates are speedbumps against honest mistakes, not audit
    targets ([USER] 2026-08-11): refute-by-default review is aimed at
-   semantics, claims and records; a gate is reviewed for «does it catch the
-   honest mistake, is it simple enough never to be wrong, could we delete
-   it», and a gate-escape finding is answered by checking the convention,
+   semantics, claims and records; a gate is reviewed for whether it catches the
+   honest mistake, is simple enough never to be wrong, and could be
+   deleted, and a gate-escape finding is answered by checking the convention,
    not by growing the gate.»
 6. *Working practices* — «Codex grinds ([USER] 2026-10-05): frozen
    objective, hash-checked fence, milestones as checkpoints (commit,
@@ -519,7 +515,7 @@ records absolute paths; purge files naming `/.claude/worktrees/`
 The memory directory itself stays where it is (`~/.claude/projects.old`,
 outside the repo); it is not copied to the new box by this plan.
 
-## 6. Disk hygiene before the move — D4 agreed ([USER] 2026-10-11 «D4: agreed»): `.tmp` now, the rest at phase D
+## 6. Disk hygiene before the move — D4 agreed ([USER] 2026-10-11): `.tmp` now, the rest at phase D
 
 **Executed 2026-10-11 ([AGENT]):** the primary's `.tmp/` scratch families
 removed — 21 × `admission-audit-*` (7,794 MB), 382 × `golean-lsimports.*`
@@ -542,11 +538,10 @@ Log: `artifacts/disk-prune-2026-10-11.log`. Nothing under worktrees,
 
 ## 7. The migration plan — target: `milner-oath`, by push and clone only
 
-[USER] 2026-10-11: «D7: I'll manage that. We're moving Go projects to
-milner-oath» and, on the bundle this plan first proposed: «I'm not doing
-this, the repo is supposed to be free-standing, why would we do this?» and,
-verbatim: «Yes, we're not going to packrat everything. If it's important
-we push it. If it isn't, we throw it out». So the move is the ordinary one: everything that matters is on `origin`,
+[USER] 2026-10-11, D7: the [USER] manages the move; Go projects move to
+milner-oath; the bundle this plan first proposed is declined — the repo is
+free-standing — and nothing is packratted: what is important is pushed,
+what is not is thrown out. So the move is the ordinary one: everything that matters is on `origin`,
 milner-oath clones it, nothing is copied box to box. The 409 snapshot refs,
 the stash entries, the §2 recovery refs, the 77 worktrees, the parked-era
 lanes not in the push set, and the gitignored `deps/`, `artifacts/` and
@@ -561,7 +556,7 @@ wrong trade).
 - A2 ([AGENT], approved) `land/records-1011` fast-forwarded onto `main`,
   the fast gate at the merged tip; then the `fix/capped-alignment` lane
   (§4.1, §4.6) built, gated, audit-asked and, on sign-off, landed.
-- A3 ([USER], outside the sandbox; «I'll do this when we're ready») the
+- A3 ([USER], outside the sandbox, when ready) the
   push set of §3, each push checked against `git ls-remote origin` first —
   a non-fast-forward on `main` means someone pushed from elsewhere and is a
   STOP:
@@ -613,9 +608,9 @@ python3 tools/certification.py release-check --base <origin/main at the push>
   or the environment drifted). No worktree is recreated; a lane makes its
   own from its branch.
 
-**Restart priority on milner-oath — a gate cull ([USER] Mike 2026-10-11,
-verbatim: «an early priority for this project's restart is a gate cull to
-conform to the gate cruft rules»).** The rule is the global `~/.claude/CLAUDE.md`
+**Restart priority on milner-oath — a gate cull ([USER] Mike 2026-10-11:
+an early priority for the restart is a gate cull conforming to the gate
+cruft rules).** The rule is the global `~/.claude/CLAUDE.md`
 section «Gates and speedbumps (avoid gate cruft)»: only the trust surface gets
 blocking gates, kept small and named in the project's working-practices doc;
 everything else is a cheap speedbump at claim points; over-elaborate gating is
@@ -658,25 +653,25 @@ holds the push set.
   prepared; the push set is `main`, the two tags, the two archive
   branches, the three `campaign-*` branches and `design-pass`. Open only:
   the merge sign-off for `land/records-1011`.
-- **D2** RULED in full ([USER] 2026-10-11: box-wide `capped`; «conform to
-  the box default, of course raising it is allowed during execution when
-  needed»). Open only: the go-ahead for the `fix/capped-alignment` lane
+- **D2** RULED in full ([USER] 2026-10-11: box-wide `capped`; conform to
+  the box default, raising it during execution when needed being
+  allowed). Open only: the go-ahead for the `fix/capped-alignment` lane
   (shim, `scripts/ci` accepting `CAPPED_STATE` and scaling from the box
   cap, the charter wording).
-- **D3** RULED («these are all minor, you can drop them»): no charter
+- **D3** RULED (all minor, dropped): no charter
   additions from the old memory; the `rm` wording stays. Closed.
-- **D4** RULED («agreed»): the primary's `.tmp` pruned 2026-10-11 (9.3 GB
+- **D4** RULED (agreed): the primary's `.tmp` pruned 2026-10-11 (9.3 GB
   freed, §6); worktrees, `artifacts/` and `deps/` at phase D.
-- **D5** RULED («keep the last run only»): §4.6 says how; lands with the
+- **D5** RULED (keep the last run only): §4.6 says how; lands with the
   `fix/capped-alignment` lane.
 - **D6** The seeded-heap HARD STOP stays open; it travels by push (D1) and is
   not re-posed here.
-- **D7** RULED («I'll manage that. We're moving Go projects to
-  milner-oath»): the [USER] runs the sibling passes; the target box is
+- **D7** RULED (the [USER] manages the move; Go projects move to
+  milner-oath): the [USER] runs the sibling passes; the target box is
   `milner-oath`.
-- **D8** RULED («nothing to do, I'm editing it»): the [USER] edits the
+- **D8** RULED (nothing to do here; the [USER] is editing it): the [USER] edits the
   global box note; no action here.
-- **D9** RULED («no, I've already migrated raft-proofs»): no reasoning-era
+- **D9** RULED (no; raft-proofs already migrated): no reasoning-era
   `deps/` checkout is carried; `deps/` on milner-oath is the gate's default
   set plus `covmap`/`grossmith` only.
 

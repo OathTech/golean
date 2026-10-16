@@ -7,12 +7,7 @@ design.md` (the "09-06 design") — reused BY SECTION, its typed-consumer-sprint
 
 ## 1. Authority and objective
 
-Authority ([USER] Mike, 2026-09-11, verbatim, relayed by the [AGENT] coordinator — cite as relayed): «okay, I am still concerned
-that we are not focusing our energy on actually making the *go semantics* as good as possible. We don't have as of now a customer.
-Our job is to make the Go seantics as good as we can make it. Nothing else. We can do limited spikes to try to validate our
-choices, but our top level goal is to make the semantics good. We should prioritize high value efforts, like cleaning up the
-handling of state, and making the semantics structure regular. We *can* provide a relational definition along with it too.
-Everything else should be dropped». Recorded in `docs/2026-09-11_review-dispositions.md` §0/§4: B7 is step 3 of the agreed sequence
+Authority ([USER] Mike, 2026-09-11, relayed by the [AGENT] coordinator — cite as relayed): the scope ruling — concentrate on making the Go semantics as good as possible, there being no customer as of then; limited spikes may validate choices, but the top-level goal is a good semantics; prioritize high-value work such as cleaning up the handling of state and making the semantics structure regular; a relational definition may be provided alongside; everything else is dropped. Recorded in `docs/2026-09-11_review-dispositions.md` §0/§4: B7 is step 3 of the agreed sequence
 ("B7, then C1"), done for its own sake, relation and coherence proofs moving in step, under the hygiene arc's six invariants
 (`docs/2026-09-03_design-hygiene-arc.md`) and the review's caution against the refactor as evidence (`2026-09-11_project-review.md` §13).
 
@@ -169,7 +164,7 @@ fixture family and its 52 sites are not purely mechanical, or if `step_preserves
 
 ## 9. Decisions for the [USER] — posed, not ruled; [AGENT] recommendations marked
 
-**RULED [USER] 2026-09-16** («Yes, let's go ahead with the D1-8 rulings as recommended (aside from D3)», relayed; record:
+**RULED [USER] 2026-09-16** ((the D1-8 rulings approved as recommended, D3 aside), relayed; record:
 `docs/2026-08-31_qrow-rulings.md`, «The B7 charter rulings record (2026-09-16)»): D1 (a), D2 (b), D3 PARK (ruled separately),
 D4 (a), D5 (a), D6 delete, D7 delete-with-the-tag/note-treatment as a separate parking-lane commit ([AGENT] reading of «as
 recommended», disclosed), D8 REPLAY. The bullets below are kept as posed; this paragraph is the ruling.

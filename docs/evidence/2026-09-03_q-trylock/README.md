@@ -135,7 +135,7 @@ sync-words table cites the probe subjects by name);
    acquires — 40/40 plain at both GOMAXPROCS, 17/40 and 20/40 under
    `-race`. Consequence: TryRLock's acquirability widened to `!writer`
    (machine ⊇ gc on both phases; sync design §8 R1's value-observable
-   half; an [AGENT] widening in the safe direction, RATIFIED [USER] 2026-09-03 («TryRLock decision sounds fine», relayed by the [AGENT] coordinator)); the per-program sets are unchanged.
+   half; an [AGENT] widening in the safe direction, RATIFIED [USER] 2026-09-03 ((the TryRLock decision accepted), relayed by the [AGENT] coordinator)); the per-program sets are unchanged.
 6. **Gate.** Full `ci --diff` on the rebased dirty tree: every step ok; the
    drift vs main 221d8964's pin = exactly +18 born-PASS rows and 2
    FAIL→PASS flips (the two TryLock frontier reds), NO PASS→non-PASS, no

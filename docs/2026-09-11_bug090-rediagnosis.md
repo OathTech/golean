@@ -1,8 +1,7 @@
 # BUG-090 re-diagnosed with a profile: two mechanisms, neither the association list (2026-09-11)
 
 [AGENT] lane `records/bug090-rediagnosis-0911`, records only (no fix, no runtime
-edit, no baseline change). Authority: [USER] Mike 2026-09-11, «Great, go ahead and
-land this, then launch the lanes» (relayed), on `docs/2026-09-11_review-dispositions.md`
+edit, no baseline change). Authority: [USER] Mike 2026-09-11, (landing approved, lanes to launch) (relayed), on `docs/2026-09-11_review-dispositions.md`
 §4 step 2(i); input to the C1 memory-module design (§4 step 3). Evidence — probe
 sources, runner, sampler, `results.json`, `steps.json`, generated `summary.md`, five
 profiles — `docs/evidence/2026-09-11_bug090-rediagnosis/` (README has the commands).

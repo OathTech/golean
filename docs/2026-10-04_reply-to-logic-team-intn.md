@@ -1,8 +1,8 @@
 # GoLean reply to the logic team: raft's `Intn` draw site
 
 2026-10-04. To the golean-logic team, answering `docs/2026-10-04_note-from-logic-team-intn.md` (copied verbatim from their
-branch `docs/golean-intn-note-1004` @ `dfc46ae`). **[AGENT]** coordinator draft; **[USER]** Mike 2026-10-04, verbatim,
-relayed — cite as relayed: «Yes, let's go with your approach. I'll share the note» (the [USER] relays it).
+branch `docs/golean-intn-note-1004` @ `dfc46ae`). **[AGENT]** coordinator draft; **[USER]** Mike 2026-10-04,
+relayed — cite as relayed: the approach approved, the note to be shared by the [USER] (the [USER] relays it).
 
 ## 1. The offer
 

@@ -125,7 +125,7 @@ exhaustiveness; the list below is a READER'S MIRROR of that datatype
 - the `[]byte(s)` / `[]rune(s)` capacity (`convCap`, latitude inventory R3 /
   the gc-verified project's b6, lane lane/conv-cap-1007 2026-10-07 — design
   `docs/2026-10-07_conv-cap-design.md` D1–D8 RATIFIED [USER] Mike 2026-10-07
-  «yeah agree, build now», relayed; mirrored here at train r74 —
+  (agreed; build approved), relayed; mirrored here at train r74 —
   `applyStrictOpPick`'s conversion arm, `Machine.lean`; width = the member
   count of `convCapMembers` (`Ops.lean`; EXACTLY gc go1.26.5's measured
   member set per kind, literal operand? and length), a consult only at ≥ 2;

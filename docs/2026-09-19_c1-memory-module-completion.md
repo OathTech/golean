@@ -1,7 +1,7 @@
 # C1 completion — the memory module against its charter (lane `core/c1-memory-module-s3-0919`, 2026-09-19)
 
 [AGENT] S3 worker. Charter `docs/2026-09-17_c1-memory-module-charter.md` (D1–D7, D9, D10 RATIFIED
-[USER] 2026-09-18 «(1) agree, (2) agree. Go ahead», relayed); handoffs S0–S2b
+[USER] 2026-09-18 (items (1) and (2) agreed, go-ahead given), relayed); handoffs S0–S2b
 `docs/2026-09-18_c1-memory-module-handoff.md`, S2c/BUG-111 `docs/2026-09-18_c1-memory-module-s2c-handoff.md`,
 S3 `docs/2026-09-19_c1-memory-module-s3-handoff.md`. Numbers below are derivation-anchored in
 `docs/evidence/2026-09-19_c1-memory-module-s3/` (S3) and the two predecessor evidence dirs.

@@ -2,8 +2,7 @@
 
 **Status:** LANDED on lane `c-arc-gu` (SHA in the landing record
 below). **Provenance:** design gate G-U RULED [USER] 2026-09-04 as
-recommended — relayed by the [AGENT] coordinator («Great, this sounds
-good - let's move ahead with the plan»; cited as relayed, not
+recommended — relayed by the [AGENT] coordinator (the plan approved; cited as relayed, not
 firsthand), `docs/2026-09-04_reasoning-surface-plan.md` §5.4 / §3.U;
 executed [AGENT] inside that ruling. Evidence:
 `docs/evidence/2026-09-04_c-arc-gu/`.
@@ -16,8 +15,7 @@ recommendation, it does not waive the per-item stop". The coordinator's
 reading [AGENT], recorded here exactly as it was made: G-U was presented
 to the [USER] INDIVIDUALLY as gate G-U — its verbatim gate text and a
 recommendation — in the coordinator's summary of the plan's nine gates,
-and the [USER] replied «Great, this sounds good - let's move ahead with
-the plan»; the coordinator takes that as the at-the-gate stop for each
+and the [USER] replied that the plan should move ahead; the coordinator takes that as the at-the-gate stop for each
 of the nine gates, since each was individually stated. This reading is
 being DISCLOSED to the [USER] for confirmation or correction; if the
 [USER] corrects it, the next lane amends this note and the arc plan.

@@ -2,14 +2,13 @@
 
 [AGENT] worker, lane `docs/gate-cull-plan-1012` (worktree
 `.claude/worktrees/gate-cull-plan-1012`, off `main` @ `89dfe677`). Authority:
-[USER] Mike 2026-10-11 «an early priority for this project's restart is a gate
-cull to conform to the gate cruft rules» (`docs/2026-10-11_recovery-and-migration-plan.md`
-§7); 2026-10-12, verbatim from the session prompt: the gate «is insanely absurdly
-over engineered and takes far too long to run», «prepare a plan for cutting it
-down to a design that enforces trust and does not slow everything to glacial
-pace», «DO NOT run the whole gate», «We don't need to baseline the gates
-beforehand»; mid-session: «We are likely going to throw out most of the costly
-certificate nonsense unless it is genuinely critical for trust». The rule applied
+[USER] Mike 2026-10-11: an early priority for the restart is a gate cull
+conforming to the gate cruft rules (`docs/2026-10-11_recovery-and-migration-plan.md`
+§7); 2026-10-12, the session prompt: the gate is grossly over-engineered and far
+too slow; prepare a plan cutting it down to a design that enforces trust without
+slowing everything; do not run the whole gate; no baselining of the gates
+beforehand; mid-session: most of the costly certificate apparatus is to go
+unless genuinely critical for trust. The rule applied
 is the global `~/.claude/CLAUDE.md` «Gates and speedbumps (avoid gate cruft)».
 
 Every disposition below is an [AGENT] proposal PENDING [USER] unless marked
@@ -206,9 +205,9 @@ nobody builds rots silently) and the fix is one line: `lakefile.toml`
 skipped silently by Lake, so the fast tier keeps one set check: every
 `Tests/*.lean` on disk must be named by a `lakefile.toml` glob (the same
 `find`-vs-lakefile comparison `check-core-audit` already does for `GoLean/`;
-one `comm` line, fails by name). The [USER] 2026-09-08 ruling (quoted in
-`scripts/ci`: «every Tests module has a library, and every library has an
-executed named CI build») keeps its intent, every Tests module is built on
+one `comm` line, fails by name). The [USER] 2026-09-08 ruling (recorded in
+`scripts/ci`: every Tests module has a library, and every library has an
+executed named CI build) keeps its intent, every Tests module is built on
 every gate, with a mechanism that costs nothing. **D2 asks for that re-ruling.**
 
 ### 3.3 The compiled «poison» and mutant controls — adversarial-grade, on checkers
@@ -380,7 +379,7 @@ the committed gate tails of 2026-10-01..11, `docs/2026-09-05_project-gate-audit.
 F8/F13, `docs/operational-lessons.md` §«A cached certification…», and the
 migration plan §4, §7, §9.
 
-## 9. Accounting — as landed (2026-10-12, [USER] «Yes, agree on all - do it»)
+## 9. Accounting — as landed (2026-10-12, [USER] agreed to all items)
 
 Branch `cull/gate-1012`, one commit per lane (the §6 lanes as commits on one
 branch rather than four branches: the [USER] cannot sign off merges mid-flight;
@@ -446,15 +445,15 @@ Measured on this box (milner-oath, 32 cores, warm `.lake`, box default cap
   ./tools/nativefrontend` could be one build per run, and the strict lane's
   three invariance streams are four interpreter runs per case.
 
-D10 — RULED ([USER] Mike 2026-10-12, verbatim: «the global rule is intended to
-mean any such records should be useful with a high bar for evidence»): the global
+D10 — RULED ([USER] Mike 2026-10-12: the global rule means that any such
+records must be useful, with a high bar for evidence): the global
 «Artifacts: rebuild or push, never hoard» rule and `docs/architecture-rules.md`
 «Evidence on main» do not conflict; a committed record must clear a high bar of
 usefulness. This branch commits no gate tails (the conclusions are in the commit
 messages and above); the existing `docs/evidence/` records stand under that bar.
 
-**Triage applied** ([USER] Mike 2026-10-12: «agree with the remediation plan -
-go ahead when ready»; the assessment: a tenth of the records cleared the bar),
+**Triage applied** ([USER] Mike 2026-10-12: the remediation plan agreed,
+go-ahead when ready; the assessment: a tenth of the records cleared the bar),
 branch `evidence/triage-1012` off the cull branch, pre-triage tip `63c9ea65`:
 deleted whole 106 of 179 directories (15 train stamps, 31 audit/review
 transcripts whose findings are in their dated docs, the rest cited by no
@@ -514,7 +513,7 @@ was done on the branch (fixes landed as the commit after the evidence triage):
   de-indented differential lanes, the fresh-fixture method-identity read,
   the workflow, the line counts and the §9 accounting.
 
-## 11. Follow-ups (2026-10-12, [USER] «yes go ahead»; branch `followups-1012`)
+## 11. Follow-ups (2026-10-12, [USER] approved; branch `followups-1012`)
 
 - **1a, the frontend built once per corpus run:** `go run ./tools/nativefrontend`
   per row became one `go build` per run into the run's artifacts dir. Frontend
