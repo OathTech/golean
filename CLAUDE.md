@@ -54,8 +54,7 @@ The customer's review shaped the current plan
 
 **What this repo provides, and does not** ([USER], Mike, 2026-09-16,
 verbatim, relayed; the qualifications are [AGENT], ratified by the
-[USER] the same day — «this is a good thing to roll into the
-statement»): «(1) we provide a Go semantics defined via the core
+[USER] the same day): «(1) we provide a Go semantics defined via the core
 GoCore language, (2) we ship a relational, i.e fuel-free semantics
 which is provably equivalent to the operational semantics, (3) we DO
 NOT ship any higher level reasoning. The aim is for the relational
@@ -90,9 +89,8 @@ pinned equation `runProgramSetup_noInit`), init-time printing is
 refused, and the domain premise `NoRefusal` covers the sequential
 driver only (a `go` statement leaves it). A refusal has no relation
 successor: a partial-correctness boundary ([USER] approved this
-wording 2026-09-28, «D2: approved», and its update 2026-10-03, «agree
-on 1-4», relayed, and its 2026-10-06 update, «Agree on 1 / 2»,
-relayed). (3):
+wording 2026-09-28 (D2), and its update 2026-10-03 (items 1-4),
+relayed, and its 2026-10-06 update (items 1 and 2), relayed). (3):
 the typed-admission profile family, the `GoLean/Interface.lean`
 facade and the adapter spikes were PARKED 2026-09-16 ([USER] ruling;
 tag `typed-profiles/last-main-2026-09-16`,
@@ -103,7 +101,7 @@ this repo at a pin. A consumer also inherits the Platform instance (gc, linux/am
 machine's concurrency granularity (the reduction to Go's access
 granularity is an explicit open obligation, not a theorem). This
 paragraph replaced the 2026-09-04 consumer-interface pointer with
-[USER] approval 2026-09-16 («approved to change the CLAUDE.md file»).
+[USER] approval 2026-09-16.
 
 - The semantics is **the weakest machine Go permits, all latitude
   included**. Differential testing is the lower bound (observed ∈
