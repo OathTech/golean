@@ -710,12 +710,12 @@ a `Classical.*` constant directly (`Tests/GoCoreAudit.lean`,
 entry points: walk a declaration's used constants and follow the ones whose
 axioms contain `Classical.choice` (a dozen-line `MetaM` loop).
 
-**Measured at 4.35** (this box, main's module set + the fixes, under the
-lock):
+**Measured at 4.35** (this box, under the lock; the module set named per row):
 
 | what | figure |
 |---|---|
-| cold full build, 169 jobs, `LEAN_NUM_THREADS=8`, `capped -m 64G` | 499 s wall; aggregate cgroup peak 3.2 GiB; largest process 3.1 GB (the 4.32.2 cold build of 2026-10-12: 163 jobs, 8 min 37 s) |
+| cold full build, `LEAN_NUM_THREADS=8`, `capped -m 64G`, main's module set (169 jobs) | 499 s wall; aggregate cgroup peak 3.2 GiB; largest process 3.1 GB (the 4.32.2 cold build of 2026-10-12: 163 jobs, 8 min 37 s) |
+| cold full build, same cap, the post-retirement tip (126 jobs; rebased onto `ea629cc8`) | 315 s wall; aggregate cgroup peak 3.1 GiB; largest process 3.1 GB; zero warnings |
 | fast tier (`capped scripts/ci`, warm) | 99 s |
 | kernel replay (`scripts/check-kernel-replay`, 68 modules, 4 threads) | 12.9 s; 5.9 GB peak (4.32.2: 17.8 s, 6.7 GB) |
 | `lake env leanexport GoLean` | 33 s; 2.7 GB; a 1.0 GB, 18.1 M-line export |
@@ -747,3 +747,15 @@ module-set equality catches an unbuilt module (`lake check` exports only
 what the default targets import), and `leanchecker`'s CLI is unchanged at
 4.35 (`--verbose`, `replaying <module>` lines; no `--help` — flags are
 partitioned by a leading dash and anything else is a module name).
+
+**After a rebase that deletes modules, wipe `.lake/build` before the gate.**
+Lake never removes the olean of a deleted module, and `leanchecker GoLean`
+replays every olean it finds under the prefix: after this lane rebased onto
+the relational retirement, the fast tier's kernel replay failed on the stale
+`GoLean.GoCore.PoolStep` olean («(kernel) unknown constant
+'GoLean.GoCore.Machine.Step'», 18 s, 26 GB peak at 4 threads from the retired
+closures loading) — the gate failing closed on the build tree, not the
+source. `scripts/check-kernel-replay` names a stale olean by path only when
+the replay itself succeeds (the set comparison runs after it); a kernel
+rejection in a module that no longer has a source is the same remedy:
+`rm -rf .lake/build` and rebuild cold (`capped -m 64G -- lake build`).

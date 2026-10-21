@@ -1498,22 +1498,22 @@ theorem applyStmtOp_plan_appendSlice_nospill {σ : Store} {elem : Ty} {nt : Nat}
     simp only [except_bind_ok]
     simp only [hsl, hel, hv1, hv2, hvis, htl] at hw
     by_cases hcap : slice.len + elemValues.size ≤ slice.cap
-    · simp only [if_pos hcap]
+    · simp only [ite_eq_left hcap]
       exact ⟨.ok fun s => do
           let (current, trW) ← Mem.storeRun ctx s slice slice.len elemValues.toList
           let (s', trT) ← Mem.store ctx current tloc
             (.slice { slice with len := slice.len + elemValues.size })
           pure (s', trE ++ trW ++ trT), fun ch => rfl⟩
-    · simp only [if_neg hcap]
+    · simp only [ite_eq_right hcap]
       cases hts : tySizeBytes ctx.types elem with
       | error e => exact ⟨.error e, fun _ => rfl⟩
       | ok elemSize =>
       simp only [except_bind_ok]
-      simp only [if_neg hcap, hts] at hw
+      simp only [ite_eq_right hcap, hts] at hw
       split
       · exact ⟨.error (.panic "runtime error: growslice: len out of range"), fun _ => rfl⟩
       · rename_i hr16
-        simp only [if_neg hr16] at hw
+        simp only [ite_eq_right hr16] at hw
         cases hold : Mem.loadSlice ctx σ slice with
         | error e => exact ⟨.error e, fun _ => rfl⟩
         | ok oldValues => rw [hold] at hw; cases hw
@@ -1575,7 +1575,7 @@ theorem applyStmtOp_plan_appendSlice_spill {σ : Store} {elem : Ty} {nt : Nat}
     subst hw
     unfold applyStmtOp.plan
     dsimp only
-    simp only [hsl, hel, hv1, hv2, hvis, htl, except_bind_ok, if_neg hcap, hts, if_neg hr16, hold]
+    simp only [hsl, hel, hv1, hv2, hvis, htl, except_bind_ok, ite_eq_right hcap, hts, ite_eq_right hr16, hold]
     refine ⟨fun extra => ?_, fun ch => ?_, fun pick => ?_⟩
     · exact do
         let newCap := slice.len + elemValues.size +
@@ -1588,7 +1588,7 @@ theorem applyStmtOp_plan_appendSlice_spill {σ : Store} {elem : Ty} {nt : Nat}
             (.slice { base := some base, offset := 0, len := slice.len + elemValues.size, cap := newCap })
           pure (s', trE ++ trO ++ trT)
     · have hw1 := one_lt_appendSpillWidth slice.cap (slice.len + elemValues.size)
-      simp only [Choices.consumeAtE_eq, PickRecord.ofPick, if_neg (Nat.not_le_of_lt hw1)]
+      simp only [Choices.consumeAtE_eq, PickRecord.ofPick, ite_eq_right (Nat.not_le_of_lt hw1)]
       rcases hc : Choices.consumeAt .appendSpill (appendSpillWidth slice.cap (slice.len + elemValues.size)) ch
         with ⟨extra, rest⟩
       try dsimp only
@@ -1611,14 +1611,14 @@ theorem intnBound?_some {vs : List GoValue} {w : Nat} (h : intnBound? vs = some 
     | ok tloc =>
       simp only [htl] at h
       by_cases h2 : 2 ≤ n
-      · rw [if_pos h2] at h
+      · rw [ite_eq_left h2] at h
         exact .inl ⟨tv, n, tloc, rfl, htl, h2, (Option.some.inj h).symm⟩
-      · rw [if_neg h2] at h; cases h
+      · rw [ite_eq_right h2] at h; cases h
   · rename_i n
     by_cases h2 : 2 ≤ n
-    · rw [if_pos h2] at h
+    · rw [ite_eq_left h2] at h
       exact .inr ⟨n, rfl, h2, (Option.some.inj h).symm⟩
-    · rw [if_neg h2] at h; cases h
+    · rw [ite_eq_right h2] at h; cases h
   · cases h
 
 /-- The draw's consult width is a genuine pop (`≥ 2`). -/
@@ -1645,28 +1645,28 @@ theorem applyStmtOp_plan_randIntn_nodraw {σ : Store} {nt : Nat} {vs : List GoVa
       by_cases hlt : n < 1
       · refine ⟨.error (.stuck s!"rand-intn: bound {n} ≤ 0 reached the draw (the lowering's guard was bypassed — forged wire)"),
           fun ch => ?_⟩
-        simp only [except_bind_ok, if_pos hlt]
+        simp only [except_bind_ok, ite_eq_left hlt]
         rfl
       · have hn2 : ¬ 2 ≤ n := by
-          intro h2; rw [if_pos h2] at hw; cases hw
+          intro h2; rw [ite_eq_left h2] at hw; cases hw
         have hn1 : n.toNat ≤ 1 := by omega
         refine ⟨.ok (fun s => do
             let (s', trT) ← Mem.store ctx s tloc (.int 0 .int)
             return (s', trT)), fun ch => ?_⟩
-        simp only [except_bind_ok, if_neg hlt, Choices.consumeAtE_le_one hn1]
+        simp only [except_bind_ok, ite_eq_right hlt, Choices.consumeAtE_le_one hn1]
         rfl
   · rename_i n
     simp only [intnBound?] at hw
     by_cases hlt : n < 1
     · refine ⟨.error (.stuck s!"rand-intn: bound {n} ≤ 0 reached the draw (the lowering's guard was bypassed — forged wire)"),
         fun ch => ?_⟩
-      simp only [if_pos hlt]
+      simp only [ite_eq_left hlt]
       rfl
     · have hn2 : ¬ 2 ≤ n := by
-        intro h2; rw [if_pos h2] at hw; cases hw
+        intro h2; rw [ite_eq_left h2] at hw; cases hw
       have hn1 : n.toNat ≤ 1 := by omega
       refine ⟨.ok (fun s => return (s, [])), fun ch => ?_⟩
-      simp only [if_neg hlt, Choices.consumeAtE_le_one hn1]
+      simp only [ite_eq_right hlt, Choices.consumeAtE_le_one hn1]
       rfl
   · exact ⟨.error (.stuck "malformed rand-intn operands (expected [target address,] an int bound)"),
       fun _ => rfl⟩
@@ -1690,8 +1690,8 @@ theorem applyStmtOp_plan_randIntn_draw {σ : Store} {nt : Nat} {vs : List GoValu
   · have hlt : ¬ n < 1 := by omega
     unfold applyStmtOp.plan
     dsimp only
-    simp only [htl, except_bind_ok, if_neg hlt, Choices.consumeAtE_eq, PickRecord.ofPick,
-      if_neg (Nat.not_le_of_lt hw1)]
+    simp only [htl, except_bind_ok, ite_eq_right hlt, Choices.consumeAtE_eq, PickRecord.ofPick,
+      ite_eq_right (Nat.not_le_of_lt hw1)]
     refine ⟨fun pick => .ok (fun s => do
         let (s', trT) ← Mem.store ctx s tloc (.int pick .int)
         return (s', trT)), fun ch => ?_, fun pick => NoPanic.ok _⟩
@@ -1700,7 +1700,7 @@ theorem applyStmtOp_plan_randIntn_draw {σ : Store} {nt : Nat} {vs : List GoValu
   · have hlt : ¬ n < 1 := by omega
     unfold applyStmtOp.plan
     dsimp only
-    simp only [if_neg hlt, Choices.consumeAtE_eq, PickRecord.ofPick, if_neg (Nat.not_le_of_lt hw1)]
+    simp only [ite_eq_right hlt, Choices.consumeAtE_eq, PickRecord.ofPick, ite_eq_right (Nat.not_le_of_lt hw1)]
     refine ⟨fun _ => .ok (fun s => return (s, [])), fun ch => ?_, fun pick => NoPanic.ok _⟩
     rcases hc : Choices.consumeAt .intn n.toNat ch with ⟨pick, rest⟩
     rfl
@@ -1759,7 +1759,7 @@ theorem applyStrictOpPick_of_strictConsult?_none {s : Store} {leafOf : Loc → L
         · exact hgt
         · simp [strictConsult?, hk, hv, hgt] at h
       refine ⟨convCapApplyAt ctx s kind literal value 0, fun ch => ?_⟩
-      rw [applyStrictOpPick_conv hk hv, Choices.consumeAt_le_one hw, PickRecord.ofPick, if_pos hw]
+      rw [applyStrictOpPick_conv hk hv, Choices.consumeAt_le_one hw, PickRecord.ofPick, ite_eq_left hw]
 
 /-- **The conversion's pop** (the twin of `applyStmtOp_plan_randIntn_draw`): at a conversion
 head on a string operand with a popping width, the funnel is a function `g` of the
@@ -1780,7 +1780,7 @@ theorem applyStrictOpPick_draw {s : Store} {leafOf : Loc → Loc} {op : StrictOp
   refine ⟨fun pick => convCapApplyAt ctx s kind literal value pick, fun ch => ?_,
     fun pick => convCapApplyAt_noPanic _ _ _ _ _⟩
   rw [applyStrictOpPick_conv hk hv]
-  simp only [PickRecord.ofPick, if_neg (Nat.not_le_of_lt hw)]
+  simp only [PickRecord.ofPick, ite_eq_right (Nat.not_le_of_lt hw)]
 
 /-- The strict apply arm at a stream-oblivious funnel: the classified result is the same
 at every stream and the arm returns its own stream untouched. -/
@@ -1912,7 +1912,7 @@ theorem stepFn_mapIter_pick {σ : Store} {kv vv : Option VarId}
               start env k),
             p.2, tail, ⟨tr, PickRecord.ofPick .mapIter (cands.size + (if mand = true then 0 else 1)) idx, []⟩)) := by
   simp only [stepFn, hcands, Bind.bind, Except.bind]
-  rw [hmand, if_neg hne, Choices.consumeAtE_eq, hcons]
+  rw [hmand, ite_eq_right hne, Choices.consumeAtE_eq, hcons]
   dsimp only
   split
   · rename_i heq
@@ -1946,7 +1946,7 @@ theorem stepFn_mapIter_stop {σ : Store} {kv vv : Option VarId}
     stepFn ctx σ (.next (.mapIterK kv vv kt vt body base produced start env k)) ch
       = .ok (.next k, σ, tail, ⟨tr, [⟨.mapIter, cands.size + 1, cands.size⟩], []⟩) := by
   simp only [stepFn, hcands, Bind.bind, Except.bind]
-  rw [hmand, if_neg hne]
+  rw [hmand, ite_eq_right hne]
   have hred : (cands.size + if false = true then 0 else 1)
       = cands.size + 1 := by simp
   rw [hred, Choices.consumeAtE_eq, hcons]
@@ -1954,7 +1954,7 @@ theorem stepFn_mapIter_stop {σ : Store} {kv vv : Option VarId}
     simp only [Array.isEmpty_iff] at hne
     have := Array.size_pos_iff.mpr hne
     omega
-  simp only [PickRecord.ofPick, if_neg hsz]
+  simp only [PickRecord.ofPick, ite_eq_right hsz]
   try dsimp only
   split
   · rfl
@@ -2468,7 +2468,7 @@ theorem stepFn_consumption_none {σ : Store} {c : Config} {ch₀ : Choices}
         exact ⟨rfl, fun ch => stepFn_mapIter_done hcands ch⟩
       · -- G-U: a width-1 consult (the last MANDATORY candidate) pops
         -- nothing and forces pick 0 — the step is oblivious.
-        rw [if_neg hemp] at hsc
+        rw [ite_eq_right hemp] at hsc
         obtain ⟨mand, hmand⟩ : ∃ m, mapIterMandatoryRemains cands start = m := ⟨_, rfl⟩
         rw [hmand] at hsc
         have hw : cands.size + (if mand = true then 0 else 1) ≤ 1 := by
@@ -2497,7 +2497,7 @@ theorem stepFn_consumption_none {σ : Store} {c : Config} {ch₀ : Choices}
     -- A4: a global past the heap REFUSES (`.stuck`); no step is produced.
     rename_i hgid
     simp only [stepFn] at h
-    rw [if_neg hgid] at h
+    rw [ite_eq_right hgid] at h
     simp [throw, throwThe, MonadExceptOf.throw] at h
   case case12 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
@@ -2526,12 +2526,12 @@ theorem stepFn_consumption_none {σ : Store} {c : Config} {ch₀ : Choices}
   case case39 =>
     rename_i hplan hgt
     simp only [stepFn] at h
-    rw [hplan, if_pos hgt] at h
+    rw [hplan, ite_eq_left hgt] at h
     simp [throw, throwThe, MonadExceptOf.throw] at h
   case case40 =>
     rename_i hplan hgt
     simp only [stepFn] at h
-    rw [hplan, if_neg hgt] at h
+    rw [hplan, ite_eq_right hgt] at h
     simp [throw, throwThe, MonadExceptOf.throw] at h
   -- Sync statements (spec-parity slice 2): the chan recipes — entry is
   -- stream-transparent; the APPLY is stream-transparent for every
@@ -2650,7 +2650,7 @@ theorem stepFn_consumption_none {σ : Store} {c : Config} {ch₀ : Choices}
        simp [stepFn, valueAsBool, Bind.bind, Except.bind])
   case case92 =>
     rename_i hlt
-    simp only [stepFn, if_pos hlt] at h
+    simp only [stepFn, ite_eq_left hlt] at h
     (try simp only [Bind.bind, Except.bind] at h)
     split at h
     · simp at h
@@ -2659,17 +2659,17 @@ theorem stepFn_consumption_none {σ : Store} {c : Config} {ch₀ : Choices}
       | ok a =>
         simp only [deliverS_ok, Except.ok.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl, rfl, rfl⟩ := h
-        exact ⟨rfl, fun ch => by simp [stepFn, if_pos hlt, hres, Bind.bind, Except.bind]⟩
+        exact ⟨rfl, fun ch => by simp [stepFn, ite_eq_left hlt, hres, Bind.bind, Except.bind]⟩
       | panic msg =>
         simp only [deliverS_panic, Except.ok.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl, rfl, rfl⟩ := h
-        exact ⟨rfl, fun ch => by simp [stepFn, if_pos hlt, hres, Bind.bind, Except.bind]⟩
+        exact ⟨rfl, fun ch => by simp [stepFn, ite_eq_left hlt, hres, Bind.bind, Except.bind]⟩
   case case93 =>
     rename_i hlt
-    simp only [stepFn, if_neg hlt, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    simp only [stepFn, ite_eq_right hlt, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl, rfl, rfl⟩ := h
     refine ⟨by simp, fun ch => ?_⟩
-    simp only [stepFn, if_neg hlt]
+    simp only [stepFn, ite_eq_right hlt]
     rfl
   case case111 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
@@ -2904,7 +2904,7 @@ theorem stepFn_consumption_some {σ : Store} {c : Config} {ch₀ : Choices}
       (try dsimp only at hsc)
       by_cases hemp : cands.isEmpty
       · simp [hemp] at hsc
-      · rw [if_neg hemp] at hsc
+      · rw [ite_eq_right hemp] at hsc
         obtain ⟨mand, hmand⟩ : ∃ m, mapIterMandatoryRemains cands start = m := ⟨_, rfl⟩
         rw [hmand] at hsc
         -- G-U: the projection reports the consult only at width ≥ 2.
