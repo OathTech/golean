@@ -520,7 +520,7 @@ theorem alignUpTo_ge (offset align : Nat) : offset ≤ alignUpTo offset align :=
 theorem alignUpTo_dvd {offset align : Nat} (h : align ≠ 0) : align ∣ alignUpTo offset align := by
   unfold alignUpTo
   have : (align == 0) = false := by simpa using h
-  rw [if_neg (by simp [this])]
+  rw [ite_eq_right (by simp [this])]
   exact Nat.dvd_mul_left _ _
 
 /-- The size oracle is monotone in its index layer: an answer of `f` that is

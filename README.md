@@ -53,7 +53,7 @@ lowered for any other target (`decodeBuildContext`). The toolchains are pinned, 
 cap.
 
 - **Lean** via [elan](https://github.com/leanprover/elan): `lean-toolchain` pins the
-  version (currently `v4.32.2`); elan installs it on first use.
+  version (currently `v4.35.0`); elan installs it on first use.
 - **Go `go1.26.5` exactly** — the differential oracle (`baselines/go-oracle-pin`); any
   other patch level is a red gate by design, never a silent drift.
 - **Python 3.11 or newer** (standard library only), `git`, `jq`.

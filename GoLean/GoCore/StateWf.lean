@@ -2362,6 +2362,14 @@ theorem goValueEntriesSup_setIfInBounds {arr : Array (Nat × GoValue × GoValue)
       (Nat.le_max_left _ _)
   · exact Nat.le_max_right _ _
 
+/-- An out-of-range `panic!` inside an `Array` function computes to `default = #[]`. Stated
+over the panic's source position (module, declaration, line, column) so that a proof never
+pins a core line number: the Lean 4.35 bump moved `Array.eraseIdx!`'s panic from line 1820
+to 1867 and broke two `rw [show panicWithPosWithDecl … 1820 47 … = #[] from rfl]` steps. -/
+theorem Array.panicWithPosWithDecl_eq_empty {α : Type} (modName declName : String)
+    (line col : Nat) (msg : String) :
+    (panicWithPosWithDecl modName declName line col msg : Array α) = #[] := rfl
+
 theorem goValueEntriesSup_eraseIdx! {arr : Array (Nat × GoValue × GoValue)} {i : Nat} :
     goValueEntriesSup (arr.eraseIdx! i).toList
       ≤ goValueEntriesSup arr.toList := by
@@ -2371,8 +2379,7 @@ theorem goValueEntriesSup_eraseIdx! {arr : Array (Nat × GoValue × GoValue)} {i
   · rw [Array.toList_eraseIdx]
     exact supBy_le_of_subset fun a ha => List.mem_of_mem_eraseIdx ha
   · -- out of range: `panic!` computes to `default = #[]`
-    rw [show (panicWithPosWithDecl "Init.Data.Array.Basic" "Array.eraseIdx!" 1820 47
-        "invalid index" : Array (Nat × GoValue × GoValue)) = #[] from rfl]
+    rw [Array.panicWithPosWithDecl_eq_empty]
     simp [supBy]
 
 theorem goValueEntriesSup_eraseIdx {arr : Array (Nat × GoValue × GoValue)} {i : Nat}
@@ -2437,7 +2444,7 @@ theorem Array.modifyM_ok_iff {α : Type} (xs : Array α) (i : Nat) (hi : i < xs.
     (f : α → Except Stop α) (ys : Array α) :
     xs.modifyM i f = .ok ys ↔ ∃ v, f xs[i] = .ok v ∧ ys = xs.set i v hi := by
   unfold Array.modifyM
-  rw [dif_pos hi]
+  rw [dite_eq_left hi]
   constructor
   · intro h
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
@@ -4572,7 +4579,7 @@ theorem applyStrictOp_wf {σ : Store} {leafOf : Loc → Loc} {op : StrictOp} {vs
     · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨gv, hgv, rfl, rfl, rfl⟩ := h
       unfold stringByteGet at hgv
-      simp only [letFun, Bind.bind, Except.bind, indexOutOfRangePanic] at hgv
+      simp only [Bind.bind, Except.bind, indexOutOfRangePanic] at hgv
       repeat' split at hgv
       all_goals
         first
@@ -6267,8 +6274,7 @@ theorem goValueListSup_eraseIdx! {arr : Array GoValue} {i : Nat} :
   split
   · rw [Array.toList_eraseIdx]
     exact supBy_le_of_subset fun a ha => List.mem_of_mem_eraseIdx ha
-  · rw [show (panicWithPosWithDecl "Init.Data.Array.Basic" "Array.eraseIdx!" 1820 47
-        "invalid index" : Array GoValue) = #[] from rfl]
+  · rw [Array.panicWithPosWithDecl_eq_empty]
     simp [supBy]
 
 theorem recvStores_locSup {v : GoValue} {ok : Bool} :

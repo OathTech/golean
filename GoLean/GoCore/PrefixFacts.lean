@@ -361,8 +361,8 @@ theorem stepFn_picks_none {σ : Store} {c : Config} {ch₀ : Choices}
       (try dsimp only at hsc)
       simp only [Bind.bind, Except.bind]
       by_cases hemp : cands.isEmpty
-      · rw [if_pos hemp]; okp
-      · rw [if_neg hemp] at hsc ⊢
+      · rw [ite_eq_left hemp]; okp
+      · rw [ite_eq_right hemp] at hsc ⊢
         have hw : ¬ 2 ≤ cands.size + (if mapIterMandatoryRemains cands start = true then 0 else 1) := by
           intro h2; simp [show ¬ (cands.size + (if mapIterMandatoryRemains cands start = true then 0 else 1) ≤ 1) by omega] at hsc
         (try dsimp only)
@@ -539,7 +539,7 @@ theorem stepFn_picks_some {σ : Store} {c : Config} {ch₀ : Choices} {site : Ch
       simp only [Bind.bind, Except.bind]
       by_cases hemp : cands.isEmpty
       · simp [hemp] at hsc
-      · rw [if_neg hemp] at hsc ⊢
+      · rw [ite_eq_right hemp] at hsc ⊢
         have hsc' : ChoiceSite.mapIter = site ∧
             (cands.size + (if mapIterMandatoryRemains cands start = true then 0 else 1)) = b := by
           by_cases hle : cands.size + (if mapIterMandatoryRemains cands start = true then 0 else 1) ≤ 1

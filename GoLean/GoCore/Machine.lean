@@ -1870,7 +1870,7 @@ variable {ctx}
 theorem appendGrowthCap_ge {oldCap newLen : Nat} (h : oldCap < newLen) :
     newLen ≤ appendGrowthCap oldCap newLen := by
   unfold appendGrowthCap
-  rw [if_neg (by omega)]
+  rw [ite_eq_right (by omega)]
   split
   · omega
   · split
@@ -1896,7 +1896,7 @@ theorem one_lt_appendSpillWidth (oldCap newLen : Nat) :
   · have := appendGrowthCap_ge h
     omega
   · unfold appendGrowthCap
-    rw [if_pos (by omega)]
+    rw [ite_eq_left (by omega)]
     omega
 
 /-- The spill consult is the raw pop (its bound is ≥ 2 always). -/

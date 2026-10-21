@@ -1095,7 +1095,7 @@ and applies at slot 0. -/
     (ha : convCapApplyAt ctx s kind literal value 0 = .ok (out, s', tr)) :
     stepFn ctx s (.retV v (.strictK op done [] env k')) ch = .ok (.retV out k', s', ch, ⟨tr, [], []⟩) := by
   have h := retV_strictK_conv env k' ch hk hv (by rwa [Choices.consumeAt_le_one hw])
-  rwa [Choices.consumeAt_le_one hw, PickRecord.ofPick, if_pos hw] at h
+  rwa [Choices.consumeAt_le_one hw, PickRecord.ofPick, ite_eq_left hw] at h
 
 /-- A conversion head WITHOUT a string operand (a non-string operand, a malformed arity) refuses
 AHEAD of any consult (`convRefuse`: a `stuck`, never a panic), the step's `Stop`. -/

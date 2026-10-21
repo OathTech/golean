@@ -1152,8 +1152,11 @@ structure ChoiceCount where
   exact : Bool
   deriving Repr, BEq
 
-def ChoiceCount.ofLeftover (given : Nat) (leftover : GoCore.Choices) : ChoiceCount :=
-  { given, consulted := given + choicePadLength - leftover.length, exact := !leftover.isEmpty }
+-- The binder is not named `given`: Lean 4.35 forbids `given` (with `requires`, `ensures`) as a
+-- binder name in a `def` signature; the field keeps its name and the JSON key is unchanged.
+def ChoiceCount.ofLeftover (givenLen : Nat) (leftover : GoCore.Choices) : ChoiceCount :=
+  { given := givenLen, consulted := givenLen + choicePadLength - leftover.length,
+    exact := !leftover.isEmpty }
 
 /-- The statuses the enumerator certifies a set for (`coverage-observations --expect-status`). -/
 def enumeratorCertifies (status : String) : Bool :=

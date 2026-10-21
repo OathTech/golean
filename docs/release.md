@@ -12,7 +12,7 @@ the logic team (`docs/changelog/61958f2e-WINDOW.md`, tag `logic-offer/2026-10-03
    release on one day takes `release/<date>.2`). The tagged commit is the release; nothing outside the repository at
    that commit is part of it.
 2. **The pinned toolchains at the tag**, unchanged by the release itself: Lean `lean-toolchain` =
-   `leanprover/lean4:v4.32.2`; the Go oracle `baselines/go-oracle-pin` = `go1.26.5` (never floated — CLAUDE.md, the
+   `leanprover/lean4:v4.35.0`; the Go oracle `baselines/go-oracle-pin` = `go1.26.5` (never floated — CLAUDE.md, the
    trusted surface #2). A pin move is a separate, earlier commit with its own full run and written reason.
 3. **The merge gate green at the tag**: `capped scripts/ci --diff`, RESULT: PASS, on a clean tree at the tagged commit,
    judged against the tracked baselines at that commit (`baselines/native-full.tsv`, `baselines/negative-full.tsv`,

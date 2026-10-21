@@ -324,12 +324,12 @@ theorem replay_coverage : replay_coverage_stmt := by
       stepFn_picks_some (ch₀ := ch) hsc _ h
     obtain ⟨-, hall⟩ := stepFn_consumption_some hsc h
     by_cases hb : b ≤ 1
-    · rw [hp, PickRecord.ofPick, if_pos hb] at hr
+    · rw [hp, PickRecord.ofPick, ite_eq_left hb] at hr
       simp only [replays] at hr
       rw [hr]
       have h₂ := hall ch₂ (by rw [Choices.consumeAt_le_one hb, Choices.consumeAt_le_one hb])
       rwa [Choices.consumeAt_le_one hb] at h₂
-    · rw [hp, PickRecord.ofPick, if_neg hb] at hr
+    · rw [hp, PickRecord.ofPick, ite_eq_right hb] at hr
       simp only [replays] at hr
       obtain ⟨mid, hmid, hmid'⟩ := hr
       rw [hmid']
