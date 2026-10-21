@@ -1130,16 +1130,18 @@ theorem observation_iff {p name args obs} :
 
 end GoLean.Semantics.Pool
 
-/-! ## The output-folding driver is the driver plus its fold (backlog row 47, raft-proofs G9)
+/-! ## The output-folding driver's accumulator law (backlog row 47, raft-proofs G9)
 
 [AGENT lane core/g11-init-driver-1021] 2026-10-21. The CLI (`golean native-json-run`) runs the
 pool through `execProgLoopOut` (`Multi.lean`), `execProgLoop` with the pool's `StepEvent.out`
-events folded in step order onto an accumulator. `execProgLoopOut_snd` (`Multi.lean`) pins the
-OUTCOME component to `execProgLoop`; `execProgLoopOut_acc` below pins the OUTPUT component's
-shape — the accumulator followed by the run's own fold (the fold only appends) — and
-`execProgLoopOut_eq_execProgLoop` is the two together as one equation on the pair. For one
-goroutine the run's own fold is the sequential labels' fold (`execProgLoopOut_single`,
-`execProgLoopOut_single_prefix`, `seqOut_of_prefix`; `PoolProjection.lean`). -/
+events folded in step order onto an accumulator. THE BRIDGE the customer consumes is
+`execProgLoopOut_snd` (`Multi.lean`, since 2026-09-04): the OUTCOME component IS `execProgLoop`;
+the output content on one goroutine is the sequential labels' fold (`execProgLoopOut_single`,
+`execProgLoopOut_single_prefix`, `seqOut_of_prefix`; `PoolProjection.lean`). Beside them, an
+ACCUMULATOR LAW (review F1: a law about the driver, not the bridge — every CLI call site passes
+`GoString.empty`): `execProgLoopOut_acc` says the output component is the accumulator followed by
+the run's own fold from the empty string (the fold only appends), and
+`execProgLoopOut_eq_execProgLoop` is that and `execProgLoopOut_snd` as one equation on the pair. -/
 
 namespace GoLean.GoString
 
@@ -1209,9 +1211,9 @@ theorem execProgLoopOut_acc (fuel : Nat) (m : MultiConfig) (r : RaceState) (ch :
               ih m' r' ch' (ev.out.foldl GoString.append GoString.empty),
               GoString.foldl_append_acc ev.out acc, GoString.append_assoc]
 
-/-- **The output-folding driver IS the driver plus its fold** (G9's equation): the CLI's
-`execProgLoopOut` is `execProgLoop` paired with the output — the accumulator followed by the run's
-own fold. The outcome half is `execProgLoopOut_snd`, the output half `execProgLoopOut_acc`. -/
+/-- **The pair form of the accumulator law**: `execProgLoopOut` is `execProgLoop` paired with the
+output — the accumulator followed by the run's own fold from the empty string. The outcome half is
+`execProgLoopOut_snd` (the bridge), the output half `execProgLoopOut_acc`. -/
 theorem execProgLoopOut_eq_execProgLoop (fuel : Nat) (m : MultiConfig) (r : RaceState)
     (ch : Choices) (acc : GoString) :
     execProgLoopOut ctx fuel m r ch acc

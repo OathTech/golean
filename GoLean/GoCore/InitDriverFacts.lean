@@ -1,4 +1,5 @@
 import GoLean.GoCore.Prefix
+import GoLean.GoCore.Equations
 
 /-!
 # The initialiser's driver against the sequential driver (backlog row 47, raft-proofs G11)
@@ -28,6 +29,22 @@ Two layers:
   indirection dropped: `runInitConfig_eq_execStmtLoop`, `runInitConfig_ok_iff`,
   `runInitConfig_panic_iff`, `runInitConfig_deadlock_iff`, `runInitConfig_fuelOut_iff`,
   `runPkgInitM_some`, `runPkgInitM_ok_iff`. The equation is now a corollary of the dichotomy.
+
+* **From one witnessed run back to the init loop** (fix round F2, the review of 2026-10-21; R8's
+  converse): `prefix_det`/`prefix_det_le` (`Prefix` determinism), `applyStmtOp_print` and
+  `stepFn_out_of_printOut?` (a successful step at a print position carries its bytes on the label),
+  `noPrint_of_prefix_silent`, `runInitConfig_ok_of_prefix_silent`, `runPkgInitM_ok_of_prefix_silent`:
+  one `Prefix` of `$pkginit`'s body to `.next .stop` within the fuel whose labels all have
+  `out = []` is a successful `runPkgInitM`. The opposite direction (a successful run's labels are
+  silent — a full label-form iff) would need the off-apply emptiness lemma
+  `printOut? c = none → stepFn ctx s c ch = .ok (c', s', ch', l) → l.out = []`, a whole-`stepFn`
+  case analysis not on main (review F3); `runInitConfig_ok_noPrint` is the config-form fact a
+  successful run gives.
+
+The init loop's one-step rewriting surface (`runInitConfig_unfold`/`_blocked`/`_nonZero`/`_refused`,
+`initPrintRefusal?_zeroCost`) is public and frozen (review F5): the twins of `execStmtLoop_unfold`/
+`_nonZero`/`_blocked`, the direct symbolic route under the init loop (one unfolding, one
+`stepFn_eqns` rewrite, the guard by evaluation) needing no `Prefix`.
 
 Nothing executable changes: every theorem is about the definitions of `StepFn.lean` as they stand.
 Pinned in `Tests/GoCoreContract.lean` (§D) and required by the core audit (`Tests/GoCoreAudit.lean`).
@@ -360,5 +377,139 @@ theorem runPkgInitM_ok_cases {ctx : ProgramCtx} {fuel : Nat} {s s₁ : Store} {c
   | some initF =>
     right
     exact ⟨initF, rfl, runPkgInitM_ok_prefix hf h⟩
+
+
+/-! ## `Prefix` determinism (fix round F2, 2026-10-21)
+
+A general law of `Prefix` (`stepFn` is a function), homed here to keep `Prefix.lean` verbatim:
+two prefixes of the same length from the same start are the same run; a shorter one is an initial
+segment of a longer one. -/
+
+/-- Two prefixes of the same length from the same start agree in labels and endpoint. -/
+theorem prefix_det {ctx : ProgramCtx} {n : Nat} {s σ₁ σ₂ : Store} {c c₁ c₂ : Config}
+    {ch ch₁ ch₂ : Choices} {ls ls' : List StepLabel}
+    (h₁ : Prefix ctx n s c ch ls σ₁ c₁ ch₁) (h₂ : Prefix ctx n s c ch ls' σ₂ c₂ ch₂) :
+    ls = ls' ∧ σ₁ = σ₂ ∧ c₁ = c₂ ∧ ch₁ = ch₂ := by
+  induction h₁ generalizing ls' σ₂ c₂ ch₂ with
+  | done => cases h₂; exact ⟨rfl, rfl, rfl, rfl⟩
+  | step hs _ ih =>
+    cases h₂ with
+    | step hs' hp' =>
+      rw [hs] at hs'
+      cases hs'
+      obtain ⟨rfl, rfl, rfl, rfl⟩ := ih hp'
+      exact ⟨rfl, rfl, rfl, rfl⟩
+
+/-- A shorter prefix from the same start is an initial segment of a longer one: the longer one's
+labels extend the shorter one's, and the remainder runs from the shorter one's endpoint. -/
+theorem prefix_det_le {ctx : ProgramCtx} {m n : Nat} {s σ₁ σ₂ : Store} {c c₁ c₂ : Config}
+    {ch ch₁ ch₂ : Choices} {ls ls' : List StepLabel}
+    (h₁ : Prefix ctx m s c ch ls σ₁ c₁ ch₁) (h₂ : Prefix ctx n s c ch ls' σ₂ c₂ ch₂) (hmn : m ≤ n) :
+    ∃ ls₂, ls' = ls ++ ls₂ ∧ Prefix ctx (n - m) σ₁ c₁ ch₁ ls₂ σ₂ c₂ ch₂ := by
+  obtain ⟨k, rfl⟩ : ∃ k, n = m + k := ⟨n - m, by omega⟩
+  obtain ⟨ls₁, ls₂, s₁, c₁', ch₁', rfl, hp₁, hp₂⟩ := prefix_split ctx m k s σ₂ c c₂ ch ch₂ ls' h₂
+  obtain ⟨rfl, rfl, rfl, rfl⟩ := prefix_det h₁ hp₁
+  exact ⟨ls₂, rfl, by rwa [Nat.add_sub_cancel_left]⟩
+
+/-! ## From ONE witnessed run to the init loop's success (fix round F2; R8's converse)
+
+The customer's R8 runs `$pkginit` symbolically once (a `Prefix` with concrete labels) and needs
+`runPkgInitM = .ok` back, to construct the seeded store. The no-print premise of `runInitConfig_ok_iff`
+quantifies over every prefix within the fuel; here it is discharged from the one run's labels: a
+print position's step carries its bytes on the label (`stepFn_out_of_printOut?`, from main's
+`printOut?_toList`, `retV_stmtOpK_apply` and the validate-only print apply), so a run whose labels are
+all silent on `out` passes no print position, and every other prefix is an initial segment of it. -/
+
+/-- At a `print` apply whose rendering succeeds, the apply commits nothing: the state and the
+tape untouched, no pick, no trace (the print arm validates only; the bytes are the label's). -/
+theorem applyStmtOp_print {ctx : ProgramCtx} {s : Store} {ch : Choices} {newline : Bool} {nt : Nat}
+    {vs : List GoValue} {bytes : GoString} (h : renderPrint newline vs = .ok bytes) :
+    applyStmtOp ctx s ch (.print newline) nt vs = .ok (s, ch, [], []) := by
+  simp [applyStmtOp, applyStmtOp.plan, applyStmtOpCore.plan, h, Commit.withStream, Bind.bind,
+    Except.bind]
+
+/-- A successful step at a print position carries the rendered bytes on its label's `out`. -/
+theorem stepFn_out_of_printOut? {ctx : ProgramCtx} {s s' : Store} {c c' : Config} {ch ch' : Choices}
+    {l : StepLabel} {bytes : GoString} (hp : printOut? c = some bytes)
+    (hs : stepFn ctx s c ch = .ok (c', s', ch', l)) : l.out = [bytes] := by
+  unfold printOut? at hp
+  split at hp
+  · rename_i v newline nt done env k
+    cases hr : renderPrint newline (v :: done).reverse with
+    | error e => rw [hr] at hp; cases hp
+    | ok b =>
+      rw [hr] at hp
+      cases hp
+      rw [GoLean.GoCore.Equations.retV_stmtOpK_apply env k ch (applyStmtOp_print hr)] at hs
+      cases hs
+      simp only [stmtOpOut]
+      rw [hr]
+  · cases hp
+
+/-- The guard is silent exactly off the print positions. -/
+theorem initPrintRefusal?_eq_none_iff {c : Config} : initPrintRefusal? c = none ↔ printOut? c = none := by
+  unfold initPrintRefusal?
+  cases printOut? c <;> simp
+
+/-- The silent-run lemma with a general endpoint (the induction's shape); the statement below
+instantiates it at `.next .stop`. -/
+private theorem noPrint_of_prefix_silent_aux {ctx : ProgramCtx} {n : Nat} {s sf : Store} {c cf : Config}
+    {ch chf : Choices} {ls : List StepLabel} (hp : Prefix ctx n s c ch ls sf cf chf) :
+    cf = .next .stop → (∀ l ∈ ls, l.out = []) →
+    ∀ (m : Nat) (σ' : Store) (c' : Config) (ch' : Choices) (ls' : List StepLabel),
+      Prefix ctx m s c ch ls' σ' c' ch' → initPrintRefusal? c' = none := by
+  induction hp with
+  | done =>
+    intro hcf _ m σ' c' ch' ls' hp'
+    subst hcf
+    cases hp' with
+    | done => exact initPrintRefusal?_zeroCost (.inl rfl)
+    | step hs _ => exact absurd (.inl rfl) (stepFn_zeroCost_not_ok hs)
+  | @step _ _ _ _ c₀ _ _ _ _ _ l ls hs _ ih =>
+    intro hcf hsil m σ' c' ch' ls' hp'
+    cases hp' with
+    | done =>
+      rw [initPrintRefusal?_eq_none_iff]
+      cases hpo : printOut? c₀ with
+      | none => rfl
+      | some bytes =>
+        have := stepFn_out_of_printOut? hpo hs
+        rw [hsil l (List.mem_cons_self ..)] at this
+        cases this
+    | step hs' hrest' =>
+      rw [hs] at hs'
+      cases hs'
+      exact ih hcf (fun l' hl' => hsil l' (List.mem_cons_of_mem _ hl')) _ _ _ _ _ hrest'
+
+/-- **The no-print premise from one silent run**: along a prefix to `.next .stop` whose labels print
+nothing, no prefix from the same start (of ANY length — none passes `.next .stop`) ends at a print
+position. -/
+theorem noPrint_of_prefix_silent {ctx : ProgramCtx} {n : Nat} {s sf : Store} {c : Config}
+    {ch chf : Choices} {ls : List StepLabel} (hp : Prefix ctx n s c ch ls sf (.next .stop) chf)
+    (hsil : ∀ l ∈ ls, l.out = []) :
+    ∀ (m : Nat) (σ' : Store) (c' : Config) (ch' : Choices) (ls' : List StepLabel),
+      Prefix ctx m s c ch ls' σ' c' ch' → initPrintRefusal? c' = none :=
+  noPrint_of_prefix_silent_aux hp rfl hsil
+
+/-- **R8's converse, one application**: a witnessed prefix to `.next .stop` within the fuel whose
+labels print nothing IS a successful init run. -/
+theorem runInitConfig_ok_of_prefix_silent {ctx : ProgramCtx} {fuel n : Nat} {s sf : Store}
+    {c : Config} {ch chf : Choices} {ls : List StepLabel}
+    (hp : Prefix ctx n s c ch ls sf (.next .stop) chf) (hn : n ≤ fuel) (hsil : ∀ l ∈ ls, l.out = []) :
+    runInitConfig ctx fuel s c ch = .ok (sf, chf) :=
+  (runInitConfig_ok_iff ctx fuel s sf c ch chf
+    (fun m σ' c' ch' ls' hp' _ => noPrint_of_prefix_silent hp hsil m σ' c' ch' ls' hp')).mpr
+    ⟨n, hn, ls, hp⟩
+
+/-- The same through the wrapper: a witnessed silent run of `$pkginit`'s body is a successful
+`runPkgInitM` — the seeded store `s₁` and the tape `ch₁` it leaves. -/
+theorem runPkgInitM_ok_of_prefix_silent {ctx : ProgramCtx} {fuel n : Nat} {s s₁ : Store}
+    {ch ch₁ : Choices} {initF : Func} {ls : List StepLabel}
+    (hf : findFunctionIn? ctx.functions pkgInitFuncId = some initF)
+    (ha : initF.args.size = 0) (hr : initF.results.size = 0)
+    (hp : Prefix ctx n s (.exec initF.body [] (.frame [] [] [] [] .stop initF.id)) ch ls s₁ (.next .stop) ch₁)
+    (hn : n ≤ fuel) (hsil : ∀ l ∈ ls, l.out = []) :
+    runPkgInitM ctx fuel s ch = .ok (s₁, ch₁) :=
+  (runPkgInitM_ok_iff hf ha hr).mpr (runInitConfig_ok_of_prefix_silent hp hn hsil)
 
 end GoLean.GoCore.ExecutionStatement

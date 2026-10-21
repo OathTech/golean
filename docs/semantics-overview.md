@@ -114,7 +114,14 @@ equals `execStmtLoop` (no configuration reachable within the fuel is a print pos
 name at a reachable print position, so a successful initialisation is a `Prefix` of `$pkginit`'s body
 to `.next .stop` (`runInitConfig_ok_prefix`, `runPkgInitM_ok_cases`); under the no-print premise the
 G-R4 family of 2026-10-05 holds as then stated (`runInitConfig_eq_execStmtLoop`, the four
-`runInitConfig_*_iff`, `runPkgInitM_some`/`_ok_iff`).
+`runInitConfig_*_iff`, `runPkgInitM_some`/`_ok_iff`). The converse from one witnessed run is
+`runPkgInitM_ok_of_prefix_silent`: a `Prefix` of `$pkginit`'s body to `.next .stop` within the fuel
+whose labels all have `out = []` is a successful `runPkgInitM` (through `prefix_det`, the `Prefix`
+determinism law, and `stepFn_out_of_printOut?`: a successful step at a print position carries its
+bytes on the label). Stated gap: the opposite direction, from a successful init run to silent labels,
+would need the off-apply emptiness lemma `printOut? c = none → stepFn ctx s c ch = .ok (c', s', ch', l)
+→ l.out = []`, a whole-`stepFn` case analysis that is not on main; what a successful run gives is the
+config-form `runInitConfig_ok_noPrint`.
 
 ## 5. The goroutine pool
 
@@ -135,12 +142,14 @@ the sequential-to-pool **projections** carrying output and terminals across
 `run_iff`, `ProgramRun`, `program_run_iff`, `Observation`, `observation_iff`,
 `refusal_is_not_observation`, `fuel_is_not_observation`; `PoolFacts.lean`). The chain
 `Prefix → execStmtLoop (run_ok_iff) → execProgLoop (single_embedding) → runProgramPoolOutM
-(program_bridge)` therefore holds end to end for one goroutine. The CLI's output-folding driver is
-the driver plus its fold, as one equation on the pair (2026-10-21, raft-proofs G9):
-`execProgLoopOut_eq_execProgLoop` (`PoolFacts.lean`) — the outcome component is `execProgLoop`
-(`execProgLoopOut_snd`, `Multi.lean`) and the output component is the accumulator followed by the
-run's own fold (`execProgLoopOut_acc`), which for one goroutine is the labels' fold
-(`execProgLoopOut_single_prefix`).
+(program_bridge)` therefore holds end to end for one goroutine. The bridge from `execProgLoop` to
+the CLI's output-folding driver `execProgLoopOut` (raft-proofs G9) is `execProgLoopOut_snd`
+(`Multi.lean`): the outcome component of `execProgLoopOut` IS `execProgLoop`; the output content on
+one goroutine is `execProgLoopOut_single_prefix` (the `Prefix` labels' fold). Both are pinned and
+required since 2026-10-21. An accumulator law was added beside them: `execProgLoopOut_acc`
+(`PoolFacts.lean`: the output component is the accumulator followed by the run's own fold from the
+empty string — the fold only appends; the CLI always starts from `GoString.empty`) and its pair form
+`execProgLoopOut_eq_execProgLoop`.
 
 ## 6. The choice tape
 
@@ -211,8 +220,10 @@ unfolded. Two additions for the raft-proofs customer (backlog row 47, 2026-10-21
 verbatim in `Tests/GoCoreContract.lean` §D and required by the core audit: `runInitConfig_cases`
 (`InitDriverFacts.lean`) relates the initialiser's driver to `execStmtLoop` and `Prefix` up to the
 init-phase print refusal, with no premise, so the seeded entry's initialisation is a `Prefix`
-(G11); `execProgLoopOut_eq_execProgLoop` (`PoolFacts.lean`) states the CLI's output-folding driver
-as `execProgLoop` paired with its output fold (G9).
+(G11), with `runPkgInitM_ok_of_prefix_silent` as the converse from one witnessed silent run;
+`execProgLoopOut_snd` (`Multi.lean`) is the G9 bridge — the outcome of the CLI's output-folding driver
+is `execProgLoop` — now pinned, with `execProgLoopOut_acc`/`execProgLoopOut_eq_execProgLoop`
+(`PoolFacts.lean`) as an accumulator law beside it.
 
 The logic repository pins a commit, currently the tag `logic-offer/2026-10-03`. Each change that
 affects a consumer-visible behaviour or the kept surface is a line in the post-offer changelog

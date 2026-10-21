@@ -350,11 +350,16 @@ end GoLean.GoCore.ContractTests.Interpreter
 of `GoLean/GoCore/InitDriverFacts.lean` (G11: the initialiser's driver `runInitConfig` against
 `execStmtLoop` and `Prefix`) or of `GoLean/GoCore/Multi.lean`/`PoolFacts.lean` (G9: the CLI's
 output-folding driver `execProgLoopOut` against `execProgLoop`), and is proved by that theorem
-alone — a drift in a pinned statement fails this build (the role `BridgeSet.lean` played until the
-retirement of 2026-10-20; the `Pin.<name>` convention of `Tests/EquationClient.lean`). Each pin is
-required by name in `Tests/GoCoreAudit.lean`. The two controls at the end show the premise-free
-dichotomy's second arm inhabited: at a print position the init loop refuses where the entry loop
-steps on (the retired `SetupStatement.lean`'s negative control, kept). -/
+alone — a drift in a pinned statement's MEANING fails this build (a non-defeq change such as
+`n < fuel` for `n ≤ fuel` or a dropped conjunct); a defeq-preserving respelling (`fuel ≥ n` for
+`n ≤ fuel`) still elaborates, so the pin freezes meaning, not text (the limit `BridgeSet.lean` had
+too; the `Pin.<name>` convention of `Tests/EquationClient.lean`). Each pin is required by name in
+`Tests/GoCoreAudit.lean`. The controls at the end show the premise-free dichotomy's second arm
+inhabited: at a print position the init loop refuses where the entry loop steps on (the retired
+`SetupStatement.lean`'s negative control, kept). Fix round F2/F5 (2026-10-21): the `Prefix`
+determinism laws, the apply-position lemmas, the silent-run converse and the init loop's one-step
+rewriting surface (`runInitConfig_unfold`/`_blocked`/`_nonZero`/`_refused`,
+`initPrintRefusal?_zeroCost`) are frozen here too. -/
 
 namespace GoLean.GoCore.ContractTests.Pin
 open GoCore GoCore.Machine GoCore.ExecutionStatement
@@ -492,6 +497,103 @@ theorem execProgLoopOut_eq_execProgLoop :
       = (acc.append (execProgLoopOut ctx fuel m r ch GoString.empty).1,
          execProgLoop ctx fuel m r ch) :=
   GoCore.Machine.execProgLoopOut_eq_execProgLoop
+
+theorem prefix_det :
+    ∀ {ctx : ProgramCtx} {n : Nat} {s σ₁ σ₂ : Store} {c c₁ c₂ : Config}
+    {ch ch₁ ch₂ : Choices} {ls ls' : List StepLabel},
+    Prefix ctx n s c ch ls σ₁ c₁ ch₁ → Prefix ctx n s c ch ls' σ₂ c₂ ch₂ →
+    ls = ls' ∧ σ₁ = σ₂ ∧ c₁ = c₂ ∧ ch₁ = ch₂ :=
+  GoCore.ExecutionStatement.prefix_det
+
+theorem prefix_det_le :
+    ∀ {ctx : ProgramCtx} {m n : Nat} {s σ₁ σ₂ : Store} {c c₁ c₂ : Config}
+    {ch ch₁ ch₂ : Choices} {ls ls' : List StepLabel},
+    Prefix ctx m s c ch ls σ₁ c₁ ch₁ → Prefix ctx n s c ch ls' σ₂ c₂ ch₂ → m ≤ n →
+    ∃ ls₂, ls' = ls ++ ls₂ ∧ Prefix ctx (n - m) σ₁ c₁ ch₁ ls₂ σ₂ c₂ ch₂ :=
+  GoCore.ExecutionStatement.prefix_det_le
+
+theorem applyStmtOp_print :
+    ∀ {ctx : ProgramCtx} {s : Store} {ch : Choices} {newline : Bool} {nt : Nat}
+    {vs : List GoValue} {bytes : GoString},
+    renderPrint newline vs = .ok bytes →
+    applyStmtOp ctx s ch (.print newline) nt vs = .ok (s, ch, [], []) :=
+  GoCore.ExecutionStatement.applyStmtOp_print
+
+theorem stepFn_out_of_printOut? :
+    ∀ {ctx : ProgramCtx} {s s' : Store} {c c' : Config} {ch ch' : Choices}
+    {l : StepLabel} {bytes : GoString},
+    printOut? c = some bytes → stepFn ctx s c ch = .ok (c', s', ch', l) → l.out = [bytes] :=
+  GoCore.ExecutionStatement.stepFn_out_of_printOut?
+
+theorem initPrintRefusal?_eq_none_iff :
+    ∀ {c : Config}, initPrintRefusal? c = none ↔ printOut? c = none :=
+  GoCore.ExecutionStatement.initPrintRefusal?_eq_none_iff
+
+theorem noPrint_of_prefix_silent :
+    ∀ {ctx : ProgramCtx} {n : Nat} {s sf : Store} {c : Config} {ch chf : Choices} {ls : List StepLabel},
+    Prefix ctx n s c ch ls sf (.next .stop) chf → (∀ l ∈ ls, l.out = []) →
+    ∀ (m : Nat) (σ' : Store) (c' : Config) (ch' : Choices) (ls' : List StepLabel),
+      Prefix ctx m s c ch ls' σ' c' ch' → initPrintRefusal? c' = none :=
+  GoCore.ExecutionStatement.noPrint_of_prefix_silent
+
+theorem runInitConfig_ok_of_prefix_silent :
+    ∀ {ctx : ProgramCtx} {fuel n : Nat} {s sf : Store} {c : Config} {ch chf : Choices} {ls : List StepLabel},
+    Prefix ctx n s c ch ls sf (.next .stop) chf → n ≤ fuel → (∀ l ∈ ls, l.out = []) →
+    runInitConfig ctx fuel s c ch = .ok (sf, chf) :=
+  GoCore.ExecutionStatement.runInitConfig_ok_of_prefix_silent
+
+theorem runPkgInitM_ok_of_prefix_silent :
+    ∀ {ctx : ProgramCtx} {fuel n : Nat} {s s₁ : Store} {ch ch₁ : Choices} {initF : Func} {ls : List StepLabel},
+    findFunctionIn? ctx.functions pkgInitFuncId = some initF →
+    initF.args.size = 0 → initF.results.size = 0 →
+    Prefix ctx n s (.exec initF.body [] (.frame [] [] [] [] .stop initF.id)) ch ls s₁ (.next .stop) ch₁ →
+    n ≤ fuel → (∀ l ∈ ls, l.out = []) →
+    runPkgInitM ctx fuel s ch = .ok (s₁, ch₁) :=
+  GoCore.ExecutionStatement.runPkgInitM_ok_of_prefix_silent
+
+-- F5: the init loop's one-step rewriting surface, frozen.
+theorem runInitConfig_unfold :
+    ∀ (ctx : ProgramCtx) (fuel : Nat) (s : Store) (c : Config) (ch : Choices),
+    runInitConfig ctx fuel s c ch
+      = (match c with
+         | .next .stop => .ok (s, ch)
+         | .blockedSend _ _ _ => throw .deadlock
+         | .blockedRecv _ _ _ _ _ => throw .deadlock
+         | .blockedSelect _ _ _ => throw .deadlock
+         | .blockedSync _ _ _ _ => throw .deadlock
+         | c =>
+             match initPrintRefusal? c with
+             | some e => throw e
+             | none =>
+               match fuel with
+               | 0 => throw .fuelOut
+               | fuel + 1 => do
+                   let (c', s', choices', _) ← stepFn ctx s c ch
+                   runInitConfig ctx fuel s' c' choices') :=
+  GoCore.ExecutionStatement.runInitConfig_unfold
+
+theorem runInitConfig_blocked :
+    ∀ {ctx : ProgramCtx} {fuel : Nat} {s : Store} {c : Config} {ch : Choices},
+    Blocked c → runInitConfig ctx fuel s c ch = .error (.terminal .deadlock) :=
+  GoCore.ExecutionStatement.runInitConfig_blocked
+
+theorem runInitConfig_nonZero :
+    ∀ {ctx : ProgramCtx} {fuel : Nat} {s : Store} {c : Config} {ch : Choices},
+    ¬ ZeroCost c → initPrintRefusal? c = none →
+    runInitConfig ctx fuel s c ch =
+      (match fuel with
+       | 0 => .error .fuelOut
+       | f + 1 => (stepFn ctx s c ch).bind fun r => runInitConfig ctx f r.2.1 r.1 r.2.2.1) :=
+  GoCore.ExecutionStatement.runInitConfig_nonZero
+
+theorem runInitConfig_refused :
+    ∀ {ctx : ProgramCtx} {fuel : Nat} {s : Store} {c : Config} {ch : Choices} {e : Stop},
+    ¬ ZeroCost c → initPrintRefusal? c = some e → runInitConfig ctx fuel s c ch = .error e :=
+  GoCore.ExecutionStatement.runInitConfig_refused
+
+theorem initPrintRefusal?_zeroCost :
+    ∀ {c : Config}, ZeroCost c → initPrintRefusal? c = none :=
+  GoCore.ExecutionStatement.initPrintRefusal?_zeroCost
 
 /-- The initialiser of the control program: `g = 7` (global cell 0). -/
 def initControlBody : Stmt := .assign (.addr (.global 0)) (.intLit 7 .int)
