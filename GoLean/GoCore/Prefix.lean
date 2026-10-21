@@ -10,8 +10,9 @@ ruling of 2026-09-27; brief `docs/codex-briefs/2026-09-24_packet-B-bridges.md`, 
 [AGENT] coordinator (input: `core/step-label-0928` @ `61bdc65d`). Every `<name>_stmt` of
 `ExecutionStatement.lean` is discharged here as `theorem <name> : <name>_stmt`, the statement
 UNCHANGED. Handoff: `docs/2026-09-28_packet-b-handoff.md`. (2026-10-20: `prefix_erase_steps`
-and `single_embedding` left the build with the relational layer, tag
-`relational/last-main-2026-10-20`; the rest is unchanged.)
+left the build with the relational layer, tag `relational/last-main-2026-10-20`;
+`single_embedding`, relation-free, was restored 2026-10-21 over `PoolFacts.lean`'s
+`execProgLoop_single`; the rest is unchanged.)
 -/
 
 namespace GoLean.GoCore.ExecutionStatement
@@ -586,6 +587,9 @@ theorem noRefusal_step {ctx : ProgramCtx} {s s' : Store} {c c' : Config} {ch₀ 
 /-! ## Silent projection, the single-goroutine embedding, the program seam -/
 
 theorem silent_projection : silent_projection_stmt := StepLabel.fold_silent
+
+theorem single_embedding : single_embedding_stmt := fun _ _ _ _ _ _ _ hr htr =>
+  execProgLoop_single hr htr
 
 theorem program_bridge : program_bridge_stmt := by
   intro fuel p name args ch pctx c₀ s₀ locs ch₁ h

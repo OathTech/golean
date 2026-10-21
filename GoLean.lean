@@ -11,8 +11,13 @@ import GoLean.GoCore
 import GoLean.GoCore.Trace
 import GoLean.GoCore.EquationsAttr
 import GoLean.GoCore.Equations
+import GoLean.GoCore.PoolFacts
 import GoLean.GoCore.ExecutionStatement
 import GoLean.GoCore.Prefix
+-- The relation-free single-goroutine bridge and projections, re-homed/restored 2026-10-21 (fix
+-- round F1 of the retirement; pending the owner's ruling): `PoolFacts` (ex-MultiSound/PoolTrace/
+-- ProgramTrace) and `PoolProjection` under its own name.
+import GoLean.GoCore.PoolProjection
 -- The seeded-heap entry (executable): the seed and its pool wrapper.
 import GoLean.GoCore.Seed
 import GoLean.GoCore.SeedPool

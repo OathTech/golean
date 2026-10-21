@@ -85,8 +85,12 @@ successor: a partial-correctness boundary, wording [USER]-approved
 (`Equations.lean`, `EquationsAttr.lean`: one proved lemma per `stepFn`
 arm, kept usable by `scripts/check-equations`'s client check), with
 their support closure `StepFnFacts.lean` (the kept part of
-`MachineSound.lean`, unchanged). No relation, no coherence theorem and
-no pool-level statement is in the build; setup is a premise (its
+`MachineSound.lean`, unchanged), and — fix round F1, 2026-10-21, pending the
+owner's ruling — the relation-free single-goroutine pool bridge and
+projections (`PoolFacts.lean`, `PoolProjection.lean`: `execProgLoop_single`,
+`single_embedding`, `program_run_iff`, `observation_iff`, …), stated over the
+executable driver only. No relation, no coherence theorem and no
+relation-level pool statement is in the build; setup is a premise (its
 no-globals, no-initializer case is the equation `runProgramSetup_noInit`)
 and init-time printing is refused. (3):
 the typed-admission profile family, the `GoLean/Interface.lean`

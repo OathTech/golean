@@ -42,7 +42,7 @@ echo "ok [no-unfold] $CLIENT never unfolds stepFn"
 # (c') the IMPORT WHITELIST pre-filter (audit re-verification R1): every `import` line of the client names a toolchain
 # root or a published API module; the load-bearing check is the client's own (`checkEnrollment` reads the environment
 # header), this is the cheap textual twin. Fail closed on any other import.
-import_whitelist='Init Std Lean GoLean.GoCore.Equations GoLean.GoCore.EquationsAttr GoLean.GoCore.Prefix GoLean.GoCore.ExecutionStatement'
+import_whitelist='Init Std Lean GoLean.GoCore.Equations GoLean.GoCore.EquationsAttr GoLean.GoCore.Prefix GoLean.GoCore.ExecutionStatement GoLean.GoCore.PoolProjection'
 while IFS= read -r impline; do
   mod="${impline#import }"; mod="${mod%% *}"
   ok_import=0

@@ -116,9 +116,19 @@ Goroutines run on a pool (`MultiConfig`, `Multi.lean`). One pool step, `stepMult
 (including spawns and channel pairings), and the full `StepLabel`. The whole-program drivers are
 `execProgLoop` / `execProgLoopOut`, and `runProgramPoolOutM` is the one `golean native-json-run`
 calls. The relational half — the labelled pool relation `StepML`, its 48 frozen statements and
-their proofs, the single-goroutine projections — was retired with the relational layer on
-2026-10-20 (tag `relational/last-main-2026-10-20`, `docs/ARCHIVE.md`); no pool-level theorem is in
-the build.
+their proofs — was retired with the relational layer on 2026-10-20 (tag
+`relational/last-main-2026-10-20`, `docs/ARCHIVE.md`); no relation-level pool theorem is in the
+build. What IS in the build, relation-free and over the executable driver only (restored
+2026-10-21, fix round F1): the **single-goroutine bridge** — `execProgLoop_single` and
+`single_embedding` (a one-goroutine pool run of `execProgLoop` is the sequential run at fuel plus
+`seqOpCount`), `stepMulti_single`/`stepThread_single`, `execProgLoop_aborted` (`PoolFacts.lean`);
+the sequential-to-pool **projections** carrying output and terminals across
+(`execProgLoopOut_single_wide`/`_prefix`/`_terminal`, `pool_run_single_prefix`, `seqOut_of_prefix`;
+`PoolProjection.lean`); and the driver trace and **observation vocabulary** (`Pool.Run`,
+`run_iff`, `ProgramRun`, `program_run_iff`, `Observation`, `observation_iff`,
+`refusal_is_not_observation`, `fuel_is_not_observation`; `PoolFacts.lean`). The chain
+`Prefix → execStmtLoop (run_ok_iff) → execProgLoop (single_embedding) → runProgramPoolOutM
+(program_bridge)` therefore holds end to end for one goroutine.
 
 ## 6. The choice tape
 

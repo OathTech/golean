@@ -5,6 +5,7 @@ import GoLean.GoCore.Admission
 import GoLean.GoCore.Prefix
 import GoLean.GoCore.Equations
 import GoLean.GoCore.Locals
+import GoLean.GoCore.PoolProjection
 import Lean
 
 /-! The core totality audit (2026-09-16, lane `park-lane/typed-profiles-0916`,
@@ -42,11 +43,37 @@ def requiredModules : List Name := [
     `GoLean.ChoiceTrace, `GoLean.GoCore.ExecutionStatement, `GoLean.GoCore.Prefix,
     `GoLean.GoCore.PrefixFacts, `GoLean.GoCore.StepErrors, `GoLean.GoCore.Locals,
     `GoLean.GoCore.EquationsAttr, `GoLean.GoCore.Equations, `GoLean.GoCore.Seed,
-    `GoLean.GoCore.SeedPool, `Tests.GoCoreContract, `Tests.PanicRendering, `Tests.GoCoreAudit]
+    `GoLean.GoCore.SeedPool, `GoLean.GoCore.PoolFacts, `GoLean.GoCore.PoolProjection,
+    `Tests.GoCoreContract, `Tests.PanicRendering, `Tests.GoCoreAudit]
 
 /-- Required core theorems (the `semantic interface` audit's CORE exports, plus the
 re-homed regressions). Each must exist as a theorem. -/
 def exports : List Name := [
+    -- RESTORED 2026-10-21 (fix round F1): the relation-free single-goroutine pool bridge, the
+    -- projections and the observation vocabulary (`PoolFacts.lean`, `PoolProjection.lean`,
+    -- `single_embedding`), the names that left the list at the retirement and exist again.
+    ``GoLean.GoCore.Machine.transferable_wide, ``GoLean.GoCore.Machine.transferableWide_ok,
+    ``GoLean.GoCore.Machine.transferableWide_fuelOut, ``GoLean.GoCore.Machine.transferableWide_terminal,
+    ``GoLean.GoCore.Machine.not_transferableWide_deadlock, ``GoLean.GoCore.Machine.not_transferableWide_refusal,
+    ``GoLean.GoCore.Machine.seqOut_zero, ``GoLean.GoCore.Machine.seqOut_succ,
+    ``GoLean.GoCore.Machine.outFold_nil, ``GoLean.GoCore.Machine.outFold_cons,
+    ``GoLean.GoCore.Machine.outFold_eq_fold, ``GoLean.GoCore.Machine.runnableIdxs_singleton_none,
+    ``GoLean.GoCore.Machine.mainOutcome?_single_none, ``GoLean.GoCore.Machine.front_single_step,
+    ``GoLean.GoCore.Machine.front_single_flagged, ``GoLean.GoCore.Machine.front_terminal,
+    ``GoLean.GoCore.Machine.front_aborted, ``GoLean.GoCore.Machine.stepThread_single_out,
+    ``GoLean.GoCore.Machine.stepMulti_single_out, ``GoLean.GoCore.Machine.execProgLoopOut_single_wide,
+    ``GoLean.GoCore.Machine.execProgLoopOut_single, ``GoLean.GoCore.Machine.execProgLoop_single_wide,
+    ``GoLean.GoCore.Machine.execProgLoop_single_terminal, ``GoLean.GoCore.Machine.execProgLoopOut_single_terminal,
+    ``GoLean.GoCore.Machine.isTerminal_false_of_stepFn_ok, ``GoLean.GoCore.Machine.isBlockedConfig_false_of_stepFn_ok,
+    ``GoLean.GoCore.Machine.zeroCost_stops, ``GoLean.GoCore.Machine.seqOut_stop,
+    ``GoLean.GoCore.Machine.seqOut_of_prefix, ``GoLean.GoCore.Machine.execProgLoopOut_single_prefix,
+    ``GoLean.GoCore.Machine.pool_run_single_prefix, ``GoLean.GoCore.Machine.afterStepFlag_none_of_noRegistry,
+    ``GoLean.GoCore.Machine.seqOpCount_eq_zero, ``GoLean.GoCore.Machine.execProgLoop_single_noBoundary,
+    ``GoLean.GoCore.Machine.execProgLoop_single_noBoundary_wide, ``GoLean.GoCore.Machine.execProgLoopOut_single_noBoundary_wide,
+    ``GoLean.Semantics.Pool.run_iff, ``GoLean.Semantics.Pool.program_run_iff,
+    ``GoLean.Semantics.Pool.exists_program_run_iff, ``GoLean.Semantics.Pool.observation_iff,
+    ``GoLean.Semantics.Pool.fuel_is_not_observation, ``GoLean.Semantics.Pool.refusal_is_not_observation,
+    ``GoLean.GoCore.Machine.stepThread_privateStep_label, ``GoLean.GoCore.ExecutionStatement.single_embedding,
     -- Layout follow-ups (f1)/(f2) of the r72 audit, BridgeSet rows 573–579.
     ``GoLean.GoCore.tyStructLayout_disjoint,
     ``GoLean.GoCore.structLayoutWith_align_ge,
