@@ -717,7 +717,7 @@ axioms contain `Classical.choice` (a dozen-line `MetaM` loop).
 | cold full build, `LEAN_NUM_THREADS=8`, `capped -m 64G`, main's module set (169 jobs) | 499 s wall; aggregate cgroup peak 3.2 GiB; largest process 3.1 GB (the 4.32.2 cold build of 2026-10-12: 163 jobs, 8 min 37 s) |
 | cold full build, same cap, the post-retirement tip (126 jobs; rebased onto `ea629cc8`) | 315 s wall; aggregate cgroup peak 3.1 GiB; largest process 3.1 GB; zero warnings |
 | fast tier (`capped scripts/ci`, warm) | 99 s |
-| kernel replay (`scripts/check-kernel-replay`, 68 modules, 4 threads) | 12.9 s; 5.9 GB peak (4.32.2: 17.8 s, 6.7 GB) |
+| kernel replay (`scripts/check-kernel-replay`, 4 threads) | main's set, 68 modules: 12.9 s, 5.9 GB peak (4.32.2: 17.8 s, 6.7 GB); the post-retirement tip, 47 modules: 8.2 s, 3.5 GB |
 | `lake env leanexport GoLean` | 33 s; 2.7 GB; a 1.0 GB, 18.1 M-line export |
 | `lake check --from-export <that> --inadvisably-no-sandbox` | 133 s; 1.6 GB; «Lean default kernel accepts the solution; Uses axioms: propext, Quot.sound, Classical.choice» |
 

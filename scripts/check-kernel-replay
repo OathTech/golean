@@ -12,8 +12,14 @@
 # added behind the elaborator's back — which neither the build (the tamperer
 # ran inside it), the escape-hatch text scan, nor the post-import axiom audit
 # (it reads the tampered environment as given) can see. It is the same kernel,
-# not an independent verifier; `lake check` (toolchains ≥ 4.35) is the stronger
-# form when the Lean pin moves.
+# not an independent verifier. Since the 4.35 pin (lane toolchain/lean-4.35-1020,
+# 2026-10-21) the toolchain's `lake check` is the stronger form — export, kernel
+# replay of the export, non-standard axioms refused, `--paranoid` external
+# kernels — but its bwrap sandbox cannot start inside nono, and on this project
+# it cannot start at all (its export imports every default module into one
+# environment; several default modules define a top-level `main`), so it is the
+# report-only speedbump scripts/check-lake-check and THIS script stays the gate:
+# no bwrap, and the module-set equality below catches an unbuilt or stale olean.
 #
 # Fail closed, three ways, and never a skip:
 #   * ANY nonzero exit of the checker fails — a kernel rejection («leanchecker
