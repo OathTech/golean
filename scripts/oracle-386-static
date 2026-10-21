@@ -80,11 +80,7 @@ GO_BUILD_CACHE="$ROOT/artifacts/go-build-cache"
 GO_TIMEOUT_SECONDS="${GO_TIMEOUT_SECONDS:-60}"
 JOBS="${GOLEAN_386_JOBS:-$(nproc 2>/dev/null || echo 4)}"
 
-run_with_timeout() {
-  local seconds="$1"
-  shift
-  perl -e 'my $t = shift @ARGV; my $pid = fork(); die "fork failed\n" unless defined $pid; if ($pid == 0) { exec @ARGV; exit 127 } $SIG{ALRM} = sub { kill "TERM", $pid; select undef, undef, undef, 1; kill "KILL", $pid; exit 124 }; alarm $t; waitpid $pid, 0; my $s = $?; exit($s == -1 ? 127 : ($s & 127 ? 128 + ($s & 127) : $s >> 8));' "$seconds" "$@"
-}
+. "$ROOT/scripts/run-with-timeout.sh"
 
 one_line() {
   local value="$1"

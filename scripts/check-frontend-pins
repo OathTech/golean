@@ -211,6 +211,7 @@
 # failed run, or any byte drift exits 1 naming the failing pin.
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+. "$ROOT/scripts/cap.sh"
 cd "$ROOT"
 
 # [AGENT] 2026-09-09 FR-31 final-stage twin re-pin: callable method targets
@@ -318,7 +319,7 @@ cd "$ROOT"
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/check-frontend-pins.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
 
-lake build golean > /dev/null \
+cap lake build golean > /dev/null \
   || { echo "check-frontend-pins: FAIL — golean build failed (fail closed)" >&2; exit 1; }
 
 # ---- 1. Deviation-observation pin ----

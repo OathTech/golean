@@ -2,6 +2,7 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+. "$ROOT/scripts/cap.sh"
 cd "$ROOT"
 
 MANIFEST="${1:-}"
@@ -99,11 +100,14 @@ MEMBERSHIP_DRAWS=32
 rm -f "$RESULTS_TSV" "$META_TSV"
 
 # Timeout knobs must be positive integers (audit F1, 2026-08-15): the
-# perl wrapper below hands the value to `alarm`, and perl numifies a
+# perl wrapper of the time handed the value to `alarm`, and perl numified a
 # non-numeric string to 0 — `alarm 0` CANCELS the alarm, so a plausible
 # operator value like "20m" (or this repo's own "=none" opt-out idiom)
-# would silently DISABLE the guard instead of failing loud. Same
-# fail-loud standard the lane params already get in parse_lane_params.
+# would silently have DISABLED the guard instead of failing loud. The
+# wrapper (scripts/run-with-timeout.sh) now refuses such a value itself
+# (exit 2); this check keeps the refusal here, before the rm above's
+# consequences, with the knob's name. Same fail-loud standard the lane
+# params already get in parse_lane_params.
 # Placed after the rm above so a run dying here leaves no readable
 # stale results pair (the gate-integrity invariant). The tracer's knob
 # LEAN_TRACE_TIMEOUT_SECONDS joined the list 2026-10-12 (release-trust
@@ -127,11 +131,8 @@ unset _tvar
 # them cause-WRONG. Belt and braces: the alarm handler also announces
 # itself on stderr, so any consumer that captures 2>&1 carries the
 # cause in its detail even if it forgets the exit-code test.
-run_with_timeout() {
-  local seconds="$1"
-  shift
-  perl -e 'my $t = shift @ARGV; my $pid = fork(); die "fork failed\n" unless defined $pid; if ($pid == 0) { exec @ARGV; exit 127 } $SIG{ALRM} = sub { print STDERR "run_with_timeout: TIMED OUT after ${t}s — killing: @ARGV\n"; kill "TERM", $pid; select undef, undef, undef, 1; kill "KILL", $pid; exit 124 }; alarm $t; waitpid $pid, 0; my $s = $?; exit($s == -1 ? 127 : ($s & 127 ? 128 + ($s & 127) : $s >> 8));' "$seconds" "$@"
-}
+. "$ROOT/scripts/run-with-timeout.sh"
+export RUN_WITH_TIMEOUT_ANNOUNCE=1   # exported: the xargs workers announce too
 
 # Invokes the ONCE-BUILT golean binary directly: `lake exe` per case pays
 # lake's startup (and a possible package lock) ~4x per case across the
@@ -493,7 +494,11 @@ echo "building Lean executable..."
 # distinguishable from exit 1 ("FAIL rows exist; published results are
 # authoritative"), like the other infra exits in this script.
 build_rc=0
-run_with_timeout "$LAKE_BUILD_TIMEOUT_SECONDS" lake build || build_rc=$?
+# The build goes through the box tool `capped` when it is on PATH (cap_argv,
+# scripts/cap.sh: an argv prefix, because the wrapper execs its argv and a
+# shell function cannot be in it); the wrapper kills the whole process group
+# on timeout, so a capped build dies whole.
+run_with_timeout "$LAKE_BUILD_TIMEOUT_SECONDS" $(cap_argv) lake build || build_rc=$?
 if [[ "$build_rc" -eq 124 ]]; then
   echo "lake build TIMED OUT after ${LAKE_BUILD_TIMEOUT_SECONDS}s (LAKE_BUILD_TIMEOUT_SECONDS; no results published)" >&2
   exit 2

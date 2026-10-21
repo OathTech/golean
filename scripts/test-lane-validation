@@ -561,7 +561,8 @@ else echo "ok: check-bugs empty-stage FAIL row fails (6) by name"; fi
 # and asserts both the exit code and the removal. G1/G2 cover the
 # post-build-attempt deaths (fake failing `lake` on PATH — no real
 # build ever runs; a timeout via LAKE_BUILD_TIMEOUT_SECONDS=0 is NOT
-# usable — run_with_timeout's perl alarm(0) DISABLES the timer — so
+# usable — diff-coverage refuses a 0 knob before any build, as does the
+# wrapper itself (scripts/run-with-timeout.sh, exit 2) — so
 # the timeout arm uses a sleeping fake lake under a 1s budget); G3
 # covers a formerly PRE-rm death (manifest not found); G4 the
 # empty-manifest path, which previously PUBLISHED a fabricated
@@ -908,6 +909,11 @@ EOF
       FR="$TMP/fakeroot"
       mkdir -p "$FR/scripts" "$FR/.lake/build/bin" "$FR/artifacts"
       ln -s "$ROOT/scripts/diff-coverage" "$FR/scripts/diff-coverage"
+      # diff-coverage resolves ROOT from its own path (here: the fake root) and
+      # sources these two beside itself; a fake root without them dies at the
+      # source line before any row is published (fix round 2026-10-21).
+      ln -s "$ROOT/scripts/cap.sh" "$FR/scripts/cap.sh"
+      ln -s "$ROOT/scripts/run-with-timeout.sh" "$FR/scripts/run-with-timeout.sh"
       for _d in tools Corpus baselines; do ln -s "$ROOT/$_d" "$FR/$_d"; done
       ln -s "$ROOT/artifacts/go-build-cache" "$FR/artifacts/go-build-cache"
       cat > "$FR/.lake/build/bin/golean" <<'EOF'

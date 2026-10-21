@@ -750,13 +750,16 @@ used constants and follow the ones whose axioms contain `Classical.choice`
 **`lake check` at this project.** The toolchain's `lake check` builds the
 default targets, exports them, replays the export through the kernel and
 refuses non-standard axioms (`--paranoid` adds five external kernels), in a
-`bwrap` sandbox that cannot start inside nono («setting up uid map:
-Permission denied»). So inside the sandbox it is a SPEEDBUMP,
-`scripts/check-lake-check` (`--inadvisably-no-sandbox`; the toolchain
-prints «this run is not trustworthy»), and the owner's sandboxed `lake
-check` outside nono is the gate at claim points, `--paranoid` at the
-release claim point (CLAUDE.md «The gates»). FINDING: the plain `lake
-check` cannot start on this project even outside nono — its export half
+`bwrap` sandbox that needs unprivileged user namespaces, which a sandboxed
+agent session does not have (here: «setting up uid map: Permission
+denied»). So `scripts/check-lake-check` is a SPEEDBUMP: it probes `bwrap`
+with Lake's own flags and runs sandboxed where that starts,
+`--inadvisably-no-sandbox` where it does not (the toolchain prints «this
+run is not trustworthy»), saying which; the owner's sandboxed `lake
+check`, where `bwrap` can start, is the gate at claim points, `--paranoid`
+at the release claim point (CLAUDE.md «The gates»; box-independence,
+below). FINDING: the plain `lake check` cannot start on this project even
+where the sandbox can — its export half
 (`Lake/CLI/Main.lean`, `checkExport`) imports EVERY default module into one
 environment, and this lakefile's default targets carry several top-level
 `main`s (`Main.lean` for `golean`; `Tests.GoCoreEval` for the eval-test
@@ -820,38 +823,118 @@ uncapped withdrawn.
 
 WHAT CHANGED ([AGENT] lane apparatus/box-independence-1021). `scripts/cap.sh`
 (sourced, beside `lean-scan.sh` and `typed-gate-scratch.sh`): `cap`, the
-thread derivation, and a one-line cap note. Every heavy call site —
-`scripts/ci` (the build, the eval tests, the two corpus runs), the nine
-check scripts, `scripts/grossmith-run` (its `gengo()`), `scripts/go-version-
-diversity` (its two corpus runs), `tools/admission-check.py` and
-`tools/core-audit.py` (`shutil.which("capped")`) — goes through it; the two
-self-wrapping scripts (`ci`, `grossmith-run`) no longer re-exec. The GitHub
-workflow passes `CAPPED_MEM_MAX` and keeps the proven-cap readback in its own
-in-scope shell. `scripts/check-lake-check` probes `bwrap --ro-bind / / --dev
-/dev true` and runs `lake check` sandboxed where that starts, with
-`--inadvisably-no-sandbox` where it does not, saying which (on the devbox,
-inside the agent sandbox: «setting up uid map: Permission denied», so the
-no-sandbox form). Hostnames, `~/projects/...` and `/usr/local/go` left the
-living docs and the Lean comments (dated records, baseline re-pin notes and
-the gc traceback fixtures keep theirs: they say what was run and where).
+thread derivation, `cap_argv` (the same choice as an argv prefix, for a site
+that hands its command to `run_with_timeout`, which execs its argv) and a
+one-line cap note that says only what THIS script does — without the tool
+it applies no cap itself; an outer cgroup (the workflow's systemd scope, a
+`capped` further up) may still be in force, which it cannot see. Every
+heavy call site — `scripts/ci` (the build, the eval tests, the two corpus
+runs), the ten check scripts (`check-frontend-pins`' `lake build golean`
+among them, after the fix round), `scripts/diff-coverage`'s own `lake
+build` (`$(cap_argv)` inside its timeout, so the README's `scripts/diff-one`
+route is capped too), `scripts/grossmith-run` (its `gengo()`),
+`scripts/go-version-diversity` (its two corpus runs), `tools/admission-
+check.py` and `tools/core-audit.py` (`shutil.which("capped")`) — goes
+through it: 29 `cap`/`cap_argv` sites in 15 shell scripts plus the two
+Python tools (27 in 13 before the fix round); the two self-wrapping scripts
+(`ci`, `grossmith-run`) no longer re-exec. The GitHub workflow passes
+`CAPPED_MEM_MAX` and keeps the proven-cap readback in its own in-scope
+shell. `scripts/check-lake-check` probes `bwrap` with Lake's own base flag
+set (`Lake/CLI/Check.lean`, `buildSandboxArgs`: `--ro-bind / /`, the tmpfs
+covers, `--dev`, `--proc`, `--clearenv`, `--unshare-all`,
+`--die-with-parent`, `--new-session`; the binary from `COMPARATOR_BWRAP`,
+Lake's own override) and runs `lake check` sandboxed where that starts,
+with `--inadvisably-no-sandbox` where it does not, saying which — the first
+round's weaker probe (`--ro-bind / / --dev /dev`) would have labelled a run
+«sandboxed» in an environment that opens a user namespace but cannot
+unshare the network; here, inside the agent sandbox, Lake's set fails on
+«setting up uid map: Permission denied» or «loopback: Failed to create
+NETLINK_ROUTE socket», whichever comes first, so the no-sandbox form.
+`scripts/check-wire-boundary` runs under `set -Ee` so the scratch file's
+ERR trap still names a failing command inside `cap`. Hostnames,
+`~/projects/...` and `/usr/local/go` left the living docs and the Lean
+comments (dated records, baseline re-pin notes and the gc traceback
+fixtures keep theirs: they say what was run and where).
 
 TOOLS, MEASURED. The declared set is now the README's list: elan/Lean,
-go1.26.5, Python ≥ 3.11, git, bash ≥ 4, GNU coreutils or compatible, perl 5
-core; `capped`, `bwrap` and `/usr/bin/time` optional. `jq` was declared but
-used only in a `docs/cli.md` example: dropped. `shasum -a 256` (the full
-`perl` package, not perl-base) became `sha256sum` (coreutils) at its five
-sites. perl STAYS for `run_with_timeout` because the obvious replacement was
-measured and does not match: this box's coreutils is uutils 0.8.0, whose
-`timeout --kill-after=1 1 sh -c 'trap "" TERM; sleep 30'` exits **137**
-(the wrapper's contract, and every consumer's first test, is **124**; 137
-is the cgroup-kill class — a cause-WRONG misclassification), and
-`timeout 5 sh -c 'kill -TERM $$'` exits **15** where the contract is 143;
-GNU timeout gives 124 and 143. A wrapper whose exit codes depend on which
-coreutils is installed is exactly the box-dependence the rule forbids;
-perl-base is Essential on Debian/Ubuntu and present on every Unix the
-project could run on, and the wrapper uses only `fork`/`exec`/`alarm`/
-`waitpid`. (`timeout` does kill the whole process group where perl kills
-the direct child only — a point in its favour, not enough.)
+go1.26.5, Python ≥ 3.11, git, bash ≥ 5, GNU coreutils or compatible;
+`capped`, `bwrap` and `/usr/bin/time` optional — perl is no longer on it
+(below). `jq` was declared but used only in a `docs/cli.md` example:
+dropped. `shasum -a 256` (the full `perl` package, not perl-base) became
+`sha256sum` (coreutils) at its five sites. bash ≥ 5, not 4 (fix round
+finding 2): `scripts/diff-coverage`'s per-row timer reads
+`${EPOCHREALTIME/./}` (bash 5.0+), which under `set -u` would kill `timed`
+on bash 4, so «bash 4» was a false promise; the alternatives buy nothing
+(`date +%s%N` is GNU/uutils-only; a python3 call per row is ≈10 ms twice a
+row), and every Linux this project can run on has shipped bash 5 since
+2019.
+
+`run_with_timeout` (one sourced definition, `scripts/run-with-timeout.sh`,
+since the fix round; the four scripts that each carried the perl one-liner
+— `diff-coverage`, `coverage-negative`, `detector-soundness`,
+`oracle-386-static` — source it). CORRECTION of the first round's record
+and of the lane commit `268f7776`'s message, which said GNU `timeout` gives
+124 on the ignored-TERM probe: that figure was asserted from memory, not
+measured, and is WRONG. Measured on this box: GNU 9.7
+(`/usr/bin/gnutimeout`) and uutils 0.8.0 BOTH exit **137** on
+`timeout --kill-after=1 1 sh -c 'trap "" TERM; sleep 30'` (GNU documents
+137 for a KILL after the timeout); the one genuine divergence is a TERM
+death, `timeout 5 sh -c 'kill -TERM $$'`: GNU 143, uutils 15. The
+wrapper's own figures: 124 / 143 / 124 (plain timeout) / 137 (SIGKILL) /
+127 (no such command). So the real reasons the project keeps its own
+wrapper are (a) the CONTRACT — 124 on a timeout, which `diff-coverage`
+relies on to tell a timeout from a cgroup kill (137 → the `killed:` cause
+family, `undecided_cause`) — and (b) the uutils/GNU divergence, which
+makes coreutils' exit codes box-dependent. The host is now Python, not
+perl ([AGENT], fix round): Python ≥ 3.11 is already declared and perl was
+not; the port keeps the contract exactly, eight probes measured through
+the sourced file — ignored TERM 124, TERM death 143, plain timeout 124,
+SIGKILL 137, no such command 127, `exit 3` → 3, a non-numeric or zero
+timeout → 2 with a message (the perl `alarm 0` silently disabled the
+guard; the callers' own checks stay, naming the knob) — at +7.7 ms a call
+(`python3 -I -S`: 9.6 ms; perl: 1.9 ms; a full run makes on the order of
+20k calls across 32 workers, a few seconds of wall). Two behaviours are
+new, both deliberate: the command runs in its own process group and the
+TERM-then-KILL goes to the group (a timed-out `go run` takes its compiled
+child with it; a capped build — `run_with_timeout … $(cap_argv) lake
+build`, the box tool between the wrapper and lake — dies whole, where the
+perl wrapper killed the direct child only and would have left lake
+running), and SIGTERM/SIGINT to the wrapper are forwarded to the group
+(exit 128+N), so Ctrl-C still reaches a command that is no longer in the
+terminal's group. The stderr announcement is opt-in
+(`RUN_WITH_TIMEOUT_ANNOUNCE=1`, set by `diff-coverage` as before; the other
+three keep stderr clean, as before). THE SELF-TEST CAUGHT THE PORT'S FIRST
+CUT: `scripts/test-lane-validation --with-go` failed every fixture with a
+real oracle run («go run oracle failed with exit 78»), and `scripts/diff-one`
+on a case the full gate had just passed failed the same way, while the
+oracle's exact command shape passed by hand under both wrappers. The cause
+was not the wrapper's semantics but its transport: `diff-coverage` hands
+`run_case` and `run_with_timeout` to its `xargs` workers with `export -f`;
+the perl one-liner lived inline in the function body and travelled with it,
+whereas the Python program lived in a plain shell variable that did not — so
+every worker ran `python3 -c ""`, which exits 0 having run NOTHING. The
+harness step «succeeded» without writing its directory and the oracle's
+crash-file reset then failed with 78 (`GOLEAN_COVERAGE_JOBS=1`, the
+sequential path, passed — the bisection that named it). Remedy: the program
+is exported with the function (`export RUN_WITH_TIMEOUT_PY`, and the
+announce flag likewise), and the function REFUSES when the program is empty
+(exit 70, a code no consumer reads as a verdict) rather than run nothing —
+a silent `exit 0` from an empty program is the fail-open the charter
+forbids. Lesson: a function that is exported to workers may only depend on
+state that is exported with it, and a wrapper must fail closed when its
+own body is missing. The self-test's own fake root (a scratch `scripts/`
+holding only a link to `diff-coverage`, so that a fake `golean` can sit
+beside it) then needed links to the two files diff-coverage now sources
+beside itself (`cap.sh`, `run-with-timeout.sh`): without them the runner
+died at the source line before any row, and sixteen fixtures reported
+«row: <none>». With both fixes `scripts/test-lane-validation --with-go` is
+green: 151 ok, 0 FAIL (2026-10-21). (The A/B run of the self-test at main's tree that was
+tried first was itself a mistake: its worktree shared this lane's `.lake`
+by symlink while its sources differed, so its `lake build` rebuilt this
+lane's oleans against the other source set while this lane used them —
+`lake build failed` mid-investigation; the orphaned workers were stopped by
+PID and `.lake/build` was wiped and rebuilt cold, 293 s. Never share a
+build tree between worktrees whose sources differ.)
 
 `deps/go`: the pin allows a shallow clone (tag `go1.26.5` is the pinned
 SHA; measured locally: 37 MB of `.git` and 186 MB checked out against
@@ -882,5 +965,8 @@ README's commands, under the box-wide build lock:
      32G): `scripts/ci` — `RESULT: PASS`, 82 s (warm); «memory cap: capped NOT
      on PATH: heavy steps run uncapped (the cap is box tooling; CAPPED_MEM_MAX=
      unset, so 32G still sizes LEAN_NUM_THREADS)»; the same speedbump RED.
+     (That note's wording was corrected in the fix round — «capped not on
+     PATH: this script applies no cap itself» — because an outer cgroup can
+     still be in force; the line quoted is the run's own at `268f7776`.)
 Reproduce: the two command lists above in a fresh clone; the logs are
 ephemeral.

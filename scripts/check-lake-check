@@ -33,16 +33,24 @@ export TMPDIR="$ROOT/.tmp"
 mkdir -p "$TMPDIR"
 log="$(mktemp "$TMPDIR/lake-check.XXXXXX.log")"
 
-# The sandbox probe: the same bwrap operations lake's sandbox needs (a user
-# namespace, a bind of / and a /dev). Its first stderr line is the reason
-# when it fails.
+# The sandbox probe: Lake's own base flag set (Lake/CLI/Check.lean,
+# buildSandboxArgs, minus the per-run binds and chdir), through the same
+# binary Lake would use (COMPARATOR_BWRAP names it, default `bwrap`), so an
+# environment that passes here can start Lake's sandbox and one that cannot
+# is labelled «no sandbox» with the first stderr line as the reason — a user
+# namespace that opens but cannot unshare the network, say, fails here too
+# (fix round 2026-10-21: the weaker `--ro-bind / / --dev /dev` probe would
+# have called that run «sandboxed»).
+sandbox_bin="${COMPARATOR_BWRAP:-bwrap}"
 sandbox_flags=()
-if ! command -v bwrap >/dev/null 2>&1; then
-  sandbox_flags=(--inadvisably-no-sandbox); form="no sandbox (bwrap is not installed)"
-elif probe="$(bwrap --ro-bind / / --dev /dev true 2>&1)"; then
-  form="sandboxed (bwrap can start here)"
+if ! command -v "$sandbox_bin" >/dev/null 2>&1; then
+  sandbox_flags=(--inadvisably-no-sandbox); form="no sandbox ($sandbox_bin is not installed)"
+elif probe="$("$sandbox_bin" --ro-bind / / --tmpfs /home --tmpfs /root --tmpfs /run/user --tmpfs /tmp --dir /tmp/home \
+                --dev /dev --proc /proc --clearenv --setenv HOME /tmp/home --unshare-all --die-with-parent --new-session \
+                --chdir / -- /bin/true 2>&1)"; then
+  form="sandboxed ($sandbox_bin starts with Lake's flags here)"
 else
-  sandbox_flags=(--inadvisably-no-sandbox); form="no sandbox (bwrap cannot start here: $(printf '%s' "$probe" | head -1))"
+  sandbox_flags=(--inadvisably-no-sandbox); form="no sandbox ($sandbox_bin cannot start with Lake's flags here: $(printf '%s' "$probe" | head -1))"
 fi
 
 timer=()

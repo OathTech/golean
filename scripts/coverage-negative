@@ -21,19 +21,16 @@ BUILD_OUT="$(mktemp -d "${TMPDIR:-/tmp}/golean-negative-build.XXXXXX")"
 # authoritative; >= 2 = infrastructure, nothing published.
 rm -f "$RESULTS_TSV" "$META_TSV"
 
-# Timeout knob must be a positive integer (exec-lane audit F1 pattern:
-# perl numifies a non-numeric string to 0 and `alarm 0` CANCELS the
-# guard — a value like "20m" would silently disable it).
+# Timeout knob must be a positive integer (exec-lane audit F1 pattern: the
+# perl wrapper of the time numified a non-numeric string to 0 and `alarm 0`
+# CANCELLED the guard — a value like "20m" would silently have disabled it;
+# the wrapper now refuses such a value itself, and this check names the knob).
 if [[ ! "$GO_TIMEOUT_SECONDS" =~ ^[1-9][0-9]*$ ]]; then
   echo "coverage-negative: GO_TIMEOUT_SECONDS must be a positive integer (seconds), got '$GO_TIMEOUT_SECONDS' — refusing to run with a disabled or malformed timeout" >&2
   exit 2
 fi
 
-run_with_timeout() {
-  local seconds="$1"
-  shift
-  perl -e 'my $t = shift @ARGV; my $pid = fork(); die "fork failed\n" unless defined $pid; if ($pid == 0) { exec @ARGV; exit 127 } $SIG{ALRM} = sub { kill "TERM", $pid; select undef, undef, undef, 1; kill "KILL", $pid; exit 124 }; alarm $t; waitpid $pid, 0; my $s = $?; exit($s == -1 ? 127 : ($s & 127 ? 128 + ($s & 127) : $s >> 8));' "$seconds" "$@"
-}
+. "$ROOT/scripts/run-with-timeout.sh"
 
 if ! command -v go >/dev/null 2>&1; then
   echo "go not found on PATH; install Go or expose it in the shell to run negative coverage" >&2

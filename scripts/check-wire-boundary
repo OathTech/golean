@@ -59,7 +59,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
 [[ $# = 0 ]] || { echo 'check-wire-boundary: expected no arguments' >&2; exit 2; }
 . "$ROOT/scripts/typed-gate-scratch.sh"
-set -e
+set -Ee   # -E: the scratch file's ERR trap fires inside `cap` and for the top-level command
 GOLEAN=".lake/build/bin/golean"
 cap lake build golean > /dev/null
 [[ -x "$GOLEAN" ]] || { echo "check-wire-boundary: no $GOLEAN (fail closed)" >&2; exit 1; }

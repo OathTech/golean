@@ -17,6 +17,12 @@
 # nothing where the tool is absent.
 cap() { if command -v capped >/dev/null 2>&1; then capped "$@"; else "$@"; fi; }
 
+# cap_argv: the same choice as an argv PREFIX, for a site that hands its
+# command to another wrapper which execs its argv (run_with_timeout), where a
+# shell function cannot go: `run_with_timeout 60 $(cap_argv) lake build`
+# (unquoted on purpose: empty when the tool is absent).
+cap_argv() { if command -v capped >/dev/null 2>&1; then echo capped; fi; }
+
 # cap_lean_threads: scale Lean's thread pool to the cap (a performance knob,
 # not a check). The pool bounds the concurrent `lean` workers AND the
 # per-file elaboration; peak memory is a sum of per-thread peaks, 8G a
@@ -51,14 +57,18 @@ cap_lean_threads() {
   fi
 }
 
-# cap_note: one line saying whether the cap is in force here, for a gate's
-# record (honest measurement: a run says what it ran under).
+# cap_note: one line saying what this script does about the cap, for a
+# gate's record (honest measurement: a run says what it ran under). Without
+# the tool the script applies no cap ITSELF — an outer cgroup (the GitHub
+# workflow's systemd scope, a `capped` further up) may still be in force,
+# which this script cannot see; the thread sizing is cap_lean_threads's own
+# line.
 cap_note() {
   local mem state tool
-  mem="${CAPPED_MEM_MAX:-unset, so 32G}"; state="${CAPPED_STATE:-unset}"
+  mem="${CAPPED_MEM_MAX:-unset}"; state="${CAPPED_STATE:-unset}"
   if tool="$(command -v capped 2>/dev/null)"; then
     echo "capped on PATH ($tool); CAPPED_MEM_MAX=$mem; CAPPED_STATE=$state"
   else
-    echo "capped NOT on PATH: heavy steps run uncapped (the cap is box tooling; CAPPED_MEM_MAX=$mem still sizes LEAN_NUM_THREADS)"
+    echo "capped not on PATH: this script applies no cap itself (the cap is box tooling); CAPPED_MEM_MAX=$mem"
   fi
 }

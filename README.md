@@ -58,15 +58,14 @@ is the complete list of what the machine needs:
   version (currently `v4.35.0`); elan installs it on first use.
 - **Go `go1.26.5` exactly** — the differential oracle (`baselines/go-oracle-pin`); any
   other patch level is a red gate by design, never a silent drift.
-- **Python 3.11 or newer** (standard library only).
-- **git**, **bash 4 or newer**, and **GNU coreutils or a compatible implementation**
-  (`realpath -m`, `shuf --random-source`, `sha256sum`, `nproc` and `timeout` are
-  used; the project is measured against uutils 0.8 as well as GNU).
-- **perl 5**, core only: the differential runner's timeout wrapper
-  (`run_with_timeout` in `scripts/diff-coverage` and three siblings) uses perl's
-  `fork`/`alarm`/`waitpid`. It stays perl because coreutils' `timeout` does not keep
-  the wrapper's exit-code contract on every implementation (measured:
-  `docs/operational-lessons.md`, «Box-independence»).
+- **Python 3.11 or newer** (standard library only; it also hosts the differential
+  runner's timeout wrapper, `scripts/run-with-timeout.sh`, whose exit-code contract
+  coreutils' `timeout` does not keep — measured in `docs/operational-lessons.md`,
+  «Box-independence»).
+- **git**, **bash 5 or newer** (the runner's per-row timer reads `EPOCHREALTIME`),
+  and **GNU coreutils or a compatible implementation** (`realpath -m`,
+  `shuf --random-source`, `sha256sum` and `nproc` are used; the project is measured
+  against uutils 0.8 as well as GNU).
 - **Optional, detected at run time, never required:** `capped`, the Oath devbox
   memory cap — every heavy step of the scripts runs through it when it is on PATH,
   sized by `CAPPED_MEM_MAX` (default 32G), and runs uncapped where it is absent;
