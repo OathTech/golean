@@ -491,7 +491,7 @@ the whole; both are checked at the array arm, and a struct TypeDef's
 sum of fields is checked when its entry decodes.
 
 Derivation (measured 2026-10-12 on main's binary at c266ce6b, the
-`.tmp/probes` programs, single runs under `capped -m 16G`, wall clock
+`.tmp/probes` programs, single runs under `CAPPED_MEM_MAX=16G capped`, wall clock
 incl. ≈0.1 s process start; the gate's per-case wall is
 `LEAN_TIMEOUT_SECONDS` = 60 s since 2026-10-07 ([USER] approved items 1 and 2,
 relayed; 30 s before). The cost is ≈ LINEAR in the product on every
@@ -541,7 +541,7 @@ would otherwise materialize — behind gc's own `makeslice` panic and
 `sliceCapBudget`, the make site's order; BUG-078 residual (2b), the
 decoder's half: `make([][1024]byte, 1<<19)`, 2^29 leaves at a count
 16× under `sliceCapBudget`, was a kill — exit 137 at 16.7 GB after
-57 s under `capped -m 16G`, the reviewer's reproduction; `1<<18` ran
+57 s under `CAPPED_MEM_MAX=16G capped`, the reviewer's reproduction; `1<<18` ran
 37.0 s / 13.6 GB). What it does NOT bound, STILL OPEN: a `make` whose
 count is a run-time value — `sliceCapBudget` (Machine.lean) bounds the
 element COUNT only, so `make([][1024]byte, n)` with `n` a variable at
@@ -1516,7 +1516,7 @@ the half the fail-close-until-fixed ruling reaches without the core): a `make([]
 cap)` whose CONSTANT length or cap `n` has `n × footprint(T)` past `arrayFootprintBudget`
 refuses by name — the backing materializes that many leaves, and `sliceCapBudget` (the
 element COUNT, Machine.lean) does not see the element type: the reviewer's reproduction
-under `capped -m 16G`, `make([][1024]byte, 1<<18)` 37.0 s / 13.6 GB (a hair under the cap),
+under `CAPPED_MEM_MAX=16G capped`, `make([][1024]byte, 1<<18)` 37.0 s / 13.6 GB (a hair under the cap),
 `1<<19` exit 137 at 16.7 GB after 57 s — a kill at a count 16× under `sliceCapBudget`.
 `n` is the backing's CONSTANT count: the cap when a cap operand is spelled and constant;
 the len only when NO cap operand is spelled (then the backing is len-sized). A constant

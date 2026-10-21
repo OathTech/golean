@@ -179,7 +179,7 @@ undecided_cause() {
 # status N" line — only a `go` tool usage error yields 2 — so codes 2..128
 # from those sites are a tool refusal with its message, not a kill; the
 # enumerator names its exit code itself. 137 and 143 spelled out because
-# they are the ones a cgroup/OOM kill or scripts/capped's kill produce;
+# they are the ones a cgroup/OOM kill or the box tool `capped`'s kill produce;
 # any other 128+n (n in 1..64, the real signal range) is a crash that
 # decided nothing either. Prints nothing and returns 1 otherwise.
 signal_cause() {
@@ -257,7 +257,7 @@ fi
 # (GO111MODULE=off) and Go IGNORES GOTOOLCHAIN there — measured: an
 # ambient `GOTOOLCHAIN=go1.24.9 go version` says go1.24.9, but with
 # GO111MODULE=off added (`go version`, `go env GOVERSION`, `go run`) the go
-# command stays on /usr/local/go: `go run` compiles with its tools and
+# command stays on the live GOROOT: `go run` compiles with its tools and
 # runtime.Version() says go1.26.5. So the alternate's GOROOT is resolved ONCE (`GOTOOLCHAIN=<v>
 # go env GOROOT` in module mode: the module-cache toolchain), and the
 # oracle command alone gets PATH=<that>/bin:…, GOROOT=<that>,
@@ -387,7 +387,7 @@ RESULTS_TMP="$(mktemp "$RESULTS_DIR/.${RESULTS_BASE}.XXXXXX")"
 META_TMP="$(mktemp "$META_DIR/.${META_BASE}.XXXXXX")"
 printf 'result\tid\tfeatures\tstage\tdetail\n' > "$RESULTS_TMP"
 
-manifest_sha="$(shasum -a 256 "$MANIFEST" | awk '{ print $1 }')"
+manifest_sha="$(sha256sum "$MANIFEST" | awk '{ print $1 }')"
 manifest_cases="$(awk -F $'\t' 'NF > 0 && $1 !~ /^#/ { count += 1 } END { print count + 0 }' "$MANIFEST")"
 # An EMPTY manifest is an infra refusal, decided BEFORE the build and
 # BEFORE publish (maint-check M2: the old check sat after

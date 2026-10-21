@@ -6,25 +6,32 @@ measured remedies. Add entries incident-first: what happened, what
 was measured, the remedy. (Agent-guidance style: incident-derived
 lines only — the BRiCk lesson.)
 
-## Memory: every lake/lean invocation goes through `capped`
+## Memory: every heavy invocation goes through `cap` (the box tool when present)
 
-**Since 2026-10-11 the cap is the box-wide `capped`** (`/usr/local/bin/capped`,
-installed by oath-devbox on every Oath box; [USER] Mike 2026-10-11, relayed:
-the global capped script is the one to use, here and on the new box; D2: conform to the box default, raising it during execution when needed being allowed). `scripts/capped`
-is now a shim onto it (legacy `GOLEAN_MEM_MAX`/`GOLEAN_CAPPED` translated to
-`CAPPED_MEM_MAX`/`CAPPED_STATE`; the original wrapper body is the fallback
-where the box tool is absent, e.g. GitHub runners), `scripts/ci` accepts
-either token and scales `LEAN_NUM_THREADS` from the effective cap, and the
-default is the box's 32 G — not the project's former 64 G. The one measured
-reason to raise: a COLD full build / cold `scripts/ci` in a fresh worktree
-needs 64G+ («Concurrency OOM», below) — `capped -m 64G -- scripts/ci`, said
-where it is run; `scripts/ci` prints that note itself when it sees a cold
-tree under a small cap. The box-wide build lock (below) stays. Why this
-mattered: before the shim, `capped scripts/ci` re-wrapped itself through
-the project wrapper into a SIBLING cgroup at 64 G and so silently escaped
-the 32 G cap the box tool had certified — nothing was uncapped, but the box
-default was not honoured and no one was told. The history below is kept as
-written (the mechanism is the same; the box tool was ported from it).
+**Since 2026-10-21 the cap is detected, never shipped** (box-independence,
+release-readiness row 46; [USER] 2026-10-21, paraphrased: the project must
+build and check on an ordinary machine with the documented commands and no
+extra setup; `capped` is box tooling, used through the function
+`cap() { if command -v capped >/dev/null 2>&1; then capped "$@"; else "$@"; fi; }`
+and sized by `CAPPED_MEM_MAX`, never `-m`; where it is absent the build runs
+uncapped, silently; `scripts/capped` goes). `scripts/cap.sh` defines `cap`
+and the thread derivation (`LEAN_NUM_THREADS` = cap/8G, floor 2, from
+`CAPPED_MEM_MAX`, default 32G — the box default, kept as the project's
+choice with or without the tool); every gate script sources it and runs its
+heavy commands through `cap`; `scripts/ci` no longer re-execs itself through
+a wrapper, and prints the cap in force as its first note. The former shim
+`scripts/capped` (its fallback body a near-copy of the box tool) is gone,
+with the names `GOLEAN_MEM_MAX` and `GOLEAN_CAPPED`. The one measured reason
+to raise the limit: a COLD full build / cold `scripts/ci` in a fresh
+worktree needs 64G+ («Concurrency OOM», below) — `CAPPED_MEM_MAX=64G
+scripts/ci`, said where it is run; `scripts/ci` prints that note itself when
+it sees a cold tree under a small cap. The box-wide build lock (below)
+stays. (2026-10-11 to 2026-10-21 the shim translated the legacy names onto
+the box tool, after `capped scripts/ci` had re-wrapped itself into a sibling
+cgroup at 64 G and silently escaped the certified 32 G; before that the
+project wrapper below WAS the cap. The history is kept as written; the box
+tool was ported from it. The full account of the 2026-10-21 change:
+«Box-independence», at the end of this file.)
 
 A `by decide +kernel` on a FALSE proposition reached 60 GB in ~2 min
 and killed the session twice (the OOM killer's badness score picks
@@ -136,10 +143,12 @@ self-reports the wrong version — identify with `go version -m`).
 
 A runner VM that dies uploads no logs and saves no cache —
 "disposable, let it die" is the wrong frame. CI wraps gate steps in
-SYSTEM-scope cgroup caps and PROVES the cap via readback
-(`GOLEAN_CAPPED=1` + size — translated to `CAPPED_STATE`/`CAPPED_MEM_MAX`
-by the shim where the box tool exists, read directly by the fallback
-wrapper on runners; `scripts/ci` refuses if the kernel disagrees).
+SYSTEM-scope cgroup caps and PROVES the cap via readback: the in-scope
+shell reads its own cgroup's `memory.max` and refuses (exit 3) if the
+kernel says `max` (the readback moved from the project wrapper into the
+workflow when the wrapper went, 2026-10-21); the size goes in as
+`CAPPED_MEM_MAX`, which sizes `scripts/ci`'s thread pool. A runner has
+no `capped`, so the gate's own steps run bare inside that scope.
 
 ## Diagnosing async results
 
@@ -794,4 +803,64 @@ closures loading) — the gate failing closed on the build tree, not the
 source. `scripts/check-kernel-replay` names a stale olean by path only when
 the replay itself succeeds (the set comparison runs after it); a kernel
 rejection in a module that no longer has a source is the same remedy:
-`rm -rf .lake/build` and rebuild cold (`capped -m 64G -- lake build`).
+`rm -rf .lake/build` and rebuild cold (`CAPPED_MEM_MAX=64G capped lake build`).
+
+## Box-independence: the cap is detected, never shipped; the tools are declared (2026-10-21)
+
+THE RULE ([USER] 2026-10-21, paraphrased; release-readiness row 46): the
+project must work outside the Oath boxes — a clone on an ordinary machine
+builds and checks with the documented commands and no extra setup; nothing
+box-specific is hard-coded (home paths, install locations, cache layouts,
+hostnames, the sandbox's name, box-only tools); dependencies are declared in
+the project's files and optional box tooling is detected at run time; the
+memory cap is used through `cap()` (above), sized by `CAPPED_MEM_MAX`, never
+`-m`, and where `capped` is absent the build runs uncapped, silently —
+`scripts/capped` removed, the README's promise that the gate refuses to run
+uncapped withdrawn.
+
+WHAT CHANGED ([AGENT] lane apparatus/box-independence-1021). `scripts/cap.sh`
+(sourced, beside `lean-scan.sh` and `typed-gate-scratch.sh`): `cap`, the
+thread derivation, and a one-line cap note. Every heavy call site —
+`scripts/ci` (the build, the eval tests, the two corpus runs), the nine
+check scripts, `scripts/grossmith-run` (its `gengo()`), `scripts/go-version-
+diversity` (its two corpus runs), `tools/admission-check.py` and
+`tools/core-audit.py` (`shutil.which("capped")`) — goes through it; the two
+self-wrapping scripts (`ci`, `grossmith-run`) no longer re-exec. The GitHub
+workflow passes `CAPPED_MEM_MAX` and keeps the proven-cap readback in its own
+in-scope shell. `scripts/check-lake-check` probes `bwrap --ro-bind / / --dev
+/dev true` and runs `lake check` sandboxed where that starts, with
+`--inadvisably-no-sandbox` where it does not, saying which (on the devbox,
+inside the agent sandbox: «setting up uid map: Permission denied», so the
+no-sandbox form). Hostnames, `~/projects/...` and `/usr/local/go` left the
+living docs and the Lean comments (dated records, baseline re-pin notes and
+the gc traceback fixtures keep theirs: they say what was run and where).
+
+TOOLS, MEASURED. The declared set is now the README's list: elan/Lean,
+go1.26.5, Python ≥ 3.11, git, bash ≥ 4, GNU coreutils or compatible, perl 5
+core; `capped`, `bwrap` and `/usr/bin/time` optional. `jq` was declared but
+used only in a `docs/cli.md` example: dropped. `shasum -a 256` (the full
+`perl` package, not perl-base) became `sha256sum` (coreutils) at its five
+sites. perl STAYS for `run_with_timeout` because the obvious replacement was
+measured and does not match: this box's coreutils is uutils 0.8.0, whose
+`timeout --kill-after=1 1 sh -c 'trap "" TERM; sleep 30'` exits **137**
+(the wrapper's contract, and every consumer's first test, is **124**; 137
+is the cgroup-kill class — a cause-WRONG misclassification), and
+`timeout 5 sh -c 'kill -TERM $$'` exits **15** where the contract is 143;
+GNU timeout gives 124 and 143. A wrapper whose exit codes depend on which
+coreutils is installed is exactly the box-dependence the rule forbids;
+perl-base is Essential on Debian/Ubuntu and present on every Unix the
+project could run on, and the wrapper uses only `fork`/`exec`/`alarm`/
+`waitpid`. (`timeout` does kill the whole process group where perl kills
+the direct child only — a point in its favour, not enough.)
+
+`deps/go`: the pin allows a shallow clone (tag `go1.26.5` is the pinned
+SHA; measured locally: 37 MB of `.git` and 186 MB checked out against
+474 MB of history; the gate's consumers read files at HEAD and run
+`rev-parse`/`diff --quiet HEAD`, which a shallow clone satisfies — the
+workflow already clones that way), but `scripts/mine-spec-archaeology`
+walks history and the network clone path cannot be tested from the
+sandbox, so `scripts/setup-deps` keeps the full clone; the README says what
+it costs.
+
+ACCEPTANCE (the clean-clone test the lane brief set; result lines below
+are the runs' own):

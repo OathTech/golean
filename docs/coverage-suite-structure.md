@@ -674,7 +674,7 @@ NOT established>` (e.g. `lean-observation: Lean run TIMED OUT after 30s
 (LEAN_TIMEOUT_SECONDS) — no observation produced`; `nondet: … re-run under
 stream [...] TIMED OUT … — invariance NOT certified`; `membership:
 enumerator TIMED OUT … (coverage not certified)`). Signal deaths (the
-wrapper's 128+signal: 137 SIGKILL — a cgroup/OOM kill or scripts/capped's
+wrapper's 128+signal: 137 SIGKILL — a cgroup/OOM kill or the box tool `capped`'s
 — 143 SIGTERM, any other 128+n) read `… KILLED (exit N — …; did not
 decide)`; the comparator's undecodable-observation refusal reads
 `observation-eq could not decode the observation (exit 2 — did not
@@ -690,8 +690,8 @@ soundness alarm — a killed command has decided nothing
 ### Go version diversity (report-only; release-readiness item 32)
 
 ```sh
-scripts/capped scripts/go-version-diversity [--staticinit] [--record <dir>] [--reuse] <goX.Y.Z>
-scripts/capped scripts/go-version-diversity --control [--staticinit] [--record <dir>] [--reuse]
+scripts/go-version-diversity [--staticinit] [--record <dir>] [--reuse] <goX.Y.Z>
+scripts/go-version-diversity --control [--staticinit] [--record <dir>] [--reuse]
 ```
 
 re-runs the differential and negative corpora with ONLY THE ORACLE on another

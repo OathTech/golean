@@ -20,7 +20,7 @@
 #                  three strict-lane adversarial streams, two random 4096-
 #                  entry streams — see GoLean/ChoiceTrace.lean parseStream)
 #   --golean BIN   the golean binary (default .lake/build/bin/golean — build
-#                  it via `scripts/capped lake build golean` first)
+#                  it via `lake build golean` first)
 #   --dump         also write every consumption (id, stream, idx, phase, site,
 #                  bound, streamValue, pick) to $OUT/dump-<k>.tsv per chunk —
 #                  the per-consumption byte-identity oracle (design-hygiene
@@ -70,7 +70,7 @@ for v in JOBS FUEL; do
   fi
 done
 if [[ ! -x "$GOLEAN_BIN" ]]; then
-  echo "choice-trace-corpus: golean binary not executable: $GOLEAN_BIN (build with scripts/capped lake build golean)" >&2
+  echo "choice-trace-corpus: golean binary not executable: $GOLEAN_BIN (build with lake build golean)" >&2
   exit 2
 fi
 if ! "$GOLEAN_BIN" choice-trace --help >/dev/null 2>&1; then

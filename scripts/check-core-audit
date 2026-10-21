@@ -10,12 +10,13 @@
 # (The five compiled poison controls were removed in the 2026-10-12 gate cull, D3.)
 set -Eeuo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+. "$ROOT/scripts/cap.sh"
 cd "$ROOT"
 [[ $# = 0 ]] || { echo 'check-core-audit: expected no arguments' >&2; exit 2; }
 . "$ROOT/scripts/typed-gate-scratch.sh"
 # The GoLean library (every module reachable from the root GoLean.lean) plus the
 # core test library: the harness needs an olean for every module it imports.
-scripts/capped lake build GoLean GoCoreAuditTests
-scripts/capped lake env python3 tools/core-audit.py | tee "$gate_scratch/audit.log"
+cap lake build GoLean GoCoreAuditTests
+cap lake env python3 tools/core-audit.py | tee "$gate_scratch/audit.log"
 grep -q 'Core totality audit: [0-9]* GoLean modules in the closure' "$gate_scratch/audit.log"
 printf '%s\n' 'Core totality audit gate: PASS'

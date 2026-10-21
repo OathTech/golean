@@ -16,6 +16,7 @@
 # client's own Lean-level proof-term check, which (b) runs.) Every step fails closed.
 set -Eeuo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+. "$ROOT/scripts/cap.sh"
 cd "$ROOT"
 [[ $# = 0 ]] || { echo 'check-equations: expected no arguments' >&2; exit 2; }
 . "$ROOT/scripts/typed-gate-scratch.sh"
@@ -24,10 +25,10 @@ CLIENT=Tests/EquationClient.lean
 GUARD='unfold stepFn|simp \[[^]]*stepFn|cbv|decide'
 
 # (a) the equation file and the client library build
-scripts/capped lake build GoLean EquationTests
+cap lake build GoLean EquationTests
 
 # (b) + (d) the client runs — its `#eval` enrollment check elaborates first — and reports PASS
-scripts/capped lake env lean --run "$CLIENT" | tee "$gate_scratch/client.log"
+cap lake env lean --run "$CLIENT" | tee "$gate_scratch/client.log"
 grep -q '^Equation client: PASS' "$gate_scratch/client.log"
 grep -q 'enrollment complete' "$gate_scratch/client.log" || {
   echo "check-equations: FAIL — the client's enrollment check did not report completion" >&2; exit 1; }

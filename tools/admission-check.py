@@ -2,8 +2,10 @@
 """Admission inventory and native artifact link (the post-import audit controls
 were removed in the 2026-10-12 gate cull, D3).
 
-Lean invocations run under scripts/capped (the shim onto the box-wide
-`capped`). Scratch is worktree-local under .tmp/: a PASSING run keeps only
+Lean invocations run under the box tool `capped` when it is on PATH, bare
+otherwise (box-independence, release-readiness row 46: the cap is detected,
+never shipped; the limit is CAPPED_MEM_MAX). Scratch is worktree-local under
+.tmp/: a PASSING run keeps only
 its own result as .tmp/admission-<label>-last (the previous last run is
 replaced); a FAILING run's scratch is retained under its random name and is
 never overwritten by a later green run ([USER] 2026-10-11, D5: keep the
@@ -23,6 +25,11 @@ MODULES = ["GoLean.GoCore.AdmissionIndices", "GoLean.GoCore.AdmissionPolicy",
            "GoLean.GoCore.Admission", "Tests.GoCoreAdmissionFixture",
            "Tests.GoCoreAdmission"]
 SOURCES = [m.replace(".", "/") + ".lean" for m in MODULES]
+
+
+def cap():
+    """The memory cap as scripts/cap.sh gives it: `capped` when on PATH, else nothing."""
+    return ["capped"] if shutil.which("capped") else []
 
 
 def run(args, env=None, cwd=ROOT, expect=0):
@@ -81,8 +88,7 @@ def artifact():
     # scripts/check-admission's diff-coverage run supplies main around it).
     run(["go", "run", "./tools/nativefrontend", "--subject", "--dir",
          str(ROOT / "Tests/admission-fixture"), "--out", str(wire)], env=env)
-    run([str(ROOT / "scripts/capped"), "lean", "--run",
-         "tools/check-admission-artifact.lean", str(wire)])
+    run(cap() + ["lean", "--run", "tools/check-admission-artifact.lean", str(wire)])
     print("Admission fresh native wire SHA256:", hashlib.sha256(wire.read_bytes()).hexdigest())
     keep_last(directory, "artifact")
 

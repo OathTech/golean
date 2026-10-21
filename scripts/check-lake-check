@@ -6,29 +6,49 @@
 # `lake check` (toolchains >= 4.35) builds the default targets, exports every default module's
 # declarations (`leanexport`), replays the export through the kernel (`leanchecker`) and refuses
 # any axiom beyond propext / Classical.choice / Quot.sound; `--paranoid` adds the bundled external
-# kernels. Its own `bwrap` sandbox cannot start inside nono («setting up uid map: Permission
-# denied»), so here it runs with `--inadvisably-no-sandbox` — the toolchain itself prints «this run
-# is not trustworthy» — and is a SPEEDBUMP: report-only, read at the merge ask by name. The GATE is
-# the owner's `lake check` outside the sandbox at claim points, `--paranoid` at the release claim
-# point (CLAUDE.md «The gates»; docs/operational-lessons.md, «Lean 4.35»). The in-sandbox kernel
-# replay gate stays `scripts/check-kernel-replay` (leanchecker over the built oleans; no bwrap).
+# kernels. It runs the project inside a `bwrap` sandbox, which needs unprivileged user namespaces
+# (or a setuid bwrap). THIS SCRIPT DETECTS whether bwrap can start here (box-independence,
+# release-readiness row 46, [USER] 2026-10-21: nothing box-specific hard-coded): where it can,
+# `lake check` runs sandboxed; where it cannot — an OS-sandboxed agent session says «setting up
+# uid map: Permission denied», a box without bwrap has none — it runs with
+# `--inadvisably-no-sandbox` (the toolchain itself prints «this run is not trustworthy»). The
+# line this script prints says which form ran. Either way it is a SPEEDBUMP: report-only, read
+# at the merge ask by name. The GATE is the owner's sandboxed `lake check` at claim points,
+# `--paranoid` at the release claim point (CLAUDE.md «The gates»; docs/operational-lessons.md,
+# «Lean 4.35»). The kernel replay gate stays `scripts/check-kernel-replay` (leanchecker over the
+# built oleans; no bwrap).
 #
 # Fail closed: any nonzero exit of `lake check` is a FAIL that names the toolchain's first error
 # line; a run that prints no axiom verdict («Uses no axioms» / «Uses axioms: …») is a FAIL too.
-# The line this script prints carries the exit code, the wall and the peak RSS of the checker
-# process tree (GNU time's %M is the largest single process; the cgroup peak is the gate's).
+# The line this script prints carries the sandbox form, the exit code, the wall and the peak RSS
+# of the checker process tree (GNU time's %M is the largest single process; the cgroup peak is
+# the gate's). The run goes through `cap` (scripts/cap.sh): the box tool `capped` when it is on
+# PATH, bare otherwise.
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+. "$ROOT/scripts/cap.sh"
 cd "$ROOT" || { echo "check-lake-check: cannot cd to $ROOT" >&2; exit 1; }
 [[ $# = 0 ]] || { echo 'check-lake-check: expected no arguments' >&2; exit 2; }
 export TMPDIR="$ROOT/.tmp"
 mkdir -p "$TMPDIR"
 log="$(mktemp "$TMPDIR/lake-check.XXXXXX.log")"
 
+# The sandbox probe: the same bwrap operations lake's sandbox needs (a user
+# namespace, a bind of / and a /dev). Its first stderr line is the reason
+# when it fails.
+sandbox_flags=()
+if ! command -v bwrap >/dev/null 2>&1; then
+  sandbox_flags=(--inadvisably-no-sandbox); form="no sandbox (bwrap is not installed)"
+elif probe="$(bwrap --ro-bind / / --dev /dev true 2>&1)"; then
+  form="sandboxed (bwrap can start here)"
+else
+  sandbox_flags=(--inadvisably-no-sandbox); form="no sandbox (bwrap cannot start here: $(printf '%s' "$probe" | head -1))"
+fi
+
 timer=()
 if [ -x /usr/bin/time ]; then timer=(/usr/bin/time -f 'lake-check-rusage wall=%e s maxrss=%M KB'); fi
 started=$SECONDS
-scripts/capped "${timer[@]+"${timer[@]}"}" lake check --inadvisably-no-sandbox > "$log" 2>&1; rc=$?
+cap "${timer[@]+"${timer[@]}"}" lake check "${sandbox_flags[@]+"${sandbox_flags[@]}"}" > "$log" 2>&1; rc=$?
 wall=$((SECONDS - started))
 rusage="$(grep -m1 '^lake-check-rusage ' "$log" || true)"
 if [ -n "$rusage" ]; then
@@ -38,7 +58,7 @@ else
   cost="wall ${wall} s; peak RSS unmeasured (/usr/bin/time absent)"
 fi
 verdict="$(grep -m1 -E '^Uses (no axioms|axioms: )' "$log" || true)"
-echo "lake check --inadvisably-no-sandbox (speedbump; the sandboxed run outside nono is the gate): exit $rc; $cost; ${verdict:-no axiom verdict printed}"
+echo "lake check, $form (speedbump; the owner's sandboxed run is the gate): exit $rc; $cost; ${verdict:-no axiom verdict printed}"
 if [ "$rc" -ne 0 ] || [ -z "$verdict" ]; then
   first_err="$(grep -m1 -E '^error: ' "$log" || true)"
   echo "check-lake-check: FAIL — ${first_err:-lake check exited $rc without an error line}" >&2
@@ -46,4 +66,4 @@ if [ "$rc" -ne 0 ] || [ -z "$verdict" ]; then
   exit 1
 fi
 rm -f "$log"
-echo "lake check speedbump: PASS — the default targets export, replay through the kernel and rest on standard axioms only ($verdict)"
+echo "lake check speedbump: PASS — $form; the default targets export, replay through the kernel and rest on standard axioms only ($verdict)"

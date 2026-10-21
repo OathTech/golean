@@ -50,7 +50,7 @@
 #
 # Preconditions (fail-closed, never auto-built here):
 #   * .lake/build/bin/golean must exist — build it yourself via
-#     `scripts/capped lake build golean` (this script never invokes lake:
+#     `lake build golean` (this script never invokes lake:
 #     the cgroup-cap discipline stays with the operator).
 #   * the live `go` must equal baselines/go-oracle-pin (same rule as
 #     scripts/diff-coverage; GOLEAN_ALLOW_GO_DRIFT=1 to probe loudly).
@@ -111,7 +111,7 @@ preflight() {
 }
 
 preflight_machine() {
-  [[ -x "$GOLEAN_BIN" ]] || die "no golean binary at $GOLEAN_BIN — build it first: scripts/capped lake build golean"
+  [[ -x "$GOLEAN_BIN" ]] || die "no golean binary at $GOLEAN_BIN — build it first: lake build golean"
   # The harness binary (stdlib slice 3): its --split-stderr mode recovers
   # the program's fd-2 prefix (the `output` observation) — built once.
   mkdir -p "$OUT/bin"

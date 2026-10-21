@@ -15,7 +15,8 @@
 # not an independent verifier. Since the 4.35 pin (lane toolchain/lean-4.35-1020,
 # 2026-10-21) the toolchain's `lake check` is the stronger form — export, kernel
 # replay of the export, non-standard axioms refused, `--paranoid` external
-# kernels — but its bwrap sandbox cannot start inside nono, and on this project
+# kernels — but its bwrap sandbox needs user namespaces a sandboxed session may
+# lack (scripts/check-lake-check detects which form can run), and on this project
 # it cannot start at all (its export imports every default module into one
 # environment; several default modules define a top-level `main`), so it is the
 # report-only speedbump scripts/check-lake-check and THIS script stays the gate:
@@ -33,7 +34,7 @@
 #     found a problem in <module>»), a missing build tree, a cgroup kill: the
 #     checker's exit 137 reaches this script (GNU time says «Command terminated
 #     by signal 9»), and this script's own FAIL line is the signal — it exits 1,
-#     so capped's KILLED banner does not print on this path (fix round F4a).
+#     so the box tool's KILLED banner does not print on this path (fix round F4a).
 #     A killed replay has checked nothing.
 #   * AFTER the replay, the set of modules replayed (the checker's `--verbose`
 #     lines) must EQUAL the same on-disk module set: what the checker chose to
@@ -52,6 +53,7 @@
 # default) and always prints the value it ran with. A caller's value is honoured.
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+. "$ROOT/scripts/cap.sh"
 cd "$ROOT" || { echo "check-kernel-replay: cannot cd to $ROOT" >&2; exit 1; }
 [[ $# = 0 ]] || { echo 'check-kernel-replay: expected no arguments' >&2; exit 2; }
 
@@ -110,7 +112,7 @@ timer=()
 if [ -x /usr/bin/time ]; then timer=(/usr/bin/time -f 'leanchecker-rusage wall=%e s maxrss=%M KB'); fi
 
 started=$SECONDS
-scripts/capped lake env "${timer[@]+"${timer[@]}"}" leanchecker --verbose GoLean > "$log" 2>&1; rc=$?
+cap lake env "${timer[@]+"${timer[@]}"}" leanchecker --verbose GoLean > "$log" 2>&1; rc=$?
 wall=$((SECONDS - started))
 rusage="$(grep -m1 '^leanchecker-rusage ' "$log" || true)"
 if [ -n "$rusage" ]; then

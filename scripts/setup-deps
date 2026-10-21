@@ -93,7 +93,7 @@ refuse_if_populated() { # $1 = dest, $2 = label
 # — it was "--from only" while it had no public home); grossmith =
 # community-truth correspondence materials, OathTech/grossmith, public
 # likewise ([USER] Mike 2026-10-11 confirmed both are publicly
-# available, after a fresh clone on milner-oath failed closed on the
+# available, after a fresh clone on a new box failed closed on the
 # "-" URL rows).
 # cedar-go / cedar-access-control-for-k8s = verification-target census
 # checkouts (docs/2026-09-03_cedar-go-coverage-census.md; opt-in, read-only

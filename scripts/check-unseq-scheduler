@@ -8,10 +8,11 @@
 # 2026-10-12 gate cull, D3: the core totality audit covers every GoLean/ module.)
 set -Eeuo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+. "$ROOT/scripts/cap.sh"
 cd "$ROOT"
 [[ $# = 0 ]] || { echo 'check-unseq-scheduler: expected no arguments' >&2; exit 2; }
 . "$ROOT/scripts/typed-gate-scratch.sh"
-scripts/capped lake build UnseqSchedulerTests
-scripts/capped lake env lean --run Tests/UnseqScheduler.lean | tee "$gate_scratch/tests.log"
+cap lake build UnseqSchedulerTests
+cap lake env lean --run Tests/UnseqScheduler.lean | tee "$gate_scratch/tests.log"
 grep -q '^Unseq scheduler (Stage B): PASS' "$gate_scratch/tests.log"
 printf '%s\n' 'Unseq scheduler gate: PASS'

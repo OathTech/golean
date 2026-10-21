@@ -21,7 +21,7 @@ Since the repo split (2026-08-31, [USER]-directed —
 designated theorem set, the judge/audit apparatus, program proofs)
 is NOT here: the parked era is on branch `park/reasoning-2026-08-31`,
 and the live program logic is the separate repository
-`~/projects/golean-logic`, which consumes this one at a pinned
+`golean-logic` (a sibling checkout), which consumes this one at a pinned
 commit. This repo makes
 NO verification claims about Go programs.
 
@@ -97,7 +97,7 @@ the typed-admission profile family, the `GoLean/Interface.lean`
 facade and the adapter spikes were PARKED 2026-09-16 ([USER] ruling;
 tag `typed-profiles/last-main-2026-09-16`,
 `docs/2026-09-16_typed-profiles-parked.md`), revivable from that tag
-by the logic repository (`~/projects/golean-logic`), which consumes
+by the logic repository (`golean-logic`), which consumes
 this repo at a pin. A consumer also inherits the Platform instance (gc, linux/amd64
 — portability is a separate contract, latitude inventory §11) and the
 machine's concurrency granularity (the reduction to Go's access
@@ -187,26 +187,29 @@ Everything else is untrusted tooling.
   cause, and a re-pin that moves a cause into a crash/non-verdict key or
   removes a row needs a `BUGS.md` Cases: line or a `# removed:` header
   line), every row, no cached tier, plus the unseq
-  scheduler's whole-tape-space check. Always under the
-  box-wide `capped` (`capped scripts/ci`; the box default cap; a COLD full
-  build is the measured `capped -m 64G -- scripts/ci` case; `scripts/capped`
-  is a shim onto the box tool; `docs/operational-lessons.md`). Baseline
+  scheduler's whole-tape-space check. Every heavy step runs through
+  `cap` (`scripts/cap.sh`): the box tool `capped` when it is on PATH, sized
+  by `CAPPED_MEM_MAX` (default 32G; a COLD full build is the measured
+  `CAPPED_MEM_MAX=64G scripts/ci` case), the bare command where it is
+  absent — the cap is box tooling, detected at run time, never shipped
+  ([USER] 2026-10-21, release-readiness row 46; `docs/operational-lessons.md`). Baseline
   re-pins only with a full run and a written reason; PASS→non-PASS flips
   must be on a `BUGS.md` Cases: line.
 - **Speedbumps report.** The same run prints the consistency checks (bugs
   index, feature tags, spec anchors, stdlib register, the
   `AGENTS.md` alias, imported-goose verbatim, memory call sites; under
   `--diff` also the derived-artifact regeneration)
-  and `lake check --inadvisably-no-sandbox` (`scripts/check-lake-check`:
-  the toolchain's build + export + kernel replay + non-standard-axiom
+  and `lake check` (`scripts/check-lake-check`: sandboxed where `bwrap`
+  can start, `--inadvisably-no-sandbox` where it cannot, saying which; the
+  toolchain's build + export + kernel replay + non-standard-axiom
   refusal) under their own heading. A red one never fails the gate; it is
   read at the merge ask and fixed or waived there, by name. `lake check`
   is RED BY CONSTRUCTION on this lakefile, sandboxed or not: it imports
   every default module into one environment, and several default modules
   define a top-level `main`. Until the default-target ruling (backlog row
   42) lands, the kernel replay above is the standing check; once that
-  ruling makes `lake check` runnable, the owner's sandboxed run outside
-  nono (its `bwrap` cannot start inside nono) is the gate at claim points,
+  ruling makes `lake check` runnable, the owner's sandboxed run (where
+  `bwrap` can start: not inside a sandboxed agent session) is the gate at claim points,
   `lake check --paranoid` at the release claim point ([USER] 2026-10-20).
 - **Self-tests are not gates.** `scripts/test-*` run by hand when the
   script they test changes.

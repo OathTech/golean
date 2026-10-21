@@ -55,12 +55,13 @@
 # control that does not answer 42 all exit 1 naming the control.
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+. "$ROOT/scripts/cap.sh"
 cd "$ROOT"
 [[ $# = 0 ]] || { echo 'check-wire-boundary: expected no arguments' >&2; exit 2; }
 . "$ROOT/scripts/typed-gate-scratch.sh"
 set -e
 GOLEAN=".lake/build/bin/golean"
-scripts/capped lake build golean > /dev/null
+cap lake build golean > /dev/null
 [[ -x "$GOLEAN" ]] || { echo "check-wire-boundary: no $GOLEAN (fail closed)" >&2; exit 1; }
 GOCACHE="$ROOT/artifacts/go-build-cache" GO111MODULE=off \
   go run ./tools/nativefrontend --dir Tests/wire-boundary --out "$gate_scratch/program.json"

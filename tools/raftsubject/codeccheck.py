@@ -35,7 +35,7 @@ checksum, so a red run names its check.
 
 Needs `artifacts/nativefrontend` (GO111MODULE=off go build -o
 artifacts/nativefrontend ./tools/nativefrontend) and `.lake/build/bin/golean`
-(scripts/capped lake build golean). Uncapped — do not point it at anything
+(lake build golean). Uncapped — do not point it at anything
 but this tree.
 """
 
@@ -708,7 +708,7 @@ def main():
     args = ap.parse_args()
 
     for tool, hint in ((args.frontend, "GO111MODULE=off go build -o artifacts/nativefrontend ./tools/nativefrontend"),
-                       (args.golean, "scripts/capped lake build golean")):
+                       (args.golean, "lake build golean")):
         if not os.path.exists(tool):
             sys.exit("codeccheck.py: missing %s (build it: %s)" % (tool, hint))
 

@@ -21,7 +21,7 @@
 #       and cleanliness, go oracle pin, gengo compiles. Exit 0 = contract
 #       holds; 1 = DRIFT (every violated clause printed); 2 = refusal.
 #
-#   scripts/capped scripts/grossmith-run campaign --seed S [--n N | --pairs P]
+#   scripts/grossmith-run campaign --seed S [--n N | --pairs P]
 #                        [--control386 N] [--label L] [--workers J] [--chunks K]
 #       contract  ->  C9 (the row-glob bound, below)  ->  dynamic smoke
 #       (12 cases end-to-end through gengo -> diff-coverage -> verdicts;
@@ -31,11 +31,12 @@
 #       runner failures in the harness log => the leg FAILS LOUD, nothing
 #       triaged)  ->  the gc-386 control  ->  triage. One leg per
 #       invocation, so every leg's parameters are recorded verbatim in its
-#       own directory. Must run
-#       under scripts/capped: diff-coverage runs `lake build` and the
-#       reference pass compiles thousands of programs — this script
-#       SELF-WRAPS like scripts/ci and refuses when the cap cannot be
-#       proven (an uncapped run is the failure mode, not a fallback).
+#       own directory. Memory: diff-coverage runs `lake build` and the
+#       reference pass compiles thousands of programs, so every gengo
+#       run (smoke, each chunk, the control) goes through `cap`
+#       (scripts/cap.sh): the box tool `capped` when it is on PATH,
+#       sized by CAPPED_MEM_MAX, the bare command where it is absent
+#       (box-independence, release-readiness row 46).
 #
 #   scripts/grossmith-run triage <batch-dir> [<batch-dir>...]
 #       Post-process published batches: every non-`match` verdict gets a
@@ -65,10 +66,11 @@
 # read back its own row files fails every case as a worker death.
 #
 # Exit codes: 0 ok; 1 contract drift / triage found divergences;
-# 2 refusal (nothing judged); 4 the cap could not be proven (capped).
+# 2 refusal (nothing judged); 4 the box tool `capped` could not prove its cap.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+. "$ROOT/scripts/cap.sh"
 cd "$ROOT" || exit 2
 
 # ---------------------------------------------------------------------
@@ -284,7 +286,7 @@ contract() {
 
 # ---------------------------------------------------------------------
 # Campaign helpers.
-gengo() { "$OUT/bin/gengo" "$@"; }
+gengo() { cap "$OUT/bin/gengo" "$@"; }   # the heavy step: capped where the box tool exists
 
 verdict_counts() { # <batch-dir>... -> aggregated "verdict count" lines from batch.json(s)
   python3 - "$@" <<'PY'
@@ -311,7 +313,7 @@ record_params() { # <prefix> <argv...>: verbatim provenance beside the batch(es)
     echo "  golean:          $(git -C "$ROOT" rev-parse HEAD)$( [[ -n "$(git -C "$ROOT" status --porcelain)" ]] && echo '-dirty' )"
     echo "  grossmith:       $(git -C "$GROSSMITH" rev-parse HEAD) ($GROSSMITH)"
     echo "  go:              $("$GO_BIN" version) at $GO_BIN"
-    echo "  memory cap:      CAPPED_MEM_MAX=${CAPPED_MEM_MAX:-${GOLEAN_MEM_MAX:-32G (box default)}} CAPPED_STATE=${CAPPED_STATE:-${GOLEAN_CAPPED:-}}"
+    echo "  memory cap:      $(cap_note)"
     echo "  load at start:   $(uptime | sed 's/.*load average/load average/')  nproc=$(nproc)"
     echo "  cwd for gengo:   $ROOT"
     echo "  TMPDIR/GOCACHE:  $TMPDIR / $GOCACHE"
@@ -383,12 +385,6 @@ leg_guard() {
 }
 
 campaign() {
-  # Self-wrap in the memory cap (scripts/ci's discipline): only the
-  # proven token skips the wrap; `none` is the loud opt-out.
-  case "${CAPPED_STATE:-${GOLEAN_CAPPED:-}}" in
-    verified|none) ;;
-    *) exec "$ROOT/scripts/capped" "$ROOT/scripts/grossmith-run" campaign "$@" ;;
-  esac
   local N=20000 SEED="" PAIRS=0 CTRL=300 LABEL="" WORKERS="" TIMEOUT="10s" SMOKE_N=12 SMOKE_SEED=424242 CHUNKS=""
   while [[ $# -gt 0 ]]; do
     case "$1" in

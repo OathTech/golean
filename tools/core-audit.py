@@ -6,7 +6,9 @@
 Tests.GoCoreAudit.run, which refuses any module on disk that is not in the closure and any
 GoLean.* module in the closure that is not on disk. The compiled poison controls (typed_audit.py)
 were removed in the 2026-10-12 gate cull (docs/2026-10-12_gate-cull-plan.md §3.3, [USER] D3).
-Run under `lake env` (scripts/check-core-audit) so the harness sees the built oleans.
+Run under `lake env` (scripts/check-core-audit) so the harness sees the built oleans. The
+`lean` run goes through the box tool `capped` when it is on PATH, bare otherwise (box-independence,
+release-readiness row 46: the cap is detected, never shipped; the limit is CAPPED_MEM_MAX).
 """
 import shutil
 import subprocess
@@ -46,7 +48,8 @@ if __name__ == "__main__":
     source = scratch / "AuditAll.lean"
     source.write_text(harness(modules))
     try:
-        result = subprocess.run([str(ROOT / "scripts/capped"), "lean", str(source)], cwd=ROOT,
+        cap = ["capped"] if shutil.which("capped") else []
+        result = subprocess.run(cap + ["lean", str(source)], cwd=ROOT,
                                 text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=900)
     except subprocess.TimeoutExpired:
         sys.exit(f"core audit: the harness exceeded 900 s — did not decide; scratch retained: {scratch}")

@@ -8,7 +8,7 @@ pushed set): what resolves where is the table below; use the
 `origin/<name>` spelling (or `git switch <name>`, which creates a local
 tracking branch) for a branch, the tag name for a tag.
 
-**What resolves where** (verified 2026-10-12 on the `milner-oath` clone of
+**What resolves where** (verified 2026-10-12 on the devbox clone of
 `OathTech/golean` with `git branch -r`, `git tag`, `git show-ref`,
 `git for-each-ref refs/snapshots`; [AGENT] records lane
 `docs/release-records-1012`, release-readiness item 12; origin itself not
@@ -122,11 +122,11 @@ independent Verdi and etcd-proof packages.
   repository (its own git repo, remote `OathTech/raft-proofs`; imports
   nothing from GoLean). It lived at the gitignored
   `deps/reasoning-revival/raft-proofs` during the migration; MOVED
-  2026-09-27 to `~/projects/raft-proofs` ([USER] Mike, 2026-09-27,
+  2026-09-27 to its own sibling checkout ([USER] Mike, 2026-09-27,
   directed; the move and its `git worktree repair` [AGENT]). Paths of
   the form `golean/deps/reasoning-revival/raft-proofs/…` in either
-  repo's older docs and provenance are historical and now resolve under
-  `~/projects/raft-proofs/`; its tools still take golean's `deps/`
+  repo's older docs and provenance are historical and now resolve in
+  that sibling checkout; its tools still take golean's `deps/`
   reference checkouts (raft, verdi-raft, opam-coq818) by explicit path.
 - **`archive/callspec-era`** — the killed CallSpec judgment track
   (2026-08-27 triage).
@@ -146,14 +146,14 @@ The relational line is retired, its pieces kept as design donors on parked
 branches and indexed here, none of it for use ([USER] 2026-10-20; the decision
 and its reasons are recorded once, in backlog row 45 of
 `docs/2026-10-12_release-readiness.md`). Checked 2026-10-20 ([AGENT]): the
-logic repository (`~/projects/golean-logic`) pins this repo at `fa343e48`
+logic repository (`golean-logic`, a sibling checkout) pins this repo at `fa343e48`
 (main, 2026-10-06) and its own note
 `docs/2026-10-13_note-to-golean-mirror-properties.md` states that its step
 relation is GoLean's executable step (`StepAdapter.run`, i.e. `stepFn`), so
 its trust path never passed through the relation `Step`.
 
-Kept on main under stable names for the raft-proofs customer
-(`~/projects/raft-proofs`), so not donors and without an entry below ([USER]
+Kept on main under stable names for the raft-proofs customer (the
+`raft-proofs` repository), so not donors and without an entry below ([USER]
 2026-10-20, the same row 45): `GoLean/GoCore/Prefix.lean` (`Prefix`/`Finish`,
 the iterated-`stepFn` prefix closure) and `GoLean/GoCore/Equations.lean` (the
 `@[stepFn_eqns]` rewrite library, with `EquationsAttr.lean` and the

@@ -45,7 +45,7 @@
 #
 # Preconditions (fail-closed, never auto-built here):
 #   * .lake/build/bin/golean exists (or GOLEAN_BIN points at one) — build
-#     via `scripts/capped lake build golean`; this script never runs lake.
+#     via `lake build golean`; this script never runs lake.
 #   * live `go` == baselines/go-oracle-pin (GOLEAN_ALLOW_GO_DRIFT=1 probes
 #     loudly, and the meta says so).
 #   * CEDAR_GO_DIR (default deps/cedar-go) and CEDAR_K8S_DIR (default
@@ -105,7 +105,7 @@ preflight() {
 }
 
 preflight_machine() {
-  [[ -x "$GOLEAN_BIN" ]] || die "no golean binary at $GOLEAN_BIN — build it first: scripts/capped lake build golean"
+  [[ -x "$GOLEAN_BIN" ]] || die "no golean binary at $GOLEAN_BIN — build it first: lake build golean"
   HARNESS_BIN="$OUT/coverageharness"
   env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go build -o "$HARNESS_BIN" ./tools/coverageharness || die "tools/coverageharness does not build"
 }

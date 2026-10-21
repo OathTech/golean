@@ -35,6 +35,7 @@
 # regeneration, a decoded mutant or a refusal that does not name its cause.
 set -Eeuo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+. "$ROOT/scripts/cap.sh"
 cd "$ROOT"
 [[ $# = 0 ]] || { echo 'check-unseq-wire: expected no arguments' >&2; exit 2; }
 . "$ROOT/scripts/typed-gate-scratch.sh"
@@ -45,8 +46,8 @@ GOCACHE="$ROOT/artifacts/go-build-cache" GO111MODULE=off \
 python3 Tests/unseq-wire/build.py --check --frontend "$gate_scratch/nativefrontend"
 
 # (2) exact sets over the wire + decoder refusals, in-process
-scripts/capped lake build UnseqWireTests golean
-scripts/capped lake env lean --run Tests/UnseqWire.lean | tee "$gate_scratch/tests.log"
+cap lake build UnseqWireTests golean
+cap lake env lean --run Tests/UnseqWire.lean | tee "$gate_scratch/tests.log"
 grep -q '^Unseq wire (Stage C): PASS' "$gate_scratch/tests.log"
 
 # (3) the mutants through the real CLI

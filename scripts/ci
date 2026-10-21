@@ -34,13 +34,14 @@ cd "$ROOT"
 # editor (2026-10-11: `git grep` paged on a tty and looked like an editor).
 export GIT_PAGER=cat PAGER=cat GIT_EDITOR=:
 
-# MEMORY CAP: re-exec inside a proven cgroup before any work (an uncapped Lean
-# elaboration took the box down twice, 2026-08-09). Only `verified` (the
-# wrapper read the cap back) and `none` (a deliberate, warned opt-out) skip it.
-case "${CAPPED_STATE:-${GOLEAN_CAPPED:-}}" in
-  verified|none) ;;
-  *) exec "$ROOT/scripts/capped" "$ROOT/scripts/ci" "$@" ;;
-esac
+# MEMORY CAP: every heavy step below runs through `cap` (scripts/cap.sh): the
+# box tool `capped` when it is on PATH, the bare command otherwise — the cap
+# is box tooling, detected at run time, never shipped (release-readiness row
+# 46, [USER] 2026-10-21). `capped scripts/ci` runs the whole gate in one
+# cgroup (the inner calls exec through); a bare `scripts/ci` caps each heavy
+# step by itself; a machine without the tool runs uncapped. The limit is
+# CAPPED_MEM_MAX (the box tool's own variable; default 32G).
+. "$ROOT/scripts/cap.sh"
 
 RUN_DIFF=0
 for arg in "$@"; do
@@ -99,36 +100,18 @@ run_bump() {
 if [ "$RUN_DIFF" -eq 1 ]; then MODE="--diff (merge gate)"; else MODE="fast tier"; fi
 echo "scripts/ci mode: $MODE"
 
-# ── Build parallelism, scaled to the memory cap (a performance knob, not a
-# check): Lean's thread pool bounds the concurrent `lean` workers AND the
-# per-file elaboration; peak memory is a sum of per-thread peaks, 8G/thread
-# measured. A cold full build needs the 64G raise (capped -m 64G -- scripts/ci).
-step "build parallelism (LEAN_NUM_THREADS from the memory cap)"
-if [ -n "${LEAN_NUM_THREADS:-}" ]; then
-  PAR_NOTE="LEAN_NUM_THREADS=$LEAN_NUM_THREADS (set by the caller — honoured as-is)"
-else
-  _mem="${CAPPED_MEM_MAX:-${GOLEAN_MEM_MAX:-32G}}"
-  _gb=""
-  case "$_mem" in
-    none)  _num=""; _unit="" ;;
-    *[Gg]) _num="${_mem%[Gg]}"; _unit=G ;;
-    *[Mm]) _num="${_mem%[Mm]}"; _unit=M ;;
-    *)     _num="$_mem"; _unit=B ;;
-  esac
-  case "$_num" in ''|*[!0-9]*) _num="" ;; esac
-  if [ -n "$_num" ]; then
-    case "$_unit" in G) _gb="$_num" ;; M) _gb=$(( _num / 1024 )) ;; B) _gb=$(( _num / 1073741824 )) ;; esac
-  fi
-  if [ -z "$_gb" ]; then
-    PAR_NOTE="LEAN_NUM_THREADS unset (cap '$_mem' is not an integer size — toolchain default, $(nproc) cores)"
-  else
-    _jobs=$(( _gb / 8 )); [ "$_jobs" -lt 2 ] && _jobs=2
-    export LEAN_NUM_THREADS="$_jobs"
-    PAR_NOTE="cap $_mem -> LEAN_NUM_THREADS=$_jobs (cap/8G, floor 2; $(nproc) cores)"
-    if [ "$_gb" -lt 64 ] && [ ! -d "$ROOT/.lake/build" ]; then
-      PAR_NOTE="$PAR_NOTE; COLD build tree under a ${_mem} cap — measured need 64G+: capped -m 64G -- scripts/ci"
-    fi
-  fi
+# ── The cap in force, and build parallelism scaled to it (a performance
+# knob, not a check — scripts/cap.sh, cap_lean_threads: LEAN_NUM_THREADS =
+# cap/8G, floor 2, from CAPPED_MEM_MAX, default 32G, unless the caller set
+# it). A cold full build needs 64G (CAPPED_MEM_MAX=64G scripts/ci).
+step "memory cap and build parallelism (LEAN_NUM_THREADS from CAPPED_MEM_MAX)"
+CAP_NOTE="$(cap_note)"
+echo "  $CAP_NOTE"
+note "memory cap: $CAP_NOTE"
+cap_lean_threads
+PAR_NOTE="$CAP_THREADS_NOTE; $(nproc) cores"
+if [ -n "$CAP_MEM_GB" ] && [ "$CAP_MEM_GB" -lt 64 ] && [ ! -d "$ROOT/.lake/build" ]; then
+  PAR_NOTE="$PAR_NOTE; COLD build tree under a ${CAPPED_MEM_MAX:-32G} cap — measured need 64G+: CAPPED_MEM_MAX=64G scripts/ci"
 fi
 echo "  $PAR_NOTE"
 note "build parallelism: $PAR_NOTE"
@@ -209,7 +192,7 @@ run_bump "memory-module raw call sites = inventory (scripts/check-mem-callsites)
 # build of 2026-10-12 (163 jobs, 64G cap, 8 min 37 s) had zero warnings
 # anywhere, so the wider watch costs nothing today.
 step "lake build (every library and executable; warning-free)"
-core_out="$(scripts/capped lake build 2>&1)"; core_rc=$?
+core_out="$(cap lake build 2>&1)"; core_rc=$?
 echo "$core_out" | tail -3 | sed 's/^/  /'
 core_warns="$(echo "$core_out" | grep -E '^warning: (GoLean/|GoLean\.lean|Main\.lean|Tests/)' || true)"
 if [ "$core_rc" -ne 0 ]; then bad "lake build (exit $core_rc)"
@@ -265,17 +248,19 @@ else
 fi
 
 # ── SPEEDBUMP: `lake check` (toolchains ≥ 4.35: build, export, kernel replay
-# of the export, non-standard axioms refused). Its bwrap sandbox cannot start
-# inside nono, so this is `--inadvisably-no-sandbox` and REPORT-ONLY; the gate
-# is the owner's sandboxed `lake check` outside nono at claim points
-# (`--paranoid` at the release claim point) — CLAUDE.md «The gates»,
-# docs/operational-lessons.md «Lean 4.35». Not run when the build failed.
-step "lake check, no sandbox (speedbump; scripts/check-lake-check)"
+# of the export, non-standard axioms refused). scripts/check-lake-check runs
+# it sandboxed where `bwrap` can start (unprivileged user namespaces) and
+# with `--inadvisably-no-sandbox` where it cannot (a sandboxed agent
+# session), saying which; REPORT-ONLY either way — the gate is the owner's
+# sandboxed `lake check` at claim points (`--paranoid` at the release claim
+# point): CLAUDE.md «The gates», docs/operational-lessons.md «Lean 4.35».
+# Not run when the build failed.
+step "lake check (speedbump; scripts/check-lake-check: sandboxed where bwrap can start)"
 if [ "$core_rc" -ne 0 ]; then
   echo "  not run: the lake build above failed (exit $core_rc)"
   bump_red "lake check NOT RUN (the lake build failed, exit $core_rc)"
 else
-  run_bump "lake check --inadvisably-no-sandbox (scripts/check-lake-check; the sandboxed run outside nono is the gate)" bash scripts/check-lake-check
+  run_bump "lake check (scripts/check-lake-check; sandboxed where bwrap can start, else --inadvisably-no-sandbox — the line above says which)" bash scripts/check-lake-check
 fi
 
 # ── GATE: the machine check of totality — a harness imports every GoLean/
@@ -296,7 +281,7 @@ run_gate "coverage-harness unit tests (go test -count=1 ./tools/coverageharness)
 # ── GATE: the interpreter's unit tests. A gutted exe exiting 0 with no output
 # is a degenerate run, not a pass.
 step "interpreter eval tests (gocore-eval-tests)"
-evout="$(scripts/capped lake exe gocore-eval-tests 2>&1)"; evrc=$?
+evout="$(cap lake exe gocore-eval-tests 2>&1)"; evrc=$?
 evok="$(printf '%s\n' "$evout" | grep -c '^ok:')"
 evbad="$(printf '%s\n' "$evout" | grep -icE '^(not ok|fail)')"
 echo "  ok:$evok  fail:$evbad  exit:$evrc"
@@ -322,13 +307,13 @@ run_gate "semantic equations (client PASS, exhaustive enrollment, no-unfold guar
 # (judged by the baseline step below); >= 2 = the run itself broke.
 if [ "$RUN_DIFF" -eq 1 ]; then
   step "differential corpus, fresh run of every row (scripts/diff-coverage)"
-  ./scripts/diff-smoke 2>&1 | tail -3 | sed 's/^/  /'; drc=${PIPESTATUS[0]}
+  cap ./scripts/diff-smoke 2>&1 | tail -3 | sed 's/^/  /'; drc=${PIPESTATUS[0]}
   case "$drc" in
     0|1) ok "differential run completed (exit $drc; the failing set is judged by the baseline diff)" ;;
     *)   bad "differential run BROKE (exit $drc — not a case failure; see output)" ;;
   esac
   step "negative corpus, fresh run (scripts/coverage-negative: gc rejects AND the native frontend refuses as a rejection)"
-  ./scripts/coverage-negative 2>&1 | tail -2 | sed 's/^/  /'; nrc=${PIPESTATUS[0]}
+  cap ./scripts/coverage-negative 2>&1 | tail -2 | sed 's/^/  /'; nrc=${PIPESTATUS[0]}
   case "$nrc" in
     0|1) ok "negative run completed (exit $nrc; judged by the baseline diff)" ;;
     *)   bad "negative run BROKE (exit $nrc)" ;;
@@ -397,7 +382,7 @@ judge_record() {  # <kind> <latest.tsv> <meta.tsv> <baseline> <manifest-cmd> <de
   fi
   if [ "$ran" -ge "$total" ]; then
     meta_sha="$(awk -F'\t' '$1=="manifest_sha256"{print $2}' "$meta")"
-    cur_sha="$($manifest_cmd 2>/dev/null | shasum -a 256 | awk '{print $1}')"
+    cur_sha="$($manifest_cmd 2>/dev/null | sha256sum | awk '{print $1}')"
     if [ -z "$meta_sha" ] || [ -z "$cur_sha" ] || [ "$meta_sha" != "$cur_sha" ]; then
       bad "$kind baseline diff (meta manifest_sha256 [${meta_sha:-missing}] != the current corpus manifest — stale/foreign results; re-run scripts/ci --diff)"; return
     fi

@@ -152,7 +152,7 @@ if [[ "$go_live" != "$go_pin" ]]; then
 fi
 GOLEAN_BIN="$ROOT/.lake/build/bin/golean"
 if [[ ! -x "$GOLEAN_BIN" ]]; then
-  echo "detector-soundness: $GOLEAN_BIN missing — build first (scripts/capped lake build); refusing rather than judging half a matrix" >&2
+  echo "detector-soundness: $GOLEAN_BIN missing — build first (lake build); refusing rather than judging half a matrix" >&2
   exit 2
 fi
 GO_BUILD_CACHE="$ROOT/artifacts/go-build-cache"

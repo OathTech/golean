@@ -102,7 +102,7 @@ def main():
                    for t in args.expect_panic_member]
 
     for tool, hint in ((args.frontend, "GO111MODULE=off go build -o artifacts/nativefrontend ./tools/nativefrontend"),
-                       (args.golean, "scripts/capped lake build golean")):
+                       (args.golean, "lake build golean")):
         if not os.path.exists(tool):
             sys.exit("runprobe.py: missing %s (build it: %s)" % (tool, hint))
 

@@ -28,7 +28,7 @@ see [`docs/semantics-overview.md`](docs/semantics-overview.md).
 
 ## Who it is for
 
-- **The GoLean logic repository** (`~/projects/golean-logic`). It builds an Iris
+- **The GoLean logic repository** (`golean-logic`, a sibling checkout). It builds an Iris
   program logic on this semantics and consumes it at a pinned commit (currently
   the tag `logic-offer/2026-10-03`).
 - **Anyone who wants a Go semantics** to execute programs against, or to state
@@ -46,32 +46,48 @@ list is in `CLAUDE.md`, «The trusted surface».)
 
 ## Getting started on a fresh clone
 
-A reasonable setup is enough; nothing is bound to a particular machine. The
+Nothing is bound to a particular machine: a clone on an ordinary Linux x86-64
+box builds and checks with the commands below and no further setup. The
 modeled instance is **gc on linux/amd64**: the interpreter realizes that platform
-(`GoLean/GoCore/Platform.lean`, `gcAmd64`), and the decoder refuses a wire
-lowered for any other target (`decodeBuildContext`). The toolchains are pinned, and builds need a memory
-cap.
+(`GoLean/GoCore/Platform.lean`, `gcAmd64`), the decoder refuses a wire lowered
+for any other target (`decodeBuildContext`), and the differential oracle is
+`go run` on that platform, so the corpus runs are Linux-only by nature. This
+is the complete list of what the machine needs:
 
 - **Lean** via [elan](https://github.com/leanprover/elan): `lean-toolchain` pins the
   version (currently `v4.35.0`); elan installs it on first use.
 - **Go `go1.26.5` exactly** — the differential oracle (`baselines/go-oracle-pin`); any
   other patch level is a red gate by design, never a silent drift.
-- **Python 3.11 or newer** (standard library only), `git`, `jq`.
-- **A memory cap**: `capped` if your box has the Oath wrapper, else `scripts/capped`
-  (the same mechanism; needs cgroup v2 delegation or `systemd-run --user`). An
-  uncapped Lean build has taken a machine down before; the gate refuses to run
-  uncapped unless you opt out by name (`CAPPED_MEM_MAX=none`).
+- **Python 3.11 or newer** (standard library only).
+- **git**, **bash 4 or newer**, and **GNU coreutils or a compatible implementation**
+  (`realpath -m`, `shuf --random-source`, `sha256sum`, `nproc` and `timeout` are
+  used; the project is measured against uutils 0.8 as well as GNU).
+- **perl 5**, core only: the differential runner's timeout wrapper
+  (`run_with_timeout` in `scripts/diff-coverage` and three siblings) uses perl's
+  `fork`/`alarm`/`waitpid`. It stays perl because coreutils' `timeout` does not keep
+  the wrapper's exit-code contract on every implementation (measured:
+  `docs/operational-lessons.md`, «Box-independence»).
+- **Optional, detected at run time, never required:** `capped`, the Oath devbox
+  memory cap — every heavy step of the scripts runs through it when it is on PATH,
+  sized by `CAPPED_MEM_MAX` (default 32G), and runs uncapped where it is absent;
+  `bwrap` with unprivileged user namespaces, for `lake check`'s sandbox;
+  `/usr/bin/time`, for peak-RSS figures in the gate's output.
 
 ```
-scripts/setup-deps                 # goose, go, raft reference checkouts at the pinned revs (gitignored deps/)
-capped -m 64G -- lake build        # the cold build needs ~64 G; later builds run at the default cap
-capped scripts/ci --diff           # the gate plus the differential corpus; records the baselines it then checks
+scripts/setup-deps                       # goose, go, raft reference checkouts at the pinned revs (gitignored deps/; needs the network)
+lake build                               # the cold build; on an Oath box: CAPPED_MEM_MAX=64G capped lake build (64 G is the measured cold need)
+CAPPED_MEM_MAX=64G scripts/ci --diff     # the gate plus the differential corpus; records the baselines it then checks
 ```
 
-The first `scripts/ci` run without `--diff` reports two «NO recorded run»
-failures, because it has not seen the corpus yet. That is the fail-closed design,
-not a problem with your setup; `--diff` records the runs. Reference checkouts live
-in the in-repo, gitignored `deps/` directory (`scripts/setup-deps`).
+`CAPPED_MEM_MAX` sizes Lean's thread pool (cap/8G) whether or not `capped` is
+present; where it is present it is also the cgroup limit, and
+`CAPPED_MEM_MAX=none` is its loud opt-out. The first `scripts/ci` run without
+`--diff` reports two «NO recorded run» failures, because it has not seen the
+corpus yet. That is the fail-closed design, not a problem with your setup;
+`--diff` records the runs. Reference checkouts live in the in-repo, gitignored
+`deps/` directory (`scripts/setup-deps`; `deps/go` is a full clone, about
+470 MB of history — a shallow clone at the tag, 37 MB, would satisfy the gate
+but not `scripts/mine-spec-archaeology`, so the script clones in full).
 
 ## Run a program and read the result
 
@@ -114,11 +130,12 @@ the source contract are described in
 
 ## The gate
 
-The gate has two tiers. `capped scripts/ci` is the fast tier, run before any
-commit that touches runtime code: build, escape-hatch scans, eval tests, the wire
-and frontend checks, plus report-only speedbumps. `capped scripts/ci --diff` is
-the merge tier, which adds a fresh differential run of every corpus row against
-the tracked baselines. The standing rule is `CLAUDE.md`, «The gates».
+The gate has two tiers. `scripts/ci` is the fast tier, run before any commit
+that touches runtime code: build, escape-hatch scans, eval tests, the wire and
+frontend checks, plus report-only speedbumps. `scripts/ci --diff` is the merge
+tier, which adds a fresh differential run of every corpus row against the
+tracked baselines. Each heavy step goes through the memory cap when the box
+has one (`scripts/cap.sh`). The standing rule is `CLAUDE.md`, «The gates».
 
 ## Limits
 

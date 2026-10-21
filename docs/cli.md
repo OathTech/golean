@@ -540,5 +540,5 @@ the message `frontend-quarantined: <cause>`.
   existence-only `unsupported` TypeDef whose users are stubs. The decoder keeps the same checks
   as a whole-wire backstop, so a hand-built wire that carries such a type is still refused whole.
 - *How to tell:* `jq '[.funcs[], .methods[] | select(has("unsupported")) | {name, id, unsupported}]' wire.json`
-  lists every stub before you run anything. For the full blocker picture, run
+  lists every stub before you run anything (`jq` is a convenience here, not a project dependency). For the full blocker picture, run
   `scripts/lower-diagnose <dir>` (`--subject <dir>` for a corpus subject exported with `--subject`).

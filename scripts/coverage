@@ -125,7 +125,7 @@ report_latest() {
       stored_commit="$(awk -F '\t' '$1 == "git_commit" { print $2 }' "$meta")"
       current_manifest="$(mktemp "${TMPDIR:-/tmp}/golean-current-full-manifest.XXXXXX")"
       if scripts/coverage-manifest --artifact-root "$ARTIFACT_ROOT" > "$current_manifest"; then
-        current_manifest_sha="$(shasum -a 256 "$current_manifest" | awk '{ print $1 }')"
+        current_manifest_sha="$(sha256sum "$current_manifest" | awk '{ print $1 }')"
         current_manifest_cases="$(awk -F '\t' 'NF > 0 && $1 !~ /^#/ { count += 1 } END { print count + 0 }' "$current_manifest")"
         if [[ -n "$stored_manifest_sha" && "$stored_manifest_sha" != "$current_manifest_sha" ]]; then
           echo "coverage report: latest-full.tsv is stale; current full manifest hash differs" >&2

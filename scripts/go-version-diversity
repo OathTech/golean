@@ -11,8 +11,9 @@
 # scripts/oracle-version-sweep (retired: it floated the frontend with the
 # oracle and judged result/stage only).
 #
-#   scripts/capped scripts/go-version-diversity [--staticinit] [--record <dir>] [--reuse] <goX.Y.Z>
-#   scripts/capped scripts/go-version-diversity --control [--staticinit] [--record <dir>] [--reuse]
+#   scripts/go-version-diversity [--staticinit] [--record <dir>] [--reuse] <goX.Y.Z>
+#   scripts/go-version-diversity --control [--staticinit] [--record <dir>] [--reuse]
+#   (the two corpus runs go through `cap`, scripts/cap.sh: the box tool `capped` when it is on PATH)
 #
 # --control runs the PIN through the same oracle-only seam on a fresh run and
 # compares it with the record: everything it reports is run-to-run noise by
@@ -79,11 +80,12 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+. "$ROOT/scripts/cap.sh"
 cd "$ROOT" || exit 2
 
 usage() {
-  echo "usage: scripts/capped scripts/go-version-diversity [--staticinit] [--record <dir>] [--reuse] <goX.Y.Z>" >&2
-  echo "       scripts/capped scripts/go-version-diversity --control [--staticinit] [--record <dir>] [--reuse]   (--help: the header)" >&2
+  echo "usage: scripts/go-version-diversity [--staticinit] [--record <dir>] [--reuse] <goX.Y.Z>" >&2
+  echo "       scripts/go-version-diversity --control [--staticinit] [--record <dir>] [--reuse]   (--help: the header)" >&2
   exit 2
 }
 STATICINIT=0
@@ -124,6 +126,8 @@ if [[ "$V" == "$PIN" && "$CONTROL" != 1 ]]; then
   exit 2
 fi
 LIVE="$(go version 2>/dev/null | awk '{print $3}')"
+PIN_GOROOT="$(go env GOROOT 2>/dev/null)"
+[[ -n "$PIN_GOROOT" ]] || { echo "go-version-diversity: \`go env GOROOT\` printed nothing — the pin's GOROOT is needed to normalise paths; refusing" >&2; exit 2; }
 if [[ "$LIVE" != "$PIN" ]]; then
   echo "go-version-diversity: the live toolchain is '${LIVE:-<none>}', not the pin $PIN — the frontend must run on the pin; refusing" >&2
   exit 2
@@ -136,8 +140,8 @@ go-version-diversity: $V is not runnable here ($(printf '%s' "$ALT_GOROOT" | tai
   Only toolchains already in the module cache run inside the sandbox. The
   [USER] populates the cache OUTSIDE the sandbox with:
       GOTOOLCHAIN=$V go version
-  (it downloads golang.org/toolchain@v0.0.1-$V.linux-amd64 into ~/go/pkg/mod;
-  nothing global moves).
+  (it downloads golang.org/toolchain@v0.0.1-$V.linux-amd64 into the module
+  cache, \`go env GOMODCACHE\`; nothing global moves).
 EOF
   exit 2
 fi
@@ -151,8 +155,8 @@ if ! scripts/coverage-manifest --artifact-root "$RECORD" > "$DM" || ! scripts/co
   echo "go-version-diversity: could not generate the current manifests — refusing" >&2
   exit 2
 fi
-D_SHA="$(shasum -a 256 "$DM" | awk '{print $1}')"
-N_SHA="$(shasum -a 256 "$NM" | awk '{print $1}')"
+D_SHA="$(sha256sum "$DM" | awk '{print $1}')"
+N_SHA="$(sha256sum "$NM" | awk '{print $1}')"
 check_record() { # <results> <meta> <want sha> <lane>
   local r="$1" m="$2" want="$3" lane="$4" tc drift sha
   if [[ ! -s "$r" || ! -s "$m" ]]; then
@@ -225,7 +229,7 @@ if [[ "$REUSE" != 1 ]]; then
   if [[ "$CONTROL" != 1 ]]; then run_env+=(GOLEAN_ALLOW_GO_DRIFT=1); fi
   d_rc=0
   env "${run_env[@]}" GOLEAN_COVERAGE_RESULTS="$OUT_REL/latest.tsv" GOLEAN_COVERAGE_META="$OUT_REL/latest.meta.tsv" \
-    scripts/diff-coverage > "$OUT/diff-coverage.log" 2>&1 || d_rc=$?
+    cap scripts/diff-coverage > "$OUT/diff-coverage.log" 2>&1 || d_rc=$?
   tail -3 "$OUT/diff-coverage.log"
   if [[ "$d_rc" -ge 2 ]]; then
     echo "go-version-diversity: the differential run could not complete (exit $d_rc; $OUT_REL/diff-coverage.log) — nothing to compare" >&2
@@ -233,7 +237,7 @@ if [[ "$REUSE" != 1 ]]; then
   fi
   n_rc=0
   env "${run_env[@]}" GOLEAN_NEGATIVE_RESULTS="$OUT_REL/negative-latest.tsv" GOLEAN_NEGATIVE_META="$OUT_REL/negative-latest.meta.tsv" \
-    scripts/coverage-negative > "$OUT/coverage-negative.log" 2>&1 || n_rc=$?
+    cap scripts/coverage-negative > "$OUT/coverage-negative.log" 2>&1 || n_rc=$?
   tail -3 "$OUT/coverage-negative.log"
   if [[ "$n_rc" -ge 2 ]]; then
     echo "go-version-diversity: the negative run could not complete (exit $n_rc; $OUT_REL/coverage-negative.log) — nothing to compare" >&2
@@ -269,10 +273,10 @@ if ! scripts/coverage-cause "$OUT/record/latest.tsv" > "$OUT/cause.pin.tsv" \
   exit 1
 fi
 if ! python3 -I - "$V" "$PIN" "$LIVE" "$ALT_GOROOT" "$RECORD" "$OUT" "$DM" "$d_rc" "$n_rc" "$TREE_NOTE" "$SI_TSV" \
-    "$CONTROL" "$CONTROL_REPORT" > "$OUT/report.txt" <<'PY'
+    "$CONTROL" "$CONTROL_REPORT" "$PIN_GOROOT" > "$OUT/report.txt" <<'PY'
 import json, os, re, sys
 (V, PIN, LIVE, ALT_GOROOT, REC, OUT, MANIFEST, D_RC, N_RC, TREE_NOTE, SI,
- CONTROL, CONTROL_REPORT) = sys.argv[1:14]
+ CONTROL, CONTROL_REPORT, PIN_GOROOT) = sys.argv[1:15]
 CONTROL = CONTROL == "1"
 ALT = f"{V}(control)" if CONTROL else V
 
@@ -319,7 +323,10 @@ def decode_bytes(s):
 
 # Every absolute prefix starts at a `/`: details carry escaped `\t/path` text.
 ART = re.compile(r'(?:/[^\s"\'\\=]*/)?(?:artifacts/coverage|\.tmp/go-diversity/[^/\s"\'\\]+)/')
-GOROOT = re.compile(r'(?:/usr/local/go|/[^\s"\'\\]*/toolchain@v0\.0\.1-go[^/\s]+)/')
+# The pin's GOROOT is the live one (`go env GOROOT`, passed in), the
+# alternate's is the module-cache toolchain: neither is a fixed path.
+GOROOT = re.compile(r'(?:' + re.escape(PIN_GOROOT.rstrip("/")) + r'|' + re.escape(ALT_GOROOT.rstrip("/"))
+                    + r'|/[^\s"\'\\]*/toolchain@v0\.0\.1-go[^/\s]+)/')
 # Cut a crash text (raw, or escaped inside a detail) before its goroutine
 # dumps: GOTRACEBACK=system's runtime frames and system goroutines vary run
 # to run and version to version; the message and output are the observation.

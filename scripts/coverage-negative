@@ -150,7 +150,7 @@ printf 'result\tid\tfeatures\tstage\tdetail\n' > "$RESULTS_TMP"
 # drifted or not). The manifest sha covers ids, dirs, expected
 # substrings and feature tags — a silent case-set/expectation edit is
 # visible against a cached record.
-manifest_sha="$(shasum -a 256 "$MANIFEST" | awk '{ print $1 }')"
+manifest_sha="$(sha256sum "$MANIFEST" | awk '{ print $1 }')"
 manifest_cases="$(awk -F $'\t' 'NF > 0 && $1 !~ /^#/ { count += 1 } END { print count + 0 }' "$MANIFEST")"
 git_commit="$(git rev-parse HEAD 2>/dev/null || printf 'unknown')"
 # Untracked files count as dirty (audit T3-7): `git diff` sees only

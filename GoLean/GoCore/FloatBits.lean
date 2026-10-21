@@ -5,7 +5,7 @@ namespace GoLean.GoCore.FloatBits
 
 GoCore's float semantics: pure functions over `Nat` bit patterns,
 TRANSCRIBED from Go's own software floating point,
-`/usr/local/go/src/runtime/softfloat64.go` (go1.26.5) — Go's definition
+`src/runtime/softfloat64.go` at the pin (go1.26.5; `deps/go`) — Go's definition
 of Go floats for softfloat targets, fuzz-tested there against hardware.
 Design of record: `docs/2026-08-04_floats-design.md` (all §11 decisions);
 this module is decision 1 (numerics model) and decision 5's rounding

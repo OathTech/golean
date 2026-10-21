@@ -16,7 +16,7 @@
 #   --out DIR     artifact dir (default artifacts/membership-sampling)
 #   --golean BIN  the golean binary used for the enumeration side
 #                 (default .lake/build/bin/golean; MUST come from a
-#                 capped build of the current tree — the script records
+#                 build of the current tree — the script records
 #                 the path and its mtime, it does not verify provenance)
 #   <id> ...      membership-lane ids to sample (default: every
 #                 lane=membership row of the manifest)

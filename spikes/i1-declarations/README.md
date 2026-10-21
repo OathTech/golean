@@ -55,8 +55,8 @@ and this I1 work remain separate changes.
 Validation uses the unchanged pinned toolchain and resource caps:
 
 ```text
-GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 scripts/capped lake build
-GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 scripts/capped lake env lean spikes/i1-declarations/Prototype.lean
+CAPPED_MEM_MAX=16G LEAN_NUM_THREADS=3 capped lake build        # `capped` where the box has it; bare `lake build` otherwise
+CAPPED_MEM_MAX=16G LEAN_NUM_THREADS=3 capped lake env lean spikes/i1-declarations/Prototype.lean
 ```
 
 The fresh prototype elaboration also audits every local/imported GoLean

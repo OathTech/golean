@@ -4660,8 +4660,8 @@ kill, never a wrong answer, lifted by (1).
 **FAIL-CLOSED (2026-10-12, [AGENT] lane `core/bug078-nested-budget-1012`;
 release-readiness item 30 — [USER] Mike 2026-10-12 (item 30: fail-close until fixed), relayed by the [AGENT] coordinator, whose answer this lane
 executes: a named refusal at the decoder's existing budget choke point.)**
-The residuals, RE-MEASURED on main's binary at c266ce6b (milner-oath,
-single runs under `capped -m 16G`, wall clock incl. ≈0.1 s process start;
+The residuals, RE-MEASURED on main's binary at c266ce6b (the devbox,
+single runs under `CAPPED_MEM_MAX=16G capped`, wall clock incl. ≈0.1 s process start;
 the probe programs were `.tmp/probes/*` — ephemeral; the gate's per-case
 wall is 60 s since 2026-10-07, [USER] (items 1 and 2 agreed), relayed):
 

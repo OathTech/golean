@@ -4,8 +4,11 @@ export TMPDIR="$ROOT/.tmp"
 mkdir -p "$TMPDIR"
 gate_scratch=$(mktemp -d "$TMPDIR/typed-gate.XXXXXX")
 printf 'Gate has not completed: %s\n' "$0" > "$gate_scratch/failure.txt"
-typed_gate_error() {
-  local rc=$1 command=$2
+typed_gate_error() { # <rc> <BASH_COMMAND> <innermost function> <its positional parameters>
+  local rc=$1 command=$2 fn=${3:-} args=${4:-}
+  # Inside `cap` (scripts/cap.sh) BASH_COMMAND is the literal `capped "$@"` or
+  # `"$@"`; the capped command itself is the function's "$*".
+  [[ "$fn" == cap ]] && command="$command  [cap: $args]"
   printf 'Command failed (exit %s): %s\n' "$rc" "$command" >> "$gate_scratch/failure.txt"
 }
 finish_scratch() {
@@ -17,5 +20,5 @@ finish_scratch() {
     printf 'Failed gate scratch retained: %s\n' "$gate_scratch" >&2
   fi
 }
-trap 'typed_gate_error "$?" "$BASH_COMMAND"' ERR
+trap 'typed_gate_error "$?" "$BASH_COMMAND" "${FUNCNAME[0]:-}" "$*"' ERR
 trap finish_scratch EXIT

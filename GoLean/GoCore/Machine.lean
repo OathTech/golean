@@ -1569,7 +1569,7 @@ is built. A modeled-resource bound, not Go behaviour: gc allocates such a
 slice fine, so a program over the budget is a standing machine-refuses /
 gc-succeeds red, never a wrong answer and never an abort.
 
-MEASURED PATH (milner-oath, main's binary at d92b95fd, single runs under
+MEASURED PATH (the devbox, main's binary at d92b95fd, single runs under
 `capped`, the probe programs inline): the whole-backing ELEMENT-WISE READ —
 `Mem.loadElems` (Ops.lean), structural on the count and non-tail
 recursive, one native stack frame per element, reached by `string(b)`,
