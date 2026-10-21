@@ -14,9 +14,14 @@ Every declaration below is UNCHANGED from its origin — statement, proof and na
 (namespace `GoLean.GoCore.Machine`) — and was kept because the surfaces that stay on main
 depend on it: the `stepFn_eqns` equation library (`Equations.lean`), the `Prefix`/`Finish`
 execution statement and its proofs (`ExecutionStatement.lean`, `Prefix.lean`,
-`PrefixFacts.lean`, `StepErrors.lean`) and the counted trace (`Trace.lean`). The set was
-computed as the exact dependency closure of those modules (a Lean-level constant walk over
-the built environment), not chosen by hand; nothing here mentions the relation.
+`PrefixFacts.lean`, `StepErrors.lean`) and the counted trace (`Trace.lean`). The set is the
+dependency closure of those modules' proof terms (a Lean-level constant walk over the built
+environment, not a hand choice) PLUS five small lemmas that closure does not contain but the
+kept proof TEXT names and so needs to elaborate — `PlanNoPanic.{stuck, unsupported, internal,
+panic}` (alternatives of the `plan_no_panic` tactic) and `except_bind_ok` (a `simp` argument
+the final terms do not use) — kept rather than editing proofs; the tactics `commit_no_panic`,
+`plan_no_panic`, `oblivious_apply`/`_applyV`/`_entry_with`, `consumption_entry_none`/`_some`
+come with the proofs that invoke them. Nothing here mentions the relation.
 
 What is here, in the origin's order: the `NoPanic`/`PlanNoPanic` discipline of the memory
 module's write path and the validate/commit seam (with the `commit_no_panic` /
@@ -1385,35 +1390,6 @@ theorem applySyncOp_core_error {σ : Store} {ch₀ : Choices} {op : SyncOp}
   cases hcore : applySyncOpCore ctx σ op vs env k with
   | error e' => rw [hcore] at h; simpa using h
   | ok r => rw [hcore] at h; cases h
-
-/-! ### The ∀-streams termination checker (sem-adequacy arc slice 5,
-2026-08-04)
-
-`Terminates` (Surface) quantifies EVERY choice stream at one uniform fuel
-bound, but a kernel evaluation exhibits one stream. The bridge is the
-machine's choices discipline (structural since `applyStmtOpCore`): the
-stream is consumed at exactly TWO sites — the `mapIterK` pick (bound =
-snapshot size, part of the CONFIGURATION) and `applyStmtOp`'s
-`appendSlice` spill (bound = `appendSpillWidth oldCap newLen` ≥ 32,
-derived from the operand slice — F2's envelope widening, arc-final
-audit 2026-08-06; BOTH sites' bounds are configuration-dependent, not
-constants) — and every other arm both ignores the
-stream and computes a stream-independent successor. So a single
-kernel-checked exploration certifies the ∀-streams claim:
-`allStreamsOk` walks the run, treating every non-consuming step as the
-oblivious step it provably is (`stepFn_oblivious`), BRANCHING over every
-possible pick at a nonempty `mapIterK` (the choice is `head % size` —
-finitely many), and FAILING CLOSED (false) at any `appendSlice` apply
-position (a genuinely stream-sized allocation; no pinned program hits
-one, and a future one turns the checker false, never unsound).
-`execStmtLoop_ok_of_allStreamsOk` is the soundness theorem: checker true
-at fuel `N` ⇒ every stream's run completes within `N`. -/
-
-theorem consumesConvCap_strictK {v : GoValue} {op : StrictOp} {done : List GoValue}
-    {env : LocalEnv} {k : Cont}
-    (h : consumesConvCap (.retV v (.strictK op done [] env k)) = false) :
-    op.convKind? = none := by
-  simpa [consumesConvCap, Option.isSome_eq_false_iff, Option.isNone_iff_eq_none] using h
 
 /-! ### The per-site stream lemmas behind `stepFn_consumption` (B8) -/
 
@@ -2982,135 +2958,6 @@ theorem stepFn_consumption_some {σ : Store} {c : Config} {ch₀ : Choices}
           simp only at hpk
           subst hpk
           rw [stepFn_mapIter_stop hcands hmand hemp hcons₁']
-
-set_option linter.unusedSimpArgs false in
-/-- The apply-position accessor's inversions (A7): a `some` names the frame. -/
-theorem applyPos_stmt {c : Config} {op : StmtOp} {nt : Nat} {vs : List GoValue}
-    {env : LocalEnv} {k : Cont} (h : c.applyPos = some (.stmt op nt, vs, env, k)) :
-    ∃ v done, c = .retV v (.stmtOpK op nt done [] env k) ∧ vs = (v :: done).reverse := by
-  unfold Config.applyPos at h
-  split at h <;> simp only [Option.some.injEq, Prod.mk.injEq, ApplyHead.stmt.injEq,
-    reduceCtorEq, false_and] at h
-  obtain ⟨⟨rfl, rfl⟩, rfl, rfl, rfl⟩ := h
-  exact ⟨_, _, rfl, rfl⟩
-
-set_option linter.unusedSimpArgs false in
-theorem applyPos_select {c : Config} {clauses : List (SelectClauseHead × Stmt)}
-    {default? : Option Stmt} {vs : List GoValue} {env : LocalEnv} {k : Cont}
-    (h : c.applyPos = some (.select clauses default?, vs, env, k)) :
-    ∃ v done, c = .retV v (.selectOpsK clauses default? done [] env k) := by
-  unfold Config.applyPos at h
-  split at h <;> simp only [Option.some.injEq, Prod.mk.injEq, ApplyHead.select.injEq,
-    reduceCtorEq, false_and] at h
-  obtain ⟨⟨rfl, rfl⟩, rfl, rfl, rfl⟩ := h
-  exact ⟨_, _, rfl⟩
-
-set_option linter.unusedSimpArgs false in
-theorem applyPos_sync {c : Config} {op : SyncOp} {vs : List GoValue}
-    {env : LocalEnv} {k : Cont} (h : c.applyPos = some (.sync op, vs, env, k)) :
-    ∃ v done, c = .retV v (.syncStK op done [] env k) := by
-  unfold Config.applyPos at h
-  split at h <;> simp only [Option.some.injEq, Prod.mk.injEq, ApplyHead.sync.injEq,
-    reduceCtorEq, false_and] at h
-  obtain ⟨rfl, rfl, rfl, rfl⟩ := h
-  exact ⟨_, _, rfl⟩
-
-theorem applyPos_strict {c : Config} {op : StrictOp} {vs : List GoValue}
-    {env : LocalEnv} {k : Cont} (h : c.applyPos = some (.strict op, vs, env, k)) :
-    ∃ v done, c = .retV v (.strictK op done [] env k) ∧ vs = (v :: done).reverse := by
-  unfold Config.applyPos at h
-  split at h <;> simp only [Option.some.injEq, Prod.mk.injEq, ApplyHead.strict.injEq,
-    reduceCtorEq, false_and] at h
-  obtain ⟨rfl, rfl, rfl, rfl⟩ := h
-  exact ⟨_, _, rfl, rfl⟩
-
-/-- The seven hand flags of the retired sweep entail a `none` projection
-(the sixth, `hnu`, is E13 option (b)'s `unseqPanic` probe consult; the
-seventh, `hnr`, is the abort's `repanicCollapse` consult — landing chunk
-L3). -/
-theorem seqConsumption_none_of_flags {σ : Store} {c : Config}
-    (hmi : ∀ (kv vv : Option VarId) (kt vt : Ty) (body : Stmt)
-      (base : Option Loc) (produced start : Array Nat)
-      (env : LocalEnv) (k : Cont),
-      c ≠ .next (.mapIterK kv vv kt vt body base produced start env k))
-    (hnc : consumesAppendSlice c = false)
-    (hni : consumesRandIntn c = false)
-    (hnk : consumesConvCap c = false)
-    (hns : consumesSelect c = false)
-    (hnv : consumesNilValueMethod ctx c = false)
-    (hnt : consumesTryLock c = false)
-    (hnu : consumesUnseqPanic c = false)
-    (hnn : consumesUnseqNext c = false)
-    (hnr : consumesRepanicCollapse c = false) :
-    seqConsumption ctx σ c = none := by
-  revert hmi hnc hni hnk hns hnv hnt hnu hnn hnr
-  unfold seqConsumption
-  split <;> intro hmi hnc hni hnk hns hnv hnt hnu hnn hnr
-  · exact absurd rfl (hmi _ _ _ _ _ _ _ _ _ _)
-  · simp [consumesUnseqPanic] at hnu
-  · simp [consumesUnseqNext] at hnn
-  · -- Unit 6b: the phase's collision draw and the abort's draw share the flag.
-    simp only [consumesRepanicCollapse] at hnr
-    split at hnr <;> simp [*]
-  · split
-    all_goals first
-      | rfl
-      | (rename_i heq
-         obtain ⟨v, done, rfl, rfl⟩ := applyPos_stmt heq
-         cases ‹StmtOp› <;> simp_all [stmtConsult?, consumesAppendSlice, consumesRandIntn])
-      | (rename_i heq
-         obtain ⟨v, done, rfl, rfl⟩ := applyPos_strict heq
-         simp [strictConsult?, consumesConvCap_strictK hnk])
-      | (rename_i heq
-         obtain ⟨v, done, rfl⟩ := applyPos_select heq
-         simp [consumesSelect] at hns)
-      | (rename_i heq
-         obtain ⟨v, done, rfl⟩ := applyPos_sync heq
-         simp only [consumesTryLock, Option.isSome_eq_false_iff, Option.isNone_iff_eq_none] at hnt
-         simp [syncConsult?, tryLockConsult?, hnt])
-      | (split
-         · rename_i fid args heq
-           unfold consumesNilValueMethod at hnv
-           rw [heq] at hnv
-           (try dsimp only at hnv)
-           unfold entryConsult?
-           rw [if_pos (by unfold nilValueMethodWidth; simp [hnv])]
-         · rfl)
-
-/-- **Stream obliviousness of the non-consuming arms** — the retired sweep
-(W3.2 slice 1 stage A) as a COROLLARY of the consumption theorem: away
-from the six consuming shapes (a `mapIterK` at the `.next` position —
-excluded by `hmi` — an `appendSlice` apply position — excluded by `hnc` —
-a select apply position — excluded by `hns` — a frame entry in BUG-087's
-wrapper family — excluded by `hnv` — a TRY head's sync apply — excluded
-by `hnt` — and a panic reaching an unsequenced-operand probe frame,
-`.panicking _ (.probeK _)`, E13 option (b)'s `unseqPanic` consult —
-excluded by `hnu` — and an abort whose head is a recovered entry with an
-equal successor payload, the `repanicCollapse` consult — excluded by
-`hnr`; an abort never returns `.ok`, so that flag is vacuous here and
-load-bearing only in the pool's `poolThreadOblivious`), a step that
-succeeds under one stream succeeds under EVERY stream, with the SAME
-successor and the stream returned untouched. Its consumers
-(`allStreamsOk`'s soundness, the pool-level `stepThread_oblivious`) are
-unchanged. -/
-theorem stepFn_oblivious {σ : Store} {c : Config} {ch₀ : Choices}
-    {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : StepLabel}
-    (hmi : ∀ (kv vv : Option VarId) (kt vt : Ty) (body : Stmt)
-      (base : Option Loc) (produced start : Array Nat)
-      (env : LocalEnv) (k : Cont),
-      c ≠ .next (.mapIterK kv vv kt vt body base produced start env k))
-    (hnc : consumesAppendSlice c = false)
-    (hni : consumesRandIntn c = false)
-    (hnk : consumesConvCap c = false)
-    (hns : consumesSelect c = false)
-    (hnv : consumesNilValueMethod ctx c = false)
-    (hnt : consumesTryLock c = false)
-    (hnu : consumesUnseqPanic c = false)
-    (hnn : consumesUnseqNext c = false)
-    (hnr : consumesRepanicCollapse c = false)
-    (h : stepFn ctx σ c ch₀ = .ok (c', σ', ch₀', tr)) :
-    ch₀' = ch₀ ∧ ∀ ch : Choices, stepFn ctx σ c ch = .ok (c', σ', ch, tr) :=
-  stepFn_consumption_none (seqConsumption_none_of_flags hmi hnc hni hnk hns hnv hnt hnu hnn hnr) h
 
 /-- The one-layer unfolding of `execStmtLoop`, as an EQUATION (the loop
 is fuel-structural, so the definitional unfolding needs the fuel

@@ -598,6 +598,18 @@ included) and on a replayed set that is not the on-disk module set (the
 checker replays whatever oleans it FINDS: a missing olean is skipped in
 silence).
 
+**Stale oleans of DELETED modules fail the replay, not the build** (lane
+`core/retire-relation-1020`, 2026-10-21, the relational retirement). Lake never
+deletes an olean whose source is gone, and `lake build` never looks at it, so a
+`.lake` copied from before a deletion still holds e.g. `PoolStep.olean`; the
+checker finds and replays it, and it fails on the first constant its imports no
+longer provide («(kernel) unknown constant 'GoLean.GoCore.Machine.Step'») before
+the set comparison could name it STALE. Since that lane the script prints the
+set diff with its remedy ALSO when the checker fails. The remedy: delete the
+deleted modules' artifacts (`find .lake/build -path '*GoLean/GoCore/<Module>.*'
+-delete`, `.olean/.ilean/.hash/.trace/.c/.o`) or build cold; a fresh clone never
+has them. (The toolchain lane hit the same on its branch; its note there confirms this.)
+
 The cost law is the build's («Concurrency OOM», above): the checker runs
 one task per module on Lean's thread pool, each importing the module's
 closure, and the peak is the SUM over the concurrent tasks. Measured

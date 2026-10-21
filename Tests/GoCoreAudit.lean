@@ -379,7 +379,8 @@ def exports : List Name := [
     ``GoLean.GoCore.ContractTests.Interpreter.equal_repanic_keeps_history,
     ``GoLean.GoCore.ContractTests.Interpreter.scope_and_zero_execution,
     ``GoLean.GoCore.ContractTests.Interpreter.write_keeps_both_actual_aliases,
-    -- the renderer and member regressions (`Tests/PanicRendering.lean`, `Tests/StringPanicMembers.lean`)
+    -- the renderer regressions (`Tests/PanicRendering.lean`; the member regressions of
+    -- `Tests/StringPanicMembers.lean` left with the relational layer, 2026-10-20)
     ``GoLean.PanicRenderingTests.equal_repanic_members,
     ``GoLean.PanicRenderingTests.invalid_utf8_first_line_refused,
     ``GoLean.PanicRenderingTests.refusal_names_the_cause]

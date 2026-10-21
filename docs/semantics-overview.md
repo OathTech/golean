@@ -179,7 +179,7 @@ partial-correctness statements across a refusal. A refusal is never counted as a
 
 ## 9. The customer surface and the re-pin offer
 
-The pinned statement set `BridgeSet.lean` (one `example` per pinned statement, 602 rows at the
+The pinned statement set `BridgeSet.lean` (one `example` per pinned statement, 605 `example`s at the
 end) left the build with the relational layer on 2026-10-20 (tag
 `relational/last-main-2026-10-20`, `docs/ARCHIVE.md`). The surface kept on main is
 `Prefix`/`Finish` (§4) and the `stepFn_eqns` equation library (`Equations.lean`,

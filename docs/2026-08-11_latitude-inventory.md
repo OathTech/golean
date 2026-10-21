@@ -294,6 +294,7 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
   streams re-derived (BUG-040 precedent), MultiSound/MultiStreams/
   MultiWfSound metatheory re-proved over the widened set, detector
   outcome-shape classification moved to the marker. CORRECTION to the
+  [2026-10-20: the relational proofs named here are at tag `relational/last-main-2026-10-20`; retired from the build, `docs/ARCHIVE.md`.]
   old cost prose here (owed at landing, note §2 B1): "race-detector
   segments shrink … clock traffic grows" over-predicted — in this
   machine boundaries are scheduling points, not clock edges
@@ -1442,6 +1443,7 @@ gc's early store a deviation, L-016, 2026-09-02).
   `.internal` refusal). The pool relation `StepM.thread` (and NPDRF's
   `StepMFine.thread`) carries the prune as a premise; soundness,
   completeness, `stepThread_single` (one-thread pool ≡ `stepFn`),
+  [2026-10-20: the relational proofs named here are at tag `relational/last-main-2026-10-20`; retired from the build, `docs/ARCHIVE.md`.]
   `MultiWf` preservation and stream-obliviousness were extended
   arm-for-arm (`pruneForeign_wf`, `Config.mapContM_locSup`,
   `stepFn_stmtOpApply_shape`; no sorry). EVIDENCE: gc probe (evidence
@@ -2353,6 +2355,7 @@ instance of R2.
   every member and slot), `Step_convCap_draw` (every member realized by the
   singleton tape), `applyStrictOpPick_conv` (the apply equation), BridgeSet
   rows 580–590 (RE-PIN 17).
+  [2026-10-20: the relational proofs named here are at tag `relational/last-main-2026-10-20`; retired from the build, `docs/ARCHIVE.md`.]
 - HISTORY: (b-n) PINNED singleton cap = len with the transfer caveat from
   the arc-final audit F8 (2026-08-06) and the rune arm (2026-08-19, triage
   L1); the re-envelope obligation discharged 2026-10-07 by the gc-verified
@@ -2658,6 +2661,7 @@ instance of R2.
   The pool relation's `StepM.abort` (and NPDRF's `StepMFine.abort`)
   quantifies the pick below the width; the sequential relation has no
   abort rule (B4: the abort is the driver's terminal). Projections:
+  [2026-10-20: the relational proofs named here are at tag `relational/last-main-2026-10-20`; retired from the build, `docs/ARCHIVE.md`.]
   `seqConsumption`'s `.panicking (first :: rest) .stop` arm,
   `poolConsumption`'s abort arm; obliviousness flags
   `consumesRepanicCollapse` (`stepFn_oblivious`'s `hnr`,
@@ -2909,6 +2913,7 @@ runtime observable. OPEN QUESTION as stated.
   LENGTH's byte size — choice-free, because `applyStmtOp_appendSlice_
   congr` (MachineSound) states the spill outcome CLASS is stream-
   independent and a cap-based check would falsify it — while gc's is
+  [2026-10-20: the relational proofs named here are at tag `relational/last-main-2026-10-20`; retired from the build, `docs/ARCHIVE.md`.]
   on the grown cap: gc panics iff `capmem > maxAlloc` with `capmem =
   roundupsize(nextslicecap(newLen, oldCap)·esize) ≥ newLen·esize`; the
   machine panics iff `newLen ≥ 2^63 ∨ newLen·esize > 2^48`. So machine-

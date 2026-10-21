@@ -2203,8 +2203,7 @@ the pinned bridge set. A fact may use what these modules state; a lemma from ANY
 `rfl`-theorems in `StepFn`/`Machine`/`MachineSound`, a test-support module) is a HELPER and is checked like one
 (the audit's re-verification R1: an imported `rfl`-theorem over `stepFn` is an unfolding of `stepFn`). -/
 def apiModules : List Name :=
-  [`GoLean.GoCore.Equations, `GoLean.GoCore.EquationsAttr, `GoLean.GoCore.Prefix, `GoLean.GoCore.ExecutionStatement,
-   `GoLean.GoCore.PoolProjection, `GoLean.GoCore.BridgeSet]
+  [`GoLean.GoCore.Equations, `GoLean.GoCore.EquationsAttr, `GoLean.GoCore.Prefix, `GoLean.GoCore.ExecutionStatement]
 
 open Lean in
 /-- The IMPORT WHITELIST of this module: the toolchain roots and the API modules — every DIRECT import of the client
