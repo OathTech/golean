@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# The `lake check` SPEEDBUMP (lane toolchain/lean-4.35-1020, 2026-10-21; release-readiness row
+# 42, [USER]-ruled 2026-10-20: bump to Lean v4.35.0 and add `lake check` to the gate script as a
+# report-only speedbump inside the sandbox).
+#
+# `lake check` (toolchains >= 4.35) builds the default targets, exports every default module's
+# declarations (`leanexport`), replays the export through the kernel (`leanchecker`) and refuses
+# any axiom beyond propext / Classical.choice / Quot.sound; `--paranoid` adds the bundled external
+# kernels. Its own `bwrap` sandbox cannot start inside nono («setting up uid map: Permission
+# denied»), so here it runs with `--inadvisably-no-sandbox` — the toolchain itself prints «this run
+# is not trustworthy» — and is a SPEEDBUMP: report-only, read at the merge ask by name. The GATE is
+# the owner's `lake check` outside the sandbox at claim points, `--paranoid` at the release claim
+# point (CLAUDE.md «The gates»; docs/operational-lessons.md, «Lean 4.35»). The in-sandbox kernel
+# replay gate stays `scripts/check-kernel-replay` (leanchecker over the built oleans; no bwrap).
+#
+# Fail closed: any nonzero exit of `lake check` is a FAIL that names the toolchain's first error
+# line; a run that prints no axiom verdict («Uses no axioms» / «Uses axioms: …») is a FAIL too.
+# The line this script prints carries the exit code, the wall and the peak RSS of the checker
+# process tree (GNU time's %M is the largest single process; the cgroup peak is the gate's).
+set -uo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT" || { echo "check-lake-check: cannot cd to $ROOT" >&2; exit 1; }
+[[ $# = 0 ]] || { echo 'check-lake-check: expected no arguments' >&2; exit 2; }
+export TMPDIR="$ROOT/.tmp"
+mkdir -p "$TMPDIR"
+log="$(mktemp "$TMPDIR/lake-check.XXXXXX.log")"
+
+timer=()
+if [ -x /usr/bin/time ]; then timer=(/usr/bin/time -f 'lake-check-rusage wall=%e s maxrss=%M KB'); fi
+started=$SECONDS
+scripts/capped "${timer[@]+"${timer[@]}"}" lake check --inadvisably-no-sandbox > "$log" 2>&1; rc=$?
+wall=$((SECONDS - started))
+rusage="$(grep -m1 '^lake-check-rusage ' "$log" || true)"
+if [ -n "$rusage" ]; then
+  kb="$(printf '%s\n' "$rusage" | sed -n 's/.*maxrss=\([0-9][0-9]*\) KB.*/\1/p')"
+  cost="wall $(printf '%s\n' "$rusage" | sed -n 's/.*wall=\([0-9.]*\) s.*/\1/p') s; largest process $((kb / 1024)) MB"
+else
+  cost="wall ${wall} s; peak RSS unmeasured (/usr/bin/time absent)"
+fi
+verdict="$(grep -m1 -E '^Uses (no axioms|axioms: )' "$log" || true)"
+echo "lake check --inadvisably-no-sandbox (speedbump; the sandboxed run outside nono is the gate): exit $rc; $cost; ${verdict:-no axiom verdict printed}"
+if [ "$rc" -ne 0 ] || [ -z "$verdict" ]; then
+  first_err="$(grep -m1 -E '^error: ' "$log" || true)"
+  echo "check-lake-check: FAIL — ${first_err:-lake check exited $rc without an error line}" >&2
+  echo "check-lake-check: the log is kept at $log" >&2
+  exit 1
+fi
+rm -f "$log"
+echo "lake check speedbump: PASS — the default targets export, replay through the kernel and rest on standard axioms only ($verdict)"

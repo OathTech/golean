@@ -197,8 +197,13 @@ Everything else is untrusted tooling.
   index, feature tags, spec anchors, stdlib register, the
   `AGENTS.md` alias, imported-goose verbatim, memory call sites; under
   `--diff` also the derived-artifact regeneration)
-  under their own heading. A red one never fails the gate; it is read at
-  the merge ask and fixed or waived there, by name.
+  and `lake check --inadvisably-no-sandbox` (`scripts/check-lake-check`:
+  the toolchain's build + export + kernel replay + non-standard-axiom
+  refusal, whose own `bwrap` sandbox cannot start inside nono) under their
+  own heading. A red one never fails the gate; it is read at the merge ask
+  and fixed or waived there, by name. The owner's sandboxed `lake check`
+  run outside nono is the gate at claim points, `lake check --paranoid`
+  at the release claim point ([USER] 2026-10-20, row 42).
 - **Self-tests are not gates.** `scripts/test-*` run by hand when the
   script they test changes.
 - The pre-merge adversarial audit: the ask is unconditional; scope and

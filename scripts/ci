@@ -15,10 +15,11 @@
 #                       the tracked baselines. Run it when you touched runtime
 #                       code; a merge to main needs it green.
 #
-# Speedbumps (the document-vs-code consistency checks) run in both tiers under
-# their own heading, REPORT-ONLY: a red one never fails the gate; it is read at
-# the merge ask and fixed or waived there, by name. Self-tests of checkers
-# (scripts/test-*) are not run here: run the one for a script you change.
+# Speedbumps (the document-vs-code consistency checks, and `lake check` without
+# its sandbox) run in both tiers under their own heading, REPORT-ONLY: a red one
+# never fails the gate; it is read at the merge ask and fixed or waived there,
+# by name. Self-tests of checkers (scripts/test-*) are not run here: run the
+# one for a script you change.
 #
 # Fail-closed rules kept from the old gate: an unknown flag refuses; a step that
 # cannot run is RED, never skipped; no recorded corpus run is a FAIL (unless
@@ -261,6 +262,20 @@ else
     printf '%s\n' "$kr_out" | tail -25 | sed 's/^/  /'
     bad "kernel replay (exit $kr_rc, ${kr_n:-no} module count — a killed, refused, incomplete or empty replay is NOT a pass; see above)"
   fi
+fi
+
+# ── SPEEDBUMP: `lake check` (toolchains ≥ 4.35: build, export, kernel replay
+# of the export, non-standard axioms refused). Its bwrap sandbox cannot start
+# inside nono, so this is `--inadvisably-no-sandbox` and REPORT-ONLY; the gate
+# is the owner's sandboxed `lake check` outside nono at claim points
+# (`--paranoid` at the release claim point) — CLAUDE.md «The gates»,
+# docs/operational-lessons.md «Lean 4.35». Not run when the build failed.
+step "lake check, no sandbox (speedbump; scripts/check-lake-check)"
+if [ "$core_rc" -ne 0 ]; then
+  echo "  not run: the lake build above failed (exit $core_rc)"
+  bump_red "lake check NOT RUN (the lake build failed, exit $core_rc)"
+else
+  run_bump "lake check --inadvisably-no-sandbox (scripts/check-lake-check; the sandboxed run outside nono is the gate)" bash scripts/check-lake-check
 fi
 
 # ── GATE: the machine check of totality — a harness imports every GoLean/

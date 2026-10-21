@@ -22,8 +22,11 @@ over the CORE alone. Run from an external harness (`tools/core-audit.py`) that i
   equation library, the `Prefix`/`Finish` execution statement's proofs, the counted trace,
   the renderer byte facts, the contract regressions — the relational exports left with the
   relational layer, 2026-10-20, tag `relational/last-main-2026-10-20`);
-* the abort-text helpers stay CONSTRUCTIVE (`propext`/`Quot.sound` only, no choice) —
-  landing chunk L3's boundary (`docs/2026-09-07_land-panic-text-tape.md`);
+* the abort-text helpers stay CONSTRUCTIVE — landing chunk L3's boundary
+  (`docs/2026-09-07_land-panic-text-tape.md`) — restated at Lean 4.35 over what THIS repository
+  writes: no GoLean-owned constant in a helper's closure appeals to `Classical.*` directly (the
+  toolchain's own `Int`/`UInt8` order instances now carry `Classical.choice` in proof fields, so
+  the helpers' axiom closure is the classical trio and can no longer witness the boundary);
 * every declaration of every `GoLean.*`/`Tests.*` module — private, generated and trailing
   declarations included — depends on the classical trio only: no `sorry`, no axiom, no
   native decision. This is the charter's «no sorry, no native_decide, no axioms anywhere in
@@ -412,12 +415,49 @@ def exports : List Name := [
     ``GoLean.PanicRenderingTests.invalid_utf8_first_line_refused,
     ``GoLean.PanicRenderingTests.refusal_names_the_cause]
 
-/-- The abort-text helpers keep the constructive machine-helper boundary (no
-`Classical.choice`), although the correspondence layer admits the classical trio. -/
+/-- The abort-text helpers keep the constructive machine-helper boundary, although the
+correspondence layer admits the classical trio. Until Lean 4.32.2 the check was «axioms ⊆
+{propext, Quot.sound}». At Lean 4.35.0 ([AGENT] lane toolchain/lean-4.35-1020, 2026-10-21) the
+toolchain's own instances carry `Classical.choice` in PROOF fields — `Int.instLinearOrderPackage`
+→ `Std.LinearOrderPackage.ofLE._proof_2` → `Classical.propDecidable`, reached by every `Int`
+comparison (`utf8StringAux?`, the derived `BEq SyncPrim`); `UInt8.instLawfulEqOrd` →
+`Classical.not_not`, reached by the `PanicText` proofs' `UInt8` `!=` reasoning — while the helpers'
+DATA paths (`String.ofByteArray`, `String.toUTF8`, `Array.takeWhile`) stay axiom-free. The axiom
+closure can no longer tell a classical proof field from a classical computation, so the boundary
+is restated over what this repository writes (`checkOwnedNoClassical`): the trio bound stays, and
+no GoLean-owned constant in a helper's closure may refer to a `Classical.*` constant directly. -/
 def constructiveHelpers : List Name := [
     ``GoLean.GoCore.PanicText.firstLine, ``GoLean.GoCore.Machine.utf8String?,
     ``GoLean.GoCore.Machine.stringFirstLine?, ``GoLean.GoCore.Machine.renderPanicHead,
     ``GoLean.GoCore.Machine.abortMsg]
+
+/-- The owned part of `helper`'s constant closure (constants whose user-facing name has root
+`GoLean`, private names included), walked with an explicit budget; a direct reference from any
+of them to a `Classical.*` constant is the finding. Toolchain constants are not entered: their
+classical proof fields are the toolchain's, not this repository's. -/
+def checkOwnedNoClassical (helper : Name) : CoreM Unit := do
+  let env ← getEnv
+  let owned (n : Name) : Bool := (privateToUserName n).getRoot == `GoLean
+  let mut seen : NameSet := {}
+  let mut stack : Array Name := #[helper]
+  let mut budget := 200000
+  while stack.size > 0 do
+    if budget == 0 then
+      throwError "Core totality audit: the owned-closure walk of {helper} exhausted its budget (fail closed)"
+    budget := budget - 1
+    let c := stack.back!
+    stack := stack.pop
+    if seen.contains c then continue
+    seen := seen.insert c
+    let some ci := env.find? c
+      | throwError "Core totality audit: unknown constant {c} in the closure of {helper}"
+    for d in ci.getUsedConstantsAsSet.toList do
+      if (privateToUserName d).getRoot == `Classical then
+        throwError "Core totality audit: constructive abort-text helper {helper} appeals to classical reasoning directly: {c} uses {d}"
+      if owned d && !seen.contains d then
+        stack := stack.push d
+  if seen.size == 0 then
+    throwError "Core totality audit: the owned-closure walk of {helper} visited nothing (vacuous)"
 
 /-- `onDisk` is the harness's listing of every `GoLean/*.lean` and `GoLean/GoCore/*.lean`
 module (plus the aggregator `GoLean.GoCore`); the audit refuses any mismatch with the
@@ -445,8 +485,9 @@ def run (onDisk : List String) : CoreM Unit := do
       | throwError "Core totality audit: missing theorem {n}"
   for n in constructiveHelpers do
     for ax in (← collectAxioms n) do
-      unless [``propext, ``Quot.sound].contains ax do
+      unless [``propext, ``Classical.choice, ``Quot.sound].contains ax do
         throwError "Core totality audit: constructive abort-text helper {n} depends on forbidden axiom {ax}"
+    checkOwnedNoClassical n
   let ours := header.map fun n => [`GoLean, `Tests].contains n.getRoot
   let allowed : List Name := [``propext, ``Classical.choice, ``Quot.sound]
   let mut checked := 0
@@ -460,6 +501,6 @@ def run (onDisk : List String) : CoreM Unit := do
         throwError "Core totality audit: {n} depends on forbidden axiom {ax}"
     checked := checked + 1
   let goCore := ourModules.filter fun m => m.toString.startsWith "GoLean.GoCore."
-  logInfo s!"Core totality audit: {ourModules.size} GoLean modules in the closure ({goCore.size} under GoLean.GoCore), all on disk; {exports.length} required theorems present; {checked} declarations across all imported local modules; classical trio only"
+  logInfo s!"Core totality audit: {ourModules.size} GoLean modules in the closure ({goCore.size} under GoLean.GoCore), all on disk; {exports.length} required theorems present; {checked} declarations across all imported local modules; classical trio only; {constructiveHelpers.length} abort-text helpers with no direct Classical reference in their owned closures"
 
 end Tests.GoCoreAudit
