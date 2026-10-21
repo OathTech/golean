@@ -650,3 +650,100 @@ executable runs the named symbol — so the escape-hatch text scan carries
 that guard (`META_HATCH_RE` in `scripts/lean-scan.sh`, `extern` added in
 the fix round, review F1). `lake check` (toolchains ≥ 4.35) is the
 stronger form when the Lean pin moves; this toolchain is 4.32.2.
+
+## Lean 4.35: the bump's breakage classes, and what the gate is at this toolchain (2026-10-21)
+
+[USER] 2026-10-20 (release-readiness row 42, paraphrased): bump to Lean
+`v4.35.0` now, as a priority — it blocks using GoLean upstream — in
+parallel with the relational retirement lane. Lane `toolchain/lean-4.35-1020`
+([AGENT]). Lake 5.0.0 (4.35.0) accepted the tracked `lake-manifest.json`
+unchanged (byte-identical after `lake env` and every build; no packages).
+
+**The whole tree compiled with zero errors in the executable modules**; the
+breakage was in proofs and in one CLI definition, six classes:
+
+1. *Deprecated lemma names* (warnings; the gate demands warning-free):
+   `if_neg`/`if_pos`/`dif_pos`/`dif_neg`/`if_false` → `ite_eq_right`/
+   `ite_eq_left`/`dite_eq_left`/`dite_eq_right`/`ite_false` — drop-in
+   (identical statements), a word-boundary `sed`. 90 sites in the kept
+   modules; 117 more in the retirement set, left to the retirement lane.
+2. *A core source position pinned in a proof*: two `StateWf` proofs rewrote
+   the literal `panicWithPosWithDecl "Init.Data.Array.Basic" "Array.eraseIdx!"
+   1820 47 …`; the panic moved to line 1867. Fixed by the position-agnostic
+   `Array.panicWithPosWithDecl_eq_empty` (`rfl` over any position). Lesson:
+   never match a toolchain source position; state the lemma over the
+   function (`panic!` computes to `default`).
+3. *A stale `Decidable` instance after `simp only`*: a `simp only [foo]`
+   unfold rewrites an `if`'s condition but leaves its instance stated over
+   the OLD condition (type-correct only up to unfolding; the toolchain's new
+   `linter.tacticCheckInstances` names it), and the following `split` or
+   `rw [ite_eq_right …]` misses the `if` («Did not find an occurrence of
+   the pattern if ?m then ?m else ?m»; `split`: «failed to simplify target
+   using new hypotheses»). Fix: `dsimp only` for the definitional rewrites
+   (`Loc.rootPath`; the rfl lemma `Int.zero_emod`) — it rewrites inside the
+   instance too. Two sites, both in `MachineSound`.
+4. *`constructor` warns when a later constructor also unifies* (the
+   generic `Step` sweep: `Step.callStart` vs `callImmediate`, the literal
+   arms vs `evalStrictNullary`): `constructor!` (= `constructor +first`)
+   is the previous behaviour, chosen where the sweep's subgoals decide.
+5. *`letFun` deprecated*: `have` is a non-dependent `let` now and `simp`
+   zeta-reduces it; drop `letFun` from `simp only` sets (one site).
+6. *`given` (with `requires`, `ensures`) is a forbidden binder name in a
+   `def` signature* («unexpected identifier; expected '_' or forbidden
+   token»): one `CLI` binder renamed; fields keep the name.
+
+Not a breakage but a gate expectation that moved: the core totality
+audit's «constructive abort-text helpers» rule (axioms ⊆ {`propext`,
+`Quot.sound`}) is unsatisfiable at 4.35 by anything touching `Int` or
+`UInt8`, because the toolchain's own instances carry `Classical.choice` in
+PROOF fields — `Int.instLinearOrderPackage` → `Std.LinearOrderPackage.ofLE.
+_proof_2` → `Classical.propDecidable` (every `Int` comparison), `UInt8.
+instLawfulEqOrd` → `Classical.not_not` (the `PanicText` proofs' `UInt8`
+`!=` reasoning) — while the helpers' data paths (`String.ofByteArray`,
+`String.toUTF8`, `Array.takeWhile`) are axiom-free. `#print axioms` cannot
+tell a classical proof field from a classical computation, so the rule is
+restated over what this repository writes: the five helpers' axioms ⊆ the
+classical trio AND no GoLean-owned constant in a helper's closure refers to
+a `Classical.*` constant directly (`Tests/GoCoreAudit.lean`,
+`checkOwnedNoClassical`; self-tested with a planted owned theorem reaching
+`Classical.em` through an owned intermediate). The trace that found the
+entry points: walk a declaration's used constants and follow the ones whose
+axioms contain `Classical.choice` (a dozen-line `MetaM` loop).
+
+**Measured at 4.35** (this box, main's module set + the fixes, under the
+lock):
+
+| what | figure |
+|---|---|
+| cold full build, 169 jobs, `LEAN_NUM_THREADS=8`, `capped -m 64G` | 499 s wall; aggregate cgroup peak 3.2 GiB; largest process 3.1 GB (the 4.32.2 cold build of 2026-10-12: 163 jobs, 8 min 37 s) |
+| fast tier (`capped scripts/ci`, warm) | 99 s |
+| kernel replay (`scripts/check-kernel-replay`, 68 modules, 4 threads) | 12.9 s; 5.9 GB peak (4.32.2: 17.8 s, 6.7 GB) |
+| `lake env leanexport GoLean` | 33 s; 2.7 GB; a 1.0 GB, 18.1 M-line export |
+| `lake check --from-export <that> --inadvisably-no-sandbox` | 133 s; 1.6 GB; «Lean default kernel accepts the solution; Uses axioms: propext, Quot.sound, Classical.choice» |
+
+**`lake check` at this project.** The toolchain's `lake check` builds the
+default targets, exports them, replays the export through the kernel and
+refuses non-standard axioms (`--paranoid` adds five external kernels), in a
+`bwrap` sandbox that cannot start inside nono («setting up uid map:
+Permission denied»). So inside the sandbox it is a SPEEDBUMP,
+`scripts/check-lake-check` (`--inadvisably-no-sandbox`; the toolchain
+prints «this run is not trustworthy»), and the owner's sandboxed `lake
+check` outside nono is the gate at claim points, `--paranoid` at the
+release claim point (CLAUDE.md «The gates»). FINDING: the plain `lake
+check` cannot start on this project even outside nono — its export half
+(`Lake/CLI/Main.lean`, `checkExport`) imports EVERY default module into one
+environment, and this lakefile's default targets carry several top-level
+`main`s (`Main.lean` for `golean`; `Tests.GoCoreEval`,
+`Tests.StrictJsonParse`, … run by `lean --run`): «import
+Tests.StrictJsonParse failed, environment already contains 'main' from
+Main». The speedbump is RED by construction until the default-target set
+changes — [USER] D2 territory (gate cull 2026-10-12: every library and
+executable a default target), raised with the lane report. The working
+route meanwhile is the export of the trust surface alone (`leanexport
+GoLean`) fed to `--from-export` (the table above), which the toolchain
+says establishes only that the export is accepted.
+`scripts/check-kernel-replay` therefore STAYS: it needs no bwrap, its
+module-set equality catches an unbuilt module (`lake check` exports only
+what the default targets import), and `leanchecker`'s CLI is unchanged at
+4.35 (`--verbose`, `replaying <module>` lines; no `--help` — flags are
+partitioned by a leading dash and anything else is a module name).
