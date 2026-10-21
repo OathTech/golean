@@ -21,21 +21,25 @@
 # report-only speedbump scripts/check-lake-check and THIS script stays the gate:
 # no bwrap, and the module-set equality below catches an unbuilt or stale olean.
 #
-# Fail closed, three ways, and never a skip:
+# Fail closed, four ways, and never a skip:
+#   * BEFORE the replay, the set of GoLean oleans on disk must EQUAL the set of
+#     GoLean modules on disk (GoLean.lean + GoLean/**/*.lean): Lake never deletes
+#     the olean of a removed module, and the checker replays whatever it finds,
+#     so a stale olean of a deleted module would otherwise surface as a kernel
+#     rejection of its first importer («unknown constant …», the 2026-10-21
+#     retirement rebase) instead of being named with its remedy; an unbuilt
+#     module would be skipped in silence.
 #   * ANY nonzero exit of the checker fails — a kernel rejection («leanchecker
 #     found a problem in <module>»), a missing build tree, a cgroup kill: the
 #     checker's exit 137 reaches this script (GNU time says «Command terminated
 #     by signal 9»), and this script's own FAIL line is the signal — it exits 1,
 #     so capped's KILLED banner does not print on this path (fix round F4a).
 #     A killed replay has checked nothing.
-#   * The set of modules replayed (the checker's `--verbose` lines) must EQUAL
-#     the set of GoLean modules on disk (GoLean.lean + GoLean/**/*.lean). The
-#     checker replays whatever oleans it FINDS on the search path: a module
-#     whose olean is absent would be skipped in silence, a stale olean without
-#     a source would be counted. An empty source set is a refusal too.
-#   * A PASS line is printed only after both checks, and names the count. The
-#     set comparison runs even when the checker fails, so a STALE olean of a
-#     deleted module (the usual cause of «unknown constant» on replay) is named.
+#   * AFTER the replay, the set of modules replayed (the checker's `--verbose`
+#     lines) must EQUAL the same on-disk module set: what the checker chose to
+#     replay is checked, not only what was on disk. An empty source set is a
+#     refusal too.
+#   * A PASS line is printed only after both checks, and names the count.
 #
 # Cost (docs/operational-lessons.md, «The kernel replay gate»): the checker
 # replays every module as a task on Lean's thread pool, so peak RSS is the SUM
@@ -71,6 +75,31 @@ want="$scratch/modules.want"
 n_want="$(wc -l < "$want" | tr -d ' ')"
 [ "$n_want" -gt 0 ] || refuse "no GoLean module found on disk (GoLean.lean / GoLean/**/*.lean) — nothing to replay"
 
+# name_differences <diff file>: each line of a `diff -u want got` names its olean
+# and the remedy (fix round F3, 2026-10-13): a `+` module was found but has no
+# source (stale), a `-` module is on disk but was not found or replayed.
+name_differences() {
+  while IFS= read -r line; do
+    m="${line:1}"; p=".lake/build/lib/lean/$(printf '%s' "$m" | tr . /).olean"
+    case "$line" in
+      +*) echo "  STALE olean $p — module $m has no source: remove it (with its .ilean/.hash/.trace siblings), or restore the source" >&2 ;;
+      -*) echo "  MISSING olean $p — module $m is on disk but has no olean / was not replayed: the build produced no olean for it (a module not imported from GoLean.lean is not built; a symlinked olean is invisible to the checker)" >&2 ;;
+    esac
+  done < <(grep -E '^[-+][^-+]' "$1")
+}
+
+# The oleans on disk, compared with the module set BEFORE the replay: a stale
+# olean of a deleted module is named here with its remedy, not as the kernel's
+# rejection of the first module that imported it.
+have="$scratch/modules.have"
+{ [ -d .lake/build/lib/lean/GoLean ] && find .lake/build/lib/lean/GoLean -name '*.olean' | sed 's|^\.lake/build/lib/lean/||; s|\.olean$||; s|/|.|g'
+  [ -f .lake/build/lib/lean/GoLean.olean ] && echo GoLean; } | LC_ALL=C sort -u > "$have"
+n_have="$(wc -l < "$have" | tr -d ' ')"
+if ! diff -u "$want" "$have" > "$scratch/modules.pre.diff"; then
+  name_differences "$scratch/modules.pre.diff"
+  refuse "the GoLean oleans on disk ($n_have) are not the on-disk GoLean module set ($n_want) — checked before the replay; each difference and its remedy is named above"
+fi
+
 if [ -n "${LEAN_NUM_THREADS:-}" ]; then thr_note="LEAN_NUM_THREADS=$LEAN_NUM_THREADS (caller's)"
 else export LEAN_NUM_THREADS=4; thr_note="LEAN_NUM_THREADS=4 (this script's default; the toolchain default peaks at 31 GB)"; fi
 
@@ -92,38 +121,21 @@ else
 fi
 echo "kernel replay: lake env leanchecker --verbose GoLean; $thr_note; exit $rc; $cost"
 
-# The set comparison runs FIRST, whatever the checker's exit (fix round
-# 2026-10-21, lane core/retire-relation-1020: a stale olean of a DELETED module
-# makes the checker fail on the first constant its imports no longer provide,
-# BEFORE a set comparison could name it — so the remedy must print on the
-# failure path too). Each difference names its olean and the remedy (fix round
-# F3): Lake never deletes the olean of a renamed or removed module, and never
-# builds a module the root does not import. The checker prints `replaying <m>`
-# as it STARTS a module, so a module that failed mid-replay is in `got`.
-got="$scratch/modules.got"
-grep '^replaying ' "$log" | sed 's/^replaying //' | LC_ALL=C sort -u > "$got"
-n_got="$(wc -l < "$got" | tr -d ' ')"
-set_ok=1
-if ! diff -u "$want" "$got" > "$scratch/modules.diff"; then
-  set_ok=0
-  while IFS= read -r line; do
-    m="${line:1}"; p=".lake/build/lib/lean/$(printf '%s' "$m" | tr . /).olean"
-    case "$line" in
-      +*) echo "  STALE olean $p — replayed, but module $m has no source: remove it (with its .ilean/.hash/.trace siblings), or restore the source" >&2 ;;
-      -*) echo "  MISSING olean $p — module $m is on disk but was not replayed: the build produced no olean for it (a module not imported from GoLean.lean is not built; a symlinked olean is invisible to the checker)" >&2 ;;
-    esac
-  done < <(grep -E '^[-+][^-+]' "$scratch/modules.diff")
-fi
-
 if [ "$rc" -ne 0 ]; then
   grep -v '^replaying ' "$log" | tail -15 | sed 's/^/  /' >&2
-  [ "$set_ok" -eq 1 ] || echo "  (the replayed set also differs from the on-disk set — the differences and remedies are named above; a STALE olean of a deleted module is the usual cause of a replay failure that names a constant the module's imports no longer provide)" >&2
   case "$rc" in
     137|143) refuse "the checker was KILLED (exit $rc — the cgroup cap or a signal); a killed replay has checked nothing" ;;
     *)       refuse "leanchecker exited $rc (a kernel rejection names its module above; a missing olean or build tree is also a refusal)" ;;
   esac
 fi
-[ "$set_ok" -eq 1 ] || refuse "the replayed set ($n_got modules) is not the on-disk GoLean module set ($n_want); each difference and its remedy is named above"
+
+got="$scratch/modules.got"
+grep '^replaying ' "$log" | sed 's/^replaying //' | LC_ALL=C sort -u > "$got"
+n_got="$(wc -l < "$got" | tr -d ' ')"
+if ! diff -u "$want" "$got" > "$scratch/modules.diff"; then
+  name_differences "$scratch/modules.diff"
+  refuse "the replayed set ($n_got modules) is not the on-disk GoLean module set ($n_want); each difference and its remedy is named above"
+fi
 
 rm -rf "$scratch"
-printf 'Kernel replay gate: PASS — %s GoLean modules replayed through the kernel into a fresh environment of their imports by leanchecker (= the %s modules on disk)\n' "$n_got" "$n_want"
+printf 'Kernel replay gate: PASS — %s GoLean modules replayed through the kernel into a fresh environment of their imports by leanchecker (= the %s modules on disk, = the %s oleans on disk)\n' "$n_got" "$n_want" "$n_have"

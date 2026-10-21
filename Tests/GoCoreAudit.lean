@@ -23,10 +23,13 @@ over the CORE alone. Run from an external harness (`tools/core-audit.py`) that i
   the renderer byte facts, the contract regressions — the relational exports left with the
   relational layer, 2026-10-20, tag `relational/last-main-2026-10-20`);
 * the abort-text helpers stay CONSTRUCTIVE — landing chunk L3's boundary
-  (`docs/2026-09-07_land-panic-text-tape.md`) — restated at Lean 4.35 over what THIS repository
-  writes: no GoLean-owned constant in a helper's closure appeals to `Classical.*` directly (the
-  toolchain's own `Int`/`UInt8` order instances now carry `Classical.choice` in proof fields, so
-  the helpers' axiom closure is the classical trio and can no longer witness the boundary);
+  (`docs/2026-09-07_land-panic-text-tape.md`). The axiom-level form of that boundary, axioms ⊆
+  {`propext`, `Quot.sound`}, is DROPPED at Lean 4.35: the toolchain's `BEq` instances on `Int`
+  and `UInt8` carry `Classical.choice` in proof fields, so `==`/`!=` on them is a data path
+  with the classical trio. What replaces it (`checkOwnedNoClassical`) is a HYGIENE check, not an
+  axiom boundary: the classical trio bound, computability of every helper, and no constant
+  defined in a GoLean/Tests module within a helper's closure naming `Classical.*` directly or
+  citing a non-instance toolchain theorem whose axioms reach `Classical.choice`;
 * every declaration of every `GoLean.*`/`Tests.*` module — private, generated and trailing
   declarations included — depends on the classical trio only: no `sorry`, no axiom, no
   native decision. This is the charter's «no sorry, no native_decide, no axioms anywhere in
@@ -416,28 +419,53 @@ def exports : List Name := [
     ``GoLean.PanicRenderingTests.refusal_names_the_cause]
 
 /-- The abort-text helpers keep the constructive machine-helper boundary, although the
-correspondence layer admits the classical trio. Until Lean 4.32.2 the check was «axioms ⊆
-{propext, Quot.sound}». At Lean 4.35.0 ([AGENT] lane toolchain/lean-4.35-1020, 2026-10-21) the
-toolchain's own instances carry `Classical.choice` in PROOF fields — `Int.instLinearOrderPackage`
-→ `Std.LinearOrderPackage.ofLE._proof_2` → `Classical.propDecidable`, reached by every `Int`
-comparison (`utf8StringAux?`, the derived `BEq SyncPrim`); `UInt8.instLawfulEqOrd` →
-`Classical.not_not`, reached by the `PanicText` proofs' `UInt8` `!=` reasoning — while the helpers'
-DATA paths (`String.ofByteArray`, `String.toUTF8`, `Array.takeWhile`) stay axiom-free. The axiom
-closure can no longer tell a classical proof field from a classical computation, so the boundary
-is restated over what this repository writes (`checkOwnedNoClassical`): the trio bound stays, and
-no GoLean-owned constant in a helper's closure may refer to a `Classical.*` constant directly. -/
+correspondence layer admits the classical trio. Until Lean 4.32.2 the check was the axiom-level
+boundary «axioms ⊆ {propext, Quot.sound}». At Lean 4.35.0 ([AGENT] lane toolchain/lean-4.35-1020,
+2026-10-21; fix round) that boundary is DROPPED, because the toolchain's `BEq` instances on `Int`
+and `UInt8` (`instBEqOfLawfulEqOrd` through `Int.instLinearOrderPackage` /
+`instLinearOrderPackageUInt8` → `Std.LinearOrderPackage.ofLE._proof_2` → `Classical.propDecidable`;
+`UInt8.instLawfulEqOrd` → `Classical.not_not`) carry `Classical.choice` in PROOF fields: `==`/`!=`
+on `Int`/`UInt8` reaches choice (`decide (a ≤ b)`, `<`, `compare`, `max`, `min` do not), so
+`firstLine`'s `(· != 10)` is itself a data path with the trio, and no implementation touching
+those operators can meet the old bound. What replaces it is a HYGIENE check, not an axiom
+boundary (`checkOwnedNoClassical`): (1) axioms ⊆ the classical trio; (2) every helper is
+computable (`Lean.isNoncomputable env n = false` — the exact cheap statement of «constructive
+data»); (3) no constant DEFINED IN A GoLean/Tests MODULE within the helper's closure names a
+`Classical.*` constant directly or cites a non-instance toolchain theorem whose axioms reach
+`Classical.choice` (owned proofs may rely on the toolchain's instances and definitions — their
+classical proof fields are the toolchain's). Inherent to a reference check: a toolchain
+INSTANCE that is itself a classical theorem (`UInt8.instLawfulEqOrd`) is allowed by (3), so this
+is hygiene over what this repository writes, not a proof that no classical fact is used. -/
 def constructiveHelpers : List Name := [
     ``GoLean.GoCore.PanicText.firstLine, ``GoLean.GoCore.Machine.utf8String?,
     ``GoLean.GoCore.Machine.stringFirstLine?, ``GoLean.GoCore.Machine.renderPanicHead,
     ``GoLean.GoCore.Machine.abortMsg]
 
-/-- The owned part of `helper`'s constant closure (constants whose user-facing name has root
-`GoLean`, private names included), walked with an explicit budget; a direct reference from any
-of them to a `Classical.*` constant is the finding. Toolchain constants are not entered: their
-classical proof fields are the toolchain's, not this repository's. -/
-def checkOwnedNoClassical (helper : Name) : CoreM Unit := do
+/-- Does `n`'s axiom closure contain `Classical.choice`? Memoised across calls, so the walks over
+the toolchain's closures are shared by every owned constant citing the same toolchain name. -/
+def touchesChoice (memo : IO.Ref (NameMap Bool)) (n : Name) : CoreM Bool := do
+  if let some b := (← memo.get).find? n then return b
+  let b := (← collectAxioms n).contains ``Classical.choice
+  memo.modify (·.insert n b)
+  return b
+
+/-- The hygiene check behind `constructiveHelpers` (its docstring states the rule). `ours[i]` says
+whether module `i` of the environment header is a GoLean/Tests module: OWNERSHIP IS BY DEFINING
+MODULE (`env.getModuleIdxFor?`), not by name root — a constant a GoLean module defines under a
+foreign root (generated splitter/equation lemmas, `EquationsAttr`'s extension constants, or a
+planted `theorem List.x … := Classical.em p`) is owned; a constant with no module (defined in
+the harness file itself) is owned too. The owned closure is walked with an explicit budget;
+toolchain constants are not entered. Findings: the helper is noncomputable; an owned constant
+names a `Classical.*` constant; an owned constant cites a toolchain THEOREM that is not an
+instance and whose axioms reach `Classical.choice`. -/
+def checkOwnedNoClassical (ours : Array Bool) (helper : Name) : CoreM Unit := do
   let env ← getEnv
-  let owned (n : Name) : Bool := (privateToUserName n).getRoot == `GoLean
+  if Lean.isNoncomputable env helper then
+    throwError "Core totality audit: constructive abort-text helper {helper} is noncomputable (no value to run)"
+  let owned (n : Name) : Bool := match env.getModuleIdxFor? n with
+    | some i => ours[i.toNat]!
+    | none => true
+  let memo ← IO.mkRef ({} : NameMap Bool)
   let mut seen : NameSet := {}
   let mut stack : Array Name := #[helper]
   let mut budget := 200000
@@ -454,10 +482,11 @@ def checkOwnedNoClassical (helper : Name) : CoreM Unit := do
     for d in ci.getUsedConstantsAsSet.toList do
       if (privateToUserName d).getRoot == `Classical then
         throwError "Core totality audit: constructive abort-text helper {helper} appeals to classical reasoning directly: {c} uses {d}"
-      if owned d && !seen.contains d then
-        stack := stack.push d
-  if seen.size == 0 then
-    throwError "Core totality audit: the owned-closure walk of {helper} visited nothing (vacuous)"
+      if owned d then
+        if !seen.contains d then stack := stack.push d
+      else if let some (.thmInfo _) := env.find? d then
+        if !(← Meta.isInstance d) && (← touchesChoice memo d) then
+          throwError "Core totality audit: constructive abort-text helper {helper} cites a classical toolchain theorem: {c} uses {d}, whose axioms reach Classical.choice"
 
 /-- `onDisk` is the harness's listing of every `GoLean/*.lean` and `GoLean/GoCore/*.lean`
 module (plus the aggregator `GoLean.GoCore`); the audit refuses any mismatch with the
@@ -483,12 +512,12 @@ def run (onDisk : List String) : CoreM Unit := do
   for n in exports do
     let some (.thmInfo _) := env.find? n
       | throwError "Core totality audit: missing theorem {n}"
+  let ours := header.map fun n => [`GoLean, `Tests].contains n.getRoot
   for n in constructiveHelpers do
     for ax in (← collectAxioms n) do
       unless [``propext, ``Classical.choice, ``Quot.sound].contains ax do
         throwError "Core totality audit: constructive abort-text helper {n} depends on forbidden axiom {ax}"
-    checkOwnedNoClassical n
-  let ours := header.map fun n => [`GoLean, `Tests].contains n.getRoot
+    checkOwnedNoClassical ours n
   let allowed : List Name := [``propext, ``Classical.choice, ``Quot.sound]
   let mut checked := 0
   for (n, _) in env.constants.toList do
@@ -501,6 +530,6 @@ def run (onDisk : List String) : CoreM Unit := do
         throwError "Core totality audit: {n} depends on forbidden axiom {ax}"
     checked := checked + 1
   let goCore := ourModules.filter fun m => m.toString.startsWith "GoLean.GoCore."
-  logInfo s!"Core totality audit: {ourModules.size} GoLean modules in the closure ({goCore.size} under GoLean.GoCore), all on disk; {exports.length} required theorems present; {checked} declarations across all imported local modules; classical trio only; {constructiveHelpers.length} abort-text helpers with no direct Classical reference in their owned closures"
+  logInfo s!"Core totality audit: {ourModules.size} GoLean modules in the closure ({goCore.size} under GoLean.GoCore), all on disk; {exports.length} required theorems present; {checked} declarations across all imported local modules; classical trio only; {constructiveHelpers.length} abort-text helpers computable, their owned-module closures naming no Classical.* constant and citing no classical toolchain theorem"
 
 end Tests.GoCoreAudit

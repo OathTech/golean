@@ -199,11 +199,15 @@ Everything else is untrusted tooling.
   `--diff` also the derived-artifact regeneration)
   and `lake check --inadvisably-no-sandbox` (`scripts/check-lake-check`:
   the toolchain's build + export + kernel replay + non-standard-axiom
-  refusal, whose own `bwrap` sandbox cannot start inside nono) under their
-  own heading. A red one never fails the gate; it is read at the merge ask
-  and fixed or waived there, by name. The owner's sandboxed `lake check`
-  run outside nono is the gate at claim points, `lake check --paranoid`
-  at the release claim point ([USER] 2026-10-20, row 42).
+  refusal) under their own heading. A red one never fails the gate; it is
+  read at the merge ask and fixed or waived there, by name. `lake check`
+  is RED BY CONSTRUCTION on this lakefile, sandboxed or not: it imports
+  every default module into one environment, and several default modules
+  define a top-level `main`. Until the default-target ruling (backlog row
+  42) lands, the kernel replay above is the standing check; once that
+  ruling makes `lake check` runnable, the owner's sandboxed run outside
+  nono (its `bwrap` cannot start inside nono) is the gate at claim points,
+  `lake check --paranoid` at the release claim point ([USER] 2026-10-20).
 - **Self-tests are not gates.** `scripts/test-*` run by hand when the
   script they test changes.
 - The pre-merge adversarial audit: the ask is unconditional; scope and

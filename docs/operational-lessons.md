@@ -649,7 +649,8 @@ outside its reach by construction — the kernel checks the Lean body, the
 executable runs the named symbol — so the escape-hatch text scan carries
 that guard (`META_HATCH_RE` in `scripts/lean-scan.sh`, `extern` added in
 the fix round, review F1). `lake check` (toolchains ≥ 4.35) is the
-stronger form when the Lean pin moves; this toolchain is 4.32.2.
+stronger form when the Lean pin moves; the pin moved to 4.35.0 on 2026-10-21 (entry
+«Lean 4.35» below: what `lake check` can and cannot do on this lakefile).
 
 ## Lean 4.35: the bump's breakage classes, and what the gate is at this toolchain (2026-10-21)
 
@@ -681,11 +682,14 @@ breakage was in proofs and in one CLI definition, six classes:
    the pattern if ?m then ?m else ?m»; `split`: «failed to simplify target
    using new hypotheses»). Fix: `dsimp only` for the definitional rewrites
    (`Loc.rootPath`; the rfl lemma `Int.zero_emod`) — it rewrites inside the
-   instance too. Two sites, both in `MachineSound`.
+   instance too. Two sites, both in `MachineSound`, which left the tree the
+   same day with the relational retirement (the re-homed `StepFnFacts` carries
+   neither site); the idiom is the lesson.
 4. *`constructor` warns when a later constructor also unifies* (the
    generic `Step` sweep: `Step.callStart` vs `callImmediate`, the literal
    arms vs `evalStrictNullary`): `constructor!` (= `constructor +first`)
-   is the previous behaviour, chosen where the sweep's subgoals decide.
+   is the previous behaviour, chosen where the sweep's subgoals decide (one
+   site, also in `MachineSound`, gone the same day).
 5. *`letFun` deprecated*: `have` is a non-dependent `let` now and `simp`
    zeta-reduces it; drop `letFun` from `simp only` sets (one site).
 6. *`given` (with `requires`, `ensures`) is a forbidden binder name in a
@@ -693,22 +697,35 @@ breakage was in proofs and in one CLI definition, six classes:
    token»): one `CLI` binder renamed; fields keep the name.
 
 Not a breakage but a gate expectation that moved: the core totality
-audit's «constructive abort-text helpers» rule (axioms ⊆ {`propext`,
-`Quot.sound`}) is unsatisfiable at 4.35 by anything touching `Int` or
-`UInt8`, because the toolchain's own instances carry `Classical.choice` in
-PROOF fields — `Int.instLinearOrderPackage` → `Std.LinearOrderPackage.ofLE.
-_proof_2` → `Classical.propDecidable` (every `Int` comparison), `UInt8.
-instLawfulEqOrd` → `Classical.not_not` (the `PanicText` proofs' `UInt8`
-`!=` reasoning) — while the helpers' data paths (`String.ofByteArray`,
-`String.toUTF8`, `Array.takeWhile`) are axiom-free. `#print axioms` cannot
-tell a classical proof field from a classical computation, so the rule is
-restated over what this repository writes: the five helpers' axioms ⊆ the
-classical trio AND no GoLean-owned constant in a helper's closure refers to
-a `Classical.*` constant directly (`Tests/GoCoreAudit.lean`,
-`checkOwnedNoClassical`; self-tested with a planted owned theorem reaching
-`Classical.em` through an owned intermediate). The trace that found the
-entry points: walk a declaration's used constants and follow the ones whose
-axioms contain `Classical.choice` (a dozen-line `MetaM` loop).
+audit's «constructive abort-text helpers» rule. Its axiom-level form,
+axioms ⊆ {`propext`, `Quot.sound`}, is DROPPED at 4.35 — not restated —
+because the toolchain's `BEq` instances on `Int` and `UInt8`
+(`instBEqOfLawfulEqOrd` through `Int.instLinearOrderPackage` /
+`instLinearOrderPackageUInt8` → `Std.LinearOrderPackage.ofLE._proof_2` →
+`Classical.propDecidable`; `UInt8.instLawfulEqOrd`, a theorem, →
+`Classical.not_not`) carry `Classical.choice` in PROOF fields. Precisely
+(the reviewer's probes): `==`/`!=` on `Int`/`UInt8` reach choice;
+`decide (a ≤ b)`, `<`, `compare`, `max`, `min` carry none; so
+`firstLine`'s `(· != 10)` is itself a data path with the trio, and every
+one of the five helpers is computable (`Lean.isNoncomputable env n =
+false`). What replaces the bound (`Tests/GoCoreAudit.lean`,
+`checkOwnedNoClassical`) is a HYGIENE check, not an axiom boundary: the
+classical trio; computability of every helper; and, over the constants
+DEFINED IN GoLean/Tests MODULES within a helper's closure (ownership by
+`env.getModuleIdxFor?`, not by name root — 43 constants in GoLean modules
+carry another root today), no direct `Classical.*` name and no citation of
+a non-instance toolchain theorem whose axioms reach `Classical.choice`
+(memoised `collectAxioms`). Owned code may rely on the toolchain's
+instances and definitions, whose classical proof fields are the
+toolchain's; every classical entry point of the five helpers today is such
+an instance (`instLinearOrderPackageUInt8`, `Int.instLinearOrderPackage`,
+`UInt8.instLawfulEqOrd`, `UInt8.instLawfulOrderOrd`). Inherent to a
+reference check: a toolchain instance that is itself a classical theorem
+is allowed, so this is hygiene over what the repository writes, not a
+proof that no classical fact is used. The owner decides between this and
+trio-only. The trace that found the entry points: walk a declaration's
+used constants and follow the ones whose axioms contain `Classical.choice`
+(a dozen-line `MetaM` loop).
 
 **Measured at 4.35** (this box, under the lock; the module set named per row):
 
@@ -718,8 +735,8 @@ axioms contain `Classical.choice` (a dozen-line `MetaM` loop).
 | cold full build, same cap, the post-retirement tip (126 jobs; rebased onto `ea629cc8`) | 315 s wall; aggregate cgroup peak 3.1 GiB; largest process 3.1 GB; zero warnings |
 | fast tier (`capped scripts/ci`, warm) | 99 s |
 | kernel replay (`scripts/check-kernel-replay`, 4 threads) | main's set, 68 modules: 12.9 s, 5.9 GB peak (4.32.2: 17.8 s, 6.7 GB); the post-retirement tip, 47 modules: 8.2 s, 3.5 GB |
-| `lake env leanexport GoLean` | 33 s; 2.7 GB; a 1.0 GB, 18.1 M-line export |
-| `lake check --from-export <that> --inadvisably-no-sandbox` | 133 s; 1.6 GB; «Lean default kernel accepts the solution; Uses axioms: propext, Quot.sound, Classical.choice» |
+| `lake env leanexport GoLean` (the `GoLean` library's closure with its Init/Std/Lean imports) | main's set: 33 s, 2.7 GB, a 1.0 GB, 18.1 M-line export; the tip (47 modules, reviewer's run): 34.7 s, 942 MB, 16.37 M lines |
+| `lake check --from-export <that> --inadvisably-no-sandbox` | main's set: 133 s, 1.6 GB; the tip: 150 s; both «Lean default kernel accepts the solution; Uses axioms: propext, Quot.sound, Classical.choice» |
 
 **`lake check` at this project.** The toolchain's `lake check` builds the
 default targets, exports them, replays the export through the kernel and
@@ -733,20 +750,39 @@ release claim point (CLAUDE.md «The gates»). FINDING: the plain `lake
 check` cannot start on this project even outside nono — its export half
 (`Lake/CLI/Main.lean`, `checkExport`) imports EVERY default module into one
 environment, and this lakefile's default targets carry several top-level
-`main`s (`Main.lean` for `golean`; `Tests.GoCoreEval`,
-`Tests.StrictJsonParse`, … run by `lean --run`): «import
-Tests.StrictJsonParse failed, environment already contains 'main' from
-Main». The speedbump is RED by construction until the default-target set
-changes — [USER] D2 territory (gate cull 2026-10-12: every library and
-executable a default target), raised with the lane report. The working
-route meanwhile is the export of the trust surface alone (`leanexport
-GoLean`) fed to `--from-export` (the table above), which the toolchain
-says establishes only that the export is accepted.
+`main`s (`Main.lean` for `golean`; `Tests.GoCoreEval` for the eval-test
+executable; `Tests.StrictJsonParse`, `Tests.DeclarationWire`, … run by
+`lean --run`): the gate logs «import Tests.GoCoreEval failed, environment
+already contains 'main' from Main» (with the eval-test pair removed it is
+`Tests.StrictJsonParse` next). The speedbump is RED by construction until
+the default-target set changes — [USER] D2 territory (gate cull
+2026-10-12: every library and executable a default target), raised with
+the lane report; the charter says so beside the speedbump. Facts for that
+ruling (the reviewer's measured probe, 2026-10-21): with
+`defaultTargets = ["GoLean", "TestsData", "AdmissionTests",
+"GoCoreAuditTests"]`, `capped -m 64G -- lake check
+--inadvisably-no-sandbox` is accepted on the classical trio, rc 0, in
+244 s — so a green speedbump costs about four minutes, which argues for
+the `--diff` tier only; that arrangement leaves `Main` and the nine
+`main`-bearing `Tests/*` modules plus `Tests.UnseqHarness` outside both
+`lake check` and the `GoLean`-prefix replay, and the ci step «every
+declared library and executable is a default target» goes red; the
+alternative is to turn the `lean --run` test mains into build-time
+`#eval` checks as `Tests.EquationClient` already does, after which only
+one of the two executables (`golean`, `gocore-eval-tests`) still needs
+demoting. The working route meanwhile is the export of the trust surface
+alone (`leanexport GoLean`) fed to `--from-export` (the table above),
+which the toolchain says establishes only that the export is accepted.
 `scripts/check-kernel-replay` therefore STAYS: it needs no bwrap, its
 module-set equality catches an unbuilt module (`lake check` exports only
-what the default targets import), and `leanchecker`'s CLI is unchanged at
-4.35 (`--verbose`, `replaying <module>` lines; no `--help` — flags are
-partitioned by a leading dash and anything else is a module name).
+what the default targets import), and the olean path the gate uses is
+unchanged at 4.35 (`leanchecker --verbose <prefix>`, `replaying <module>`
+lines; no `--help` — flags are partitioned by a leading dash and anything
+else is a module name); 4.35 adds `--from-export` and `--silent`, the
+export path `lake check` drives. Since the fix round the script compares
+the oleans on disk with the module set BEFORE the replay, so a stale
+olean of a deleted module is named with its remedy rather than surfacing
+as the kernel's rejection of its first importer.
 
 **After a rebase that deletes modules, wipe `.lake/build` before the gate.**
 Lake never removes the olean of a deleted module, and `leanchecker GoLean`
