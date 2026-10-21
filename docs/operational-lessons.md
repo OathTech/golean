@@ -862,5 +862,25 @@ walks history and the network clone path cannot be tested from the
 sandbox, so `scripts/setup-deps` keeps the full clone; the README says what
 it costs.
 
-ACCEPTANCE (the clean-clone test the lane brief set; result lines below
-are the runs' own):
+ACCEPTANCE (the clean-clone test the lane brief set, run 2026-10-21 at the
+lane commit `dc95dea6`; the result lines are the runs' own). A clean clone
+(`git clone --no-hardlinks` of the lane worktree into its `.tmp/`, the
+branch checked out, `scripts/setup-deps --from <the primary's deps/>` — a
+fresh machine runs `scripts/setup-deps` with the network), then ONLY the
+README's commands, under the box-wide build lock:
+  1. with `capped` on PATH and `CAPPED_MEM_MAX=64G`:
+     `capped lake build` (cold) — EXIT=0 in 294 s;
+     `scripts/ci --diff` — `RESULT: PASS`, 488 s; «memory cap: capped on PATH
+     (/usr/local/bin/capped); CAPPED_MEM_MAX=64G; CAPPED_STATE=unset» (the
+     bare `scripts/ci` capped each heavy step itself), LEAN_NUM_THREADS=8;
+     differential 4025/4025 and negative 415/415, no regression; the one
+     speedbump RED is `lake check` (environment already contains 'main' from
+     Main — row 42 territory, as before), its line reading «no sandbox (bwrap
+     cannot start here: bwrap: setting up uid map: Permission denied)».
+  2. the same clone, PATH stripped of the directory holding `capped`,
+     `CAPPED_MEM_MAX` unset, `LEAN_NUM_THREADS=4` (the derivation's value for
+     32G): `scripts/ci` — `RESULT: PASS`, 82 s (warm); «memory cap: capped NOT
+     on PATH: heavy steps run uncapped (the cap is box tooling; CAPPED_MEM_MAX=
+     unset, so 32G still sizes LEAN_NUM_THREADS)»; the same speedbump RED.
+Reproduce: the two command lists above in a fresh clone; the logs are
+ephemeral.
