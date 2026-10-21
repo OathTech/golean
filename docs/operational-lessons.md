@@ -848,8 +848,9 @@ with `--inadvisably-no-sandbox` where it does not, saying which — the first
 round's weaker probe (`--ro-bind / / --dev /dev`) would have labelled a run
 «sandboxed» in an environment that opens a user namespace but cannot
 unshare the network; here, inside the agent sandbox, Lake's set fails on
-«setting up uid map: Permission denied» or «loopback: Failed to create
-NETLINK_ROUTE socket», whichever comes first, so the no-sandbox form.
+«loopback: Failed to create NETLINK_ROUTE socket: Operation not permitted»
+(every time, also under `env -i`; the «setting up uid map» error was the
+weaker probe's), so the no-sandbox form.
 `scripts/check-wire-boundary` runs under `set -Ee` so the scratch file's
 ERR trap still names a failing command inside `cap`. Hostnames,
 `~/projects/...` and `/usr/local/go` left the living docs and the Lean
@@ -892,16 +893,35 @@ the sourced file — ignored TERM 124, TERM death 143, plain timeout 124,
 SIGKILL 137, no such command 127, `exit 3` → 3, a non-numeric or zero
 timeout → 2 with a message (the perl `alarm 0` silently disabled the
 guard; the callers' own checks stay, naming the knob) — at +7.7 ms a call
-(`python3 -I -S`: 9.6 ms; perl: 1.9 ms; a full run makes on the order of
-20k calls across 32 workers, a few seconds of wall). Two behaviours are
-new, both deliberate: the command runs in its own process group and the
-TERM-then-KILL goes to the group (a timed-out `go run` takes its compiled
-child with it; a capped build — `run_with_timeout … $(cap_argv) lake
-build`, the box tool between the wrapper and lake — dies whole, where the
-perl wrapper killed the direct child only and would have left lake
-running), and SIGTERM/SIGINT to the wrapper are forwarded to the group
-(exit 128+N), so Ctrl-C still reaches a command that is no longer in the
-terminal's group. The stderr announcement is opt-in
+(`python3 -I -S`: 9.6 ms; perl: 1.9 ms). The cost of a full run, anchored:
+`artifacts/coverage/timings.tsv` of the lane's `--diff` run at `6ded1f4b`
+has 64,539 timed phases, every one a `run_with_timeout` call, so
+64.5k × 7.7 ms ≈ 500 s of CPU ≈ 16 s of wall over 32 workers — consistent
+with the gate's 488 s (perl) → 499 s (Python). (The first record here said
+«on the order of 20k calls»; the second review counted.) Two behaviours
+are new, both deliberate: the command runs in its own process group — set
+from both sides of the fork, so a signal forwarded in the first instant
+finds it — and the TERM-then-KILL goes to the group (a timed-out `go run`
+takes its compiled child with it; a capped build — `run_with_timeout …
+$(cap_argv) lake build`, the box tool between the wrapper and lake — dies
+whole, where the perl wrapper killed the direct child only and would have
+left lake running), and HUP, INT, QUIT and TERM to the wrapper are
+forwarded to the group (exit 128+N), so a hangup or Ctrl-C still reaches a
+command that is no longer in the terminal's group (the second review found
+HUP missing from the first port: the wrapper died 129 and the command
+lived on, its alarm gone — the perl child shared the caller's group and
+died with it). ONE LEAK, KNOWN AND LEFT ([AGENT], second fix round): on
+the bare route — `scripts/diff-one` or `scripts/diff-coverage` by hand on
+a box with `capped` on PATH and no outer `CAPPED_STATE` — a `lake build`
+that times out inside the wrapper leaves an empty cgroup directory behind:
+the group TERM kills the box tool's outer shell, which keeps itself outside
+the cgroup, has no trap, and never reaches its `rmdir`. Ordering the kill
+(the direct child first, the group a moment later) would not help — that
+shell dies on TERM at once, before any cleanup, and excluding it from the
+group kill would make the wrapper depend on the tool's internals. The
+cleanup belongs to the tool (a trap around its `rmdir`), proposed to the
+owner as box-tool hygiene; under `scripts/ci --diff` the route does not
+arise (the outer `cap` makes the inner `capped` a plain exec). The stderr announcement is opt-in
 (`RUN_WITH_TIMEOUT_ANNOUNCE=1`, set by `diff-coverage` as before; the other
 three keep stderr clean, as before). THE SELF-TEST CAUGHT THE PORT'S FIRST
 CUT: `scripts/test-lane-validation --with-go` failed every fixture with a

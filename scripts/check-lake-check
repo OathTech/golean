@@ -9,8 +9,8 @@
 # kernels. It runs the project inside a `bwrap` sandbox, which needs unprivileged user namespaces
 # (or a setuid bwrap). THIS SCRIPT DETECTS whether bwrap can start here (box-independence,
 # release-readiness row 46, [USER] 2026-10-21: nothing box-specific hard-coded): where it can,
-# `lake check` runs sandboxed; where it cannot — an OS-sandboxed agent session says «setting up
-# uid map: Permission denied», a box without bwrap has none — it runs with
+# `lake check` runs sandboxed; where it cannot — an OS-sandboxed agent session fails Lake's flag
+# set on «loopback: Failed to create NETLINK_ROUTE socket», a box without bwrap has none — it runs with
 # `--inadvisably-no-sandbox` (the toolchain itself prints «this run is not trustworthy»). The
 # line this script prints says which form ran. Either way it is a SPEEDBUMP: report-only, read
 # at the merge ask by name. The GATE is the owner's sandboxed `lake check` at claim points,

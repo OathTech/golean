@@ -20,15 +20,24 @@
 # code that depends on which coreutils is installed is box-dependence. Why
 # Python and not perl (the 2026-08..10 one-liner): Python ≥ 3.11 is already a
 # declared dependency and perl is not; the port keeps the contract exactly
-# (eight probes in the lessons entry) at +8 ms a call (9.6 vs 1.9 ms).
+# (eight probes in the lessons entry) at +7.7 ms a call (9.6 vs 1.9 ms).
 #
 # The command runs in its OWN PROCESS GROUP and the kill goes to the group, so
 # a timed-out `go run` takes its compiled child with it and a capped build
 # (`run_with_timeout 60 $(cap_argv) lake build`: the box tool between the
 # wrapper and lake) dies whole — the perl wrapper killed the direct child only
-# and left grandchildren running. SIGTERM/SIGINT to the wrapper are forwarded
-# to the group the same way (exit 128+N), so Ctrl-C still reaches a command
-# that is no longer in the terminal's group.
+# and left grandchildren running. The group is set from BOTH sides (the child
+# before its exec, the parent right after the fork, each ignoring the other's
+# success) so a signal forwarded in the first instant finds the group. Because
+# the command is no longer in the terminal's group, the signals a terminal or
+# a parent sends reach the WRAPPER only; it forwards every one of them — HUP,
+# INT, QUIT, TERM — to the group, one second, then KILL, and exits 128+N. The
+# second review (2026-10-21) found HUP missing: a hangup killed the wrapper
+# (129) and left the command alive with its alarm gone. One known leak on the
+# bare route (box tool on PATH, no outer CAPPED_STATE): the group TERM kills
+# the box tool's outer shell before its `rmdir`, so a timed-out capped build
+# leaves an empty cgroup directory behind — a box-tool hygiene matter, left
+# documented (docs/operational-lessons.md, «Box-independence»).
 #
 # RUN_WITH_TIMEOUT_ANNOUNCE=1 (diff-coverage sets it) makes the timeout
 # announce itself on stderr — «run_with_timeout: TIMED OUT after Ns — killing:
@@ -56,11 +65,14 @@ if not argv:
     sys.stderr.write("run_with_timeout: no command\n"); os._exit(2)
 pid = os.fork()
 if pid == 0:
-    os.setpgid(0, 0)
+    try: os.setpgid(0, 0)
+    except OSError: pass
     try:
         os.execvp(argv[0], argv)
     except OSError as e:
         sys.stderr.write("run_with_timeout: cannot exec %s: %s\n" % (argv[0], e)); os._exit(127)
+try: os.setpgid(pid, pid)
+except OSError: pass
 def group(sig):
     try: os.killpg(pid, sig)
     except ProcessLookupError: pass
@@ -71,8 +83,8 @@ def on_alarm(*_):
 def forward(signum, *_):
     group(signum); time.sleep(1); group(signal.SIGKILL); os._exit(128 + signum)
 signal.signal(signal.SIGALRM, on_alarm)
-signal.signal(signal.SIGTERM, forward)
-signal.signal(signal.SIGINT, forward)
+for s in (signal.SIGHUP, signal.SIGINT, signal.SIGQUIT, signal.SIGTERM):
+    signal.signal(s, forward)
 signal.alarm(t)
 _, st = os.waitpid(pid, 0)
 os._exit(128 + os.WTERMSIG(st) if os.WIFSIGNALED(st) else os.WEXITSTATUS(st))

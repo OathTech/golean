@@ -65,7 +65,11 @@ is the complete list of what the machine needs:
 - **git**, **bash 5 or newer** (the runner's per-row timer reads `EPOCHREALTIME`),
   and **GNU coreutils or a compatible implementation** (`realpath -m`,
   `shuf --random-source`, `sha256sum` and `nproc` are used; the project is measured
-  against uutils 0.8 as well as GNU).
+  against uutils 0.8 as well as GNU), plus the usual Unix text tools: **findutils**
+  (`find`, `xargs -0 -P`), **diffutils** (`diff`, `cmp`), **awk**, **sed** and
+  **grep**. Two GNU-only `sed` uses sit outside the gate: `\l` in
+  `scripts/import-goose` and `-i` in `scripts/cedar-census` and
+  `scripts/test-import-goose`.
 - **Optional, detected at run time, never required:** `capped`, the Oath devbox
   memory cap — every heavy step of the scripts runs through it when it is on PATH,
   sized by `CAPPED_MEM_MAX` (default 32G), and runs uncapped where it is absent;
