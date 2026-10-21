@@ -160,9 +160,7 @@ Same ruling, later the same day (relayed; paraphrased): `GoLean/GoCore/Prefix.le
 They stay on main under stable names as a supported surface for the raft-proofs
 customer (`~/projects/raft-proofs`), which states its theorem over
 `Prefix`/`Finish` and evaluates symbolically with `stepFn_eqns`. They are not
-donors and have no entry below. Note that the tag's own message (written before
-that clarification) names the Equations library among the retired set; the
-ruling above corrects it, the tag itself stands.
+donors and have no entry below.
 
 Common to every donor: **not for use and not maintained**. Toolchain
 `leanprover/lean4:v4.32.2` at every tip and at the tag (each tip's
