@@ -31,11 +31,14 @@ Two layers:
   `runPkgInitM_some`, `runPkgInitM_ok_iff`. The equation is now a corollary of the dichotomy.
 
 * **From one witnessed run back to the init loop** (fix round F2, the review of 2026-10-21; R8's
-  converse): `prefix_det`/`prefix_det_le` (`Prefix` determinism), `applyStmtOp_print` and
-  `stepFn_out_of_printOut?` (a successful step at a print position carries its bytes on the label),
-  `noPrint_of_prefix_silent`, `runInitConfig_ok_of_prefix_silent`, `runPkgInitM_ok_of_prefix_silent`:
-  one `Prefix` of `$pkginit`'s body to `.next .stop` within the fuel whose labels all have
-  `out = []` is a successful `runPkgInitM`. The opposite direction (a successful run's labels are
+  converse): `applyStmtOp_print` and `stepFn_out_of_printOut?` (a successful step at a print
+  position carries its bytes on the label), `noPrint_of_prefix_silent` (by `stepFn`'s
+  functionality along the witnessed run), `runInitConfig_ok_of_prefix_silent`,
+  `runPkgInitM_ok_of_prefix_silent`: one `Prefix` of `$pkginit`'s body to `.next .stop` within the
+  fuel whose labels all have `out = []` is a successful `runPkgInitM`. Beside them, for the customer,
+  the `Prefix` determinism laws `prefix_det`/`prefix_det_le`, which the converse does not use (the
+  second review's closure walk, 2026-10-21; the earlier wording crediting them was wrong). The
+  opposite direction (a successful run's labels are
   silent — a full label-form iff) would need the off-apply emptiness lemma
   `printOut? c = none → stepFn ctx s c ch = .ok (c', s', ch', l) → l.out = []`, a whole-`stepFn`
   case analysis not on main (review F3); `runInitConfig_ok_noPrint` is the config-form fact a
@@ -383,7 +386,8 @@ theorem runPkgInitM_ok_cases {ctx : ProgramCtx} {fuel : Nat} {s s₁ : Store} {c
 
 A general law of `Prefix` (`stepFn` is a function), homed here to keep `Prefix.lean` verbatim:
 two prefixes of the same length from the same start are the same run; a shorter one is an initial
-segment of a longer one. -/
+segment of a longer one. Shipped for the customer beside the converse below, which does not use
+them (its induction inlines `stepFn`'s functionality). -/
 
 /-- Two prefixes of the same length from the same start agree in labels and endpoint. -/
 theorem prefix_det {ctx : ProgramCtx} {n : Nat} {s σ₁ σ₂ : Store} {c c₁ c₂ : Config}
@@ -418,7 +422,8 @@ The customer's R8 runs `$pkginit` symbolically once (a `Prefix` with concrete la
 quantifies over every prefix within the fuel; here it is discharged from the one run's labels: a
 print position's step carries its bytes on the label (`stepFn_out_of_printOut?`, from main's
 `printOut?_toList`, `retV_stmtOpK_apply` and the validate-only print apply), so a run whose labels are
-all silent on `out` passes no print position, and every other prefix is an initial segment of it. -/
+all silent on `out` passes no print position, and every other prefix from the same start follows
+the same steps (`stepFn` is a function — inlined in the induction below; `prefix_det` is not used). -/
 
 /-- At a `print` apply whose rendering succeeds, the apply commits nothing: the state and the
 tape untouched, no pick, no trace (the print arm validates only; the bytes are the label's). -/

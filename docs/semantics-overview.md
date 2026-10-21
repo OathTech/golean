@@ -116,9 +116,14 @@ to `.next .stop` (`runInitConfig_ok_prefix`, `runPkgInitM_ok_cases`); under the 
 G-R4 family of 2026-10-05 holds as then stated (`runInitConfig_eq_execStmtLoop`, the four
 `runInitConfig_*_iff`, `runPkgInitM_some`/`_ok_iff`). The converse from one witnessed run is
 `runPkgInitM_ok_of_prefix_silent`: a `Prefix` of `$pkginit`'s body to `.next .stop` within the fuel
-whose labels all have `out = []` is a successful `runPkgInitM` (through `prefix_det`, the `Prefix`
-determinism law, and `stepFn_out_of_printOut?`: a successful step at a print position carries its
-bytes on the label). Stated gap: the opposite direction, from a successful init run to silent labels,
+whose labels all have `out = []` is a successful `runPkgInitM` (through `stepFn_out_of_printOut?` —
+a successful step at a print position carries its bytes on the label — and `stepFn`'s functionality;
+the `Prefix` determinism laws `prefix_det`/`prefix_det_le` ship beside it for the customer and are
+not used by it). Scope: the converse delivers `runPkgInitM … = .ok (s₁, ch₁)`; the customer's
+`Seeded` is over `runProgramSetupSeededM`, which after `runPkgInitM` continues with `seedCells`,
+`resolveSeedArgs`, `bindParams`, `allocDecls` and `pinResultLocs` and has no equation on main — G11
+as asked is met, and the remaining distance to `Seeded` is their R8 symbolic work as their design
+prices it. Stated gap: the opposite direction, from a successful init run to silent labels,
 would need the off-apply emptiness lemma `printOut? c = none → stepFn ctx s c ch = .ok (c', s', ch', l)
 → l.out = []`, a whole-`stepFn` case analysis that is not on main; what a successful run gives is the
 config-form `runInitConfig_ok_noPrint`.
@@ -145,8 +150,10 @@ the sequential-to-pool **projections** carrying output and terminals across
 (program_bridge)` therefore holds end to end for one goroutine. The bridge from `execProgLoop` to
 the CLI's output-folding driver `execProgLoopOut` (raft-proofs G9) is `execProgLoopOut_snd`
 (`Multi.lean`): the outcome component of `execProgLoopOut` IS `execProgLoop`; the output content on
-one goroutine is `execProgLoopOut_single_prefix` (the `Prefix` labels' fold). Both are pinned and
-required since 2026-10-21. An accumulator law was added beside them: `execProgLoopOut_acc`
+one goroutine is `execProgLoopOut_single_prefix` (the `Prefix` labels' fold). `execProgLoopOut_snd`
+(on main since 2026-09-05, commit `6a73d02d`) is pinned and required since 2026-10-21;
+`execProgLoopOut_single_prefix`, `execProgLoopOut_single` and `seqOut_of_prefix` are required by the
+core audit (by name, not pinned — their statements live in the kept module `PoolProjection.lean`). An accumulator law was added beside them: `execProgLoopOut_acc`
 (`PoolFacts.lean`: the output component is the accumulator followed by the run's own fold from the
 empty string — the fold only appends; the CLI always starts from `GoString.empty`) and its pair form
 `execProgLoopOut_eq_execProgLoop`.

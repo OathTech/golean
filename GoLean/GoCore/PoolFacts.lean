@@ -1135,7 +1135,8 @@ end GoLean.Semantics.Pool
 [AGENT lane core/g11-init-driver-1021] 2026-10-21. The CLI (`golean native-json-run`) runs the
 pool through `execProgLoopOut` (`Multi.lean`), `execProgLoop` with the pool's `StepEvent.out`
 events folded in step order onto an accumulator. THE BRIDGE the customer consumes is
-`execProgLoopOut_snd` (`Multi.lean`, since 2026-09-04): the OUTCOME component IS `execProgLoop`;
+`execProgLoopOut_snd` (`Multi.lean`, since 2026-09-05, commit `6a73d02d`): the OUTCOME component IS
+`execProgLoop`;
 the output content on one goroutine is the sequential labels' fold (`execProgLoopOut_single`,
 `execProgLoopOut_single_prefix`, `seqOut_of_prefix`; `PoolProjection.lean`). Beside them, an
 ACCUMULATOR LAW (review F1: a law about the driver, not the bridge — every CLI call site passes
