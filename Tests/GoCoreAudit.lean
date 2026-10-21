@@ -48,6 +48,7 @@ def requiredModules : List Name := [
     `GoLean.GoCore.AdmissionPolicy, `GoLean.GoCore.Admission, `GoLean.CLI, `GoLean.NativeToIR,
     `GoLean.ChoiceTrace, `GoLean.GoCore.ExecutionStatement, `GoLean.GoCore.Prefix,
     `GoLean.GoCore.PrefixFacts, `GoLean.GoCore.StepErrors, `GoLean.GoCore.Locals,
+    `GoLean.GoCore.InitDriverFacts,
     `GoLean.GoCore.EquationsAttr, `GoLean.GoCore.Equations, `GoLean.GoCore.Seed,
     `GoLean.GoCore.SeedPool, `GoLean.GoCore.PoolFacts, `GoLean.GoCore.PoolProjection,
     `Tests.GoCoreContract, `Tests.PanicRendering, `Tests.GoCoreAudit]
@@ -120,7 +121,8 @@ def exports : List Name := [
     -- The setup equations G-R1–G-R3 (2026-10-05): the nine proved statements of
     -- `SetupStatement.lean` (`SetupSound.lean`), BridgeSet rows 512–520. G-R4 is a statement only.
     -- G-R4 approved and proved with the logic team's answers (a)–(d) (2026-10-05): the init loop's
-    -- equation, its four `run_*_iff` corollaries and the `runPkgInitM` wrapper pair, BridgeSet rows 521–527.
+    -- equation, its four `run_*_iff` corollaries and the `runPkgInitM` wrapper pair, BridgeSet rows 521–527
+    -- — retired 2026-10-20, RESTATED 2026-10-21 in `InitDriverFacts.lean` (backlog row 47, G11; below).
     -- The seeded-heap entry, slice A (2026-10-12, gc-verified a2): S1–S6 of `SetupStatement.lean`
     -- proved in `SetupSound.lean`, the pool erasure in `SeedPool.lean`; BridgeSet rows 591–601.
     -- RE-PIN 20 (2026-10-12, lane core/followups-1012): the seeded base's helper, BridgeSet row 602.
@@ -402,6 +404,48 @@ def exports : List Name := [
     ``GoLean.GoCore.PanicText.lfPrefix_valid,
     ``GoLean.GoCore.PanicText.firstLine_bytes,
     ``GoLean.GoCore.Machine.utf8String?_bytes,
+    -- raft-proofs G11 (backlog row 47, 2026-10-21; `InitDriverFacts.lean`): the initialiser's driver
+    -- against `execStmtLoop`/`Prefix` — the premise-free dichotomy and its corollaries, the G-R4 family
+    -- restated, the `runPkgInitM` wrapper
+    ``GoLean.GoCore.ExecutionStatement.runInitConfig_cases,
+    ``GoLean.GoCore.ExecutionStatement.runInitConfig_ok_execStmtLoop,
+    ``GoLean.GoCore.ExecutionStatement.runInitConfig_ok_noPrint,
+    ``GoLean.GoCore.ExecutionStatement.runInitConfig_ok_prefix,
+    ``GoLean.GoCore.ExecutionStatement.runInitConfig_eq_execStmtLoop,
+    ``GoLean.GoCore.ExecutionStatement.runInitConfig_ok_iff_execStmtLoop,
+    ``GoLean.GoCore.ExecutionStatement.runInitConfig_ok_iff,
+    ``GoLean.GoCore.ExecutionStatement.runInitConfig_panic_iff,
+    ``GoLean.GoCore.ExecutionStatement.runInitConfig_deadlock_iff,
+    ``GoLean.GoCore.ExecutionStatement.runInitConfig_fuelOut_iff,
+    ``GoLean.GoCore.ExecutionStatement.runPkgInitM_some,
+    ``GoLean.GoCore.ExecutionStatement.runPkgInitM_ok_iff,
+    ``GoLean.GoCore.ExecutionStatement.runPkgInitM_ok_prefix,
+    ``GoLean.GoCore.ExecutionStatement.runPkgInitM_ok_cases,
+    -- raft-proofs G9 (row 47): the CLI's output-folding driver is `execProgLoop` plus its fold
+    -- (`Multi.lean`'s outcome half, `PoolFacts.lean`'s output half and the pair)
+    ``GoLean.GoCore.Machine.execProgLoopOut_snd,
+    ``GoLean.GoCore.Machine.execProgLoopOut_acc,
+    ``GoLean.GoCore.Machine.execProgLoopOut_eq_execProgLoop,
+    -- their pins (`Tests/GoCoreContract.lean` §D): the statements restated verbatim
+    ``GoLean.GoCore.ContractTests.Pin.runInitConfig_cases,
+    ``GoLean.GoCore.ContractTests.Pin.runInitConfig_ok_execStmtLoop,
+    ``GoLean.GoCore.ContractTests.Pin.runInitConfig_ok_noPrint,
+    ``GoLean.GoCore.ContractTests.Pin.runInitConfig_ok_prefix,
+    ``GoLean.GoCore.ContractTests.Pin.runInitConfig_eq_execStmtLoop,
+    ``GoLean.GoCore.ContractTests.Pin.runInitConfig_ok_iff_execStmtLoop,
+    ``GoLean.GoCore.ContractTests.Pin.runInitConfig_ok_iff,
+    ``GoLean.GoCore.ContractTests.Pin.runInitConfig_panic_iff,
+    ``GoLean.GoCore.ContractTests.Pin.runInitConfig_deadlock_iff,
+    ``GoLean.GoCore.ContractTests.Pin.runInitConfig_fuelOut_iff,
+    ``GoLean.GoCore.ContractTests.Pin.runPkgInitM_some,
+    ``GoLean.GoCore.ContractTests.Pin.runPkgInitM_ok_iff,
+    ``GoLean.GoCore.ContractTests.Pin.runPkgInitM_ok_prefix,
+    ``GoLean.GoCore.ContractTests.Pin.runPkgInitM_ok_cases,
+    ``GoLean.GoCore.ContractTests.Pin.execProgLoopOut_snd,
+    ``GoLean.GoCore.ContractTests.Pin.execProgLoopOut_acc,
+    ``GoLean.GoCore.ContractTests.Pin.execProgLoopOut_eq_execProgLoop,
+    ``GoLean.GoCore.ContractTests.Pin.init_print_refused_control,
+    ``GoLean.GoCore.ContractTests.Pin.init_print_loops_differ_control,
     -- the contract regressions (`Tests/GoCoreContract.lean` §A/§B/§C)
     ``GoLean.GoCore.ContractTests.address_bound_admits_ill_typed,
     ``GoLean.GoCore.ContractTests.print_before_panic,

@@ -1129,3 +1129,94 @@ theorem observation_iff {p name args obs} :
     exact ⟨fuel, ch, (program_run_iff.mpr hrun) ▸ hobs⟩
 
 end GoLean.Semantics.Pool
+
+/-! ## The output-folding driver is the driver plus its fold (backlog row 47, raft-proofs G9)
+
+[AGENT lane core/g11-init-driver-1021] 2026-10-21. The CLI (`golean native-json-run`) runs the
+pool through `execProgLoopOut` (`Multi.lean`), `execProgLoop` with the pool's `StepEvent.out`
+events folded in step order onto an accumulator. `execProgLoopOut_snd` (`Multi.lean`) pins the
+OUTCOME component to `execProgLoop`; `execProgLoopOut_acc` below pins the OUTPUT component's
+shape — the accumulator followed by the run's own fold (the fold only appends) — and
+`execProgLoopOut_eq_execProgLoop` is the two together as one equation on the pair. For one
+goroutine the run's own fold is the sequential labels' fold (`execProgLoopOut_single`,
+`execProgLoopOut_single_prefix`, `seqOut_of_prefix`; `PoolProjection.lean`). -/
+
+namespace GoLean.GoString
+
+theorem append_assoc (a b c : GoString) : (a.append b).append c = a.append (b.append c) := by
+  simp [append, Array.append_assoc]
+
+theorem empty_append (a : GoString) : empty.append a = a := by
+  cases a
+  simp [append, empty]
+
+theorem append_empty (a : GoString) : a.append empty = a := by
+  cases a
+  simp [append, empty]
+
+/-- A fold of outputs onto an accumulator is the accumulator followed by the fold onto the empty
+string. -/
+theorem foldl_append_acc : ∀ (l : List GoString) (acc : GoString),
+    l.foldl append acc = acc.append (l.foldl append empty)
+  | [], acc => (append_empty acc).symm
+  | o :: l, acc => by
+    simp only [List.foldl_cons]
+    rw [foldl_append_acc l (acc.append o), foldl_append_acc l (empty.append o), empty_append,
+      append_assoc]
+
+end GoLean.GoString
+
+namespace GoLean.GoCore.Machine
+
+variable {ctx : ProgramCtx}
+open GoLean.Semantics.Pool (unfold_driver front)
+
+/-- **The accumulator law of the output-folding driver**: the output component is the accumulator
+followed by the run's own output (its fold from the empty string) — the fold only APPENDS to `acc`,
+on every path (a Go terminal, a refusal, the fuel, a detector rejection, a normal completion). -/
+theorem execProgLoopOut_acc (fuel : Nat) (m : MultiConfig) (r : RaceState) (ch : Choices)
+    (acc : GoString) :
+    (execProgLoopOut ctx fuel m r ch acc).1
+      = acc.append (execProgLoopOut ctx fuel m r ch GoString.empty).1 := by
+  induction fuel generalizing m r ch acc with
+  | zero =>
+    rw [unfold_driver, unfold_driver]
+    cases hf : front ctx m ch with
+    | error e => simp [GoString.append_empty]
+    | ok v =>
+      cases v with
+      | inl res => simp [GoString.append_empty]
+      | inr next => simp [GoString.append_empty]
+  | succ n ih =>
+    rw [unfold_driver, unfold_driver]
+    cases hf : front ctx m ch with
+    | error e => simp [GoString.append_empty]
+    | ok v =>
+      cases v with
+      | inl res => simp [GoString.append_empty]
+      | inr next =>
+        simp only
+        cases hs : stepMulti ctx m next with
+        | error e => simp [GoString.append_empty]
+        | ok v =>
+          obtain ⟨m', ch', ev⟩ := v
+          simp only
+          cases hr : raceUpdate ev m' r with
+          | error e => simp [GoString.append_empty]
+          | ok r' =>
+            simp only
+            rw [ih m' r' ch' (ev.out.foldl GoString.append acc),
+              ih m' r' ch' (ev.out.foldl GoString.append GoString.empty),
+              GoString.foldl_append_acc ev.out acc, GoString.append_assoc]
+
+/-- **The output-folding driver IS the driver plus its fold** (G9's equation): the CLI's
+`execProgLoopOut` is `execProgLoop` paired with the output — the accumulator followed by the run's
+own fold. The outcome half is `execProgLoopOut_snd`, the output half `execProgLoopOut_acc`. -/
+theorem execProgLoopOut_eq_execProgLoop (fuel : Nat) (m : MultiConfig) (r : RaceState)
+    (ch : Choices) (acc : GoString) :
+    execProgLoopOut ctx fuel m r ch acc
+      = (acc.append (execProgLoopOut ctx fuel m r ch GoString.empty).1,
+         execProgLoop ctx fuel m r ch) := by
+  rw [← execProgLoopOut_acc, ← execProgLoopOut_snd fuel m r ch acc]
+
+end GoLean.GoCore.Machine

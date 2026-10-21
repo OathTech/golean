@@ -107,7 +107,14 @@ Whole-program setup (seeding globals, the package initializer, binding the entry
 is `runProgramSetupM` / `seedGlobals` (`StepFn.lean`); its no-globals, no-initializer case is the
 equation `runProgramSetup_noInit` (`Equations.lean`). The general setup equations and the
 seeded-heap statements (`SetupStatement.lean`/`SetupSound.lean`) were retired with the
-relational layer.
+relational layer. The package initialiser's own driver `runInitConfig` (the loop with the init-phase
+print guard `initPrintRefusal?`) is related to this surface by `GoLean/GoCore/InitDriverFacts.lean`
+(2026-10-21, raft-proofs G11): `runInitConfig_cases` says, with no premise, that the init loop either
+equals `execStmtLoop` (no configuration reachable within the fuel is a print position) or refuses by
+name at a reachable print position, so a successful initialisation is a `Prefix` of `$pkginit`'s body
+to `.next .stop` (`runInitConfig_ok_prefix`, `runPkgInitM_ok_cases`); under the no-print premise the
+G-R4 family of 2026-10-05 holds as then stated (`runInitConfig_eq_execStmtLoop`, the four
+`runInitConfig_*_iff`, `runPkgInitM_some`/`_ok_iff`).
 
 ## 5. The goroutine pool
 
@@ -128,7 +135,12 @@ the sequential-to-pool **projections** carrying output and terminals across
 `run_iff`, `ProgramRun`, `program_run_iff`, `Observation`, `observation_iff`,
 `refusal_is_not_observation`, `fuel_is_not_observation`; `PoolFacts.lean`). The chain
 `Prefix → execStmtLoop (run_ok_iff) → execProgLoop (single_embedding) → runProgramPoolOutM
-(program_bridge)` therefore holds end to end for one goroutine.
+(program_bridge)` therefore holds end to end for one goroutine. The CLI's output-folding driver is
+the driver plus its fold, as one equation on the pair (2026-10-21, raft-proofs G9):
+`execProgLoopOut_eq_execProgLoop` (`PoolFacts.lean`) — the outcome component is `execProgLoop`
+(`execProgLoopOut_snd`, `Multi.lean`) and the output component is the accumulator followed by the
+run's own fold (`execProgLoopOut_acc`), which for one goroutine is the labels' fold
+(`execProgLoopOut_single_prefix`).
 
 ## 6. The choice tape
 
@@ -195,7 +207,12 @@ end) left the build with the relational layer on 2026-10-20 (tag
 `Prefix`/`Finish` (§4) and the `stepFn_eqns` equation library (`Equations.lean`,
 `EquationsAttr.lean`), gated by `scripts/check-equations`: the client `Tests/EquationClient.lean`
 proves its facts from the equations alone, every equation is enrolled, and `stepFn` is never
-unfolded.
+unfolded. Two additions for the raft-proofs customer (backlog row 47, 2026-10-21), each pinned
+verbatim in `Tests/GoCoreContract.lean` §D and required by the core audit: `runInitConfig_cases`
+(`InitDriverFacts.lean`) relates the initialiser's driver to `execStmtLoop` and `Prefix` up to the
+init-phase print refusal, with no premise, so the seeded entry's initialisation is a `Prefix`
+(G11); `execProgLoopOut_eq_execProgLoop` (`PoolFacts.lean`) states the CLI's output-folding driver
+as `execProgLoop` paired with its output fold (G9).
 
 The logic repository pins a commit, currently the tag `logic-offer/2026-10-03`. Each change that
 affects a consumer-visible behaviour or the kept surface is a line in the post-offer changelog

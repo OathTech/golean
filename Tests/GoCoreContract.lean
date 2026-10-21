@@ -1,5 +1,6 @@
 import GoLean.GoCore.Trace
 import GoLean.GoCore.Multi
+import GoLean.GoCore.InitDriverFacts
 
 /-! Core contract regressions, re-homed 2026-09-16 (lane `park-lane/typed-profiles-0916`,
 `docs/2026-09-16_typed-profiles-parked.md` §3) when the typed-admission profile family
@@ -342,3 +343,194 @@ theorem write_keeps_both_actual_aliases (before after : Bool) :
   constructor <;> with_unfolding_all rfl
 
 end GoLean.GoCore.ContractTests.Interpreter
+
+/-! ## D. Pinned statements for the raft-proofs customer (backlog row 47, 2026-10-21)
+
+[AGENT lane core/g11-init-driver-1021]. Each theorem below restates VERBATIM the type of a theorem
+of `GoLean/GoCore/InitDriverFacts.lean` (G11: the initialiser's driver `runInitConfig` against
+`execStmtLoop` and `Prefix`) or of `GoLean/GoCore/Multi.lean`/`PoolFacts.lean` (G9: the CLI's
+output-folding driver `execProgLoopOut` against `execProgLoop`), and is proved by that theorem
+alone — a drift in a pinned statement fails this build (the role `BridgeSet.lean` played until the
+retirement of 2026-10-20; the `Pin.<name>` convention of `Tests/EquationClient.lean`). Each pin is
+required by name in `Tests/GoCoreAudit.lean`. The two controls at the end show the premise-free
+dichotomy's second arm inhabited: at a print position the init loop refuses where the entry loop
+steps on (the retired `SetupStatement.lean`'s negative control, kept). -/
+
+namespace GoLean.GoCore.ContractTests.Pin
+open GoCore GoCore.Machine GoCore.ExecutionStatement
+
+theorem runInitConfig_cases :
+    ∀ (ctx : ProgramCtx) (fuel : Nat) (s : Store) (c : Config) (ch : Choices),
+    ((∀ (n : Nat) (σ' : Store) (c' : Config) (ch' : Choices) (ls : List StepLabel),
+        Prefix ctx n s c ch ls σ' c' ch' → n ≤ fuel → initPrintRefusal? c' = none) ∧
+      runInitConfig ctx fuel s c ch = execStmtLoop ctx fuel s c ch) ∨
+    (∃ (n : Nat) (ls : List StepLabel) (sf : Store) (cf : Config) (chf : Choices) (e : Stop),
+      n ≤ fuel ∧ Prefix ctx n s c ch ls sf cf chf ∧ ¬ ZeroCost cf ∧
+        initPrintRefusal? cf = some e ∧ runInitConfig ctx fuel s c ch = .error e) :=
+  GoCore.ExecutionStatement.runInitConfig_cases
+
+theorem runInitConfig_ok_execStmtLoop :
+    ∀ {ctx : ProgramCtx} {fuel : Nat} {s sf : Store} {c : Config} {ch chf : Choices},
+    runInitConfig ctx fuel s c ch = .ok (sf, chf) →
+    execStmtLoop ctx fuel s c ch = .ok (sf, chf) :=
+  GoCore.ExecutionStatement.runInitConfig_ok_execStmtLoop
+
+theorem runInitConfig_ok_noPrint :
+    ∀ {ctx : ProgramCtx} {fuel : Nat} {s sf : Store} {c : Config} {ch chf : Choices},
+    runInitConfig ctx fuel s c ch = .ok (sf, chf) →
+    ∀ (n : Nat) (σ' : Store) (c' : Config) (ch' : Choices) (ls : List StepLabel),
+      Prefix ctx n s c ch ls σ' c' ch' → n ≤ fuel → initPrintRefusal? c' = none :=
+  GoCore.ExecutionStatement.runInitConfig_ok_noPrint
+
+theorem runInitConfig_ok_prefix :
+    ∀ {ctx : ProgramCtx} {fuel : Nat} {s sf : Store} {c : Config} {ch chf : Choices},
+    runInitConfig ctx fuel s c ch = .ok (sf, chf) →
+    ∃ n, n ≤ fuel ∧ ∃ ls, Prefix ctx n s c ch ls sf (.next .stop) chf :=
+  GoCore.ExecutionStatement.runInitConfig_ok_prefix
+
+theorem runInitConfig_eq_execStmtLoop :
+    ∀ {ctx : ProgramCtx} {fuel : Nat} {σ : Store} {c : Config} {ch : Choices},
+    (∀ (n : Nat) (σ' : Store) (c' : Config) (ch' : Choices) (ls : List StepLabel),
+      Prefix ctx n σ c ch ls σ' c' ch' → n ≤ fuel → initPrintRefusal? c' = none) →
+    runInitConfig ctx fuel σ c ch = execStmtLoop ctx fuel σ c ch :=
+  GoCore.ExecutionStatement.runInitConfig_eq_execStmtLoop
+
+theorem runInitConfig_ok_iff_execStmtLoop :
+    ∀ (ctx : ProgramCtx) (fuel : Nat) (s sf : Store) (c : Config) (ch chf : Choices),
+    runInitConfig ctx fuel s c ch = .ok (sf, chf) ↔
+      (execStmtLoop ctx fuel s c ch = .ok (sf, chf) ∧
+        ∀ (n : Nat) (σ' : Store) (c' : Config) (ch' : Choices) (ls : List StepLabel),
+          Prefix ctx n s c ch ls σ' c' ch' → n ≤ fuel → initPrintRefusal? c' = none) :=
+  GoCore.ExecutionStatement.runInitConfig_ok_iff_execStmtLoop
+
+theorem runInitConfig_ok_iff :
+    ∀ (ctx : ProgramCtx) (fuel : Nat) (s sf : Store) (c : Config) (ch chf : Choices),
+    (∀ (n : Nat) (σ' : Store) (c' : Config) (ch' : Choices) (ls : List StepLabel),
+      Prefix ctx n s c ch ls σ' c' ch' → n ≤ fuel → initPrintRefusal? c' = none) →
+    (runInitConfig ctx fuel s c ch = .ok (sf, chf) ↔
+      ∃ n, n ≤ fuel ∧ ∃ ls, Prefix ctx n s c ch ls sf (.next .stop) chf) :=
+  GoCore.ExecutionStatement.runInitConfig_ok_iff
+
+theorem runInitConfig_panic_iff :
+    ∀ (ctx : ProgramCtx) (fuel : Nat) (s : Store) (c : Config) (ch : Choices) (t : String),
+    (∀ (n : Nat) (σ' : Store) (c' : Config) (ch' : Choices) (ls : List StepLabel),
+      Prefix ctx n s c ch ls σ' c' ch' → n ≤ fuel → initPrintRefusal? c' = none) →
+    (runInitConfig ctx fuel s c ch = .error (.terminal (.panic t)) ↔
+      ∃ (n : Nat) (ls : List StepLabel) (sf : Store) (cf : Config) (chf ch'' : Choices)
+        (rec : List PickRecord),
+        n + 1 ≤ fuel ∧ Prefix ctx n s c ch ls sf cf chf ∧
+          Finish ctx sf cf chf rec (.aborted t sf ch'') 1) :=
+  GoCore.ExecutionStatement.runInitConfig_panic_iff
+
+theorem runInitConfig_deadlock_iff :
+    ∀ (ctx : ProgramCtx) (fuel : Nat) (s : Store) (c : Config) (ch : Choices),
+    (∀ (n : Nat) (σ' : Store) (c' : Config) (ch' : Choices) (ls : List StepLabel),
+      Prefix ctx n s c ch ls σ' c' ch' → n ≤ fuel → initPrintRefusal? c' = none) →
+    (runInitConfig ctx fuel s c ch = .error (.terminal .deadlock) ↔
+      ∃ n, n ≤ fuel ∧ ∃ (ls : List StepLabel) (sf : Store) (cf : Config) (chf : Choices),
+        Prefix ctx n s c ch ls sf cf chf ∧ Finish ctx sf cf chf [] (.deadlock sf chf) 0) :=
+  GoCore.ExecutionStatement.runInitConfig_deadlock_iff
+
+theorem runInitConfig_fuelOut_iff :
+    ∀ (ctx : ProgramCtx) (fuel : Nat) (s : Store) (c : Config) (ch : Choices),
+    (∀ (n : Nat) (σ' : Store) (c' : Config) (ch' : Choices) (ls : List StepLabel),
+      Prefix ctx n s c ch ls σ' c' ch' → n ≤ fuel → initPrintRefusal? c' = none) →
+    (runInitConfig ctx fuel s c ch = .error .fuelOut ↔
+      ∃ (ls : List StepLabel) (sf : Store) (cf : Config) (chf : Choices),
+        Prefix ctx fuel s c ch ls sf cf chf ∧ ¬ ZeroCost cf) :=
+  GoCore.ExecutionStatement.runInitConfig_fuelOut_iff
+
+theorem runPkgInitM_some :
+    ∀ {ctx : ProgramCtx} {fuel : Nat} {s : Store} {ch : Choices} {initF : Func},
+    findFunctionIn? ctx.functions pkgInitFuncId = some initF →
+    initF.args.size = 0 → initF.results.size = 0 →
+    runPkgInitM ctx fuel s ch
+      = (runInitConfig ctx fuel s (.exec initF.body [] (.frame [] [] [] [] .stop initF.id)) ch).mapError
+          markInitPhase :=
+  GoCore.ExecutionStatement.runPkgInitM_some
+
+theorem runPkgInitM_ok_iff :
+    ∀ {ctx : ProgramCtx} {fuel : Nat} {s s₁ : Store} {ch ch₁ : Choices} {initF : Func},
+    findFunctionIn? ctx.functions pkgInitFuncId = some initF →
+    initF.args.size = 0 → initF.results.size = 0 →
+    (runPkgInitM ctx fuel s ch = .ok (s₁, ch₁) ↔
+      runInitConfig ctx fuel s (.exec initF.body [] (.frame [] [] [] [] .stop initF.id)) ch
+        = .ok (s₁, ch₁)) :=
+  GoCore.ExecutionStatement.runPkgInitM_ok_iff
+
+theorem runPkgInitM_ok_prefix :
+    ∀ {ctx : ProgramCtx} {fuel : Nat} {s s₁ : Store} {ch ch₁ : Choices} {initF : Func},
+    findFunctionIn? ctx.functions pkgInitFuncId = some initF →
+    runPkgInitM ctx fuel s ch = .ok (s₁, ch₁) →
+    ∃ n, n ≤ fuel ∧ ∃ ls,
+      Prefix ctx n s (.exec initF.body [] (.frame [] [] [] [] .stop initF.id)) ch ls s₁ (.next .stop) ch₁ :=
+  GoCore.ExecutionStatement.runPkgInitM_ok_prefix
+
+theorem runPkgInitM_ok_cases :
+    ∀ {ctx : ProgramCtx} {fuel : Nat} {s s₁ : Store} {ch ch₁ : Choices},
+    runPkgInitM ctx fuel s ch = .ok (s₁, ch₁) →
+    (findFunctionIn? ctx.functions pkgInitFuncId = none ∧ s₁ = s ∧ ch₁ = ch) ∨
+    ∃ initF, findFunctionIn? ctx.functions pkgInitFuncId = some initF ∧
+      ∃ n, n ≤ fuel ∧ ∃ ls,
+        Prefix ctx n s (.exec initF.body [] (.frame [] [] [] [] .stop initF.id)) ch ls s₁ (.next .stop) ch₁ :=
+  GoCore.ExecutionStatement.runPkgInitM_ok_cases
+
+theorem execProgLoopOut_snd :
+    ∀ {ctx : ProgramCtx} (fuel : Nat) (m : MultiConfig) (r : RaceState) (choices : Choices) (acc : GoString),
+    (execProgLoopOut ctx fuel m r choices acc).2 = execProgLoop ctx fuel m r choices :=
+  GoCore.Machine.execProgLoopOut_snd
+
+theorem execProgLoopOut_acc :
+    ∀ {ctx : ProgramCtx} (fuel : Nat) (m : MultiConfig) (r : RaceState) (ch : Choices) (acc : GoString),
+    (execProgLoopOut ctx fuel m r ch acc).1
+      = acc.append (execProgLoopOut ctx fuel m r ch GoString.empty).1 :=
+  GoCore.Machine.execProgLoopOut_acc
+
+theorem execProgLoopOut_eq_execProgLoop :
+    ∀ {ctx : ProgramCtx} (fuel : Nat) (m : MultiConfig) (r : RaceState) (ch : Choices) (acc : GoString),
+    execProgLoopOut ctx fuel m r ch acc
+      = (acc.append (execProgLoopOut ctx fuel m r ch GoString.empty).1,
+         execProgLoop ctx fuel m r ch) :=
+  GoCore.Machine.execProgLoopOut_eq_execProgLoop
+
+/-- The initialiser of the control program: `g = 7` (global cell 0). -/
+def initControlBody : Stmt := .assign (.addr (.global 0)) (.intLit 7 .int)
+
+/-- `var g int`; `func init() { g = 7 }`; `func F() (z int) { z = g }` — one global, one
+initializer writing it, the subject reading it. -/
+def initControl : Program := {
+  funcs := #[
+    { id := ⟨"F"⟩, args := #[], results := #[{ id := 1, typ := .int }],
+      body := .assign (.var 1) (.deref (.global 0) .int) },
+    { id := pkgInitFuncId, args := #[], results := #[], body := initControlBody } ],
+  globals := #[{ name := "g", typ := .int }] }
+
+/-- A `println(1)` at its apply position: the one operand delivered, no targets, nothing pending. -/
+def printPosition : Config := .retV (.int 1 .int) (.stmtOpK (.print true) 0 [] [] [] .stop)
+
+/-- The dichotomy's second arm, inhabited: at the print position the guard FIRES by name. -/
+theorem init_print_refused_control :
+    initPrintRefusal? printPosition = some (Stop.unsupported "print/println during package initialization: the init phase runs on the sequential driver, which has no output event channel (the pool driver folds StepEvent.out) — refused rather than dropping the bytes (stdlib slice 3; row builtins/print/in-init)") :=
+  rfl
+
+/-- The init loop at the print position: the guard's refusal (at fuel 4, with steps to spare). -/
+theorem init_print_loop_refuses_control :
+    runInitConfig ⟨initControl⟩ 4 {} printPosition []
+      = .error ((initPrintRefusal? printPosition).getD .fuelOut) :=
+  rfl
+
+/-- The entry loop at the same position steps through to `.next .stop` (the print's bytes ride the
+step label, which this driver drops — exactly what the init guard exists to refuse). -/
+theorem init_print_entry_loop_completes_control :
+    execStmtLoop ⟨initControl⟩ 4 {} printPosition [] = .ok ({}, []) :=
+  rfl
+
+/-- So the two loops DIFFER there and no premise-free EQUATION holds; the dichotomy
+`runInitConfig_cases` is the statement. -/
+theorem init_print_loops_differ_control :
+    runInitConfig ⟨initControl⟩ 4 {} printPosition [] ≠ execStmtLoop ⟨initControl⟩ 4 {} printPosition [] := by
+  rw [init_print_loop_refuses_control, init_print_entry_loop_completes_control]
+  intro h
+  cases h
+
+end GoLean.GoCore.ContractTests.Pin

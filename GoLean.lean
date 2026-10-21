@@ -14,6 +14,9 @@ import GoLean.GoCore.Equations
 import GoLean.GoCore.PoolFacts
 import GoLean.GoCore.ExecutionStatement
 import GoLean.GoCore.Prefix
+-- The initialiser's driver against the sequential driver and `Prefix` (raft-proofs G11, backlog
+-- row 47, 2026-10-21): the premise-free dichotomy and the G-R4 family restated.
+import GoLean.GoCore.InitDriverFacts
 -- The relation-free single-goroutine bridge and projections, re-homed/restored 2026-10-21 (fix
 -- round F1 of the retirement; pending the owner's ruling): `PoolFacts` (ex-MultiSound/PoolTrace/
 -- ProgramTrace) and `PoolProjection` under its own name.
