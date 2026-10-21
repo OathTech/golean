@@ -481,7 +481,7 @@ theorem seqOut_of_prefix :
     | succ m =>
       rw [outFold_cons]
       unfold seqOut
-      rw [if_neg (by simp [isTerminal_false_of_stepFn_ok hstep, isBlockedConfig_false_of_stepFn_ok hstep]), hstep]
+      rw [ite_eq_right (by simp [isTerminal_false_of_stepFn_ok hstep, isBlockedConfig_false_of_stepFn_ok hstep]), hstep]
       rcases hstop with h | h
       · exact ih (by omega) (.inl (by omega))
       · exact ih (by omega) (.inr h)
