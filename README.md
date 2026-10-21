@@ -11,13 +11,16 @@ trustworthy and portable, and it is validated by differential testing.
 - **Validated against real Go.** Every corpus case runs under both `go run` at a
   pinned toolchain (go1.26.5, linux/amd64) and the Lean interpreter, and the two
   observations are compared.
-- **A relational semantics proved coherent with the interpreter.** A fuel-free
-  step relation (`Step`, and `StepML` for the goroutine pool) is proved equivalent
-  to the interpreter per step in both directions, and for the drivers' traces,
-  runs and observations (`GoLean/GoCore/BridgeSet.lean` pins the statements).
-- **No higher-level reasoning is shipped.** The relation is meant to be useful
-  for reasoning, but program logics, weakest preconditions and program proofs are
-  not provided here.
+- **A proof-level surface over the interpreter, for the raft-proofs repository.**
+  `Prefix`/`Finish` (the counted, choice-threaded prefix closure of `stepFn` and
+  the driver's five endings — `GoLean/GoCore/ExecutionStatement.lean`, proofs in
+  `Prefix.lean`) and the `stepFn_eqns` rewrite library (one proved equation per
+  `stepFn` arm, `GoLean/GoCore/Equations.lean`, gated by `scripts/check-equations`).
+  The fuel-free relation and its coherence proofs were retired from the build on
+  2026-10-20; the last main carrying them is the tag `relational/last-main-2026-10-20`
+  (`docs/ARCHIVE.md`).
+- **No higher-level reasoning is shipped.** Program logics, weakest preconditions
+  and program proofs are not provided here.
 
 The authoritative statement of what the repository provides is `CLAUDE.md`,
 «What this repo provides, and does not». For a newcomer's tour of the semantics,

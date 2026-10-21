@@ -46,7 +46,11 @@ historical operating documents, not current instructions.
   WITHDRAWN, its 2026-09-05 addendum). [Amended 2026-09-05; the sentence
   previously read "proof infrastructure destined for that side … until
   its extraction slice".] It must keep pace with the interpreter — see
-  the merge invariant below.
+  the merge invariant below. RETIRED 2026-10-20 ([USER] ruling, relayed):
+  the relational layer left the build — tag `relational/last-main-2026-10-20` is the
+  last main carrying it, `docs/ARCHIVE.md` the archive entry — so the
+  Prop-level-relation sentences of this bullet are history; `Prefix`/`Finish`
+  and the `stepFn_eqns` library stay on main for the raft-proofs customer.
 
 ## Architecture Rules
 
@@ -59,12 +63,17 @@ historical operating documents, not current instructions.
 - Interface semantics must come from Go type identity, type sets, method sets,
   dynamic values, typed nils, and comparability rules.
 - Stable semantic identity is `TypeId`/`FuncId`, not raw source strings.
-- **Merge invariant (from the 2026-07 design review):** the proof-facing
-  relation (`Step`/`Steps`, `Machine.lean`) and its premises must stay total and keep pace with the
-  interpreter. Do not add an interpreter feature without its relational rule
-  shape (total premises; nondeterminism permitted where Go has it). Do not hide
-  a semantic choice in evaluator recursion just to pass a case. See
-  `docs/nondeterminism-design.md` and the design-review notes.
+- **Merge invariant — RETIRED 2026-10-20.** It read (from the 2026-07 design
+  review): the proof-facing relation (`Step`/`Steps`, `Machine.lean`) and its
+  premises must stay total and keep pace with the interpreter; do not add an
+  interpreter feature without its relational rule shape (total premises;
+  nondeterminism permitted where Go has it); do not hide a semantic choice in
+  evaluator recursion just to pass a case (`docs/nondeterminism-design.md` and
+  the design-review notes). The relation left the build with the [USER] ruling
+  of 2026-10-20 (tag `relational/last-main-2026-10-20`), so the first two clauses
+  no longer bind; the third stands on its own as the charter's doctrine («No
+  semantic choice hides in evaluator recursion»: latitude Go permits is reified
+  on the choice tape).
 
 ## Planning Docs
 

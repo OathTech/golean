@@ -2,11 +2,14 @@
 
 Living document, written 2026-10-12 ([AGENT], lane `docs/release-docs-1012`; release-readiness
 item 11). It summarises the semantics and points at the Lean name or file that makes each claim
-true. The Lean source is authoritative. The pinned statements are in
-`GoLean/GoCore/BridgeSet.lean`, and the design records this page summarises are
-`docs/2026-09-24_execution-statement.md`, `docs/2026-09-28_step-label.md` and
-`docs/2026-10-04_pool-relation-spec.md`. All Lean files are under `GoLean/GoCore/` unless the
-path says otherwise. The scope statement is `CLAUDE.md`, «What this repo provides, and does not».
+true. The Lean source is authoritative. Amended 2026-10-20 ([AGENT], lane
+`core/retire-relation-1020`): the relational layer this page described — the step relation and
+its coherence proofs, the pool relation, the pinned statement set `BridgeSet.lean` — was retired
+from the build by the [USER] ruling of 2026-10-20; the last main carrying it is the tag
+`relational/last-main-2026-10-20`, and the archive-library entry is in `docs/ARCHIVE.md`. The
+design records this page summarises are `docs/2026-09-24_execution-statement.md` and
+`docs/2026-09-28_step-label.md` (`docs/2026-10-04_pool-relation-spec.md` describes the retired
+pool half). All Lean files are under `GoLean/GoCore/` unless the path says otherwise. The scope statement is `CLAUDE.md`, «What this repo provides, and does not».
 
 ## 1. GoCore, the language
 
@@ -19,9 +22,9 @@ dependency-ordered table indexed by `Ty.defined` (`TypeEnv`, accepted only if
 `GoLean/NativeToIR.lean` (wire format: `docs/cli.md` §3). **That lowering has no correctness
 theorem.** It is validated differentially, and whoever consumes a GoCore program inherits this
 trust assumption. A run's static context (the program's tables) is a `ProgramCtx`
-(`ProgramCtx.lean`), and every step function and relation below is parametrised by it.
+(`ProgramCtx.lean`), and every step function below is parametrised by it.
 
-## 2. The machine and the step relation
+## 2. The machine and the executable step
 
 **State.** A configuration (`Config`, `Machine.lean`) is the control state of one goroutine.
 `exec stmt env k` runs a statement, `evalE e env k` evaluates an expression, and `retV v k`
@@ -37,23 +40,21 @@ with store `s` and choice tape `ch`. It returns either
 `.ok (c', s', ch', label)` or `.error stop`. It is total: there is no `partial` anywhere in
 `GoLean/GoCore/`, and the gate's escape-hatch scan in `scripts/ci` enforces this.
 
-**The relation.** `Step ctx c s c' s' l` (`Machine.lean`) is the fuel-free, choice-free
-inductive step relation. Where Go permits several behaviours, the relation's rules range over
-all of them, and the executable selects one member using the tape (§6). The two are proved
-equivalent per step (`MachineSound.lean`):
-
-- `stepFn_sound`: if `stepFn ctx s c ch = .ok (c', s', ch', l)`, then `Step ctx c s c' s' l`.
-- `step_complete`: if `Step ctx c s c' s' l`, then there exist `ch, ch'` such that
-  `stepFn ctx s c ch = .ok (c', s', ch', l)`.
-
-They share their operational core. Strict operators go through one generic frame whose
-`applyStrictOp` is the same function on both sides (the `Machine.lean` header). The
-consumption projection `seqConsumption` names the site and bound of every tape consultation a
-step makes, and the `stepFn_consumption_*` theorems tie it to the executable.
+**The relation — retired.** A fuel-free, choice-free step relation `Step ctx c s c' s' l`
+(`Machine.lean`), proved equivalent to `stepFn` per step in both directions (`stepFn_sound`,
+`step_complete`, `MachineSound.lean`), with well-formedness preservation along it, lived here
+until 2026-10-20, when the [USER] ruled the relational layer retired from the build: the last
+main carrying it is the tag `relational/last-main-2026-10-20`, and `docs/ARCHIVE.md` has the
+archive-library entry. What remains of its support is `StepFnFacts.lean`, the kept part of
+`MachineSound.lean` (unchanged): the `NoPanic` discipline of the write path, the apply
+inversions, and the stream lemmas — the consumption projection `seqConsumption`
+(`Machine.lean`) names the site and bound of every tape consultation a step makes, and the
+`stepFn_consumption_*` theorems tie it to the executable. The executable predicates naming the
+consuming shapes (`consumesSelect`, `consumesAppendSlice`, …) are in `Consumes.lean`.
 
 **Well-formedness.** `StateWf` (`StateWf.lean`) states the store invariants, such as declared
-types and normal heap shapes. `step_preserves_wf` preserves the machine-level invariant
-`MachineWf` across a step.
+types and normal heap shapes; the setup path decides it (`StepFn.lean`), and `MachineWf` /
+`MultiWf` (`Multi.lean`) are built on it.
 
 ## 3. The labelled step
 
@@ -73,13 +74,14 @@ no interleaving between channels. This is a documented limitation, not an invent
 
 The sequential driver is `execStmtLoop ctx fuel s c ch` (`StepFn.lean`). It iterates `stepFn`
 until the configuration is terminal, the goroutine blocks, a stop occurs, or the fuel runs out.
-Its relational counterpart (statements in `ExecutionStatement.lean`, proofs in `Prefix.lean`)
-has the following parts:
+Its proof-level counterpart (statements in `ExecutionStatement.lean`, proofs in `Prefix.lean`;
+kept on main as a supported surface for the raft-proofs repository) has the following parts:
 
 - **`Prefix ctx n s c ch ls sf cf chf`** is the counted, choice-threaded prefix closure: `n`
   executable steps, one label per step, threading the tape exactly as `stepFn` does. It holds
   for arbitrary endpoints and is independent of termination. Its algebra is `prefix_refl`,
-  `prefix_comp`, `prefix_split`, `prefix_erase_trace`, `prefix_erase_steps` and `prefix_iter`.
+  `prefix_comp`, `prefix_split`, `prefix_erase_trace` (to the counted `Trace`, `Trace.lean`) and
+  `prefix_iter` (exact agreement with `stepFnIter`).
 - **`Finish`** is how the driver classifies an endpoint. It has five constructors, and these are
   the **five endings**:
   - `normal` at `.next .stop`
@@ -102,8 +104,10 @@ has the following parts:
   reachable abort's renderer refuses.
 
 Whole-program setup (seeding globals, the package initializer, binding the entry's arguments)
-is `runProgramSetupM` / `seedGlobals` (`StepFn.lean`), with equations in
-`SetupStatement.lean`/`SetupSound.lean` and `runProgramSetup_noInit` (`Equations.lean`).
+is `runProgramSetupM` / `seedGlobals` (`StepFn.lean`); its no-globals, no-initializer case is the
+equation `runProgramSetup_noInit` (`Equations.lean`). The general setup equations and the
+seeded-heap statements (`SetupStatement.lean`/`SetupSound.lean`) were retired with the
+relational layer.
 
 ## 5. The goroutine pool
 
@@ -111,31 +115,10 @@ Goroutines run on a pool (`MultiConfig`, `Multi.lean`). One pool step, `stepMult
 `StepEvent := { who, action, label }`: which goroutine stepped, what kind of step the pool took
 (including spawns and channel pairings), and the full `StepLabel`. The whole-program drivers are
 `execProgLoop` / `execProgLoopOut`, and `runProgramPoolOutM` is the one `golean native-json-run`
-calls. The relational half (`PoolStep.lean` definitions, `PoolStatement.lean` the 48 frozen
-statements, `PoolSound.lean` their proofs, frozen by `scripts/check-pool-spec`) has these parts:
-
-- **`StepML ctx m m' ev`** is the scheduler relation labelled by the executable's own event.
-  `stepML_sound` and `stepML_complete` relate it to `stepMulti` per step. `StepsML` is its
-  closure. The older trace-labelled `StepM` is its projection (`stepML_erase`).
-- **Scheduling is a pick.** At a registry boundary (`MultiConfig.schedMenu?`) the rule premise
-  `SchedSlot` names the menu slot that runs, and the event's `picks` begins with that record
-  (`schedRecord`). Context switches happen only at boundaries (`stepML_switch_boundary`).
-  Attribution and the frame law are `stepML_who_runnable` and `stepML_frame`.
-- **Deadlock** has its own predicate, `PoolDeadlock`. The relation is silent on a deadlocked
-  pool (`asleep_silent`). It differs from the sequential `Blocked` (`singleton_deadlock`).
-- **The driver** is modelled by `PoolPrefix` (the counted closure of the driver loop: the gate
-  `Continue`, then `stepMulti`, then the race detector) and by `PoolFinish`, which classifies
-  with terminal priority (an aborted goroutine first, then main's exit, then deadlock).
-  `pool_classification` and the `pool_run_*_iff` fuel bridges are the counterparts of §4, and
-  `stepMulti_replay` / `poolPrefix_replay` give replay by record.
-- **Single goroutine.** `stepML_single_sound`, `stepML_single_complete`, `singleton_run` and the
-  `singleton_finish_*` family show that a one-goroutine pool is the sequential machine.
-  `PoolProjection.lean` (`execProgLoopOut_single_wide` and its siblings) carries output and
-  terminals across.
-
-**Not a theorem:** «every relational run is some tape's prefix». The relation can step past an
-aborted goroutine, whereas the driver classifies the abort first. The statement holds per step,
-and for runs that pass the driver's gate.
+calls. The relational half — the labelled pool relation `StepML`, its 48 frozen statements and
+their proofs, the single-goroutine projections — was retired with the relational layer on
+2026-10-20 (tag `relational/last-main-2026-10-20`, `docs/ARCHIVE.md`); no pool-level theorem is in
+the build.
 
 ## 6. The choice tape
 
@@ -146,8 +129,7 @@ clause and waiter picks, `TryLock`'s spurious failure, unsequenced panic order, 
 scheduler, a panic-text pair, the re-panic marker, and `rand.Intn`. Every consultation goes
 through **one** combinator, `Choices.consumeAt site bound`. It pops the tape only when
 `bound ≥ 2`; a bound-≤-1 consult is inert (`Choices.consumeAt_le_one`). The tape is a plain
-`List Nat` (`Choices`), and it is threaded outside the `Store`, so the relation never mentions
-it.
+`List Nat` (`Choices`), and it is threaded outside the `Store`.
 
 - **Slot 0 is the canonical member** (`ChoiceSite.canonicalSlot0`, one documented row per
   site). The empty or exhausted tape therefore gives the machine's default behaviour, usually
@@ -170,9 +152,8 @@ in one of four lanes (`docs/coverage-suite-structure.md`). **Strict** compares o
 the default-tape run, checking invariance across several tapes. **Membership** requires every
 Go sample to be a member of the enumerated set (`golean coverage-observations`).
 **Confluent** certifies that the set has one member, then compares strictly. **Racy**
-certifies that every enumerated path ends in the race refusal (`--expect-status race`). In proof vocabulary, a terminal observation is `Observation` (`ProgramTrace.lean`,
-with `observation_iff`) and `Obs`/`SlowObs` (`EnumSpec.lean`), and refusals and fuel-out are
-not observations (`refusal_is_not_observation`, `fuel_is_not_observation`). The evidence
+certifies that every enumerated path ends in the race refusal (`--expect-status race`). In proof vocabulary, an observation is `Obs`/`SlowObs` (`EnumSpec.lean`); refusals and
+fuel-out are not observations (`Stop.status`, §8). The evidence
 relation is observed ⊆ modeled ⊆ permitted. The differential tests the left inclusion. The
 right inclusion is argued in the latitude inventory, row by row, at the rule sites (§11 of the
 inventory).
@@ -193,36 +174,37 @@ words come from `Stop.status`.
 | refusal | `Refusal.internal` | `error` | no: a machine invariant broke (a machine bug) |
 | — | `Stop.fuelOut` | `fuel-out` | no: the bounded run ended first (a model artifact) |
 
-A refusal has no relation successor, so the theorems are partial-correctness statements across
-a refusal. A refusal is never counted as a pass.
+A refusal has no successor (`Finish.abortRefused`, `ClassRefusal`), so the `Prefix` theorems are
+partial-correctness statements across a refusal. A refusal is never counted as a pass.
 
-## 9. The pinned statement set and the re-pin offer
+## 9. The customer surface and the re-pin offer
 
-`BridgeSet.lean` contains one `example` per pinned statement, with binders written out, and
-it is imported by the default build. If a pinned type drifts, the build fails. There are
-currently 590 rows. The device does not catch a changed binder annotation, or a changed
-definition with an unchanged type (the file header says so). The semantic equations are
-gated separately (`scripts/check-equations`).
+The pinned statement set `BridgeSet.lean` (one `example` per pinned statement, 602 rows at the
+end) left the build with the relational layer on 2026-10-20 (tag
+`relational/last-main-2026-10-20`, `docs/ARCHIVE.md`). The surface kept on main is
+`Prefix`/`Finish` (§4) and the `stepFn_eqns` equation library (`Equations.lean`,
+`EquationsAttr.lean`), gated by `scripts/check-equations`: the client `Tests/EquationClient.lean`
+proves its facts from the equations alone, every equation is enrolled, and `stepFn` is never
+unfolded.
 
-The set is the consumer's interface. The logic repository pins a commit, currently the tag
-`logic-offer/2026-10-03`. Changes accumulate on `main` behind that pin. Each change that
-affects a pinned row or a consumer-visible behaviour is a line in the post-offer changelog
-(`docs/changelog/20d3946d-WINDOW.md`), and the rows ship together as the next batched **re-pin
-offer**. The diff of `BridgeSet.lean` between two pins is the interface diff. The last offer is
-`docs/2026-10-03_offer-to-logic-team.md`.
+The logic repository pins a commit, currently the tag `logic-offer/2026-10-03`. Each change that
+affects a consumer-visible behaviour or the kept surface is a line in the post-offer changelog
+(`docs/changelog/20d3946d-WINDOW.md`), including this retirement; a re-pin past it must drop
+the relational imports. The last offer is `docs/2026-10-03_offer-to-logic-team.md`.
 
 ## 10. Stated limits
 
-- **Setup is a premise.** Whole-program setup is stated by equations, not derived from the
-  relation. Its no-globals, no-initializer case is the pinned `runProgramSetup_noInit`.
+- **Setup is a premise.** Whole-program setup is not derived from the step; its no-globals,
+  no-initializer case is the equation `runProgramSetup_noInit`, and the general setup
+  equations were retired with the relational layer.
 - **Printing during package initialization is refused** (`initPrintRefusal?`, `Machine.lean`).
 - **`NoRefusal` and the sequential classification apply to the sequential driver only.** A `go`
-  statement leaves that domain, and the pool results of §5 cover it instead.
+  statement leaves that domain; no pool-level statement is in the build (§5).
 - **Concurrency granularity.** The machine steps at its own granularity. Some wide operations
   are single steps (latitude inventory U-5). Reducing this to Go's access granularity is an
-  explicit open obligation, not a theorem. `NPDRF.lean` states the registry-point reduction
-  (only its easy inclusion, `stepM_le_stepMFine`, is proved), and the 2026-10-03 offer lists the
-  NPDRF reduction as unusable (its limit 9).
+  explicit open obligation, not a theorem (the `NPDRF.lean` statement of the registry-point
+  reduction left with the relational layer; the 2026-10-03 offer already listed it as unusable,
+  its limit 9).
 - **Fixed platform.** The one instance is `Platform.gcAmd64` (`Platform.lean`): gc on
   linux/amd64, with 64-bit `int`, gc's layout, and per-op float rounding. Portability is a
   separate contract (latitude inventory §11).

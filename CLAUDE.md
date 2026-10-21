@@ -34,7 +34,12 @@ just porting it) and the relational semantics is downstream. But
 here we are co-designing the semantics to support both execution
 and proof. So we should build both in this repo, with a thin enough
 customer layer that we can feel confident we are building the right
-thing». So: the semantic transition relation, its observations, the
+thing». SUPERSEDED 2026-10-20 ([USER] ruling, relayed by the [AGENT]
+coordinator): the relational layer is retired from the build — tag
+`relational/last-main-2026-10-20` is the last main carrying it, `docs/ARCHIVE.md`
+has the archive entry — so the statement above no longer governs and the
+consequence that followed it (next sentence, kept as written) no longer
+holds. So: the semantic transition relation, its observations, the
 invariants stating its domain, and the executable↔relation coherence
 proofs LIVE HERE, co-designed with the executable core (the merge
 invariant in `docs/architecture-rules.md`). Iris resources, WP rules,
@@ -62,35 +67,28 @@ semantics to be useful for reasoning but this isn't something we
 ourselves supply». Qualifications: (1) includes the native lowering
 Go → GoCore, differentially validated and carrying NO correctness
 theorem — a consumer of a GoCore program inherits that trust
-assumption and the wire's provenance record. (2) is proved per step
-in both directions (`stepFn_sound`, `step_complete`), for the drivers'
-traces, runs and observations, and end to end for the sequential
-driver over the labelled step (`GoLean/GoCore/Prefix.lean`: the
-counted, choice-threaded prefix closure; the finishing classification
-with its five endings; the fuel bridges; choice replay by record; the
-refusal-separate classification; statements pinned in
-`GoLean/GoCore/BridgeSet.lean`). And, since 2026-10-06 (train r70),
-for the goroutine pool over the labelled step
-(`GoLean/GoCore/PoolStep.lean`, `PoolSound.lean`; 48 statements frozen
-by `scripts/check-pool-spec`): per-step soundness and completeness of
-the scheduler against the relation `StepML`, whose label is the
-executable's own event (who stepped, its action, its `StepLabel`);
-attribution and the frame law; context switches only at registry
-boundaries, with the scheduling pick recorded first; the pool deadlock
-as its own predicate; the counted pool prefix and its classification
-with terminal priority; the fuel bridges; replay by record; and the
-single-goroutine reduction to the sequential results
-(`PoolProjection.lean`). Not a theorem: the run-level converse «every
-relational run is some tape's prefix» is FALSE as a bare statement
-(the relation steps past an aborted goroutine, the driver classifies
-it first); it holds per step and for runs that pass the driver's gate.
-Limits: setup is a premise (its no-globals, no-initializer case is the
-pinned equation `runProgramSetup_noInit`), init-time printing is
-refused, and the domain premise `NoRefusal` covers the sequential
-driver only (a `go` statement leaves it). A refusal has no relation
-successor: a partial-correctness boundary ([USER] approved this
-wording 2026-09-28 (D2), and its update 2026-10-03 (items 1-4),
-relayed, and its 2026-10-06 update (items 1 and 2), relayed). (3):
+assumption and the wire's provenance record. (2) is WITHDRAWN by the
+[USER] ruling of 2026-10-20 (relayed): the relational semantics and its
+coherence proofs — the per-step soundness/completeness, the pool half
+(`StepML`), the pinned statement set `BridgeSet`, the setup/multi
+soundness modules — are retired from the build; the last main carrying
+them is tag `relational/last-main-2026-10-20`, the archive entry is
+`docs/ARCHIVE.md`. What stays on main as a supported surface for the
+raft-proofs customer (owner input, 2026-10-20, relayed): `Prefix`/`Finish`
+(`GoLean/GoCore/ExecutionStatement.lean`, proofs in `Prefix.lean` — the
+counted, choice-threaded prefix closure over `stepFn`, the finishing
+classification with its five endings, the fuel bridges, choice replay by
+record, the refusal-separate classification; the domain premise
+`NoRefusal` covers the sequential driver only and a refusal has no
+successor: a partial-correctness boundary, wording [USER]-approved
+2026-09-28 (D2), relayed) and the `@[stepFn_eqns]` equation library
+(`Equations.lean`, `EquationsAttr.lean`: one proved lemma per `stepFn`
+arm, kept usable by `scripts/check-equations`'s client check), with
+their support closure `StepFnFacts.lean` (the kept part of
+`MachineSound.lean`, unchanged). No relation, no coherence theorem and
+no pool-level statement is in the build; setup is a premise (its
+no-globals, no-initializer case is the equation `runProgramSetup_noInit`)
+and init-time printing is refused. (3):
 the typed-admission profile family, the `GoLean/Interface.lean`
 facade and the adapter spikes were PARKED 2026-09-16 ([USER] ruling;
 tag `typed-profiles/last-main-2026-09-16`,
@@ -114,10 +112,11 @@ paragraph replaced the 2026-09-04 consumer-interface pointer with
   `raftharness/`) is the test suite for the semantics — every
   fixture is a differential test case first; the raft subject's
   lowering is pinned by `scripts/check-frontend-pins`.
-- The Prop-level relation (`GoLean/GoCore/Machine.lean` + the
-  soundness modules) is part of the product, not a debt: the split
-  plan's extraction slice is WITHDRAWN ([USER] 2026-09-05, above);
-  it must keep pace with the interpreter (merge invariant).
+- No Prop-level relation is part of the product: the relational layer
+  was retired 2026-10-20 ([USER] ruling, above; tag
+  `relational/last-main-2026-10-20`), and with it the merge invariant
+  (`docs/architecture-rules.md`, retired there). `Prefix`/`Finish` and
+  the `stepFn_eqns` library stay for the raft-proofs customer.
 
 ## The trusted surface (and nothing else)
 
@@ -143,8 +142,8 @@ Everything else is untrusted tooling.
 - **The semantic core is total.** No `sorry`, no `native_decide`,
   no axioms anywhere in `GoLean/`; no `partial` in the semantic
   core `GoLean/GoCore/` — structural/well-founded recursion so the
-  coherence proofs here and the customer's proofs downstream stay
-  reachable. (Six files outside the core use `partial` for JSON,
+  `Prefix`/equation proofs here and the customer's proofs downstream
+  stay reachable. (Six files outside the core use `partial` for JSON,
   wire and search descent — 35 `partial def`s: the wire decoder
   `NativeToIR.lean` 17, `CLI.lean` 7, `StrictJsonParse.lean` 5,
   `ChoiceTrace.lean` 4, `NativeDeclaration.lean` 1, `EnumDedup.lean`
@@ -192,8 +191,8 @@ Everything else is untrusted tooling.
   must be on a `BUGS.md` Cases: line.
 - **Speedbumps report.** The same run prints the consistency checks (bugs
   index, feature tags, spec anchors, stdlib register, the
-  `AGENTS.md` alias, imported-goose verbatim, memory call sites, the
-  pool-spec freeze; under `--diff` also the derived-artifact regeneration)
+  `AGENTS.md` alias, imported-goose verbatim, memory call sites; under
+  `--diff` also the derived-artifact regeneration)
   under their own heading. A red one never fails the gate; it is read at
   the merge ask and fixed or waived there, by name.
 - **Self-tests are not gates.** `scripts/test-*` run by hand when the

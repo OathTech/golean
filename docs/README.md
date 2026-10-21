@@ -12,8 +12,8 @@ reading everything else.
 - `../README.md`: the front door. It covers what GoLean is, how to build and run it, and its
   limits.
 - `semantics-overview.md`: the semantics for someone who will reason against it (the machine,
-  the relation, drivers, labels, the choice tape, stops, the pinned set, limits), with each
-  claim pointing at its Lean name.
+  the executable step, drivers, labels, the choice tape, stops, the kept customer surface, limits;
+  the relation retired 2026-10-20), with each claim pointing at its Lean name.
 - `release.md`: what a release is (the tag, the pins, the gate, the frozen changelog, the stated
   limits, the three predicates), who tags, the procedure, and the stated limits ruled so far.
 - `cli.md`: the `golean` subcommands, the wire format `golean-native-v3`, the observation
@@ -79,7 +79,8 @@ the brief for the next one is `codex-briefs/2026-10-13_zero-context-release-pass
 
 The pinned-statement design notes (`2026-09-24_execution-statement.md`,
 `2026-09-28_step-label.md`, `2026-10-04_pool-relation-spec.md`) are records too. What they
-designed is now in the Lean source and summarised in `semantics-overview.md`.
+designed was in the Lean source until the relational layer's retirement (2026-10-20, tag
+`relational/last-main-2026-10-20`, `ARCHIVE.md`); `semantics-overview.md` says what remains.
 
 The batched-window charter (`2026-09-23_batched-window-charter.md`) and its window plan
 (`2026-09-24_window-plan.md`) closed with the 2026-10-03 offer. The earlier master plan

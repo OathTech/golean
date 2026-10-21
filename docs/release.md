@@ -27,9 +27,10 @@ the logic team (`docs/changelog/61958f2e-WINDOW.md`, tag `logic-offer/2026-10-03
    offer's summary was.
 5. **A stated-limits section**, in that changelog, one place, each a limit and not a gap read as closed. The template is
    the offer's ten STATED LIMITS (`docs/changelog/61958f2e-WINDOW.md`, «STATED LIMITS of the offer»: the memory floor;
-   the pool/registry half [since proved, r70 — strike or restate per release]; the legacy evaluation-order triple; C4's
-   run-level preservation as a stated claim; raw location ids in the readout; setup as a premise and init-time printing
-   refused; `NoRefusal` sequential-only and refusals without a successor; the corpus limits; the deferred items; the
+   the relation retired and parked (2026-10-20, tag `relational/last-main-2026-10-20`: the pool/registry half, C4's run-level
+   preservation, `NoRefusal`'s sequential-only domain and the false run-level converse are no longer claims — `Prefix`/`Finish`
+   and the `stepFn_eqns` library remain); the legacy evaluation-order triple; raw location ids in the readout; setup as a
+   premise and init-time printing refused; the corpus limits; the deferred items; the
    native lowering without a correctness theorem and the Platform instance gc linux/amd64). Each release re-derives the
    list against the tag; the backlog's debt table (`docs/2026-10-12_release-readiness.md` §3) is the current input.
 6. **The three release predicates, reported separately** — each its own line in the release record, never folded into
