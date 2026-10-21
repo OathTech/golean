@@ -63,11 +63,12 @@ globs = ["Tests.UnseqWire"]
 [[lean_lib]]
 # The core totality audit and the core contract regressions, re-homed from the
 # parked typed-profile family (docs/2026-09-16_typed-profiles-parked.md §3):
-# recover/choice-site/trace bridges, interpreter facts, the config-level abort
-# observer, and the post-import axiom audit over EVERY module under GoLean/
-# (classical trio only), with the panic-text renderer/member tests.
+# recover/choice-site/trace facts, interpreter facts, and the post-import axiom
+# audit over EVERY module under GoLean/ (classical trio only), with the
+# panic-text renderer tests. (The string-panic member tests left with the
+# relational layer, 2026-10-20.)
 name = "GoCoreAuditTests"
-globs = ["Tests.GoCoreContract", "Tests.PanicRendering", "Tests.StringPanicMembers", "Tests.GoCoreAudit"]
+globs = ["Tests.GoCoreContract", "Tests.PanicRendering", "Tests.GoCoreAudit"]
 
 [[lean_lib]]
 # The toy semantic-equation CLIENT (window packet D, 2026-10-03; charter row 7, decision 8): GoCore

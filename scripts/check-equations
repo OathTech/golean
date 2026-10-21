@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # The semantic-EQUATION gate (window packet D, 2026-10-03; charter row 7's second and third
-# checks beside BridgeSet's statements): (a) the equation file GoLean/GoCore/Equations.lean —
+# checks — BridgeSet's statements left the build with the relational layer 2026-10-20, this
+# library stays on main for the raft-proofs customer): (a) the equation file GoLean/GoCore/Equations.lean —
 # one PROVED lemma per `stepFn` arm, the `stepFn_eqns` rewrite set — builds with the toy client
 # library; (b) the client Tests/EquationClient.lean runs and reports PASS — its facts are proved
 # by the equation set alone, and its in-file `#eval` checks EXHAUSTIVE enrollment (every theorem
@@ -41,7 +42,7 @@ echo "ok [no-unfold] $CLIENT never unfolds stepFn"
 # (c') the IMPORT WHITELIST pre-filter (audit re-verification R1): every `import` line of the client names a toolchain
 # root or a published API module; the load-bearing check is the client's own (`checkEnrollment` reads the environment
 # header), this is the cheap textual twin. Fail closed on any other import.
-import_whitelist='Init Std Lean GoLean.GoCore.Equations GoLean.GoCore.EquationsAttr GoLean.GoCore.Prefix GoLean.GoCore.ExecutionStatement GoLean.GoCore.PoolProjection GoLean.GoCore.BridgeSet'
+import_whitelist='Init Std Lean GoLean.GoCore.Equations GoLean.GoCore.EquationsAttr GoLean.GoCore.Prefix GoLean.GoCore.ExecutionStatement'
 while IFS= read -r impline; do
   mod="${impline#import }"; mod="${mod%% *}"
   ok_import=0

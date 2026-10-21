@@ -2,42 +2,20 @@
 -- Import modules here that should be built as part of the library.
 import GoLean.StrictJson
 import GoLean.GoCore
--- The relational trace/run correspondence, the abort observer and the string-panic
--- members reached the default build only through the parked facade GoLean.Interface
--- (docs/2026-09-16_typed-profiles-parked.md §3); they are core and are wired here
--- directly so nothing leaves the build silently. ProgramTrace pulls PoolTrace;
--- AbortObservation pulls Trace.
-import GoLean.GoCore.ProgramTrace
-import GoLean.GoCore.AbortObservation
-import GoLean.GoCore.StringPanic
--- The window's contract (charter row 0; packet A, 2026-09-27): the pinned stable bridge set
--- (a statement drift fails THIS build) and the execution statement (Prop definitions only;
--- packet B proves them). Enrolled here = default-build membership.
-import GoLean.GoCore.BridgeSet
-import GoLean.GoCore.ExecutionStatement
-import GoLean.GoCore.Prefix
--- Window packet D (2026-10-03): the per-arm `stepFn` EQUATIONS with the `stepFn_eqns` rewrite
--- set (charter row 7's second check) and the sequential-to-pool PROJECTIONS (packet B audit F5).
+-- The surfaces kept on main for the raft-proofs customer when the relational layer was
+-- retired (2026-10-20, tag relational/last-main-2026-10-20; docs/ARCHIVE.md): the
+-- `stepFn_eqns` equation library with its attribute, the `Prefix`/`Finish` execution
+-- statement with its proofs, the counted trace, and the kept part of `MachineSound.lean`
+-- (`StepFnFacts`, reached through them). Enrolled here = default-build membership and the
+-- core audit's two-way closure.
+import GoLean.GoCore.Trace
 import GoLean.GoCore.EquationsAttr
 import GoLean.GoCore.Equations
-import GoLean.GoCore.PoolProjection
--- The pool/registry half's SPEC PACKET (design gate, 2026-10-04): the labelled pool relation's
--- frozen DEFINITIONS and its target STATEMENTS (Prop definitions only; the grind proves them).
--- Enrolled here = default-build membership and the core audit's two-way closure.
-import GoLean.GoCore.PoolStep
-import GoLean.GoCore.PoolStatement
-import GoLean.GoCore.PoolErrorFacts
-import GoLean.GoCore.PoolReplayFacts
-import GoLean.GoCore.PoolStructure
-import GoLean.GoCore.PoolFrontFacts
-import GoLean.GoCore.PoolSingletonFacts
-import GoLean.GoCore.PoolSound
--- The SETUP EQUATIONS (the logic team's G-R1–G-R4, 2026-10-05): the statements (`_stmt` defs; G-R4
--- stated only, out for review) and the proofs of G-R1–G-R3 (BridgeSet RE-PIN 12, rows 512–520).
+import GoLean.GoCore.ExecutionStatement
+import GoLean.GoCore.Prefix
+-- The seeded-heap entry (executable): the seed and its pool wrapper.
 import GoLean.GoCore.Seed
 import GoLean.GoCore.SeedPool
-import GoLean.GoCore.SetupStatement
-import GoLean.GoCore.SetupSound
 import GoLean.NativeToIR
 import GoLean.SeedFile
 import GoLean.CLI

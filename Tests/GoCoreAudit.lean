@@ -1,10 +1,9 @@
 import Tests.GoCoreContract
 import Tests.PanicRendering
-import Tests.StringPanicMembers
 import GoLean.GoCore.PanicText
 import GoLean.GoCore.Admission
 import GoLean.GoCore.Prefix
-import GoLean.GoCore.BridgeSet
+import GoLean.GoCore.Equations
 import Lean
 
 /-! The core totality audit (2026-09-16, lane `park-lane/typed-profiles-0916`,
@@ -17,8 +16,10 @@ over the CORE alone. Run from an external harness (`tools/core-audit.py`) that i
   is on disk (two-way; a module that fails to import fails the harness first);
 * no module root outside `Init`/`Std`/`Lean`/`GoLean`/`Tests` is in the closure
   (`lake-manifest.json` declares no packages — a new dependency is refused by name);
-* the load-bearing core modules and the required core theorems exist (the trace/run
-  bridges, the abort observer, the string-panic members, the contract regressions);
+* the load-bearing core modules and the required core theorems exist (the `stepFn_eqns`
+  equation library, the `Prefix`/`Finish` execution statement's proofs, the counted trace,
+  the renderer byte facts, the contract regressions — the relational exports left with the
+  relational layer, 2026-10-20, tag `relational/last-main-2026-10-20`);
 * the abort-text helpers stay CONSTRUCTIVE (`propext`/`Quot.sound` only, no choice) —
   landing chunk L3's boundary (`docs/2026-09-07_land-panic-text-tape.md`);
 * every declaration of every `GoLean.*`/`Tests.*` module — private, generated and trailing
@@ -33,22 +34,14 @@ namespace Tests.GoCoreAudit
 def allowedRoots : List Name := [`Init, `Std, `Lean, `GoLean, `Tests]
 
 def requiredModules : List Name := [
-    `GoLean.GoCore.PoolFrontFacts,
-    `GoLean.GoCore.PoolSingletonFacts,
-    `GoLean.GoCore.PoolStructure,
-    `GoLean.GoCore.PoolErrorFacts, `GoLean.GoCore.PoolReplayFacts, `GoLean.GoCore.PoolSound,
     `GoLean.GoCore, `GoLean.GoCore.Machine, `GoLean.GoCore.StepFn, `GoLean.GoCore.StateWf,
-    `GoLean.GoCore.MachineSound, `GoLean.GoCore.UnseqSound, `GoLean.GoCore.Multi,
-    `GoLean.GoCore.MultiSound, `GoLean.GoCore.Trace, `GoLean.GoCore.PoolTrace,
-    `GoLean.GoCore.ProgramTrace, `GoLean.GoCore.AbortObservation, `GoLean.GoCore.StringPanic,
-    `GoLean.GoCore.PanicText, `GoLean.GoCore.AdmissionIndices, `GoLean.GoCore.AdmissionPolicy,
-    `GoLean.GoCore.Admission, `GoLean.CLI, `GoLean.NativeToIR, `GoLean.ChoiceTrace,
-    `GoLean.GoCore.ExecutionStatement, `GoLean.GoCore.Prefix, `GoLean.GoCore.BridgeSet,
+    `GoLean.GoCore.Multi, `GoLean.GoCore.Consumes, `GoLean.GoCore.StepFnFacts,
+    `GoLean.GoCore.Trace, `GoLean.GoCore.PanicText, `GoLean.GoCore.AdmissionIndices,
+    `GoLean.GoCore.AdmissionPolicy, `GoLean.GoCore.Admission, `GoLean.CLI, `GoLean.NativeToIR,
+    `GoLean.ChoiceTrace, `GoLean.GoCore.ExecutionStatement, `GoLean.GoCore.Prefix,
     `GoLean.GoCore.PrefixFacts, `GoLean.GoCore.StepErrors, `GoLean.GoCore.Locals,
-    `GoLean.GoCore.EquationsAttr, `GoLean.GoCore.Equations, `GoLean.GoCore.PoolProjection,
-    `GoLean.GoCore.SetupStatement, `GoLean.GoCore.SetupSound, `GoLean.GoCore.Seed, `GoLean.GoCore.SeedPool,
-    `Tests.GoCoreContract, `Tests.PanicRendering, `Tests.StringPanicMembers,
-    `Tests.GoCoreAudit]
+    `GoLean.GoCore.EquationsAttr, `GoLean.GoCore.Equations, `GoLean.GoCore.Seed,
+    `GoLean.GoCore.SeedPool, `Tests.GoCoreContract, `Tests.PanicRendering, `Tests.GoCoreAudit]
 
 /-- Required core theorems (the `semantic interface` audit's CORE exports, plus the
 re-homed regressions). Each must exist as a theorem. -/

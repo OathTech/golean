@@ -1,6 +1,5 @@
 import GoLean.GoCore.Trace
-import GoLean.GoCore.ProgramTrace
-import GoLean.GoCore.MultiSound
+import GoLean.GoCore.Multi
 
 /-!
 # The execution statement — STATEMENTS ONLY (window charter row 0, §2)
@@ -24,6 +23,13 @@ CONTROLS, each closed by `rfl`: three copied from the review witness
 plus one `NoRefusal` positive control (a short case analysis, audit F2). PROVED: every
 `<name>_stmt` is discharged as `theorem <name>` in `Prefix.lean` ([AGENT packet B worker],
 2026-09-28), the statements unchanged.
+
+RETIREMENT (2026-10-20, lane `core/retire-relation-1020`, [USER] ruling): the mainline
+relation and its coherence proofs left the build (tag `relational/last-main-2026-10-20`,
+`docs/ARCHIVE.md`). Two statements went with them — `prefix_erase_steps_stmt` (the erasure to
+the relation `Steps`) and `single_embedding_stmt` (the pool embedding over `MultiSound.lean`'s
+`seqOpCount`); every other statement here, and its proof in `Prefix.lean`, is unchanged.
+`Prefix`/`Finish` and this file remain on main as a supported surface.
 
 Coordinator dispositions ([AGENT] coordinator, 2026-09-27; disclosed at the merge ask):
 (1) Reading A for the classification — `Finish` gains a FIFTH constructor `fatal` for the
@@ -195,12 +201,6 @@ def prefix_split_stmt : Prop :=
     ∃ (ls₁ ls₂ : List StepLabel) (s₁ : Store) (c₁ : Config) (ch₁ : Choices),
       ls = ls₁ ++ ls₂ ∧ Prefix ctx n s c ch ls₁ s₁ c₁ ch₁ ∧ Prefix ctx m s₁ c₁ ch₁ ls₂ sf cf chf
 
-/-- Erasure to relational reachability `Steps` (`Machine.lean:6220`). -/
-def prefix_erase_steps_stmt : Prop :=
-  ∀ (ctx : ProgramCtx) (n : Nat) (s sf : Store) (c cf : Config) (ch chf : Choices)
-    (ls : List StepLabel),
-    Prefix ctx n s c ch ls sf cf chf → Steps ctx c s cf sf
-
 /-- Erasure to the unlabelled counted `Trace` (`Trace.lean:15`). -/
 def prefix_erase_trace_stmt : Prop :=
   ∀ (ctx : ProgramCtx) (n : Nat) (s sf : Store) (c cf : Config) (ch chf : Choices)
@@ -298,15 +298,6 @@ def silent_projection_stmt : Prop :=
   ∀ (ls₁ ls₂ : List StepLabel),
     StepLabel.fold (ls₁ ++ ⟨[], [], []⟩ :: ls₂) = StepLabel.fold (ls₁ ++ ls₂)
 
-/-- The single-goroutine embedding: `execProgLoop_single` (`MultiSound.lean:666`) restated;
-the cost relation IS `seqOpCount` (`MultiSound.lean:640`), never «equal fuel». DEFINITIONAL
-(audit F5): it is literally `execProgLoop_single` — pinned, NOT counted as a new bridge. -/
-def single_embedding_stmt : Prop :=
-  ∀ (ctx : ProgramCtx) (fuel : Nat) (σ : Store) (c : Config) (ch : Choices) (rs : RaceState)
-    (r : Except Stop (Store × Choices)),
-    execStmtLoop ctx fuel σ c ch = r → transferable r →
-    execProgLoop ctx (fuel + seqOpCount ctx fuel σ c ch) ⟨#[.running c none], σ, 0⟩ rs ch = r
-
 /-- The program bridge under successful setup (setup's tape `ch → ch₁` INCLUDED): the
 driver is the pool fold from the setup seam's context, configuration, store and residual
 tape, with the `loadMany` readout. Init OUTPUT is empty BY REFUSAL (`initPrintRefusal?`,
@@ -372,9 +363,9 @@ def classification_stmt : Prop :=
       ClassRefusal ctx fuel s c ch
 
 /-- The corollary under the domain premises: a well-formed store and no reachable refusal
-leave the first three cases only. `step_preserves_wf` (`StateWf.lean:8107`) is the
-preservation fact to cite; it is stated over `MachineWf ctx σ c`, not `StateWf ctx σ` (an
-[AGENT packet A worker] flag for packet B). -/
+leave the first three cases only. (`step_preserves_wf`, the preservation fact over
+`MachineWf` once cited here, was retired with the relation 2026-10-20; the proof in
+`Prefix.lean` never needed it.) -/
 def classification_wf_stmt : Prop :=
   ∀ (ctx : ProgramCtx) (fuel : Nat) (s : Store) (c : Config) (ch : Choices),
     StateWf ctx s → NoRefusal ctx s c →

@@ -9,7 +9,9 @@ import GoLean.GoCore.StepErrors
 ruling of 2026-09-27; brief `docs/codex-briefs/2026-09-24_packet-B-bridges.md`, refreshed by the
 [AGENT] coordinator (input: `core/step-label-0928` @ `61bdc65d`). Every `<name>_stmt` of
 `ExecutionStatement.lean` is discharged here as `theorem <name> : <name>_stmt`, the statement
-UNCHANGED. Handoff: `docs/2026-09-28_packet-b-handoff.md`.
+UNCHANGED. Handoff: `docs/2026-09-28_packet-b-handoff.md`. (2026-10-20: `prefix_erase_steps`
+and `single_embedding` left the build with the relational layer, tag
+`relational/last-main-2026-10-20`; the rest is unchanged.)
 -/
 
 namespace GoLean.GoCore.ExecutionStatement
@@ -96,9 +98,6 @@ theorem prefix_erase_trace : prefix_erase_trace_stmt := by
   induction h with
   | done => exact .done
   | step hs _ ih => exact .step hs ih
-
-theorem prefix_erase_steps : prefix_erase_steps_stmt := fun ctx n s sf c cf ch chf ls h =>
-  (prefix_erase_trace ctx n s sf c cf ch chf ls h).erase
 
 /-- A counted `Trace` carries its labels: the reverse erasure. -/
 theorem prefix_of_trace {ctx : ProgramCtx} {n : Nat} {s sf : Store} {c cf : Config}
@@ -587,9 +586,6 @@ theorem noRefusal_step {ctx : ProgramCtx} {s s' : Store} {c c' : Config} {ch₀ 
 /-! ## Silent projection, the single-goroutine embedding, the program seam -/
 
 theorem silent_projection : silent_projection_stmt := StepLabel.fold_silent
-
-theorem single_embedding : single_embedding_stmt := fun _ _ _ _ _ _ _ hr htr =>
-  execProgLoop_single hr htr
 
 theorem program_bridge : program_bridge_stmt := by
   intro fuel p name args ch pctx c₀ s₀ locs ch₁ h

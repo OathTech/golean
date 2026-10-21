@@ -1,8 +1,9 @@
-import GoLean.GoCore.MachineSound
+import GoLean.GoCore.StepFnFacts
 
 /-! Exact, choice-threaded prefixes of the CURRENT executable step.
-This is a proof carrier, not another executable interpreter. Erasing the
-stream yields `Steps`; the reverse erasure needs a composition theorem.
+This is a proof carrier, not another executable interpreter. (`Trace.erase`,
+the erasure of the stream to the relation `Steps`, left the build with the
+relational layer 2026-10-20, tag `relational/last-main-2026-10-20`.)
 -/
 namespace GoLean.Semantics
 
@@ -38,11 +39,6 @@ theorem iter_iff_trace {n s c ch sf cf chf} :
     · intro h
       cases h with
       | step hs ht => simpa [stepFnIter, hs, Bind.bind, Except.bind] using ih.mpr ht
-
-theorem Trace.erase (h : Trace ctx n s c ch sf cf chf) : Steps ctx c s cf sf := by
-  induction h with
-  | done => exact .refl _ _
-  | step hs _ ih => exact (Steps.single (stepFn_sound hs)).trans ih
 
 theorem exists_iter_iff {n s c sf cf} :
     (∃ ch chf, stepFnIter ctx n s c ch = .ok (cf, sf, chf)) ↔

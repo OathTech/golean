@@ -1,5 +1,5 @@
-import GoLean.GoCore.AbortObservation
-import GoLean.GoCore.ProgramTrace
+import GoLean.GoCore.Trace
+import GoLean.GoCore.Multi
 
 /-! Core contract regressions, re-homed 2026-09-16 (lane `park-lane/typed-profiles-0916`,
 `docs/2026-09-16_typed-profiles-parked.md` §3) when the typed-admission profile family
@@ -9,12 +9,14 @@ and its facade `GoLean/Interface.lean` were parked.
 L3): the proofs are byte-identical; only the imports (the deleted facade → the two core
 trace modules), the namespace (`GoLean.GateA1` → `GoLean.GoCore.ContractTests`) and this
 header changed. Every fact is about the CORE: `recoverResult`/`recoverAtDeferred` (G-P S2) on
-frames, `stepFn` at the `probeK` choice site, `Step`/`Steps`/`Trace`, `StateWf`, the
-`run_ok_iff` / `Pool.run_iff` / `Pool.program_run_iff` bridges, `execProgLoopOut` and
-`runProgramPoolOutM`. §B — interpreter facts moved out of the deleted typed test
-libraries. §C — the config-level abort observer (`GoLean/GoCore/AbortObservation.lean`).
-The 14 theorems named in `tools/core-audit.py`'s required list are required exports of
-`Tests/GoCoreAudit.lean`; the other 22 declarations here are regression facts (audit fix F2). -/
+frames, `stepFn` at the `probeK` choice site, `Trace`, `StateWf`, the `run_ok_iff` bridge,
+`execProgLoopOut` and `runProgramPoolOutM`. §B — interpreter facts moved out of the deleted
+typed test libraries. RETIREMENT (2026-10-20, lane `core/retire-relation-1020`): the facts
+stated over the relation (`both_relational_successors`, `fixed_stream_not_existential_path`),
+the pool traces (`print_before_panic_trace`, `both_pool_traces`) and §C, the config-level
+abort observer (`AbortObservation.lean`), left the build with the relational layer (tag
+`relational/last-main-2026-10-20`); the theorems named in `Tests/GoCoreAudit.lean`'s export
+list are the required ones, the rest are regression facts (audit fix F2). -/
 
 namespace GoLean.GoCore.ContractTests
 open GoCore GoCore.Machine Semantics
@@ -133,21 +135,6 @@ theorem choose_defer (s : Store) (tail : Choices) :
 theorem choose_raise (s : Store) (tail : Choices) :
     stepFn ctx s forkPoint (1 :: tail) = .ok (raised, s, tail, ⟨[], [⟨.unseqPanic, 2, 1⟩], []⟩) := rfl
 
-theorem both_relational_successors (s : Store) :
-    Step ctx forkPoint s (.next .stop) s ⟨[], [⟨.unseqPanic, 2, 0⟩], []⟩ ∧
-      Step ctx forkPoint s raised s ⟨[], [⟨.unseqPanic, 2, 1⟩], []⟩ :=
-  ⟨.probeDefer, .probeRaise⟩
-
-/-- The old fixed-stream ⇐ existential-path claim already fails at one step. -/
-theorem fixed_stream_not_existential_path (s : Store) :
-    Steps ctx forkPoint s raised s ∧
-      ¬ ∃ chf, stepFnIter ctx 1 s forkPoint [0] = .ok (raised, s, chf) := by
-  refine ⟨Steps.single (both_relational_successors s).2, ?_⟩
-  rintro ⟨chf, h⟩
-  have hc : Config.next .stop = raised := congrArg (fun x => x.toOption.map Prod.fst) h
-    |> Option.some.inj
-  cases hc
-
 theorem defer_trace (s : Store) (tail : Choices) :
     Trace ctx 1 s forkPoint (0 :: tail) s (.next .stop) tail :=
   .step (choose_defer s tail) .done
@@ -215,11 +202,6 @@ theorem print_before_panic :
   apply panicObservation_sound
   decide +kernel
 
-theorem print_before_panic_trace :
-    Pool.ProgramRun 20 printPanicProgram "main.audit" #[] []
-      (.error (.panic "boom", GoString.fromLeanString "before\n")) :=
-  Pool.program_run_iff.mp print_before_panic
-
 /-- Terminal checking precedes exhaustion. One step suffices for DEFER. -/
 theorem defer_completes (s : Store) (tail : Choices) :
     execStmtLoop ctx 1 s forkPoint (0 :: tail) = .ok (s, tail) :=
@@ -248,11 +230,6 @@ theorem pool_defer (acc : GoString) :
 theorem pool_raise (acc : GoString) :
     execProgLoopOut exampleCtx 2 choicePool {} [1] acc = (acc, .error (.panic "audit")) := by
   with_unfolding_all rfl
-
-theorem both_pool_traces (acc : GoString) :
-    Pool.Run exampleCtx 2 choicePool {} [0] acc (acc, .ok (exampleState, [])) ∧
-    Pool.Run exampleCtx 2 choicePool {} [1] acc (acc, .error (.panic "audit")) :=
-  ⟨Pool.run_iff.mp (pool_defer acc), Pool.run_iff.mp (pool_raise acc)⟩
 
 theorem two_choice_pool_bridge (acc : GoString) :
     (∃ ch, execProgLoopOut exampleCtx 2 choicePool {} ch acc = (acc, .error (.panic "audit"))) ∧
@@ -376,41 +353,3 @@ theorem write_keeps_both_actual_aliases (before after : Bool) :
   constructor <;> with_unfolding_all rfl
 
 end GoLean.GoCore.ContractTests.Interpreter
-
-/-! ## C. The config-level abort observer (`GoLean/GoCore/AbortObservation.lean`, core)
-Origins: `Tests/AbortObservation.lean` (the three `abortRecord?` facts; landed `f70ea4bf`)
-and `Tests/RecoveryTerminal.lean` (`stringPanicEntries?_map_entry`; landed `a6a068ce`). The
-POOL-level observer facts (`execPoolWithAbort`, `stepAbortRecord?`, `PoolAbortWitness`) were
-theorems about `GoLean/GoCore/RecoveryPoolObservation.lean` and left with the family. -/
-namespace GoLean.GoCore.ContractTests.AbortObserver
-open Machine RecoveryRuntime
-
-set_option maxRecDepth 8192
-
-def text : GoString := ⟨#[104, 101, 97, 100]⟩
-def later : GoString := ⟨#[255, 0, 10, 9]⟩
-def entries : List PanicEntry :=
-  [{ value := .interface .string (.string text), recovered := false },
-   { value := .interface .string (.string later), recovered := true }]
-def record : AbortRecord := ⟨text, false, [⟨later, true⟩]⟩
-def abortConfig : Config := .panicking entries .stop
-
-theorem complete_chain_bytes_and_flags : abortRecord? abortConfig = some record := by rfl
-
-theorem nonstring_tail_rejected :
-    abortRecord? (.panicking
-      [{ value := .interface .string (.string text), recovered := false },
-       { value := .interface .bool (.bool true), recovered := false }] .stop) = none := by rfl
-
-theorem recovered_transient_rejected :
-    abortRecord? (.panicking entries (.frame [] [] [] [] .stop auditFid)) = none := by rfl
-
-theorem stringPanicEntries?_map_entry (tail : List AbortHead) :
-    stringPanicEntries? (tail.map AbortHead.entry) = some tail := by
-  induction tail with
-  | nil => rfl
-  | cons head tail ih =>
-      cases head
-      simp [stringPanicEntries?, stringPanicEntry?, AbortHead.entry, ih]
-
-end GoLean.GoCore.ContractTests.AbortObserver

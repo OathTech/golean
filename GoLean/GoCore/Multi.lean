@@ -2138,129 +2138,12 @@ def runProgramPoolM (fuel : Nat) (program : Program) (name : String)
     (args : Array GoValue) (choices : Choices := []) : Except Stop Readout :=
   (runProgramPoolOutM fuel program name args choices).mapError (·.1)
 
-/-! ## The spawn-extended per-goroutine relation (the `Step` spawn
-component, D1: the relation stays per-thread with a spawn component;
-iris-lean's generic thread-pool `Language` consumes exactly this shape
-— `Config × Store → Config × Store × List Config`). -/
+/-! ## The pool relation — RETIRED from the build (2026-10-20)
 
-/-- Per-goroutine step WITH spawn component: every sequential `Step`
-lifts with no forked goroutines; the completed spawn positions (where
-`Step` is deliberately silent) fork exactly one. Proof infrastructure
-(statement-TCB: forbidden from designated statement closures, like
-`Step`/`Steps`). -/
-inductive StepE : Nat → Config → Store → Config → Store → List Config → StepLabel → Prop where
-  /-- `n` is the index the spawned child WOULD take (the pool's size); a lift
-  spawns nothing and is indifferent to it. -/
-  | lift {n c σ c' σ' tr} : Step ctx c σ c' σ' tr → StepE n c σ c' σ' [] tr
-  /-- The spawn's label (C1 S2c): the `go` statement's edge to the child at
-  index `n`, then the CHILD's frame-entry read (its receiver dispatch)
-  attributed to it — gc's attribution, after the edge. -/
-  | spawn {n c σ cv args k parent' child σ' ch ch' ps tr} :
-      spawnPlan c = some (cv, args, k) →
-      spawnStep ctx σ cv args k ch = .ok (parent', child, σ', ch', ps, tr) →
-      StepE n c σ parent' σ' [child] ⟨.hb (.spawn n) :: tr.map (.attributed n), ps, []⟩
-
-/-- Legal scheduler picks (D2a): between boundaries only the running
-goroutine steps; at a boundary any RUNNABLE goroutine may be picked —
-the L1 envelope (`runnableIdxs`). -/
-def schedPick (m : MultiConfig) (i : Nat) : Prop :=
-  match m.threads[m.cur]? with
-  | some t => if t.atBoundary then i ∈ runnableIdxs ctx m.shared m.threads else i = m.cur
-  | none => False
-
-/-- The POOL relation (proof infrastructure; `stepMulti` is its
-executable instantiation — `stepMulti_sound`/`stepM_complete`). Seven
-rule classes: a partnerless goroutine step (`thread` — ordinary, spawn,
-or park: the arrival analysis found no waiter involvement, so a blocked
-outcome simply parks; the successor's boundary flag is the post-op
-boundary rule `Thread.afterStep`, C5; the rule is THREAD-LOCAL: it
-rewrites goroutine `i`'s state and the shared state, and appends the
-spawned children — nothing else; the 2026-09-02 cross-goroutine
-delete-prune premise was retired by the B1 stamps, 2026-09-03), the
-boundary CLEAR (`strip` — C5: the pool-level step the sequential
-relation's former `opDoneStrip` became), the ABORT (`abort` — B4: the
-tombstone step the former `panicAbort` became), the
-singleton arrival pairing
-(`pair` — gc's waiter-queue priority; the L4 waiter pick is the rule's
-`idx`), the multi-ready select arrival's two L2-picked shapes
-(`pickPair` / `pickCommit` — the rule's `sel` is the L2 clause pick
-over the pure `.multi` analysis, slice 4), and the wake of a parked
-goroutine (`wake` — head-commit, no re-randomization). Deadlock is
-relation-SILENT (no rule from an all-asleep pool), mirroring the
-sequential machine's silent blocked configs. -/
-inductive StepM : MultiConfig → MultiConfig → AccessTrace → Prop where
-  | thread {m : MultiConfig} {i : Nat} {c : Config} {c' : Config} {σ' : Store}
-      {efs : List Config} {l : StepLabel} :
-      schedPick ctx m i →
-      m.threads[i]? = some (.running c none) →
-      isBlockedConfig c = false →
-      arrivalCases ctx m.shared m.threads i c = .ok .cellPath →
-      StepE ctx m.threads.size c m.shared c' σ' efs l →
-      StepM m ⟨(m.threads.setIfInBounds i (Thread.afterStep m.shared c c'))
-        ++ (efs.map (Thread.running · none)).toArray, σ', i⟩ l.trace
-  /-- The boundary CLEAR (C5): a goroutine whose last op opened a boundary
-  clears it — a pool step, the sequential relation has no counterpart. -/
-  | strip {m : MultiConfig} {i : Nat} {c : Config} {site : ChoiceSite} :
-      schedPick ctx m i →
-      m.threads[i]? = some (.running c (some site)) →
-      StepM m ⟨m.threads.setIfInBounds i (.running c none), m.shared, i⟩ []
-  /-- The ABORT (B4): an unrecovered chain at `.stop` renders into the
-  goroutine's tombstone (`abortMsg`; a chain with no pinned rendering has
-  no rule — fail closed). The `repanicCollapse` pick is QUANTIFIED below
-  its width (landing chunk L3): on the `repanicEqualNext` shape both
-  members are legal successors (the total premise `pick <
-  repanicCollapseWidth first rest`); elsewhere the width is 1 and the
-  pick is the forced 0. -/
-  | abort {m : MultiConfig} {i : Nat} {c : Config} {first : PanicEntry}
-      {rest : List PanicEntry} {pick : Nat} {msg : String} :
-      schedPick ctx m i →
-      m.threads[i]? = some (.running c none) →
-      c.abort? = some (first, rest) →
-      pick < repanicCollapseWidth first rest →
-      abortMsg ctx first rest pick = .ok msg →
-      StepM m ⟨m.threads.setIfInBounds i (.aborted msg), m.shared, i⟩ []
-  | pair {m : MultiConfig} {i : Nat} {c bc : Config} {σ'' : Store}
-      {cs : List (Nat × PairTarget)} {idx : Nat} {ts' : Array Thread} {tr : AccessTrace} :
-      schedPick ctx m i →
-      m.threads[i]? = some (.running c none) →
-      isBlockedConfig c = false →
-      spawnPlan c = none →
-      arrivalCases ctx m.shared m.threads i c = .ok (.single bc cs) →
-      (hidx : idx < cs.length) →
-      applyPairing ctx m.shared m.threads i bc cs[idx] = .ok (ts', σ'', tr) →
-      StepM m ⟨ts', σ'', i⟩ tr
-  | pickPair {m : MultiConfig} {i : Nat} {c bc : Config} {σ'' : Store}
-      {os : List ArrivalOutcome} {sel : Nat}
-      {cs : List (Nat × PairTarget)} {idx : Nat} {ts' : Array Thread} {tr : AccessTrace} :
-      schedPick ctx m i →
-      m.threads[i]? = some (.running c none) →
-      isBlockedConfig c = false →
-      spawnPlan c = none →
-      arrivalCases ctx m.shared m.threads i c = .ok (.multi os) →
-      os[sel]? = some (.pair bc cs) →
-      (hidx : idx < cs.length) →
-      applyPairing ctx m.shared m.threads i bc cs[idx] = .ok (ts', σ'', tr) →
-      StepM m ⟨ts', σ'', i⟩ tr
-  /-- The arrival commit's label (C1 S2c): the select's poll over its evaluated
-  clauses, then the committed clause's action. -/
-  | pickCommit {m : MultiConfig} {i : Nat} {c : Config} {evs : List EvClause} {cl : EvClause}
-      {env : LocalEnv} {k : Cont} {os : List ArrivalOutcome} {sel : Nat}
-      {c' : Config} {σ' : Store} {trc : AccessTrace} :
-      schedPick ctx m i →
-      m.threads[i]? = some (.running c none) →
-      isBlockedConfig c = false →
-      spawnPlan c = none →
-      arrivalCases ctx m.shared m.threads i c = .ok (.multi os) →
-      os[sel]? = some (.commit evs cl env k) →
-      commitClause ctx m.shared env k cl = .ok (c', σ', trc) →
-      StepM m ⟨m.threads.setIfInBounds i (Thread.afterStep m.shared c c'), σ', i⟩
-        (selectPoll evs ++ trc)
-  | wake {m : MultiConfig} {i : Nat} {c c' : Config} {σ' : Store} {tr : AccessTrace} :
-      schedPick ctx m i →
-      m.threads[i]? = some (.running c none) →
-      isBlockedConfig c = true →
-      resumeThread ctx m.shared c = .ok (c', σ', tr) →
-      StepM m ⟨m.threads.setIfInBounds i (Thread.completed c'), σ', i⟩ tr
+The spawn-extended per-goroutine relation `StepE`, the legal scheduler picks `schedPick` and
+the POOL relation `StepM` (proof infrastructure beside the executable `stepMulti`) lived here;
+they were retired with the relational layer by the [USER] ruling of 2026-10-20 (lane
+`core/retire-relation-1020`; tag `relational/last-main-2026-10-20`, `docs/ARCHIVE.md`). -/
 
 /-! ## Well-formedness (the thread-indexed carrier) -/
 
@@ -2286,9 +2169,10 @@ thread-indexed. Decidable, so concrete pool seeds discharge it by
 per-thread `itersNormalized` conjunct (the only reader of `ctx.types`
 here) was deleted as vacuous, so `MultiWf m` takes no `ProgramCtx`.
 
-PRESERVATION IS DISCHARGED (slice 5, by the slice-3 build log's
-recorded route): `stepMulti_wf` (`MultiWfSound.lean`) proves one
-executable pool step keeps this invariant. The sequential `*_wf`
+PRESERVATION WAS DISCHARGED (slice 5, by the slice-3 build log's
+recorded route) by `stepMulti_wf` (`MultiWfSound.lean`): one
+executable pool step keeps this invariant. That proof left the build
+with the relational layer, 2026-10-20 (tag `relational/last-main-2026-10-20`). The sequential `*_wf`
 conclusions (`applyChanOp_wf`, `applySelect_wf`,
 `step_preserves_wf_loc`) were extended with the step-level
 `σ.nextAddr ≤ σ'.nextAddr` conjunct — the monotonicity the

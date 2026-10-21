@@ -4,7 +4,8 @@ import GoLean.GoCore.StateWf
 /-!
 # The executable step function (reshape R2, S2c)
 
-`stepFn` is the machine's instantiation: one arm per `Machine.Step` rule,
+`stepFn` is the machine's instantiation: one arm per rule of the relation
+`Machine.Step` (RETIRED from the build 2026-10-20, tag `relational/last-main-2026-10-20`),
 sharing the rule premises' functions verbatim (`strictPlan`,
 `applyStrictOp`, `stmtPlan`, `applyStmtOp`, `enterFrame`, …), plus the
 *why* on every configuration the relation is silent on — an explicit
@@ -36,7 +37,9 @@ it is the only Program-level entry (the non-seeding
 Everything uses the machine's env-in-config representation throughout —
 `Store.locals` is never touched (it is deleted at S4).
 
-Per-rule soundness/completeness lemmas against `Machine.Step` land at S5.
+The per-rule soundness/completeness lemmas against `Machine.Step` (S5,
+`MachineSound.lean`) were retired with the relation; what the kept surfaces need of that
+module is `StepFnFacts.lean`.
 -/
 
 namespace GoLean.GoCore.Machine

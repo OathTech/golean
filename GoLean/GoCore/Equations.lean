@@ -1,8 +1,12 @@
 import GoLean.GoCore.EquationsAttr
-import GoLean.GoCore.MachineSound
+import GoLean.GoCore.StepFnFacts
 
 /-!
 # The semantic EQUATIONS — per-arm `stepFn` lemmas, the `stepFn_eqns` rewrite set (window packet D)
+
+(2026-10-20: `BridgeSet.lean` and the relational layer left the build, tag `relational/last-main-2026-10-20`;
+this library, its attribute and the client remain on main as a supported surface, proved from
+`StepFnFacts.lean` — the kept part of `MachineSound.lean`.)
 
 [AGENT packet D worker] 2026-10-03, under the re-pin offer's charter row 7 (three separate checks:
 STATEMENTS — `BridgeSet.lean`; EQUATIONS — this file, proved, catching a definition changed under

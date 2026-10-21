@@ -200,7 +200,6 @@ run_bump "stdlib admission register = frontend tables (scripts/check-stdlib-regi
 run_bump "AGENTS.md is the alias of CLAUDE.md (scripts/check-agents-alias)" ./scripts/check-agents-alias
 run_bump "imported-goose verbatim at the pin (scripts/check-imported-goose)" ./scripts/check-imported-goose
 run_bump "memory-module raw call sites = inventory (scripts/check-mem-callsites)" bash scripts/check-mem-callsites
-run_bump "pool spec freeze + staged discharge (scripts/check-pool-spec)" python3 scripts/check-pool-spec
 
 # ── GATE: the build of every target. Warning-free, because a GoLean/ warning
 # replays into the runner's stdout and corrupts the JSON observation channel
@@ -289,8 +288,8 @@ echo "  ok:$evok  fail:$evbad  exit:$evrc"
 if [ "$evrc" -eq 0 ] && [ "$evbad" -eq 0 ] && [ "$evok" -gt 0 ]; then ok "eval tests ($evok ok)"
 else printf '%s\n' "$evout" | grep -iE '^(not ok|fail)' | head -10; bad "eval tests (exit $evrc, $evbad bad, $evok ok — zero ok is a degenerate run)"; fi
 
-# ── GATE: the lowering and decoder boundary, and the relational product's
-# equation API — each its own script, each fail-closed.
+# ── GATE: the lowering and decoder boundary, and the `stepFn_eqns` equation
+# library's client check — each its own script, each fail-closed.
 step "unseq wire, Stage C (scripts/check-unseq-wire)"
 run_gate "unseq wire (wires from bytes vs reference sets; decoder mutants refused by name)" bash scripts/check-unseq-wire
 step "wire boundary (scripts/check-wire-boundary)"

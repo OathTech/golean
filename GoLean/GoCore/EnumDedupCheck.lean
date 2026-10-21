@@ -1,4 +1,4 @@
-import GoLean.GoCore.MultiStreams
+import GoLean.GoCore.Consumes
 import GoLean.GoCore.EnumSpec
 import GoLean.GoCore.StateEqb
 
