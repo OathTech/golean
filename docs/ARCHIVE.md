@@ -27,12 +27,12 @@ with the clone», the tags read from the clone's `packed-refs`):
 | `snapshot/typed-sprint-before-uintptr-20260906` | no | no | — | does NOT resolve (same tip as `origin/typed-consumer-sprint`, `7edc298f`) |
 | `refs/snapshots/*` (e.g. `pre-repo-split-main`) | — | — | — | EMPTY on this clone (`pre-repo-split-main` = `7440bf70` = `origin/park/reasoning-2026-08-31`) |
 | (the offer) | — | — | `logic-offer/2026-10-03` | `20d3946d` |
-| `park/relational-prototype-2026-10-15` (design donor, below) | yes | **NO — not on origin** | — | `701d8689` |
-| `park/relational-prototype-rendering-2026-10-15` (design donor) | yes | **NO — not on origin** | — | `95b0b64b` |
-| `park/relational-spike-concurrency-2026-10-15` (design donor) | yes | **NO — not on origin** | — | `f6f37e36` |
-| `park/relational-spike-detector-contracts-2026-10-15` (design donor) | yes | **NO — not on origin** | — | `b4282cff` |
-| `park/relational-spike-unseq-2026-10-15` (design donor) | yes | **NO — not on origin** | — | `ce0daf9f` |
-| (the last main carrying the relation) | — | — | `relational/last-main-2026-10-20` (annotated, local; not pushed) | `89b1fce1` |
+| `park/relational-prototype-2026-10-15` (design donor, below) | yes | yes (pushed 2026-10-21) | — | `701d8689` |
+| `park/relational-prototype-rendering-2026-10-15` (design donor) | yes | yes (pushed 2026-10-21) | — | `95b0b64b` |
+| `park/relational-spike-concurrency-2026-10-15` (design donor) | yes | yes (pushed 2026-10-21) | — | `f6f37e36` |
+| `park/relational-spike-detector-contracts-2026-10-15` (design donor) | yes | yes (pushed 2026-10-21) | — | `b4282cff` |
+| `park/relational-spike-unseq-2026-10-15` (design donor) | yes | yes (pushed 2026-10-21) | — | `ce0daf9f` |
+| (the last main carrying the relation) | — | — | `relational/last-main-2026-10-20` (annotated; pushed 2026-10-21) | `89b1fce1` |
 
 Rows from `park/relational-*` down were added 2026-10-20 ([AGENT] lane
 `records/archive-library-1020`, read with `git branch`, `git branch -r`,
@@ -162,8 +162,7 @@ the iterated-`stepFn` prefix closure) and `GoLean/GoCore/Equations.lean` (the
 Common to every donor: **not for use and not maintained**. Toolchain
 `leanprover/lean4:v4.32.2` at every tip and at the tag (each tip's
 `lean-toolchain`). Every branch tip is dated 2026-10-15 and was parked under
-its `park/relational-*` name on 2026-10-20 with the tip unchanged; none of the
-five branches is on origin; the push, if any, is the owner's. Read a branch
+its `park/relational-*` name on 2026-10-20 with the tip unchanged; the five branches and the tag were pushed to origin on 2026-10-21. Read a branch
 with `git show <branch>:<path>` and `git log <branch>`; each entry gives a
 revive command. Every fact below was read from the named branch, tag or
 record on 2026-10-20 ([AGENT] lane `records/archive-library-1020`); the gate
@@ -189,8 +188,8 @@ events and histories), U1 (restricted unseq sequentialization), I1 and I2
   repository as the charter's second deliverable (a fuel-free relational
   semantics proved equivalent, per step, to the operational one); the rewrite
   of that charter claim is row 45's plan, not this entry's.
-- **Where.** Tag **`relational/last-main-2026-10-20`** (annotated, local, not
-  pushed) = main **`89b1fce1`** (last commit 2026-10-16; tagged 2026-10-21,
+- **Where.** Tag **`relational/last-main-2026-10-20`** (annotated; pushed
+  2026-10-21) = main **`89b1fce1`** (last commit 2026-10-16; tagged 2026-10-21,
   recreated with a corrected message; the branches were parked 2026-10-20): the
   last main carrying these modules. Their removal from the build is the plan of
   backlog row 45 (`docs/2026-10-12_release-readiness.md`, lane
@@ -346,7 +345,7 @@ events and histories), U1 (restricted unseq sequentialization), I1 and I2
 - **Where.** Branch **`park/relational-prototype-2026-10-15`**, tip
   **`701d8689`** (2026-10-15, a documentation-only handoff; implementation pin
   `82353580`), 33 commits over main `31a6069d` (2026-10-14; the base is also
-  `refs/integration/i1/main`). Not on origin.
+  `refs/integration/i1/main`). On origin since 2026-10-21.
 - **Content versus its base** (`git diff --name-status 31a6069d 701d8689`):
   46 new modules under `GoLean/GoCore/` (7,491 lines: the 43 `Relational*`
   modules plus `LocationOrder`, `ShadowOrder`, `ShadowHistory`), the facade
@@ -445,7 +444,7 @@ events and histories), U1 (restricted unseq sequentialization), I1 and I2
   `docs/2026-10-15_relational-rendering-review.md`; checked experiment
   `experiments/2026-10-15-rendering/` (`Derivation.lean`, `SemanticLinks.lean`,
   `RendererAudit.lean`, `check-derivation.py`, the reviewer's probes under
-  `review/`). Not on origin.
+  `review/`). On origin since 2026-10-21.
 - **State reached.** Full `scripts/ci --diff` PASS, 1,335 s, 114 GoLean
   modules replayed, 4,025 rows (3,767 / 258), 415 negative — on a DIRTY
   worktree; no commit-clean run is claimed; the review bound production
@@ -479,7 +478,7 @@ events and histories), U1 (restricted unseq sequentialization), I1 and I2
   the production tree is exactly `fc52512a` (only `docs/` and
   `experiments/2026-10-14-concurrency-compatibility/` differ). Records:
   `docs/2026-10-14_relational-concurrency-compatibility.md`,
-  `docs/2026-10-15_relational-concurrency-review.md`. Not on origin.
+  `docs/2026-10-15_relational-concurrency-review.md`. On origin since 2026-10-21.
 - **State reached.** The experiment package built (69 jobs), its standard-axiom
   audit passed (20,349 declarations), `leanchecker --fresh` of
   `Concurrency.Audit` exited 0; the implementation scan is FAIL with 17
@@ -517,7 +516,7 @@ events and histories), U1 (restricted unseq sequentialization), I1 and I2
   audited C1 `55ad7249` (so this branch also holds the old-line C1 modules).
   `refs/integration/i1/d1-{implementation,handoff}` name the same two commits.
   Records: `docs/2026-10-15_relational-detector-contracts.md`,
-  `docs/2026-10-15_relational-detector-review.md`. Not on origin.
+  `docs/2026-10-15_relational-detector-review.md`. On origin since 2026-10-21.
 - **State reached.** Full CI/differential PASS at `9c6efcfc` (3,989 rows:
   3,749 PASS / 240 tracked FAIL; 405 negative; 396 interpreter tests; all
   speedbumps), kernel replay of the 105-import aggregate; experiment axiom
@@ -558,7 +557,7 @@ events and histories), U1 (restricted unseq sequentialization), I1 and I2
   `refs/integration/i2/u1`), implementation `82a2ff31`, two commits over I1
   `5d8e53e9` on the prototype line; base on main `31a6069d`. Records:
   `docs/2026-10-15_relational-unseq-stage.md`,
-  `docs/2026-10-15_relational-unseq-review.md`. Not on origin.
+  `docs/2026-10-15_relational-unseq-review.md`. On origin since 2026-10-21.
 - **State reached.** Full `scripts/ci --diff` PASS on an EARLIER dirty U1
   tree (4,025 / 415, no regression) that preceded the final traversal and
   adapter additions; at the final commit only the fast tier (`scripts/ci`,
