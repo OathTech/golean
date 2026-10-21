@@ -49,7 +49,9 @@ reading everything else.
 - `2026-08-31_qrow-rulings.md`: the decision log of [USER] rulings (the Q-rows and later
   rulings, appended).
 - `operational-lessons.md`: build, memory and tool incidents, with their measured remedies.
-- `ARCHIVE.md`: the index of parked branches and era archives.
+- `ARCHIVE.md`: the index of parked branches and era archives; since 2026-10-20 also the
+  design-donor library of the retired relational line (what is parked where, in what state,
+  none of it for use).
 - `agent-sandbox.md`: scratch-directory conventions for sandboxed sessions.
 
 ## Dated files are records
@@ -79,8 +81,10 @@ the brief for the next one is `codex-briefs/2026-10-13_zero-context-release-pass
 
 The pinned-statement design notes (`2026-09-24_execution-statement.md`,
 `2026-09-28_step-label.md`, `2026-10-04_pool-relation-spec.md`) are records too. What they
-designed was in the Lean source until the relational layer's retirement (2026-10-20, tag
-`relational/last-main-2026-10-20`, `ARCHIVE.md`); `semantics-overview.md` says what remains.
+designed went into the Lean source up to tag `relational/last-main-2026-10-20`; the relational
+line (the `Step` relation, its coherence proofs and the pool half) was retired 2026-10-20 and is
+indexed as design donors in `ARCHIVE.md`. The `Prefix`/`Finish` closure and the `stepFn_eqns`
+library stay live on main; `semantics-overview.md` says what remains.
 
 The batched-window charter (`2026-09-23_batched-window-charter.md`) and its window plan
 (`2026-09-24_window-plan.md`) closed with the 2026-10-03 offer. The earlier master plan
