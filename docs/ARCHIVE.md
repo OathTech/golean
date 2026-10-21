@@ -142,25 +142,22 @@ Older pipeline-history notes for the SEMANTICS product live in
 
 ## Design donors (retired 2026-10-20): the relational line
 
-[USER] ruling, 2026-10-20 (relayed by the [AGENT] coordinator; paraphrased):
-the relational line of work is retired. Its intended consumer does not use it
-and it presents a misleading target. Its pieces are kept as DESIGN DONORS for
-other agents, on parked branches with clear names, and indexed here: what is
-available where, in what state, and that none of it is intended for use.
-Checked 2026-10-20 ([AGENT]): the logic repository (`~/projects/golean-logic`)
-pins this repo at `fa343e48` (main, 2026-10-06) and its own note
+The relational line is retired, its pieces kept as design donors on parked
+branches and indexed here, none of it for use ([USER] 2026-10-20; the decision
+and its reasons are recorded once, in backlog row 45 of
+`docs/2026-10-12_release-readiness.md`). Checked 2026-10-20 ([AGENT]): the
+logic repository (`~/projects/golean-logic`) pins this repo at `fa343e48`
+(main, 2026-10-06) and its own note
 `docs/2026-10-13_note-to-golean-mirror-properties.md` states that its step
 relation is GoLean's executable step (`StepAdapter.run`, i.e. `stepFn`), so
 its trust path never passed through the relation `Step`.
 
-Same ruling, later the same day (relayed; paraphrased): `GoLean/GoCore/Prefix.lean`
-(`Prefix`/`Finish`, the iterated-`stepFn` prefix closure) and
-`GoLean/GoCore/Equations.lean` (the `@[stepFn_eqns]` rewrite library, with
-`EquationsAttr.lean` and the `scripts/check-equations` gate) are NOT retired.
-They stay on main under stable names as a supported surface for the raft-proofs
-customer (`~/projects/raft-proofs`), which states its theorem over
-`Prefix`/`Finish` and evaluates symbolically with `stepFn_eqns`. They are not
-donors and have no entry below.
+Kept on main under stable names for the raft-proofs customer
+(`~/projects/raft-proofs`), so not donors and without an entry below ([USER]
+2026-10-20, the same row 45): `GoLean/GoCore/Prefix.lean` (`Prefix`/`Finish`,
+the iterated-`stepFn` prefix closure) and `GoLean/GoCore/Equations.lean` (the
+`@[stepFn_eqns]` rewrite library, with `EquationsAttr.lean` and the
+`scripts/check-equations` gate).
 
 Common to every donor: **not for use and not maintained**. Toolchain
 `leanprover/lean4:v4.32.2` at every tip and at the tag (each tip's
@@ -190,12 +187,14 @@ events and histories), U1 (restricted unseq sequentialization), I1 and I2
   setup half, the multi-goroutine and pool halves with their frozen statement
   set, and the pinned bridge set. Built 2026-09 to 2026-10 for the logic
   repository as the charter's second deliverable (a fuel-free relational
-  semantics proved equivalent, per step, to the operational one); that charter
-  claim is being rewritten by the retirement lane, not here.
+  semantics proved equivalent, per step, to the operational one); the rewrite
+  of that charter claim is row 45's plan, not this entry's.
 - **Where.** Tag **`relational/last-main-2026-10-20`** (annotated, local, not
-  pushed) = main **`89b1fce1`** (last commit 2026-10-16; tagged 2026-10-20): the
-  last main carrying these modules before the separate lane
-  `core/retire-relation-1020` removes them from the build. Base: main itself.
+  pushed) = main **`89b1fce1`** (last commit 2026-10-16; tagged 2026-10-21,
+  recreated with a corrected message; the branches were parked 2026-10-20): the
+  last main carrying these modules. Their removal from the build is the plan of
+  backlog row 45 (`docs/2026-10-12_release-readiness.md`, lane
+  `core/retire-relation-1020`), not landed at this writing. Base: main itself.
 - **Modules at the tag** (`GoLean/GoCore/`, line counts at the tag; the import
   graph puts all of them downstream of `Step`): the `Step` inductive in
   `Machine.lean` (from line 6524 of 7,983; the file also holds the configuration
@@ -220,10 +219,16 @@ events and histories), U1 (restricted unseq sequentialization), I1 and I2
   `docs/specs/pool-relation/` (`FROZEN.sha256`, `MILESTONES`, `LANDED` = M5,
   `REPAIRS.md`) and is checked by `scripts/check-pool-spec` (a `scripts/ci`
   speedbump). Downstream of these also sit `EnumDedupCheck`, `EnumDedupSound`
-  and `MachineEqb` (the enumeration dedup check). Three of the modules listed
-  (`ExecutionStatement`, `PrefixFacts`, `StepErrors`) are imports of the live
-  `Prefix.lean`: whether they stay is the retirement lane's call, recorded in
-  its commit, which is the authority on the exact set removed.
+  and `MachineEqb` (the enumeration dedup check). The kept surface depends on
+  these modules at the tag: `Equations.lean` imports `EquationsAttr` and
+  `MachineSound`; `Prefix.lean` imports `ExecutionStatement`, `PrefixFacts` and
+  `StepErrors`; `PrefixFacts.lean` imports `MachineSound`;
+  `ExecutionStatement.lean` imports `Trace`, `ProgramTrace` and `MultiSound`;
+  `ProgramTrace.lean` imports `PoolTrace`. So `Prefix`/`Finish` and the
+  `stepFn_eqns` library transitively import `MachineSound`, `MultiSound`,
+  `PoolTrace` and `Trace` at the tag; whether the retirement lane keeps,
+  re-homes or cuts those is recorded in its commit, which is the authority on
+  the exact set removed.
 - **State reached.** On main, so merged under the merge protocol's full gate
   at each runtime-touching train since it landed (the pool half by train r70,
   2026-10-06, the charter's own account); at the tag the fast tier of
@@ -241,10 +246,10 @@ events and histories), U1 (restricted unseq sequentialization), I1 and I2
 - **Reusable; not to be trusted for.** Reusable: the design of a labelled
   relation whose label is the executable's own event, the per-step two-way
   coherence proof pattern, the frozen-statement discipline of the pool half,
-  and the pinned bridge set as a catalogue of statement shapes. Do not rely on
-  it as a claim about main: the retirement lane rewrites the charter, the
-  semantics overview and the release document, and after it lands these
-  modules are not in the build. The run-level converse («every relational run
+  and the pinned bridge set as a catalogue of statement shapes. Do not read it
+  as a claim about main beyond the tag: the charter, the semantics overview
+  and the release document on main carry the current claims, and their rewrite
+  is row 45's plan. The run-level converse («every relational run
   is some tape's prefix») is FALSE as a bare statement (charter, 2026-10-06).
 - **Revive.** `git worktree add --detach .claude/worktrees/relational-last-main relational/last-main-2026-10-20`
   (then `cp -a .lake` from a primary that still has the modules built, or
@@ -269,10 +274,10 @@ events and histories), U1 (restricted unseq sequentialization), I1 and I2
   `RelationalCall.lean` (`reference`, `assign_variable`, `return_start`,
   `return_sequence`, `SavedCaller.enter`, `CallBoundary.deliver`,
   `SavedCaller.invoke`), `RelationalStorePath.lean` and `RelationalPhases.lean`
-  (`StorePath`, `StoreEffect`, `OperandPaths`; `pointer_assignment_phases`,
+  (`StorePath`, `StoreEffect`, `OrderedWrites`, `OperandPaths`; `pointer_assignment_phases`,
   `variable_assignment_phases`, `SavedCaller.entry_phases`,
   `variable_expression_phases`, `pointer_rhs_phases`),
-  `RelationalDelivery.lean` (`OrderedWrites`, `CallBoundary.delivery_phases`),
+  `RelationalDelivery.lean` (`CallBoundary.delivery_phases` only),
   `RelationalExpression.lean` (`ReadOnlyExpr` with `.variable`, `.reference`,
   `.int_literal`, `.deref`, `.add_int`, `.less_int`), `RelationalLoop.lean`
   (`WhileControl`, `while_control`), `RelationalMemory.lean` (`write_support`,
@@ -352,8 +357,12 @@ events and histories), U1 (restricted unseq sequentialization), I1 and I2
   `docs/relational-interface.md`. It MODIFIES
   `BridgeSet.lean` (the Equations rows retired), `MachineSound.lean`, `Ops.lean`
   (the `Loc` comparator moved to `LocationOrder`), `SetupSound.lean`,
-  `SetupStatement.lean`, `GoLean.lean`, `lakefile.toml`, `scripts/ci` and
-  `scripts/mem-callsites.tsv`; and it DELETES `GoLean/GoCore/Equations.lean`,
+  `SetupStatement.lean`, `GoLean.lean`, `lakefile.toml`, `scripts/ci`,
+  `scripts/mem-callsites.tsv`, and also `Tests/GoCoreAudit.lean` (the
+  core-audit harness, a gate file), `CLAUDE.md`, `README.md`, `docs/README.md`,
+  `docs/semantics-overview.md` and `docs/changelog/20d3946d-WINDOW.md` (fifteen
+  modified files in all: a reviver inherits a divergent charter and gate
+  harness); and it DELETES `GoLean/GoCore/Equations.lean`,
   `EquationsAttr.lean`, `Tests/EquationClient.lean` and
   `scripts/check-equations` — the surface that the 2026-10-20 ruling keeps
   live on main. A revived prototype therefore conflicts with main's supported
@@ -416,7 +425,7 @@ events and histories), U1 (restricted unseq sequentialization), I1 and I2
 
 ### Donor 4 — the rendering branch (total diagnostic renderers)
 
-- **What it is.** On top of Donor 3, a bounded executed-renderer
+- **What it is.** On top of Donor 3's implementation pin, a bounded executed-renderer
   correspondence: the three recursive derived `Repr` printers for `Ty`,
   `GoValue` and `Expr` replaced by transparent, structurally terminating
   definitions (`GoLean/GoCore/Rendering.lean`; `Syntax.lean` and `Value.lean`
@@ -426,9 +435,13 @@ events and histories), U1 (restricted unseq sequentialization), I1 and I2
   It removes three of the partial-implementation findings (the `Ty`, `GoValue`
   and `Expr` printers).
 - **Where.** Branch **`park/relational-prototype-rendering-2026-10-15`**, tip
-  **`95b0b64b`** (2026-10-15; documentation-only park commit), implementation
-  pin `ccc54f4f`, two commits over Donor 3's tip `701d8689`; base on main
-  `31a6069d`. Records: `docs/2026-10-15_relational-rendering-stage.md`,
+  **`95b0b64b`** (2026-10-15; the park commit adds the review record and two
+  reviewer Lean probes under `experiments/2026-10-15-rendering/review/` and
+  edits the experiment README and the stage record; production sources
+  unchanged), implementation pin `ccc54f4f`, two commits over Donor 3's
+  IMPLEMENTATION PIN `82353580` (`git merge-base 701d8689 95b0b64b`): Donor 3's
+  handoff commit `701d8689` and its observed-phases review record are NOT on
+  this branch. Base on main `31a6069d`. Records: `docs/2026-10-15_relational-rendering-stage.md`,
   `docs/2026-10-15_relational-rendering-review.md`; checked experiment
   `experiments/2026-10-15-rendering/` (`Derivation.lean`, `SemanticLinks.lean`,
   `RendererAudit.lean`, `check-derivation.py`, the reviewer's probes under
@@ -439,10 +452,9 @@ events and histories), U1 (restricted unseq sequentialization), I1 and I2
   hashes to `ccc54f4f`. Independent review accepted the bounded candidate
   for immutable handoff (no new semantic defect or preservation blocker) and
   explicitly not for merge or integration; in its narrower import scope the
-  implementation scan still reports twelve inherited findings, unwaived. The
-  stage record ends with the [USER] 2026-10-15 instruction (paraphrased) to
-  finish only this candidate's validation and handoff and then park while the
-  relational architecture was reassessed; it was parked after that handoff.
+  implementation scan still reports twelve inherited findings, unwaived. It
+  was parked after that handoff on a [USER] 2026-10-15 instruction recorded in
+  the stage record's closing paragraphs.
 - **Reusable; not to be trusted for.** Reusable: the technique (parameterise
   the generated body, prove the total definition satisfies it, argue
   preservation at the source level) for any derived-instance finding of the
