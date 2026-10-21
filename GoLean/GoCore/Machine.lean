@@ -6513,7 +6513,6 @@ relational layer was retired from the build by the [USER] ruling of 2026-10-20 (
 archive entry is in `docs/ARCHIVE.md`. The lemmas below are about the executable (the
 finished configuration, the activation's slots, block-entry allocation) and are unchanged. -/
 
-variable (ctx)
 /-- A configuration the sequential machine considers FINISHED. The
 blocked configurations (channels arc slice 1) are deliberately NOT here
 (audit S12): they are relation-terminal in the per-goroutine relation

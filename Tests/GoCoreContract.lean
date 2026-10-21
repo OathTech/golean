@@ -12,7 +12,8 @@ header changed. Every fact is about the CORE: `recoverResult`/`recoverAtDeferred
 frames, `stepFn` at the `probeK` choice site, `Trace`, `StateWf`, the `run_ok_iff` bridge,
 `execProgLoopOut` and `runProgramPoolOutM`. §B — interpreter facts moved out of the deleted
 typed test libraries. RETIREMENT (2026-10-20, lane `core/retire-relation-1020`): the facts
-stated over the relation (`both_relational_successors`, `fixed_stream_not_existential_path`),
+stated over the relation (`recover_step_does_not_transport`, `both_relational_successors`,
+`fixed_stream_not_existential_path`),
 the pool traces (`print_before_panic_trace`, `both_pool_traces`) and §C, the config-level
 abort observer (`AbortObservation.lean`), left the build with the relational layer (tag
 `relational/last-main-2026-10-20`); the theorems named in `Tests/GoCoreAudit.lean`'s export
@@ -60,18 +61,6 @@ theorem recover_changes_handler : (recoverResult panicFrame).2 ≠ panicFrame :=
 theorem recover_stepFn (s : Store) (env : LocalEnv) (k : Cont) (ch : Choices) :
     stepFn ctx s (.evalE .recoverCall env k) ch =
       .ok (.retV (recoverResult k).1 (recoverResult k).2, s, ch, ⟨[], [], []⟩) := rfl
-
-/-- Transporting the bare-frame recover successor under the added handler
-is not a step. This refutes the concrete instance of the proposed fill law. -/
-theorem recover_step_does_not_transport (s : Store) :
-    Step ctx (.evalE .recoverCall [] bareFrame) s (.retV .nil bareFrame) s ⟨[], [], []⟩ ∧
-    ¬ ∃ tr, Step ctx (.evalE .recoverCall [] panicFrame) s (.retV .nil panicFrame) s tr := by
-  refine ⟨.evalRecover recover_bare, ?_⟩
-  rintro ⟨tr, h⟩
-  obtain ⟨ch, ch', he⟩ := step_complete h
-  rw [recover_stepFn, recover_handler] at he
-  have hc := (Prod.mk.inj (Except.ok.inj he)).1
-  cases hc
 
 def illTyped : Store := { heap := #[.value .bool (.int 7)] }
 /-- Still admitted under `HeapNormal` (C1 S1): the normalizer does not coerce at a

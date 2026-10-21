@@ -4,6 +4,7 @@ import GoLean.GoCore.PanicText
 import GoLean.GoCore.Admission
 import GoLean.GoCore.Prefix
 import GoLean.GoCore.Equations
+import GoLean.GoCore.Locals
 import Lean
 
 /-! The core totality audit (2026-09-16, lane `park-lane/typed-profiles-0916`,
@@ -67,107 +68,31 @@ def exports : List Name := [
     -- outcome-class congruence and its well-formedness, the envelope's lemmas (the spec floor at every
     -- member and slot, the default-tape slots, the literal singleton, gc's roundupsize floor), and the
     -- three conversion equations; BridgeSet rows 580–590
-    ``GoLean.GoCore.Machine.applyStrictOpPick_conv, ``GoLean.GoCore.Machine.Step_convCap_draw,
+    ``GoLean.GoCore.Machine.applyStrictOpPick_conv,
     ``GoLean.GoCore.Machine.applyStrictOpPick_draw,
     ``GoLean.GoCore.Machine.applyStrictOpPick_of_strictConsult?_none,
     ``GoLean.GoCore.Machine.strictConsult?_some, ``GoLean.GoCore.Machine.stepFn_strict_pick,
-    ``GoLean.GoCore.Machine.stepFn_strict_oblivious, ``GoLean.GoCore.Machine.applyStrictOpPick_congr_any_ch,
-    ``GoLean.GoCore.Machine.convCapApplyAt_congr, ``GoLean.GoCore.Machine.applyStrictOpPick_wf,
+    ``GoLean.GoCore.Machine.stepFn_strict_oblivious,
+    ``GoLean.GoCore.Machine.applyStrictOpPick_wf,
     ``GoLean.GoCore.convCapMembers_ge, ``GoLean.GoCore.convCapAt_ge, ``GoLean.GoCore.gcRoundupSize_ge,
     ``GoLean.GoCore.convCapAt_bytes_zero, ``GoLean.GoCore.convCapAt_runes_zero,
     ``GoLean.GoCore.convCapMembers_literal,
     ``GoLean.GoCore.Equations.retV_strictK_conv, ``GoLean.GoCore.Equations.retV_strictK_conv_nopop,
     ``GoLean.GoCore.Equations.retV_strictK_conv_refuse,
     -- Pool grind M5, BridgeSet rows 558–566.
-    ``GoLean.GoCore.PoolSound.stepML_single_sound,
-    ``GoLean.GoCore.PoolSound.stepML_single_complete,
-    ``GoLean.GoCore.PoolSound.singleton_finish_normal,
-    ``GoLean.GoCore.PoolSound.singleton_finish_aborted,
-    ``GoLean.GoCore.PoolSound.singleton_finish_refused,
-    ``GoLean.GoCore.PoolSound.singleton_finish_fatal,
-    ``GoLean.GoCore.PoolSound.singleton_finish_deadlock,
-    ``GoLean.GoCore.PoolSound.singleton_prefix_embedding,
-    ``GoLean.GoCore.PoolSound.singleton_run,
     -- Pool grind M4, BridgeSet rows 544–557.
-    ``GoLean.GoCore.PoolSound.poolPrefix_comp,
-    ``GoLean.GoCore.PoolSound.poolPrefix_split,
-    ``GoLean.GoCore.PoolSound.poolPrefix_labelled,
-    ``GoLean.GoCore.PoolSound.poolPrefix_erase,
-    ``GoLean.GoCore.PoolSound.poolPrefix_run,
-    ``GoLean.GoCore.PoolSound.pool_run_ok_iff,
-    ``GoLean.GoCore.PoolSound.pool_run_terminal_iff,
-    ``GoLean.GoCore.PoolSound.pool_run_fuelOut_iff,
-    ``GoLean.GoCore.PoolSound.pool_run_refusal_iff,
-    ``GoLean.GoCore.PoolSound.pool_classification,
-    ``GoLean.GoCore.PoolSound.run_ok_prefix,
-    ``GoLean.GoCore.PoolSound.program_prefix,
-    ``GoLean.GoCore.PoolSound.continue_replay,
-    ``GoLean.GoCore.PoolSound.poolPrefix_replay,
     -- Pool grind M3, BridgeSet rows 539–543.
-    ``GoLean.GoCore.PoolSound.front_continue,
-    ``GoLean.GoCore.PoolSound.front_finish,
-    ``GoLean.GoCore.PoolSound.front_refusal,
-    ``GoLean.GoCore.PoolSound.poolFinish_functional,
-    ``GoLean.GoCore.PoolSound.poolFinish_zero_not_continue,
     -- Pool grind M2, BridgeSet rows 528–538.
-    ``GoLean.GoCore.PoolSound.stepML_who_runnable,
-    ``GoLean.GoCore.PoolSound.stepML_sched,
-    ``GoLean.GoCore.PoolSound.stepML_switch_boundary,
-    ``GoLean.GoCore.PoolSound.stepML_sched_record,
-    ``GoLean.GoCore.PoolSound.stepML_frame,
-    ``GoLean.GoCore.PoolSound.stepML_paired_trace,
-    ``GoLean.GoCore.PoolSound.stepML_spawn,
-    ``GoLean.GoCore.PoolSound.asleep_silent,
-    ``GoLean.GoCore.PoolSound.singleton_deadlock,
-    ``GoLean.GoCore.PoolSound.mainOutcome_not_deadlock,
-    ``GoLean.GoCore.PoolSound.stepMulti_deadlock_elim,
 
     -- The setup equations G-R1–G-R3 (2026-10-05): the nine proved statements of
     -- `SetupStatement.lean` (`SetupSound.lean`), BridgeSet rows 512–520. G-R4 is a statement only.
-    ``GoLean.GoCore.SetupSound.seedGlobals_cells,
-    ``GoLean.GoCore.SetupSound.seedGlobals_cell,
-    ``GoLean.GoCore.SetupSound.seedGlobals_heap_size,
-    ``GoLean.GoCore.SetupSound.seedGlobals_wf,
-    ``GoLean.GoCore.SetupSound.runProgramSetup_init,
-    ``GoLean.GoCore.SetupSound.setup_lookup_arg_from,
-    ``GoLean.GoCore.SetupSound.setup_lookup_result_from,
-    ``GoLean.GoCore.SetupSound.setup_resultLocs_from,
-    ``GoLean.GoCore.SetupSound.setup_heap_size_from,
     -- G-R4 approved and proved with the logic team's answers (a)–(d) (2026-10-05): the init loop's
     -- equation, its four `run_*_iff` corollaries and the `runPkgInitM` wrapper pair, BridgeSet rows 521–527.
-    ``GoLean.GoCore.SetupSound.runInitConfig_eq_execStmtLoop,
-    ``GoLean.GoCore.SetupSound.runInitConfig_ok_iff,
-    ``GoLean.GoCore.SetupSound.runInitConfig_panic_iff,
-    ``GoLean.GoCore.SetupSound.runInitConfig_deadlock_iff,
-    ``GoLean.GoCore.SetupSound.runInitConfig_fuelOut_iff,
-    ``GoLean.GoCore.SetupSound.runPkgInitM_some,
-    ``GoLean.GoCore.SetupSound.runPkgInitM_ok_iff,
     -- The seeded-heap entry, slice A (2026-10-12, gc-verified a2): S1–S6 of `SetupStatement.lean`
     -- proved in `SetupSound.lean`, the pool erasure in `SeedPool.lean`; BridgeSet rows 591–601.
-    ``GoLean.GoCore.SetupSound.runProgramSetupSeeded_init,
-    ``GoLean.GoCore.SetupSound.seedCells_cell,
-    ``GoLean.GoCore.SetupSound.seedCells_frame,
-    ``GoLean.GoCore.SetupSound.seedCells_locs,
-    ``GoLean.GoCore.SetupSound.seedCells_heap_size,
-    ``GoLean.GoCore.SetupSound.runProgramSetupSeeded_empty,
-    ``GoLean.GoCore.SetupSound.seedCells_wf,
-    ``GoLean.GoCore.SetupSound.runProgramSetupSeeded_wf,
-    ``GoLean.GoCore.SetupSound.runProgramSeededM_eq,
-    ``GoLean.GoCore.SetupSound.runProgramSeededM_empty,
-    ``GoLean.GoCore.SetupSound.runProgramPoolSeeded_empty,
     -- RE-PIN 20 (2026-10-12, lane core/followups-1012): the seeded base's helper, BridgeSet row 602.
-    ``GoLean.GoCore.SetupSound.seedBase_seedLocs,
 
     -- Pool grind M1: the nine frozen statements, BridgeSet rows 503–511.
-    ``GoLean.GoCore.PoolSound.raceUpdate_error,
-    ``GoLean.GoCore.PoolSound.stepMulti_error_cases,
-    ``GoLean.GoCore.PoolSound.schedSlot_iff,
-    ``GoLean.GoCore.PoolSound.stepML_erase,
-    ``GoLean.GoCore.PoolSound.stepML_sound,
-    ``GoLean.GoCore.PoolSound.stepML_complete,
-    ``GoLean.GoCore.PoolSound.stepM_lift,
-    ``GoLean.GoCore.PoolSound.stepsML_erase,
-    ``GoLean.GoCore.PoolSound.stepMulti_replay,
 
     -- Window packet D (2026-10-03): the per-arm `stepFn` EQUATIONS and their helper laws (every
     -- theorem of `GoLean/GoCore/Equations.lean`; BridgeSet rows 174–402, 437–499 and 502) and the sequential-to-pool
@@ -326,27 +251,6 @@ def exports : List Name := [
     ``GoLean.GoCore.Equations.signalStep_mapIterK_contTo_self,
     ``GoLean.GoCore.Equations.signalStep_mapIterK_contTo_ne,
     ``GoLean.GoCore.Equations.signal_labelK_contTo_self,
-    ``GoLean.GoCore.Machine.transferable_wide, ``GoLean.GoCore.Machine.transferableWide_ok,
-    ``GoLean.GoCore.Machine.transferableWide_fuelOut, ``GoLean.GoCore.Machine.transferableWide_terminal,
-    ``GoLean.GoCore.Machine.not_transferableWide_deadlock,
-    ``GoLean.GoCore.Machine.not_transferableWide_refusal, ``GoLean.GoCore.Machine.seqOut_zero,
-    ``GoLean.GoCore.Machine.seqOut_succ, ``GoLean.GoCore.Machine.outFold_nil,
-    ``GoLean.GoCore.Machine.outFold_cons, ``GoLean.GoCore.Machine.outFold_eq_fold,
-    ``GoLean.GoCore.Machine.runnableIdxs_singleton_none, ``GoLean.GoCore.Machine.mainOutcome?_single_none,
-    ``GoLean.GoCore.Machine.front_single_step, ``GoLean.GoCore.Machine.front_single_flagged,
-    ``GoLean.GoCore.Machine.front_terminal, ``GoLean.GoCore.Machine.front_aborted,
-    ``GoLean.GoCore.Machine.stepThread_single_out, ``GoLean.GoCore.Machine.stepMulti_single_out,
-    ``GoLean.GoCore.Machine.execProgLoopOut_single_wide, ``GoLean.GoCore.Machine.execProgLoopOut_single,
-    ``GoLean.GoCore.Machine.execProgLoop_single_wide, ``GoLean.GoCore.Machine.execProgLoop_single_terminal,
-    ``GoLean.GoCore.Machine.execProgLoopOut_single_terminal,
-    ``GoLean.GoCore.Machine.isTerminal_false_of_stepFn_ok,
-    ``GoLean.GoCore.Machine.isBlockedConfig_false_of_stepFn_ok, ``GoLean.GoCore.Machine.zeroCost_stops,
-    ``GoLean.GoCore.Machine.seqOut_stop, ``GoLean.GoCore.Machine.seqOut_of_prefix,
-    ``GoLean.GoCore.Machine.execProgLoopOut_single_prefix, ``GoLean.GoCore.Machine.pool_run_single_prefix,
-    ``GoLean.GoCore.Machine.afterStepFlag_none_of_noRegistry, ``GoLean.GoCore.Machine.seqOpCount_eq_zero,
-    ``GoLean.GoCore.Machine.execProgLoop_single_noBoundary,
-    ``GoLean.GoCore.Machine.execProgLoop_single_noBoundary_wide,
-    ``GoLean.GoCore.Machine.execProgLoopOut_single_noBoundary_wide,
     -- Unit 6b, BUG-004 item 4 — the preprint phase (2026-10-03; design
     -- docs/2026-09-30_bug004-item4-design.md §2 (i), RULED [USER] 2026-09-30 relayed): the
     -- abort's characterization over the settled chain, the split's two facts, the rendering
@@ -355,13 +259,6 @@ def exports : List Name := [
     ``GoLean.GoCore.Machine.Config.abort?_some_iff, ``GoLean.GoCore.Machine.Config.abort?_of_settled,
     ``GoLean.GoCore.Machine.Config.abort?_of_pending,
     ``GoLean.GoCore.Machine.splitNewestPending?_eq, ``GoLean.GoCore.Machine.splitNewestPending?_pending,
-    ``GoLean.GoCore.Machine.renderPanicHead_text, ``GoLean.GoCore.Machine.abortMsg_text,
-    ``GoLean.GoCore.Machine.abortMsg_text_refused, ``GoLean.GoCore.Machine.abortMsg_text_ok,
-    ``GoLean.GoCore.Machine.stepFn_text_abort, ``GoLean.GoCore.Machine.stepFn_text_abort_refused,
-    ``GoLean.GoCore.Machine.runConfig_text_abort, ``GoLean.GoCore.Machine.runConfig_text_abort_refused,
-    ``GoLean.GoCore.Machine.stepPanicStop_sound, ``GoLean.GoCore.Machine.stepRetOther_sound,
-    ``GoLean.GoCore.Machine.stepNextOther_sound,
-    ``GoLean.GoCore.Machine.step_abort_elim, ``GoLean.GoCore.Machine.step_stop_unsettled,
     ``GoLean.GoCore.Machine.stepPanicStop_strict, ``GoLean.GoCore.Machine.preprintFatalStop_strict,
     -- C4, block-entry allocation (2026-10-01; design docs/2026-10-01_gc4-block-allocation-design.md D8 —
     -- the layout function's lemma set, the lane's acceptance list; BridgeSet rows 136–154)
@@ -372,7 +269,7 @@ def exports : List Name := [
     ``GoLean.GoCore.Machine.allocDecls_zero, ``GoLean.GoCore.Machine.allocDecls_heap_get_lt,
     ``GoLean.GoCore.Machine.Store.alloc_cell,
     ``GoLean.GoCore.Machine.blockEntry_fresh, ``GoLean.GoCore.Machine.blockExit_store_eq,
-    ``GoLean.GoCore.Machine.heap_size_mono, ``GoLean.GoCore.Machine.enterFrame_shift,
+    ``GoLean.GoCore.Machine.enterFrame_shift,
     ``GoLean.GoCore.Machine.frameEntry_lookup_arg, ``GoLean.GoCore.Machine.frameEntry_lookup_result,
     ``GoLean.GoCore.Machine.frameEntry_fresh,
     ``GoLean.GoCore.Machine.pushDefer_saves_values, ``GoLean.GoCore.Machine.funcVal_captures_locs,
@@ -380,12 +277,10 @@ def exports : List Name := [
     -- the draw's apply equation, its derived step rule, the pick-lifted / oblivious plans, the
     -- generalized wide-op pick lemma, the two-way consult characterization, and the int-store
     -- class congruence behind the ∀-streams kit; BridgeSet rows 133–135
-    ``GoLean.GoCore.Machine.applyStmtOp_randIntn_eq, ``GoLean.GoCore.Machine.Step_randIntn_draw,
     ``GoLean.GoCore.Machine.applyStmtOp_plan_randIntn_draw,
     ``GoLean.GoCore.Machine.applyStmtOp_plan_randIntn_nodraw,
     ``GoLean.GoCore.Machine.stepFn_stmtOp_pick, ``GoLean.GoCore.Machine.stmtConsult?_some,
     ``GoLean.GoCore.Machine.intnBound?_some, ``GoLean.GoCore.Machine.intnBound?_gt_one,
-    ``GoLean.GoCore.Machine.Mem.store_int_congr, ``GoLean.GoCore.Machine.applyStmtOp_randIntn_congr,
     -- B6, numeric locals (2026-09-30): the name-table interface (the logic team's request 3)
     ``GoLean.GoCore.Func.localsOk_covers, ``GoLean.GoCore.Func.localsOk_sigDistinct,
     ``GoLean.GoCore.Func.localsOk_named, ``GoLean.GoCore.Func.localsOk_argKind,
@@ -396,30 +291,23 @@ def exports : List Name := [
     ``GoLean.GoCore.Machine.bindParams_lookup, ``GoLean.GoCore.Machine.allocDecls_lookup,
     ``GoLean.GoCore.Machine.enterFrame_lookup_arg, ``GoLean.GoCore.Machine.enterFrame_lookup_result,
     -- the trace/run correspondence (`Trace`, `PoolTrace`, `ProgramTrace`)
-    ``GoLean.Semantics.iter_iff_trace, ``GoLean.Semantics.Trace.erase,
+    ``GoLean.Semantics.iter_iff_trace,
     ``GoLean.Semantics.run_ok_iff, ``GoLean.Semantics.exists_run_ok_iff,
-    ``GoLean.Semantics.Pool.run_iff, ``GoLean.Semantics.Pool.Run.success_reaches,
-    ``GoLean.Semantics.Pool.program_run_iff,
-    ``GoLean.Semantics.Pool.exists_program_run_iff,
-    ``GoLean.Semantics.Pool.observation_iff,
-    ``GoLean.Semantics.Pool.fuel_is_not_observation,
-    ``GoLean.Semantics.Pool.refusal_is_not_observation,
     -- the full step label (row-2 reshape, 2026-09-28): the silent projection and the
     -- pool projection (a goroutine step's event label IS `stepFn`'s)
     ``GoLean.GoCore.StepLabel.fold_silent,
-    ``GoLean.GoCore.Machine.stepThread_privateStep_label,
     ``GoLean.GoCore.Machine.printOut?_toList,
     ``GoLean.GoCore.Choices.consumeAtE_eq,
     -- the execution bridges (window row 2b, packet B, 2026-09-28; packet B audit F6,
     -- [AGENT] coordinator disposition): the 23 proved `_stmt` theorems and their supports
     ``GoLean.GoCore.ExecutionStatement.prefix_refl, ``GoLean.GoCore.ExecutionStatement.prefix_comp,
-    ``GoLean.GoCore.ExecutionStatement.prefix_split, ``GoLean.GoCore.ExecutionStatement.prefix_erase_steps,
+    ``GoLean.GoCore.ExecutionStatement.prefix_split,
     ``GoLean.GoCore.ExecutionStatement.prefix_erase_trace, ``GoLean.GoCore.ExecutionStatement.prefix_iter,
     ``GoLean.GoCore.ExecutionStatement.finish_abort_step, ``GoLean.GoCore.ExecutionStatement.finish_refused_step,
     ``GoLean.GoCore.ExecutionStatement.finish_replay, ``GoLean.GoCore.ExecutionStatement.run_ok_iff,
     ``GoLean.GoCore.ExecutionStatement.run_panic_iff, ``GoLean.GoCore.ExecutionStatement.run_deadlock_iff,
     ``GoLean.GoCore.ExecutionStatement.run_fuelOut_iff, ``GoLean.GoCore.ExecutionStatement.replay_coverage,
-    ``GoLean.GoCore.ExecutionStatement.silent_projection, ``GoLean.GoCore.ExecutionStatement.single_embedding,
+    ``GoLean.GoCore.ExecutionStatement.silent_projection,
     ``GoLean.GoCore.ExecutionStatement.program_bridge, ``GoLean.GoCore.ExecutionStatement.classification,
     ``GoLean.GoCore.ExecutionStatement.classification_wf, ``GoLean.GoCore.ExecutionStatement.boundary_abort_one,
     ``GoLean.GoCore.ExecutionStatement.boundary_blocked_zero, ``GoLean.GoCore.ExecutionStatement.boundary_refused_one,
@@ -432,7 +320,7 @@ def exports : List Name := [
     -- native method promotion (window row 3, G-P S2, 2026-09-28; [USER] agreed to option (1), relayed):
     -- the frame names the function it runs at entry and at exit, and the direct path is the
     -- function-call rule
-    ``GoLean.GoCore.Machine.Entry.callConfig_run, ``GoLean.GoCore.Machine.frame_exit_returns,
+    ``GoLean.GoCore.Machine.Entry.callConfig_run,
     ``GoLean.GoCore.Machine.enterFrame_declared,
     -- G-P S3 (2026-09-29): the §3 equation lemmas — the lookups, the resolution, the path
     -- walk, the recover rule — and the `findFunctionIn?` domain-narrowing bridge (the logic
@@ -476,29 +364,13 @@ def exports : List Name := [
     ``GoLean.GoCore.Admission.admitted_index_bound,
     ``GoLean.GoCore.Admission.admitted_all_bodies,
     -- the config-level abort observer (`AbortObservation`)
-    ``GoLean.GoCore.RecoveryRuntime.runConfigWithAbort_erasure,
-    ``GoLean.GoCore.RecoveryRuntime.stringPanicEntry?_some,
-    ``GoLean.GoCore.RecoveryRuntime.stringPanicEntries?_some,
-    ``GoLean.GoCore.RecoveryRuntime.stringPanicEntries?_typed,
-    ``GoLean.GoCore.RecoveryRuntime.abortRecord?_some,
-    ``GoLean.GoCore.RecoveryRuntime.runConfigWithAbort_witness,
     -- the string-panic members at the machine's abort (`StringPanic`)
-    ``GoLean.GoCore.Machine.renderPanicHead_string,
-    ``GoLean.GoCore.Machine.stringPanicHead_none_iff,
-    ``GoLean.GoCore.Machine.stringFirstLine?_bytes,
-    ``GoLean.GoCore.Machine.stepFn_string_abort,
-    ``GoLean.GoCore.Machine.stepFn_string_abort_refused,
-    ``GoLean.GoCore.Machine.runConfig_string_abort,
-    ``GoLean.GoCore.Machine.runConfig_string_abort_refused,
     -- the first-line renderer's byte facts (`PanicText`, `Machine`)
     ``GoLean.GoCore.PanicText.lfPrefix_valid,
     ``GoLean.GoCore.PanicText.firstLine_bytes,
     ``GoLean.GoCore.Machine.utf8String?_bytes,
     -- the contract regressions (`Tests/GoCoreContract.lean` §A/§B/§C)
-    ``GoLean.GoCore.ContractTests.recover_step_does_not_transport,
-    ``GoLean.GoCore.ContractTests.fixed_stream_not_existential_path,
     ``GoLean.GoCore.ContractTests.address_bound_admits_ill_typed,
-    ``GoLean.GoCore.ContractTests.both_pool_traces,
     ``GoLean.GoCore.ContractTests.print_before_panic,
     ``GoLean.GoCore.ContractTests.Interpreter.terminal_at_zero_fuel,
     ``GoLean.GoCore.ContractTests.Interpreter.actual_scope_restoration,
@@ -507,16 +379,10 @@ def exports : List Name := [
     ``GoLean.GoCore.ContractTests.Interpreter.equal_repanic_keeps_history,
     ``GoLean.GoCore.ContractTests.Interpreter.scope_and_zero_execution,
     ``GoLean.GoCore.ContractTests.Interpreter.write_keeps_both_actual_aliases,
-    ``GoLean.GoCore.ContractTests.AbortObserver.complete_chain_bytes_and_flags,
-    ``GoLean.GoCore.ContractTests.AbortObserver.stringPanicEntries?_map_entry,
     -- the renderer and member regressions (`Tests/PanicRendering.lean`, `Tests/StringPanicMembers.lean`)
     ``GoLean.PanicRenderingTests.equal_repanic_members,
     ``GoLean.PanicRenderingTests.invalid_utf8_first_line_refused,
-    ``GoLean.PanicRenderingTests.refusal_names_the_cause,
-    ``GoLean.StringPanicMembersTests.member_is_renderer,
-    ``GoLean.StringPanicMembersTests.generic_actual_abort,
-    ``GoLean.StringPanicMembersTests.actual_abort_pin_collapse,
-    ``GoLean.StringPanicMembersTests.actual_abort_refused]
+    ``GoLean.PanicRenderingTests.refusal_names_the_cause]
 
 /-- The abort-text helpers keep the constructive machine-helper boundary (no
 `Classical.choice`), although the correspondence layer admits the classical trio. -/
