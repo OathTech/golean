@@ -136,7 +136,9 @@ export RUN_WITH_TIMEOUT_ANNOUNCE=1   # exported: the xargs workers announce too
 
 # Invokes the ONCE-BUILT golean binary directly: `lake exe` per case pays
 # lake's startup (and a possible package lock) ~4x per case across the
-# nondet-oracle re-runs — resolved after the up-front `lake build`.
+# nondet-oracle re-runs — resolved after the up-front `lake build golean`
+# (named: the executable is not a default target since the library-only
+# defaults, [USER] 2026-10-21, release-readiness row 42).
 GOLEAN_BIN="$ROOT/.lake/build/bin/golean"
 lean() {
   run_with_timeout "$LEAN_TIMEOUT_SECONDS" "$GOLEAN_BIN" "$@"
@@ -498,7 +500,7 @@ build_rc=0
 # scripts/cap.sh: an argv prefix, because the wrapper execs its argv and a
 # shell function cannot be in it); the wrapper kills the whole process group
 # on timeout, so a capped build dies whole.
-run_with_timeout "$LAKE_BUILD_TIMEOUT_SECONDS" $(cap_argv) lake build || build_rc=$?
+run_with_timeout "$LAKE_BUILD_TIMEOUT_SECONDS" $(cap_argv) lake build golean || build_rc=$?
 if [[ "$build_rc" -eq 124 ]]; then
   echo "lake build TIMED OUT after ${LAKE_BUILD_TIMEOUT_SECONDS}s (LAKE_BUILD_TIMEOUT_SECONDS; no results published)" >&2
   exit 2

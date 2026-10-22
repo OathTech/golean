@@ -78,7 +78,7 @@ is the complete list of what the machine needs:
 
 ```
 scripts/setup-deps                       # goose, go, raft reference checkouts at the pinned revs (gitignored deps/; needs the network)
-lake build                               # the cold build; on an Oath box: CAPPED_MEM_MAX=64G capped lake build (64 G is the measured cold need)
+lake build                               # the cold build of the default targets (the libraries `lake check` verifies); on an Oath box: CAPPED_MEM_MAX=64G capped lake build (64 G is the measured cold need); the gate builds every target by name, the `golean` binary among them
 CAPPED_MEM_MAX=64G scripts/ci --diff     # the gate plus the differential corpus; records the baselines it then checks
 ```
 
@@ -134,11 +134,16 @@ the source contract are described in
 ## The gate
 
 The gate has two tiers. `scripts/ci` is the fast tier, run before any commit
-that touches runtime code: build, escape-hatch scans, eval tests, the wire and
-frontend checks, plus report-only speedbumps. `scripts/ci --diff` is the merge
-tier, which adds a fresh differential run of every corpus row against the
-tracked baselines. Each heavy step goes through the memory cap when the box
-has one (`scripts/cap.sh`). The standing rule is `CLAUDE.md`, «The gates».
+that touches runtime code: build, escape-hatch scans, the kernel replay, eval
+tests, the wire and frontend checks, plus report-only speedbumps. `scripts/ci
+--diff` is the merge tier, which adds a fresh differential run of every corpus
+row against the tracked baselines and the `lake check` speedbump (the
+toolchain's export and kernel replay of the default targets, about four
+minutes; `--inadvisably-no-sandbox` where `bwrap` cannot start, and the line
+says so). The owner's `lake check` outside any sandbox is the gate at claim
+points, `lake check --paranoid` at a release. Each heavy step goes through the
+memory cap when the box has one (`scripts/cap.sh`). The standing rule is
+`CLAUDE.md`, «The gates».
 
 ## Limits
 

@@ -12,14 +12,16 @@
 #   scripts/ci --diff   the merge gate — the fast tier plus a FRESH run of the
 #                       differential corpus (`go run` per case, every row, no
 #                       cached tier) and the negative corpus, judged against
-#                       the tracked baselines. Run it when you touched runtime
-#                       code; a merge to main needs it green.
+#                       the tracked baselines, and the `lake check` speedbump.
+#                       Run it when you touched runtime code; a merge to main
+#                       needs it green.
 #
-# Speedbumps (the document-vs-code consistency checks, and `lake check` without
-# its sandbox) run in both tiers under their own heading, REPORT-ONLY: a red one
-# never fails the gate; it is read at the merge ask and fixed or waived there,
-# by name. Self-tests of checkers (scripts/test-*) are not run here: run the
-# one for a script you change.
+# Speedbumps (the document-vs-code consistency checks in both tiers; under
+# --diff also the derived-artifact regeneration and `lake check`, about four
+# minutes) run under their own heading, REPORT-ONLY: a red one never fails the
+# gate; it is read at the merge ask and fixed or waived there, by name.
+# Self-tests of checkers (scripts/test-*) are not run here: run the one for a
+# script you change.
 #
 # Fail-closed rules kept from the old gate: an unknown flag refuses; a step that
 # cannot run is RED, never skipped; no recorded corpus run is a FAIL (unless
@@ -185,23 +187,89 @@ run_bump "AGENTS.md is the alias of CLAUDE.md (scripts/check-agents-alias)" ./sc
 run_bump "imported-goose verbatim at the pin (scripts/check-imported-goose)" ./scripts/check-imported-goose
 run_bump "memory-module raw call sites = inventory (scripts/check-mem-callsites)" bash scripts/check-mem-callsites
 
-# ── GATE: the build of every target. Warning-free, because a GoLean/ warning
-# replays into the runner's stdout and corrupts the JSON observation channel
-# (the 2026-07-23 phantom-drift incident). Tests/ is in the watch too (audit
-# item 5, 2026-10-12): a `sorry` in a test module is a warning, and the cold
-# build of 2026-10-12 (163 jobs, 64G cap, 8 min 37 s) had zero warnings
-# anywhere, so the wider watch costs nothing today.
-step "lake build (every library and executable; warning-free)"
-core_out="$(cap lake build 2>&1)"; core_rc=$?
-echo "$core_out" | tail -3 | sed 's/^/  /'
-core_warns="$(echo "$core_out" | grep -E '^warning: (GoLean/|GoLean\.lean|Main\.lean|Tests/)' || true)"
-if [ "$core_rc" -ne 0 ]; then bad "lake build (exit $core_rc)"
-elif [ -n "$core_warns" ]; then echo "$core_warns" | head -10; bad "lake build has GoLean/ or Tests/ warnings (a GoLean/ warning corrupts the runner JSON channel; a Tests/ one is a sorry or a dead declaration)"
-else ok "lake build (every target, warning-free)"; fi
+# ── GATE: the build of every target, EACH NAMED on the command line. The
+# default targets are the main-free libraries only ([USER] 2026-10-21,
+# release-readiness row 42: `lake check` imports every default module into
+# one environment and stops at the second `main`), so a bare `lake build`
+# would skip the executables and the `main`-bearing test libraries; the list
+# is parsed from lakefile.toml here, once, and the target-split check below
+# reads the same parse. Warning-free, because a GoLean/ warning replays into
+# the runner's stdout and corrupts the JSON observation channel (the
+# 2026-07-23 phantom-drift incident). Tests/ is in the watch too (audit item
+# 5, 2026-10-12): a `sorry` in a test module is a warning, and the cold build
+# of 2026-10-12 (163 jobs, 64G cap, 8 min 37 s) had zero warnings anywhere,
+# so the wider watch costs nothing today.
+#
+# lakefile_targets: one line per declared target — `lib <name> <module>...`
+# (a library's modules are its `globs`, each an exact module name; a library
+# without `globs` is listed with no modules and enumerated below as its root
+# module plus every module under the root's directory, the walk the kernel
+# replay does) or `exe <name> <root>`. Any other key in a target section, a
+# glob that is not an exact module name, or a target without a name prints an
+# `unsupported` line, and the build FAILS rather than build a set it cannot
+# name (extend the parser, deliberately).
+lakefile_targets() {
+  awk '
+    function flush(   i, n, a) {
+      if (kind == "") return
+      if (name == "") print "unsupported", kind, "section without a name"
+      else if (kind == "lib") print "lib", name, globs
+      else if (root == "") print "unsupported exe", name, "without a root"
+      else print "exe", name, root
+      kind = ""; name = ""; globs = ""; root = ""
+    }
+    /^\[\[lean_lib\]\]/ { flush(); kind = "lib"; next }
+    /^\[\[lean_exe\]\]/ { flush(); kind = "exe"; next }
+    /^\[/ { flush(); next }
+    kind == "" || /^[[:space:]]*(#|$)/ { next }
+    /^name = "[A-Za-z0-9_-]+"$/ { name = $0; sub(/^name = "/, "", name); sub(/"$/, "", name); next }
+    kind == "exe" && /^root = "[A-Za-z0-9_.]+"$/ { root = $0; sub(/^root = "/, "", root); sub(/"$/, "", root); next }
+    kind == "lib" && /^globs = \[.*\]$/ {
+      globs = $0; sub(/^globs = \[/, "", globs); sub(/\]$/, "", globs); gsub(/[",]/, " ", globs)
+      n = split(globs, a, " ")
+      for (i = 1; i <= n; i++) if (a[i] !~ /^[A-Za-z0-9_.]+$/) print "unsupported glob", name ":", a[i]
+      if (n == 0) print "unsupported empty globs", name
+      next
+    }
+    { print "unsupported", kind, name ":", $0 }
+    END { flush() }
+  ' lakefile.toml
+}
+lf_parse="$(lakefile_targets)"
+lf_unsupported="$(printf '%s\n' "$lf_parse" | grep '^unsupported' || true)"
+lf_all=(); lf_libs=(); lf_exes=(); lf_enum_bad=""
+while read -r kind name rest; do
+  case "$kind" in
+    lib)
+      lf_all+=("$name")
+      if [ -z "$rest" ]; then
+        if [ -f "$name.lean" ]; then
+          rest="$name"
+          [ -d "$name" ] && rest="$rest $(find "$name" -name '*.lean' -not -path '*/.lake/*' | sed 's|\.lean$||; s|/|.|g' | LC_ALL=C sort | tr '\n' ' ')"
+        else lf_enum_bad="$lf_enum_bad $name"; fi
+      fi
+      lf_libs+=("$name $rest") ;;
+    exe) lf_all+=("$name"); lf_exes+=("$name") ;;
+  esac
+done <<< "$lf_parse"
+step "lake build (every declared library and executable, each named; warning-free)"
+if [ -n "$lf_unsupported" ] || [ -n "$lf_enum_bad" ] || [ "${#lf_all[@]}" -eq 0 ]; then
+  [ -n "$lf_unsupported" ] && printf '%s\n' "$lf_unsupported" | sed 's/^/  /' >&2
+  [ -n "$lf_enum_bad" ] && echo "  library without globs and without a root module file:$lf_enum_bad" >&2
+  core_rc=2; bad "lake build NOT RUN (lakefile.toml did not parse into a target list — the lines above; extend lakefile_targets in scripts/ci deliberately)"
+else
+  echo "  targets: ${lf_all[*]}"
+  core_out="$(cap lake build "${lf_all[@]}" 2>&1)"; core_rc=$?
+  echo "$core_out" | tail -3 | sed 's/^/  /'
+  core_warns="$(echo "$core_out" | grep -E '^warning: (GoLean/|GoLean\.lean|Main\.lean|Tests/)' || true)"
+  if [ "$core_rc" -ne 0 ]; then bad "lake build (exit $core_rc)"
+  elif [ -n "$core_warns" ]; then echo "$core_warns" | head -10; bad "lake build has GoLean/ or Tests/ warnings (a GoLean/ warning corrupts the runner JSON channel; a Tests/ one is a sorry or a dead declaration)"
+  else ok "lake build (every declared target by name: ${#lf_all[@]} — ${lf_all[*]}; warning-free)"; fi
+fi
 
 # Every Tests/ module must be named by a lakefile.toml glob, or the build above
 # skipped it silently (D2: this set check replaces the receipt registry).
-step "lakefile ownership (every Tests/*.lean in a glob; every declared target a default target)"
+step "lakefile ownership (every Tests/*.lean in a glob)"
 tests_unowned=""
 for tf in Tests/*.lean; do
   tm="Tests.$(basename "$tf" .lean)"
@@ -209,16 +277,73 @@ for tf in Tests/*.lean; do
 done
 if [ -z "$tests_unowned" ]; then ok "Tests/ library ownership (every module named by a lakefile glob)"
 else echo "  not in any lakefile.toml glob:$tests_unowned" >&2; bad "Tests/ library ownership (unowned:$tests_unowned — add to a lakefile.toml glob)"; fi
-# ...and every library and executable the lakefile declares is a default
-# target, or the build above skipped it silently (audit 2026-10-12, item 3).
-lf_targets="$(tr -d '\n' < lakefile.toml | sed -n 's/.*defaultTargets = \[\([^]]*\)\].*/\1/p')"
-lf_missing=""
-for nm in $(grep -E '^name = "' lakefile.toml | sed -E 's/^name = "([^"]+)"/\1/'); do
-  case "$lf_targets" in *"\"$nm\""*) ;; *) lf_missing="$lf_missing $nm" ;; esac
-done
-if [ -z "$lf_targets" ]; then bad "lakefile targets (defaultTargets could not be read — the build's target set is unverifiable)"
-elif [ -z "$lf_missing" ]; then ok "lakefile targets (every declared library and executable is a default target)"
-else echo "  declared but not in defaultTargets:$lf_missing" >&2; bad "lakefile targets (not built by the default build:$lf_missing — add to defaultTargets)"; fi
+
+# ── GATE: the default-target split ([USER] 2026-10-21, release-readiness row
+# 42; it replaced «every declared target is a default target», audit
+# 2026-10-12 item 3). Every library that defines no top-level `main` — the
+# proof and pin holders — IS a default target, or `lake check` never sees it;
+# every executable and every library with a `main`-bearing module is NOT (a
+# second `main` stops `lake check`'s single-environment export) and is built
+# by name above. `main` is read from each module's built .ilean — the
+# elaborated constant names, so a namespaced `Tests.X.main` is not `main` —
+# which is why the check runs only after a green build, and FAILS when an
+# .ilean is missing or not the shape it reads. Both directions fail closed.
+step "lakefile targets (the default-target split: main-free libraries default; executables and main-bearing libraries built by name)"
+if [ "$core_rc" -ne 0 ]; then
+  bad "lakefile target split NOT CHECKED (the lake build failed, exit $core_rc — no .ilean to read)"
+else
+  lf_defaults="$(tr -d '\n' < lakefile.toml | sed -n 's/.*defaultTargets = \[\([^]]*\)\].*/\1/p' | tr -d '",')"
+  split_out="$(LF_LIBS="$(printf '%s\n' "${lf_libs[@]}")" LF_EXES="${lf_exes[*]}" LF_DEFAULTS="$lf_defaults" python3 -I - <<'PY'
+import json, os, sys
+defaults = os.environ["LF_DEFAULTS"].split()
+exes = os.environ["LF_EXES"].split()
+libs = [l.split() for l in os.environ["LF_LIBS"].splitlines() if l.strip()]
+bad = []
+def has_main(mod):
+    p = os.path.join(".lake", "build", "lib", "lean", *mod.split(".")) + ".ilean"
+    try:
+        with open(p, encoding="utf-8") as f:
+            d = json.load(f)
+    except (OSError, ValueError) as e:
+        bad.append(f"{mod}: cannot read {p} ({e}) — the build left no readable .ilean for it"); return None
+    decls = d.get("decls") if isinstance(d, dict) else None
+    if not isinstance(decls, dict) or d.get("module") != mod:
+        bad.append(f"{mod}: {p} is not the .ilean shape this check reads (version {d.get('version')!r}, module {d.get('module')!r}) — the format moved; re-derive the check"); return None
+    return "main" in decls
+known = set()
+for name, *mods in libs:
+    known.add(name)
+    states = {m: has_main(m) for m in mods}
+    carriers = [m for m, v in states.items() if v]
+    unreadable = [m for m, v in states.items() if v is None]
+    is_default = name in defaults
+    shape = ("main in " + ", ".join(carriers)) if carriers else ("UNREADABLE .ilean: " + ", ".join(unreadable)) if unreadable else "main-free"
+    print(f"  lib {name}: {'default' if is_default else 'built by name'}; {shape}; {len(mods)} module(s)")
+    if carriers and is_default:
+        bad.append(f"library {name} is a default target but defines a top-level main in {', '.join(carriers)} — a second main stops lake check; drop it from defaultTargets (it is built by name)")
+    elif unreadable:
+        pass  # already a FAIL line each, above
+    elif not carriers and not is_default:
+        bad.append(f"library {name} defines no top-level main (a proof/pin holder) but is NOT a default target — lake check never sees it; add it to defaultTargets")
+for name in exes:
+    known.add(name)
+    print(f"  exe {name}: {'DEFAULT' if name in defaults else 'built by name'}")
+    if name in defaults:
+        bad.append(f"executable {name} is a default target — its root's main stops lake check; drop it from defaultTargets (it is built by name)")
+for d in defaults:
+    if d not in known:
+        bad.append(f"defaultTargets names {d!r}, which is not a declared library or executable")
+if not libs or not defaults:
+    bad.append("no library parsed or no default target read — the split is unverifiable")
+for b in bad:
+    print("  " + b)
+sys.exit(1 if bad else 0)
+PY
+)"; split_rc=$?
+  printf '%s\n' "$split_out"
+  if [ "$split_rc" -eq 0 ]; then ok "lakefile targets (defaults = the main-free libraries: $lf_defaults; executables and main-bearing libraries built by name)"
+  else bad "lakefile targets (the default-target split is broken or unverifiable — exit $split_rc; see above)"; fi
+fi
 
 # ── GATE: the kernel replay of the built GoLean oleans (the Codex zero-context
 # pass, F4; release-readiness row 40, [USER]-ruled 2026-10-13). leanchecker
@@ -245,22 +370,6 @@ else
     printf '%s\n' "$kr_out" | tail -25 | sed 's/^/  /'
     bad "kernel replay (exit $kr_rc, ${kr_n:-no} module count — a killed, refused, incomplete or empty replay is NOT a pass; see above)"
   fi
-fi
-
-# ── SPEEDBUMP: `lake check` (toolchains ≥ 4.35: build, export, kernel replay
-# of the export, non-standard axioms refused). scripts/check-lake-check runs
-# it sandboxed where `bwrap` can start (unprivileged user namespaces) and
-# with `--inadvisably-no-sandbox` where it cannot (a sandboxed agent
-# session), saying which; REPORT-ONLY either way — the gate is the owner's
-# sandboxed `lake check` at claim points (`--paranoid` at the release claim
-# point): CLAUDE.md «The gates», docs/operational-lessons.md «Lean 4.35».
-# Not run when the build failed.
-step "lake check (speedbump; scripts/check-lake-check: sandboxed where bwrap can start)"
-if [ "$core_rc" -ne 0 ]; then
-  echo "  not run: the lake build above failed (exit $core_rc)"
-  bump_red "lake check NOT RUN (the lake build failed, exit $core_rc)"
-else
-  run_bump "lake check (scripts/check-lake-check; sandboxed where bwrap can start, else --inadvisably-no-sandbox — the line above says which)" bash scripts/check-lake-check
 fi
 
 # ── GATE: the machine check of totality — a harness imports every GoLean/
@@ -341,6 +450,26 @@ if [ "$RUN_DIFF" -eq 1 ]; then
     else diff "$derive_tmp/it.fresh" "$derive_tmp/it.tracked" 2>&1 | head -5 | sed 's/^/  /'; bump_red "tools/nativefrontend/inittask-std.tsv DIFFERS from a fresh scripts/gen-inittask-table run"; fi
   else tail -5 "$derive_tmp/it.out" | sed 's/^/  /'; bump_red "inittask-std.tsv regeneration FAILED (the check could not run)"; fi
   rm -rf "$derive_tmp"
+
+  # ── SPEEDBUMP, --diff tier only (about four minutes): `lake check`
+  # (toolchains ≥ 4.35) builds the default targets — the main-free libraries
+  # — exports them, replays the export through the kernel and refuses
+  # non-standard axioms. scripts/check-lake-check runs it sandboxed where
+  # `bwrap` can start (unprivileged user namespaces) and with
+  # `--inadvisably-no-sandbox` where it cannot (a sandboxed agent session),
+  # saying which; REPORT-ONLY either way — the gate is the owner's `lake
+  # check` outside the sandbox at claim points, `--paranoid` at the release
+  # claim point ([USER] 2026-10-20; the default targets ruled 2026-10-21,
+  # release-readiness row 42): CLAUDE.md «The gates», docs/operational-
+  # lessons.md «Lean 4.35». The 8-second kernel replay stays in the fast
+  # tier (no sandbox; the on-disk olean set). Not run when the build failed.
+  step "lake check (speedbump, --diff tier; scripts/check-lake-check: the default targets exported and replayed; sandboxed where bwrap can start)"
+  if [ "$core_rc" -ne 0 ]; then
+    echo "  not run: the lake build above failed (exit $core_rc)"
+    bump_red "lake check NOT RUN (the lake build failed, exit $core_rc)"
+  else
+    run_bump "lake check (scripts/check-lake-check, --diff tier; the main-free libraries built, exported, kernel-replayed; sandboxed where bwrap can start, else --inadvisably-no-sandbox — its line says which)" bash scripts/check-lake-check
+  fi
 fi
 
 # ── GATE: the baselines. judge_record judges a recorded corpus run against its

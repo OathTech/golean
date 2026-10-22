@@ -15,12 +15,17 @@
 # not an independent verifier. Since the 4.35 pin (lane toolchain/lean-4.35-1020,
 # 2026-10-21) the toolchain's `lake check` is the stronger form — export, kernel
 # replay of the export, non-standard axioms refused, `--paranoid` external
-# kernels — but its bwrap sandbox needs user namespaces a sandboxed session may
-# lack (scripts/check-lake-check detects which form can run), and on this project
-# it cannot start at all (its export imports every default module into one
-# environment; several default modules define a top-level `main`), so it is the
-# report-only speedbump scripts/check-lake-check and THIS script stays the gate:
-# no bwrap, and the module-set equality below catches an unbuilt or stale olean.
+# kernels — and since the library-only default targets ([USER] 2026-10-21,
+# release-readiness row 42) it runs on this project: the `--diff` tier's
+# report-only speedbump (scripts/check-lake-check, about four minutes) and the
+# owner's gate outside the sandbox at claim points. BOTH stay, one reason each:
+# this script replays the ON-DISK olean set and checks it equal to the module
+# set (an unbuilt or stale olean is named; `lake check` exports only what the
+# default targets import), needs no bwrap, and costs 8 s in the fast tier;
+# `lake check` covers the default test libraries' modules (the pins in
+# Tests/GoCoreContract.lean, the audit harness, the admission facts), which
+# this `GoLean`-prefix replay does not, and adds the export path and, under
+# `--paranoid`, the external kernels.
 #
 # Fail closed, four ways, and never a skip:
 #   * BEFORE the replay, the set of GoLean oleans on disk must EQUAL the set of

@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # The `lake check` SPEEDBUMP (lane toolchain/lean-4.35-1020, 2026-10-21; release-readiness row
 # 42, [USER]-ruled 2026-10-20: bump to Lean v4.35.0 and add `lake check` to the gate script as a
-# report-only speedbump inside the sandbox).
+# report-only speedbump inside the sandbox; the open half ruled 2026-10-21, lane
+# gate/lake-check-1021: the default targets are the main-free LIBRARIES only, so the check can
+# run — before that it stopped at the second top-level `main` — and it sits in the `--diff`
+# tier of scripts/ci, about four minutes).
 #
 # `lake check` (toolchains >= 4.35) builds the default targets, exports every default module's
 # declarations (`leanexport`), replays the export through the kernel (`leanchecker`) and refuses
@@ -13,13 +16,17 @@
 # set on «loopback: Failed to create NETLINK_ROUTE socket», a box without bwrap has none — it runs with
 # `--inadvisably-no-sandbox` (the toolchain itself prints «this run is not trustworthy»). The
 # line this script prints says which form ran. Either way it is a SPEEDBUMP: report-only, read
-# at the merge ask by name. The GATE is the owner's sandboxed `lake check` at claim points,
-# `--paranoid` at the release claim point (CLAUDE.md «The gates»; docs/operational-lessons.md,
-# «Lean 4.35»). The kernel replay gate stays `scripts/check-kernel-replay` (leanchecker over the
-# built oleans; no bwrap).
+# at the merge ask by name. The GATE is the owner's `lake check` outside the sandbox at claim
+# points, `--paranoid` at the release claim point (CLAUDE.md «The gates»; docs/operational-
+# lessons.md, «Lean 4.35»). The kernel replay gate stays `scripts/check-kernel-replay` in the
+# fast tier: no bwrap, 8 s, and it checks the on-disk olean set against the module set, which
+# `lake check` (exporting what the default targets import) does not; `lake check` in turn
+# covers the default test libraries' modules (the pins in Tests/GoCoreContract.lean, the audit
+# harness, the admission facts), which the `GoLean`-prefix replay does not.
 #
 # Fail closed: any nonzero exit of `lake check` is a FAIL that names the toolchain's first error
-# line; a run that prints no axiom verdict («Uses no axioms» / «Uses axioms: …») is a FAIL too.
+# line; a run that prints no acceptance line («… kernel accepts …») or no axiom verdict («Uses
+# no axioms» / «Uses axioms: …») is a FAIL too; a green run prints both lines.
 # The line this script prints carries the sandbox form, the exit code, the wall and the peak RSS
 # of the checker process tree (GNU time's %M is the largest single process; the cgroup peak is
 # the gate's). The run goes through `cap` (scripts/cap.sh): the box tool `capped` when it is on
@@ -66,12 +73,13 @@ else
   cost="wall ${wall} s; peak RSS unmeasured (/usr/bin/time absent)"
 fi
 verdict="$(grep -m1 -E '^Uses (no axioms|axioms: )' "$log" || true)"
-echo "lake check, $form (speedbump; the owner's sandboxed run is the gate): exit $rc; $cost; ${verdict:-no axiom verdict printed}"
-if [ "$rc" -ne 0 ] || [ -z "$verdict" ]; then
+accepted="$(grep -m1 -E 'kernel accepts' "$log" || true)"
+echo "lake check, $form (speedbump; the owner's run outside the sandbox is the gate): exit $rc; $cost; ${accepted:-no acceptance line printed}; ${verdict:-no axiom verdict printed}"
+if [ "$rc" -ne 0 ] || [ -z "$verdict" ] || [ -z "$accepted" ]; then
   first_err="$(grep -m1 -E '^error: ' "$log" || true)"
   echo "check-lake-check: FAIL — ${first_err:-lake check exited $rc without an error line}" >&2
   echo "check-lake-check: the log is kept at $log" >&2
   exit 1
 fi
 rm -f "$log"
-echo "lake check speedbump: PASS — $form; the default targets export, replay through the kernel and rest on standard axioms only ($verdict)"
+echo "lake check speedbump: PASS — $form; $cost; the default targets export and replay through the kernel on standard axioms only («$accepted»; «$verdict»)"

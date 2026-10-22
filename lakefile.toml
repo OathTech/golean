@@ -1,13 +1,26 @@
 name = "GoLean"
 version = "0.1.0"
-# Every library and executable is a default target (gate cull 2026-10-12,
-# docs/2026-10-12_gate-cull-plan.md §3.2, [USER]-ruled D2): one `lake build`
-# builds everything, which is how «every Tests module has an executed build»
-# is kept without a receipt registry. scripts/ci checks that every
-# Tests/*.lean is named by a glob below.
-defaultTargets = ["golean", "gocore-eval-tests", "GoLean", "TestsData", "EvalTests",
-  "AdmissionTests", "DeclarationTests", "MethodIdentityTests", "UnseqSchedulerTests",
-  "UnseqWireTests", "GoCoreAuditTests", "EquationTests"]
+# The default targets are the LIBRARIES THAT DEFINE NO TOP-LEVEL `main` — the
+# proof and pin holders ([USER] 2026-10-21, release-readiness row 42's open
+# half, paraphrased: `lake check` exports every default target's modules into
+# ONE environment and stops at the second `main`; the defaults become the
+# libraries only, and the gate builds every other target by name). This
+# narrows the 2026-10-12 «every library and executable is a default target»
+# arrangement (docs/2026-10-12_gate-cull-plan.md §3.2, D2) for the default
+# SET only: scripts/ci still builds every declared target, each named on its
+# `lake build` line, and still checks that every Tests/*.lean is in a glob.
+# Built by name, NOT default ([AGENT] 2026-10-21, each from its built .ilean):
+# the executables `golean` (Main) and `gocore-eval-tests` (Tests.GoCoreEval),
+# and the libraries whose modules define `main` for `lean --run` — EvalTests
+# (Tests.GoCoreEval), DeclarationTests (Tests.StrictJsonParse),
+# MethodIdentityTests (Tests.MethodIdentity), UnseqSchedulerTests
+# (Tests.UnseqScheduler), UnseqWireTests (Tests.UnseqWire), EquationTests
+# (Tests.EquationClient: its 310 pin theorems sit under that `main`, so they
+# are outside `lake check`; scripts/check-equations builds and runs them).
+# scripts/ci checks this split both ways from the built .ilean files: a
+# main-free library that is not default FAILS, a default executable or
+# main-bearing library FAILS.
+defaultTargets = ["GoLean", "TestsData", "AdmissionTests", "GoCoreAuditTests"]
 
 [[lean_lib]]
 name = "GoLean"

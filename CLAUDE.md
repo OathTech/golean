@@ -198,19 +198,20 @@ Everything else is untrusted tooling.
 - **Speedbumps report.** The same run prints the consistency checks (bugs
   index, feature tags, spec anchors, stdlib register, the
   `AGENTS.md` alias, imported-goose verbatim, memory call sites; under
-  `--diff` also the derived-artifact regeneration)
-  and `lake check` (`scripts/check-lake-check`: sandboxed where `bwrap`
-  can start, `--inadvisably-no-sandbox` where it cannot, saying which; the
-  toolchain's build + export + kernel replay + non-standard-axiom
-  refusal) under their own heading. A red one never fails the gate; it is
-  read at the merge ask and fixed or waived there, by name. `lake check`
-  is RED BY CONSTRUCTION on this lakefile, sandboxed or not: it imports
-  every default module into one environment, and several default modules
-  define a top-level `main`. Until the default-target ruling (backlog row
-  42) lands, the kernel replay above is the standing check; once that
-  ruling makes `lake check` runnable, the owner's sandboxed run (where
-  `bwrap` can start: not inside a sandboxed agent session) is the gate at claim points,
-  `lake check --paranoid` at the release claim point ([USER] 2026-10-20).
+  `--diff` also the derived-artifact regeneration and `lake check`
+  (`scripts/check-lake-check`, about four minutes: the toolchain's build +
+  export + kernel replay + non-standard-axiom refusal over the default
+  targets, which are the main-free libraries `GoLean`, `TestsData`,
+  `AdmissionTests`, `GoCoreAuditTests` — the executables and the
+  `main`-bearing test libraries are built by name, [USER] 2026-10-21,
+  backlog row 42; sandboxed where `bwrap` can start,
+  `--inadvisably-no-sandbox` where it cannot, saying which)) under their
+  own heading. A red one never fails the gate; it is read at the merge ask
+  and fixed or waived there, by name. The owner's `lake check` outside the
+  sandbox is the gate at claim points, `lake check --paranoid` at the
+  release claim point ([USER] 2026-10-20); the 8-second kernel replay
+  above stays in the fast tier (no sandbox; it checks the on-disk olean
+  set, which `lake check` does not).
 - **Self-tests are not gates.** `scripts/test-*` run by hand when the
   script they test changes.
 - The pre-merge adversarial audit: the ask is unconditional; scope and
