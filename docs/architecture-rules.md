@@ -107,8 +107,10 @@ lane `HANDOFF.md` + design-note pattern it describes.
 - Keep frontend (native emission/lowering) failures separate from GoCore
   semantic failures. Prefer fixing cases that reach Lean and produce a
   differential mismatch before chasing broad frontend coverage.
-- For Lean changes, run `lake build` before declaring the work complete. Add
-  focused differential runs for the feature touched.
+- For Lean changes, run `scripts/ci` before declaring the work complete (its
+  build names every target; a bare `lake build` builds only the default
+  targets, the main-free libraries, since 2026-10-21). Add focused
+  differential runs for the feature touched.
 - For cleanup work, record intentional regressions with the case id, previous
   and new stage/result, removed bad assumption, and intended clean fix. Never
   count `unsupported`, `stuck`, frontend failure, or JSON/lowering failure as

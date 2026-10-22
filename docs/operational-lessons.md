@@ -748,6 +748,7 @@ used constants and follow the ones whose axioms contain `Classical.choice`
 | `lake check --from-export <that> --inadvisably-no-sandbox` | main's set: 133 s, 1.6 GB; the tip: 150 s; both «Lean default kernel accepts the solution; Uses axioms: propext, Quot.sound, Classical.choice» |
 | `capped lake check --inadvisably-no-sandbox`, the library-only defaults (2026-10-22, lane `gate/lake-check-1021`; 32G cap, by hand) | probe: 212 s wall, largest process 2.7 GB; the by-hand run at the tip: 204.6 s wall, largest process 2.7 GB (2,749,232 KB); both «Lean default kernel accepts the solution», «Uses axioms: propext, Quot.sound, Classical.choice», rc 0 |
 | the same inside `CAPPED_MEM_MAX=64G capped scripts/ci --diff` (the `--diff`-tier speedbump) | wall 203.7 s; largest process 2,687 MB; PASS — «Lean default kernel accepts the solution», «Uses axioms: propext, Quot.sound, Classical.choice», no sandbox (bwrap: «loopback: Failed to create NETLINK_ROUTE socket: Operation not permitted»); the whole merge tier 710 s wall at LEAN_NUM_THREADS=8 on a warm tree (the fresh corpus runs included), RESULT: PASS, no red speedbump |
+| the export alone (`LAKE_CHECK_EXPORT=1 capped lake check > export.ndjson`, Lake's build-and-export half) and the four working bundled kernels on it by hand, as Lake invokes them (`LEAN_ABORT_ON_PANIC=1`, the export path last; the box default cap) | export 34.6 s, 2.7 GB, 0.95 GB / 16.5 M lines; `leanchecker-paranoid --silent --from-export` 224.8 s, 1.7 GB, exit 0 (silent); `lean4lean --import` 235.6 s, 1.4 GB, «checked 178476 declarations»; `con-leche` 26.8 s, 6.6 GB, «accepted 178479 declarations (--verified)»; `con-ron` 17.6 s, 3.4 GB, «accepted 178479 declarations (--verified)»; the default kernel `leanchecker --silent --from-export` 154.0 s, 1.5 GB, exit 0 — about 9 min for the export plus the four, `docs/release.md` §3 (a) |
 | `CAPPED_MEM_MAX=64G capped lake check --paranoid --inadvisably-no-sandbox` (the five external kernels; the cap raised deliberately for the measurement) | 975.6 s wall; largest process 42.2 GB (44,257,920 KB — OVER the 32G box default, which would kill it: run it under 64G); Lean's paranoid kernel, lean4lean (178,476 declarations), con-leche and con-ron (178,479 each, --verified) and the default kernel all accept; nanoda REJECTS by crashing — «thread 'thread_3' has overflowed its stack; fatal runtime error: stack overflow, aborting», «error: nanoda exited with 134» — a crash in nanoda's own worker thread on this export, not a kernel rejection of a named declaration; rc 1 overall. Not chased (the lane brief: do not loop on it); whether it reproduces outside the sandbox is the owner's run to say |
 
 **`lake check` at this project — LANDED 2026-10-22 (lane
@@ -778,13 +779,31 @@ module's built `.ilean` (the elaborated constant names, so a namespaced
 `Tests.X.main` is not `main`; an unreadable or reshaped `.ilean` is a FAIL,
 never «main-free»): a main-free library that is not default, a default
 executable or `main`-bearing library, a default name no target declares —
-each a FAIL. Two consequences to know: `Tests/EquationClient.lean`'s 310
-pin theorems sit under that module's `main` and are therefore OUTSIDE
-`lake check` (built and run by `scripts/check-equations`; turning the
-`lean --run` mains into build-time checks would bring them in and is a
-separate change under `Tests/`); and `scripts/diff-coverage`'s up-front
-build names `golean`, which is no longer a default (a bare `lake build`
-now builds the libraries only — the README's cold-build line says so).
+each a FAIL. The COVERAGE GAP this leaves (review F3, 2026-10-22): ten
+modules are outside BOTH kernel checks — not default targets, so not in
+`lake check`'s export, and not `GoLean.*`, so not in the replay's prefix:
+`Main`, `Tests.GoCoreEval`, `Tests.DeclarationWire`,
+`Tests.StrictJsonParse`, `Tests.DeclarationUnicode`, `Tests.MethodIdentity`,
+`Tests.UnseqHarness`, `Tests.UnseqScheduler`, `Tests.UnseqWire`,
+`Tests.EquationClient`. Two of them carry theorems:
+`Tests/EquationClient.lean` (296 equation pins and 12 facts, plus two
+witnesses, under its `main`; built and run by `scripts/check-equations`)
+and `Tests/MethodIdentity.lean` (12: `requirement_identity_is_semantic`,
+`method_identity_is_semantic`, `private_same_package_accepted`,
+`private_cross_package_rejected`, `pointer_inherits_private_value`,
+`value_does_not_inherit_private_pointer`, `variadic_is_part_of_signature`,
+`nil_text_ignores_foreign_declaration`,
+`nil_text_promoted_entry_outside_family`,
+`nil_text_requires_matching_package`, `private_targets_are_distinct`,
+`utf8_target_vector`; run by `scripts/check-method-identity`). Those are
+kernel-checked at elaboration (the build) but NOT replayed against
+tampering by either check. The remedy is a follow-up, not made here: turn
+the `lean --run` `main`s into build-time checks (as the enrollment `#eval`
+in `Tests/EquationClient.lean` already is), after which the libraries
+become main-free and default, and `lake check` covers them. Also:
+`scripts/diff-coverage`'s up-front build names `golean`, which is no
+longer a default (a bare `lake build` now builds the libraries only — the
+README's cold-build line says so).
 `scripts/check-lake-check` is the SPEEDBUMP, in the `--diff` tier only
 (about four minutes): it probes `bwrap` with Lake's own flags, runs
 sandboxed where that starts and `--inadvisably-no-sandbox` where it does
@@ -796,7 +815,7 @@ owner's `lake check` outside the sandbox is the gate at claim points,
 `docs/release.md` §3). The measurements are in the table above.
 
 **Both kernel checks stay, one reason each.** `scripts/check-kernel-replay`
-(fast tier, 9 s, 4.4 GB at 4 threads over 50 modules) replays the ON-DISK
+(fast tier; 50 modules: 9.1 s, 4.4 GB at 4 threads, 6.8 s, 9.1 GB at 8) replays the ON-DISK
 `GoLean` olean set and checks it equal to the module set on disk — an
 unbuilt or stale olean is named with its remedy, which `lake check`
 (exporting what the default targets import) cannot see — and needs no

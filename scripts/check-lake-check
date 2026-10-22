@@ -19,7 +19,7 @@
 # at the merge ask by name. The GATE is the owner's `lake check` outside the sandbox at claim
 # points, `--paranoid` at the release claim point (CLAUDE.md «The gates»; docs/operational-
 # lessons.md, «Lean 4.35»). The kernel replay gate stays `scripts/check-kernel-replay` in the
-# fast tier: no bwrap, 8 s, and it checks the on-disk olean set against the module set, which
+# fast tier: no bwrap, 9.1 s at 4 threads (6.8 s at 8), and it checks the on-disk olean set against the module set, which
 # `lake check` (exporting what the default targets import) does not; `lake check` in turn
 # covers the default test libraries' modules (the pins in Tests/GoCoreContract.lean, the audit
 # harness, the admission facts), which the `GoLean`-prefix replay does not.

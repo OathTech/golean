@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Semantics-owned admission check; no Iris dependency. Not a ci step since the
-# 2026-10-12 gate cull (AdmissionTests builds in the default lake build; the
-# poison/elaboration controls went, D3): --lean-only is the inventory
-# preflight plus the build; the full opt-in check also re-emits the fixture
-# and compares it with Go.
+# 2026-10-12 gate cull (AdmissionTests is a default target — still, under the
+# library-only defaults of 2026-10-21; the poison/elaboration controls went,
+# D3): --lean-only is the inventory preflight plus the build; the full opt-in
+# check also re-emits the fixture and compares it with Go, which needs the
+# golean binary — built by name, since it is no longer a default target.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 . "$ROOT/scripts/cap.sh"
@@ -16,7 +17,7 @@ esac
 python3 tools/admission-check.py preflight
 cap lake build AdmissionTests
 if [[ $# = 0 ]]; then
-  cap lake build
+  cap lake build golean
   cap lake env python3 tools/admission-check.py artifact
   GOLEAN_COVERAGE_ARTIFACTS=artifacts/admission \
     scripts/diff-coverage Tests/admission-fixture/manifest.tsv

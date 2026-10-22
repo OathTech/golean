@@ -60,14 +60,41 @@ push rule). Pushing the tag is a separate sign-off.
    predicates (§1.6) with their counts and sources (`scripts/check-bugs.sh`'s summary line, the open `docs/BUGS.md`
    entries, `artifacts/coverage/latest.tsv`, the latitude inventory).
 2. Run the audit ask on the branch (CLAUDE.md, merge protocol step 3); merge on sign-off.
-3. At the merged tip, on a clean tree: `capped scripts/ci --diff` (§1.3), then, outside any sandbox, `lake check
-   --paranoid` (the release claim-point gate, CLAUDE.md «The gates»: the default targets exported, replayed through
-   Lean's kernel and the five bundled external kernels, non-standard axioms refused; the in-gate speedbump is the same
-   check without the external kernels; it needs the 64G cap, `CAPPED_MEM_MAX=64G`, on an Oath box). A red run of
-   either stops the procedure; nothing is re-pinned to make it green. Measured 2026-10-22 inside the sandbox: four of
-   the five external kernels accept and nanoda crashes with a stack overflow in its own worker thread
-   (`docs/operational-lessons.md`, «Lean 4.35»), so the release claim needs that resolved — a nanoda run that
-   completes outside the sandbox, or a [USER] ruling on the kernel set — before step 5.
+3. At the merged tip, on a clean tree: `capped scripts/ci --diff` (§1.3), then the claim-point kernel check in the
+   form that exists today (every figure below measured 2026-10-22 on this box under the nono agent sandbox with
+   `--inadvisably-no-sandbox`, i.e. NOT under Lake's `bwrap` sandbox; `docs/operational-lessons.md`, «Lean 4.35»):
+   - (a) The plain `lake check` is the claim-point gate — the literal command, on an Oath box outside the agent
+     sandbox: `CAPPED_MEM_MAX=64G capped lake check`. Expected: «Lean default kernel accepts the solution», «Uses
+     axioms: propext, Quot.sound, Classical.choice», exit 0, about 3.5 min, largest process 2.7 GB. Exit 2 with a
+     `bwrap` line means Lake's sandbox cannot start there — unverified on this box from inside the agent sandbox
+     (`/usr/bin/bwrap` is not setuid, `kernel.apparmor_restrict_unprivileged_userns=1`, the AppArmor profiles are
+     unreadable from here) — and then the only form is `lake check --inadvisably-no-sandbox`, which the toolchain
+     labels «not trustworthy»: there is no sandboxed gate on that box, and the release record (step 4) must say so.
+     PLUS, on the same export, the four bundled external kernels that work, run by hand exactly as Lake invokes them
+     (`Lake/CLI/Check.lean`, `bundledKernels` and `runExternalKernel`: `LEAN_ABORT_ON_PANIC=1`, the export path as
+     the last argument; `T` is the toolchain's `bin`, `~/.elan/toolchains/leanprover--lean4---v4.35.0/bin`); the box
+     default cap suffices for these (the largest is con-leche at 6.6 GB):
+
+     ```
+     LAKE_CHECK_EXPORT=1 capped lake check > export.ndjson          # Lake's build-and-export half alone: 35 s, 2.7 GB; a 0.95 GB, 16.5 M-line export
+     LEAN_ABORT_ON_PANIC=1 capped $T/leanchecker-paranoid --silent --from-export export.ndjson   # silent; exit 0 = accepts (225 s, 1.7 GB)
+     LEAN_ABORT_ON_PANIC=1 capped $T/lean4lean --import export.ndjson       # «checked 178476 declarations», exit 0 (236 s, 1.4 GB)
+     LEAN_ABORT_ON_PANIC=1 capped $T/con-leche export.ndjson                # «con-leche: accepted 178479 declarations (--verified)», exit 0 (27 s, 6.6 GB)
+     LEAN_ABORT_ON_PANIC=1 capped $T/con-ron export.ndjson                  # «con-ron: accepted 178479 declarations (--verified)», exit 0 (18 s, 3.4 GB)
+     ```
+
+     About 9 min in all (the declaration counts move with the tree; what matters is exit 0 and the acceptance line of
+     each). Lake itself offers no kernel subset: `lake check --paranoid` runs all five bundled kernels or none
+     (`Check.lean:623`; `enable_nanoda` / `external_kernels` are `lake comparator`'s configuration, not `check`'s).
+   - (b) `lake check --paranoid` (`CAPPED_MEM_MAX=64G capped lake check --paranoid`; 975 s, largest process 42 GB)
+     becomes the release command once nanoda is fixed upstream. Today it is red, deterministically and independent
+     of the sandbox: `nanoda_bin` 0.4.19 crashes on this export with Lake's own configuration (`num_threads` 4, the
+     trio permitted, `nat_extension` and `string_extension` on) — «thread 'thread_3' has overflowed its stack» /
+     «fatal runtime error: stack overflow, aborting», SIGABRT, exit 134 — after about 249 s at 43.5 GB, twice on the
+     export alone; `RUST_MIN_STACK=4G` is ignored (nanoda sizes its worker stacks itself; its help has no stack
+     option); the other four kernels and Lean's own accept the same export. That is the report to file upstream.
+
+   A red run of the gate or of any kernel in (a) stops the procedure; nothing is re-pinned to make it green.
 4. Write the release record — a short section at the top of the frozen changelog: tag name, commit, toolchain pins,
    the gate run's result line, the three predicates — and commit it on a records branch merged on sign-off. (The record
    cannot name its own commit; the tag goes on the record's commit, and the record names the gated commit it

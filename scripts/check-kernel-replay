@@ -21,7 +21,7 @@
 # owner's gate outside the sandbox at claim points. BOTH stay, one reason each:
 # this script replays the ON-DISK olean set and checks it equal to the module
 # set (an unbuilt or stale olean is named; `lake check` exports only what the
-# default targets import), needs no bwrap, and costs 8 s in the fast tier;
+# default targets import), needs no bwrap, and costs 9.1 s at 4 threads (6.8 s at 8) in the fast tier;
 # `lake check` covers the default test libraries' modules (the pins in
 # Tests/GoCoreContract.lean, the audit harness, the admission facts), which
 # this `GoLean`-prefix replay does not, and adds the export path and, under

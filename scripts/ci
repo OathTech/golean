@@ -206,8 +206,10 @@ run_bump "memory-module raw call sites = inventory (scripts/check-mem-callsites)
 # module plus every module under the root's directory, the walk the kernel
 # replay does) or `exe <name> <root>`. Any other key in a target section, a
 # glob that is not an exact module name, or a target without a name prints an
-# `unsupported` line, and the build FAILS rather than build a set it cannot
-# name (extend the parser, deliberately).
+# `unsupported` line, as does TOML's other spellings of a target — the
+# inline-array form `lean_exe = [{ name = …, root = … }]` and a single
+# `[lean_lib]` table — and the build FAILS rather than build a set it cannot
+# name (extend the parser, deliberately; review F4, 2026-10-22).
 lakefile_targets() {
   awk '
     function flush(   i, n, a) {
@@ -220,7 +222,9 @@ lakefile_targets() {
     }
     /^\[\[lean_lib\]\]/ { flush(); kind = "lib"; next }
     /^\[\[lean_exe\]\]/ { flush(); kind = "exe"; next }
+    /^\[lean_(lib|exe)\]/ { flush(); print "unsupported single-table", $0; next }
     /^\[/ { flush(); next }
+    /^[[:space:]]*lean_(lib|exe)[[:space:]]*=/ { flush(); print "unsupported inline-array target", $0; next }
     kind == "" || /^[[:space:]]*(#|$)/ { next }
     /^name = "[A-Za-z0-9_-]+"$/ { name = $0; sub(/^name = "/, "", name); sub(/"$/, "", name); next }
     kind == "exe" && /^root = "[A-Za-z0-9_.]+"$/ { root = $0; sub(/^root = "/, "", root); sub(/"$/, "", root); next }
@@ -308,7 +312,7 @@ def has_main(mod):
         bad.append(f"{mod}: cannot read {p} ({e}) — the build left no readable .ilean for it"); return None
     decls = d.get("decls") if isinstance(d, dict) else None
     if not isinstance(decls, dict) or d.get("module") != mod:
-        bad.append(f"{mod}: {p} is not the .ilean shape this check reads (version {d.get('version')!r}, module {d.get('module')!r}) — the format moved; re-derive the check"); return None
+        bad.append(f"{mod}: {p} is not this module's .ilean in the shape this check reads (version {d.get('version')!r}, module field {d.get('module')!r}) — a stale or misplaced .ilean (rebuild: rm -rf .lake/build), or the format moved (re-derive the check)"); return None
     return "main" in decls
 known = set()
 for name, *mods in libs:
@@ -370,6 +374,13 @@ else
     printf '%s\n' "$kr_out" | tail -25 | sed 's/^/  /'
     bad "kernel replay (exit $kr_rc, ${kr_n:-no} module count — a killed, refused, incomplete or empty replay is NOT a pass; see above)"
   fi
+fi
+
+# The fast tier says where `lake check` went (review F6, 2026-10-22): a
+# summary without the line would read as if the check did not exist.
+if [ "$RUN_DIFF" -eq 0 ]; then
+  echo "  lake check: not in the fast tier — scripts/ci --diff runs it as a speedbump (about four minutes); the owner's run outside the sandbox is the claim-point gate"
+  note "lake check: not in this tier (the --diff tier runs scripts/check-lake-check as a speedbump; the owner's run outside the sandbox is the claim-point gate)"
 fi
 
 # ── GATE: the machine check of totality — a harness imports every GoLean/
@@ -461,8 +472,9 @@ if [ "$RUN_DIFF" -eq 1 ]; then
   # check` outside the sandbox at claim points, `--paranoid` at the release
   # claim point ([USER] 2026-10-20; the default targets ruled 2026-10-21,
   # release-readiness row 42): CLAUDE.md «The gates», docs/operational-
-  # lessons.md «Lean 4.35». The 8-second kernel replay stays in the fast
-  # tier (no sandbox; the on-disk olean set). Not run when the build failed.
+  # lessons.md «Lean 4.35». The kernel replay (9.1 s at 4 threads, 6.8 s
+  # at 8) stays in the fast tier (no sandbox; the on-disk olean set). Not
+  # run when the build failed.
   step "lake check (speedbump, --diff tier; scripts/check-lake-check: the default targets exported and replayed; sandboxed where bwrap can start)"
   if [ "$core_rc" -ne 0 ]; then
     echo "  not run: the lake build above failed (exit $core_rc)"

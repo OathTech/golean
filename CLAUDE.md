@@ -209,9 +209,20 @@ Everything else is untrusted tooling.
   own heading. A red one never fails the gate; it is read at the merge ask
   and fixed or waived there, by name. The owner's `lake check` outside the
   sandbox is the gate at claim points, `lake check --paranoid` at the
-  release claim point ([USER] 2026-10-20); the 8-second kernel replay
-  above stays in the fast tier (no sandbox; it checks the on-disk olean
-  set, which `lake check` does not).
+  release claim point ([USER] 2026-10-20) — once that run is shown to
+  start `bwrap` (unverified on this box: `bwrap` is not setuid and
+  `apparmor_restrict_unprivileged_userns=1`); until then the in-tree
+  no-sandbox run is what exists, and `--paranoid` is red today because
+  nanoda crashes on this export (`docs/release.md` §3 gives the form that
+  works). The kernel replay above stays in the fast tier (9.1 s at 4
+  threads, 6.8 s at 8; no sandbox; it checks the on-disk olean set, which
+  `lake check` does not). Outside BOTH kernel checks: the ten modules that
+  are neither default targets nor `GoLean.*` — the executables' roots and
+  the `main`-bearing test modules — two of which carry theorems
+  (`Tests/EquationClient.lean`: 296 equation pins + 12 facts;
+  `Tests/MethodIdentity.lean`: 12), kernel-checked at elaboration, not
+  replayed against tampering; the follow-up is to turn their `main`s into
+  build-time checks.
 - **Self-tests are not gates.** `scripts/test-*` run by hand when the
   script they test changes.
 - The pre-merge adversarial audit: the ask is unconditional; scope and
