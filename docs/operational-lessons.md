@@ -619,6 +619,23 @@ deleted modules' artifacts (`find .lake/build -path '*GoLean/GoCore/<Module>.*'
 -delete`, `.olean/.ilean/.hash/.trace/.c/.o`) or build cold; a fresh clone never
 has them. (The toolchain lane hit the same on its branch; its note there confirms this.)
 
+The hosted runner is the case that never builds cold ([AGENT] 2026-10-22, lane
+`ci/prune-stale-oleans-1022`): the workflow restores `.lake` from the Actions
+cache through a restore-keys FALLBACK every run (the primary key embeds the run
+id, so it never hits) and saves the whole tree back `always()`, so a deleted
+module's artifacts ride the cache lineage forever — 79 dead modules (the
+typed-profile facade parked 2026-09-16, the relational layer retired 2026-10-21)
+failed every push run on main from the retirement to 2026-10-22, refused by the
+gate, while the same gate passed on every local tree. The remedy is now a script,
+`scripts/prune-stale-oleans` (self-test `scripts/test-prune-stale-oleans`): it
+deletes every artifact under `.lake/build/lib/lean/` and `.lake/build/ir/` whose
+module has no `<path>.lean` at the root, names each one, passes a cold tree, and
+refuses a lakefile with a `srcDir` (the rule would be wrong). The workflow runs it
+right after the cache restore; by hand it replaces the `find … -delete` above.
+`scripts/ci` prints only the last 25 lines of a failed check, so the runner log
+named 23 of the 79 under its «129 oleans vs 50 modules» count — the full list is
+in the check's own output, not the gate's tail.
+
 The cost law is the build's («Concurrency OOM», above): the checker runs
 one task per module on Lean's thread pool, each importing the module's
 closure, and the peak is the SUM over the concurrent tasks. Measured

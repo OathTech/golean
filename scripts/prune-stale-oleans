@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+# prune-stale-oleans — delete the build artifacts of modules whose source is gone.
+#
+# Lake never deletes the olean of a removed module, and `lake build` never
+# looks at it, so a `.lake` that outlives a deletion keeps the dead module's
+# `.olean`/`.ilean`/`.trace`/`.hash`/`.setup.json` under `.lake/build/lib/lean/`
+# and its `.c`/`.c.o.*` under `.lake/build/ir/`. The kernel replay gate
+# (scripts/check-kernel-replay) refuses such a tree by name, as it should: the
+# checker would otherwise replay the dead module too. On a local tree the
+# artifacts die with the next cold build; on the hosted runner they never do —
+# the workflow restores `.lake` from the Actions cache through a restore-keys
+# fallback (the primary key embeds the run id and never hits) and saves it
+# back wholesale even on a red gate, so the artifacts of every module ever
+# deleted ride the cache lineage forever (2026-10-22: 23 modules parked on
+# 2026-09-16 and retired on 2026-10-21 failed every push run on main after
+# the retirement). The workflow runs this script right after the restore;
+# by hand it is the remedy docs/operational-lessons.md names.
+#
+# Rule: a module is `<path>.lean` at the checkout root (the lakefile declares
+# no `srcDir`, and this script REFUSES if one appears: the rule would be wrong).
+# For every module name found under `.lake/build/lib/lean/` (`*.olean`,
+# `*.ilean`, `*.trace`) or `.lake/build/ir/` (`*.c`) with no `<path>.lean`,
+# every file `<path>.*` in both trees is deleted and NAMED; directories stay
+# (a submodule's artifacts are judged by its own source). Nothing else is
+# touched: `.lake/build/bin/` holds executables, not module artifacts.
+#
+# Exit 0 = done (each pruned module named, or nothing to prune — including a
+# checkout with no build at all, which a cold runner is); 1 = a deletion
+# failed (the tree is left as it is, the failure named); 2 = cannot judge
+# (bad arguments, not a checkout root, a `srcDir` in the lakefile).
+#
+#   scripts/prune-stale-oleans [--dry-run] [--repo <checkout-root>]
+set -uo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+REPO="$ROOT"; DRY=0
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --dry-run) DRY=1; shift ;;
+    --repo) [[ $# -ge 2 ]] || { echo "prune-stale-oleans: --repo needs a directory" >&2; exit 2; }
+            REPO="$2"; shift 2 ;;
+    *) echo "prune-stale-oleans: unknown argument '$1' (expected [--dry-run] [--repo <dir>])" >&2; exit 2 ;;
+  esac
+done
+die() { echo "prune-stale-oleans: CANNOT JUDGE — $*" >&2; exit 2; }
+
+[[ -d "$REPO" ]] || die "--repo $REPO: not a directory"
+cd "$REPO" || die "cannot cd to $REPO"
+[[ -f lakefile.toml ]] || die "$PWD has no lakefile.toml — not a checkout root"
+if grep -qE '^[[:space:]]*srcDir[[:space:]]*=' lakefile.toml; then
+  die "lakefile.toml sets srcDir — the module-to-source rule here (<path>.lean at the root) no longer holds; re-derive it"
+fi
+
+LIB=.lake/build/lib/lean; IR=.lake/build/ir
+if [[ ! -d "$LIB" && ! -d "$IR" ]]; then
+  echo "prune-stale-oleans: nothing built ($LIB and $IR absent) — nothing to prune"
+  exit 0
+fi
+
+# Module paths (e.g. GoLean/GoCore/SetupSound) named by any artifact in either tree.
+mods="$( {
+  [[ -d "$LIB" ]] && find "$LIB" -type f \( -name '*.olean' -o -name '*.ilean' -o -name '*.trace' \) \
+    | sed -e "s|^$LIB/||" -e 's/\.olean$//; s/\.ilean$//; s/\.trace$//'
+  [[ -d "$IR" ]] && find "$IR" -type f -name '*.c' | sed -e "s|^$IR/||" -e 's/\.c$//'
+} | LC_ALL=C sort -u )"
+n_mods="$(printf '%s\n' "$mods" | grep -c . || true)"
+
+pruned=0; files=0; failed=0
+while IFS= read -r p; do
+  [[ -n "$p" ]] || continue
+  [[ -f "$p.lean" ]] && continue
+  m="${p//\//.}"
+  base="$(basename "$p")"; dir="$(dirname "$p")"
+  arts="$( for t in "$LIB" "$IR"; do
+             [[ -d "$t/$dir" ]] && find "$t/$dir" -maxdepth 1 -type f -name "$base.*"
+           done | LC_ALL=C sort )"
+  n="$(printf '%s\n' "$arts" | grep -c . || true)"
+  if [[ "$DRY" = 1 ]]; then
+    echo "prune-stale-oleans: STALE $m — no source $p.lean; would remove $n files:"
+  else
+    echo "prune-stale-oleans: REMOVING $m — no source $p.lean; $n files:"
+  fi
+  while IFS= read -r f; do
+    [[ -n "$f" ]] || continue
+    echo "    $f"
+    if [[ "$DRY" = 0 ]] && ! rm -f -- "$f"; then
+      echo "prune-stale-oleans: FAIL — could not remove $f" >&2; failed=$((failed+1))
+    fi
+  done <<<"$arts"
+  pruned=$((pruned+1)); files=$((files+n))
+done <<<"$mods"
+
+if [[ "$failed" -ne 0 ]]; then
+  echo "prune-stale-oleans: FAIL — $failed deletions failed (named above); $pruned stale modules found among $n_mods built" >&2
+  exit 1
+fi
+if [[ "$pruned" -eq 0 ]]; then
+  echo "prune-stale-oleans: nothing stale — every one of the $n_mods built modules has its source"
+elif [[ "$DRY" = 1 ]]; then
+  echo "prune-stale-oleans: DRY RUN — $pruned of $n_mods built modules have no source ($files files would be removed; named above)"
+else
+  echo "prune-stale-oleans: PRUNED $pruned of $n_mods built modules that have no source ($files files removed; named above)"
+fi

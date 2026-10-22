@@ -106,6 +106,21 @@ jobs:
             lake-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-
             lake-${{ runner.os }}-
 
+      # STALE ARTIFACTS OF DELETED MODULES (2026-10-22). Lake never deletes
+      # the olean of a removed module, and the restore above is a restore-keys
+      # FALLBACK every time (the primary key embeds the run id), followed by an
+      # always() save of the whole tree: so once a module is deleted, its
+      # artifacts ride the cache lineage forever. The kernel replay gate
+      # (scripts/check-kernel-replay) refuses such a tree by name — correctly —
+      # and did so on every push run on main after the 2026-10-21 retirement
+      # (79 dead modules: the typed-profile facade parked 2026-09-16 and the
+      # relational layer retired 2026-10-21; the gate's tail named 23). This step is the
+      # remedy docs/operational-lessons.md names, run before anything builds:
+      # each pruned module is listed; a cold runner (no .lake) prints that and
+      # passes; a failed deletion or a lakefile the rule no longer fits is red.
+      - name: Prune build artifacts of modules with no source
+        run: scripts/prune-stale-oleans
+
       # The imported-goose verbatim guard verifies landed corpus
       # bytes against the PINNED goose checkout and fails
       # CLOSED if it is absent — deps/ is gitignored, so the runner must

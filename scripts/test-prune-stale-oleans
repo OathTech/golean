@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# Self-test for scripts/prune-stale-oleans against a SCRATCH checkout under the
+# repo's .tmp/ (never /tmp — docs/agent-sandbox.md). Every case asserts the exit
+# code AND that the verdict names what it did or why it could not; the scratch
+# dir is left in place for inspection. Run by hand when the script changes
+# (self-tests are not gates: CLAUDE.md).
+set -uo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+PRUNE="$ROOT/scripts/prune-stale-oleans"
+mkdir -p "$ROOT/.tmp"
+SCRATCH="$(mktemp -d "$ROOT/.tmp/prune-stale-oleans-test.XXXXXX")" || { echo "self-test: cannot create scratch dir under $ROOT/.tmp" >&2; exit 2; }
+REPO="$SCRATCH/repo"; LIB="$REPO/.lake/build/lib/lean"; IR="$REPO/.lake/build/ir"
+
+pass=0; fail=0
+# expect <exit> <label> <must-contain|-> [<must-not-contain>] -- <cmd...>
+expect() {
+  local want="$1" label="$2" must="$3"; shift 3
+  local mustnot="-"; if [[ "$1" != -- ]]; then mustnot="$1"; shift; fi; shift
+  local out rc=0; out="$("$@" 2>&1)" || rc=$?
+  if [[ "$rc" != "$want" ]]; then
+    echo "FAIL $label: exit $rc, want $want"; printf '%s\n' "$out" | sed 's/^/    /'; fail=$((fail+1)); return
+  fi
+  if [[ "$must" != "-" ]] && ! grep -qF -- "$must" <<<"$out"; then
+    echo "FAIL $label: output lacks '$must'"; printf '%s\n' "$out" | sed 's/^/    /'; fail=$((fail+1)); return
+  fi
+  if [[ "$mustnot" != "-" ]] && grep -qF -- "$mustnot" <<<"$out"; then
+    echo "FAIL $label: output must not mention '$mustnot'"; printf '%s\n' "$out" | sed 's/^/    /'; fail=$((fail+1)); return
+  fi
+  pass=$((pass+1))
+}
+# present <label> <path>... / absent <label> <path>...: the tree after a run
+present() { local l="$1"; shift; for f in "$@"; do [[ -e "$f" ]] && pass=$((pass+1)) || { echo "FAIL $l: $f should still exist"; fail=$((fail+1)); }; done; }
+absent()  { local l="$1"; shift; for f in "$@"; do [[ -e "$f" ]] && { echo "FAIL $l: $f should be gone"; fail=$((fail+1)); } || pass=$((pass+1)); done; }
+run() { "$PRUNE" --repo "$REPO" "$@"; }
+
+# The scratch checkout: three live modules (A, Sub.B, Sub.C.E — the last under
+# a DELETED parent Sub.C), four stale ones (Sub.C, D, Sub.BB, F — BB checks
+# the exact-name rule against B, F has ir artifacts only).
+mkdir -p "$REPO/Sub/C" "$LIB/Sub/C" "$IR/Sub"
+printf 'name = "Scratch"\n\n[[lean_lib]]\nname = "Scratch"\n' > "$REPO/lakefile.toml"
+touch "$REPO/A.lean" "$REPO/Sub/B.lean" "$REPO/Sub/C/E.lean"
+touch "$LIB/A.olean" "$LIB/A.ilean" "$LIB/A.trace" "$LIB/A.olean.hash" "$IR/A.c" "$IR/A.c.o.export"
+touch "$LIB/Sub/B.olean" "$LIB/Sub/B.ilean" "$IR/Sub/B.c"
+touch "$LIB/Sub/C/E.olean" "$LIB/Sub/C/E.ilean"
+touch "$LIB/Sub/C.olean" "$LIB/Sub/C.ilean" "$LIB/Sub/C.trace" "$IR/Sub/C.c" "$IR/Sub/C.c.hash"   # stale
+touch "$LIB/D.olean" "$LIB/D.setup.json"                                                          # stale
+touch "$LIB/Sub/BB.olean"                                                                         # stale, name-prefix control
+touch "$IR/F.c"                                                                                   # stale, ir only
+
+# 1. dry run names every stale module and removes nothing
+expect 0 dry-run "DRY RUN — 4 of 7 built modules have no source (9 files would be removed" "REMOVING" -- run --dry-run
+expect 0 dry-run-names-C "STALE Sub.C — no source Sub/C.lean; would remove 5 files" -- run --dry-run
+expect 0 dry-run-names-F "STALE F — no source F.lean; would remove 1 files" -- run --dry-run
+present dry-run-keeps "$LIB/Sub/C.olean" "$LIB/D.olean" "$LIB/Sub/BB.olean" "$IR/F.c"
+# 2. the real run prunes exactly the four, naming each file, and keeps the live modules
+expect 0 prune "PRUNED 4 of 7 built modules that have no source (9 files removed" -- run
+absent  prune-removes "$LIB/Sub/C.olean" "$LIB/Sub/C.ilean" "$LIB/Sub/C.trace" "$IR/Sub/C.c" "$IR/Sub/C.c.hash" \
+                      "$LIB/D.olean" "$LIB/D.setup.json" "$LIB/Sub/BB.olean" "$IR/F.c"
+present prune-keeps   "$LIB/A.olean" "$LIB/A.ilean" "$LIB/A.trace" "$LIB/A.olean.hash" "$IR/A.c" "$IR/A.c.o.export" \
+                      "$LIB/Sub/B.olean" "$LIB/Sub/B.ilean" "$IR/Sub/B.c" "$LIB/Sub/C/E.olean" "$LIB/Sub/C/E.ilean"
+# 3. a second run finds nothing
+expect 0 idempotent "nothing stale — every one of the 3 built modules has its source" -- run
+# 4. a checkout with no build at all (a cold runner) is fine, and says so
+REPO2="$SCRATCH/cold"; mkdir -p "$REPO2"; cp "$REPO/lakefile.toml" "$REPO2/"
+expect 0 no-build "nothing built" -- "$PRUNE" --repo "$REPO2"
+# 5. a deletion that fails is a FAIL that names the file (a read-only directory refuses the unlink)
+mkdir -p "$LIB/RO"; touch "$LIB/RO/G.olean"; chmod a-w "$LIB/RO"
+expect 1 rm-fails "could not remove .lake/build/lib/lean/RO/G.olean" -- run
+chmod u+w "$LIB/RO"
+expect 0 rm-ok-after "PRUNED 1 of 4 built modules" -- run
+# 6. cannot-judge cases are exit 2, never a pass: srcDir, no lakefile, missing dir, bad flag
+printf 'srcDir = "src"\n' >> "$REPO/lakefile.toml"
+expect 2 srcdir "sets srcDir" -- run
+rm "$REPO/lakefile.toml"
+expect 2 no-lakefile "has no lakefile.toml" -- run
+expect 2 missing-repo "not a directory" -- "$PRUNE" --repo "$SCRATCH/nope"
+expect 2 bad-flag "unknown argument" -- "$PRUNE" --bogus
+
+if [[ "$fail" -ne 0 ]]; then
+  echo "prune-stale-oleans self-test: FAIL ($fail failed, $pass passed; scratch $SCRATCH)"; exit 1
+fi
+echo "prune-stale-oleans self-test: PASS ($pass checks; scratch $SCRATCH)"
