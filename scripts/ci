@@ -30,7 +30,7 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
-cd "$ROOT"
+cd "$ROOT" || { echo "scripts/ci: cannot cd to $ROOT" >&2; exit 1; }
 
 # Never interactive: no git call here or in a sub-script may page or open an
 # editor (2026-10-11: `git grep` paged on a tty and looked like an editor).
