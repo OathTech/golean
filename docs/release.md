@@ -63,8 +63,11 @@ push rule). Pushing the tag is a separate sign-off.
 3. At the merged tip, on a clean tree: `capped scripts/ci --diff` (§1.3), then, outside any sandbox, `lake check
    --paranoid` (the release claim-point gate, CLAUDE.md «The gates»: the default targets exported, replayed through
    Lean's kernel and the five bundled external kernels, non-standard axioms refused; the in-gate speedbump is the same
-   check without the external kernels). A red run of either stops the procedure; nothing is re-pinned to make it
-   green.
+   check without the external kernels; it needs the 64G cap, `CAPPED_MEM_MAX=64G`, on an Oath box). A red run of
+   either stops the procedure; nothing is re-pinned to make it green. Measured 2026-10-22 inside the sandbox: four of
+   the five external kernels accept and nanoda crashes with a stack overflow in its own worker thread
+   (`docs/operational-lessons.md`, «Lean 4.35»), so the release claim needs that resolved — a nanoda run that
+   completes outside the sandbox, or a [USER] ruling on the kernel set — before step 5.
 4. Write the release record — a short section at the top of the frozen changelog: tag name, commit, toolchain pins,
    the gate run's result line, the three predicates — and commit it on a records branch merged on sign-off. (The record
    cannot name its own commit; the tag goes on the record's commit, and the record names the gated commit it

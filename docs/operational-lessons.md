@@ -742,59 +742,76 @@ used constants and follow the ones whose axioms contain `Classical.choice`
 |---|---|
 | cold full build, `LEAN_NUM_THREADS=8`, `capped -m 64G`, main's module set (169 jobs) | 499 s wall; aggregate cgroup peak 3.2 GiB; largest process 3.1 GB (the 4.32.2 cold build of 2026-10-12: 163 jobs, 8 min 37 s) |
 | cold full build, same cap, the post-retirement tip (126 jobs; rebased onto `ea629cc8`) | 315 s wall; aggregate cgroup peak 3.1 GiB; largest process 3.1 GB; zero warnings |
-| fast tier (`capped scripts/ci`, warm) | 99 s |
-| kernel replay (`scripts/check-kernel-replay`, 4 threads) | main's set, 68 modules: 12.9 s, 5.9 GB peak (4.32.2: 17.8 s, 6.7 GB); the post-retirement tip, 47 modules: 8.2 s, 3.5 GB |
+| fast tier (`capped scripts/ci`, warm) | 99 s; 2026-10-22, library-only defaults (12 targets built by name, the split check, no `lake check`): 89 s |
+| kernel replay (`scripts/check-kernel-replay`, 4 threads) | main's set, 68 modules: 12.9 s, 5.9 GB peak (4.32.2: 17.8 s, 6.7 GB); the post-retirement tip, 47 modules: 8.2 s, 3.5 GB; 2026-10-22, 50 modules: 9.1 s, 4.4 GB |
 | `lake env leanexport GoLean` (the `GoLean` library's closure with its Init/Std/Lean imports) | main's set: 33 s, 2.7 GB, a 1.0 GB, 18.1 M-line export; the tip (47 modules, reviewer's run): 34.7 s, 942 MB, 16.37 M lines |
 | `lake check --from-export <that> --inadvisably-no-sandbox` | main's set: 133 s, 1.6 GB; the tip: 150 s; both «Lean default kernel accepts the solution; Uses axioms: propext, Quot.sound, Classical.choice» |
+| `capped lake check --inadvisably-no-sandbox`, the library-only defaults (2026-10-22, lane `gate/lake-check-1021`; 32G cap, by hand) | probe: 212 s wall, largest process 2.7 GB; the by-hand run at the tip: 204.6 s wall, largest process 2.7 GB (2,749,232 KB); both «Lean default kernel accepts the solution», «Uses axioms: propext, Quot.sound, Classical.choice», rc 0 |
+| the same inside `CAPPED_MEM_MAX=64G capped scripts/ci --diff` (the `--diff`-tier speedbump) | wall 203.7 s; largest process 2,687 MB; PASS — «Lean default kernel accepts the solution», «Uses axioms: propext, Quot.sound, Classical.choice», no sandbox (bwrap: «loopback: Failed to create NETLINK_ROUTE socket: Operation not permitted»); the whole merge tier 710 s wall at LEAN_NUM_THREADS=8 on a warm tree (the fresh corpus runs included), RESULT: PASS, no red speedbump |
+| `CAPPED_MEM_MAX=64G capped lake check --paranoid --inadvisably-no-sandbox` (the five external kernels; the cap raised deliberately for the measurement) | 975.6 s wall; largest process 42.2 GB (44,257,920 KB — OVER the 32G box default, which would kill it: run it under 64G); Lean's paranoid kernel, lean4lean (178,476 declarations), con-leche and con-ron (178,479 each, --verified) and the default kernel all accept; nanoda REJECTS by crashing — «thread 'thread_3' has overflowed its stack; fatal runtime error: stack overflow, aborting», «error: nanoda exited with 134» — a crash in nanoda's own worker thread on this export, not a kernel rejection of a named declaration; rc 1 overall. Not chased (the lane brief: do not loop on it); whether it reproduces outside the sandbox is the owner's run to say |
 
-**`lake check` at this project.** The toolchain's `lake check` builds the
-default targets, exports them, replays the export through the kernel and
-refuses non-standard axioms (`--paranoid` adds five external kernels), in a
+**`lake check` at this project — LANDED 2026-10-22 (lane
+`gate/lake-check-1021`; [USER] 2026-10-21, release-readiness row 42's
+open half, paraphrased: the check must run, as the in-sandbox speedbump
+and as the owner's claim-point gate; the default targets become the
+libraries only).** The toolchain's `lake check` builds the default
+targets, exports them, replays the export through the kernel and refuses
+non-standard axioms (`--paranoid` adds five external kernels), in a
 `bwrap` sandbox that needs unprivileged user namespaces, which a sandboxed
 agent session does not have (here: «setting up uid map: Permission
-denied»). So `scripts/check-lake-check` is a SPEEDBUMP: it probes `bwrap`
-with Lake's own flags and runs sandboxed where that starts,
-`--inadvisably-no-sandbox` where it does not (the toolchain prints «this
-run is not trustworthy»), saying which; the owner's sandboxed `lake
-check`, where `bwrap` can start, is the gate at claim points, `--paranoid`
-at the release claim point (CLAUDE.md «The gates»; box-independence,
-below). FINDING: the plain `lake check` cannot start on this project even
-where the sandbox can — its export half
-(`Lake/CLI/Main.lean`, `checkExport`) imports EVERY default module into one
-environment, and this lakefile's default targets carry several top-level
-`main`s (`Main.lean` for `golean`; `Tests.GoCoreEval` for the eval-test
-executable; `Tests.StrictJsonParse`, `Tests.DeclarationWire`, … run by
-`lean --run`): the gate logs «import Tests.GoCoreEval failed, environment
-already contains 'main' from Main» (with the eval-test pair removed it is
-`Tests.StrictJsonParse` next). The speedbump is RED by construction until
-the default-target set changes — [USER] D2 territory (gate cull
-2026-10-12: every library and executable a default target), raised with
-the lane report; the charter says so beside the speedbump. Facts for that
-ruling (the reviewer's measured probe, 2026-10-21): with
-`defaultTargets = ["GoLean", "TestsData", "AdmissionTests",
-"GoCoreAuditTests"]`, `capped -m 64G -- lake check
---inadvisably-no-sandbox` is accepted on the classical trio, rc 0, in
-244 s — so a green speedbump costs about four minutes, which argues for
-the `--diff` tier only; that arrangement leaves `Main` and the nine
-`main`-bearing `Tests/*` modules plus `Tests.UnseqHarness` outside both
-`lake check` and the `GoLean`-prefix replay, and the ci step «every
-declared library and executable is a default target» goes red; the
-alternative is to turn the `lean --run` test mains into build-time
-`#eval` checks as `Tests.EquationClient` already does, after which only
-one of the two executables (`golean`, `gocore-eval-tests`) still needs
-demoting. The working route meanwhile is the export of the trust surface
-alone (`leanexport GoLean`) fed to `--from-export` (the table above),
-which the toolchain says establishes only that the export is accepted.
-`scripts/check-kernel-replay` therefore STAYS: it needs no bwrap, its
-module-set equality catches an unbuilt module (`lake check` exports only
-what the default targets import), and the olean path the gate uses is
-unchanged at 4.35 (`leanchecker --verbose <prefix>`, `replaying <module>`
-lines; no `--help` — flags are partitioned by a leading dash and anything
-else is a module name); 4.35 adds `--from-export` and `--silent`, the
-export path `lake check` drives. Since the fix round the script compares
-the oleans on disk with the module set BEFORE the replay, so a stale
-olean of a deleted module is named with its remedy rather than surfacing
-as the kernel's rejection of its first importer.
+denied»). Its export half (`Lake/CLI/Main.lean`, `checkExport`) imports
+EVERY default module into one environment, so on the 2026-10-12 lakefile
+— every library and executable a default target; `Main.lean`,
+`Tests.GoCoreEval`, `Tests.StrictJsonParse`, … each with a top-level
+`main` for `lean --run` — it stopped at the second `main` («import
+Tests.GoCoreEval failed, environment already contains 'main' from Main»),
+sandboxed or not. The landed arrangement: `defaultTargets` is the
+main-free LIBRARIES only — `GoLean`, `TestsData`, `AdmissionTests`,
+`GoCoreAuditTests` — and the gate builds every declared target by name
+(`scripts/ci` parses `lakefile.toml` for the list and FAILS the build step
+on a shape it cannot parse: an unknown key, a wildcard glob, a nameless
+section); the two executables and the six `main`-bearing test libraries
+(`EvalTests`, `DeclarationTests`, `MethodIdentityTests`,
+`UnseqSchedulerTests`, `UnseqWireTests`, `EquationTests`) are outside the
+defaults. The split is checked both ways after a green build from each
+module's built `.ilean` (the elaborated constant names, so a namespaced
+`Tests.X.main` is not `main`; an unreadable or reshaped `.ilean` is a FAIL,
+never «main-free»): a main-free library that is not default, a default
+executable or `main`-bearing library, a default name no target declares —
+each a FAIL. Two consequences to know: `Tests/EquationClient.lean`'s 310
+pin theorems sit under that module's `main` and are therefore OUTSIDE
+`lake check` (built and run by `scripts/check-equations`; turning the
+`lean --run` mains into build-time checks would bring them in and is a
+separate change under `Tests/`); and `scripts/diff-coverage`'s up-front
+build names `golean`, which is no longer a default (a bare `lake build`
+now builds the libraries only — the README's cold-build line says so).
+`scripts/check-lake-check` is the SPEEDBUMP, in the `--diff` tier only
+(about four minutes): it probes `bwrap` with Lake's own flags, runs
+sandboxed where that starts and `--inadvisably-no-sandbox` where it does
+not (the toolchain prints «this run is not trustworthy»), says which, and
+passes only on the toolchain's acceptance line AND the axiom verdict (both
+carried on its PASS line with the wall and the largest-process RSS); the
+owner's `lake check` outside the sandbox is the gate at claim points,
+`--paranoid` at the release claim point (CLAUDE.md «The gates»,
+`docs/release.md` §3). The measurements are in the table above.
+
+**Both kernel checks stay, one reason each.** `scripts/check-kernel-replay`
+(fast tier, 9 s, 4.4 GB at 4 threads over 50 modules) replays the ON-DISK
+`GoLean` olean set and checks it equal to the module set on disk — an
+unbuilt or stale olean is named with its remedy, which `lake check`
+(exporting what the default targets import) cannot see — and needs no
+bwrap. `lake check` covers the default test libraries' modules —
+`Tests/GoCoreContract.lean`'s pins, the audit harness
+`Tests/GoCoreAudit.lean`, the admission facts — which the `GoLean`-prefix
+replay does not, plus the export path and, under `--paranoid`, the five
+external kernels. The olean path the replay uses is unchanged at 4.35
+(`leanchecker --verbose <prefix>`, `replaying <module>` lines; no `--help`
+— flags are partitioned by a leading dash and anything else is a module
+name); 4.35 adds `--from-export` and `--silent`, the export path `lake
+check` drives. Since the fix round the script compares the oleans on disk
+with the module set BEFORE the replay, so a stale olean of a deleted
+module is named with its remedy rather than surfacing as the kernel's
+rejection of its first importer.
 
 **After a rebase that deletes modules, wipe `.lake/build` before the gate.**
 Lake never removes the olean of a deleted module, and `leanchecker GoLean`
