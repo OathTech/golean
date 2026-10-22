@@ -85,7 +85,7 @@ jobs:
       # cap + diagnostics below are that half of the mitigation.)
       - name: Restore toolchains and build artifacts
         id: lake-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: |
             ~/.elan
@@ -163,6 +163,17 @@ jobs:
       # constant with the diagnostics numbers, never deleting the
       # readback. Investigation record:
       # docs/2026-08-14_ci-runner-death-and-slow-tier-timeout.md.
+      # OOMPolicy=continue (2026-10-22): the "red BUILD with logs" above did
+      # NOT hold as written. systemd's default OOMPolicy is `stop`: when the
+      # kernel OOM-killed leanchecker inside the scope (five runs, 2026-10-16
+      # to -21, ~15 GB against the 14.8 GB cap on the pre-retirement tree),
+      # systemd terminated the WHOLE scope — runuser printed "Session
+      # terminated, killing shell", the step died with exit 143 and
+      # scripts/ci never printed its summary; only the dmesg step below told
+      # the truth. With `continue`, the kernel kills the one process, the
+      # check that ran it reports exit 137 by name, and the gate's summary
+      # line says which step. The dmesg step now also raises a ::warning
+      # annotation so the cause is visible on the run page.
 
       # check-spec-anchors (spec-truth P2) verifies spec#/mem# citations
       # against the PINNED golang/go checkout and fails CLOSED if absent
@@ -173,7 +184,7 @@ jobs:
           git clone --quiet --depth 1 --branch go1.26.5 https://github.com/golang/go deps/go
 
       - name: Set up Go (pinned to the oracle family)
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           # The differential oracle IS go1.26.5 EXACTLY (docs/spec-sources.md
           # — the doctrine pin): every fatal-message, panic-payload, and probe
@@ -187,6 +198,38 @@ jobs:
           # re-pin rationale + the deps/go clone tag above, in one change).
           go-version: '1.26.5'
           cache: false
+
+      # LAKE CHECK SANDBOX EXPERIMENT ([USER] 2026-10-22, agreed to run it).
+      # scripts/check-lake-check (the --diff tier's speedbump) runs `lake
+      # check` inside the toolchain's bwrap sandbox where bwrap can start and
+      # `--inadvisably-no-sandbox` where it cannot, and its log line says
+      # which; the hosted image ships no bubblewrap, so every runner run so
+      # far was the no-sandbox form, like this project's devboxes (bwrap not
+      # setuid, apparmor_restrict_unprivileged_userns=1). This step installs
+      # bubblewrap and runs the script's own probe (keep the flags in lockstep
+      # with scripts/check-lake-check). If the probe fails on the apparmor
+      # restriction it lifts it on this THROWAWAY VM and probes once more.
+      # The outcome is this step's output on every run and, on a --diff run,
+      # the form named on the lake check line. It is information, not a
+      # gate: continue-on-error, and no gate step reads its result — the
+      # script re-probes for itself.
+      - name: Experiment — install bubblewrap and probe the lake check sandbox
+        continue-on-error: true
+        run: |
+          sudo apt-get install -y -q bubblewrap >/dev/null
+          echo "bwrap: $(bwrap --version 2>&1); mode: $(stat -c %A "$(command -v bwrap)")"
+          echo "kernel.apparmor_restrict_unprivileged_userns = $(sysctl -n kernel.apparmor_restrict_unprivileged_userns 2>&1)"
+          probe() {
+            bwrap --ro-bind / / --tmpfs /home --tmpfs /root --tmpfs /run/user --tmpfs /tmp --dir /tmp/home \
+              --dev /dev --proc /proc --clearenv --setenv HOME /tmp/home --unshare-all --die-with-parent --new-session \
+              --chdir / -- /bin/true
+          }
+          if probe; then echo "PROBE 1: bwrap starts with Lake's flags as installed — lake check will run SANDBOXED here"; exit 0; fi
+          echo "PROBE 1: bwrap cannot start with Lake's flags as installed (stderr above)"
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || echo "the sysctl could not be set (key absent on this kernel?) — probing again anyway"
+          if probe; then echo "PROBE 2: bwrap starts once the apparmor userns restriction is lifted — lake check will run SANDBOXED here"; exit 0; fi
+          echo "PROBE 2: bwrap still cannot start with the restriction lifted (stderr above) — lake check stays --inadvisably-no-sandbox here"
+          exit 1
 
       - name: Fast gate (scripts/ci)
         id: fast-gate
@@ -210,7 +253,7 @@ jobs:
             exit 1
           fi
           cap_mb=$(( total_mb - 1200 ))
-          sudo -n systemd-run --scope -p "MemoryMax=${cap_mb}M" -p MemorySwapMax=0 \
+          sudo -n systemd-run --scope -p "MemoryMax=${cap_mb}M" -p MemorySwapMax=0 -p OOMPolicy=continue \
             runuser -u "$(id -un)" -- env "PATH=$PATH" \
               "CAPPED_MEM_MAX=${cap_mb}M" GOLEAN_ALLOW_NO_DIFF=1 \
               bash -c 'cg="$(awk -F: "/^0::/{print substr(\$0, index(\$0, \":\")+2); exit}" /proc/self/cgroup)"; lim="$(cat "/sys/fs/cgroup$cg/memory.max" 2>/dev/null)"; case "$lim" in ""|max) echo "in-scope: memory.max of $cg is [${lim:-unreadable}] — the cap is NOT in effect; refusing" >&2; exit 3;; esac; echo "in-scope: user=$(id -un) pwd=$PWD | memory.max=$lim | $(go version 2>&1) | $(lake --version 2>&1)"; exec ./scripts/ci'
@@ -232,7 +275,7 @@ jobs:
           fi
           cap_mb=$(( total_mb - 1200 ))
           cap() {
-            sudo -n systemd-run --scope -p "MemoryMax=${cap_mb}M" -p MemorySwapMax=0 \
+            sudo -n systemd-run --scope -p "MemoryMax=${cap_mb}M" -p MemorySwapMax=0 -p OOMPolicy=continue \
               runuser -u "$(id -un)" -- env "PATH=$PATH" \
                 "CAPPED_MEM_MAX=${cap_mb}M" \
                 bash -c 'cg="$(awk -F: "/^0::/{print substr(\$0, index(\$0, \":\")+2); exit}" /proc/self/cgroup)"; lim="$(cat "/sys/fs/cgroup$cg/memory.max" 2>/dev/null)"; case "$lim" in ""|max) echo "in-scope: memory.max of $cg is [${lim:-unreadable}] — the cap is NOT in effect; refusing" >&2; exit 3;; esac; echo "in-scope: user=$(id -un) pwd=$PWD | memory.max=$lim | $(go version 2>&1) | $(lake --version 2>&1)"; exec ./scripts/ci "$@"' ci-wrapper "$@"
@@ -274,6 +317,32 @@ jobs:
               || echo "::warning::gate failed AND the failure issue could not be filed — the notification path itself is broken; check GITHUB_TOKEN issue permissions"
           fi
 
+      # The success half of the notification (2026-10-22): a green
+      # scheduled/dispatch run CLOSES the open failure issue, commenting the
+      # run, so the next red opens a fresh issue instead of appending to a
+      # thread nobody reads (issue #1 collected a month of comments,
+      # 2026-09-21 to 10-21, across five green nightlies in between). Same
+      # dedup key as the filing step; a failed lookup or close is the loud
+      # ::warning, never a silent pass.
+      - name: Close the open failure issue on a green scheduled/dispatch gate
+        if: success() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          if ! open="$(gh issue list --repo "${{ github.repository }}" --state open \
+                --search '"gate FAILED" in:title' --json number --jq '.[].number')"; then
+            echo "::warning::the gate is green but the failure-issue lookup failed — nothing closed; check GITHUB_TOKEN issue permissions"
+            exit 0
+          fi
+          [ -n "$open" ] || { echo "no open failure issue to close"; exit 0; }
+          for n in $open; do
+            gh issue close "$n" --repo "${{ github.repository }}" \
+              --comment "The ${{ github.event_name }} gate is green again at commit ${{ github.sha }}. Run: $run_url" \
+              && echo "closed failure issue #$n" \
+              || echo "::warning::the gate is green but closing failure issue #$n failed — the notification path itself is broken; check GITHUB_TOKEN issue permissions"
+          done
+
       # Was anything OOM-killed inside the gate's cgroup scope? A cap kill
       # would otherwise be indistinguishable from a semantic failure in
       # the differential (a killed worker surfaces as a case FAIL — audit
@@ -285,7 +354,10 @@ jobs:
         # first live run (2026-08-15) even though there were no events.
         run: |
           oom="$(sudo -n dmesg 2>/dev/null | grep -iE "out of memory|oom-kill|killed process" | tail -20)"
-          if [ -n "$oom" ]; then printf '%s\n' "$oom"; else echo "dmesg: no OOM events"; fi
+          if [ -n "$oom" ]; then
+            printf '%s\n' "$oom"
+            echo "::warning title=OOM inside the gate's cgroup::the kernel OOM-killed a gate process (dmesg above); a red step above with exit 137 is that kill, not a semantic failure"
+          else echo "dmesg: no OOM events"; fi
 
       # The save half of the split cache — see the restore step's comment.
       # `always()` is the point: a red gate still saves, so each retry
@@ -298,7 +370,7 @@ jobs:
       # keep them in lockstep.
       - name: Save toolchains and build artifacts (runs even on a red gate)
         if: always() && (steps.fast-gate.conclusion != 'skipped' || steps.full-gate.conclusion != 'skipped')
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: |
             ~/.elan

@@ -632,9 +632,9 @@ deletes every artifact under `.lake/build/lib/lean/` and `.lake/build/ir/` whose
 module has no `<path>.lean` at the root, names each one, passes a cold tree, and
 refuses a lakefile with a `srcDir` (the rule would be wrong). The workflow runs it
 right after the cache restore; by hand it replaces the `find … -delete` above.
-`scripts/ci` prints only the last 25 lines of a failed check, so the runner log
-named 23 of the 79 under its «129 oleans vs 50 modules» count — the full list is
-in the check's own output, not the gate's tail.
+`scripts/ci` printed only the last 25 lines of a failed check, so the runner log
+named 23 of the 79 under its «129 oleans vs 50 modules» count; since the same
+lane it prints a failed replay's whole output (bounded by the module count).
 
 The cost law is the build's («Concurrency OOM», above): the checker runs
 one task per module on Lean's thread pool, each importing the module's

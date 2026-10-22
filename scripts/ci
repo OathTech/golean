@@ -371,7 +371,11 @@ else
   if [ "$kr_rc" -eq 0 ] && [ "${kr_n:-0}" -gt 0 ]; then
     printf '%s\n' "$kr_out" | tail -2 | sed 's/^/  /'; ok "kernel replay ($kr_n GoLean modules replayed through the kernel — leanchecker)"
   else
-    printf '%s\n' "$kr_out" | tail -25 | sed 's/^/  /'
+    # The WHOLE output, not a tail: a stale-olean refusal names one module per
+    # line and the list is bounded by the module count (2026-10-22: the
+    # runner's tail -25 showed 23 of 79 under a «129 oleans vs 50 modules»
+    # line that said «named above»). The checker's own log is still a file.
+    printf '%s\n' "$kr_out" | sed 's/^/  /'
     bad "kernel replay (exit $kr_rc, ${kr_n:-no} module count — a killed, refused, incomplete or empty replay is NOT a pass; see above)"
   fi
 fi
