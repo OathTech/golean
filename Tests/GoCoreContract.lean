@@ -596,6 +596,60 @@ theorem initPrintRefusal?_zeroCost :
     ∀ {c : Config}, ZeroCost c → initPrintRefusal? c = none :=
   GoCore.ExecutionStatement.initPrintRefusal?_zeroCost
 
+/-- The initialiser of the control program: `g = 7` (global cell 0). -/
+def initControlBody : Stmt := .assign (.addr (.global 0)) (.intLit 7 .int)
+
+/-- `var g int`; `func init() { g = 7 }`; `func F() (z int) { z = g }` — one global, one
+initializer writing it, the subject reading it. -/
+def initControl : Program := {
+  funcs := #[
+    { id := ⟨"F"⟩, args := #[], results := #[{ id := 1, typ := .int }],
+      body := .assign (.var 1) (.deref (.global 0) .int) },
+    { id := pkgInitFuncId, args := #[], results := #[], body := initControlBody } ],
+  globals := #[{ name := "g", typ := .int }] }
+
+/-- A `println(1)` at its apply position: the one operand delivered, no targets, nothing pending. -/
+def printPosition : Config := .retV (.int 1 .int) (.stmtOpK (.print true) 0 [] [] [] .stop)
+
+/-- The dichotomy's second arm, inhabited: at the print position the guard FIRES by name. -/
+theorem init_print_refused_control :
+    initPrintRefusal? printPosition = some (Stop.unsupported "print/println during package initialization: the init phase runs on the sequential driver, which has no output event channel (the pool driver folds StepEvent.out) — refused rather than dropping the bytes (stdlib slice 3; row builtins/print/in-init)") :=
+  rfl
+
+/-- The init loop at the print position: the guard's refusal (at fuel 4, with steps to spare). -/
+theorem init_print_loop_refuses_control :
+    runInitConfig ⟨initControl⟩ 4 {} printPosition []
+      = .error ((initPrintRefusal? printPosition).getD .fuelOut) :=
+  rfl
+
+/-- The entry loop at the same position steps through to `.next .stop` (the print's bytes ride the
+step label, which this driver drops — exactly what the init guard exists to refuse). -/
+theorem init_print_entry_loop_completes_control :
+    execStmtLoop ⟨initControl⟩ 4 {} printPosition [] = .ok ({}, []) :=
+  rfl
+
+/-- So the two loops DIFFER there and no premise-free EQUATION holds; the dichotomy
+`runInitConfig_cases` is the statement. -/
+theorem init_print_loops_differ_control :
+    runInitConfig ⟨initControl⟩ 4 {} printPosition [] ≠ execStmtLoop ⟨initControl⟩ 4 {} printPosition [] := by
+  rw [init_print_loop_refuses_control, init_print_entry_loop_completes_control]
+  intro h
+  cases h
+
+end GoLean.GoCore.ContractTests.Pin
+
+/-! ## §E Provisional statements (pinned for build-time drift; NOT in the comparator contract)
+
+The G16 table-monotonicity statements below are proved and pinned like §D, but they are kept
+OUT of `comparator.json`'s frozen surface until backlog row 48's ruling settles the relation
+`ProgramCtx.SubTables` (the review of 2026-10-23 measured that its premises defeat the
+customer's slicing; a redesign would change these statements). `scripts/gen-contract --check`
+reads §D only, so a pin here does not demand a contract entry. Move a statement to §D when it
+is settled. -/
+namespace GoLean.GoCore.ContractTests.Provisional
+
+open GoCore GoCore.Machine GoCore.ExecutionStatement
+
 /-! raft-proofs G16 (backlog row 48, 2026-10-23; `GoLean/GoCore/TableMonotonicity.lean`, lane
 `core/g16-table-monotonicity-1023`): a successful step under a SLICE of the function, method and
 promotion tables (`ProgramCtx.SubTables`: same `typeDefs`/`globals`/`typeDisplays`/`methodSets`,
@@ -672,44 +726,4 @@ theorem enterFramePickV_mono :
     enterFramePickV a s fid args ch = .ok x → enterFramePickV b s fid args ch = .ok x :=
   GoCore.ProgramCtx.SubTables.enterFramePickV_mono
 
-/-- The initialiser of the control program: `g = 7` (global cell 0). -/
-def initControlBody : Stmt := .assign (.addr (.global 0)) (.intLit 7 .int)
-
-/-- `var g int`; `func init() { g = 7 }`; `func F() (z int) { z = g }` — one global, one
-initializer writing it, the subject reading it. -/
-def initControl : Program := {
-  funcs := #[
-    { id := ⟨"F"⟩, args := #[], results := #[{ id := 1, typ := .int }],
-      body := .assign (.var 1) (.deref (.global 0) .int) },
-    { id := pkgInitFuncId, args := #[], results := #[], body := initControlBody } ],
-  globals := #[{ name := "g", typ := .int }] }
-
-/-- A `println(1)` at its apply position: the one operand delivered, no targets, nothing pending. -/
-def printPosition : Config := .retV (.int 1 .int) (.stmtOpK (.print true) 0 [] [] [] .stop)
-
-/-- The dichotomy's second arm, inhabited: at the print position the guard FIRES by name. -/
-theorem init_print_refused_control :
-    initPrintRefusal? printPosition = some (Stop.unsupported "print/println during package initialization: the init phase runs on the sequential driver, which has no output event channel (the pool driver folds StepEvent.out) — refused rather than dropping the bytes (stdlib slice 3; row builtins/print/in-init)") :=
-  rfl
-
-/-- The init loop at the print position: the guard's refusal (at fuel 4, with steps to spare). -/
-theorem init_print_loop_refuses_control :
-    runInitConfig ⟨initControl⟩ 4 {} printPosition []
-      = .error ((initPrintRefusal? printPosition).getD .fuelOut) :=
-  rfl
-
-/-- The entry loop at the same position steps through to `.next .stop` (the print's bytes ride the
-step label, which this driver drops — exactly what the init guard exists to refuse). -/
-theorem init_print_entry_loop_completes_control :
-    execStmtLoop ⟨initControl⟩ 4 {} printPosition [] = .ok ({}, []) :=
-  rfl
-
-/-- So the two loops DIFFER there and no premise-free EQUATION holds; the dichotomy
-`runInitConfig_cases` is the statement. -/
-theorem init_print_loops_differ_control :
-    runInitConfig ⟨initControl⟩ 4 {} printPosition [] ≠ execStmtLoop ⟨initControl⟩ 4 {} printPosition [] := by
-  rw [init_print_loop_refuses_control, init_print_entry_loop_completes_control]
-  intro h
-  cases h
-
-end GoLean.GoCore.ContractTests.Pin
+end GoLean.GoCore.ContractTests.Provisional
