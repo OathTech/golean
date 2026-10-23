@@ -242,19 +242,25 @@ panic under a slice of the tables are the same under the whole — pinned in
 by the core audit. Refusals are not claimed (a slice refuses where the whole dispatches).
 
 Since 2026-10-23 (release-readiness row 43, [USER]-ruled) that kept surface is a COMPARATOR
-CONTRACT: `Contract/Challenge.lean` restates all 285 of its theorems — the five `Prefix`/`Finish`
-laws above, the 232 `@[stepFn_eqns]` lemmas, the 27 public theorems of `InitDriverFacts.lean`
-(G11), the six output-fold statements, `enterFrame_declared` and the fourteen
+CONTRACT: `Contract/Challenge.lean` restates all 349 of its theorems — every theorem of
+`Equations.lean` (296; 232 of them `@[stepFn_eqns]` simp-set members — the `signalStep_*` rows,
+`runProgramSetup_noInit`, the `allocDecls_*`/`bindParams_*`/`setup_*` facts and the rest are plain
+theorems of the module), the 27 public theorems of `InitDriverFacts.lean` (G11), the five
+`Prefix`/`Finish` laws above, the six output-fold statements, `enterFrame_declared` and the fourteen
 `Choices.consumeAt*` laws (the list, read from the built environment: `scripts/contract-names.lean`)
 — as frozen text with `sorry` holes, under alias names `GoLean.Contract.<rest>`; the generated
 `GoLean/Contract/Solution.lean` presents GoLean's own theorems under the same names with their own
 types; and `lake comparator` (`comparator.json` at the root; the `--diff`-tier speedbump
 `scripts/check-comparator`, the claim-point run of `docs/release.md` §3) judges that each statement
-is syntactically what the challenge says, on standard axioms, kernel-accepted. A kept statement that
-moves is a kernel-level mismatch naming the theorem; the challenge is updated deliberately, with a
-changelog row. The §D pins of `Tests/GoCoreContract.lean` stay as the build-time text witness of the
-same set; definitions (`Prefix`, `Finish`, `replays`, `stepFn`) are shared by both sides, not
-frozen.
+is syntactically what the challenge says (Lake's comparison of the two exports; binder names and
+binder annotations ignored), on standard axioms, with the solution replayed through the kernel. An
+edit to a kept theorem's statement is a mismatch naming the theorem; the challenge is updated
+deliberately, with a changelog row. The limit: in-repo the frozen text is re-elaborated against the
+LIVE definitions, so a drift that enters through a definition's signature (an inserted implicit or
+default argument, an `abbrev`) moves both sides and is caught only across a pin, by the consumer's
+`--challenge-from-export` route (`scripts/contract-export`); definitions (`Prefix`, `Finish`,
+`replays`, `stepFn`) are shared by both sides in-repo, not frozen. The §D pins of
+`Tests/GoCoreContract.lean` stay as the build-time text witness of the same set.
 
 The logic repository pins a commit, currently the tag `logic-offer/2026-10-03`. Each change that
 affects a consumer-visible behaviour or the kept surface is a line in the post-offer changelog

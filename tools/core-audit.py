@@ -20,11 +20,14 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def on_disk_modules():
-    top = sorted(p for p in (ROOT / "GoLean").glob("*.lean") if p.is_file())
-    core = sorted(p for p in (ROOT / "GoLean/GoCore").glob("*.lean") if p.is_file())
+    # Every module under GoLean/, recursively (fix round 2026-10-23, review F4: the two
+    # GoLean/Contract/ modules of the comparator contract were outside a GoLean/*.lean +
+    # GoLean/GoCore/*.lean walk, and the two-way closure claim was false by three modules).
+    found = sorted(p for p in (ROOT / "GoLean").rglob("*.lean") if p.is_file() and ".lake" not in p.parts)
+    core = [p for p in found if p.parent == ROOT / "GoLean/GoCore"]
     if not core:
         raise RuntimeError("core audit: GoLean/GoCore/ has no modules — a vacuous audit is refused")
-    modules = ["GoLean." + p.stem for p in top] + ["GoLean.GoCore." + p.stem for p in core]
+    modules = ["GoLean." + ".".join(p.relative_to(ROOT / "GoLean").with_suffix("").parts) for p in found]
     if len(set(modules)) != len(modules):
         raise RuntimeError("core audit: duplicate module names on disk")
     # The root GoLean.lean is imports only and is scanned by scripts/ci's text scan; the

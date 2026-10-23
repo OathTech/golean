@@ -206,15 +206,22 @@ Everything else is untrusted tooling.
   `main`-bearing test libraries are built by name, [USER] 2026-10-21,
   backlog row 42; sandboxed where `bwrap` can start,
   `--inadvisably-no-sandbox` where it cannot, saying which) and `lake
-  comparator` (`scripts/check-comparator`, about 20 s: the 285 statements
-  of the surface kept on main for the raft-proofs customer, FROZEN in
-  `Contract/Challenge.lean`, judged against GoLean's own theorems through
-  the generated aliases of `GoLean/Contract/Solution.lean` per
-  `comparator.json` — syntactically as stated, standard axioms only,
-  kernel-accepted, so a statement drift is a kernel-level mismatch naming
-  the theorem, never a text diff; the challenge is updated deliberately
-  with a changelog row; [USER] 2026-10-23, backlog row 43; the same
-  sandbox detection)) under their own heading. A red one never fails the
+  comparator` (`scripts/check-comparator`, about 20 s: the 349 statements
+  of the surface kept on main for the raft-proofs customer — every theorem
+  of `Equations.lean`, the G11 family, the `Prefix`/`Finish` laws, the
+  output-fold bridge, `enterFrame_declared`, the `Choices.consumeAt*` laws
+  — FROZEN as text in `Contract/Challenge.lean`, judged against GoLean's
+  own theorems through the generated aliases of
+  `GoLean/Contract/Solution.lean` per `comparator.json`: Lake's judge
+  compares the two exports' statements syntactically, requires standard
+  axioms only and replays the solution through the kernel, so an edit to
+  a kept theorem's statement is a mismatch naming the theorem, never a
+  text diff. In-repo the frozen text is re-elaborated against the LIVE
+  definitions, so a drift that enters through a definition's signature is
+  caught only across a pin, by the consumer's `--challenge-from-export`
+  route; the challenge is updated deliberately with a changelog row;
+  [USER] 2026-10-23, backlog row 43; the same sandbox detection)) under
+  their own heading. A red one never fails the
   gate; it is read at the merge ask and fixed or waived there, by name.
   The owner's `lake check` and `lake comparator` outside the sandbox are
   the gate at claim points, `lake check --paranoid` at the release claim

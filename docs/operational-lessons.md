@@ -841,7 +841,10 @@ must be a kernel-level mismatch, not a text diff).** The toolchain's
 `Lake/Check/Compare.lean` + `Axioms.lean`) builds and exports a CHALLENGE
 module and a SOLUTION module per `comparator.json` and judges each name in
 `theorem_names`: the two `ConstantVal`s (name, levels, TYPE) must be `==`
-— SYNTACTIC `Expr` equality, binder names ignored, nothing definitional —
+— SYNTACTIC `Expr` equality (`Expr.eqv`: binder names AND binder
+annotations ignored — explicit for implicit is accepted — nothing
+definitional; today the challenge differs from the kept types in binder
+names only, 203 of 349, and in no annotation) —
 every non-target constant the statements reach must be `==` whole (value
 included) in both exports, the solution's proofs may reach only
 `permitted_axioms`, and `leanchecker` replays the solution export. Names
@@ -865,17 +868,35 @@ itself; (3) `sorry` holes with `set_option warn.sorry false` (4.35's
 option) keep the warning-free build honest without a regex exemption, and
 keep the challenge out of `lake check` (which would refuse `sorryAx`);
 (4) `permitted_axioms` is the classical trio only. The list is read from
-the built environment (`scripts/contract-names.lean`: the `stepFn_eqns`
-simp set's members, InitDriverFacts.lean's public theorems, the named
-laws), `scripts/gen-contract` writes `comparator.json` and the Solution
-and `--check` fails on any difference, and `scripts/check-comparator` is
-the `--diff`-tier speedbump (gen-contract --check, then the comparator
-with scripts/check-lake-check's sandbox detection). Measured 2026-10-23
-(this box, inside the agent sandbox, `--inadvisably-no-sandbox`, 64G cap):
-19.0 s wall, largest process 1.84 GB, 285 theorem names (232 equations,
-27 G11, 14 `consumeAt*`, 6 output-fold, 5 Prefix/Finish, 1 enterFrame);
+the built environment (`scripts/contract-names.lean`: every public theorem
+of `Equations.lean` — 296, of which 232 carry `@[stepFn_eqns]`; the family
+was first the simp set's membership and was WIDENED at the fix round
+(review F1): the customer's rewriting library is the module, and its
+`signalStep_*` rows, `runProgramSetup_noInit`, the
+`allocDecls_*`/`bindParams_*`/`setup_*` facts are plain theorems there,
+which `Tests/EquationClient.lean` pins all 296 of — plus InitDriverFacts'
+public theorems and the named laws), `scripts/gen-contract` writes
+`comparator.json` and the Solution — in write mode BEFORE its challenge
+checks, so a widened family can be drafted from the fresh list — and
+`--check` fails on any difference, and `scripts/check-comparator` is the
+`--diff`-tier speedbump (gen-contract --check, then the comparator with
+scripts/check-lake-check's sandbox detection). Measured 2026-10-23 (this
+box, inside the agent sandbox, `--inadvisably-no-sandbox`, 64G cap) at
+285 names: 19.0 s wall, largest process 1.84 GB; at the final 349 names
+(296 equations, 27 G11, 14 `consumeAt*`, 6 output-fold, 5 Prefix/Finish,
+1 enterFrame) the figures are in the fix-round record below;
 scripts/contract-names.lean 1.8 s; a `lake build` of the two modules a
-few seconds. Fail-closed, shown in scratch: a dropped conjunct in one
+few seconds. THE LIMIT of the in-repo form (review F3): the challenge's
+TEXT is frozen and re-elaborated against the LIVE definitions, so an edit
+to a kept theorem's statement is caught, while a drift through a
+definition's signature — an inserted implicit, an `optParam`/`autoParam`,
+an instance argument, an `abbrev` — moves kept type and re-elaborated
+challenge alike and is accepted (the reviewer's mini project: `def f (x :
+Nat) (k : Nat := 1)`, judge accepts); only the consumer's cross-pin
+`--challenge-from-export` route (`scripts/contract-export`) catches that,
+because it compares the pinned export's definitions with the candidate's.
+The judge of a drift is Lake's syntactic comparison of the exports; the
+kernel replays the solution only. Fail-closed, shown in scratch: a dropped conjunct in one
 challenge statement → «error: Challenge and solution theorem statement do
 not match: 'GoLean.Contract.GoCore.ExecutionStatement.prefix_det'», exit
 1; an alias removed from the solution → the exporter aborts before the
@@ -888,7 +909,11 @@ form. The consumer's route, measured the same day: `scripts/contract-export`
 `lake comparator --challenge-from-export <it>` 16.9 s, exit 0. Four
 lessons from making the challenge's text re-elaborate to the IDENTICAL
 `Expr` (`scripts/contract-challenge-draft` prints every statement from
-the environment and checks exactly that; 281 of 285 as printed): a
+the environment and checks exactly that, elaborating the drafted
+`theorem` COMMAND in the challenge's own scope; it must import the
+challenge's vocabulary modules and never the `GoLean` root, which now
+carries the Solution's aliases — the first version did, and every drafted
+alias failed as «already declared», review F2; 341 of 349 as printed): a
 `match`/`do` in a statement mints an auxiliary matcher constant PER
 MODULE (`Lean.Meta.Match.mkMatcherAuxDefinition`'s cache is a local env
 extension), so the challenge names the kept theorem's own matcher,
@@ -897,8 +922,11 @@ printed with `pp.match false` (three statements); a statement ending in a
 the statement; `.ok (s, ch, [], [])` and `Except.ok (s, ch, [], [])`
 elaborate to DIFFERENT terms when a tuple component's type is an `abbrev`
 (`AccessTrace` vs `List MemEvent` in `Prod.mk`'s type argument: the
-dot-form waits for the expected type) — one statement is spelled by hand
-in the source's form; and `#eval`'s `IO.eprintln` output lands on stdout
+dot-form waits for the expected type) — the draft tool reprints such a
+statement in the dot-form and verifies it (four statements); a list
+literal whose element type is fixed before `++` meets an `AccessTrace`
+operand (`loadResults_cons`) is the one statement spelled by hand, in the
+source's form; and `#eval`'s `IO.eprintln` output lands on stdout
 with the messages, so a tool that separates a draft from diagnostics must
 filter by line. Not expressible as a theorem name, and what covers it:
 the `@[stepFn_eqns]` attribute itself (the name script reads the simp

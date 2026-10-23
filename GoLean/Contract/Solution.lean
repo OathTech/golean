@@ -108,7 +108,47 @@ theorem GoLean.Contract.GoCore.Machine.Choices.consumeAt_nilValueMethodText_one 
     stmt_of% GoLean.GoCore.Machine.Choices.consumeAt_nilValueMethodText_one :=
   GoLean.GoCore.Machine.Choices.consumeAt_nilValueMethodText_one
 
-/-! ## eqns (232) -/
+/-! ## eqns (296) -/
+
+theorem GoLean.Contract.GoCore.Equations.Heap.lookup_push_self :
+    stmt_of% GoLean.GoCore.Equations.Heap.lookup_push_self :=
+  GoLean.GoCore.Equations.Heap.lookup_push_self
+
+theorem GoLean.Contract.GoCore.Equations.Heap.lookup_set_self :
+    stmt_of% GoLean.GoCore.Equations.Heap.lookup_set_self :=
+  GoLean.GoCore.Equations.Heap.lookup_set_self
+
+theorem GoLean.Contract.GoCore.Equations.allocDecls_cons :
+    stmt_of% GoLean.GoCore.Equations.allocDecls_cons :=
+  GoLean.GoCore.Equations.allocDecls_cons
+
+theorem GoLean.Contract.GoCore.Equations.allocDecls_nil :
+    stmt_of% GoLean.GoCore.Equations.allocDecls_nil :=
+  GoLean.GoCore.Equations.allocDecls_nil
+
+theorem GoLean.Contract.GoCore.Equations.applyRhsOp_vals :
+    stmt_of% GoLean.GoCore.Equations.applyRhsOp_vals :=
+  GoLean.GoCore.Equations.applyRhsOp_vals
+
+theorem GoLean.Contract.GoCore.Equations.applyStmtOp_inv_panic :
+    stmt_of% GoLean.GoCore.Equations.applyStmtOp_inv_panic :=
+  GoLean.GoCore.Equations.applyStmtOp_inv_panic
+
+theorem GoLean.Contract.GoCore.Equations.applyStrictOp_toInterface_string :
+    stmt_of% GoLean.GoCore.Equations.applyStrictOp_toInterface_string :=
+  GoLean.GoCore.Equations.applyStrictOp_toInterface_string
+
+theorem GoLean.Contract.GoCore.Equations.bindParams_cons :
+    stmt_of% GoLean.GoCore.Equations.bindParams_cons :=
+  GoLean.GoCore.Equations.bindParams_cons
+
+theorem GoLean.Contract.GoCore.Equations.bindParams_nil :
+    stmt_of% GoLean.GoCore.Equations.bindParams_nil :=
+  GoLean.GoCore.Equations.bindParams_nil
+
+theorem GoLean.Contract.GoCore.Equations.bind_eq_error :
+    stmt_of% GoLean.GoCore.Equations.bind_eq_error :=
+  GoLean.GoCore.Equations.bind_eq_error
 
 theorem GoLean.Contract.GoCore.Equations.blockedRecv :
     stmt_of% GoLean.GoCore.Equations.blockedRecv :=
@@ -125,6 +165,34 @@ theorem GoLean.Contract.GoCore.Equations.blockedSend :
 theorem GoLean.Contract.GoCore.Equations.blockedSync :
     stmt_of% GoLean.GoCore.Equations.blockedSync :=
   GoLean.GoCore.Equations.blockedSync
+
+theorem GoLean.Contract.GoCore.Equations.completeTargetRef_var :
+    stmt_of% GoLean.GoCore.Equations.completeTargetRef_var :=
+  GoLean.GoCore.Equations.completeTargetRef_var
+
+theorem GoLean.Contract.GoCore.Equations.contHeadLabel_frame :
+    stmt_of% GoLean.GoCore.Equations.contHeadLabel_frame :=
+  GoLean.GoCore.Equations.contHeadLabel_frame
+
+theorem GoLean.Contract.GoCore.Equations.contHeadLabel_labelK :
+    stmt_of% GoLean.GoCore.Equations.contHeadLabel_labelK :=
+  GoLean.GoCore.Equations.contHeadLabel_labelK
+
+theorem GoLean.Contract.GoCore.Equations.contHeadLabel_stop :
+    stmt_of% GoLean.GoCore.Equations.contHeadLabel_stop :=
+  GoLean.GoCore.Equations.contHeadLabel_stop
+
+theorem GoLean.Contract.GoCore.Equations.deferrableCallee_false :
+    stmt_of% GoLean.GoCore.Equations.deferrableCallee_false :=
+  GoLean.GoCore.Equations.deferrableCallee_false
+
+theorem GoLean.Contract.GoCore.Equations.enterFramePickV_of_plan_error :
+    stmt_of% GoLean.GoCore.Equations.enterFramePickV_of_plan_error :=
+  GoLean.GoCore.Equations.enterFramePickV_of_plan_error
+
+theorem GoLean.Contract.GoCore.Equations.enterFrame_inv_error :
+    stmt_of% GoLean.GoCore.Equations.enterFrame_inv_error :=
+  GoLean.GoCore.Equations.enterFrame_inv_error
 
 theorem GoLean.Contract.GoCore.Equations.evalE_and :
     stmt_of% GoLean.GoCore.Equations.evalE_and :=
@@ -434,6 +502,18 @@ theorem GoLean.Contract.GoCore.Equations.frameExit_targets_error :
     stmt_of% GoLean.GoCore.Equations.frameExit_targets_error :=
   GoLean.GoCore.Equations.frameExit_targets_error
 
+theorem GoLean.Contract.GoCore.Equations.loadResults_cons :
+    stmt_of% GoLean.GoCore.Equations.loadResults_cons :=
+  GoLean.GoCore.Equations.loadResults_cons
+
+theorem GoLean.Contract.GoCore.Equations.loadResults_nil :
+    stmt_of% GoLean.GoCore.Equations.loadResults_nil :=
+  GoLean.GoCore.Equations.loadResults_nil
+
+theorem GoLean.Contract.GoCore.Equations.loadRoot_base :
+    stmt_of% GoLean.GoCore.Equations.loadRoot_base :=
+  GoLean.GoCore.Equations.loadRoot_base
+
 theorem GoLean.Contract.GoCore.Equations.next_breakableK :
     stmt_of% GoLean.GoCore.Equations.next_breakableK :=
   GoLean.GoCore.Equations.next_breakableK
@@ -625,6 +705,14 @@ theorem GoLean.Contract.GoCore.Equations.panicking_storeK :
 theorem GoLean.Contract.GoCore.Equations.panicking_strictK :
     stmt_of% GoLean.GoCore.Equations.panicking_strictK :=
   GoLean.GoCore.Equations.panicking_strictK
+
+theorem GoLean.Contract.GoCore.Equations.pinResultLocs_eq_of_lookup :
+    stmt_of% GoLean.GoCore.Equations.pinResultLocs_eq_of_lookup :=
+  GoLean.GoCore.Equations.pinResultLocs_eq_of_lookup
+
+theorem GoLean.Contract.GoCore.Equations.resolveChain_nil :
+    stmt_of% GoLean.GoCore.Equations.resolveChain_nil :=
+  GoLean.GoCore.Equations.resolveChain_nil
 
 theorem GoLean.Contract.GoCore.Equations.retV_andK_error :
     stmt_of% GoLean.GoCore.Equations.retV_andK_error :=
@@ -994,6 +1082,138 @@ theorem GoLean.Contract.GoCore.Equations.retV_whileK_true :
     stmt_of% GoLean.GoCore.Equations.retV_whileK_true :=
   GoLean.GoCore.Equations.retV_whileK_true
 
+theorem GoLean.Contract.GoCore.Equations.runCommit_error :
+    stmt_of% GoLean.GoCore.Equations.runCommit_error :=
+  GoLean.GoCore.Equations.runCommit_error
+
+theorem GoLean.Contract.GoCore.Equations.runPkgInitM_none :
+    stmt_of% GoLean.GoCore.Equations.runPkgInitM_none :=
+  GoLean.GoCore.Equations.runPkgInitM_none
+
+theorem GoLean.Contract.GoCore.Equations.runProgramSetup_noInit :
+    stmt_of% GoLean.GoCore.Equations.runProgramSetup_noInit :=
+  GoLean.GoCore.Equations.runProgramSetup_noInit
+
+theorem GoLean.Contract.GoCore.Equations.seedGlobals_nil :
+    stmt_of% GoLean.GoCore.Equations.seedGlobals_nil :=
+  GoLean.GoCore.Equations.seedGlobals_nil
+
+theorem GoLean.Contract.GoCore.Equations.setup_heap_size :
+    stmt_of% GoLean.GoCore.Equations.setup_heap_size :=
+  GoLean.GoCore.Equations.setup_heap_size
+
+theorem GoLean.Contract.GoCore.Equations.setup_lookup_arg :
+    stmt_of% GoLean.GoCore.Equations.setup_lookup_arg :=
+  GoLean.GoCore.Equations.setup_lookup_arg
+
+theorem GoLean.Contract.GoCore.Equations.setup_lookup_result :
+    stmt_of% GoLean.GoCore.Equations.setup_lookup_result :=
+  GoLean.GoCore.Equations.setup_lookup_result
+
+theorem GoLean.Contract.GoCore.Equations.setup_resultLocs :
+    stmt_of% GoLean.GoCore.Equations.setup_resultLocs :=
+  GoLean.GoCore.Equations.setup_resultLocs
+
+theorem GoLean.Contract.GoCore.Equations.signalStep_breakableK_brk :
+    stmt_of% GoLean.GoCore.Equations.signalStep_breakableK_brk :=
+  GoLean.GoCore.Equations.signalStep_breakableK_brk
+
+theorem GoLean.Contract.GoCore.Equations.signalStep_breakableK_brkTo :
+    stmt_of% GoLean.GoCore.Equations.signalStep_breakableK_brkTo :=
+  GoLean.GoCore.Equations.signalStep_breakableK_brkTo
+
+theorem GoLean.Contract.GoCore.Equations.signalStep_breakableK_cont :
+    stmt_of% GoLean.GoCore.Equations.signalStep_breakableK_cont :=
+  GoLean.GoCore.Equations.signalStep_breakableK_cont
+
+theorem GoLean.Contract.GoCore.Equations.signalStep_breakableK_contTo :
+    stmt_of% GoLean.GoCore.Equations.signalStep_breakableK_contTo :=
+  GoLean.GoCore.Equations.signalStep_breakableK_contTo
+
+theorem GoLean.Contract.GoCore.Equations.signalStep_breakableK_ret :
+    stmt_of% GoLean.GoCore.Equations.signalStep_breakableK_ret :=
+  GoLean.GoCore.Equations.signalStep_breakableK_ret
+
+theorem GoLean.Contract.GoCore.Equations.signalStep_labelK_brk :
+    stmt_of% GoLean.GoCore.Equations.signalStep_labelK_brk :=
+  GoLean.GoCore.Equations.signalStep_labelK_brk
+
+theorem GoLean.Contract.GoCore.Equations.signalStep_labelK_brkTo_ne :
+    stmt_of% GoLean.GoCore.Equations.signalStep_labelK_brkTo_ne :=
+  GoLean.GoCore.Equations.signalStep_labelK_brkTo_ne
+
+theorem GoLean.Contract.GoCore.Equations.signalStep_labelK_brkTo_self :
+    stmt_of% GoLean.GoCore.Equations.signalStep_labelK_brkTo_self :=
+  GoLean.GoCore.Equations.signalStep_labelK_brkTo_self
+
+theorem GoLean.Contract.GoCore.Equations.signalStep_labelK_cont :
+    stmt_of% GoLean.GoCore.Equations.signalStep_labelK_cont :=
+  GoLean.GoCore.Equations.signalStep_labelK_cont
+
+theorem GoLean.Contract.GoCore.Equations.signalStep_labelK_contTo_ne :
+    stmt_of% GoLean.GoCore.Equations.signalStep_labelK_contTo_ne :=
+  GoLean.GoCore.Equations.signalStep_labelK_contTo_ne
+
+theorem GoLean.Contract.GoCore.Equations.signalStep_labelK_contTo_self :
+    stmt_of% GoLean.GoCore.Equations.signalStep_labelK_contTo_self :=
+  GoLean.GoCore.Equations.signalStep_labelK_contTo_self
+
+theorem GoLean.Contract.GoCore.Equations.signalStep_labelK_ret :
+    stmt_of% GoLean.GoCore.Equations.signalStep_labelK_ret :=
+  GoLean.GoCore.Equations.signalStep_labelK_ret
+
+theorem GoLean.Contract.GoCore.Equations.signalStep_loop_brk :
+    stmt_of% GoLean.GoCore.Equations.signalStep_loop_brk :=
+  GoLean.GoCore.Equations.signalStep_loop_brk
+
+theorem GoLean.Contract.GoCore.Equations.signalStep_loop_brkTo :
+    stmt_of% GoLean.GoCore.Equations.signalStep_loop_brkTo :=
+  GoLean.GoCore.Equations.signalStep_loop_brkTo
+
+theorem GoLean.Contract.GoCore.Equations.signalStep_loop_cont :
+    stmt_of% GoLean.GoCore.Equations.signalStep_loop_cont :=
+  GoLean.GoCore.Equations.signalStep_loop_cont
+
+theorem GoLean.Contract.GoCore.Equations.signalStep_loop_contTo_ne :
+    stmt_of% GoLean.GoCore.Equations.signalStep_loop_contTo_ne :=
+  GoLean.GoCore.Equations.signalStep_loop_contTo_ne
+
+theorem GoLean.Contract.GoCore.Equations.signalStep_loop_contTo_self :
+    stmt_of% GoLean.GoCore.Equations.signalStep_loop_contTo_self :=
+  GoLean.GoCore.Equations.signalStep_loop_contTo_self
+
+theorem GoLean.Contract.GoCore.Equations.signalStep_loop_ret :
+    stmt_of% GoLean.GoCore.Equations.signalStep_loop_ret :=
+  GoLean.GoCore.Equations.signalStep_loop_ret
+
+theorem GoLean.Contract.GoCore.Equations.signalStep_mapIterK_brk :
+    stmt_of% GoLean.GoCore.Equations.signalStep_mapIterK_brk :=
+  GoLean.GoCore.Equations.signalStep_mapIterK_brk
+
+theorem GoLean.Contract.GoCore.Equations.signalStep_mapIterK_brkTo :
+    stmt_of% GoLean.GoCore.Equations.signalStep_mapIterK_brkTo :=
+  GoLean.GoCore.Equations.signalStep_mapIterK_brkTo
+
+theorem GoLean.Contract.GoCore.Equations.signalStep_mapIterK_cont :
+    stmt_of% GoLean.GoCore.Equations.signalStep_mapIterK_cont :=
+  GoLean.GoCore.Equations.signalStep_mapIterK_cont
+
+theorem GoLean.Contract.GoCore.Equations.signalStep_mapIterK_contTo_ne :
+    stmt_of% GoLean.GoCore.Equations.signalStep_mapIterK_contTo_ne :=
+  GoLean.GoCore.Equations.signalStep_mapIterK_contTo_ne
+
+theorem GoLean.Contract.GoCore.Equations.signalStep_mapIterK_contTo_self :
+    stmt_of% GoLean.GoCore.Equations.signalStep_mapIterK_contTo_self :=
+  GoLean.GoCore.Equations.signalStep_mapIterK_contTo_self
+
+theorem GoLean.Contract.GoCore.Equations.signalStep_mapIterK_ret :
+    stmt_of% GoLean.GoCore.Equations.signalStep_mapIterK_ret :=
+  GoLean.GoCore.Equations.signalStep_mapIterK_ret
+
+theorem GoLean.Contract.GoCore.Equations.signalStep_seq :
+    stmt_of% GoLean.GoCore.Equations.signalStep_seq :=
+  GoLean.GoCore.Equations.signalStep_seq
+
 theorem GoLean.Contract.GoCore.Equations.signal_frame_escape :
     stmt_of% GoLean.GoCore.Equations.signal_frame_escape :=
   GoLean.GoCore.Equations.signal_frame_escape
@@ -1013,6 +1233,26 @@ theorem GoLean.Contract.GoCore.Equations.signal_stop :
 theorem GoLean.Contract.GoCore.Equations.signal_table :
     stmt_of% GoLean.GoCore.Equations.signal_table :=
   GoLean.GoCore.Equations.signal_table
+
+theorem GoLean.Contract.GoCore.Equations.stateWf_empty :
+    stmt_of% GoLean.GoCore.Equations.stateWf_empty :=
+  GoLean.GoCore.Equations.stateWf_empty
+
+theorem GoLean.Contract.GoCore.Equations.storeLoc_root :
+    stmt_of% GoLean.GoCore.Equations.storeLoc_root :=
+  GoLean.GoCore.Equations.storeLoc_root
+
+theorem GoLean.Contract.GoCore.Equations.storeTarget_inv_panic :
+    stmt_of% GoLean.GoCore.Equations.storeTarget_inv_panic :=
+  GoLean.GoCore.Equations.storeTarget_inv_panic
+
+theorem GoLean.Contract.GoCore.Equations.targetPlan_var :
+    stmt_of% GoLean.GoCore.Equations.targetPlan_var :=
+  GoLean.GoCore.Equations.targetPlan_var
+
+theorem GoLean.Contract.GoCore.Equations.toResult_of_error :
+    stmt_of% GoLean.GoCore.Equations.toResult_of_error :=
+  GoLean.GoCore.Equations.toResult_of_error
 
 theorem GoLean.Contract.GoCore.Equations.unseqEnter :
     stmt_of% GoLean.GoCore.Equations.unseqEnter :=
@@ -1037,6 +1277,22 @@ theorem GoLean.Contract.GoCore.Equations.unseqValue_error :
 theorem GoLean.Contract.GoCore.Equations.unseqWait_invoke :
     stmt_of% GoLean.GoCore.Equations.unseqWait_invoke :=
   GoLean.GoCore.Equations.unseqWait_invoke
+
+theorem GoLean.Contract.GoCore.Equations.valueAsBool_bool :
+    stmt_of% GoLean.GoCore.Equations.valueAsBool_bool :=
+  GoLean.GoCore.Equations.valueAsBool_bool
+
+theorem GoLean.Contract.GoCore.Equations.valueAsBool_nonbool :
+    stmt_of% GoLean.GoCore.Equations.valueAsBool_nonbool :=
+  GoLean.GoCore.Equations.valueAsBool_nonbool
+
+theorem GoLean.Contract.GoCore.Equations.valueAsLoc_addr :
+    stmt_of% GoLean.GoCore.Equations.valueAsLoc_addr :=
+  GoLean.GoCore.Equations.valueAsLoc_addr
+
+theorem GoLean.Contract.GoCore.Equations.valueAsLoc_nil :
+    stmt_of% GoLean.GoCore.Equations.valueAsLoc_nil :=
+  GoLean.GoCore.Equations.valueAsLoc_nil
 
 /-! ## g11 (27) -/
 

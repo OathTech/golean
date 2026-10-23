@@ -11,8 +11,9 @@ import Lean
 /-! The core totality audit (2026-09-16, lane `park-lane/typed-profiles-0916`,
 `docs/2026-09-16_typed-profiles-parked.md` §3): the post-import axiom audit re-homed from
 the parked `semantic interface` step (`Tests/InterfaceAudit.lean` at `62fc8073`), restated
-over the CORE alone. Run from an external harness (`tools/core-audit.py`) that imports every
-`GoLean/*.lean` and `GoLean/GoCore/*.lean` found on disk and passes that list in, so that:
+over the CORE alone. Run from an external harness (`tools/core-audit.py`) that imports
+every `.lean` under `GoLean/`, recursively (`GoLean/Contract/` included since the comparator
+contract, fix round 2026-10-23), found on disk and passes that list in, so that:
 
 * every module on disk is in the audited closure and every `GoLean.*` module in the closure
   is on disk (two-way; a module that fails to import fails the harness first);

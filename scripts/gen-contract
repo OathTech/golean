@@ -23,7 +23,10 @@
 # `lake comparator` matches `theorem_names` by FULL name in both exports, which is why the
 # names must agree and why the hand-written challenge cannot be imported by the solution.
 #
-#   scripts/gen-contract           (re)write both files
+#   scripts/gen-contract           (re)write both files FIRST, then run the challenge checks
+#                                  below (so a widened family can be drafted from the fresh
+#                                  comparator.json with scripts/contract-challenge-draft); the
+#                                  exit is 1 while the challenge is incomplete
 #   scripts/gen-contract --check   regenerate into scratch and FAIL on any difference from the
 #                                  tracked files (a kept theorem added, removed, renamed or
 #                                  re-attributed without regenerating — the comparator would
@@ -68,8 +71,10 @@ if ! cap lake env lean scripts/contract-names.lean > "$list" 2> "$scratch/names.
   fail "scripts/contract-names.lean failed (its first lines above; the GoLean library must be built)"
 fi
 [ -s "$list" ] || fail "scripts/contract-names.lean printed nothing"
-stray="$(grep -v $'^KEPT\t' "$list" || true)"
+stray="$(grep -v $'^KEPT\t\|^COUNT\t' "$list" || true)"
 [ -z "$stray" ] || { printf '%s\n' "$stray" | head -5 >&2; fail "unexpected lines from scripts/contract-names.lean (above)"; }
+counts="$(grep $'^COUNT\t' "$list" | awk -F'\t' '{printf "%s%s: %s", (NR>1?"; ":""), $2, $3}')"
+grep -v $'^COUNT\t' "$list" > "$list.kept" && mv "$list.kept" "$list"
 n_kept="$(wc -l < "$list" | tr -d ' ')"
 while IFS=$'\t' read -r _ family name module; do
   [[ "$name" == GoLean.* ]] || fail "kept name '$name' ($family) is outside the GoLean namespace"
@@ -118,6 +123,7 @@ generation. Lane gate/comparator-1023, 2026-10-23 (release-readiness row 43, [US
 HDR
   prev=""
   while IFS=$'\t' read -r _ family name module; do
+    [ "$family" != "" ] || continue
     if [ "$family" != "$prev" ]; then
       printf '\n/-! ## %s (%s) -/\n' "$family" "$(awk -F'\t' -v f="$family" '$2==f' "$list" | wc -l | tr -d ' ')"
       prev="$family"
@@ -127,7 +133,16 @@ HDR
   done < "$list"
 } > "$scratch/Solution.lean"
 
-# ── 4. Text checks on the challenge.
+# ── 4. Write mode writes here — before the challenge checks — so that a deliberate change of
+# the kept set (a family widened, a theorem added) can be drafted from the fresh
+# comparator.json; the checks below still decide the exit code.
+if [ "$mode" = write ]; then
+  cp "$scratch/comparator.json" "$CONFIG"
+  cp "$scratch/Solution.lean" "$SOLUTION"
+  echo "gen-contract: wrote $CONFIG and $SOLUTION ($n_kept theorem names)"
+fi
+
+# ── 5. Text checks on the challenge.
 [ -f "$CHALLENGE" ] || fail "$CHALLENGE is missing"
 chal_code="$(strip_lean_comments < "$CHALLENGE")"
 declared="$(printf '%s\n' "$chal_code" | grep -oE '^theorem GoLean\.Contract\.[A-Za-z0-9_.?!₀-₉]+' | sed 's/^theorem //' | LC_ALL=C sort)"
@@ -142,7 +157,7 @@ circ="$(printf '%s\n' "$chal_code" | grep -nE 'stmt_of%|type_of%|[A-Za-z0-9_]_st
 [ -z "$circ" ] || { printf '%s\n' "$circ" | head -5 >&2; fail "$CHALLENGE spells a statement through the solution side (above): a challenge that names the kept theorem's type or a *_stmt constant pins nothing"; }
 grep -q '^set_option warn.sorry false' "$CHALLENGE" || fail "$CHALLENGE must carry 'set_option warn.sorry false' (its holes are sorry; the build is warning-free by that option, not by a regex)"
 
-# ── 5. Tests/GoCoreContract.lean §D: every pinned theorem is a kept name.
+# ── 6. Tests/GoCoreContract.lean §D: every pinned theorem is a kept name.
 pins="$(awk '/^namespace GoLean\.GoCore\.ContractTests\.Pin/{p=1} /^end GoLean\.GoCore\.ContractTests\.Pin/{p=0} p' Tests/GoCoreContract.lean \
   | grep -oE '^[[:space:]]+GoCore\.[A-Za-z0-9_.?!₀-₉]+[[:space:]]*$' | sed 's/[[:space:]]//g; s/^/GoLean./' | LC_ALL=C sort -u)"
 [ -n "$pins" ] || fail "no §D pin found in Tests/GoCoreContract.lean (the awk/grep shape moved?)"
@@ -150,12 +165,10 @@ unpinned="$(LC_ALL=C comm -23 <(printf '%s\n' "$pins") <(cut -f3 "$list" | LC_AL
 [ -z "$unpinned" ] || { printf '%s\n' "$unpinned" >&2; fail "Tests/GoCoreContract.lean §D pins theorem(s) that are not in the contract (above)"; }
 n_pins="$(printf '%s\n' "$pins" | wc -l | tr -d ' ')"
 
-# ── 6. Write, or compare.
-summary="kept surface: $n_kept theorems ($(cut -f2 "$list" | uniq -c | awk '{printf "%s%s %s", (NR>1?", ":""), $1, $2}')); §D pins $n_pins ⊆ contract; challenge declares all $n_kept and nothing else"
+# ── 7. The summary, or the comparison with the tracked files.
+summary="kept surface: $n_kept theorems ($(cut -f2 "$list" | uniq -c | awk '{printf "%s%s %s", (NR>1?", ":""), $1, $2}')); ${counts:-no COUNT line}; §D pins $n_pins ⊆ contract; challenge declares all $n_kept and nothing else"
 if [ "$mode" = write ]; then
-  cp "$scratch/comparator.json" "$CONFIG"
-  cp "$scratch/Solution.lean" "$SOLUTION"
-  echo "gen-contract: wrote $CONFIG and $SOLUTION — $summary"
+  echo "gen-contract: PASS — $summary"
 else
   bad=0
   for pair in "$scratch/comparator.json:$CONFIG" "$scratch/Solution.lean:$SOLUTION"; do

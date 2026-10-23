@@ -6,7 +6,9 @@ built environment (lane gate/comparator-1023, 2026-10-23; release-readiness row 
     lake env lean scripts/contract-names.lean
 
 Prints one line per kept theorem — `KEPT<TAB><family><TAB><full name><TAB><module>` — in a
-fixed family order, names sorted within a family, and nothing else on stdout. scripts/gen-contract
+fixed family order, names sorted within a family, plus `COUNT<TAB><what><TAB><n>` lines for the
+counts the records quote (today: the `stepFn_eqns` simp set's membership), and nothing else on
+stdout. scripts/gen-contract
 turns the list into `comparator.json` and `GoLean/Contract/Solution.lean`. Every family is read
 from the ENVIRONMENT, not from text, so a lemma that gains or loses the `stepFn_eqns` attribute,
 or a theorem added to or removed from `InitDriverFacts.lean`, changes the list (and
@@ -19,8 +21,13 @@ or a theorem added to or removed from `InitDriverFacts.lean`, changes the list (
   enterFrame  `enterFrame_declared` (`Machine.lean`).
   consumeAt   every theorem `…Choices.consumeAt*` — the `consumeAt_*` and `consumeAtE_*` laws of
               `State.lean` and `Machine.lean` (the customer's G9 list names both spellings).
-  eqns        every lemma carrying `@[stepFn_eqns]` — the simp set's own member list
-              (`EquationsAttr.lean`, `Equations.lean`).
+  eqns        every public theorem of the module `GoLean.GoCore.Equations` — the customer's
+              rewriting library is the MODULE (its `signalStep_*` rows, `runProgramSetup_noInit`,
+              the `allocDecls_*`/`bindParams_*`/`setup_*` facts, … are plain theorems there,
+              not simp-set members), widened from the `@[stepFn_eqns]` simp set's membership at
+              the fix round of 2026-10-23 (review F1; the owner's confirmation asked at the
+              merge ask). The simp set's membership is printed as a COUNT line beside it, and
+              every member must be a theorem of the module (fail closed otherwise).
   g11         every public theorem of `GoLean/GoCore/InitDriverFacts.lean` (the G11 family:
               `runInitConfig_*`, `runPkgInitM_*`, `prefix_det`/`prefix_det_le`, the
               `*_of_prefix_silent` converses, the one-step helpers), minus the toolchain's
@@ -91,13 +98,18 @@ open ContractNames in
   for o in thms.lemmaNames.toList do
     if let .decl n _ _ := o then tagged := tagged.push n
   let eqns := tagged.qsort (fun a b => a.toString < b.toString)
+  let eqnsModule := moduleTheorems env `GoLean.GoCore.Equations
+  for n in eqns do
+    unless eqnsModule.contains n do
+      throwError "contract-names: the stepFn_eqns member {n} is not a public theorem of GoLean.GoCore.Equations"
+  IO.println s!"COUNT\tstepFn_eqns simp-set members (all of them theorems of GoLean.GoCore.Equations)\t{eqns.size}"
   let families : Array (String × Array Lean.Name) := #[
     ("prefix", #[`GoLean.GoCore.ExecutionStatement.prefix_comp, `GoLean.GoCore.ExecutionStatement.prefix_split,
       `GoLean.GoCore.ExecutionStatement.run_ok_iff, `GoLean.GoCore.ExecutionStatement.run_panic_iff,
       `GoLean.GoCore.ExecutionStatement.replay_coverage]),
     ("enterFrame", #[`GoLean.GoCore.Machine.enterFrame_declared]),
     ("consumeAt", consumeAtTheorems env),
-    ("eqns", eqns),
+    ("eqns", eqnsModule),
     ("g11", moduleTheorems env `GoLean.GoCore.InitDriverFacts),
     ("pool", #[`GoLean.GoCore.Machine.execProgLoopOut_snd, `GoLean.GoCore.Machine.execProgLoopOut_single,
       `GoLean.GoCore.Machine.execProgLoopOut_single_prefix, `GoLean.GoCore.Machine.seqOut_of_prefix,

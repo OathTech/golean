@@ -93,16 +93,22 @@ push rule). Pushing the tag is a separate sign-off.
      «fatal runtime error: stack overflow, aborting», SIGABRT, exit 134 — after about 249 s at 43.5 GB, twice on the
      export alone; `RUST_MIN_STACK=4G` is ignored (nanoda sizes its worker stacks itself; its help has no stack
      option); the other four kernels and Lean's own accept the same export. That is the report to file upstream.
-   - (c) `lake comparator` — the surface kept on main for the raft-proofs customer (285 theorems: the `Prefix`/`Finish`
-     laws, every `@[stepFn_eqns]` lemma, the G11 family, the output-fold bridge, `enterFrame_declared`, the
-     `Choices.consumeAt*` laws) judged against its FROZEN challenge `Contract/Challenge.lean` per `comparator.json`
+   - (c) `lake comparator` — the surface kept on main for the raft-proofs customer (349 theorems: every theorem of
+     `Equations.lean` (296; 232 of them `@[stepFn_eqns]` simp-set members), the G11 family, the `Prefix`/`Finish`
+     laws, the output-fold bridge, `enterFrame_declared`, the `Choices.consumeAt*` laws) judged against its FROZEN
+     challenge `Contract/Challenge.lean` per `comparator.json`
      at the root (release-readiness row 43, [USER] 2026-10-23): `CAPPED_MEM_MAX=64G capped lake comparator` (the box
      default cap suffices). Expected: «Lean default kernel accepts the solution», «Your solution is okay!», exit 0,
      about 20 s (measured 2026-10-23 inside the agent sandbox with `--inadvisably-no-sandbox`: 19.0 s, largest process
      1.84 GB; the `bwrap` caveat of (a) applies unchanged). Exit 1 names the first statement, definition or axiom that
-     mismatches — a kept statement that moved without the challenge being updated deliberately (with a changelog row),
-     a stale generated half (`scripts/gen-contract --check` names it first in the speedbump form,
-     `scripts/check-comparator`), or a proof that reached a non-standard axiom. Nothing is re-pinned to make it green.
+     mismatches — a kept theorem whose statement was edited without the challenge being updated deliberately (with a
+     changelog row), a stale generated half (`scripts/gen-contract --check` names it first in the speedbump form,
+     `scripts/check-comparator`), or a proof that reached a non-standard axiom. What this run does NOT see: the
+     frozen text is re-elaborated against the live definitions, so a drift that enters through a definition's
+     signature (an inserted implicit or default argument, an `abbrev`) moves the kept statement and the challenge
+     alike; that is caught only across a pin, by the consumer's `--challenge-from-export` route
+     (`scripts/contract-export`). The judge is Lake's syntactic comparison of the two exports; the kernel replays
+     the solution. Nothing is re-pinned to make it green.
 
    A red run of the gate, of any kernel in (a) or of the comparator in (c) stops the procedure; nothing is re-pinned
    to make it green.

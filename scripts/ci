@@ -198,7 +198,8 @@ run_bump "memory-module raw call sites = inventory (scripts/check-mem-callsites)
 # reads the same parse. Warning-free, because a GoLean/ warning replays into
 # the runner's stdout and corrupts the JSON observation channel (the
 # 2026-07-23 phantom-drift incident). Tests/ is in the watch too (audit item
-# 5, 2026-10-12): a `sorry` in a test module is a warning, and the cold build
+# 5, 2026-10-12), and Contract/ since the comparator challenge (review F8,
+# 2026-10-23): a `sorry` in a test module is a warning, and the cold build
 # of 2026-10-12 (163 jobs, 64G cap, 8 min 37 s) had zero warnings anywhere,
 # so the wider watch costs nothing today.
 #
@@ -267,9 +268,9 @@ else
   echo "  targets: ${lf_all[*]}"
   core_out="$(cap lake build "${lf_all[@]}" 2>&1)"; core_rc=$?
   echo "$core_out" | tail -3 | sed 's/^/  /'
-  core_warns="$(echo "$core_out" | grep -E '^warning: (GoLean/|GoLean\.lean|Main\.lean|Tests/)' || true)"
+  core_warns="$(echo "$core_out" | grep -E '^warning: (GoLean/|GoLean\.lean|Main\.lean|Tests/|Contract/)' || true)"
   if [ "$core_rc" -ne 0 ]; then bad "lake build (exit $core_rc)"
-  elif [ -n "$core_warns" ]; then echo "$core_warns" | head -10; bad "lake build has GoLean/ or Tests/ warnings (a GoLean/ warning corrupts the runner JSON channel; a Tests/ one is a sorry or a dead declaration)"
+  elif [ -n "$core_warns" ]; then echo "$core_warns" | head -10; bad "lake build has GoLean/, Tests/ or Contract/ warnings (a GoLean/ warning corrupts the runner JSON channel; a Tests/ or Contract/ one is a sorry or a dead declaration — the challenge's holes are silenced by warn.sorry, not by this regex)"
   else ok "lake build (every declared target by name: ${#lf_all[@]} — ${lf_all[*]}; warning-free)"; fi
 fi
 

@@ -12,10 +12,15 @@ import GoLean.GoCore.InitDriverFacts
 [AGENT lane gate/comparator-1023] 2026-10-23, release-readiness row 43 ([USER]-ruled 2026-10-21
 and 2026-10-23, paraphrased: use `lake comparator` where appropriate; with the relation retired,
 the appropriate challenge is the statement set GoLean keeps on main under stable names for the
-raft-proofs repository — `Prefix`/`Finish` and their laws, every `@[stepFn_eqns]` lemma,
+raft-proofs repository — `Prefix`/`Finish` and their laws, the equation library,
 `enterFrame_declared`, the `Choices.consumeAt*` laws, the G11 family, the output-fold bridge and
-what `Tests/GoCoreContract.lean` §D pins; a statement drift in that set must become a
-kernel-level mismatch, not a text diff).
+what `Tests/GoCoreContract.lean` §D pins; a statement drift in that set must become a mismatch
+the judge names, not a text diff). The equation family is EVERY public theorem of
+`Equations.lean` (296; 232 of them `@[stepFn_eqns]` simp-set members — the customer's rewriting
+library is the module, and its `signalStep_*` rows, `runProgramSetup_noInit`, the
+`allocDecls_*`/`bindParams_*`/`setup_*` facts and the rest are plain theorems there): widened
+from the simp set's membership at the fix round of 2026-10-23 (review F1), the owner's
+confirmation asked at the merge ask.
 
 ## What this file is
 
@@ -27,12 +32,16 @@ environment: `theorem GoLean.Contract.<rest> : stmt_of% GoLean.<rest> := GoLean.
 theorem's own type under the same name (GoLean/Contract/StmtOf.lean). `lake comparator` builds
 and exports both modules and judges, per name in `theorem_names`: the two types are
 SYNTACTICALLY equal (`Lake/Check/Compare.lean`, `compareAt`: the `ConstantVal`s must be `==`,
-binder names being all it ignores); every definition the statements reach is identical in both
-exports (the worklist compares each non-target constant whole, value included); the solution's
-proofs rest on `propext`/`Quot.sound`/`Classical.choice` alone (`permitted_axioms`; the
-challenge's `sorry` is never examined — `Lake/Check/Axioms.lean` walks the solution only); and
-Lean's kernel (`leanchecker`) accepts the solution export. Exit 0 accepts; exit 1 names the
-first mismatching constant.
+which is `Expr.eqv` — alpha-equivalence, so binder NAMES and binder ANNOTATIONS (explicit,
+implicit, instance-implicit) are ignored, nothing else; today the challenge differs from the
+kept types in binder names only, in 203 of the 349, and in no annotation); every definition the
+statements reach is identical in both exports (the worklist compares each non-target constant
+whole, value included); the solution's proofs rest on `propext`/`Quot.sound`/`Classical.choice`
+alone (`permitted_axioms`; the challenge's `sorry` is never examined — `Lake/Check/Axioms.lean`
+walks the solution only); and Lean's kernel (`leanchecker`) replays the SOLUTION export. The
+judge of a drift is thus Lake's comparison of the two exports, not the kernel; the kernel's
+part is the acceptance of the solution. Exit 0 accepts; exit 1 names the first mismatching
+constant.
 
 ## Design (each choice with its reason)
 
@@ -68,20 +77,28 @@ first mismatching constant.
   theorem's own matcher (`runInitConfig_unfold.match_3`, printed with `pp.match false`);
   `enterFrame_declared` likewise names `enterFrame.plan.match_5` from Machine.lean. Importing a
   proof module is harmless under alias names; the circularity guard is the textual ban above.
-* **Definitions are shared, not frozen.** Every definition a statement reaches is compared for
-  exact equality between the two exports — in-repo, main with main. The contract pins the
-  STATEMENTS over the vocabulary; a change to `stepFn` or `Prefix` itself is seen by the
-  differential corpus and by the equations' own proofs, not here. For a consumer holding a
-  pinned export it is different: `lake comparator --challenge-from-export <the pin's export>`
-  compares their definitions with ours as well (docs/changelog/20d3946d-WINDOW.md).
+* **Definitions are shared, not frozen — and the in-repo freeze is of the TEXT.** Every
+  definition a statement reaches is compared for exact equality between the two exports —
+  in-repo, main with main — and this file's text is re-elaborated against the LIVE definitions
+  at every run. So an EDIT to a kept theorem's statement is caught (the frozen text no longer
+  re-elaborates to the kept type), but a drift that enters through a definition's SIGNATURE —
+  an inserted implicit or default argument (`optParam`/`autoParam`), an instance argument, an
+  `abbrev` — moves the kept statement and the re-elaborated challenge alike, with no mismatch
+  (review F3, 2026-10-23: `def f (x : Nat) (k : Nat := 1)` in a mini project, accepted). A
+  change to `stepFn` or `Prefix` itself is seen by the differential corpus and by the equations'
+  own proofs, not here. For a consumer holding a pinned export it is different:
+  `lake comparator --challenge-from-export <the pin's export>` (`scripts/contract-export`)
+  compares their definitions with ours as well, and catches both (docs/changelog/20d3946d-WINDOW.md).
 * **The text is the delaborator's, verified.** scripts/contract-challenge-draft prints every
   kept statement from the environment and checks that the printed command re-elaborates, in
-  this file's scope, to the identical `Expr` — the comparator's own test. 281 of the 285
+  this file's scope, to the identical `Expr` — the comparator's own test. 341 of the 349
   round-trip as printed; the three with a `match`/`do` are printed with `pp.match false` and
-  parenthesised (a `do` block would otherwise read the theorem's `:=` as a reassignment); one,
-  `applyStmtOp_print`, is spelled by hand in the source's `.ok (s, ch, [], [])` form (the
-  printed `Except.ok` elaborates the tuple's `AccessTrace` component as `List MemEvent`:
-  definitionally equal, syntactically not).
+  parenthesised (a `do` block would otherwise read the theorem's `:=` as a reassignment); four
+  (`applyRhsOp_vals`, `applyStrictOp_toInterface_string`, `loadResults_nil`, `applyStmtOp_print`)
+  in the source's dot-form `.ok` (the printed `Except.ok (…, [])` elaborates a tuple's
+  `AccessTrace` component as `List MemEvent`: definitionally equal, syntactically not); one,
+  `loadResults_cons`, by hand in the source's form (its printed list literal fixes the element
+  type before `++` meets `tr : AccessTrace`). Each entry carries a note saying which.
 
 ## Updating this file
 
@@ -95,8 +112,9 @@ docs/changelog/20d3946d-WINDOW.md naming the statement and why. A kept theorem a
 ## Not expressible here, and what covers it
 
 The `@[stepFn_eqns]` ATTRIBUTE itself (the simp set's membership): scripts/contract-names.lean
-reads the set, so a lemma that loses the attribute leaves the list and gen-contract's check
-fails. `Decidable` instances and every other DEFINITION (`StateWf`'s instance, `replays`,
+reads the set and prints its size as a COUNT line, requires every member to be a theorem of
+`Equations.lean`, and gen-contract carries the count into its summary; a lemma that loses the
+attribute stays in the family (the module's) but changes the count the records quote. `Decidable` instances and every other DEFINITION (`StateWf`'s instance, `replays`,
 `Prefix`, `Finish`): shared, as above. The `example` controls of Prefix.lean,
 ExecutionStatement.lean and §D: an `example` declares nothing an exporter can name; they stay
 build-time controls. The no-unfold discipline of `Tests/EquationClient.lean`:
@@ -287,6 +305,76 @@ theorem GoLean.Contract.GoCore.Machine.Choices.consumeAt_nilValueMethodText_one 
 
 /-! ## GoLean.GoCore.Equations -/
 
+/-- `GoLean.GoCore.Equations.Heap.lookup_push_self` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.Heap.lookup_push_self :
+    ∀ {h : Heap} {c : HeapCell}, Heap.lookup (Array.push h c) (Loc.base { id := Array.size h }) = some c
+    := sorry
+
+/-- `GoLean.GoCore.Equations.Heap.lookup_set_self` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.Heap.lookup_set_self :
+    ∀ {h : Heap} {i : Nat} {c : HeapCell} {hi : i < Array.size h},
+      Heap.lookup (Array.set h i c hi) (Loc.base { id := i }) = some c
+    := sorry
+
+/-- `GoLean.GoCore.Equations.allocDecls_cons` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.allocDecls_cons :
+    ∀ {ctx : ProgramCtx} {env : LocalEnv} {s s₁ : Store} {p : Param} {v : GoValue} {loc : Loc}
+      (rest : List Param),
+      defaultValue ctx p.typ = Except.ok v →
+        Store.alloc ctx s v p.typ = Except.ok (loc, s₁) →
+          allocDecls ctx env s (p :: rest) = allocDecls ctx (env.declare p.id loc) s₁ rest
+    := sorry
+
+/-- `GoLean.GoCore.Equations.allocDecls_nil` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.allocDecls_nil :
+    ∀ {ctx : ProgramCtx} (env : LocalEnv) (s : Store), allocDecls ctx env s [] = Except.ok (env, s)
+    := sorry
+
+/-- `GoLean.GoCore.Equations.applyRhsOp_vals` (GoLean.GoCore.Equations) -/
+-- `.ok` in the source's dot-form: the printed `Except.ok (…)` elaborates a tuple's `AccessTrace`
+-- component as `List MemEvent` (definitionally, not syntactically, the kept statement).
+theorem GoLean.Contract.GoCore.Equations.applyRhsOp_vals :
+    ∀ {ctx : ProgramCtx} (s : Store) (vs : List GoValue),
+      applyRhsOp ctx s RhsOp.vals vs = .ok (vs, [])
+    := sorry
+
+/-- `GoLean.GoCore.Equations.applyStmtOp_inv_panic` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.applyStmtOp_inv_panic :
+    ∀ {ctx : ProgramCtx} {s : Store} {ch : Choices} {op : StmtOp} {nt : Nat} {vs : List GoValue}
+      {msg : String},
+      applyStmtOp ctx s ch op nt vs = Except.error (Stop.panic msg) →
+        applyStmtOp.plan ctx s ch op nt vs = Except.error (Stop.panic msg)
+    := sorry
+
+/-- `GoLean.GoCore.Equations.applyStrictOp_toInterface_string` (GoLean.GoCore.Equations) -/
+-- `.ok` in the source's dot-form: the printed `Except.ok (…)` elaborates a tuple's `AccessTrace`
+-- component as `List MemEvent` (definitionally, not syntactically, the kept statement).
+theorem GoLean.Contract.GoCore.Equations.applyStrictOp_toInterface_string :
+    ∀ {ctx : ProgramCtx} (s : Store) (tgt : Loc → Loc) (ty : Ty) (v : GoValue),
+      applyStrictOp ctx s tgt (StrictOp.toInterface ty Ty.string) [v] =
+        .ok (GoValue.interface Ty.string v, s, [])
+    := sorry
+
+/-- `GoLean.GoCore.Equations.bindParams_cons` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.bindParams_cons :
+    ∀ {ctx : ProgramCtx} {env : LocalEnv} {s s₁ : Store} {p : Param} {v v' : GoValue} {loc : Loc}
+      (ps : List Param) (vs : List GoValue),
+      normalizeValueForTy ctx p.typ v = Except.ok v' →
+        Store.alloc ctx s v' p.typ = Except.ok (loc, s₁) →
+          bindParams ctx env s (p :: ps) (v :: vs) = bindParams ctx (env.declare p.id loc) s₁ ps vs
+    := sorry
+
+/-- `GoLean.GoCore.Equations.bindParams_nil` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.bindParams_nil :
+    ∀ {ctx : ProgramCtx} (env : LocalEnv) (s : Store), bindParams ctx env s [] [] = Except.ok (env, s)
+    := sorry
+
+/-- `GoLean.GoCore.Equations.bind_eq_error` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.bind_eq_error :
+    ∀ {ε α β : Type} {x : Except ε α} {f : α → Except ε β} {e : ε},
+      x >>= f = Except.error e → x = Except.error e ∨ ∃ (a : α), x = Except.ok a ∧ f a = Except.error e
+    := sorry
+
 /-- `GoLean.GoCore.Equations.blockedRecv` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.blockedRecv :
     ∀ {ctx : ProgramCtx} (s : Store) (chl : Option Loc) (targets : List Assignee) (elem : Ty)
@@ -310,6 +398,51 @@ theorem GoLean.Contract.GoCore.Equations.blockedSend :
 theorem GoLean.Contract.GoCore.Equations.blockedSync :
     ∀ {ctx : ProgramCtx} (s : Store) (op : SyncOp) (loc : Loc) (env : LocalEnv) (k : Cont)
       (ch : Choices), stepFn ctx s (Config.blockedSync op loc env k) ch = Except.error Stop.deadlock
+    := sorry
+
+/-- `GoLean.GoCore.Equations.completeTargetRef_var` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.completeTargetRef_var :
+    ∀ (a : GoValue), completeTargetRef (TargetShape.chain []) [a] = some (TargetRef.chain a [] [])
+    := sorry
+
+/-- `GoLean.GoCore.Equations.contHeadLabel_frame` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.contHeadLabel_frame :
+    ∀ (t : List (TargetShape × List Expr)) (te : LocalEnv) (r : List Loc)
+      (ds : List (GoValue × List GoValue)) (k : Cont) (fr : FuncId),
+      contHeadLabel (Cont.frame t te r ds k fr) = none
+    := sorry
+
+/-- `GoLean.GoCore.Equations.contHeadLabel_labelK` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.contHeadLabel_labelK :
+    ∀ (name : String) (k : Cont), contHeadLabel (Cont.labelK name k) = some name
+    := sorry
+
+/-- `GoLean.GoCore.Equations.contHeadLabel_stop` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.contHeadLabel_stop :
+    contHeadLabel Cont.stop = none
+    := sorry
+
+/-- `GoLean.GoCore.Equations.deferrableCallee_false` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.deferrableCallee_false :
+    ∀ {cv : GoValue},
+      (∀ (fid : FuncId) (c : List GoValue), cv ≠ GoValue.funcVal fid c) →
+        cv ≠ GoValue.nil → deferrableCallee cv = false
+    := sorry
+
+/-- `GoLean.GoCore.Equations.enterFramePickV_of_plan_error` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.enterFramePickV_of_plan_error :
+    ∀ {ctx : ProgramCtx} {s : Store} {fid : FuncId} {args : List GoValue} {e : Stop} (ch : Choices),
+      enterFrame.plan ctx s fid args = Except.error e →
+        (∀ (msg : String), e ≠ Stop.panic msg) → enterFramePickV ctx s fid args ch = Except.error e
+    := sorry
+
+/-- `GoLean.GoCore.Equations.enterFrame_inv_error` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.enterFrame_inv_error :
+    ∀ {ctx : ProgramCtx} {s : Store} {fid : FuncId} {args : List GoValue} {e : Stop},
+      enterFrame ctx s fid args = Except.error e →
+        enterFrame.plan ctx s fid args = Except.error e ∨
+          ∃ (c : Commit (Entry × Store × AccessTrace)),
+            enterFrame.plan ctx s fid args = Except.ok c ∧ c s = Except.error e
     := sorry
 
 /-- `GoLean.GoCore.Equations.evalE_and` (GoLean.GoCore.Equations) -/
@@ -1107,6 +1240,31 @@ theorem GoLean.Contract.GoCore.Equations.frameExit_targets_error :
         stepFrameExit ctx s ((sh, ex :: ops) :: rest) tenv results [] k' fr ch = Except.error e
     := sorry
 
+/-- `GoLean.GoCore.Equations.loadResults_cons` (GoLean.GoCore.Equations) -/
+-- Spelled by hand in the source's form (the only one, 2026-10-23): the printed
+-- `[MemEvent.access AccessKind.read (ShadowKey.data l.canon)] ++ tr` fixes the list's element type
+-- before `++` meets `tr : AccessTrace`, and the append elaborates differently from the kept statement;
+-- the dot-form `[.access .read (.data l.canon)]` waits for the expected type, as the source does.
+theorem GoLean.Contract.GoCore.Equations.loadResults_cons :
+    ∀ {ctx : ProgramCtx} {s : Store} {l : Loc} {ls : List Loc} {v : GoValue} {vs : List GoValue} {tr : AccessTrace},
+      loadRoot ctx s l = .ok v → loadResults ctx s ls = .ok (vs, tr) →
+      loadResults ctx s (l :: ls) = .ok (v :: vs, [.access .read (.data l.canon)] ++ tr)
+    := sorry
+
+/-- `GoLean.GoCore.Equations.loadResults_nil` (GoLean.GoCore.Equations) -/
+-- `.ok` in the source's dot-form: the printed `Except.ok (…)` elaborates a tuple's `AccessTrace`
+-- component as `List MemEvent` (definitionally, not syntactically, the kept statement).
+theorem GoLean.Contract.GoCore.Equations.loadResults_nil :
+    ∀ {ctx : ProgramCtx} (s : Store), loadResults ctx s [] = .ok ([], [])
+    := sorry
+
+/-- `GoLean.GoCore.Equations.loadRoot_base` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.loadRoot_base :
+    ∀ {ctx : ProgramCtx} {s : Store} {a : Addr} {ty : Ty} {v : GoValue},
+      s.heap.lookup (Loc.base a) = some (HeapCell.value ty v) →
+        loadRoot ctx s (Loc.base a) = Except.ok v
+    := sorry
+
 /-- `GoLean.GoCore.Equations.next_breakableK` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.next_breakableK :
     ∀ {ctx : ProgramCtx} (s : Store) (k' : Cont) (ch : Choices),
@@ -1629,6 +1787,18 @@ theorem GoLean.Contract.GoCore.Equations.panicking_strictK :
       (pending : List Expr) (env : LocalEnv) (k : Cont) (ch : Choices),
       stepFn ctx s (Config.panicking chain (Cont.strictK op done pending env k)) ch =
         Except.ok (Config.panicking chain k, s, ch, { trace := [], picks := [], out := [] })
+    := sorry
+
+/-- `GoLean.GoCore.Equations.pinResultLocs_eq_of_lookup` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.pinResultLocs_eq_of_lookup :
+    ∀ (env : LocalEnv) (ps : List Param) (f : Nat → Loc),
+      (∀ (j : Nat) (hj : j < ps.length), env.lookup ps[j].id = some (f j)) →
+        pinResultLocs env ps = Except.ok (List.map f (List.range ps.length))
+    := sorry
+
+/-- `GoLean.GoCore.Equations.resolveChain_nil` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.resolveChain_nil :
+    ∀ {ctx : ProgramCtx} (s : Store) (a : GoValue), resolveChain ctx s a [] [] = Except.ok a
     := sorry
 
 /-- `GoLean.GoCore.Equations.retV_andK_error` (GoLean.GoCore.Equations) -/
@@ -2621,6 +2791,255 @@ theorem GoLean.Contract.GoCore.Equations.retV_whileK_true :
             (Config.exec b env (Cont.loop c b env k'), s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+/-- `GoLean.GoCore.Equations.runCommit_error` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.runCommit_error :
+    ∀ {α : Type} {c : Commit α} {s : Store} {e : Stop},
+      c s = Except.error e → (∀ (msg : String), e ≠ Stop.panic msg) → runCommit c s = Except.error e
+    := sorry
+
+/-- `GoLean.GoCore.Equations.runPkgInitM_none` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.runPkgInitM_none :
+    ∀ {ctx : ProgramCtx} {fuel : Nat} {s : Store} {ch : Choices},
+      findFunctionIn? ctx.functions pkgInitFuncId = none → runPkgInitM ctx fuel s ch = Except.ok (s, ch)
+    := sorry
+
+/-- `GoLean.GoCore.Equations.runProgramSetup_noInit` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.runProgramSetup_noInit :
+    ∀ {fuel : Nat} {program : Program} {name : String} {args : Array GoValue} {choices : Choices}
+      {func : Func} {env frameEnv : LocalEnv} {s₂ s₃ : Store} {resultLocs : List Loc},
+      findFunctionIn? program.funcs { key := name } = some func →
+        func.args.size = args.size →
+          program.typeDefs.hasReservedPrefix = true →
+            program.globals = #[] →
+              findFunctionIn? program.funcs pkgInitFuncId = none →
+                bindParams { program := program } [] { } func.args.toList args.toList =
+                    Except.ok (env, s₂) →
+                  allocDecls { program := program } env s₂ func.results.toList =
+                      Except.ok (frameEnv, s₃) →
+                    pinResultLocs frameEnv func.results.toList = Except.ok resultLocs →
+                      runProgramSetupM fuel program name args choices =
+                        Except.ok
+                          ({ program := program },
+                            Config.exec func.body frameEnv (Cont.frame [] [] [] [] Cont.stop func.id),
+                            s₃, resultLocs, choices)
+    := sorry
+
+/-- `GoLean.GoCore.Equations.seedGlobals_nil` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.seedGlobals_nil :
+    ∀ {ctx : ProgramCtx}, seedGlobals ctx { } #[] = Except.ok { }
+    := sorry
+
+/-- `GoLean.GoCore.Equations.setup_heap_size` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.setup_heap_size :
+    ∀ {program : Program} {func : Func} {args : Array GoValue} {env frameEnv : LocalEnv}
+      {s₂ s₃ : Store},
+      bindParams { program := program } [] { } func.args.toList args.toList = Except.ok (env, s₂) →
+        allocDecls { program := program } env s₂ func.results.toList = Except.ok (frameEnv, s₃) →
+          Array.size s₃.heap = func.args.size + func.results.size
+    := sorry
+
+/-- `GoLean.GoCore.Equations.setup_lookup_arg` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.setup_lookup_arg :
+    ∀ {program : Program} {func : Func} {args : Array GoValue} {env frameEnv : LocalEnv}
+      {s₂ s₃ : Store},
+      bindParams { program := program } [] { } func.args.toList args.toList = Except.ok (env, s₂) →
+        allocDecls { program := program } env s₂ func.results.toList = Except.ok (frameEnv, s₃) →
+          namesDistinct (List.map (fun (x : Param) => x.id) (func.args ++ func.results).toList) = true →
+            ∀ (i : Nat) (hi : i < func.args.size),
+              frameEnv.lookup func.args[i].id = some (Loc.base { id := i })
+    := sorry
+
+/-- `GoLean.GoCore.Equations.setup_lookup_result` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.setup_lookup_result :
+    ∀ {program : Program} {func : Func} {args : Array GoValue} {env frameEnv : LocalEnv}
+      {s₂ s₃ : Store},
+      bindParams { program := program } [] { } func.args.toList args.toList = Except.ok (env, s₂) →
+        allocDecls { program := program } env s₂ func.results.toList = Except.ok (frameEnv, s₃) →
+          namesDistinct (List.map (fun (x : Param) => x.id) (func.args ++ func.results).toList) = true →
+            ∀ (j : Nat) (hj : j < func.results.size),
+              frameEnv.lookup func.results[j].id = some (Loc.base { id := func.args.size + j })
+    := sorry
+
+/-- `GoLean.GoCore.Equations.setup_resultLocs` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.setup_resultLocs :
+    ∀ {program : Program} {func : Func} {args : Array GoValue} {env frameEnv : LocalEnv} {s₂ s₃ : Store}
+      {resultLocs : List Loc},
+      bindParams { program := program } [] { } func.args.toList args.toList = Except.ok (env, s₂) →
+        allocDecls { program := program } env s₂ func.results.toList = Except.ok (frameEnv, s₃) →
+          namesDistinct (List.map (fun (x : Param) => x.id) (func.args ++ func.results).toList) = true →
+            pinResultLocs frameEnv func.results.toList = Except.ok resultLocs →
+              resultLocs =
+                List.map (fun (j : Nat) => Loc.base { id := func.args.size + j })
+                  (List.range func.results.size)
+    := sorry
+
+/-- `GoLean.GoCore.Equations.signalStep_breakableK_brk` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.signalStep_breakableK_brk :
+    ∀ (k' : Cont), signalStep Signal.brk k'.breakableK = some (Config.next k')
+    := sorry
+
+/-- `GoLean.GoCore.Equations.signalStep_breakableK_brkTo` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.signalStep_breakableK_brkTo :
+    ∀ (L : String) (k' : Cont),
+      signalStep (Signal.brkTo L) k'.breakableK = some (Config.signal (Signal.brkTo L) k')
+    := sorry
+
+/-- `GoLean.GoCore.Equations.signalStep_breakableK_cont` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.signalStep_breakableK_cont :
+    ∀ (k' : Cont), signalStep Signal.cont k'.breakableK = some (Config.signal Signal.cont k')
+    := sorry
+
+/-- `GoLean.GoCore.Equations.signalStep_breakableK_contTo` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.signalStep_breakableK_contTo :
+    ∀ (L : String) (k' : Cont),
+      signalStep (Signal.contTo L) k'.breakableK = some (Config.signal (Signal.contTo L) k')
+    := sorry
+
+/-- `GoLean.GoCore.Equations.signalStep_breakableK_ret` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.signalStep_breakableK_ret :
+    ∀ (k' : Cont), signalStep Signal.ret k'.breakableK = some (Config.signal Signal.ret k')
+    := sorry
+
+/-- `GoLean.GoCore.Equations.signalStep_labelK_brk` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.signalStep_labelK_brk :
+    ∀ (name : String) (k' : Cont),
+      signalStep Signal.brk (Cont.labelK name k') = some (Config.signal Signal.brk k')
+    := sorry
+
+/-- `GoLean.GoCore.Equations.signalStep_labelK_brkTo_ne` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.signalStep_labelK_brkTo_ne :
+    ∀ {name L : String} (k' : Cont),
+      name ≠ L →
+        signalStep (Signal.brkTo L) (Cont.labelK name k') = some (Config.signal (Signal.brkTo L) k')
+    := sorry
+
+/-- `GoLean.GoCore.Equations.signalStep_labelK_brkTo_self` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.signalStep_labelK_brkTo_self :
+    ∀ (name : String) (k' : Cont),
+      signalStep (Signal.brkTo name) (Cont.labelK name k') = some (Config.next k')
+    := sorry
+
+/-- `GoLean.GoCore.Equations.signalStep_labelK_cont` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.signalStep_labelK_cont :
+    ∀ (name : String) (k' : Cont),
+      signalStep Signal.cont (Cont.labelK name k') = some (Config.signal Signal.cont k')
+    := sorry
+
+/-- `GoLean.GoCore.Equations.signalStep_labelK_contTo_ne` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.signalStep_labelK_contTo_ne :
+    ∀ {name L : String} (k' : Cont),
+      name ≠ L →
+        signalStep (Signal.contTo L) (Cont.labelK name k') = some (Config.signal (Signal.contTo L) k')
+    := sorry
+
+/-- `GoLean.GoCore.Equations.signalStep_labelK_contTo_self` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.signalStep_labelK_contTo_self :
+    ∀ (name : String) (k' : Cont), signalStep (Signal.contTo name) (Cont.labelK name k') = none
+    := sorry
+
+/-- `GoLean.GoCore.Equations.signalStep_labelK_ret` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.signalStep_labelK_ret :
+    ∀ (name : String) (k' : Cont),
+      signalStep Signal.ret (Cont.labelK name k') = some (Config.signal Signal.ret k')
+    := sorry
+
+/-- `GoLean.GoCore.Equations.signalStep_loop_brk` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.signalStep_loop_brk :
+    ∀ (c : Expr) (b : Stmt) (env : LocalEnv) (k' : Cont),
+      signalStep Signal.brk (Cont.loop c b env k') = some (Config.next k')
+    := sorry
+
+/-- `GoLean.GoCore.Equations.signalStep_loop_brkTo` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.signalStep_loop_brkTo :
+    ∀ (L : String) (c : Expr) (b : Stmt) (env : LocalEnv) (k' : Cont),
+      signalStep (Signal.brkTo L) (Cont.loop c b env k') = some (Config.signal (Signal.brkTo L) k')
+    := sorry
+
+/-- `GoLean.GoCore.Equations.signalStep_loop_cont` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.signalStep_loop_cont :
+    ∀ (c : Expr) (b : Stmt) (env : LocalEnv) (k' : Cont),
+      signalStep Signal.cont (Cont.loop c b env k') = some (Config.exec (Stmt.while c b) env k')
+    := sorry
+
+/-- `GoLean.GoCore.Equations.signalStep_loop_contTo_ne` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.signalStep_loop_contTo_ne :
+    ∀ {L : String} (c : Expr) (b : Stmt) (env : LocalEnv) {k' : Cont},
+      contHeadLabel k' ≠ some L →
+        signalStep (Signal.contTo L) (Cont.loop c b env k') = some (Config.signal (Signal.contTo L) k')
+    := sorry
+
+/-- `GoLean.GoCore.Equations.signalStep_loop_contTo_self` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.signalStep_loop_contTo_self :
+    ∀ {L : String} (c : Expr) (b : Stmt) (env : LocalEnv) {k' : Cont},
+      contHeadLabel k' = some L →
+        signalStep (Signal.contTo L) (Cont.loop c b env k') = some (Config.exec (Stmt.while c b) env k')
+    := sorry
+
+/-- `GoLean.GoCore.Equations.signalStep_loop_ret` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.signalStep_loop_ret :
+    ∀ (c : Expr) (b : Stmt) (env : LocalEnv) (k' : Cont),
+      signalStep Signal.ret (Cont.loop c b env k') = some (Config.signal Signal.ret k')
+    := sorry
+
+/-- `GoLean.GoCore.Equations.signalStep_mapIterK_brk` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.signalStep_mapIterK_brk :
+    ∀ (keyVar valVar : Option VarId) (keyTy valTy : Ty) (body : Stmt) (base : Option Loc)
+      (produced start : Array Nat) (env : LocalEnv) (k' : Cont),
+      signalStep Signal.brk (Cont.mapIterK keyVar valVar keyTy valTy body base produced start env k') =
+        some (Config.next k')
+    := sorry
+
+/-- `GoLean.GoCore.Equations.signalStep_mapIterK_brkTo` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.signalStep_mapIterK_brkTo :
+    ∀ (L : String) (keyVar valVar : Option VarId) (keyTy valTy : Ty) (body : Stmt) (base : Option Loc)
+      (produced start : Array Nat) (env : LocalEnv) (k' : Cont),
+      signalStep (Signal.brkTo L)
+          (Cont.mapIterK keyVar valVar keyTy valTy body base produced start env k') =
+        some (Config.signal (Signal.brkTo L) k')
+    := sorry
+
+/-- `GoLean.GoCore.Equations.signalStep_mapIterK_cont` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.signalStep_mapIterK_cont :
+    ∀ (keyVar valVar : Option VarId) (keyTy valTy : Ty) (body : Stmt) (base : Option Loc)
+      (produced start : Array Nat) (env : LocalEnv) (k' : Cont),
+      signalStep Signal.cont (Cont.mapIterK keyVar valVar keyTy valTy body base produced start env k') =
+        some (Config.next (Cont.mapIterK keyVar valVar keyTy valTy body base produced start env k'))
+    := sorry
+
+/-- `GoLean.GoCore.Equations.signalStep_mapIterK_contTo_ne` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.signalStep_mapIterK_contTo_ne :
+    ∀ {L : String} (keyVar valVar : Option VarId) (keyTy valTy : Ty) (body : Stmt) (base : Option Loc)
+      (produced start : Array Nat) (env : LocalEnv) {k' : Cont},
+      contHeadLabel k' ≠ some L →
+        signalStep (Signal.contTo L)
+            (Cont.mapIterK keyVar valVar keyTy valTy body base produced start env k') =
+          some (Config.signal (Signal.contTo L) k')
+    := sorry
+
+/-- `GoLean.GoCore.Equations.signalStep_mapIterK_contTo_self` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.signalStep_mapIterK_contTo_self :
+    ∀ {L : String} (keyVar valVar : Option VarId) (keyTy valTy : Ty) (body : Stmt) (base : Option Loc)
+      (produced start : Array Nat) (env : LocalEnv) {k' : Cont},
+      contHeadLabel k' = some L →
+        signalStep (Signal.contTo L)
+            (Cont.mapIterK keyVar valVar keyTy valTy body base produced start env k') =
+          some (Config.next (Cont.mapIterK keyVar valVar keyTy valTy body base produced start env k'))
+    := sorry
+
+/-- `GoLean.GoCore.Equations.signalStep_mapIterK_ret` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.signalStep_mapIterK_ret :
+    ∀ (keyVar valVar : Option VarId) (keyTy valTy : Ty) (body : Stmt) (base : Option Loc)
+      (produced start : Array Nat) (env : LocalEnv) (k' : Cont),
+      signalStep Signal.ret (Cont.mapIterK keyVar valVar keyTy valTy body base produced start env k') =
+        some (Config.signal Signal.ret k')
+    := sorry
+
+/-- `GoLean.GoCore.Equations.signalStep_seq` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.signalStep_seq :
+    ∀ (sg : Signal) (rest : List Stmt) (env : LocalEnv) (k' : Cont),
+      signalStep sg (Cont.seq rest env k') = some (Config.signal sg k')
+    := sorry
+
 /-- `GoLean.GoCore.Equations.signal_frame_escape` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.signal_frame_escape :
     ∀ {ctx : ProgramCtx} {s : Store} {sg : Signal} (targets : List (TargetShape × List Expr))
@@ -2659,6 +3078,38 @@ theorem GoLean.Contract.GoCore.Equations.signal_table :
       signalStep sg k = some c' →
         stepFn ctx s (Config.signal sg k) ch =
           Except.ok (c', s, ch, { trace := [], picks := [], out := [] })
+    := sorry
+
+/-- `GoLean.GoCore.Equations.stateWf_empty` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.stateWf_empty :
+    ∀ {ctx : ProgramCtx}, StateWf ctx { }
+    := sorry
+
+/-- `GoLean.GoCore.Equations.storeLoc_root` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.storeLoc_root :
+    ∀ {ctx : ProgramCtx} {s : Store} {a : Addr} {ty : Ty} {old v v' : GoValue}
+      (hl : s.heap.lookup (Loc.base a) = some (HeapCell.value ty old)),
+      normalizeValueForTy ctx ty v = Except.ok v' →
+        storeLoc ctx s (Loc.base a) v =
+          Except.ok { heap := Array.set s.heap a.id (HeapCell.value ty v') (Heap.lookup_lt hl) }
+    := sorry
+
+/-- `GoLean.GoCore.Equations.storeTarget_inv_panic` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.storeTarget_inv_panic :
+    ∀ {ctx : ProgramCtx} {s : Store} {r : TargetRef} {v : GoValue} {msg : String},
+      storeTarget ctx s r v = Except.error (Stop.panic msg) →
+        storeTarget.plan ctx s r v = Except.error (Stop.panic msg)
+    := sorry
+
+/-- `GoLean.GoCore.Equations.targetPlan_var` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.targetPlan_var :
+    ∀ (id : VarId), targetPlan (Assignee.var id) = some (TargetShape.chain [], [Expr.ref id])
+    := sorry
+
+/-- `GoLean.GoCore.Equations.toResult_of_error` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.toResult_of_error :
+    ∀ {α : Type} {x : Except Stop α} {e : Stop},
+      x = Except.error e → (∀ (msg : String), e ≠ Stop.panic msg) → toResult x = Except.error e
     := sorry
 
 /-- `GoLean.GoCore.Equations.unseqEnter` (GoLean.GoCore.Equations) -/
@@ -2743,11 +3194,34 @@ theorem GoLean.Contract.GoCore.Equations.unseqWait_invoke :
                 s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+/-- `GoLean.GoCore.Equations.valueAsBool_bool` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.valueAsBool_bool :
+    ∀ (b : Bool), valueAsBool (GoValue.bool b) = Except.ok b
+    := sorry
+
+/-- `GoLean.GoCore.Equations.valueAsBool_nonbool` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.valueAsBool_nonbool :
+    ∀ {v : GoValue},
+      (∀ (b : Bool), v ≠ GoValue.bool b) →
+        valueAsBool v =
+          Except.error (Stop.stuck (toString "expected bool value, got " ++ toString (repr v)))
+    := sorry
+
+/-- `GoLean.GoCore.Equations.valueAsLoc_addr` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.valueAsLoc_addr :
+    ∀ (loc : Loc), valueAsLoc (GoValue.addr loc) = Except.ok loc
+    := sorry
+
+/-- `GoLean.GoCore.Equations.valueAsLoc_nil` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.valueAsLoc_nil :
+    valueAsLoc GoValue.nil = Except.error (Stop.panic nilDerefPanicText)
+    := sorry
+
 /-! ## GoLean.GoCore.InitDriverFacts -/
 
 /-- `GoLean.GoCore.ExecutionStatement.applyStmtOp_print` (GoLean.GoCore.InitDriverFacts) -/
--- Spelled by hand in the source's `.ok` form: the printed `Except.ok (s, ch, [], [])` elaborates
--- the tuple's `AccessTrace` component as `List MemEvent` (definitionally, not syntactically, equal).
+-- `.ok` in the source's dot-form: the printed `Except.ok (…)` elaborates a tuple's `AccessTrace`
+-- component as `List MemEvent` (definitionally, not syntactically, the kept statement).
 theorem GoLean.Contract.GoCore.ExecutionStatement.applyStmtOp_print :
     ∀ {ctx : ProgramCtx} {s : Store} {ch : Choices} {newline : Bool} {nt : Nat} {vs : List GoValue}
       {bytes : GoString},

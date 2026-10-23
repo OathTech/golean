@@ -139,10 +139,13 @@ tests, the wire and frontend checks, plus report-only speedbumps. `scripts/ci
 --diff` is the merge tier, which adds a fresh differential run of every corpus
 row against the tracked baselines and two toolchain speedbumps: `lake check`
 (the export and kernel replay of the default targets, about four minutes) and
-`lake comparator` (the 285 theorems kept on main for the raft-proofs customer,
+`lake comparator` (the 349 theorems kept on main for the raft-proofs customer,
 frozen as statements in `Contract/Challenge.lean`, judged against GoLean's own
-theorems per `comparator.json` — a statement drift is a kernel-level mismatch
-naming the theorem; about 20 s); both `--inadvisably-no-sandbox` where `bwrap`
+theorems per `comparator.json` — Lake's judge compares the exported statements
+syntactically and replays the solution through the kernel, so an edit to a kept
+theorem's statement is a mismatch naming it; a drift through a definition's
+signature is caught only across a pin, via `--challenge-from-export`; about
+20 s); both `--inadvisably-no-sandbox` where `bwrap`
 cannot start, and the line says so. The owner's `lake check` and
 `lake comparator` outside any sandbox are the gate at claim points, `lake check
 --paranoid` at a release. Each heavy step goes through the
