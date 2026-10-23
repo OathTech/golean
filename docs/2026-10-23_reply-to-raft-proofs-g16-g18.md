@@ -86,3 +86,32 @@ statements AND definitions of your pin: at your pin run `scripts/contract-export
 pin.ndjson` (inside a sandbox-less agent box add `--inadvisably-no-sandbox`).
 In-repo the contract catches an edited statement; a drift through a definition's
 signature is caught only by that cross-pin route.
+
+## Addendum, 2026-10-23 (later): G16 option 1 has landed
+
+Pin GoLean `main` at `272261a8` or later (train 17). The raise step is table-free
+and the relation is your per-key rule: `ProgramCtx.SubTables a b` requires
+`types`, `globals` and `typeDisplays` equal; `funcs`, `methods`, `methodSets` and
+`promotions` of the slice as sublists of the whole's; `TablesKeyed b` (the whole's
+key discipline, enforced by GoLean's decoder); and `SliceClosed a b` — a kept
+record's carrier keeps every method of the whole on it (`T` and `*T`) with its
+`Func`, and its promotion records with their target `Func`s. Your `Inflights`
+slice (12 callables, 6 records) and `MemoryStorage` (8, 6) satisfy it exactly as
+`extract_wire.py` extracts them, provided `types` are copied whole (your §7.10
+plan). `stepFn_mono`, `prefix_mono`, `finish_aborted_mono`,
+`execStmtLoop_ok_mono`, `execStmtLoop_panic_mono` are in
+`GoLean/GoCore/TableMonotonicity.lean`, pinned, at the classical trio.
+
+Migration for your in-flight proofs (seven sites spell `panicEntryOf ctx (…)`):
+`panicEntryOf` takes no context now; a run ending at
+`.panicking [panicEntryOf (stringPanicValue …)] .stop` takes one more step —
+`panicking_stop_raised` with `rfl, rfl, phaseMark_string _ rfl` — before
+`Config.abort?_of_settled rfl` gives the abort. `phaseMark_string` and
+`phaseMark_nonCarrier` (`Equations.lean`) discharge the decision for string and
+other non-carrier payloads by `rfl` on your table. Statements that changed:
+`retV_panicArgK`, `panicking_stop_settled`, `panicking_stop_pending`,
+`Prefix.abort?_some`, `Prefix.stepFn_abort`, `Config.abort?_some_iff`,
+`Config.abort?_of_settled` (the cursor is `splitNewestUnsettled?`); new:
+`panicking_stop_raised`, `panicking_stop_raised_error`. All in the comparator
+contract, so your `--challenge-from-export` run against your pin will name
+exactly these.
