@@ -476,6 +476,8 @@ def exports : List Name := [
     ``GoLean.GoCore.ContractTests.Pin.runInitConfig_refused,
     ``GoLean.GoCore.ContractTests.Pin.initPrintRefusal?_zeroCost,
     ``GoLean.GoCore.ContractTests.Pin.execProgLoopOut_snd,
+    -- the phase's mark of a non-carrier payload (lane core/g16-raise-mark-1023, fix round F2, 2026-10-23)
+    ``GoLean.GoCore.ContractTests.Pin.phaseMark_nonCarrier, ``GoLean.GoCore.ContractTests.Pin.phaseMark_string,
     ``GoLean.GoCore.ContractTests.Pin.execProgLoopOut_acc,
     ``GoLean.GoCore.ContractTests.Pin.execProgLoopOut_eq_execProgLoop,
     ``GoLean.GoCore.ContractTests.Pin.init_print_refused_control,

@@ -2077,6 +2077,41 @@ def dynamicMethodSetExportedOnly (dynTy : Ty) : Bool :=
   | some key => methodSetCoverage? ctx key == some .exported
   | none => false
 
+/-! ### A NON-CARRIER dynamic type resolves nothing (2026-10-23, lane
+`core/g16-raise-mark-1023`, review fix round F2 — the symbolic route of
+raft-proofs): a non-pointer type with no method carrier (`methodCarrierKey?`
+is `none` — a basic, slice, map, chan, func or array type) on which the
+table declares no method resolves nothing. `Bool` premises over the explicit
+table (`rfl` on a concrete program): no `Ty` equality soundness is needed
+here (that lemma, `Ty.beq_sound`, lives in `StateEqb.lean`). -/
+
+variable {ctx} in
+theorem methodDecl?_none_of_noRecv {dynTy : Ty} {member : Declaration.MemberId}
+    (hno : ctx.methods.all (fun m => methodRecvDynamicTy? m != some dynTy) = true) :
+    methodDecl? ctx dynTy member = none := by
+  rw [methodDecl?_eq_find?, List.find?_eq_none]
+  intro m hm
+  rw [← Array.all_toList, List.all_eq_true] at hno
+  have hm' := hno m hm
+  cases hb : (methodRecvDynamicTy? m == some dynTy) with
+  | true => simp [bne, hb] at hm'
+  | false => simp
+
+variable {ctx} in
+theorem resolveMethod?_none_of_nonCarrier {dynTy : Ty} {member : Declaration.MemberId}
+    (hnp : ∀ e, dynTy ≠ .pointer e) (hk : methodCarrierKey? ctx dynTy = none)
+    (hno : ctx.methods.all (fun m => methodRecvDynamicTy? m != some dynTy) = true) :
+    resolveMethod? ctx dynTy member = none := by
+  unfold resolveMethod?
+  rw [methodDecl?_none_of_noRecv hno]
+  cases dynTy with
+  | pointer e => exact (hnp e rfl).elim
+  | defined idx =>
+    exfalso
+    unfold methodCarrierKey? at hk
+    cases h : ctx.types.nameOf? idx <;> simp [h] at hk
+  | _ => simp [resolvePromoted?]
+
 /-- The FIRST requirement of `interfaceName` that `dynTy` does not meet, in
 the interface's own gc method order — `none` means it satisfies
 the interface. Go names exactly this method in its assert-panic message.

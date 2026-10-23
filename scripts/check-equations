@@ -22,7 +22,11 @@ cd "$ROOT"
 . "$ROOT/scripts/typed-gate-scratch.sh"
 
 CLIENT=Tests/EquationClient.lean
-GUARD='unfold stepFn|simp \[[^]]*stepFn|cbv|decide'
+# The tactic words are word-bounded (lane core/g16-raise-mark-1023, review fix round F3, 2026-10-23):
+# `by decide` and `decide +kernel` still match; an identifier merely CONTAINING the substring
+# (`hdecide`, `strEntryDecided`, `Rewrite.undecided`) does not. The pre-filter is cheap and
+# case-sensitive; the load-bearing check is the client's own Lean-level proof-term check ((b) above).
+GUARD='unfold stepFn|simp \[[^]]*stepFn|\b(cbv|decide)\b'
 
 # (a) the equation file and the client library build
 cap lake build GoLean EquationTests

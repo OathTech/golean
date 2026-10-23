@@ -108,7 +108,7 @@ theorem GoLean.Contract.GoCore.Machine.Choices.consumeAt_nilValueMethodText_one 
     stmt_of% GoLean.GoCore.Machine.Choices.consumeAt_nilValueMethodText_one :=
   GoLean.GoCore.Machine.Choices.consumeAt_nilValueMethodText_one
 
-/-! ## eqns (298) -/
+/-! ## eqns (300) -/
 
 theorem GoLean.Contract.GoCore.Equations.Heap.lookup_push_self :
     stmt_of% GoLean.GoCore.Equations.Heap.lookup_push_self :=
@@ -713,6 +713,14 @@ theorem GoLean.Contract.GoCore.Equations.panicking_storeK :
 theorem GoLean.Contract.GoCore.Equations.panicking_strictK :
     stmt_of% GoLean.GoCore.Equations.panicking_strictK :=
   GoLean.GoCore.Equations.panicking_strictK
+
+theorem GoLean.Contract.GoCore.Equations.phaseMark_nonCarrier :
+    stmt_of% GoLean.GoCore.Equations.phaseMark_nonCarrier :=
+  GoLean.GoCore.Equations.phaseMark_nonCarrier
+
+theorem GoLean.Contract.GoCore.Equations.phaseMark_string :
+    stmt_of% GoLean.GoCore.Equations.phaseMark_string :=
+  GoLean.GoCore.Equations.phaseMark_string
 
 theorem GoLean.Contract.GoCore.Equations.pinResultLocs_eq_of_lookup :
     stmt_of% GoLean.GoCore.Equations.pinResultLocs_eq_of_lookup :=

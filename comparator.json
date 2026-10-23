@@ -173,6 +173,8 @@
     "GoLean.Contract.GoCore.Equations.panicking_stop_settled",
     "GoLean.Contract.GoCore.Equations.panicking_storeK",
     "GoLean.Contract.GoCore.Equations.panicking_strictK",
+    "GoLean.Contract.GoCore.Equations.phaseMark_nonCarrier",
+    "GoLean.Contract.GoCore.Equations.phaseMark_string",
     "GoLean.Contract.GoCore.Equations.pinResultLocs_eq_of_lookup",
     "GoLean.Contract.GoCore.Equations.resolveChain_nil",
     "GoLean.Contract.GoCore.Equations.retV_andK_error",

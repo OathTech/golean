@@ -3613,21 +3613,24 @@ def panicEntryOf (v : GoValue) : PanicEntry :=
 /-- **The rewrite's DECISION, at the preprint phase** (design §2 (i) 1,
 re-placed 2026-10-23): the phase's walk reaches an `.raised` entry and
 decides it from the payload's dynamic type — gc's `switch v := p.arg.(type)`
-(`runtime/panic.go:722`–`:725` at the pin). The method-set RECORD is read
-FIRST and its absence is a refusal by name (BUG-053: a carrier without a
-record may carry an `Error()`/`String()` the wire never saw, so neither a
-found `String` nor «neither» is a definite answer — fail closed; the
-abort's `.none` arm re-checks the same record). With the record: a type
-carrying `Error() string` is `.pending Error`; else `String() string` →
-`.pending String` (gc's order, p01); else `.none`. The `runtime.Error` twin
-is `.none` without a record (as at the raise). An unboxed payload is a
-machine-internal breach (the raise never marks one `.raised`). -/
+(`runtime/panic.go:722`–`:725` at the pin), in gc's order: a type carrying
+`Error() string` is `.pending Error` — gc's `case error:` comes first, so a
+FOUND `Error()` is a definite answer whatever the record says (`Error` is an
+exported name; the raise-time mark had the same rule). Else the method-set
+RECORD is required and its absence is a refusal by name (BUG-053: a carrier
+without a record may carry an `Error()` the wire never saw, so neither a
+found `String()` nor «neither» is a definite answer — fail closed; the
+abort's `.none` arm re-checks the same record; review fix round F1,
+2026-10-23). With the record: `String() string` → `.pending String` (p01);
+else `.none`. The `runtime.Error` twin is `.none` without a record (as at the
+raise). An unboxed payload is a machine-internal breach (the raise never
+marks one `.raised`). -/
 def phaseMark : GoValue → Except Stop Rewrite
   | .interface dynTy _ =>
       if dynTy == .defined runtimeErrorTypeIdx then return .none
+      else if hasNoArgStringMethod ctx dynTy errorMember then return .pending errorMember
       else if !dynamicMethodSetRecorded ctx dynTy then
         throw (.unsupported s!"panic preprint for a payload of dynamic type {goTypeNameForMessage ctx dynTy}: the dynamic type's method set is not recorded on the wire, so whether gc rewrites the payload through Error()/String() cannot be decided (BUG-053)")
-      else if hasNoArgStringMethod ctx dynTy errorMember then return .pending errorMember
       else if hasNoArgStringMethod ctx dynTy stringerMember then return .pending stringerMember
       else return .none
   | other => throw (.internal s!"preprint: an undecided rewrite on an unboxed payload {repr other}")

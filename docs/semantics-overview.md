@@ -253,19 +253,24 @@ preprint rewrite mark. `panicEntryOf` is table-free (no context argument): a box
 marked `Rewrite.raised` (the `runtime.Error` twin and unboxed values `.none`, as before), and
 the preprint phase's walk at `.stop` DECIDES it in one extra machine step
 (`phaseMark`, the `.stop` arm's decision step — `panicking_stop_raised`; no draw, trace or
-output): the method-set record first — its absence is a refusal by name (BUG-053; before, the
-raise baked `.unrecorded` into the entry and only the abort's rendering of a HEAD entry refused,
-so a non-head unrecorded entry was fail-open) — then `Error() string` → `.pending Error`, then
-`String() string` → `.pending String`, else `.none`; the phase step then runs as before on a
+output), in gc's order: `Error() string` first → `.pending Error` (a found `Error()` is a definite
+answer whatever the record says); else the method-set record is required — its absence is a
+refusal by name (BUG-053) — then `String() string` → `.pending String`, else `.none`; the phase step then runs as before on a
 `.pending` entry (`panicking_stop_pending`, now with the mark as a premise), and a settled chain
 aborts (`panicking_stop_settled`, over `splitNewestUnsettled?` — the cursor is the newest
 `.raised` or `.pending` entry). Observations are unchanged (the differential corpus and the
 eval tests are the check); a `Prefix` over an abort of a boxed payload is one step longer per such
-entry, with the entry's mark `.raised` until that step.
+entry, with the entry's mark `.raised` until that step. The reach on SLICED or hand-built wires
+(never on a decoded whole wire, where every carrier has a record) shrinks in two places, both
+deliberate: a payload whose type has `String()` but no `Error()` with its record dropped refuses
+by name where the raise-time mark answered, and a non-head entry of an unrecorded carrier refuses
+where it was fail-open (`docs/2026-10-03_panic-preprint-audit.md` F3). For the symbolic route,
+`phaseMark_string` and `phaseMark_nonCarrier` (`Equations.lean`, §D pins, the contract) discharge
+the decision step's premise for a `string` or any non-carrier payload.
 
 Since 2026-10-23 (release-readiness row 43, [USER]-ruled) that kept surface is a COMPARATOR
-CONTRACT: `Contract/Challenge.lean` restates all 351 of its theorems — every theorem of
-`Equations.lean` (298; 234 of them `@[stepFn_eqns]` simp-set members — the `signalStep_*` rows,
+CONTRACT: `Contract/Challenge.lean` restates all 353 of its theorems — every theorem of
+`Equations.lean` (300; 234 of them `@[stepFn_eqns]` simp-set members — the `signalStep_*` rows,
 `runProgramSetup_noInit`, the `allocDecls_*`/`bindParams_*`/`setup_*` facts and the rest are plain
 theorems of the module), the 27 public theorems of `InitDriverFacts.lean` (G11), the five
 `Prefix`/`Finish` laws above, the six output-fold statements, `enterFrame_declared` and the fourteen

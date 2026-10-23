@@ -404,6 +404,33 @@ the preprint phase decides it at `.stop`, `panicking_stop_raised`), `.none` for 
     stepFn ctx s (.retV v (.panicArgK k')) ch
       = .ok (.panicking [panicEntryOf (panicPayload v)] k', s, ch, ⟨[], [], []⟩) := by defn_eq
 
+/-- **The phase's mark of a NON-CARRIER payload** (review fix round F2, 2026-10-23 — the symbolic
+route of raft-proofs, whose runs end at `.panicking [panicEntryOf (…)] .stop` and take the decision
+step `panicking_stop_raised` with this premise): a boxed payload whose dynamic type is no pointer and
+has no method carrier (`methodCarrierKey?` is `none` — a basic, slice, map, chan, func or array type)
+and on which the method table declares nothing is marked `.none`: no record is needed and no method
+resolves. The premises are `Bool`/structural facts over the explicit context — `rfl` and
+`Ty.noConfusion` on a concrete program. -/
+theorem phaseMark_nonCarrier {t : Ty} (v : GoValue) (hnp : ∀ e, t ≠ .pointer e)
+    (hk : methodCarrierKey? ctx t = none)
+    (hno : ctx.methods.all (fun m => methodRecvDynamicTy? m != some t) = true) :
+    phaseMark ctx (.interface t v) = .ok .none := by
+  have hres : ∀ M, hasNoArgStringMethod ctx t M = false := fun M => by
+    unfold hasNoArgStringMethod; rw [resolveMethod?_none_of_nonCarrier hnp hk hno]
+  have hrec : dynamicMethodSetRecorded ctx t = true := by
+    unfold dynamicMethodSetRecorded; rw [hk]
+  unfold phaseMark
+  simp only [hres, hrec, Bool.false_eq_true, ↓reduceIte, Bool.not_true]
+  split <;> rfl
+
+/-- The `string` payload — `panic("…")`, `panic(any("…"))`, every `string`-typed payload: `string` is no
+carrier, so the mark is `.none` as soon as the method table declares nothing on `string` (a `Bool`
+premise over the explicit table — `rfl` on a concrete program). -/
+theorem phaseMark_string (v : GoValue)
+    (hno : ctx.methods.all (fun m => methodRecvDynamicTy? m != some .string) = true) :
+    phaseMark ctx (.interface .string v) = .ok .none :=
+  phaseMark_nonCarrier v (fun _ h => Ty.noConfusion h) rfl hno
+
 /-- `recover()`: the walk's answer and the continuation with the entry marked
 (`recoverResult_eq`/`_frame`/`_glue` state the walk). -/
 @[stepFn_eqns] theorem evalE_recoverCall (s : Store) (env : LocalEnv) (k : Cont) (ch : Choices) :

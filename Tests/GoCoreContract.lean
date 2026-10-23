@@ -636,6 +636,21 @@ theorem init_print_loops_differ_control :
   intro h
   cases h
 
+/-! The phase's mark of a NON-CARRIER payload (lane `core/g16-raise-mark-1023`, review fix round F2,
+2026-10-23; `GoLean/GoCore/Equations.lean`): the premise the customer's symbolic route discharges at
+the decision step (`panicking_stop_raised`) for a `string` payload or any non-carrier type. -/
+theorem phaseMark_nonCarrier :
+    ∀ {ctx : ProgramCtx} {t : Ty} (v : GoValue), (∀ e, t ≠ .pointer e) → methodCarrierKey? ctx t = none →
+    ctx.methods.all (fun m => methodRecvDynamicTy? m != some t) = true →
+    phaseMark ctx (.interface t v) = .ok .none :=
+  GoCore.Equations.phaseMark_nonCarrier
+
+theorem phaseMark_string :
+    ∀ {ctx : ProgramCtx} (v : GoValue),
+    ctx.methods.all (fun m => methodRecvDynamicTy? m != some .string) = true →
+    phaseMark ctx (.interface .string v) = .ok .none :=
+  GoCore.Equations.phaseMark_string
+
 end GoLean.GoCore.ContractTests.Pin
 
 /-! ## §E Provisional statements (pinned for build-time drift; NOT in the comparator contract)

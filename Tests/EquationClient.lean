@@ -712,6 +712,17 @@ theorem Pin.retV_panicArgK : ∀ {ctx : ProgramCtx} (s : Store) (v : GoValue) (k
       = .ok (.panicking [panicEntryOf (panicPayload v)] k', s, ch, ⟨[], [], []⟩) :=
   @GoLean.GoCore.Equations.retV_panicArgK
 
+theorem Pin.phaseMark_nonCarrier : ∀ {ctx : ProgramCtx} {t : Ty} (v : GoValue),
+    (∀ e, t ≠ .pointer e) → methodCarrierKey? ctx t = none →
+    ctx.methods.all (fun m => methodRecvDynamicTy? m != some t) = true →
+    phaseMark ctx (.interface t v) = .ok .none :=
+  @GoLean.GoCore.Equations.phaseMark_nonCarrier
+
+theorem Pin.phaseMark_string : ∀ {ctx : ProgramCtx} (v : GoValue),
+    ctx.methods.all (fun m => methodRecvDynamicTy? m != some .string) = true →
+    phaseMark ctx (.interface .string v) = .ok .none :=
+  @GoLean.GoCore.Equations.phaseMark_string
+
 theorem Pin.evalE_recoverCall : ∀ {ctx : ProgramCtx} (s : Store) (env : LocalEnv) (k : Cont) (ch : Choices),
     stepFn ctx s (.evalE .recoverCall env k) ch
       = .ok (.retV (recoverResult k).1 (recoverResult k).2, s, ch, ⟨[], [], []⟩) :=

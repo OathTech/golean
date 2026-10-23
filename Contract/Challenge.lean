@@ -16,7 +16,7 @@ raft-proofs repository — `Prefix`/`Finish` and their laws, the equation librar
 `enterFrame_declared`, the `Choices.consumeAt*` laws, the G11 family, the output-fold bridge and
 what `Tests/GoCoreContract.lean` §D pins; a statement drift in that set must become a mismatch
 the judge names, not a text diff). The equation family is EVERY public theorem of
-`Equations.lean` (298 since lane `core/g16-raise-mark-1023`; 234 of them `@[stepFn_eqns]` simp-set members — the customer's rewriting
+`Equations.lean` (300 since lane `core/g16-raise-mark-1023`; 234 of them `@[stepFn_eqns]` simp-set members — the customer's rewriting
 library is the module, and its `signalStep_*` rows, `runProgramSetup_noInit`, the
 `allocDecls_*`/`bindParams_*`/`setup_*` facts and the rest are plain theorems there): widened
 from the simp set's membership at the fix round of 2026-10-23 (review F1), the owner's
@@ -2383,6 +2383,22 @@ theorem GoLean.Contract.GoCore.Equations.retV_panicArgK :
         Except.ok
           (Config.panicking [panicEntryOf (panicPayload v)] k', s, ch,
             { trace := [], picks := [], out := [] })
+    := sorry
+
+/-- `GoLean.GoCore.Equations.phaseMark_nonCarrier` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.phaseMark_nonCarrier :
+    ∀ {ctx : ProgramCtx} {t : Ty} (v : GoValue),
+      (∀ (e : Ty), t ≠ e.pointer) →
+        methodCarrierKey? ctx t = none →
+          (ctx.methods.all fun (m : MethodInfo) => methodRecvDynamicTy? m != some t) = true →
+            phaseMark ctx (GoValue.interface t v) = Except.ok Rewrite.none
+    := sorry
+
+/-- `GoLean.GoCore.Equations.phaseMark_string` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.phaseMark_string :
+    ∀ {ctx : ProgramCtx} (v : GoValue),
+      (ctx.methods.all fun (m : MethodInfo) => methodRecvDynamicTy? m != some Ty.string) = true →
+        phaseMark ctx (GoValue.interface Ty.string v) = Except.ok Rewrite.none
     := sorry
 
 /-- `GoLean.GoCore.Equations.retV_preprintK_nonstring` (GoLean.GoCore.Equations) -/

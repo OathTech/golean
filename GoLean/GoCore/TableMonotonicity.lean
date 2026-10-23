@@ -32,8 +32,13 @@ wire boundary; the admission profile `Admission.lean` re-checks function keys on
 entry), and the two Go-level facts (a member is declared on `T` or on `*T`, never both; a
 promotion record never names a member the carrier declares) are what `go/types` guarantees and
 `validatePromotion` re-checks; every concrete receiver is a method CARRIER (`methodReceiverAgrees`)
-— but THIS module proves nothing about the decoder: the facts are PREMISES of the relation,
-decidable on the whole program, and a consumer discharges them once per wire.
+— but THIS module proves nothing about the decoder: the facts are PREMISES of the relation, and a
+consumer discharges them once per wire. They are decidable in principle, but NO `Decidable`
+instance or `Bool` checker ships (`by decide` cannot synthesize one; review fix round F5,
+2026-10-23): a consumer discharges the explicit clauses by evaluation on its concrete tables
+(`simp`/`rfl` over the unfolded lists) or through its reflective evaluator; a `Bool` checker over
+the four tables with its soundness lemma (about a hundred lines beside `TablesKeyed`/`SliceClosed`)
+is a follow-up if a consumer asks.
 
 ## Why the PER-KEY closure (and nothing else)
 
@@ -89,8 +94,8 @@ def ProgramCtx.tablesFree (c : ProgramCtx) : ProgramCtx :=
     c.tablesFree.typeDisplays = c.typeDisplays := rfl
 
 /-- The whole program's KEY DISCIPLINE: what makes each first-match lookup's answer the
-unique row of its key, and keeps `resolveMethod?`'s arms disjoint. Every clause is a decidable
-fact about the whole program alone. On a decoded wire they hold: the decoder refuses duplicate
+unique row of its key, and keeps `resolveMethod?`'s arms disjoint. Every clause is a fact about
+the whole program alone (decidable in principle; no instance shipped — module header). On a decoded wire they hold: the decoder refuses duplicate
 function ids (hence duplicate method func-ids and, through `methodReceiverAgrees`, duplicate
 (receiver, member) declarations), duplicate method-set keys, duplicate promotion keys, an empty
 promotion path, a record naming a member its carrier declares (`NativeToIR.lean`,
@@ -141,7 +146,8 @@ structure ProgramCtx.TablesKeyed (b : ProgramCtx) : Prop where
       methodDecl? b (.pointer (.defined idx)) p.member = none
 
 /-- The slice's CLOSURE under the whole — PER KEY: what its own method-set records certify
-(module header). Each clause is decidable on the pair. -/
+(module header). Each clause is a fact about the pair (decidable in principle; no instance
+shipped — module header). -/
 structure ProgramCtx.SliceClosed (a b : ProgramCtx) : Prop where
   /-- A kept `Func` keeps its `MethodInfo` (`dynamicDispatch?` dispatches a method and runs a
   plain function by this table alone). -/
@@ -1698,6 +1704,20 @@ theorem satisfiesMethodSig_mono (h : a.SubTables b) {t : Ty} {req : MethodSig}
     | none => simp only [hsg] at hs; cases hs
     | some sg => simp only [hsg] at hs; simp only [h.resolvedSignature?_mono hsg]; exact hs
 
+/-- A preprint member found under the slice is found under the whole (positive lookups only):
+`Error()` decides the mark without the record. -/
+theorem hasNoArgStringMethod_mono (h : a.SubTables b) {t : Ty} {M : Declaration.MemberId}
+    (hs : hasNoArgStringMethod a t M = true) : hasNoArgStringMethod b t M = true := by
+  unfold hasNoArgStringMethod at hs ⊢
+  cases hres : resolveMethod? a t M with
+  | none => simp only [hres] at hs; cases hs
+  | some r =>
+    simp only [hres] at hs
+    simp only [h.resolveMethod?_mono hres]
+    cases hsg : resolvedSignature? a M r with
+    | none => simp only [hsg] at hs; cases hs
+    | some sg => simp only [hsg] at hs; simp only [h.resolvedSignature?_mono hsg]; exact hs
+
 theorem hasNoArgStringMethod_eq_of_recorded (h : a.SubTables b) {t : Ty} {M : Declaration.MemberId}
     (hr : dynamicMethodSetRecorded a t = true) :
     hasNoArgStringMethod a t M = hasNoArgStringMethod b t M := by
@@ -1976,14 +1996,25 @@ theorem phaseMark_mono (h : a.SubTables b) {v : GoValue} {r : Rewrite}
     · rename_i hrt
       (try simp only [hrt, Bool.false_eq_true, ↓reduceIte] at hx)
       (try simp only [hrt, Bool.false_eq_true, ↓reduceIte])
-      cases hr : dynamicMethodSetRecorded a dynTy with
-      | false => rw [hr] at hx; simp at hx
+      -- `Error()` first: found under the slice, found under the whole, no record consulted
+      cases he : hasNoArgStringMethod a dynTy errorMember with
       | true =>
-        rw [hr] at hx
-        rw [h.dynamicMethodSetRecorded_mono hr]
-        simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte] at hx ⊢
-        rw [← h.hasNoArgStringMethod_eq_of_recorded hr, ← h.hasNoArgStringMethod_eq_of_recorded hr]
+        rw [he] at hx
+        rw [h.hasNoArgStringMethod_mono he]
         exact hx
+      | false =>
+        rw [he] at hx
+        simp only [Bool.false_eq_true, ↓reduceIte] at hx
+        -- not found: the slice's record certifies the whole finds none either
+        cases hr : dynamicMethodSetRecorded a dynTy with
+        | false => rw [hr] at hx; simp at hx
+        | true =>
+          rw [hr] at hx
+          rw [← h.hasNoArgStringMethod_eq_of_recorded (M := errorMember) hr,
+            ← h.hasNoArgStringMethod_eq_of_recorded (M := stringerMember) hr, he,
+            h.dynamicMethodSetRecorded_mono hr]
+          simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte] at hx ⊢
+          exact hx
   | _ => simp at hx
 
 theorem renderPanicRewrite_mono (h : a.SubTables b) {e : PanicEntry} {x : String × Bool}
