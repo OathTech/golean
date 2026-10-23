@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# The challenge's EXPORT at this commit, as `lake comparator` makes it (lane gate/comparator-1023,
+# 2026-10-23; release-readiness row 43) — for a consumer who pins this repository and wants to
+# judge a LATER commit against the statements of their pin:
+#
+#     scripts/contract-export > challenge-at-pin.ndjson        # at the pinned commit
+#     lake comparator --challenge-from-export challenge-at-pin.ndjson   # at the candidate commit
+#
+# The comparator then requires, besides the statements, every DEFINITION the statements reach
+# (`Prefix`, `Finish`, `stepFn`, …) to be identical between the pinned export and the candidate,
+# and names the first constant that moved. The export is `leanexport` (the toolchain's own, as
+# the comparator insists: the format must match the compiler that produced the oleans) over the
+# target list the comparator exports — `Lake/CLI/Check.lean`, `compareIt`: the `Quot` builtins
+# (Quot.sound being permitted), `theorem_names`, `permitted_axioms`, the kernel's primitive
+# constants (`primitiveTargets`, the list below copied from the toolchain source for v4.35.0),
+# and `definition_names` — read from comparator.json. The challenge library must be built
+# (`lake build ContractChallenge`). NDJSON on stdout; everything else on stderr; a nonzero
+# exit of leanexport (an unknown constant aborts it) is this script's.
+set -uo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+. "$ROOT/scripts/cap.sh"
+cd "$ROOT" || { echo "contract-export: cannot cd to $ROOT" >&2; exit 1; }
+[[ $# = 0 ]] || { echo 'contract-export: expected no arguments' >&2; exit 2; }
+[ -f comparator.json ] || { echo "contract-export: comparator.json is missing" >&2; exit 1; }
+# Lake/CLI/Check.lean v4.35.0: primitiveTargets (git grep new_persistent_expr_const src/kernel/).
+primitives=(Nat.add Nat.sub Nat.mul Nat.pow Nat.gcd Nat.div Nat.mod Nat.beq Nat.ble Nat.land Nat.lor Nat.xor
+  Nat.shiftLeft Nat.shiftRight String.ofList Char.ofNat List eagerReduce Nat String String.mk Char
+  optParam autoParam semiOutParam outParam)
+mapfile -t cfg < <(python3 -I - <<'PY'
+import json, sys
+c = json.load(open("comparator.json"))
+print(c["challenge_module"])
+quot = ["Quot", "Quot.mk", "Quot.lift", "Quot.ind"] if "Quot.sound" in c["permitted_axioms"] else []
+for n in quot + c["theorem_names"] + c["permitted_axioms"] + c.get("definition_names", []):
+    print(n)
+PY
+) || { echo "contract-export: comparator.json could not be read" >&2; exit 1; }
+[ "${#cfg[@]}" -ge 2 ] || { echo "contract-export: comparator.json names no theorem" >&2; exit 1; }
+module="${cfg[0]}"
+targets=("${cfg[@]:1}")
+echo "contract-export: exporting ${#targets[@]} named constants plus ${#primitives[@]} kernel primitives from $module" >&2
+LEAN_ABORT_ON_PANIC=1 cap lake env leanexport "$module" -- "${targets[@]}" "${primitives[@]}"
