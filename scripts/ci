@@ -12,13 +12,15 @@
 #   scripts/ci --diff   the merge gate — the fast tier plus a FRESH run of the
 #                       differential corpus (`go run` per case, every row, no
 #                       cached tier) and the negative corpus, judged against
-#                       the tracked baselines, and the `lake check` speedbump.
+#                       the tracked baselines, and the `lake check` and
+#                       `lake comparator` speedbumps.
 #                       Run it when you touched runtime code; a merge to main
 #                       needs it green.
 #
 # Speedbumps (the document-vs-code consistency checks in both tiers; under
-# --diff also the derived-artifact regeneration and `lake check`, about four
-# minutes) run under their own heading, REPORT-ONLY: a red one never fails the
+# --diff also the derived-artifact regeneration, `lake check` (about four
+# minutes) and `lake comparator` (the kept customer surface against its frozen
+# challenge, scripts/check-comparator)) run under their own heading, REPORT-ONLY: a red one never fails the
 # gate; it is read at the merge ask and fixed or waived there, by name.
 # Self-tests of checkers (scripts/test-*) are not run here: run the one for a
 # script you change.
@@ -288,7 +290,14 @@ else echo "  not in any lakefile.toml glob:$tests_unowned" >&2; bad "Tests/ libr
 # proof and pin holders — IS a default target, or `lake check` never sees it;
 # every executable and every library with a `main`-bearing module is NOT (a
 # second `main` stops `lake check`'s single-environment export) and is built
-# by name above. `main` is read from each module's built .ilean — the
+# by name above. ONE main-free library is required NOT to be default: the one
+# owning the comparator's CHALLENGE module (`challenge_module` in
+# comparator.json; release-readiness row 43, 2026-10-23) — its `sorry` holes
+# would fail `lake check`'s axiom verdict and its alias names are the
+# Solution's, which `lake check` imports into the same environment; it is
+# built by name above and judged by `lake comparator` (scripts/check-comparator).
+# A comparator.json that cannot be read, or a challenge module no library
+# owns, FAILS here. `main` is read from each module's built .ilean — the
 # elaborated constant names, so a namespaced `Tests.X.main` is not `main` —
 # which is why the check runs only after a green build, and FAILS when an
 # .ilean is missing or not the shape it reads. Both directions fail closed.
@@ -297,12 +306,17 @@ if [ "$core_rc" -ne 0 ]; then
   bad "lakefile target split NOT CHECKED (the lake build failed, exit $core_rc — no .ilean to read)"
 else
   lf_defaults="$(tr -d '\n' < lakefile.toml | sed -n 's/.*defaultTargets = \[\([^]]*\)\].*/\1/p' | tr -d '",')"
-  split_out="$(LF_LIBS="$(printf '%s\n' "${lf_libs[@]}")" LF_EXES="${lf_exes[*]}" LF_DEFAULTS="$lf_defaults" python3 -I - <<'PY'
+  lf_challenge="$(python3 -I -c 'import json; print(json.load(open("comparator.json"))["challenge_module"])' 2>/dev/null || true)"
+  split_out="$(LF_LIBS="$(printf '%s\n' "${lf_libs[@]}")" LF_EXES="${lf_exes[*]}" LF_DEFAULTS="$lf_defaults" LF_CHALLENGE="$lf_challenge" python3 -I - <<'PY'
 import json, os, sys
 defaults = os.environ["LF_DEFAULTS"].split()
 exes = os.environ["LF_EXES"].split()
 libs = [l.split() for l in os.environ["LF_LIBS"].splitlines() if l.strip()]
+challenge = os.environ["LF_CHALLENGE"].strip()
 bad = []
+if not challenge:
+    bad.append("comparator.json is unreadable or has no challenge_module — the comparator's challenge library cannot be classified (it must be the one main-free library that is NOT a default target)")
+challenge_owner = None
 def has_main(mod):
     p = os.path.join(".lake", "build", "lib", "lean", *mod.split(".")) + ".ilean"
     try:
@@ -321,9 +335,19 @@ for name, *mods in libs:
     carriers = [m for m, v in states.items() if v]
     unreadable = [m for m, v in states.items() if v is None]
     is_default = name in defaults
+    is_challenge = bool(challenge) and challenge in mods
     shape = ("main in " + ", ".join(carriers)) if carriers else ("UNREADABLE .ilean: " + ", ".join(unreadable)) if unreadable else "main-free"
+    if is_challenge:
+        challenge_owner = name
+        shape += f"; owns the comparator challenge {challenge} (comparator.json)"
     print(f"  lib {name}: {'default' if is_default else 'built by name'}; {shape}; {len(mods)} module(s)")
-    if carriers and is_default:
+    if is_challenge and is_default:
+        bad.append(f"library {name} owns the comparator challenge module {challenge} but is a default target — its sorry holes fail lake check's axiom verdict and its alias names clash with GoLean.Contract.Solution's in one environment; drop it from defaultTargets (it is built by name and judged by lake comparator)")
+    elif is_challenge and carriers:
+        bad.append(f"library {name} owns the comparator challenge module {challenge} but defines a top-level main in {', '.join(carriers)} — the challenge is statements with holes, nothing else")
+    elif is_challenge:
+        pass  # the one main-free library that is NOT default, by design
+    elif carriers and is_default:
         bad.append(f"library {name} is a default target but defines a top-level main in {', '.join(carriers)} — a second main stops lake check; drop it from defaultTargets (it is built by name)")
     elif unreadable:
         pass  # already a FAIL line each, above
@@ -337,6 +361,8 @@ for name in exes:
 for d in defaults:
     if d not in known:
         bad.append(f"defaultTargets names {d!r}, which is not a declared library or executable")
+if challenge and challenge_owner is None:
+    bad.append(f"comparator.json names the challenge module {challenge!r}, which no declared library's globs own — lake comparator could not build it")
 if not libs or not defaults:
     bad.append("no library parsed or no default target read — the split is unverifiable")
 for b in bad:
@@ -345,7 +371,7 @@ sys.exit(1 if bad else 0)
 PY
 )"; split_rc=$?
   printf '%s\n' "$split_out"
-  if [ "$split_rc" -eq 0 ]; then ok "lakefile targets (defaults = the main-free libraries: $lf_defaults; executables and main-bearing libraries built by name)"
+  if [ "$split_rc" -eq 0 ]; then ok "lakefile targets (defaults = the main-free libraries: $lf_defaults; executables, main-bearing libraries and the comparator challenge ($lf_challenge) built by name)"
   else bad "lakefile targets (the default-target split is broken or unverifiable — exit $split_rc; see above)"; fi
 fi
 
@@ -383,8 +409,8 @@ fi
 # The fast tier says where `lake check` went (review F6, 2026-10-22): a
 # summary without the line would read as if the check did not exist.
 if [ "$RUN_DIFF" -eq 0 ]; then
-  echo "  lake check: not in the fast tier — scripts/ci --diff runs it as a speedbump (about four minutes); the owner's run outside the sandbox is the claim-point gate"
-  note "lake check: not in this tier (the --diff tier runs scripts/check-lake-check as a speedbump; the owner's run outside the sandbox is the claim-point gate)"
+  echo "  lake check, lake comparator: not in the fast tier — scripts/ci --diff runs both as speedbumps (about four minutes, and the comparator); the owner's runs outside the sandbox are the claim-point gate"
+  note "lake check, lake comparator: not in this tier (the --diff tier runs scripts/check-lake-check and scripts/check-comparator as speedbumps; the owner's runs outside the sandbox are the claim-point gate)"
 fi
 
 # ── GATE: the machine check of totality — a harness imports every GoLean/
@@ -485,6 +511,27 @@ if [ "$RUN_DIFF" -eq 1 ]; then
     bump_red "lake check NOT RUN (the lake build failed, exit $core_rc)"
   else
     run_bump "lake check (scripts/check-lake-check, --diff tier; the main-free libraries built, exported, kernel-replayed; sandboxed where bwrap can start, else --inadvisably-no-sandbox — its line says which)" bash scripts/check-lake-check
+  fi
+
+  # ── SPEEDBUMP, --diff tier only: `lake comparator` (release-readiness row
+  # 43, [USER] 2026-10-23). The surface kept on main for the raft-proofs
+  # customer — the Prefix/Finish laws, every `stepFn_eqns` lemma, the G11
+  # family, the output-fold bridge, enterFrame_declared, the Choices.consumeAt*
+  # laws (285 theorems; scripts/contract-names.lean) — is FROZEN as statements
+  # in Contract/Challenge.lean, and the comparator judges GoLean's own theorems
+  # (through the generated aliases of GoLean/Contract/Solution.lean) against
+  # it: syntactically the same statement, standard axioms only, kernel-
+  # accepted. A statement drift is a kernel-level mismatch naming the theorem,
+  # not a text diff. scripts/check-comparator first checks the generated half
+  # is current (scripts/gen-contract --check), then runs the comparator with
+  # scripts/check-lake-check's sandbox detection. REPORT-ONLY here; the gate
+  # is the owner's run outside the sandbox at claim points (docs/release.md §3).
+  step "lake comparator (speedbump, --diff tier; scripts/check-comparator: the kept customer surface judged against its frozen challenge)"
+  if [ "$core_rc" -ne 0 ]; then
+    echo "  not run: the lake build above failed (exit $core_rc)"
+    bump_red "lake comparator NOT RUN (the lake build failed, exit $core_rc)"
+  else
+    run_bump "lake comparator (scripts/check-comparator, --diff tier; Contract/Challenge.lean vs GoLean/Contract/Solution.lean per comparator.json; sandboxed where bwrap can start, else --inadvisably-no-sandbox — its line says which)" bash scripts/check-comparator
   fi
 fi
 

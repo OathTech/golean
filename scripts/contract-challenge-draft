@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# A DRAFT of the comparator challenge's statements, printed from the built environment
+# (scripts/contract-draft.lean; lane gate/comparator-1023, 2026-10-23, release-readiness row
+# 43). Statements to stdout, diagnostics to stderr; exit 1 when a statement's printed form does
+# not re-elaborate to the kept theorem's statement (it is then marked `-- CONTRACT DRAFT:` in
+# the output and must be spelled by hand, as Contract/Challenge.lean does for
+# `applyStmtOp_print`).
+#
+# NOT the contract: Contract/Challenge.lean is the FROZEN statement set, updated deliberately
+# with a changelog row. Regenerating it from main would make `lake comparator` compare main
+# with main. Use this to see what a deliberate update would say:
+#
+#     scripts/contract-challenge-draft > .tmp/challenge-draft.lean
+#     diff <(sed -n '/^open /,$p' Contract/Challenge.lean) <(sed -n '/^open /,$p' .tmp/challenge-draft.lean)
+set -uo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+. "$ROOT/scripts/cap.sh"
+cd "$ROOT" || { echo "contract-challenge-draft: cannot cd to $ROOT" >&2; exit 1; }
+[[ $# = 0 ]] || { echo 'contract-challenge-draft: expected no arguments' >&2; exit 2; }
+export TMPDIR="$ROOT/.tmp"
+mkdir -p "$TMPDIR"
+out="$(mktemp "$TMPDIR/contract-draft.XXXXXX")"
+trap 'rm -f "$out"' EXIT
+cap lake env lean scripts/contract-draft.lean > "$out" 2>&1; rc=$?
+# The statements, after the challenge's own preamble so the draft is a loadable module.
+sed -n '/^set_option warn.sorry false/,/^open /p' Contract/Challenge.lean
+grep -vE '^contract-draft:|^scripts/contract-draft\.lean:' "$out"
+grep -E '^contract-draft:|^scripts/contract-draft\.lean:' "$out" >&2
+exit "$rc"

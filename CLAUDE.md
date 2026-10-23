@@ -205,11 +205,20 @@ Everything else is untrusted tooling.
   `AdmissionTests`, `GoCoreAuditTests` — the executables and the
   `main`-bearing test libraries are built by name, [USER] 2026-10-21,
   backlog row 42; sandboxed where `bwrap` can start,
-  `--inadvisably-no-sandbox` where it cannot, saying which)) under their
-  own heading. A red one never fails the gate; it is read at the merge ask
-  and fixed or waived there, by name. The owner's `lake check` outside the
-  sandbox is the gate at claim points, `lake check --paranoid` at the
-  release claim point ([USER] 2026-10-20) — once that run is shown to
+  `--inadvisably-no-sandbox` where it cannot, saying which) and `lake
+  comparator` (`scripts/check-comparator`, about 20 s: the 285 statements
+  of the surface kept on main for the raft-proofs customer, FROZEN in
+  `Contract/Challenge.lean`, judged against GoLean's own theorems through
+  the generated aliases of `GoLean/Contract/Solution.lean` per
+  `comparator.json` — syntactically as stated, standard axioms only,
+  kernel-accepted, so a statement drift is a kernel-level mismatch naming
+  the theorem, never a text diff; the challenge is updated deliberately
+  with a changelog row; [USER] 2026-10-23, backlog row 43; the same
+  sandbox detection)) under their own heading. A red one never fails the
+  gate; it is read at the merge ask and fixed or waived there, by name.
+  The owner's `lake check` and `lake comparator` outside the sandbox are
+  the gate at claim points, `lake check --paranoid` at the release claim
+  point ([USER] 2026-10-20) — once that run is shown to
   start `bwrap` (unverified on this box: `bwrap` is not setuid and
   `apparmor_restrict_unprivileged_userns=1`); until then the in-tree
   no-sandbox run is what exists, and `--paranoid` is red today because

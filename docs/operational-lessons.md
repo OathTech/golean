@@ -831,6 +831,78 @@ owner's `lake check` outside the sandbox is the gate at claim points,
 `--paranoid` at the release claim point (CLAUDE.md «The gates»,
 `docs/release.md` §3). The measurements are in the table above.
 
+**`lake comparator` at this project — LANDED 2026-10-23 (lane
+`gate/comparator-1023`; [USER] 2026-10-21 and 2026-10-23, release-readiness
+row 43, paraphrased: use the comparator where appropriate; with the
+relation retired, the appropriate challenge is the statement set kept on
+main under stable names for the raft-proofs customer, and a drift in it
+must be a kernel-level mismatch, not a text diff).** The toolchain's
+`lake comparator` (`Lake/CLI/Check.lean`, `runComparator`; the judge is
+`Lake/Check/Compare.lean` + `Axioms.lean`) builds and exports a CHALLENGE
+module and a SOLUTION module per `comparator.json` and judges each name in
+`theorem_names`: the two `ConstantVal`s (name, levels, TYPE) must be `==`
+— SYNTACTIC `Expr` equality, binder names ignored, nothing definitional —
+every non-target constant the statements reach must be `==` whole (value
+included) in both exports, the solution's proofs may reach only
+`permitted_axioms`, and `leanchecker` replays the solution export. Names
+are matched by FULL name in both exports, kinds must agree (theorem with
+theorem), and only the solution's axioms are examined. Those four facts
+fixed the design: (1) ALIAS NAMES — a module cannot redeclare an imported
+name, and kept theorems live in the vocabulary modules
+(`enterFrame_declared` in Machine.lean, `Choices.consumeAt*` in State/
+Machine.lean, `execProgLoopOut_snd` in Multi.lean), so the solution is a
+generated module `GoLean/Contract/Solution.lean` of `theorem
+GoLean.Contract.<rest> : stmt_of% GoLean.<rest> := GoLean.<rest>`, and the
+hand-maintained challenge `Contract/Challenge.lean` (library
+`ContractChallenge`, NOT default, imported by nothing) restates each under
+the same alias with a `sorry` hole; (2) the alias's type must be the kept
+theorem's OWN type (`stmt_of%`, `GoLean/Contract/StmtOf.lean`: the
+environment's type, a `*_stmt` head unfolded), never a hand copy — a hand
+copy on the solution side would make the comparator compare two copies
+written in this repo, and the `Prefix.lean` idiom `theorem X : X_stmt`
+would make a challenge that names `X_stmt` compare one definition with
+itself; (3) `sorry` holes with `set_option warn.sorry false` (4.35's
+option) keep the warning-free build honest without a regex exemption, and
+keep the challenge out of `lake check` (which would refuse `sorryAx`);
+(4) `permitted_axioms` is the classical trio only. The list is read from
+the built environment (`scripts/contract-names.lean`: the `stepFn_eqns`
+simp set's members, InitDriverFacts.lean's public theorems, the named
+laws), `scripts/gen-contract` writes `comparator.json` and the Solution
+and `--check` fails on any difference, and `scripts/check-comparator` is
+the `--diff`-tier speedbump (gen-contract --check, then the comparator
+with scripts/check-lake-check's sandbox detection). Measured 2026-10-23
+(this box, inside the agent sandbox, `--inadvisably-no-sandbox`, 64G cap):
+19.0 s wall, largest process 1.84 GB, 285 theorem names (232 equations,
+27 G11, 14 `consumeAt*`, 6 output-fold, 5 Prefix/Finish, 1 enterFrame);
+scripts/contract-names.lean 1.8 s; a `lake build` of the two modules a
+few seconds. Fail-closed, shown in scratch: a dropped conjunct in one
+challenge statement → «error: Challenge and solution theorem statement do
+not match: 'GoLean.Contract.GoCore.ExecutionStatement.prefix_det'», exit
+1; an alias removed from the solution → «error: Const not found in
+solution: 'GoLean.Contract.GoCore.Machine.execProgLoopOut_snd'», exit 1
+(and `gen-contract --check` names it first as a stale Solution). Four
+lessons from making the challenge's text re-elaborate to the IDENTICAL
+`Expr` (`scripts/contract-challenge-draft` prints every statement from
+the environment and checks exactly that; 281 of 285 as printed): a
+`match`/`do` in a statement mints an auxiliary matcher constant PER
+MODULE (`Lean.Meta.Match.mkMatcherAuxDefinition`'s cache is a local env
+extension), so the challenge names the kept theorem's own matcher,
+printed with `pp.match false` (three statements); a statement ending in a
+`do` block swallows the theorem's `:=` as a `doReassign` — parenthesise
+the statement; `.ok (s, ch, [], [])` and `Except.ok (s, ch, [], [])`
+elaborate to DIFFERENT terms when a tuple component's type is an `abbrev`
+(`AccessTrace` vs `List MemEvent` in `Prod.mk`'s type argument: the
+dot-form waits for the expected type) — one statement is spelled by hand
+in the source's form; and `#eval`'s `IO.eprintln` output lands on stdout
+with the messages, so a tool that separates a draft from diagnostics must
+filter by line. Not expressible as a theorem name, and what covers it:
+the `@[stepFn_eqns]` attribute itself (the name script reads the simp
+set, so a lost attribute is a list change the check names); definitions
+(`Prefix`, `replays`, `StateWf`'s `Decidable` instance) are compared
+whole between the exports — in-repo main with main, so they are SHARED,
+not frozen (the differential corpus and the equations' proofs watch
+them); `example` controls declare nothing an exporter can name.
+
 **Both kernel checks stay, one reason each.** `scripts/check-kernel-replay`
 (fast tier; 50 modules: 9.1 s, 4.4 GB at 4 threads, 6.8 s, 9.1 GB at 8) replays the ON-DISK
 `GoLean` olean set and checks it equal to the module set on disk — an

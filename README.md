@@ -137,11 +137,15 @@ The gate has two tiers. `scripts/ci` is the fast tier, run before any commit
 that touches runtime code: build, escape-hatch scans, the kernel replay, eval
 tests, the wire and frontend checks, plus report-only speedbumps. `scripts/ci
 --diff` is the merge tier, which adds a fresh differential run of every corpus
-row against the tracked baselines and the `lake check` speedbump (the
-toolchain's export and kernel replay of the default targets, about four
-minutes; `--inadvisably-no-sandbox` where `bwrap` cannot start, and the line
-says so). The owner's `lake check` outside any sandbox is the gate at claim
-points, `lake check --paranoid` at a release. Each heavy step goes through the
+row against the tracked baselines and two toolchain speedbumps: `lake check`
+(the export and kernel replay of the default targets, about four minutes) and
+`lake comparator` (the 285 theorems kept on main for the raft-proofs customer,
+frozen as statements in `Contract/Challenge.lean`, judged against GoLean's own
+theorems per `comparator.json` — a statement drift is a kernel-level mismatch
+naming the theorem; about 20 s); both `--inadvisably-no-sandbox` where `bwrap`
+cannot start, and the line says so. The owner's `lake check` and
+`lake comparator` outside any sandbox are the gate at claim points, `lake check
+--paranoid` at a release. Each heavy step goes through the
 memory cap when the box has one (`scripts/cap.sh`). The standing rule is
 `CLAUDE.md`, «The gates».
 

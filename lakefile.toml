@@ -84,6 +84,16 @@ name = "GoCoreAuditTests"
 globs = ["Tests.GoCoreContract", "Tests.PanicRendering", "Tests.GoCoreAudit"]
 
 [[lean_lib]]
+# The comparator CHALLENGE (release-readiness row 43, [USER] 2026-10-23): the kept customer
+# surface frozen as statements with `sorry` holes, judged against the generated Solution
+# (GoLean/Contract/Solution.lean, in the GoLean library) by `lake comparator` (comparator.json
+# at the root; scripts/check-comparator in the --diff tier). NOT a default target and imported
+# by nothing, by design: its holes would fail `lake check`'s axiom verdict and its names are the
+# Solution's. scripts/ci's target-split check reads this exemption from comparator.json.
+name = "ContractChallenge"
+globs = ["Contract.Challenge"]
+
+[[lean_lib]]
 # The toy semantic-equation CLIENT (window packet D, 2026-10-03; charter row 7, decision 8): GoCore
 # only, symbolic state and continuations, proves its facts by the `stepFn_eqns` rewrite set and
 # pins every equation theorem (exhaustive enrollment); run by scripts/check-equations. No runtime

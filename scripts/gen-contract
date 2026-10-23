@@ -1,0 +1,171 @@
+#!/usr/bin/env bash
+# The comparator contract's GENERATED half (lane gate/comparator-1023, 2026-10-23; release-
+# readiness row 43, [USER]-ruled 2026-10-23: the surface kept on main for the raft-proofs
+# customer becomes a `lake comparator` CHALLENGE, so that a statement drift is a kernel-level
+# mismatch, not a text diff).
+#
+# From the kept-surface name list that scripts/contract-names.lean reads out of the BUILT
+# environment (the `stepFn_eqns` simp set, the public theorems of InitDriverFacts.lean, the
+# named Prefix/Finish, enterFrame, Choices.consumeAt* and output-fold laws), this script writes:
+#
+#   comparator.json                  `lake comparator`'s configuration at its default path:
+#                                    challenge `Contract.Challenge`, solution
+#                                    `GoLean.Contract.Solution`, the full `theorem_names` list
+#                                    under the alias names, `permitted_axioms` = the classical
+#                                    trio only (the solution may use nothing else; the
+#                                    challenge's `sorry` holes are never checked).
+#   GoLean/Contract/Solution.lean    one alias per kept theorem — `theorem <alias> : stmt_of%
+#                                    <kept> := <kept>` — the kept theorem's OWN type
+#                                    (GoLean/Contract/StmtOf.lean) under the challenge's name.
+#
+# The ALIAS of a kept theorem `GoLean.<rest>` is `GoLean.Contract.<rest>` (namespace-preserving,
+# collision-free by construction; a consumer strips `Contract.` to find the theorem it uses).
+# `lake comparator` matches `theorem_names` by FULL name in both exports, which is why the
+# names must agree and why the hand-written challenge cannot be imported by the solution.
+#
+#   scripts/gen-contract           (re)write both files
+#   scripts/gen-contract --check   regenerate into scratch and FAIL on any difference from the
+#                                  tracked files (a kept theorem added, removed, renamed or
+#                                  re-attributed without regenerating — the comparator would
+#                                  not look at it); also the text checks below. Run by
+#                                  scripts/check-comparator before every comparator run.
+#
+# Text checks on the hand-maintained challenge, Contract/Challenge.lean, both modes:
+#   * every alias is declared there exactly once (`theorem <alias> :` at a line start), and
+#     every `theorem GoLean.Contract.…` it declares is a kept name — a missing one the
+#     comparator would name itself; an EXTRA one it would never look at;
+#   * no circular spelling in its code (comments stripped): `stmt_of%`, `type_of%`, a
+#     `*_stmt` constant, `Contract.Solution`, an `import GoLean.Contract…` — the challenge
+#     must spell every statement out from the definitions, or it pins nothing;
+#   * every theorem that Tests/GoCoreContract.lean §D pins (`:= GoCore.<name>`) is a kept name.
+# Fail closed on every step: the name script's error, an empty list, a line it cannot parse.
+set -uo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+. "$ROOT/scripts/cap.sh"
+. "$ROOT/scripts/lean-scan.sh"
+cd "$ROOT" || { echo "gen-contract: cannot cd to $ROOT" >&2; exit 1; }
+mode="write"
+case "${1:-}" in
+  "") ;;
+  --check) mode=check ;;
+  *) echo "gen-contract: unknown argument '$1' (expected nothing or --check)" >&2; exit 2 ;;
+esac
+[[ $# -le 1 ]] || { echo 'gen-contract: at most one argument' >&2; exit 2; }
+export TMPDIR="$ROOT/.tmp"
+mkdir -p "$TMPDIR"
+scratch="$(mktemp -d "$TMPDIR/gen-contract.XXXXXX")"
+trap 'rm -rf "$scratch"' EXIT
+fail() { echo "gen-contract: FAIL — $*" >&2; exit 1; }
+
+CHALLENGE=Contract/Challenge.lean
+SOLUTION=GoLean/Contract/Solution.lean
+CONFIG=comparator.json
+
+# ── 1. The kept-surface list, from the built environment.
+list="$scratch/names.tsv"
+if ! cap lake env lean scripts/contract-names.lean > "$list" 2> "$scratch/names.err"; then
+  head -5 "$scratch/names.err" >&2
+  fail "scripts/contract-names.lean failed (its first lines above; the GoLean library must be built)"
+fi
+[ -s "$list" ] || fail "scripts/contract-names.lean printed nothing"
+stray="$(grep -v $'^KEPT\t' "$list" || true)"
+[ -z "$stray" ] || { printf '%s\n' "$stray" | head -5 >&2; fail "unexpected lines from scripts/contract-names.lean (above)"; }
+n_kept="$(wc -l < "$list" | tr -d ' ')"
+while IFS=$'\t' read -r _ family name module; do
+  [[ "$name" == GoLean.* ]] || fail "kept name '$name' ($family) is outside the GoLean namespace"
+  [[ "$name" =~ ^[A-Za-z0-9_.?!₀-₉]+$ ]] || fail "kept name '$name' ($family) has a character this script does not expect"
+  [ -n "$module" ] || fail "kept name '$name' ($family) has no module"
+done < "$list"
+
+# ── 2. comparator.json
+NAMES_TSV="$list" python3 -I - > "$scratch/comparator.json" <<'PY' || fail "could not write comparator.json"
+import json, os, sys
+names = []
+with open(os.environ["NAMES_TSV"], encoding="utf-8") as f:
+    for line in f:
+        kept, family, name, module = line.rstrip("\n").split("\t")
+        names.append("GoLean.Contract." + name[len("GoLean."):])
+cfg = {
+    "challenge_module": "Contract.Challenge",
+    "solution_module": "GoLean.Contract.Solution",
+    "theorem_names": names,
+    "definition_names": [],
+    "permitted_axioms": ["propext", "Quot.sound", "Classical.choice"],
+}
+json.dump(cfg, sys.stdout, indent=2, ensure_ascii=False)
+sys.stdout.write("\n")
+PY
+
+# ── 3. GoLean/Contract/Solution.lean
+{
+  echo "import GoLean.Contract.StmtOf"
+  cut -f4 "$list" | LC_ALL=C sort -u | sed 's/^/import /'
+  cat <<'HDR'
+
+/-!
+# The comparator contract — the SOLUTION side (GENERATED by scripts/gen-contract; do not edit)
+
+One alias per kept theorem, `theorem GoLean.Contract.<rest> : stmt_of% GoLean.<rest> :=
+GoLean.<rest>`: the kept theorem's own type (`GoLean/Contract/StmtOf.lean`) under the name the
+challenge `Contract/Challenge.lean` uses, proved by the kept theorem itself. `lake comparator`
+(`comparator.json` at the root) checks that each alias's statement is SYNTACTICALLY the
+challenge's, that it rests on `propext`/`Quot.sound`/`Classical.choice` only, and that the
+kernel accepts the export. The list is read from the built environment by
+scripts/contract-names.lean (the families and their rule are documented there);
+`scripts/gen-contract --check` fails on any difference between this file and a fresh
+generation. Lane gate/comparator-1023, 2026-10-23 (release-readiness row 43, [USER]-ruled).
+-/
+HDR
+  prev=""
+  while IFS=$'\t' read -r _ family name module; do
+    if [ "$family" != "$prev" ]; then
+      printf '\n/-! ## %s (%s) -/\n' "$family" "$(awk -F'\t' -v f="$family" '$2==f' "$list" | wc -l | tr -d ' ')"
+      prev="$family"
+    fi
+    alias="GoLean.Contract.${name#GoLean.}"
+    printf '\ntheorem %s :\n    stmt_of%% %s :=\n  %s\n' "$alias" "$name" "$name"
+  done < "$list"
+} > "$scratch/Solution.lean"
+
+# ── 4. Text checks on the challenge.
+[ -f "$CHALLENGE" ] || fail "$CHALLENGE is missing"
+chal_code="$(strip_lean_comments < "$CHALLENGE")"
+declared="$(printf '%s\n' "$chal_code" | grep -oE '^theorem GoLean\.Contract\.[A-Za-z0-9_.?!₀-₉]+' | sed 's/^theorem //' | LC_ALL=C sort)"
+expected="$(cut -f3 "$list" | sed 's/^GoLean\./GoLean.Contract./' | LC_ALL=C sort)"
+dups="$(printf '%s\n' "$declared" | uniq -d)"
+[ -z "$dups" ] || { printf '%s\n' "$dups" | head -5 >&2; fail "$CHALLENGE declares an alias more than once (above)"; }
+missing="$(LC_ALL=C comm -23 <(printf '%s\n' "$expected") <(printf '%s\n' "$declared" | uniq))"
+extra="$(LC_ALL=C comm -13 <(printf '%s\n' "$expected") <(printf '%s\n' "$declared" | uniq))"
+[ -z "$missing" ] || { printf '%s\n' "$missing" | head -10 >&2; fail "$CHALLENGE lacks a statement for $(printf '%s\n' "$missing" | wc -l | tr -d ' ') kept theorem(s) (above): the challenge is updated DELIBERATELY, with a changelog row"; }
+[ -z "$extra" ] || { printf '%s\n' "$extra" | head -10 >&2; fail "$CHALLENGE declares $(printf '%s\n' "$extra" | wc -l | tr -d ' ') theorem(s) that are not kept names (above) — the comparator would never look at them"; }
+circ="$(printf '%s\n' "$chal_code" | grep -nE 'stmt_of%|type_of%|[A-Za-z0-9_]_stmt\b|Contract\.Solution|^import GoLean\.Contract' || true)"
+[ -z "$circ" ] || { printf '%s\n' "$circ" | head -5 >&2; fail "$CHALLENGE spells a statement through the solution side (above): a challenge that names the kept theorem's type or a *_stmt constant pins nothing"; }
+grep -q '^set_option warn.sorry false' "$CHALLENGE" || fail "$CHALLENGE must carry 'set_option warn.sorry false' (its holes are sorry; the build is warning-free by that option, not by a regex)"
+
+# ── 5. Tests/GoCoreContract.lean §D: every pinned theorem is a kept name.
+pins="$(awk '/^namespace GoLean\.GoCore\.ContractTests\.Pin/{p=1} /^end GoLean\.GoCore\.ContractTests\.Pin/{p=0} p' Tests/GoCoreContract.lean \
+  | grep -oE '^[[:space:]]+GoCore\.[A-Za-z0-9_.?!₀-₉]+[[:space:]]*$' | sed 's/[[:space:]]//g; s/^/GoLean./' | LC_ALL=C sort -u)"
+[ -n "$pins" ] || fail "no §D pin found in Tests/GoCoreContract.lean (the awk/grep shape moved?)"
+unpinned="$(LC_ALL=C comm -23 <(printf '%s\n' "$pins") <(cut -f3 "$list" | LC_ALL=C sort))"
+[ -z "$unpinned" ] || { printf '%s\n' "$unpinned" >&2; fail "Tests/GoCoreContract.lean §D pins theorem(s) that are not in the contract (above)"; }
+n_pins="$(printf '%s\n' "$pins" | wc -l | tr -d ' ')"
+
+# ── 6. Write, or compare.
+summary="kept surface: $n_kept theorems ($(cut -f2 "$list" | uniq -c | awk '{printf "%s%s %s", (NR>1?", ":""), $1, $2}')); §D pins $n_pins ⊆ contract; challenge declares all $n_kept and nothing else"
+if [ "$mode" = write ]; then
+  cp "$scratch/comparator.json" "$CONFIG"
+  cp "$scratch/Solution.lean" "$SOLUTION"
+  echo "gen-contract: wrote $CONFIG and $SOLUTION — $summary"
+else
+  bad=0
+  for pair in "$scratch/comparator.json:$CONFIG" "$scratch/Solution.lean:$SOLUTION"; do
+    fresh="${pair%%:*}"; tracked="${pair#*:}"
+    if [ ! -f "$tracked" ]; then echo "  $tracked is missing" >&2; bad=1
+    elif ! diff -u "$tracked" "$fresh" > "$scratch/diff"; then
+      head -30 "$scratch/diff" | sed 's/^/  /' >&2; bad=1
+      echo "  $tracked differs from a fresh generation (above; run scripts/gen-contract and review the change)" >&2
+    fi
+  done
+  [ "$bad" -eq 0 ] || fail "the tracked contract files are stale"
+  echo "gen-contract --check: PASS — $CONFIG and $SOLUTION equal a fresh generation; $summary"
+fi
