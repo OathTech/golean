@@ -17,6 +17,9 @@ import GoLean.GoCore.Prefix
 -- The initialiser's driver against the sequential driver and `Prefix` (raft-proofs G11, backlog
 -- row 47, 2026-10-21): the premise-free dichotomy and the G-R4 family restated.
 import GoLean.GoCore.InitDriverFacts
+-- Table monotonicity for the raft-proofs customer (G16, backlog row 48, 2026-10-23): a step under a
+-- slice of the function/method/promotion tables is the step under the whole, lifted to `Prefix`.
+import GoLean.GoCore.TableMonotonicity
 -- The relation-free single-goroutine bridge and projections, re-homed/restored 2026-10-21 (fix
 -- round F1 of the retirement; pending the owner's ruling): `PoolFacts` (ex-MultiSound/PoolTrace/
 -- ProgramTrace) and `PoolProjection` under its own name.

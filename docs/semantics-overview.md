@@ -230,7 +230,16 @@ init-phase print refusal, with no premise, so the seeded entry's initialisation 
 (G11), with `runPkgInitM_ok_of_prefix_silent` as the converse from one witnessed silent run;
 `execProgLoopOut_snd` (`Multi.lean`) is the G9 bridge — the outcome of the CLI's output-folding driver
 is `execProgLoop` — now pinned, with `execProgLoopOut_acc`/`execProgLoopOut_eq_execProgLoop`
-(`PoolFacts.lean`) as an accumulator law beside it.
+(`PoolFacts.lean`) as an accumulator law beside it. A third addition (backlog row 48, 2026-10-23,
+raft-proofs G16): `GoLean/GoCore/TableMonotonicity.lean` — the sub-table relation
+`ProgramCtx.SubTables` (the same `typeDefs`, `globals`, `typeDisplays` and `methodSets`; `funcs`,
+`methods` and `promotions` sublists of the whole's; the whole's key discipline, which the decoder
+enforces; three closures of the slice, named in the module header) and `stepFn_mono`,
+`prefix_mono`, `finish_aborted_mono`, `execStmtLoop_ok_mono`, `execStmtLoop_panic_mono`: a
+successful step, a labelled run, an abort's finish and the sequential driver's completion or
+panic under a slice of the tables are the same under the whole — pinned in
+`Tests/GoCoreContract.lean` §D with the lookups and the frame-entry funnel it rests on, required
+by the core audit. Refusals are not claimed (a slice refuses where the whole dispatches).
 
 The logic repository pins a commit, currently the tag `logic-offer/2026-10-03`. Each change that
 affects a consumer-visible behaviour or the kept surface is a line in the post-offer changelog

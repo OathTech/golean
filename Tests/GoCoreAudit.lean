@@ -48,7 +48,7 @@ def requiredModules : List Name := [
     `GoLean.GoCore.AdmissionPolicy, `GoLean.GoCore.Admission, `GoLean.CLI, `GoLean.NativeToIR,
     `GoLean.ChoiceTrace, `GoLean.GoCore.ExecutionStatement, `GoLean.GoCore.Prefix,
     `GoLean.GoCore.PrefixFacts, `GoLean.GoCore.StepErrors, `GoLean.GoCore.Locals,
-    `GoLean.GoCore.InitDriverFacts,
+    `GoLean.GoCore.InitDriverFacts, `GoLean.GoCore.TableMonotonicity,
     `GoLean.GoCore.EquationsAttr, `GoLean.GoCore.Equations, `GoLean.GoCore.Seed,
     `GoLean.GoCore.SeedPool, `GoLean.GoCore.PoolFacts, `GoLean.GoCore.PoolProjection,
     `Tests.GoCoreContract, `Tests.PanicRendering, `Tests.GoCoreAudit]
@@ -478,6 +478,27 @@ def exports : List Name := [
     ``GoLean.GoCore.ContractTests.Pin.execProgLoopOut_eq_execProgLoop,
     ``GoLean.GoCore.ContractTests.Pin.init_print_refused_control,
     ``GoLean.GoCore.ContractTests.Pin.init_print_loops_differ_control,
+    -- raft-proofs G16 (backlog row 48, 2026-10-23; `TableMonotonicity.lean`): a step under a slice of the
+    -- tables is the step under the whole, the lookups and the entry funnel it rests on, and the lifts
+    ``GoLean.GoCore.ProgramCtx.SubTables.stepFn_mono, ``GoLean.GoCore.ProgramCtx.SubTables.prefix_mono,
+    ``GoLean.GoCore.ProgramCtx.SubTables.finish_aborted_mono,
+    ``GoLean.GoCore.ProgramCtx.SubTables.execStmtLoop_ok_mono,
+    ``GoLean.GoCore.ProgramCtx.SubTables.execStmtLoop_panic_mono,
+    ``GoLean.GoCore.ProgramCtx.SubTables.findFunctionIn?_mono,
+    ``GoLean.GoCore.ProgramCtx.SubTables.methodInfoByFuncId?_mono,
+    ``GoLean.GoCore.ProgramCtx.SubTables.methodDecl?_mono, ``GoLean.GoCore.ProgramCtx.SubTables.promotion?_mono,
+    ``GoLean.GoCore.ProgramCtx.SubTables.resolveMethod?_mono, ``GoLean.GoCore.ProgramCtx.SubTables.callee?_mono,
+    ``GoLean.GoCore.ProgramCtx.SubTables.enterFramePickV_mono,
+    -- their pins (`Tests/GoCoreContract.lean` §D)
+    ``GoLean.GoCore.ContractTests.Pin.stepFn_mono, ``GoLean.GoCore.ContractTests.Pin.prefix_mono,
+    ``GoLean.GoCore.ContractTests.Pin.finish_aborted_mono,
+    ``GoLean.GoCore.ContractTests.Pin.execStmtLoop_ok_mono,
+    ``GoLean.GoCore.ContractTests.Pin.execStmtLoop_panic_mono,
+    ``GoLean.GoCore.ContractTests.Pin.findFunctionIn?_mono,
+    ``GoLean.GoCore.ContractTests.Pin.methodInfoByFuncId?_mono,
+    ``GoLean.GoCore.ContractTests.Pin.methodDecl?_mono, ``GoLean.GoCore.ContractTests.Pin.promotion?_mono,
+    ``GoLean.GoCore.ContractTests.Pin.resolveMethod?_mono, ``GoLean.GoCore.ContractTests.Pin.callee?_mono,
+    ``GoLean.GoCore.ContractTests.Pin.enterFramePickV_mono,
     -- the contract regressions (`Tests/GoCoreContract.lean` §A/§B/§C)
     ``GoLean.GoCore.ContractTests.address_bound_admits_ill_typed,
     ``GoLean.GoCore.ContractTests.print_before_panic,

@@ -1,6 +1,7 @@
 import GoLean.GoCore.Trace
 import GoLean.GoCore.Multi
 import GoLean.GoCore.InitDriverFacts
+import GoLean.GoCore.TableMonotonicity
 
 /-! Core contract regressions, re-homed 2026-09-16 (lane `park-lane/typed-profiles-0916`,
 `docs/2026-09-16_typed-profiles-parked.md` §3) when the typed-admission profile family
@@ -594,6 +595,82 @@ theorem runInitConfig_refused :
 theorem initPrintRefusal?_zeroCost :
     ∀ {c : Config}, ZeroCost c → initPrintRefusal? c = none :=
   GoCore.ExecutionStatement.initPrintRefusal?_zeroCost
+
+/-! raft-proofs G16 (backlog row 48, 2026-10-23; `GoLean/GoCore/TableMonotonicity.lean`, lane
+`core/g16-table-monotonicity-1023`): a successful step under a SLICE of the function, method and
+promotion tables (`ProgramCtx.SubTables`: same `typeDefs`/`globals`/`typeDisplays`/`methodSets`,
+sublists of the three tables, the whole's key discipline, the slice's closures) is the step under
+the whole, lifted to `Prefix`, the abort's `Finish` and the sequential driver's completion and
+panic; the first-match lookups and the frame-entry funnel it rests on. -/
+
+theorem stepFn_mono :
+    ∀ {a b : ProgramCtx}, a.SubTables b →
+    ∀ {s : Store} {c : Config} {ch : Choices} {r : Config × Store × Choices × StepLabel},
+    stepFn a s c ch = .ok r → stepFn b s c ch = .ok r :=
+  GoCore.ProgramCtx.SubTables.stepFn_mono
+
+theorem prefix_mono :
+    ∀ {a b : ProgramCtx}, a.SubTables b →
+    ∀ {n : Nat} {s sf : Store} {c cf : Config} {ch chf : Choices} {ls : List StepLabel},
+    Prefix a n s c ch ls sf cf chf → Prefix b n s c ch ls sf cf chf :=
+  GoCore.ProgramCtx.SubTables.prefix_mono
+
+theorem finish_aborted_mono :
+    ∀ {a b : ProgramCtx}, a.SubTables b →
+    ∀ {s : Store} {c : Config} {ch ch'' : Choices} {rec : List PickRecord} {t : String},
+    Finish a s c ch rec (.aborted t s ch'') 1 → Finish b s c ch rec (.aborted t s ch'') 1 :=
+  GoCore.ProgramCtx.SubTables.finish_aborted_mono
+
+theorem execStmtLoop_ok_mono :
+    ∀ {a b : ProgramCtx}, a.SubTables b →
+    ∀ {fuel : Nat} {s sf : Store} {c : Config} {ch chf : Choices},
+    execStmtLoop a fuel s c ch = .ok (sf, chf) → execStmtLoop b fuel s c ch = .ok (sf, chf) :=
+  GoCore.ProgramCtx.SubTables.execStmtLoop_ok_mono
+
+theorem execStmtLoop_panic_mono :
+    ∀ {a b : ProgramCtx}, a.SubTables b →
+    ∀ {fuel : Nat} {s : Store} {c : Config} {ch : Choices} {t : String},
+    execStmtLoop a fuel s c ch = .error (.terminal (.panic t)) →
+      execStmtLoop b fuel s c ch = .error (.terminal (.panic t)) :=
+  GoCore.ProgramCtx.SubTables.execStmtLoop_panic_mono
+
+theorem findFunctionIn?_mono :
+    ∀ {a b : ProgramCtx}, a.SubTables b → ∀ {fid : FuncId} {f : Func},
+    findFunctionIn? a.functions fid = some f → findFunctionIn? b.functions fid = some f :=
+  GoCore.ProgramCtx.SubTables.findFunctionIn?_mono
+
+theorem methodInfoByFuncId?_mono :
+    ∀ {a b : ProgramCtx}, a.SubTables b → ∀ {fid : FuncId} {m : MethodInfo},
+    methodInfoByFuncId? a fid = some m → methodInfoByFuncId? b fid = some m :=
+  GoCore.ProgramCtx.SubTables.methodInfoByFuncId?_mono
+
+theorem methodDecl?_mono :
+    ∀ {a b : ProgramCtx}, a.SubTables b → ∀ {t : Ty} {M : Declaration.MemberId} {m : MethodInfo},
+    methodDecl? a t M = some m → methodDecl? b t M = some m :=
+  GoCore.ProgramCtx.SubTables.methodDecl?_mono
+
+theorem promotion?_mono :
+    ∀ {a b : ProgramCtx}, a.SubTables b → ∀ {c : TypeId} {M : Declaration.MemberId} {p : Promotion},
+    promotion? a c M = some p → promotion? b c M = some p :=
+  GoCore.ProgramCtx.SubTables.promotion?_mono
+
+theorem resolveMethod?_mono :
+    ∀ {a b : ProgramCtx}, a.SubTables b →
+    ∀ {t : Ty} {M : Declaration.MemberId} {r : MethodResolution},
+    resolveMethod? a t M = some r → resolveMethod? b t M = some r :=
+  GoCore.ProgramCtx.SubTables.resolveMethod?_mono
+
+theorem callee?_mono :
+    ∀ {a b : ProgramCtx}, a.SubTables b → ∀ {fid : FuncId} {c : Callee},
+    callee? a fid = some c → callee? b fid = some c :=
+  GoCore.ProgramCtx.SubTables.callee?_mono
+
+theorem enterFramePickV_mono :
+    ∀ {a b : ProgramCtx}, a.SubTables b →
+    ∀ {s : Store} {fid : FuncId} {args : List GoValue} {ch : Choices}
+      {x : Result (Commit (Entry × Store × AccessTrace)) × Choices × List PickRecord},
+    enterFramePickV a s fid args ch = .ok x → enterFramePickV b s fid args ch = .ok x :=
+  GoCore.ProgramCtx.SubTables.enterFramePickV_mono
 
 /-- The initialiser of the control program: `g = 7` (global cell 0). -/
 def initControlBody : Stmt := .assign (.addr (.global 0)) (.intLit 7 .int)
