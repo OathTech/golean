@@ -538,16 +538,17 @@ other configuration reporting the site is a violation. -/
 def repanicCollapseFacts (c : Config) : MenuFacts :=
   match c with
   | .panicking (first :: rest) .stop =>
-      match splitNewestPending? (first :: rest) with
+      match splitNewestUnsettled? (first :: rest) with
       | some (older, entry, _) =>
           -- Unit 6b: the preprint PHASE's draw at the newest pending entry
           -- — the same site, bound 2 exactly when the entry's OLDER
           -- neighbour carries an equal payload (`preprintCollide`),
-          -- recomputed here by a second, direct reading.
+          -- recomputed here by a second, direct reading. An UNDECIDED
+          -- cursor's decision step (2026-10-23) draws nothing: width 1.
           let equalPrev := match older.getLast? with
             | some prev => prev.value == entry.value
             | none => false
-          { specWidth := some (if equalPrev then 2 else 1)
+          { specWidth := some (if entry.isPending && equalPrev then 2 else 1)
             invariants :=
               [ ("the entry's rewrite is pending (the phase's cursor)", entry.isPending),
                 ("the older neighbour's payload equals the entry's payload (BEq)", equalPrev) ]

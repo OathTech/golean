@@ -133,13 +133,13 @@ theorem refusal_names_the_cause :
 /-! ## Unit 6b (BUG-004 item 4): the REWRITTEN payload and the phase's records -/
 
 /-- A defined-type box (index 7 — any index other than the twin's) whose rewrite is
-owed, done, or unrecorded. -/
+owed, done, or undecided. -/
 def boxed (rewrite : Rewrite) (recovered := false) (repanicked := false) : PanicEntry :=
   { value := .interface (.defined 7) (.int 9 .int), recovered, rewrite, repanicked }
 
 /-- The stored text prints as a string payload: first line, suffix by the flags
 (the phase's `repanicked` record selects ` [recovered, repanicked]` on a
-recovered head with NO abort-time draw); a `.pending`/`.unrecorded` entry has
+recovered head with NO abort-time draw); a `.pending`/`.raised` entry has
 no member (fail closed by name). -/
 theorem rewritten_text_renders :
     renderPanicHead state (boxed (.done (GoString.fromLeanString "boom"))) [] 0 = some "boom" ∧
@@ -152,7 +152,7 @@ theorem rewritten_text_renders :
     renderPanicHead state (boxed (.done (GoString.fromLeanString "same")) false true) [] 0
       = some "same" ∧
     (renderPanicHead state (boxed (.pending ⟨"Error", ""⟩)) [] 0).isNone ∧
-    (renderPanicHead state (boxed .unrecorded) [] 0).isNone ∧
+    (renderPanicHead state (boxed .raised) [] 0).isNone ∧
     (renderPanicHead state (boxed (.done ⟨#[0xff]⟩)) [] 0).isNone := by
   decide +kernel
 
@@ -170,11 +170,11 @@ theorem rewritten_head_no_abort_draw :
 (the settled `newer` suffix kept), a collision marks the older entry and drops
 the newer; the abort is `none` while a rewrite is owed. -/
 theorem phase_cursor_and_collapse :
-    (splitNewestPending? [boxed (.pending ⟨"Error", ""⟩) true, boxed (.pending ⟨"Error", ""⟩),
+    (splitNewestUnsettled? [boxed (.pending ⟨"Error", ""⟩) true, boxed (.pending ⟨"Error", ""⟩),
         boxed (.done (GoString.fromLeanString "t"))]
       == some ([boxed (.pending ⟨"Error", ""⟩) true], boxed (.pending ⟨"Error", ""⟩),
           [boxed (.done (GoString.fromLeanString "t"))])) = true ∧
-    (splitNewestPending? [boxed (.done (GoString.fromLeanString "t")), entry "s"]).isNone = true ∧
+    (splitNewestUnsettled? [boxed (.done (GoString.fromLeanString "t")), entry "s"]).isNone = true ∧
     preprintCollide [boxed (.pending ⟨"Error", ""⟩) true] (boxed (.pending ⟨"Error", ""⟩)) = true ∧
     preprintCollide [entry "s"] (boxed (.pending ⟨"Error", ""⟩)) = false ∧
     (preprintDrop [boxed (.pending ⟨"Error", ""⟩) true] [entry "s"]
@@ -182,6 +182,26 @@ theorem phase_cursor_and_collapse :
     (Config.abort? (.panicking [boxed (.pending ⟨"Error", ""⟩)] .stop)).isNone = true ∧
     (Config.abort? (.panicking [boxed (.done (GoString.fromLeanString "t"))] .stop)
       == some (boxed (.done (GoString.fromLeanString "t")), [])) = true := by
+  decide +kernel
+
+/-- The raise's mark is TABLE-FREE and the phase decides it (backlog row 48, 2026-10-23): a
+boxed string raises `.raised`, the runtime-error twin `.none`; at the phase, `string` (a
+non-carrier: recorded by the language) decides `.none`, a boxed `.defined` carrier WITHOUT a
+record refuses by name (BUG-053), and the twin decides `.none` without a record; an
+`.raised` entry is the phase's cursor and never the abort. -/
+theorem raise_mark_and_decision :
+    ((panicEntryOf (.interface .string (.string (GoString.fromLeanString "s")))).rewrite == .raised) = true ∧
+    ((panicEntryOf (runtimeErrorValue "boom")).rewrite == .none) = true ∧
+    ((panicEntryOf (.string (GoString.fromLeanString "unboxed"))).rewrite == .none) = true ∧
+    (phaseMark state (.interface .string (.string (GoString.fromLeanString "s"))) matches .ok .none) = true ∧
+    (phaseMark state (.interface (.defined 7) (.int 9 .int)) matches .error (.unsupported _)) = true ∧
+    (phaseMark state (runtimeErrorValue "boom") matches .ok .none) = true ∧
+    (phaseMark state (.string (GoString.fromLeanString "unboxed")) matches .error (.internal _)) = true ∧
+    (splitNewestUnsettled? [entry "s", boxed .raised]
+      == some ([entry "s"], boxed .raised, [])) = true ∧
+    (Config.abort? (.panicking [boxed .raised] .stop)).isNone = true ∧
+    (abortRefusal state (boxed .raised)).startsWith
+      "panic abort rendering for payload" = true := by
   decide +kernel
 
 /-- The fatal text (decision 4): exact for a string payload's first line; a

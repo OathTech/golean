@@ -414,7 +414,7 @@ stored text's bytes compared through their lawful `BEq`s. -/
 def Rewrite.eqb : Rewrite → Rewrite → Bool
   | .none, .none => true
   | .pending a, .pending b => a.name == b.name && a.package == b.package
-  | .unrecorded, .unrecorded => true
+  | .raised, .raised => true
   | .done a, .done b => a.bytes == b.bytes
   | _, _ => false
 

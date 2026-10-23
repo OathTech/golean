@@ -130,17 +130,17 @@ theorem Prefix.run_eq {ctx : ProgramCtx} {n fuel : Nat} {s sf : Store} {c cf : C
 /-! ## The abort arm of `stepFn` (deliverable 3) -/
 
 /-- An abort IS a SETTLED unrecovered chain at `.stop` (unit 6b: the settled conjunct —
-`splitNewestPending? = none` — is what separates the abort from the preprint phase's running
+`splitNewestUnsettled? = none` — is what separates the abort from the preprint phase's running
 configurations at the same shape; `Config.abort?_some_iff`). -/
 theorem abort?_some {c : Config} {first : PanicEntry} {rest : List PanicEntry}
     (h : c.abort? = some (first, rest)) :
-    c = .panicking (first :: rest) .stop ∧ splitNewestPending? (first :: rest) = none :=
+    c = .panicking (first :: rest) .stop ∧ splitNewestUnsettled? (first :: rest) = none :=
   Config.abort?_some_iff.mp h
 
 /-- `stepFn` at an abort — a SETTLED chain at `.stop` (unit 6b) — : the consult, then the
 renderer; a render is the panic terminal, a renderer error is passed through. -/
 theorem stepFn_abort {ctx : ProgramCtx} {s : Store} {first : PanicEntry}
-    {rest : List PanicEntry} {ch : Choices} (hs : splitNewestPending? (first :: rest) = none) :
+    {rest : List PanicEntry} {ch : Choices} (hs : splitNewestUnsettled? (first :: rest) = none) :
     stepFn ctx s (.panicking (first :: rest) .stop) ch =
       (match abortMsg ctx first rest
           (Choices.consumeAtE .repanicCollapse (repanicCollapseWidth first rest) ch).1 with

@@ -16,7 +16,7 @@ raft-proofs repository — `Prefix`/`Finish` and their laws, the equation librar
 `enterFrame_declared`, the `Choices.consumeAt*` laws, the G11 family, the output-fold bridge and
 what `Tests/GoCoreContract.lean` §D pins; a statement drift in that set must become a mismatch
 the judge names, not a text diff). The equation family is EVERY public theorem of
-`Equations.lean` (296; 232 of them `@[stepFn_eqns]` simp-set members — the customer's rewriting
+`Equations.lean` (298 since lane `core/g16-raise-mark-1023`; 234 of them `@[stepFn_eqns]` simp-set members — the customer's rewriting
 library is the module, and its `signalStep_*` rows, `runProgramSetup_noInit`, the
 `allocDecls_*`/`bindParams_*`/`setup_*` facts and the rest are plain theorems there): widened
 from the simp set's membership at the fix round of 2026-10-23 (review F1), the owner's
@@ -34,7 +34,7 @@ and exports both modules and judges, per name in `theorem_names`: the two types 
 SYNTACTICALLY equal (`Lake/Check/Compare.lean`, `compareAt`: the `ConstantVal`s must be `==`,
 which is `Expr.eqv` — alpha-equivalence, so binder NAMES and binder ANNOTATIONS (explicit,
 implicit, instance-implicit) are ignored, nothing else; today the challenge differs from the
-kept types in binder names only, in 203 of the 349, and in no annotation); every definition the
+kept types in binder names only, in 203 of the 349 at the freeze, and in no annotation); every definition the
 statements reach is identical in both exports (the worklist compares each non-target constant
 whole, value included); the solution's proofs rest on `propext`/`Quot.sound`/`Classical.choice`
 alone (`permitted_axioms`; the challenge's `sorry` is never examined — `Lake/Check/Axioms.lean`
@@ -91,7 +91,7 @@ constant.
   compares their definitions with ours as well, and catches both (docs/changelog/20d3946d-WINDOW.md).
 * **The text is the delaborator's, verified.** scripts/contract-challenge-draft prints every
   kept statement from the environment and checks that the printed command re-elaborates, in
-  this file's scope, to the identical `Expr` — the comparator's own test. 341 of the 349
+  this file's scope, to the identical `Expr` — the comparator's own test. 341 of the 349 at the freeze
   round-trip as printed; the three with a `match`/`do` are printed with `pp.match false` and
   parenthesised (a `do` block would otherwise read the theorem's `:=` as a reassignment); four
   (`applyRhsOp_vals`, `applyStrictOp_toInterface_string`, `loadResults_nil`, `applyStmtOp_print`)
@@ -1743,34 +1743,64 @@ theorem GoLean.Contract.GoCore.Equations.panicking_seq :
 /-- `GoLean.GoCore.Equations.panicking_stop_pending` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.panicking_stop_pending :
     ∀ {ctx : ProgramCtx} {s : Store} {first : PanicEntry} {rest older : List PanicEntry}
-      {entry : PanicEntry} {newer : List PanicEntry} (ch : Choices),
-      splitNewestPending? (first :: rest) = some (older, entry, newer) →
-        stepFn ctx s (Config.panicking (first :: rest) Cont.stop) ch =
-          Except.ok
-            (if
-                  (preprintCollide older entry &&
-                      decide
-                        ((Choices.consumeAtE ChoiceSite.repanicCollapse (preprintWidth older entry)
-                              ch).fst =
-                          0)) =
-                    true then
-                Config.panicking (preprintDrop older newer) Cont.stop
-              else Config.next (Cont.preprintK older entry newer Cont.stop),
-              s, (Choices.consumeAtE ChoiceSite.repanicCollapse (preprintWidth older entry) ch).snd.fst,
-              { trace := [],
-                picks :=
-                  (Choices.consumeAtE ChoiceSite.repanicCollapse (preprintWidth older entry)
-                        ch).snd.snd,
-                out := [] })
+      {entry : PanicEntry} {newer : List PanicEntry} {m : Declaration.MemberId} (ch : Choices),
+      splitNewestUnsettled? (first :: rest) = some (older, entry, newer) →
+        entry.rewrite = Rewrite.pending m →
+          stepFn ctx s (Config.panicking (first :: rest) Cont.stop) ch =
+            Except.ok
+              (if
+                    (preprintCollide older entry &&
+                        decide
+                          ((Choices.consumeAtE ChoiceSite.repanicCollapse (preprintWidth older entry)
+                                ch).fst =
+                            0)) =
+                      true then
+                  Config.panicking (preprintDrop older newer) Cont.stop
+                else Config.next (Cont.preprintK older entry newer Cont.stop),
+                s,
+                (Choices.consumeAtE ChoiceSite.repanicCollapse (preprintWidth older entry) ch).snd.fst,
+                { trace := [],
+                  picks :=
+                    (Choices.consumeAtE ChoiceSite.repanicCollapse (preprintWidth older entry)
+                          ch).snd.snd,
+                  out := [] })
     := sorry
 
 /-- `GoLean.GoCore.Equations.panicking_stop_settled` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.panicking_stop_settled :
     (∀ {ctx : ProgramCtx} {s : Store} {first : PanicEntry} {rest : List PanicEntry} (ch : Choices),
-           splitNewestPending? (first :: rest) = none →
+           splitNewestUnsettled? (first :: rest) = none →
              stepFn ctx s (Config.panicking (first :: rest) Cont.stop) ch = do
                let msg ← abortMsg ctx first rest (abortConsult first rest ch).fst
                throw (Stop.panic msg))
+    := sorry
+
+/-- `GoLean.GoCore.Equations.panicking_stop_raised` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.panicking_stop_raised :
+    ∀ {ctx : ProgramCtx} {s : Store} {first : PanicEntry} {rest older : List PanicEntry}
+      {entry : PanicEntry} {newer : List PanicEntry} {r : Rewrite} (ch : Choices),
+      splitNewestUnsettled? (first :: rest) = some (older, entry, newer) →
+        entry.rewrite = Rewrite.raised →
+          phaseMark ctx entry.value = Except.ok r →
+            stepFn ctx s (Config.panicking (first :: rest) Cont.stop) ch =
+              Except.ok
+                (Config.panicking
+                    (older ++
+                      { value := entry.value, recovered := entry.recovered, rewrite := r,
+                          repanicked := entry.repanicked } ::
+                        newer)
+                    Cont.stop,
+                  s, ch, { trace := [], picks := [], out := [] })
+    := sorry
+
+/-- `GoLean.GoCore.Equations.panicking_stop_raised_error` (GoLean.GoCore.Equations) -/
+theorem GoLean.Contract.GoCore.Equations.panicking_stop_raised_error :
+    ∀ {ctx : ProgramCtx} {s : Store} {first : PanicEntry} {rest older : List PanicEntry}
+      {entry : PanicEntry} {newer : List PanicEntry} {e : Stop} (ch : Choices),
+      splitNewestUnsettled? (first :: rest) = some (older, entry, newer) →
+        entry.rewrite = Rewrite.raised →
+          phaseMark ctx entry.value = Except.error e →
+            stepFn ctx s (Config.panicking (first :: rest) Cont.stop) ch = Except.error e
     := sorry
 
 /-- `GoLean.GoCore.Equations.panicking_storeK` (GoLean.GoCore.Equations) -/
@@ -2351,7 +2381,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_panicArgK :
     ∀ {ctx : ProgramCtx} (s : Store) (v : GoValue) (k' : Cont) (ch : Choices),
       stepFn ctx s (Config.retV v k'.panicArgK) ch =
         Except.ok
-          (Config.panicking [panicEntryOf ctx (panicPayload v)] k', s, ch,
+          (Config.panicking [panicEntryOf (panicPayload v)] k', s, ch,
             { trace := [], picks := [], out := [] })
     := sorry
 

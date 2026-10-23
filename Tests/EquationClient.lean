@@ -58,12 +58,16 @@ abbrev calleeFrame (env : LocalEnv) (fid cid : FuncId) : Cont :=
   .frame [] env [] [] (.seq [] env (barrier fid)) cid
 
 /-- The chain entry a BOXED string payload raises (`panic(any("…"))`: the string at the dynamic type
-`string`, `renderPanicPayload`'s string arm renders it). Settled — no preprint phase — when `string`
-carries neither `Error` nor `String`: FACT 3's premise `hsettled`, inhabited below. The window
-review's F1: an UNBOXED `.string` is not a Go interface value and has no rendering arm
+`string`, `renderPanicPayload`'s string arm renders it). UNDECIDED at the raise (table-free since
+2026-10-23); the preprint phase's decision step settles it `.none` when `string` carries neither
+`Error` nor `String`: FACT 3's premise `hmark`, inhabited below. The window review's F1: an
+UNBOXED `.string` is not a Go interface value and has no rendering arm
 (`witness_unboxed_payload_unrenderable`). -/
-abbrev strEntry (ctx : ProgramCtx) (txt : GoString) : PanicEntry :=
-  panicEntryOf ctx (.interface .string (.string txt))
+abbrev strEntry (txt : GoString) : PanicEntry :=
+  panicEntryOf (.interface .string (.string txt))
+
+/-- The same entry once the phase has marked it: `.none` — gc prints the string as it is. -/
+abbrev strEntryDecided (txt : GoString) : PanicEntry := { strEntry txt with rewrite := .none }
 
 /-- FACT 1 — a call entry then a return: a nullary declared call enters its frame (the entry
 premise bottoms out in `enterFrame`, which `enterFrame_declared` reduces to `bindParams`/
@@ -128,11 +132,12 @@ theorem fact_defer_then_drain {s s' : Store} {g : VarId} {gl : Loc} {gfid : Func
 trace `tr` is the call's one label), the callee's body `panic(any(txt))` BOXES the string
 (`applyStrictOp_toInterface_string`) and RAISES it, the chain unwinds through the callee's empty frame, the
 caller's sequence glue and the barrier frame to the empty continuation, and the run FINISHES aborted at the
-endpoint store `s'`, the written one: the write survives the abort. Twenty steps. The premises: the memory
+endpoint store `s'`, the written one: the write survives the abort. Twenty-one steps. The premises: the memory
 floor (`hlx`/`hly`/`hy`/`hst`), the entry (`he`, store-preserving for a parameterless, resultless callee) and
-its body (`hbody`), and the boxed string entry's rendering — SETTLED (`hsettled`: `string` carries no
-`Error`/`String` method, so no preprint phase; the `repanicCollapse` consult is then at bound 1, nothing
-drawn) and the renderer's text `t` (`hmsg`). Every premise is INHABITED by
+its body (`hbody`), the preprint phase's DECISION of the boxed string entry — `.none` (`hmark`: `string`
+carries no `Error`/`String` method, so no call; the entry is `.raised` at the raise, table-free, and the
+phase's one decision step settles it; the `repanicCollapse` consult is then at bound 1, nothing drawn) —
+and the renderer's text `t` (`hmsg`). Every premise is INHABITED by
 `fact_inhabit_write_survives_panic` below (the window review's F1: the previous statement raised an UNBOXED
 `.string`, whose `hmsg` no context satisfies — `witness_unboxed_premise_false`). -/
 theorem fact_write_survives_panic {s s' : Store} {x y : VarId} {lx ly : Loc} {vy : GoValue}
@@ -142,16 +147,16 @@ theorem fact_write_survives_panic {s s' : Store} {x y : VarId} {lx ly : Loc} {vy
     (hy : loadRoot ctx s ly = .ok vy) (hst : storeLoc ctx s lx vy = .ok s')
     (he : enterFrame ctx s' f [] = .ok (.run func fenv [], s', tr))
     (hbody : func.body = .panicStmt (.toInterface ty .string (.stringLit txt)))
-    (hsettled : splitNewestPending? [strEntry ctx txt] = none)
-    (hmsg : abortMsg ctx (strEntry ctx txt) [] 0 = .ok t) :
+    (hmark : phaseMark ctx (.interface .string (.string txt)) = .ok .none)
+    (hmsg : abortMsg ctx (strEntryDecided txt) [] 0 = .ok t) :
     LRun ctx s (.exec (.seqn #[.assign (.var x) (.var y), .call #[] f #[]]) env (barrier fid)) ch
       [silent, silent, silent, silent, silent, readOf ly, silent, writeOf lx, silent, silent, silent,
-        ⟨tr, [], []⟩, silent, silent, silent, silent, silent, silent, silent, silent]
+        ⟨tr, [], []⟩, silent, silent, silent, silent, silent, silent, silent, silent, silent]
       [] (.aborted t s' ch) := by
-  have hprefix : Prefix ctx 20 s (.exec (.seqn #[.assign (.var x) (.var y), .call #[] f #[]]) env (barrier fid)) ch
+  have hprefix : Prefix ctx 21 s (.exec (.seqn #[.assign (.var x) (.var y), .call #[] f #[]]) env (barrier fid)) ch
       [silent, silent, silent, silent, silent, readOf ly, silent, writeOf lx, silent, silent, silent,
-        ⟨tr, [], []⟩, silent, silent, silent, silent, silent, silent, silent, silent]
-      s' (.panicking [strEntry ctx txt] .stop) ch := by
+        ⟨tr, [], []⟩, silent, silent, silent, silent, silent, silent, silent, silent, silent]
+      s' (.panicking [strEntryDecided txt] .stop) ch := by
     refine .step (c₁ := .next (.seq [.assign (.var x) (.var y), .call #[] f #[]] env (barrier fid))) (s₁ := s) (ch₁ := ch) ?_
       (.step (c₁ := .exec (.assign (.var x) (.var y)) env (callerSeq f env fid)) (s₁ := s) (ch₁ := ch) ?_
       (.step (c₁ := .evalE (.ref x) env (.tgtOpK (.chain []) [] [] [] [] .vals [.var y] [] (.seqn #[]) env (callerSeq f env fid))) (s₁ := s) (ch₁ := ch) ?_
@@ -168,10 +173,11 @@ theorem fact_write_survives_panic {s s' : Store} {x y : VarId} {lx ly : Loc} {vy
       (.step (c₁ := .evalE (.stringLit txt) fenv (.strictK (.toInterface ty .string) [] [] fenv (.panicArgK (calleeFrame env fid func.id)))) (s₁ := s') (ch₁ := ch) ?_
       (.step (c₁ := .retV (.string txt) (.strictK (.toInterface ty .string) [] [] fenv (.panicArgK (calleeFrame env fid func.id)))) (s₁ := s') (ch₁ := ch) ?_
       (.step (c₁ := .retV (.interface .string (.string txt)) (.panicArgK (calleeFrame env fid func.id))) (s₁ := s') (ch₁ := ch) ?_
-      (.step (c₁ := .panicking [strEntry ctx txt] (calleeFrame env fid func.id)) (s₁ := s') (ch₁ := ch) ?_
-      (.step (c₁ := .panicking [strEntry ctx txt] (.seq [] env (barrier fid))) (s₁ := s') (ch₁ := ch) ?_
-      (.step (c₁ := .panicking [strEntry ctx txt] (barrier fid)) (s₁ := s') (ch₁ := ch) ?_
-      (.step (c₁ := .panicking [strEntry ctx txt] .stop) (s₁ := s') (ch₁ := ch) ?_ .done)))))))))))))))))))
+      (.step (c₁ := .panicking [strEntry txt] (calleeFrame env fid func.id)) (s₁ := s') (ch₁ := ch) ?_
+      (.step (c₁ := .panicking [strEntry txt] (.seq [] env (barrier fid))) (s₁ := s') (ch₁ := ch) ?_
+      (.step (c₁ := .panicking [strEntry txt] (barrier fid)) (s₁ := s') (ch₁ := ch) ?_
+      (.step (c₁ := .panicking [strEntry txt] .stop) (s₁ := s') (ch₁ := ch) ?_
+      (.step (c₁ := .panicking [strEntryDecided txt] .stop) (s₁ := s') (ch₁ := ch) ?_ .done))))))))))))))))))))
     · simp only [stepFn_eqns]; rfl
     · simp only [stepFn_eqns]
     · simp only [stepFn_eqns]
@@ -193,11 +199,13 @@ theorem fact_write_survives_panic {s s' : Store} {x y : VarId} {lx ly : Loc} {vy
     · simp only [stepFn_eqns]
     · simp only [stepFn_eqns]
     · simp only [stepFn_eqns]
+    -- the phase's mark step: the raised entry is the cursor; `hmark` settles it `.none`
+    · rw [panicking_stop_raised (older := []) (newer := []) ch rfl rfl hmark]; rfl
   -- the finish: a settled single-entry chain at the empty continuation is the abort; its consult is at
   -- bound 1 (a single entry has no equal successor), so nothing is drawn
-  have hwidth : repanicCollapseWidth (strEntry ctx txt) [] = 1 := rfl
-  refine ⟨20, s', .panicking [strEntry ctx txt] .stop, ch, 1, hprefix, ?_⟩
-  refine Finish.aborted (Config.abort?_of_settled hsettled) ?_ hmsg
+  have hwidth : repanicCollapseWidth (strEntryDecided txt) [] = 1 := rfl
+  refine ⟨21, s', .panicking [strEntryDecided txt] .stop, ch, 1, hprefix, ?_⟩
+  refine Finish.aborted (Config.abort?_of_settled rfl) ?_ hmsg
   rw [hwidth]
   exact Choices.consumeAtE_le_one (Nat.le_refl 1)
 
@@ -227,7 +235,7 @@ def boomEnv : LocalEnv := [[(0, .base ⟨0⟩), (1, .base ⟨1⟩)]]
 
 /-- FACT 3 INHABITED: every premise discharged by computation at the concrete context, stores and environment
 above (the lookups, the read, the write, the entry — `enterFrame` of a parameterless callee is store- and
-trace-free — the body, the settled chain, and the renderer's `"boom"` by `with_unfolding_all rfl`: the abort's
+trace-free — the body, the phase's decision (`.none` at `string`), and the renderer's `"boom"` by `with_unfolding_all rfl`: the abort's
 UTF-8 decoding is well-founded recursion). The conclusion is FACT 3's at these values — so the symbolic
 statement is not vacuous. The enrollment check verifies this proof too (it is a `fact_*`): its premise
 obligations name no constant that unfolds to `stepFn`, so none is re-run. -/
@@ -235,7 +243,7 @@ theorem fact_inhabit_write_survives_panic :
     LRun boomCtx boomStore₀
       (.exec (.seqn #[.assign (.var 0) (.var 1), .call #[] ⟨"boom"⟩ #[]]) boomEnv (barrier ⟨"main"⟩)) []
       [silent, silent, silent, silent, silent, readOf (.base ⟨1⟩), silent, writeOf (.base ⟨0⟩), silent, silent,
-        silent, silent, silent, silent, silent, silent, silent, silent, silent, silent]
+        silent, silent, silent, silent, silent, silent, silent, silent, silent, silent, silent]
       [] (.aborted "boom" boomStore₁ []) :=
   fact_write_survives_panic (lx := .base ⟨0⟩) (ly := .base ⟨1⟩) (vy := .int 7 .int) (func := boomFunc) (fenv := [])
     (ty := anyTy) (txt := boomText) boomEnv ⟨"main"⟩ [] rfl rfl rfl rfl rfl rfl rfl (by with_unfolding_all rfl)
@@ -367,12 +375,12 @@ section Witnesses
 /-- An unboxed `.string` payload is not a Go interface value: `renderPanicPayload` has no arm for it, for
 every context and text. -/
 theorem witness_unboxed_payload_unrenderable (ctx : ProgramCtx) (txt : GoString) :
-    renderPanicPayload ctx (panicEntryOf ctx (.string txt)) = none := rfl
+    renderPanicPayload ctx (panicEntryOf (.string txt)) = none := rfl
 
 /-- … so the previous FACT 3's rendering premise — `abortMsg` of that entry answering `.ok t` — was
 UNSATISFIABLE: it refutes itself for every context, text and `t` (the previous fact was vacuous). -/
 theorem witness_unboxed_premise_false (ctx : ProgramCtx) (txt : GoString) (t : String)
-    (hmsg : abortMsg ctx (panicEntryOf ctx (.string txt)) [] 0 = .ok t) : False := by
+    (hmsg : abortMsg ctx (panicEntryOf (.string txt)) [] 0 = .ok t) : False := by
   cases hmsg
 
 end Witnesses
@@ -701,7 +709,7 @@ theorem Pin.exec_panicStmt : ∀ {ctx : ProgramCtx} (s : Store) (e : Expr) (env 
 
 theorem Pin.retV_panicArgK : ∀ {ctx : ProgramCtx} (s : Store) (v : GoValue) (k' : Cont) (ch : Choices),
     stepFn ctx s (.retV v (.panicArgK k')) ch
-      = .ok (.panicking [panicEntryOf ctx (panicPayload v)] k', s, ch, ⟨[], [], []⟩) :=
+      = .ok (.panicking [panicEntryOf (panicPayload v)] k', s, ch, ⟨[], [], []⟩) :=
   @GoLean.GoCore.Equations.retV_panicArgK
 
 theorem Pin.evalE_recoverCall : ∀ {ctx : ProgramCtx} (s : Store) (env : LocalEnv) (k : Cont) (ch : Choices),
@@ -812,14 +820,23 @@ theorem Pin.panicking_probeK : ∀ {ctx : ProgramCtx} (s : Store) (chain : List 
   @GoLean.GoCore.Equations.panicking_probeK
 
 theorem Pin.panicking_stop_settled : ∀ {ctx : ProgramCtx} {s : Store} {first : PanicEntry}
-    {rest : List PanicEntry} (ch : Choices) (_hs : splitNewestPending? (first :: rest) = none),
+    {rest : List PanicEntry} (ch : Choices) (_hs : splitNewestUnsettled? (first :: rest) = none),
     stepFn ctx s (.panicking (first :: rest) .stop) ch
       = (do let msg ← abortMsg ctx first rest (abortConsult first rest ch).1; throw (.panic msg)) :=
   @GoLean.GoCore.Equations.panicking_stop_settled
 
+theorem Pin.panicking_stop_raised : ∀ {ctx : ProgramCtx} {s : Store} {first : PanicEntry}
+    {rest older : List PanicEntry} {entry : PanicEntry} {newer : List PanicEntry} {r : Rewrite} (ch : Choices)
+    (_hs : splitNewestUnsettled? (first :: rest) = some (older, entry, newer))
+    (_hu : entry.rewrite = .raised) (_hd : phaseMark ctx entry.value = .ok r),
+    stepFn ctx s (.panicking (first :: rest) .stop) ch
+      = .ok (.panicking (older ++ { entry with rewrite := r } :: newer) .stop, s, ch, ⟨[], [], []⟩) :=
+  @GoLean.GoCore.Equations.panicking_stop_raised
+
 theorem Pin.panicking_stop_pending : ∀ {ctx : ProgramCtx} {s : Store} {first : PanicEntry}
-    {rest older : List PanicEntry} {entry : PanicEntry} {newer : List PanicEntry} (ch : Choices)
-    (_hs : splitNewestPending? (first :: rest) = some (older, entry, newer)),
+    {rest older : List PanicEntry} {entry : PanicEntry} {newer : List PanicEntry} {m : Declaration.MemberId} (ch : Choices)
+    (_hs : splitNewestUnsettled? (first :: rest) = some (older, entry, newer))
+    (_hp : entry.rewrite = .pending m),
     stepFn ctx s (.panicking (first :: rest) .stop) ch
       = .ok (if preprintCollide older entry && (Choices.consumeAtE .repanicCollapse (preprintWidth older entry) ch).1 = 0
               then .panicking (preprintDrop older newer) .stop
@@ -1888,6 +1905,13 @@ theorem Pin.next_preprintK_error : ∀ {ctx : ProgramCtx} {s : Store} {older : L
     (_h : preprintDispatch ctx s entry = .error e) (_hne : ∀ msg, e ≠ .panic msg),
     stepFn ctx s (.next (.preprintK older entry newer k')) ch = .error e :=
   @GoLean.GoCore.Equations.next_preprintK_error
+
+theorem Pin.panicking_stop_raised_error : ∀ {ctx : ProgramCtx} {s : Store} {first : PanicEntry}
+    {rest older : List PanicEntry} {entry : PanicEntry} {newer : List PanicEntry} {e : Stop} (ch : Choices)
+    (_hs : splitNewestUnsettled? (first :: rest) = some (older, entry, newer))
+    (_hu : entry.rewrite = .raised) (_hd : phaseMark ctx entry.value = .error e),
+    stepFn ctx s (.panicking (first :: rest) .stop) ch = .error e :=
+  @GoLean.GoCore.Equations.panicking_stop_raised_error
 
 theorem Pin.retV_stmtOpK_apply_error : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {op : StmtOp} {nt : Nat}
     {done : List GoValue} {e : Stop} (env : LocalEnv) (k' : Cont) (ch : Choices)

@@ -3323,22 +3323,28 @@ agreed to the fix inside this window, relayed): a payload whose
 dynamic type carries `Error() string` or `String() string` (the runtime's
 own two interfaces, `runtime/panic.go:723`–`:725` at the pin) is printed as
 the STRING that method returns — CALLED on the panicking goroutine after
-every deferred call and before anything prints. The mark is decided at the
-RAISE (`panicEntryOf`) by today's method-set check — a static property of
-the dynamic type, so deciding it early is sound — and the text is stored
-BESIDE the payload once the preprint phase has called the method
+every deferred call and before anything prints. The mark is DECIDED where
+gc decides it — at the preprint phase's walk, on the goroutine's chain at
+`.stop` (`phaseMark`, the `.stop` arm's decision step): the raise marks
+a boxed payload `.raised` without reading any table (`panicEntryOf`,
+table-free since 2026-10-23 — backlog row 48's ruling, [USER], relayed:
+the raise-time decision read the method-set record and baked its answer
+into a successful step, which defeated the raft-proofs slicing), and the
+text is stored BESIDE the payload once the phase has called the method
 (`.done`): gc compares eface identity on the RAW `arg` before overwriting
 it, and the machine's collapse envelope compares the original values.
 `.none` is a payload gc prints as it is (string/int/bool payloads, the
 machine's `runtime.Error` twin — `runtimeErrorValue` already IS gc's
-rewritten text — and a recorded method set without either method);
-`.unrecorded` is a carrier WITHOUT a method-set record (BUG-053): gc may
-rewrite it through a method the wire never saw, so the abort refuses by
-name — recovering it stays fully supported. -/
+rewritten text, marked at the raise — and, decided at the phase, a
+recorded method set without either method); `.raised` is a boxed
+payload the phase has not reached yet — recovering it never consults a
+table. A carrier WITHOUT a method-set record (BUG-053) is a REFUSAL at
+the decision, by name: gc may rewrite it through a method the wire never
+saw, and absence is no answer. -/
 inductive Rewrite where
   | none
   | pending (member : Declaration.MemberId)
-  | unrecorded
+  | raised
   | done (text : GoString)
   deriving Repr, BEq
 
@@ -3361,64 +3367,85 @@ structure PanicEntry where
   deriving Repr, BEq
 
 /-- Is the entry's rewrite still OWED — a method call the preprint phase has
-yet to make? Exactly the `.pending` mark. -/
+yet to make? Exactly the `.pending` mark (a decided call). -/
 def PanicEntry.isPending (e : PanicEntry) : Bool :=
   match e.rewrite with
   | .pending _ => true
   | _ => false
 
-/-- **The preprint phase's cursor**: the NEWEST pending entry of a chain, as
-the split `(older, entry, newer)` with `older ++ entry :: newer` the chain
-and every entry of `newer` settled — `none` when no rewrite is owed (the
-chain is SETTLED: the abort, `Config.abort?`). gc's `preprintpanics` walks
-the chain newest → oldest (`:713`); the phase realizes that order by
-always working at this split. Structural on the (oldest-first) list. -/
-def splitNewestPending? : List PanicEntry →
+/-- Does the preprint phase still owe this entry a STEP — the decision of
+its mark (`.raised`, the raise's mark of a boxed payload) or the call it
+decided (`.pending`)? Everything else is SETTLED (`.none`, `.done`). -/
+def PanicEntry.isUnsettled (e : PanicEntry) : Bool :=
+  match e.rewrite with
+  | .raised => true
+  | .pending _ => true
+  | _ => false
+
+/-- **The preprint phase's cursor**: the NEWEST unsettled entry of a chain,
+as the split `(older, entry, newer)` with `older ++ entry :: newer` the
+chain and every entry of `newer` settled — `none` when the phase owes
+nothing (the chain is SETTLED: the abort, `Config.abort?`). gc's
+`preprintpanics` walks the chain newest → oldest (`:713`); the phase
+realizes that order by always working at this split: the cursor's mark is
+decided (`.raised` → `phaseMark`) and, decided `.pending`, its call
+made. Structural on the (oldest-first) list. (Named `splitNewestPending?`
+until 2026-10-23, when the raise stopped deciding the mark.) -/
+def splitNewestUnsettled? : List PanicEntry →
     Option (List PanicEntry × PanicEntry × List PanicEntry)
   | [] => none
   | e :: es =>
-      match splitNewestPending? es with
+      match splitNewestUnsettled? es with
       | some (older, p, newer) => some (e :: older, p, newer)
-      | none => if e.isPending then some ([], e, es) else none
+      | none => if e.isUnsettled then some ([], e, es) else none
 
-/-- A chain with no owed rewrite: the shape the abort renders. -/
-def chainSettled (chain : List PanicEntry) : Bool := (splitNewestPending? chain).isNone
+/-- A chain the phase owes nothing: the shape the abort renders. -/
+def chainSettled (chain : List PanicEntry) : Bool := (splitNewestUnsettled? chain).isNone
 
 /-- The split IS the chain: `older ++ entry :: newer`. -/
-theorem splitNewestPending?_eq :
+theorem splitNewestUnsettled?_eq :
     ∀ {chain older : List PanicEntry} {entry : PanicEntry} {newer : List PanicEntry},
-      splitNewestPending? chain = some (older, entry, newer) → chain = older ++ entry :: newer
-  | [], _, _, _, h => by simp [splitNewestPending?] at h
+      splitNewestUnsettled? chain = some (older, entry, newer) → chain = older ++ entry :: newer
+  | [], _, _, _, h => by simp [splitNewestUnsettled?] at h
   | e :: es, older, entry, newer, h => by
-    simp only [splitNewestPending?] at h
+    simp only [splitNewestUnsettled?] at h
     split at h
     · rename_i older' p newer' hrec
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl, rfl⟩ := h
-      simp [splitNewestPending?_eq hrec]
+      simp [splitNewestUnsettled?_eq hrec]
     · split at h
       · simp only [Option.some.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl, rfl⟩ := h
         rfl
       · cases h
 
-/-- The split's entry owes its rewrite. -/
-theorem splitNewestPending?_pending :
+/-- The split's entry is unsettled: its mark undecided, or its call owed. -/
+theorem splitNewestUnsettled?_unsettled :
     ∀ {chain older : List PanicEntry} {entry : PanicEntry} {newer : List PanicEntry},
-      splitNewestPending? chain = some (older, entry, newer) → entry.isPending = true
-  | [], _, _, _, h => by simp [splitNewestPending?] at h
+      splitNewestUnsettled? chain = some (older, entry, newer) → entry.isUnsettled = true
+  | [], _, _, _, h => by simp [splitNewestUnsettled?] at h
   | e :: es, older, entry, newer, h => by
-    simp only [splitNewestPending?] at h
+    simp only [splitNewestUnsettled?] at h
     split at h
     · rename_i older' p newer' hrec
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl, rfl⟩ := h
-      exact splitNewestPending?_pending hrec
+      exact splitNewestUnsettled?_unsettled hrec
     · split at h
       · simp only [Option.some.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl, rfl⟩ := h
         assumption
       · cases h
+
+/-- An unsettled entry's mark is `.raised` or `.pending m`. -/
+theorem PanicEntry.isUnsettled_cases {e : PanicEntry} (h : e.isUnsettled = true) :
+    e.rewrite = .raised ∨ ∃ m, e.rewrite = .pending m := by
+  unfold PanicEntry.isUnsettled at h
+  split at h
+  · exact .inl ‹_›
+  · exact .inr ⟨_, ‹_›⟩
+  · cases h
 
 -- `runtimeErrorTypeId` moved to Syntax.lean (2026-08-05, slice-2 stage 5):
 -- the decoder synthesizes the runtime-panic payload for the nil-interface
@@ -3560,30 +3587,50 @@ probe p01 — a type with both prints `Error()`'s text). -/
 def errorMember : Declaration.MemberId := ⟨"Error", ""⟩
 def stringerMember : Declaration.MemberId := ⟨"String", ""⟩
 
-/-- **The rewrite mark, decided at the RAISE** (unit 6b, design §2 (i) 1): a
-boxed payload whose dynamic type carries `Error() string` is `.pending
-Error`; else `String() string` → `.pending String` (gc's order, p01); else
-a carrier WITHOUT a method-set record is `.unrecorded` (BUG-053: no
-definite answer from absence — the abort refuses by name; `Error`/`String`
-are exported names, so a FOUND method is real whatever the record's
-coverage); else `.none`. The machine's `runtime.Error` twin is `.none`
-without consulting any record: `runtimeErrorValue` already IS gc's
-rewritten text (`panic(nil)` maps there — `panicPayload`; probes p13/p23).
-Unboxed values (the chain never holds one from a raise) are `.none`. -/
-def rewriteMark : GoValue → Rewrite
+/-- **The raise's mark** (unit 6b, design §2 (i) 1, re-placed 2026-10-23 —
+backlog row 48's ruling, [USER], relayed): TABLE-FREE. A boxed payload is
+`.raised` — the preprint phase decides its rewrite at `.stop`
+(`phaseMark`) — except the machine's `runtime.Error` twin, `.none`
+without consulting anything: `runtimeErrorValue` already IS gc's rewritten
+text (`panic(nil)` maps there — `panicPayload`; probes p13/p23). Unboxed
+values (the chain never holds one from a raise) are `.none`. Until
+2026-10-23 the raise decided the whole mark here (`rewriteMark`: `Error`,
+then `String`, then the record), reading the method tables and the
+method-set record into a successful step; the decision is now the phase's,
+where a missing record is a REFUSAL (the readers of the step stay
+refusal-guarded, which is what `TableMonotonicity.lean` rests on). -/
+def raiseMark : GoValue → Rewrite
   | .interface dynTy _ =>
-      if dynTy == .defined runtimeErrorTypeIdx then .none
-      else if hasNoArgStringMethod ctx dynTy errorMember then .pending errorMember
-      else if hasNoArgStringMethod ctx dynTy stringerMember then .pending stringerMember
-      else if dynamicMethodSetRecorded ctx dynTy then .none
-      else .unrecorded
+      if dynTy == .defined runtimeErrorTypeIdx then .none else .raised
   | _ => .none
 
 /-- THE chain entry of a raised payload (`Step.panicArgValue`; the one raise
-site of a user payload): unrecovered, marked for the preprint phase by the
-payload's dynamic type, not yet collapsed. -/
+site of a user payload): unrecovered, its rewrite undecided (`raiseMark`),
+not yet collapsed. Table-free: no context argument (since 2026-10-23). -/
 def panicEntryOf (v : GoValue) : PanicEntry :=
-  { value := v, recovered := false, rewrite := rewriteMark ctx v }
+  { value := v, recovered := false, rewrite := raiseMark v }
+
+/-- **The rewrite's DECISION, at the preprint phase** (design §2 (i) 1,
+re-placed 2026-10-23): the phase's walk reaches an `.raised` entry and
+decides it from the payload's dynamic type — gc's `switch v := p.arg.(type)`
+(`runtime/panic.go:722`–`:725` at the pin). The method-set RECORD is read
+FIRST and its absence is a refusal by name (BUG-053: a carrier without a
+record may carry an `Error()`/`String()` the wire never saw, so neither a
+found `String` nor «neither» is a definite answer — fail closed; the
+abort's `.none` arm re-checks the same record). With the record: a type
+carrying `Error() string` is `.pending Error`; else `String() string` →
+`.pending String` (gc's order, p01); else `.none`. The `runtime.Error` twin
+is `.none` without a record (as at the raise). An unboxed payload is a
+machine-internal breach (the raise never marks one `.raised`). -/
+def phaseMark : GoValue → Except Stop Rewrite
+  | .interface dynTy _ =>
+      if dynTy == .defined runtimeErrorTypeIdx then return .none
+      else if !dynamicMethodSetRecorded ctx dynTy then
+        throw (.unsupported s!"panic preprint for a payload of dynamic type {goTypeNameForMessage ctx dynTy}: the dynamic type's method set is not recorded on the wire, so whether gc rewrites the payload through Error()/String() cannot be decided (BUG-053)")
+      else if hasNoArgStringMethod ctx dynTy errorMember then return .pending errorMember
+      else if hasNoArgStringMethod ctx dynTy stringerMember then return .pending stringerMember
+      else return .none
+  | other => throw (.internal s!"preprint: an undecided rewrite on an unboxed payload {repr other}")
 
 /-- The REWRITE arms of `renderPanicPayload` (below): the phase's text
 (`.done` — printed as a string payload, first line and D5 included), the
@@ -3593,7 +3640,7 @@ def renderPanicRewrite (e : PanicEntry) : Option (String × Bool) :=
   match e.rewrite with
   | .done text => stringFirstLine? text.bytes
   | .pending _ => none
-  | .unrecorded => none
+  | .raised => none
   | .none =>
     match e.value with
     -- A DEFINED-type payload renders qualified with Go's
@@ -3633,13 +3680,15 @@ proofs), then the REWRITE: a `.done text` entry — the preprint phase CALLED
 on the rewritten `arg`, the first-line rule and D5's invalid-UTF-8 refusal
 included; probe p20), THEN `printanycustomtype`'s `main.T(v)` shape for a
 defined type with NEITHER method (`.none`; BUG-004 item 2), int-underlying
-only. A `.pending` entry at an abort is unreachable (`Config.abort?` demands
-a settled chain) and refuses by name; `.unrecorded` is the BUG-053 refusal
-(no method-set record — gc may rewrite through a method the wire never
-saw; fail closed to an unrenderable abort, never a fabricated `main.T(v)`).
+only. A `.pending` or `.raised` entry at an abort is unreachable
+(`Config.abort?` demands a settled chain: the phase decides every mark and
+makes every call first) and refuses by name; a carrier without a
+method-set record (BUG-053) REFUSED at the phase's decision
+(`phaseMark`) and never reaches an abort — no fabricated `main.T(v)`.
 The `.none` arm re-checks the method set — a hand-built chain whose mark
 disagrees with its type refuses rather than renders (the standing
-fail-closed guard; on a raised chain the two agree by construction).
+fail-closed guard; on a raised chain the two agree by construction: the
+phase decided the mark from the same tables).
 A string whose FIRST LINE is not valid UTF-8 is `none` (D5: no byte
 channel — `utf8String?`). Everything else not pinned is `none` for the
 same reason. -/
@@ -4096,7 +4145,8 @@ inductive Frame where
   while gc's `preprintpanics` calls `entry`'s `Error()`/`String()` method
   (`runtime/panic.go:702`–`:730` at the pin — after every deferred call,
   before anything prints, with the world still running). `entry` is the
-  NEWEST pending entry (`splitNewestPending?`; every entry of `newer` is
+  NEWEST pending entry (`splitNewestUnsettled?`, its mark decided by the
+  `.stop` arm's decision step; every entry of `newer` is
   settled), its identity against `older`'s last entry already decided
   (`preprintCollide`'s draw at the `.stop` arm). Positions: `.next` here
   RESOLVES the call (`preprintDispatch`: the method on the payload's dynamic
@@ -4817,14 +4867,15 @@ of the old `.panicked` step is exact. An empty chain at `.stop` is a
 machine-internal breach (`stepFn` refuses it by name).
 
 Unit 6b (the preprint phase, design §2 (i) 2): the chain must be SETTLED —
-no entry's rewrite still `.pending` (`chainSettled`). A chain with a pending
-entry at `.stop` is an ordinary RUNNING configuration: gc calls the payload's
+no entry's rewrite still `.raised` or `.pending` (`chainSettled`). A
+chain with an unsettled entry at `.stop` is an ordinary RUNNING
+configuration: gc decides the payload's rewrite and calls its
 `Error()`/`String()` there (`preprintpanics`) before the terminal, and so
-does the machine (`stepFn`'s `.stop` arm, `stepPanicStop`; the relation's
-`preprint*` rules). The type is unchanged (BridgeSet row 19). -/
+does the machine (`stepFn`'s `.stop` arm, `stepPanicStop`: the decision
+step, then the call). The type is unchanged (BridgeSet row 19). -/
 def Config.abort? : Config → Option (PanicEntry × List PanicEntry)
   | .panicking (first :: rest) .stop =>
-      match splitNewestPending? (first :: rest) with
+      match splitNewestUnsettled? (first :: rest) with
       | none => some (first, rest)
       | some _ => none
   | _ => none
@@ -4834,7 +4885,7 @@ variable {ctx} in
 unrecovered chain at `.stop`. -/
 theorem Config.abort?_some_iff {c : Config} {first : PanicEntry} {rest : List PanicEntry} :
     c.abort? = some (first, rest) ↔
-      c = .panicking (first :: rest) .stop ∧ splitNewestPending? (first :: rest) = none := by
+      c = .panicking (first :: rest) .stop ∧ splitNewestUnsettled? (first :: rest) = none := by
   constructor
   · intro h
     unfold Config.abort? at h
@@ -4852,15 +4903,15 @@ theorem Config.abort?_some_iff {c : Config} {first : PanicEntry} {rest : List Pa
 variable {ctx} in
 /-- A settled chain at `.stop` is the abort. -/
 theorem Config.abort?_of_settled {first : PanicEntry} {rest : List PanicEntry}
-    (hs : splitNewestPending? (first :: rest) = none) :
+    (hs : splitNewestUnsettled? (first :: rest) = none) :
     Config.abort? (.panicking (first :: rest) .stop) = some (first, rest) := by
   simp [Config.abort?, hs]
 
 variable {ctx} in
 /-- An unsettled chain at `.stop` is NOT the abort (the phase runs first). -/
-theorem Config.abort?_of_pending {first : PanicEntry} {rest older : List PanicEntry}
+theorem Config.abort?_of_unsettled {first : PanicEntry} {rest older : List PanicEntry}
     {entry : PanicEntry} {newer : List PanicEntry}
-    (hs : splitNewestPending? (first :: rest) = some (older, entry, newer)) :
+    (hs : splitNewestUnsettled? (first :: rest) = some (older, entry, newer)) :
     Config.abort? (.panicking (first :: rest) .stop) = none := by
   simp [Config.abort?, hs]
 
@@ -4869,9 +4920,9 @@ a string or `runtime.Error` payload whose FIRST LINE is not valid UTF-8 is
 the D5 refusal — gc writes the raw bytes and the `String`-valued
 observation cannot carry them (BUG-004 item 3, `docs/2026-09-07_land-panic-
 text-tape.md` §2.3) — a REWRITTEN payload's text (`.done`, unit 6b)
-included; a carrier without a method-set record (`.unrecorded`, BUG-053) and
-a rewrite still owed at an abort (`.pending` — unreachable: `Config.abort?`
-demands a settled chain) are named as such; everything else is the standing
+included; a rewrite still undecided or owed at an abort (`.raised`,
+`.pending` — unreachable: `Config.abort?` demands a settled chain) is
+named as such; everything else is the standing
 payload refusal (an unpinned family), named by the payload's dynamic type
 key beside the `repr`, which prints a bare `Ty.defined i` since C2
 (`payloadDynamicTypeNote`, audit fix R16). -/
@@ -4889,8 +4940,8 @@ def abortRefusal (first : PanicEntry) : String :=
       s!"panic abort rendering: the string payload's first line is not valid UTF-8 ({bytes.size} payload byte(s), first line {(bytes.takeWhile (· != 0x0A)).toList.map (·.toNat)}) — gc prints the raw bytes and the String-valued observation cannot carry them (BUG-004 item 3 / landing decision D5: no byte channel)"
   | none =>
       match first.rewrite with
-      | .unrecorded =>
-          s!"panic abort rendering for payload {repr first.value}{payloadDynamicTypeNote ctx first.value}: the dynamic type's method set is not recorded on the wire, so whether gc rewrites the payload through Error()/String() cannot be decided (BUG-053)"
+      | .raised =>
+          s!"panic abort rendering for payload {repr first.value}{payloadDynamicTypeNote ctx first.value}: the rewrite is still undecided at the abort (a machine-internal breach — the preprint phase decides every mark before the abort)"
       | .pending m =>
           s!"panic abort rendering for payload {repr first.value}{payloadDynamicTypeNote ctx first.value}: the {m.name}() rewrite is still owed at the abort (a machine-internal breach — the preprint phase runs before the abort)"
       | _ =>
@@ -4930,7 +4981,10 @@ neighbour holds the identical eface (`:715`): the older is marked
 `v.Error()` (`error` first) / `v.String()` and stores the string as the
 payload to print. The machine realizes this as ORDINARY machine steps at
 the empty continuation (the chain is a running configuration until it is
-SETTLED — `Config.abort?`): the `.stop` arm's phase step draws the identity
+SETTLED — `Config.abort?`): the `.stop` arm's DECISION step marks the newest
+undecided entry from its payload's dynamic type (`phaseMark` — gc's type
+switch; since 2026-10-23, the raise marks every boxed payload `.raised`
+and reads no table), its phase step draws the identity
 pick and selects the entry (`preprintCollide`/`preprintDrop`; the frame
 `Cont.preprintK`), the frame's `.next` position resolves the call and
 re-queues it as a value call (`preprintDispatch`), the method's frame exit
@@ -6375,8 +6429,8 @@ def consumesRepanicCollapse (c : Config) : Bool :=
       -- Unit 6b: the same site is drawn by the preprint PHASE step at an
       -- unsettled chain whose newest pending entry collides with its older
       -- neighbour (`preprintCollide`), and by the abort at a settled one.
-      match splitNewestPending? (first :: rest) with
-      | some (older, entry, _) => preprintCollide older entry
+      match splitNewestUnsettled? (first :: rest) with
+      | some (older, entry, _) => entry.isPending && preprintCollide older entry
       | none => repanicEqualNext first rest
   | _ => false
 
@@ -6408,9 +6462,10 @@ def seqConsumption (σ : Store) (c : Config) : Option (ChoiceSite × Nat) :=
       -- Unit 6b: an UNSETTLED chain's phase step draws the site at a
       -- collision (`preprintCollide`, bound 2); a settled chain's abort at
       -- the `repanicEqualNext` shape — the same site, one draw per step.
-      match splitNewestPending? (first :: rest) with
+      -- An UNDECIDED cursor's decision step draws nothing.
+      match splitNewestUnsettled? (first :: rest) with
       | some (older, entry, _) =>
-          if preprintCollide older entry then some (.repanicCollapse, 2) else none
+          if entry.isPending && preprintCollide older entry then some (.repanicCollapse, 2) else none
       | none =>
           if repanicEqualNext first rest then some (.repanicCollapse, 2) else none
   | c =>

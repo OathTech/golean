@@ -108,7 +108,7 @@ theorem GoLean.Contract.GoCore.Machine.Choices.consumeAt_nilValueMethodText_one 
     stmt_of% GoLean.GoCore.Machine.Choices.consumeAt_nilValueMethodText_one :=
   GoLean.GoCore.Machine.Choices.consumeAt_nilValueMethodText_one
 
-/-! ## eqns (296) -/
+/-! ## eqns (298) -/
 
 theorem GoLean.Contract.GoCore.Equations.Heap.lookup_push_self :
     stmt_of% GoLean.GoCore.Equations.Heap.lookup_push_self :=
@@ -693,6 +693,14 @@ theorem GoLean.Contract.GoCore.Equations.panicking_seq :
 theorem GoLean.Contract.GoCore.Equations.panicking_stop_pending :
     stmt_of% GoLean.GoCore.Equations.panicking_stop_pending :=
   GoLean.GoCore.Equations.panicking_stop_pending
+
+theorem GoLean.Contract.GoCore.Equations.panicking_stop_raised :
+    stmt_of% GoLean.GoCore.Equations.panicking_stop_raised :=
+  GoLean.GoCore.Equations.panicking_stop_raised
+
+theorem GoLean.Contract.GoCore.Equations.panicking_stop_raised_error :
+    stmt_of% GoLean.GoCore.Equations.panicking_stop_raised_error :=
+  GoLean.GoCore.Equations.panicking_stop_raised_error
 
 theorem GoLean.Contract.GoCore.Equations.panicking_stop_settled :
     stmt_of% GoLean.GoCore.Equations.panicking_stop_settled :=

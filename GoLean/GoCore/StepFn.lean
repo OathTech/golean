@@ -366,9 +366,17 @@ head is a recovered entry whose successor carries an equal payload, bound 1
 `panic` terminal, ONE step, no successor configuration (the pool records a
 tombstone instead, `stepThread`); the popped stream is dropped (the
 machine stops; enumerators read `abortLeftover`). An UNSETTLED chain takes
-the preprint PHASE step at its newest pending entry (`splitNewestPending?`):
-THE same `repanicCollapse` consult at bound 2 exactly at a COLLISION with
-the older neighbour (`preprintWidth`; the draw gc's `panic.go:715` identity
+the preprint PHASE step at its newest unsettled entry
+(`splitNewestUnsettled?`). An UNDECIDED entry (the raise's mark of a boxed
+payload) takes the DECISION step (since 2026-10-23, backlog row 48's
+ruling, [USER], relayed — the raise no longer reads the tables):
+`phaseMark` reads the method-set record and the two preprint members
+on the payload's dynamic type, refusing by name without a record
+(BUG-053), and the entry is re-marked in place — `.pending m` (the call
+is owed) or `.none` (gc prints the payload as it is) — the chain resuming
+at `.stop`; no draw, no trace, no output. A PENDING entry takes THE same
+`repanicCollapse` consult at bound 2 exactly at a COLLISION with the
+older neighbour (`preprintWidth`; the draw gc's `panic.go:715` identity
 compare stands for) — slot 0 = IDENTICAL: the older entry marked
 `repanicked`, the newer dropped, the chain resumes at `.stop`
 (`preprintCollapse`); slot 1, or no collision: the entry is selected and
@@ -377,15 +385,24 @@ a single `let`+`if` term so the pick's record rides the label and the arm
 has one shape per branch. -/
 def stepPanicStop (s : Store) (first : PanicEntry) (rest : List PanicEntry) (choices : Choices) :
     Except Stop (Config × Store × Choices × StepLabel) :=
-  match splitNewestPending? (first :: rest) with
+  match splitNewestUnsettled? (first :: rest) with
   | none => do
       let pick := (abortConsult first rest choices).1
       throw (.panic (← abortMsg ctx first rest pick))
   | some (older, entry, newer) =>
-      let (pick, ch', ps) := Choices.consumeAtE .repanicCollapse (preprintWidth older entry) choices
-      return (if preprintCollide older entry && pick = 0
-                then .panicking (preprintDrop older newer) .stop
-                else .next (.preprintK older entry newer .stop), s, ch', ⟨[], ps, []⟩)
+      match entry.rewrite with
+      | .raised => do
+          let r ← phaseMark ctx entry.value
+          return (.panicking (older ++ { entry with rewrite := r } :: newer) .stop, s, choices,
+            ⟨[], [], []⟩)
+      | .pending _ =>
+          let (pick, ch', ps) := Choices.consumeAtE .repanicCollapse (preprintWidth older entry) choices
+          return (if preprintCollide older entry && pick = 0
+                    then .panicking (preprintDrop older newer) .stop
+                    else .next (.preprintK older entry newer .stop), s, ch', ⟨[], ps, []⟩)
+      -- Unreachable: the cursor is unsettled (`splitNewestUnsettled?_unsettled`);
+      -- a settled cursor is a machine-internal breach, named.
+      | _ => throw (.internal "preprint: the phase's cursor is a settled entry")
 
 /-- The `.panicking` arm's head that is neither glue, a call frame, the
 resume marker, a probe nor `.stop`: the PREPRINT frame — the payload
@@ -840,9 +857,11 @@ def stepFn (s : Store) (c : Config) (choices : Choices) :
           let (base, start, tr) ← mapRangeStartSets s v
           return (.next (.mapIterK keyVar valVar keyTy valTy body base #[] start env k'), s, choices, ⟨tr, [], []⟩)
       | .panicArgK k' =>
-          -- THE RAISE: the entry's rewrite mark is decided here by the
-          -- payload's dynamic type (`panicEntryOf`, unit 6b).
-          return (.panicking [panicEntryOf ctx (panicPayload v)] k', s, choices, ⟨[], [], []⟩)
+          -- THE RAISE: the entry's rewrite mark is `.raised` for a boxed
+          -- payload (`panicEntryOf`, unit 6b; TABLE-FREE since backlog row
+          -- 48, 2026-10-23) — the preprint phase decides it at `.stop`
+          -- (`phaseMark`); the `runtime.Error` twin is `.none`.
+          return (.panicking [panicEntryOf (panicPayload v)] k', s, choices, ⟨[], [], []⟩)
       | .chanStK op done pending env k' =>
           -- Pre-communication operands only; a receive's targets evaluate
           -- AFTER the apply step (BUG-022 — spec §Assignments phase 2,

@@ -642,20 +642,23 @@ end GoLean.GoCore.ContractTests.Pin
 
 The G16 table-monotonicity statements below are proved and pinned like §D, but they are kept
 OUT of `comparator.json`'s frozen surface until backlog row 48's ruling settles the relation
-`ProgramCtx.SubTables` (the review of 2026-10-23 measured that its premises defeat the
-customer's slicing; a redesign would change these statements). `scripts/gen-contract --check`
-reads §D only, so a pin here does not demand a contract entry. Move a statement to §D when it
-is settled. -/
+`ProgramCtx.SubTables` (the review of 2026-10-23 measured that the first cut's premises defeat
+the customer's slicing; the per-key relation of lane `core/g16-raise-mark-1023` is the proposed
+final form — the coordinator moves these pins to §D and the contract at the ask).
+`scripts/gen-contract --check` reads §D only, so a pin here does not demand a contract entry.
+Move a statement to §D when it is settled. -/
 namespace GoLean.GoCore.ContractTests.Provisional
 
 open GoCore GoCore.Machine GoCore.ExecutionStatement
 
-/-! raft-proofs G16 (backlog row 48, 2026-10-23; `GoLean/GoCore/TableMonotonicity.lean`, lane
-`core/g16-table-monotonicity-1023`): a successful step under a SLICE of the function, method and
-promotion tables (`ProgramCtx.SubTables`: same `typeDefs`/`globals`/`typeDisplays`/`methodSets`,
-sublists of the three tables, the whole's key discipline, the slice's closures) is the step under
-the whole, lifted to `Prefix`, the abort's `Finish` and the sequential driver's completion and
-panic; the first-match lookups and the frame-entry funnel it rests on. -/
+/-! raft-proofs G16 (backlog row 48, 2026-10-23; `GoLean/GoCore/TableMonotonicity.lean`, lanes
+`core/g16-table-monotonicity-1023` and `core/g16-raise-mark-1023`): a successful step under a
+SLICE of the function, method, method-set and promotion tables (`ProgramCtx.SubTables`: same
+`typeDefs`/`globals`/`typeDisplays`, sublists of the four tables, the whole's key discipline, the
+slice's PER-KEY closure — a kept record's carrier keeps its methods and promotions with their
+`Func`s, a kept `Func` its `MethodInfo`) is the step under the whole, lifted to `Prefix`, the
+abort's `Finish` and the sequential driver's completion and panic; the first-match lookups and
+the frame-entry funnel it rests on. -/
 
 theorem stepFn_mono :
     ∀ {a b : ProgramCtx}, a.SubTables b →

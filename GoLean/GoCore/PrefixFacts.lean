@@ -178,15 +178,26 @@ theorem stepPanicStop_picks_none {σ : Store} {first : PanicEntry} {rest : List 
     simp [throw, throwThe, MonadExceptOf.throw] at hr
   · rename_i older entry newer hsplit
     simp only [seqConsumption, hsplit] at hsc
-    have hcol : preprintCollide older entry = false := by
-      cases hc : preprintCollide older entry
-      · rfl
-      · simp [hc] at hsc
-    have hw : preprintWidth older entry = 1 := by simp [preprintWidth, hcol]
-    rw [hw, Choices.consumeAtE_le_one (Nat.le_refl 1)] at hr
-    simp only [pure_eq_ok, Except.ok.injEq] at hr
-    subst hr
-    rfl
+    split at hr
+    · -- the decision step (2026-10-23): no draw
+      simp only [bind_eq_ok] at hr
+      obtain ⟨m, -, hr⟩ := hr
+      simp only [pure_eq_ok, Except.ok.injEq] at hr
+      subst hr
+      rfl
+    · rename_i m hp
+      have hpend : entry.isPending = true := by simp [PanicEntry.isPending, hp]
+      simp only [hpend, Bool.true_and] at hsc
+      have hcol : preprintCollide older entry = false := by
+        cases hc : preprintCollide older entry
+        · rfl
+        · simp [hc] at hsc
+      have hw : preprintWidth older entry = 1 := by simp [preprintWidth, hcol]
+      rw [hw, Choices.consumeAtE_le_one (Nat.le_refl 1)] at hr
+      simp only [pure_eq_ok, Except.ok.injEq] at hr
+      subst hr
+      rfl
+    · simp [throw, throwThe, MonadExceptOf.throw] at hr
 
 /-- … and with the projection `some`: the phase's collision draw records the
 `repanicCollapse` pick at bound 2 (a settled chain throws). -/
@@ -204,21 +215,31 @@ theorem stepPanicStop_picks_some {σ : Store} {first : PanicEntry} {rest : List 
     simp [throw, throwThe, MonadExceptOf.throw] at hr
   · rename_i older entry newer hsplit
     simp only [seqConsumption, hsplit] at hsc
-    have hcol : preprintCollide older entry = true := by
-      cases hc : preprintCollide older entry
-      · simp [hc] at hsc
-      · rfl
-    simp only [hcol, ite_true, Option.some.injEq, Prod.mk.injEq] at hsc
-    obtain ⟨rfl, rfl⟩ := hsc
-    have hw : preprintWidth older entry = 2 := by simp [preprintWidth, hcol]
-    rw [hw] at hr
-    rcases hx : Choices.consumeAtE .repanicCollapse 2 ch₀ with ⟨pick, ch', ps⟩
-    rw [hx] at hr
-    simp only [pure_eq_ok, Except.ok.injEq] at hr
-    subst hr
-    obtain ⟨hps, hc⟩ := Choices.consumeAtE_inv hx
-    simp only [hc]
-    exact hps
+    split at hr
+    · -- the decision step (2026-10-23) reports no site
+      rename_i hu
+      exfalso
+      have : entry.isPending = false := by simp [PanicEntry.isPending, hu]
+      simp [this] at hsc
+    · rename_i m hp
+      have hpend : entry.isPending = true := by simp [PanicEntry.isPending, hp]
+      simp only [hpend, Bool.true_and] at hsc
+      have hcol : preprintCollide older entry = true := by
+        cases hc : preprintCollide older entry
+        · simp [hc] at hsc
+        · rfl
+      simp only [hcol, ite_true, Option.some.injEq, Prod.mk.injEq] at hsc
+      obtain ⟨rfl, rfl⟩ := hsc
+      have hw : preprintWidth older entry = 2 := by simp [preprintWidth, hcol]
+      rw [hw] at hr
+      rcases hx : Choices.consumeAtE .repanicCollapse 2 ch₀ with ⟨pick, ch', ps⟩
+      rw [hx] at hr
+      simp only [pure_eq_ok, Except.ok.injEq] at hr
+      subst hr
+      obtain ⟨hps, hc⟩ := Choices.consumeAtE_inv hx
+      simp only [hc]
+      exact hps
+    · simp [throw, throwThe, MonadExceptOf.throw] at hr
 
 set_option maxHeartbeats 1600000 in
 set_option linter.unusedSimpArgs false in

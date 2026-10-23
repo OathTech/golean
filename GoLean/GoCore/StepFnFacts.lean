@@ -1013,17 +1013,30 @@ theorem stepPanicStop_consumption_none {σ : Store} {first : PanicEntry} {rest :
     simp [throw, throwThe, MonadExceptOf.throw] at h
   · rename_i older entry newer hsplit
     simp only [seqConsumption, hsplit] at hsc
-    have hcol : preprintCollide older entry = false := by
-      cases hc : preprintCollide older entry
-      · rfl
-      · simp [hc] at hsc
-    have hw : preprintWidth older entry = 1 := by simp [preprintWidth, hcol]
-    rw [hw, Choices.consumeAtE_le_one (Nat.le_refl 1)] at h
-    simp only [hcol, Bool.false_and, Bool.false_eq_true, ↓reduceIte, pure_eq_ok, Except.ok.injEq,
-      Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl, rfl, rfl⟩ := h
-    refine ⟨rfl, fun ch => ?_⟩
-    simp [hw, Choices.consumeAtE_le_one (Nat.le_refl 1), hcol]
+    split at h
+    · -- the decision step (2026-10-23): no draw, stream-oblivious
+      simp only [bind_eq_ok] at h
+      obtain ⟨m, hm, h⟩ := h
+      simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+      refine ⟨rfl, fun ch => ?_⟩
+      rw [hm]
+      rfl
+    · rename_i m hp
+      have hpend : entry.isPending = true := by simp [PanicEntry.isPending, hp]
+      simp only [hpend, Bool.true_and] at hsc
+      have hcol : preprintCollide older entry = false := by
+        cases hc : preprintCollide older entry
+        · rfl
+        · simp [hc] at hsc
+      have hw : preprintWidth older entry = 1 := by simp [preprintWidth, hcol]
+      rw [hw, Choices.consumeAtE_le_one (Nat.le_refl 1)] at h
+      simp only [hcol, Bool.false_and, Bool.false_eq_true, ↓reduceIte, pure_eq_ok, Except.ok.injEq,
+        Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+      refine ⟨rfl, fun ch => ?_⟩
+      simp [hw, Choices.consumeAtE_le_one (Nat.le_refl 1), hcol]
+    · simp [throw, throwThe, MonadExceptOf.throw] at h
 
 /-- The `.stop` arm's consumption, `some` half: a collision — the
 `repanicCollapse` pop at bound 2; the step depends on the stream only
@@ -1043,26 +1056,36 @@ theorem stepPanicStop_consumption_some {σ : Store} {first : PanicEntry} {rest :
     simp [throw, throwThe, MonadExceptOf.throw] at h
   · rename_i older entry newer hsplit
     simp only [seqConsumption, hsplit] at hsc
-    have hcol : preprintCollide older entry = true := by
-      cases hc : preprintCollide older entry
-      · simp [hc] at hsc
-      · rfl
-    simp only [hcol, ite_true, Option.some.injEq, Prod.mk.injEq] at hsc
-    obtain ⟨rfl, rfl⟩ := hsc
-    have hw : preprintWidth older entry = 2 := by simp [preprintWidth, hcol]
-    rw [hw] at h ⊢
-    rcases hx : Choices.consumeAtE .repanicCollapse 2 ch₀ with ⟨pick, ch'', ps⟩
-    rw [hx] at h
-    simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl, rfl, rfl⟩ := h
-    obtain ⟨rfl, hx'⟩ := Choices.consumeAtE_inv hx
-    refine ⟨by rw [hx'], fun ch hpk => ?_⟩
-    rw [hx'] at hpk
-    obtain ⟨p, cs, hpc⟩ : ∃ p cs, Choices.consumeAt .repanicCollapse 2 ch = (p, cs) := ⟨_, _, rfl⟩
-    rw [hpc] at hpk ⊢
-    simp only at hpk
-    subst hpk
-    simp [hpc, Choices.consumeAtE_eq]
+    split at h
+    · -- the decision step (2026-10-23) reports no site
+      rename_i hu
+      exfalso
+      have : entry.isPending = false := by simp [PanicEntry.isPending, hu]
+      simp [this] at hsc
+    · rename_i m hp
+      have hpend : entry.isPending = true := by simp [PanicEntry.isPending, hp]
+      simp only [hpend, Bool.true_and] at hsc
+      have hcol : preprintCollide older entry = true := by
+        cases hc : preprintCollide older entry
+        · simp [hc] at hsc
+        · rfl
+      simp only [hcol, ite_true, Option.some.injEq, Prod.mk.injEq] at hsc
+      obtain ⟨rfl, rfl⟩ := hsc
+      have hw : preprintWidth older entry = 2 := by simp [preprintWidth, hcol]
+      rw [hw] at h ⊢
+      rcases hx : Choices.consumeAtE .repanicCollapse 2 ch₀ with ⟨pick, ch'', ps⟩
+      rw [hx] at h
+      simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+      obtain ⟨rfl, hx'⟩ := Choices.consumeAtE_inv hx
+      refine ⟨by rw [hx'], fun ch hpk => ?_⟩
+      rw [hx'] at hpk
+      obtain ⟨p, cs, hpc⟩ : ∃ p cs, Choices.consumeAt .repanicCollapse 2 ch = (p, cs) := ⟨_, _, rfl⟩
+      rw [hpc] at hpk ⊢
+      simp only at hpk
+      subst hpk
+      simp [hpc, Choices.consumeAtE_eq]
+    · simp [throw, throwThe, MonadExceptOf.throw] at h
 
 /-! ### The `unseq` construct's step functions (Stage B, 2026-09-16)
 

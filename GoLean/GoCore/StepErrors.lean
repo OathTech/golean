@@ -881,8 +881,15 @@ theorem stepNextOther_strict {σ : Store} {k : Cont} {ch : Choices} :
   unfold stepNextOther
   errp
 
-/-- The `.stop` arm away from the abort — an UNSETTLED chain — takes the phase
-step, which never raises. -/
+/-- The phase's decision of a mark (2026-10-23): a refusal by name — no method-set
+record (BUG-053), or an unboxed payload (a breach) — never a panic. -/
+theorem phaseMark_strict {v : GoValue} : ErrP Stop.Strict (phaseMark ctx v) := by
+  unfold phaseMark
+  errp
+macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact phaseMark_strict)
+
+/-- The `.stop` arm away from the abort — an UNSETTLED chain — takes the decision
+step or the phase step, neither of which raises. -/
 theorem stepPanicStop_strict {σ : Store} {first : PanicEntry} {rest : List PanicEntry}
     {ch : Choices} (hab : Config.abort? (.panicking (first :: rest) .stop) = none) :
     ErrP Stop.Strict (stepPanicStop ctx σ first rest ch) := by
@@ -891,7 +898,7 @@ theorem stepPanicStop_strict {σ : Store} {first : PanicEntry} {rest : List Pani
   · rename_i hs
     rw [Config.abort?_of_settled hs] at hab
     cases hab
-  · errp
+  · split <;> errp
 
 macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact stepRetOther_strict)
 macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact stepNextOther_strict)

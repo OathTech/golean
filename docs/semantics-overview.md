@@ -232,18 +232,40 @@ init-phase print refusal, with no premise, so the seeded entry's initialisation 
 is `execProgLoop` — now pinned, with `execProgLoopOut_acc`/`execProgLoopOut_eq_execProgLoop`
 (`PoolFacts.lean`) as an accumulator law beside it. A third addition (backlog row 48, 2026-10-23,
 raft-proofs G16): `GoLean/GoCore/TableMonotonicity.lean` — the sub-table relation
-`ProgramCtx.SubTables` (the same `typeDefs`, `globals`, `typeDisplays` and `methodSets`; `funcs`,
-`methods` and `promotions` sublists of the whole's; the whole's key discipline, which the decoder
-enforces; three closures of the slice, named in the module header) and `stepFn_mono`,
+`ProgramCtx.SubTables` (the same `typeDefs`, `globals` and `typeDisplays`; `funcs`, `methods`,
+`methodSets` and `promotions` sublists of the whole's; the whole's key discipline `TablesKeyed`,
+which the decoder enforces; the slice's PER-KEY closure `SliceClosed`: a kept method-set record's
+carrier keeps every method and promotion the whole states for it, each with its `Func`, and a kept
+`Func` keeps its `MethodInfo` — exactly what the customer's `extract_wire.py` already produces;
+the first cut's `Error`/`String`/interface-requirement/per-receiver closures and whole `methodSets`
+are gone since the raise stopped deciding the rendering mark, below) and `stepFn_mono`,
 `prefix_mono`, `finish_aborted_mono`, `execStmtLoop_ok_mono`, `execStmtLoop_panic_mono`: a
 successful step, a labelled run, an abort's finish and the sequential driver's completion or
 panic under a slice of the tables are the same under the whole — pinned in
-`Tests/GoCoreContract.lean` §D with the lookups and the frame-entry funnel it rests on, required
-by the core audit. Refusals are not claimed (a slice refuses where the whole dispatches).
+`Tests/GoCoreContract.lean` §E (Provisional; the coordinator moves them to §D and the comparator
+contract when the relation is ruled final) with the lookups and the frame-entry funnel it rests
+on, required by the core audit. Refusals are not claimed (a slice refuses where the whole
+dispatches; a slice without the carrier's record refuses where the whole decides from it).
+
+The change that made the per-key relation provable ([USER]-ruled 2026-10-23, backlog row 48,
+option 1; lane `core/g16-raise-mark-1023`): the raise of a boxed payload no longer decides its
+preprint rewrite mark. `panicEntryOf` is table-free (no context argument): a boxed payload is
+marked `Rewrite.raised` (the `runtime.Error` twin and unboxed values `.none`, as before), and
+the preprint phase's walk at `.stop` DECIDES it in one extra machine step
+(`phaseMark`, the `.stop` arm's decision step — `panicking_stop_raised`; no draw, trace or
+output): the method-set record first — its absence is a refusal by name (BUG-053; before, the
+raise baked `.unrecorded` into the entry and only the abort's rendering of a HEAD entry refused,
+so a non-head unrecorded entry was fail-open) — then `Error() string` → `.pending Error`, then
+`String() string` → `.pending String`, else `.none`; the phase step then runs as before on a
+`.pending` entry (`panicking_stop_pending`, now with the mark as a premise), and a settled chain
+aborts (`panicking_stop_settled`, over `splitNewestUnsettled?` — the cursor is the newest
+`.raised` or `.pending` entry). Observations are unchanged (the differential corpus and the
+eval tests are the check); a `Prefix` over an abort of a boxed payload is one step longer per such
+entry, with the entry's mark `.raised` until that step.
 
 Since 2026-10-23 (release-readiness row 43, [USER]-ruled) that kept surface is a COMPARATOR
-CONTRACT: `Contract/Challenge.lean` restates all 349 of its theorems — every theorem of
-`Equations.lean` (296; 232 of them `@[stepFn_eqns]` simp-set members — the `signalStep_*` rows,
+CONTRACT: `Contract/Challenge.lean` restates all 351 of its theorems — every theorem of
+`Equations.lean` (298; 234 of them `@[stepFn_eqns]` simp-set members — the `signalStep_*` rows,
 `runProgramSetup_noInit`, the `allocDecls_*`/`bindParams_*`/`setup_*` facts and the rest are plain
 theorems of the module), the 27 public theorems of `InitDriverFacts.lean` (G11), the five
 `Prefix`/`Finish` laws above, the six output-fold statements, `enterFrame_declared` and the fourteen

@@ -57,7 +57,8 @@ result (`retV_preprintK_nonstring`); the `valueAsBool` refusals (`retV_ifK_error
 `_andK_error`, `_orK_error`, `_boolK_error`); `storeK`'s arity breaches (`next_storeK_arity_refs`/`_vals`).
 (iii) The composed applies' NON-PANIC `Stop` pass-through (a refusal or the `fatal` terminal propagates as the
 step's `Stop`) is stated for every apply/entry position: `*_apply_error`, `*_enter_error`, `next_storeK_error`,
-`frameExit_defer_error`, `panicking_frame_defer_error`, `next_preprintK_error`, and the plain-bind arms
+`frameExit_defer_error`, `panicking_frame_defer_error`, `next_preprintK_error`, `panicking_stop_raised_error`
+(the preprint phase's decision step, 2026-10-23 — its helper never panics), and the plain-bind arms
 (`exec_block_error`, `evalE_var_error`, `retV_mapRangeK_error`, `next_mapIterK_error`, `frameExit_targets_error`,
 `frameExit_preprint_error`, `unseqEnter_error`, `unseqValue_error`) — each over the composed helper's error, the
 premise `∀ msg, e ≠ .panic msg` where the helper can panic. (iv) `signalStep`'s table: every row is an equation
@@ -395,11 +396,13 @@ or nil — Go evaluates every argument before the nil check) starts the argument
 @[stepFn_eqns] theorem exec_panicStmt (s : Store) (e : Expr) (env : LocalEnv) (k : Cont) (ch : Choices) :
     stepFn ctx s (.exec (.panicStmt e) env k) ch = .ok (.evalE e env (.panicArgK k), s, ch, ⟨[], [], []⟩) := by defn_eq
 
-/-- THE RAISE: the payload's entry (its rewrite mark decided by its dynamic type) starts
-unwinding under `k'`. -/
+/-- THE RAISE: the payload's entry — its rewrite mark UNDECIDED for a boxed payload (`raiseMark`;
+the preprint phase decides it at `.stop`, `panicking_stop_raised`), `.none` for the
+`runtime.Error` twin and for an unboxed value — starts unwinding under `k'`. Table-free since
+2026-10-23 (backlog row 48): `panicEntryOf` takes no context. -/
 @[stepFn_eqns] theorem retV_panicArgK (s : Store) (v : GoValue) (k' : Cont) (ch : Choices) :
     stepFn ctx s (.retV v (.panicArgK k')) ch
-      = .ok (.panicking [panicEntryOf ctx (panicPayload v)] k', s, ch, ⟨[], [], []⟩) := by defn_eq
+      = .ok (.panicking [panicEntryOf (panicPayload v)] k', s, ch, ⟨[], [], []⟩) := by defn_eq
 
 /-- `recover()`: the walk's answer and the continuation with the entry marked
 (`recoverResult_eq`/`_frame`/`_glue` state the walk). -/
@@ -519,25 +522,40 @@ are its instances below). -/
 `repanicCollapse` consult — `stepFn` raises, no successor (`Prefix.stepFn_abort` under
 `Config.abort?`; here over the split). -/
 @[stepFn_eqns] theorem panicking_stop_settled {s : Store} {first : PanicEntry} {rest : List PanicEntry} (ch : Choices)
-    (hs : splitNewestPending? (first :: rest) = none) :
+    (hs : splitNewestUnsettled? (first :: rest) = none) :
     stepFn ctx s (.panicking (first :: rest) .stop) ch
       = (do let msg ← abortMsg ctx first rest (abortConsult first rest ch).1; throw (.panic msg)) := by
   simp only [stepFn, stepPanicStop, hs]
 
-/-- THE PREPRINT PHASE (unit 6b): an UNSETTLED chain at `.stop` takes the phase step at its newest
-pending entry — the `repanicCollapse` consult at `preprintWidth`: slot 0 at a collision marks the
-older entry repanicked and drops the newer (`preprintDrop`); otherwise the entry is selected and
-the preprint frame built. -/
+/-- THE PREPRINT PHASE's DECISION step (2026-10-23, backlog row 48): an unsettled chain at `.stop`
+whose newest unsettled entry is UNDECIDED (the raise's mark of a boxed payload) re-marks it in
+place from the payload's dynamic type (`phaseMark`: the method-set record first — its absence
+refuses, `panicking_stop_raised_error` — then `Error`, then `String`, else `.none`); no draw,
+no trace, no output; the chain resumes at `.stop`. -/
+@[stepFn_eqns] theorem panicking_stop_raised {s : Store} {first : PanicEntry} {rest older : List PanicEntry}
+    {entry : PanicEntry} {newer : List PanicEntry} {r : Rewrite} (ch : Choices)
+    (hs : splitNewestUnsettled? (first :: rest) = some (older, entry, newer))
+    (hu : entry.rewrite = .raised) (hd : phaseMark ctx entry.value = .ok r) :
+    stepFn ctx s (.panicking (first :: rest) .stop) ch
+      = .ok (.panicking (older ++ { entry with rewrite := r } :: newer) .stop, s, ch, ⟨[], [], []⟩) := by
+  simp only [stepFn, stepPanicStop, hs, hu, hd]
+  rfl
+
+/-- THE PREPRINT PHASE (unit 6b): an UNSETTLED chain at `.stop` whose newest unsettled entry is
+PENDING (its mark decided) takes the phase step there — the `repanicCollapse` consult at
+`preprintWidth`: slot 0 at a collision marks the older entry repanicked and drops the newer
+(`preprintDrop`); otherwise the entry is selected and the preprint frame built. -/
 @[stepFn_eqns] theorem panicking_stop_pending {s : Store} {first : PanicEntry} {rest older : List PanicEntry}
-    {entry : PanicEntry} {newer : List PanicEntry} (ch : Choices)
-    (hs : splitNewestPending? (first :: rest) = some (older, entry, newer)) :
+    {entry : PanicEntry} {newer : List PanicEntry} {m : Declaration.MemberId} (ch : Choices)
+    (hs : splitNewestUnsettled? (first :: rest) = some (older, entry, newer))
+    (hp : entry.rewrite = .pending m) :
     stepFn ctx s (.panicking (first :: rest) .stop) ch
       = .ok (if preprintCollide older entry && (Choices.consumeAtE .repanicCollapse (preprintWidth older entry) ch).1 = 0
               then .panicking (preprintDrop older newer) .stop
               else .next (.preprintK older entry newer .stop), s,
             (Choices.consumeAtE .repanicCollapse (preprintWidth older entry) ch).2.1,
             ⟨[], (Choices.consumeAtE .repanicCollapse (preprintWidth older entry) ch).2.2, []⟩) := by
-  simp only [stepFn, stepPanicStop, hs]
+  simp only [stepFn, stepPanicStop, hs, hp]
   rfl
 
 @[stepFn_eqns] theorem panicking_nil_stop (s : Store) (ch : Choices) :
@@ -1673,6 +1691,16 @@ theorem enterFrame_inv_error {s : Store} {fid : FuncId} {args : List GoValue} {e
     {e : Stop} (k' : Cont) (ch : Choices) (h : preprintDispatch ctx s entry = .error e) (hne : ∀ msg, e ≠ .panic msg) :
     stepFn ctx s (.next (.preprintK older entry newer k')) ch = .error e := by
   simp only [stepFn, stepNextOther, toResult_of_error h hne, Bind.bind, Except.bind]
+
+/-- The decision step's refusal (2026-10-23): `phaseMark`'s error — no method-set record for
+the payload's carrier (BUG-053, by name), or an unboxed payload (a breach) — is the step's `Stop`
+(`phaseMark_strict`: never a panic). -/
+@[stepFn_eqns] theorem panicking_stop_raised_error {s : Store} {first : PanicEntry} {rest older : List PanicEntry}
+    {entry : PanicEntry} {newer : List PanicEntry} {e : Stop} (ch : Choices)
+    (hs : splitNewestUnsettled? (first :: rest) = some (older, entry, newer))
+    (hu : entry.rewrite = .raised) (hd : phaseMark ctx entry.value = .error e) :
+    stepFn ctx s (.panicking (first :: rest) .stop) ch = .error e := by
+  simp only [stepFn, stepPanicStop, hs, hu, hd, Bind.bind, Except.bind]
 
 @[stepFn_eqns] theorem retV_stmtOpK_apply_error {s : Store} {v : GoValue} {op : StmtOp} {nt : Nat} {done : List GoValue} {e : Stop}
     (env : LocalEnv) (k' : Cont) (ch : Choices) (h : applyStmtOp ctx s ch op nt (v :: done).reverse = .error e)

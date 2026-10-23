@@ -299,8 +299,9 @@ def exports : List Name := [
     -- equations the logic side asked for (`*_text`, the `StringPanic` string lemmas' twins),
     -- the helper arms' soundness and the relation-side elimination facts
     ``GoLean.GoCore.Machine.Config.abort?_some_iff, ``GoLean.GoCore.Machine.Config.abort?_of_settled,
-    ``GoLean.GoCore.Machine.Config.abort?_of_pending,
-    ``GoLean.GoCore.Machine.splitNewestPending?_eq, ``GoLean.GoCore.Machine.splitNewestPending?_pending,
+    ``GoLean.GoCore.Machine.Config.abort?_of_unsettled,
+    ``GoLean.GoCore.Machine.splitNewestUnsettled?_eq, ``GoLean.GoCore.Machine.splitNewestUnsettled?_unsettled,
+    ``GoLean.GoCore.Machine.PanicEntry.isUnsettled_cases, ``GoLean.GoCore.Machine.phaseMark_strict,
     ``GoLean.GoCore.Machine.stepPanicStop_strict, ``GoLean.GoCore.Machine.preprintFatalStop_strict,
     -- C4, block-entry allocation (2026-10-01; design docs/2026-10-01_gc4-block-allocation-design.md D8 —
     -- the layout function's lemma set, the lane's acceptance list; BridgeSet rows 136–154)

@@ -168,6 +168,8 @@
     "GoLean.Contract.GoCore.Equations.panicking_probeK",
     "GoLean.Contract.GoCore.Equations.panicking_seq",
     "GoLean.Contract.GoCore.Equations.panicking_stop_pending",
+    "GoLean.Contract.GoCore.Equations.panicking_stop_raised",
+    "GoLean.Contract.GoCore.Equations.panicking_stop_raised_error",
     "GoLean.Contract.GoCore.Equations.panicking_stop_settled",
     "GoLean.Contract.GoCore.Equations.panicking_storeK",
     "GoLean.Contract.GoCore.Equations.panicking_strictK",
