@@ -878,9 +878,14 @@ scripts/contract-names.lean 1.8 s; a `lake build` of the two modules a
 few seconds. Fail-closed, shown in scratch: a dropped conjunct in one
 challenge statement → «error: Challenge and solution theorem statement do
 not match: 'GoLean.Contract.GoCore.ExecutionStatement.prefix_det'», exit
-1; an alias removed from the solution → «error: Const not found in
-solution: 'GoLean.Contract.GoCore.Machine.execProgLoopOut_snd'», exit 1
-(and `gen-contract --check` names it first as a stale Solution). Four
+1; an alias removed from the solution → the exporter aborts before the
+judge sees it («PANIC at LeanExport.dumpConstant LeanExport.Basic:254:48:
+Constant GoLean.Contract.GoCore.Machine.execProgLoopOut_snd not found in
+environment.», then «error: Child exited with 134»), exit 1 — closed, and
+`gen-contract --check` names the stale Solution first in the speedbump
+form. The consumer's route, measured the same day: `scripts/contract-export`
+(leanexport over the comparator's own target list) 1.7 s, a 32 MB export;
+`lake comparator --challenge-from-export <it>` 16.9 s, exit 0. Four
 lessons from making the challenge's text re-elaborate to the IDENTICAL
 `Expr` (`scripts/contract-challenge-draft` prints every statement from
 the environment and checks exactly that; 281 of 285 as printed): a
