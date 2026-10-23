@@ -109,6 +109,12 @@ def exports : List Name := [
     ``GoLean.GoCore.Machine.stepFn_strict_oblivious,
     ``GoLean.GoCore.Machine.applyStrictOpPick_wf,
     ``GoLean.GoCore.convCapMembers_ge, ``GoLean.GoCore.convCapAt_ge, ``GoLean.GoCore.gcRoundupSize_ge,
+    -- G18 (2026-10-23, backlog row 49): the append-spill slot map — slot 0 is gc's realized
+    -- `growslice` capacity, every slot within the unchanged envelope, the realized capacity at
+    -- least the new length and at most the envelope's upper end, the noscan rounding the R3 one.
+    ``GoLean.GoCore.appendSpillCapAt_zero, ``GoLean.GoCore.appendSpillCapAt_ge,
+    ``GoLean.GoCore.appendSpillCapAt_le_upper, ``GoLean.GoCore.gcGrowsliceCap_ge,
+    ``GoLean.GoCore.gcGrowsliceCap_le_appendSpillUpper, ``GoLean.GoCore.gcRoundupSizeOf_noscan,
     ``GoLean.GoCore.convCapAt_bytes_zero, ``GoLean.GoCore.convCapAt_runes_zero,
     ``GoLean.GoCore.convCapMembers_literal,
     ``GoLean.GoCore.Equations.retV_strictK_conv, ``GoLean.GoCore.Equations.retV_strictK_conv_nopop,

@@ -1514,6 +1514,11 @@ theorem applyStmtOp_plan_appendSlice_nospill {σ : Store} {elem : Ty} {nt : Nat}
       · exact ⟨.error (.panic "runtime error: growslice: len out of range"), fun _ => rfl⟩
       · rename_i hr16
         simp only [ite_eq_right hr16] at hw
+        cases hhp : tyHasPointers ctx.types elem with
+        | error e => exact ⟨.error e, fun _ => rfl⟩
+        | ok pointerful =>
+        simp only [except_bind_ok]
+        simp only [hhp] at hw
         cases hold : Mem.loadSlice ctx σ slice with
         | error e => exact ⟨.error e, fun _ => rfl⟩
         | ok oldValues => rw [hold] at hw; cases hw
@@ -1566,6 +1571,10 @@ theorem applyStmtOp_plan_appendSlice_spill {σ : Store} {elem : Ty} {nt : Nat}
     split at hw
     · cases hw
     rename_i hr16
+    cases hhp : tyHasPointers ctx.types elem with
+    | error e => rw [hhp] at hw; cases hw
+    | ok pointerful =>
+    simp only [hhp] at hw
     cases hold : Mem.loadSlice ctx σ slice with
     | error e => rw [hold] at hw; cases hw
     | ok pO =>
@@ -1575,12 +1584,11 @@ theorem applyStmtOp_plan_appendSlice_spill {σ : Store} {elem : Ty} {nt : Nat}
     subst hw
     unfold applyStmtOp.plan
     dsimp only
-    simp only [hsl, hel, hv1, hv2, hvis, htl, except_bind_ok, ite_eq_right hcap, hts, ite_eq_right hr16, hold]
+    simp only [hsl, hel, hv1, hv2, hvis, htl, except_bind_ok, ite_eq_right hcap, hts, ite_eq_right hr16,
+      hhp, hold]
     refine ⟨fun extra => ?_, fun ch => ?_, fun pick => ?_⟩
     · exact do
-        let newCap := slice.len + elemValues.size +
-          ((appendGrowthCap slice.cap (slice.len + elemValues.size) - (slice.len + elemValues.size) + extra)
-            % appendSpillWidth slice.cap (slice.len + elemValues.size))
+        let newCap := appendSpillCapAt elemSize pointerful slice.cap (slice.len + elemValues.size) extra
         let backing ← buildAppendBackingValue ctx elem oldValues elemValues newCap
         pure fun s => do
           let (base, current) ← Store.alloc ctx s backing (.array newCap elem)

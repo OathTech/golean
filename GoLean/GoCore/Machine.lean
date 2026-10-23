@@ -1974,19 +1974,26 @@ def applyStmtOp.plan (s : Store) (choices : Choices) (op : StmtOp) (_nt : Nat)
             let elemSize ← tySizeBytes ctx.types elem
             if newLen ≥ intExclusiveUpperBound || newLen * elemSize > maxAllocBytes then
               panic "runtime error: growslice: len out of range"
+            -- gc's `noscan` bit of the new backing (G18, 2026-10-23): it
+            -- decides the malloc header inside the realized capacity;
+            -- `tyHasPointers` refuses only where the element size already
+            -- did (Ops.lean), so no new refusal precedes the consult.
+            let pointerful ← tyHasPointers ctx.types elem
             let (oldValues, trO) ← Mem.loadSlice ctx s slice
             -- The capacity ENVELOPE is [newLen, appendSpillUpper] (the
             -- statement and containment argument live on
             -- `appendSpillUpper`, Ops.lean — arc-final audit F2 /
             -- BUG-021, replacing growth+[0,8), which go1.26.5 escapes
-            -- in both directions). The choice is offset so the EMPTY
-            -- stream (extra = 0) keeps the growth-formula point — the
-            -- strict lane's deterministic behavior is unchanged — while
-            -- extra ranges bijectively over the whole envelope.
+            -- in both directions). The slot map `appendSpillCapAt`
+            -- (Ops.lean) is offset so the EMPTY stream (extra = 0)
+            -- realizes gc's capacity — `gcGrowsliceCap`, the size-class
+            -- rounded `growslice` result (G18, [USER] ruling 2026-10-23,
+            -- backlog row 49; before it the growth-formula point) — while
+            -- extra ranges bijectively over the whole envelope, which is
+            -- unchanged (`appendSpillCapAt_zero`, `_ge`, `_le_upper`).
             let width := appendSpillWidth slice.cap newLen
             let (extra, choices, ps) := Choices.consumeAtE .appendSpill width choices
-            let newCap := newLen +
-              ((appendGrowthCap slice.cap newLen - newLen + extra) % width)
+            let newCap := appendSpillCapAt elemSize pointerful slice.cap newLen extra
             let backing ← buildAppendBackingValue ctx elem oldValues elemValues newCap
             return Commit.withStream choices ps fun s => do
               let (base, current) ← Store.alloc ctx s backing (.array newCap elem)
@@ -6198,7 +6205,8 @@ the state alone — EVERY test `applyStmtOp`'s append arm performs before
 it consults the stream, in the arm's order (operand shapes, slice
 validation, the visible element read, the target address, the capacity
 test, the R16 `growslice` refusal — a recoverable panic raised BEFORE the
-consult — and the old-element read); `some (appendSpillWidth …)` exactly
+consult —, the element's pointer scan (G18) and the old-element read);
+`some (appendSpillWidth …)` exactly
 when the arm reaches the consult, `none` whenever it refuses, panics or
 stores in place before it (audit fix F1: `some` ⇔ the consult happens). -/
 def appendSpill? (s : Store) (elem : Ty) (vs : List GoValue) : Option Nat :=
@@ -6215,8 +6223,11 @@ def appendSpill? (s : Store) (elem : Ty) (vs : List GoValue) : Option Nat :=
                 | .ok elemSize =>
                     if newLen ≥ intExclusiveUpperBound || newLen * elemSize > maxAllocBytes then none
                     else
-                      match Mem.loadSlice ctx s slice with
-                      | .ok _ => some (appendSpillWidth slice.cap newLen)
+                      match tyHasPointers ctx.types elem with
+                      | .ok _ =>
+                          match Mem.loadSlice ctx s slice with
+                          | .ok _ => some (appendSpillWidth slice.cap newLen)
+                          | .error _ => none
                       | .error _ => none
                 | .error _ => none
           | _, _, _, _ => none

@@ -436,6 +436,69 @@ def tySizeBytes (types : TypeEnv) (ty : Ty) : Except Stop Nat := do
   let (size, _) ← tySizeAlign platform types ty
   pure size
 
+/-! ### Pointer scan: does a type contain pointers? (G18, 2026-10-23)
+
+gc's `_type.Pointers()` (`PtrBytes != 0`): the `noscan` bit of every heap allocation,
+which decides whether `roundupsize` charges the 8-byte malloc header
+(`runtime/msize.go` @ go1.26.5: `!noscan && size > MinSizeForMallocHeader`). The append
+spill's realized capacity (`gcGrowsliceCap`, below) is the one consumer. The descent is
+`tySizeAlignTy`'s (the type layer structural on the type, the index layer `bound`-structural
+on the table) and refuses EXACTLY where it does — an `.unsupported` type, an opaque
+declaration, an unknown index, an exhausted bound — so a refusal here can only arise where
+the element size already refused (the size also refuses untyped integer kinds; this does
+not); it never guesses. Pointer-bearing kinds: a string (its data pointer), a slice, a map,
+a channel, a pointer, a function value, an interface (both words), an array of a pointerful
+element with a non-zero length (`[0]T` has `PtrBytes = 0`), a struct with a pointerful
+field. Scalars, arrays of scalars, `struct{}` and the four `sync` primitives
+(`internal/sync.Mutex` `{state int32; sema uint32}`, `RWMutex`, `WaitGroup`, `Once`:
+integer and atomic-integer fields only, `sync/*.go` @ go1.26.5) carry none. -/
+
+/-- The TYPE layer: structural on the type; `.defined` handed to `atDefined`. -/
+def tyHasPointersTy (atDefined : TypeIdx → Except Stop Bool) : Ty → Except Stop Bool
+  | .bool => pure false
+  | .int _ => pure false
+  | .float _ => pure false
+  | .string => pure true
+  | .array n elem => do
+      let p ← tyHasPointersTy atDefined elem
+      pure (n != 0 && p)
+  | .slice _ => pure true
+  | .map _ _ => pure true
+  | .chan _ _ => pure true
+  | .pointer _ => pure true
+  | .funcType _ _ _ => pure true
+  | .interface _ => pure true
+  | .defined i => atDefined i
+  | .unsupported feature => unsupported s!"pointer-scan computation: {feature}"
+  | .sync _ => pure false
+
+/-- Every field is visited (a refusal on any field is the struct's refusal, as in
+`structSizeAlignWith`); the struct is pointerful iff some field is. -/
+def fieldsHavePointers (fieldHas : Ty → Except Stop Bool) : List FieldDef → Except Stop Bool
+  | [] => pure false
+  | field :: rest => do
+      let p ← fieldHas field.typ
+      let q ← fieldsHavePointers fieldHas rest
+      pure (p || q)
+
+/-- The INDEX layer: the declaration at index `i`, descending only to smaller indices
+(`bound`-structural, as `tySizeAlignAt`). -/
+def tyHasPointersAt (types : TypeEnv) : Nat → TypeIdx → Except Stop Bool
+  | 0, i => typeIndexExhausted "pointer-scan computation" i
+  | bound + 1, i =>
+      match types[i]? with
+      | some (_, .struct fields) =>
+          fieldsHavePointers (tyHasPointersTy (tyHasPointersAt types bound)) fields.toList
+      | some (_, .defined underlying) => tyHasPointersTy (tyHasPointersAt types bound) underlying
+      | some (_, .interfaceDef _) => pure true
+      | some (_, .opaqueDecl feature) => unsupported s!"pointer-scan computation: {feature}"
+      | none => unsupported s!"pointer-scan computation: unknown type index {i}"
+
+/-- Does a value of type `ty` contain pointers (gc's `Pointers()`), over the type table
+(the descent seeded at `types.size`, as `tySizeAlign`)? -/
+def tyHasPointers (types : TypeEnv) (ty : Ty) : Except Stop Bool :=
+  tyHasPointersTy (tyHasPointersAt types types.size) ty
+
 /-! ### Struct field offsets (gc-verified request (a1), 2026-10-07)
 
 The per-field offsets `structSizeAlignWith` computes and discards, EXPORTED
@@ -4215,6 +4278,372 @@ theorem gcRoundupSize_ge (n : Nat) : n ≤ gcRoundupSize n := by
     · have h2 := gcTable128_bound (j := (n - 1024 + 127) / 128) (by omega)
       omega
   · omega
+
+/-! ### gc's realized append capacity — the `appendSpill` site's slot 0 (G18, 2026-10-23)
+
+[USER] ruling 2026-10-23 (Mike, relayed by the [AGENT] coordinator; backlog row 49 of
+`docs/2026-10-12_release-readiness.md`; the raft-proofs ask
+`~/projects/raft-proofs/docs/2026-10-23_golean-ask-append-capacity.md`, G18, option 1): the
+empty tape's pick at `ChoiceSite.appendSpill` REALIZES gc's capacity. The envelope is
+UNCHANGED — `[newLen, appendSpillUpper]`, width `appendSpillWidth` — only which member slot 0
+selects moved: from the element-size-free growth formula (`appendGrowthCap`, gc's
+`nextslicecap` alone) to gc's `growslice` result,
+`roundupsize(nextslicecap(newLen, oldCap) · elemSize, noscan) / elemSize`
+(`deps/go/src/runtime/slice.go:178-252` @ go1.26.5 — all four element-size branches compute
+this; `:189-193` returns `newLen` for a zero-size element).
+
+WHAT IS REALIZED, and for which element kinds. `gcNextSliceCap` is `nextslicecap`
+(`slice.go:326`) exactly — note that `appendGrowthCap` is NOT: its `oldCap = 0 → max 4 newLen`
+arm is the compiler's 32-byte STACK buffer's point for 8-byte elements
+(`cmd/compile/internal/ssagen/ssa.go:3785` `getBackingStoreInfoForAppend`, `K = 32 /
+elemSize` elements, a non-escaping result's FIRST append with `newLen ≤ K`;
+`base/flag.go:189`), not the heap formula; the two agree whenever `0 < oldCap < newLen`
+(`gcNextSliceCap_eq_appendGrowthCap`). `gcRoundupSizeOf` is `roundupsize(size, noscan)`
+(`runtime/msize.go:16`) for BOTH `noscan` values: a small request (`size ≤ MaxSmallSize −
+MallocHeaderSize = 32760`) for a POINTERFUL element type whose byte size exceeds
+`MinSizeForMallocHeader = 512` (`internal/runtime/gc/malloc.go:17,47`; the threshold is on
+the ALLOCATION's bytes `newcap · elemSize`, not on the element's) is charged the 8-byte
+malloc header before the class lookup and credited it after; a noscan request never is
+(`gcRoundupSizeOf_noscan`: the existing `gcRoundupSize`); a large request rounds up to the
+8 KiB page. `pointerful` is gc's `et.Pointers()` (`tyHasPointers`, above). The regimes slot 0
+does NOT realize — still members of the envelope, selected by the other picks, and
+version-tracked by the membership rows `slices/append-spill-*` — are the compiler's stack
+buffer (above; the customer's slices are heap fields, where it never applies) and the
+`-race` allocator's points. Overflow: gc's `int`/`uintptr` wraps in `nextslicecap` and
+`roundupsize` lie behind the arm's own refusal (`newLen < 2^63`, `newLen · elemSize ≤
+maxAllocBytes`, decided before the consult), so the pure-`Nat` formulas agree with gc on the
+arm's whole domain.
+
+THE SLOT MAP (`appendSpillCapAt`): pick `extra` selects
+`newLen + ((gcGrowsliceCap − newLen + extra) mod width)` — the envelope walked upward from
+gc's point, wrapping to `newLen` after `appendSpillUpper`; a bijection `[0, width) →
+[newLen, upper]` (the pre-G18 map with the growth formula replaced by the realized capacity;
+the `choice-trace` menu check `spillFacts` recomputes it at every consult).
+`appendSpillCapAt_zero` is the customer-citable statement: slot 0 IS gc's capacity;
+`appendSpillCapAt_ge`/`_le_upper` say every slot stays inside the envelope. Cross-checked
+against the pinned toolchain (probe of 2026-10-23, heap-resident slices appended one at a
+time; corpus rows `slices/append-cap-gc-*`): `[]*T` 1 2 4 8 16 32 64 143 287 607 1023;
+`[]int` … 64 128 256 512 848; `[]byte` 8 16 … 512 896 1408 2048; `[]string` … 32 71 143 303
+591; a 608-byte pointerful struct 1 2 4 8 16 33 67 134; `[]struct{}` = newLen — the
+`example`s below pin these; raft-proofs' mirror (`packages/etcd-model/EtcdModel/Mirror/
+GoSlice.lean` `growCap`, their argument order `newLen oldCap`) computes the same sequence
+(`docs/2026-09-28_i6-fidelity-design.md` there). -/
+
+/-- gc's `nextslicecap(newLen, oldCap)` (`runtime/slice.go:326` @ go1.26.5), in GoLean's
+`oldCap newLen` argument order: `newLen` when it exceeds the doubled capacity, the doubled
+capacity below the 256-element threshold, else the 1.25× walk (`appendGrowthCap.loop`,
+gc's `newcap += (newcap + 3·256) >> 2` until `newcap ≥ newLen`). -/
+def gcNextSliceCap (oldCap newLen : Nat) : Nat :=
+  if newLen > oldCap + oldCap then newLen
+  else if oldCap < 256 then oldCap + oldCap
+  else appendGrowthCap.loop newLen oldCap
+
+/-- The size-class lookup of a small request (`req ≤ MaxSmallSize = 32768`, the header
+already charged): the 8-byte-step table to 1016 bytes, the 128-byte-step table above. -/
+def gcSmallClassSize (req : Nat) : Nat :=
+  if req ≤ 1016 then
+    gcSizeClassToSize.getD (gcSizeToSizeClass8.getD ((req + 7) / 8) 0) 0
+  else
+    gcSizeClassToSize.getD (gcSizeToSizeClass128.getD ((req - 1024 + 127) / 128) 0) 0
+
+/-- gc's `roundupsize(size, noscan)` (`runtime/msize.go:16` @ go1.26.5) with `pointerful =
+!noscan`: a small object rounds to its size class, charged the 8-byte malloc header first and
+credited it after when it is pointerful and over 512 bytes; a large object rounds to the
+page. -/
+def gcRoundupSizeOf (size : Nat) (pointerful : Bool) : Nat :=
+  if size ≤ 32760 then
+    if pointerful && 512 < size then gcSmallClassSize (size + 8) - 8
+    else gcSmallClassSize size
+  else
+    (size + 8191) / 8192 * 8192
+
+/-- gc's `growslice` capacity (`runtime/slice.go:178`): `roundupsize(nextslicecap · elemSize,
+noscan) / elemSize`, and `newLen` for a zero-size element. -/
+def gcGrowsliceCap (elemSize : Nat) (pointerful : Bool) (oldCap newLen : Nat) : Nat :=
+  if elemSize = 0 then newLen
+  else gcRoundupSizeOf (gcNextSliceCap oldCap newLen * elemSize) pointerful / elemSize
+
+/-- THE SLOT MAP of `ChoiceSite.appendSpill`: pick `extra` (drawn at bound
+`appendSpillWidth oldCap newLen`) selects this capacity — slot 0 gc's realized capacity
+(`appendSpillCapAt_zero`), the rest the envelope upward from it, wrapping. -/
+def appendSpillCapAt (elemSize : Nat) (pointerful : Bool) (oldCap newLen extra : Nat) : Nat :=
+  newLen + ((gcGrowsliceCap elemSize pointerful oldCap newLen - newLen + extra)
+    % appendSpillWidth oldCap newLen)
+
+/-! #### The upper table facts (G18): a class never exceeds twice its request above 32 bytes
+
+Closed `Bool`s `decide`d below (`#eval`-checked first — the memory note of the lower facts):
+every 8-byte step index `i` (requests `8i − 7 .. 8i`) maps to a class `≤ max 32 (16i − 14)`;
+from index 66 (requests over 520 bytes, the header's range) the class plus 22 is at most
+`16i` (so the header-charged lookup stays under twice the uncharged request); every 128-byte
+step index `j` (requests `897 + 128j .. 1024 + 128j`) maps to a class `≤ 1786 + 256j`. -/
+def gcTable8Le : Bool :=
+  (List.range 129).all fun i =>
+    gcSizeClassToSize.getD (gcSizeToSizeClass8.getD i 0) 0 ≤ max 32 (16 * i - 14)
+
+def gcTable8HeaderLe : Bool :=
+  (List.range 129).all fun i =>
+    i < 66 || gcSizeClassToSize.getD (gcSizeToSizeClass8.getD i 0) 0 + 22 ≤ 16 * i
+
+def gcTable128Le : Bool :=
+  (List.range 249).all fun j =>
+    gcSizeClassToSize.getD (gcSizeToSizeClass128.getD j 0) 0 ≤ 1786 + 256 * j
+
+set_option maxRecDepth 100000 in
+theorem gcTable8Le_eq : gcTable8Le = true := by decide
+set_option maxRecDepth 100000 in
+theorem gcTable8HeaderLe_eq : gcTable8HeaderLe = true := by decide
+set_option maxRecDepth 100000 in
+theorem gcTable128Le_eq : gcTable128Le = true := by decide
+
+theorem gcTable8_le {i : Nat} (hi : i < 129) :
+    gcSizeClassToSize.getD (gcSizeToSizeClass8.getD i 0) 0 ≤ max 32 (16 * i - 14) := by
+  have h := gcTable8Le_eq
+  simp only [gcTable8Le, List.all_eq_true, List.mem_range, decide_eq_true_eq] at h
+  exact h i hi
+
+theorem gcTable8_header_le {i : Nat} (hi : i < 129) (h66 : 66 ≤ i) :
+    gcSizeClassToSize.getD (gcSizeToSizeClass8.getD i 0) 0 + 22 ≤ 16 * i := by
+  have h := gcTable8HeaderLe_eq
+  simp only [gcTable8HeaderLe, List.all_eq_true, List.mem_range, Bool.or_eq_true,
+    decide_eq_true_eq] at h
+  exact (h i hi).resolve_left (by omega)
+
+theorem gcTable128_le {j : Nat} (hj : j < 249) :
+    gcSizeClassToSize.getD (gcSizeToSizeClass128.getD j 0) 0 ≤ 1786 + 256 * j := by
+  have h := gcTable128Le_eq
+  simp only [gcTable128Le, List.all_eq_true, List.mem_range, decide_eq_true_eq] at h
+  exact h j hj
+
+/-- A small request never rounds DOWN (the lower table facts). -/
+theorem gcSmallClassSize_ge {req : Nat} (h : req ≤ 32768) : req ≤ gcSmallClassSize req := by
+  unfold gcSmallClassSize
+  split
+  · have := gcTable8_bound (i := (req + 7) / 8) (by omega)
+    omega
+  · have := gcTable128_bound (j := (req - 1024 + 127) / 128) (by omega)
+    omega
+
+/-- A small request rounds to at most `max 32 (2 · req)`. -/
+theorem gcSmallClassSize_le {req : Nat} (h : req ≤ 32768) :
+    gcSmallClassSize req ≤ max 32 (2 * req) := by
+  unfold gcSmallClassSize
+  split
+  · have := gcTable8_le (i := (req + 7) / 8) (by omega)
+    omega
+  · have := gcTable128_le (j := (req - 1024 + 127) / 128) (by omega)
+    omega
+
+/-- A header-charged request (`req = size + 8`, `size > 512`) rounds to at most twice the
+uncharged size: `class(req) − 8 ≤ 2 · (req − 8)`. -/
+theorem gcSmallClassSize_le_header {req : Nat} (h520 : 520 < req) (h : req ≤ 32768) :
+    gcSmallClassSize req + 8 ≤ 2 * req := by
+  unfold gcSmallClassSize
+  split
+  · have := gcTable8_header_le (i := (req + 7) / 8) (by omega) (by omega)
+    omega
+  · have := gcTable128_le (j := (req - 1024 + 127) / 128) (by omega)
+    omega
+
+/-- The noscan instance is the existing `gcRoundupSize` (R3 / b6). -/
+theorem gcRoundupSizeOf_noscan (n : Nat) : gcRoundupSizeOf n false = gcRoundupSize n := by
+  simp [gcRoundupSizeOf, gcRoundupSize, gcSmallClassSize]
+
+/-- `roundupsize` never rounds DOWN, header or not: the spec floor. -/
+theorem gcRoundupSizeOf_ge (n : Nat) (p : Bool) : n ≤ gcRoundupSizeOf n p := by
+  unfold gcRoundupSizeOf
+  split
+  · split
+    · have := gcSmallClassSize_ge (req := n + 8) (by omega)
+      omega
+    · have := gcSmallClassSize_ge (req := n) (by omega)
+      omega
+  · omega
+
+/-- `roundupsize` never exceeds `max 32 (2 · size)`, header or not: the containment half of
+the envelope argument (`appendSpillUpper`'s docstring: "the worst class step ratio 48/33 <
+1.5 < 2"), now a theorem. -/
+theorem gcRoundupSizeOf_le (n : Nat) (p : Bool) : gcRoundupSizeOf n p ≤ max 32 (2 * n) := by
+  unfold gcRoundupSizeOf
+  split
+  · split
+    · rename_i hp
+      simp only [Bool.and_eq_true, decide_eq_true_eq] at hp
+      have := gcSmallClassSize_le_header (req := n + 8) (by omega) (by omega)
+      omega
+    · have := gcSmallClassSize_le (req := n) (by omega)
+      omega
+  · omega
+
+/-- `nextslicecap` never shrinks below the requested length (at every operand pair). -/
+theorem gcNextSliceCap_ge (oldCap newLen : Nat) : newLen ≤ gcNextSliceCap oldCap newLen := by
+  unfold gcNextSliceCap
+  split
+  · omega
+  · split
+    · omega
+    · have hloop : ∀ cap, newLen ≤ appendGrowthCap.loop newLen cap := by
+        intro cap
+        fun_induction appendGrowthCap.loop with
+        | case1 c hge => simpa using hge
+        | case2 c hlt ih => exact ih
+      exact hloop oldCap
+
+/-- One step of the 1.25× walk, written out (the well-founded loop is irreducible to
+`decide`; these two rewrite it on literals, one step at a time). -/
+theorem appendGrowthCap.loop_of_lt {newLen cap : Nat} (h : cap < newLen) :
+    appendGrowthCap.loop newLen cap
+      = appendGrowthCap.loop newLen (cap + (cap + 3 * 256) / 4) := by
+  rw [appendGrowthCap.loop]
+  exact ite_eq_right (Nat.not_le.mpr h)
+
+theorem appendGrowthCap.loop_of_ge {newLen cap : Nat} (h : newLen ≤ cap) :
+    appendGrowthCap.loop newLen cap = cap := by
+  rw [appendGrowthCap.loop]
+  exact ite_eq_left h
+
+/-- On a spill from a non-zero capacity, gc's `nextslicecap` IS the growth formula. -/
+theorem gcNextSliceCap_eq_appendGrowthCap {oldCap newLen : Nat} (h0 : 0 < oldCap)
+    (h : oldCap < newLen) : gcNextSliceCap oldCap newLen = appendGrowthCap oldCap newLen := by
+  have h1 : ¬ (newLen ≤ oldCap) := by omega
+  have h2 : ¬ ((oldCap == 0) = true) := by simp; omega
+  unfold gcNextSliceCap appendGrowthCap
+  rw [ite_eq_right h1, ite_eq_right h2]
+
+/-- On every spill, gc's `nextslicecap` is at most the growth formula (equal from a non-zero
+capacity; `newLen ≤ max 4 newLen` from zero). -/
+theorem gcNextSliceCap_le_appendGrowthCap {oldCap newLen : Nat} (h : oldCap < newLen) :
+    gcNextSliceCap oldCap newLen ≤ appendGrowthCap oldCap newLen := by
+  by_cases h0 : oldCap = 0
+  · subst h0
+    have h1 : newLen > 0 + 0 := by omega
+    have h2 : ¬ (newLen ≤ 0) := by omega
+    have h3 : ((0 : Nat) == 0) = true := by decide
+    unfold gcNextSliceCap appendGrowthCap
+    rw [ite_eq_left h1, ite_eq_right h2, ite_eq_left h3]
+    exact Nat.le_max_right _ _
+  · rw [gcNextSliceCap_eq_appendGrowthCap (by omega) h]
+    exact Nat.le_refl _
+
+/-- gc's realized capacity is at least the new length: the spec floor (`cap ≥ len`). -/
+theorem gcGrowsliceCap_ge (elemSize : Nat) (pointerful : Bool) (oldCap newLen : Nat) :
+    newLen ≤ gcGrowsliceCap elemSize pointerful oldCap newLen := by
+  unfold gcGrowsliceCap
+  split
+  · exact Nat.le_refl _
+  · rename_i hes
+    rw [Nat.le_div_iff_mul_le (Nat.pos_of_ne_zero hes)]
+    exact Nat.le_trans (Nat.mul_le_mul_right _ (gcNextSliceCap_ge _ _)) (gcRoundupSizeOf_ge _ _)
+
+/-- gc's realized capacity lies within the envelope on every spill: the containment the
+envelope's upper end was designed for (`appendSpillUpper`), proved for every element size
+and both scan kinds. -/
+theorem gcGrowsliceCap_le_appendSpillUpper {oldCap newLen : Nat} (elemSize : Nat)
+    (pointerful : Bool) (h : oldCap < newLen) :
+    gcGrowsliceCap elemSize pointerful oldCap newLen ≤ appendSpillUpper oldCap newLen := by
+  have hg := gcNextSliceCap_le_appendGrowthCap h
+  have hn := gcNextSliceCap_ge oldCap newLen
+  unfold gcGrowsliceCap appendSpillUpper
+  split
+  · omega
+  · rename_i hes
+    have hpos : 0 < elemSize := Nat.pos_of_ne_zero hes
+    apply Nat.div_le_of_le_mul
+    refine Nat.le_trans (gcRoundupSizeOf_le _ _) (Nat.max_le.mpr ⟨?_, ?_⟩)
+    · exact Nat.le_trans (Nat.le_max_left _ _)
+        (Nat.le_mul_of_pos_left _ hpos)
+    · calc 2 * (gcNextSliceCap oldCap newLen * elemSize)
+          = elemSize * (2 * gcNextSliceCap oldCap newLen) := by
+            rw [← Nat.mul_assoc, Nat.mul_comm]
+        _ ≤ elemSize * (2 * appendGrowthCap oldCap newLen) :=
+            Nat.mul_le_mul_left _ (Nat.mul_le_mul_left _ hg)
+        _ ≤ elemSize * max 32 (2 * appendGrowthCap oldCap newLen) :=
+            Nat.mul_le_mul_left _ (Nat.le_max_right _ _)
+
+/-- **Slot 0 of `appendSpill` is gc's realized capacity** (G18): on every spill, the empty
+tape's pick selects `gcGrowsliceCap` — `roundupsize(nextslicecap(newLen, oldCap) · elemSize,
+noscan) / elemSize`. -/
+theorem appendSpillCapAt_zero {oldCap newLen : Nat} (elemSize : Nat) (pointerful : Bool)
+    (h : oldCap < newLen) :
+    appendSpillCapAt elemSize pointerful oldCap newLen 0
+      = gcGrowsliceCap elemSize pointerful oldCap newLen := by
+  have h1 := gcGrowsliceCap_ge elemSize pointerful oldCap newLen
+  have h2 := gcGrowsliceCap_le_appendSpillUpper elemSize pointerful h
+  unfold appendSpillCapAt appendSpillWidth
+  rw [Nat.add_zero, Nat.mod_eq_of_lt (by omega)]
+  omega
+
+/-- Every slot realizes a capacity at least the new length (the spec floor). -/
+theorem appendSpillCapAt_ge (elemSize : Nat) (pointerful : Bool) (oldCap newLen extra : Nat) :
+    newLen ≤ appendSpillCapAt elemSize pointerful oldCap newLen extra :=
+  Nat.le_add_right _ _
+
+/-- Every slot stays within the envelope's upper end on a spill: the envelope is the
+pre-G18 one, unchanged. -/
+theorem appendSpillCapAt_le_upper {oldCap newLen : Nat} (elemSize : Nat) (pointerful : Bool)
+    (extra : Nat) (h : oldCap < newLen) :
+    appendSpillCapAt elemSize pointerful oldCap newLen extra ≤ appendSpillUpper oldCap newLen := by
+  have hn := Nat.le_trans (gcNextSliceCap_ge oldCap newLen) (gcNextSliceCap_le_appendGrowthCap h)
+  have hu : newLen ≤ appendSpillUpper oldCap newLen := by
+    unfold appendSpillUpper; omega
+  unfold appendSpillCapAt appendSpillWidth
+  have := Nat.mod_lt (gcGrowsliceCap elemSize pointerful oldCap newLen - newLen + extra)
+    (show 0 < appendSpillUpper oldCap newLen - newLen + 1 by omega)
+  omega
+
+/-! #### Concrete instances, kernel-checked (the gc probe of 2026-10-23 and raft-proofs' mirror) -/
+
+-- The customer's `[]*pb.Entry` (8-byte pointer elements), appended one at a time:
+-- 1 2 4 8 16 32 64 143 287 607 1023 — the 143 is the malloc header (128·8 + 8 → class 1152
+-- → 1144 / 8), the regime gc's heap `growslice` realizes and the mirror computes. Instances
+-- past the 256-element threshold walk `appendGrowthCap.loop` (well-founded, irreducible to
+-- `decide`): the walk is rewritten one step at a time on the literals, `decide` does the rest.
+example : gcGrowsliceCap 8 true 0 1 = 1 := by decide
+example : gcGrowsliceCap 8 true 1 2 = 2 := by decide
+example : gcGrowsliceCap 8 true 2 3 = 4 := by decide
+example : gcGrowsliceCap 8 true 4 5 = 8 := by decide
+example : gcGrowsliceCap 8 true 8 9 = 16 := by decide
+example : gcGrowsliceCap 8 true 16 17 = 32 := by decide
+example : gcGrowsliceCap 8 true 32 33 = 64 := by decide
+example : gcGrowsliceCap 8 true 64 65 = 143 := by decide
+example : gcGrowsliceCap 8 true 143 144 = 287 := by decide
+example : gcGrowsliceCap 8 true 287 288 = 607 := by
+  rw [gcGrowsliceCap, gcNextSliceCap, appendGrowthCap.loop_of_lt (by decide),
+    appendGrowthCap.loop_of_ge (by decide)]
+  decide
+example : gcGrowsliceCap 8 true 607 608 = 1023 := by
+  rw [gcGrowsliceCap, gcNextSliceCap, appendGrowthCap.loop_of_lt (by decide),
+    appendGrowthCap.loop_of_ge (by decide)]
+  decide
+example : appendSpillCapAt 8 true 64 65 0 = 143 := by decide
+-- The same growth without the header (an 8-byte noscan element, `[]int`): 128, not 143.
+example : gcGrowsliceCap 8 false 64 65 = 128 := by decide
+example : gcGrowsliceCap 8 false 512 513 = 848 := by
+  rw [gcGrowsliceCap, gcNextSliceCap, appendGrowthCap.loop_of_lt (by decide),
+    appendGrowthCap.loop_of_ge (by decide)]
+  decide
+-- The size-class row's point (`slices/append-spill-size-class`): `[]int` 100 → 101 is 224.
+example : gcGrowsliceCap 8 false 100 101 = 224 := by decide
+-- Bytes: 3 → 4 on the heap is 8 (the stack buffer's 32 is another member of the envelope).
+example : gcGrowsliceCap 1 false 3 4 = 8 := by decide
+example : gcGrowsliceCap 1 false 512 513 = 896 := by
+  rw [gcGrowsliceCap, gcNextSliceCap, appendGrowthCap.loop_of_lt (by decide),
+    appendGrowthCap.loop_of_ge (by decide)]
+  decide
+-- 16-byte pointerful elements (`[]string`): the header shows at 32 → 33 (1032 → 1152 − 8).
+example : gcGrowsliceCap 16 true 32 33 = 71 := by decide
+-- A 608-byte pointerful struct: 16 → 17 is 33 (19464 → 20480 − 8), 33 → 34 the page path.
+example : gcGrowsliceCap 608 true 16 17 = 33 := by decide
+example : gcGrowsliceCap 608 true 33 34 = 67 := by decide
+-- A 1024-byte element: the header is visible at the 5th append (4 → 5: 8 · 1024 + 8 = 8200
+-- → class 9472 − 8 → 9) where the noscan twin stays at 8 (8192 is a class); the sequences to
+-- 50 appends are 1 2 4 9 18 40 80 and 1 2 4 8 16 32 64 (`slices/append-cap-gc-header-elem`).
+example : gcGrowsliceCap 1024 true 4 5 = 9 := by decide
+example : gcGrowsliceCap 1024 false 4 5 = 8 := by decide
+example : gcGrowsliceCap 1024 true 9 10 = 18 := by decide
+example : gcGrowsliceCap 1024 false 8 9 = 16 := by decide
+-- A zero-size element is `newLen`.
+example : gcGrowsliceCap 0 false 4 5 = 5 := by decide
 
 /-! ### The conversion capacity envelope (R3 / b6, `ChoiceSite.convCap`)
 

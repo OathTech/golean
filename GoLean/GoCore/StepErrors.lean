@@ -559,6 +559,41 @@ theorem tySizeAlignTy_strict' {p : Platform} {types : TypeEnv} {b : Nat} {ty : T
   tySizeAlignTy_strict (tySizeAlignAt_strict p types b) ty
 macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact tySizeAlignTy_strict')
 
+-- The element's pointer scan (G18, 2026-10-23): the same descent as the size computation,
+-- the same leaves — a refusal or nothing.
+theorem fieldsHavePointers_strict {f : Ty → Except Stop Bool}
+    (hf : ∀ t, ErrP Stop.Strict (f t)) (fs : List FieldDef) :
+    ErrP Stop.Strict (fieldsHavePointers f fs) := by
+  fun_induction fieldsHavePointers f fs <;> errp
+
+theorem tyHasPointersTy_strict {f : TypeIdx → Except Stop Bool}
+    (hf : ∀ i, ErrP Stop.Strict (f i)) (ty : Ty) : ErrP Stop.Strict (tyHasPointersTy f ty) := by
+  induction ty using Ty.arrayInduction with
+  | array n e ih => unfold tyHasPointersTy; errp
+  | leaf t hne =>
+    unfold tyHasPointersTy
+    split
+    all_goals first
+      | exact absurd rfl (hne _ _)
+      | errp
+
+theorem tyHasPointersAt_strict (types : TypeEnv) :
+    ∀ (bound : Nat) (i : TypeIdx), ErrP Stop.Strict (tyHasPointersAt types bound i) := by
+  intro bound
+  induction bound with
+  | zero => intro i; unfold tyHasPointersAt; errp
+  | succ n ih =>
+    intro i
+    have h1 := tyHasPointersTy_strict ih
+    have h2 := fieldsHavePointers_strict (tyHasPointersTy_strict ih)
+    unfold tyHasPointersAt
+    errp
+
+theorem tyHasPointersTy_strict' {types : TypeEnv} {b : Nat} {ty : Ty} :
+    ErrP Stop.Strict (tyHasPointersTy (tyHasPointersAt types b) ty) :=
+  tyHasPointersTy_strict (tyHasPointersAt_strict types b) ty
+macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact tyHasPointersTy_strict')
+
 theorem renderPrint_strict {nl : Bool} : ∀ {vs : List GoValue}, ErrP Stop.Strict (renderPrint nl vs)
   | [] => by unfold renderPrint; errp
   | v :: vs => by

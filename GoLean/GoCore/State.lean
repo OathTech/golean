@@ -414,7 +414,7 @@ def ChoiceSite.canonicalSlot0 : ChoiceSite → String
   | .mapIter =>
       "first remaining candidate in cell order (stop LAST; the zero stream IS the canonical produce-all member — memo §5 ruling Q3; the last MANDATORY candidate is a bound-1 consult and pops nothing, G-U)"
   | .appendSpill =>
-      "the growth-formula capacity (extra = 0 keeps gc's deterministic point; width ≥ 2 always — `one_lt_appendSpillWidth`)"
+      "gc's realized capacity (extra = 0 is `gcGrowsliceCap`: `roundupsize(nextslicecap(newLen, oldCap) · elemSize, noscan) / elemSize`, the malloc header included — G18, [USER] ruling 2026-10-23, `appendSpillCapAt_zero`; before it the growth-formula point, gc's `nextslicecap` without the size-class rounding; the envelope and its width are unchanged; width ≥ 2 always — `one_lt_appendSpillWidth`)"
   | .l2Entry =>
       "first ready clause in clause order (.picks is ≥ 2 ready by construction; singleton commit is .done upstream)"
   | .l2Arrival =>

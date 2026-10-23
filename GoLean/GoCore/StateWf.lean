@@ -5719,7 +5719,7 @@ theorem applyStmtOp_wf {σ : Store} {ch : Choices} {op : StmtOp} {nt : Nat}
         · simp [Bind.bind, Except.bind] at hplan
         simp only [Choices.consumeAt_appendSpill, bind_eq_ok, pure_eq_ok,
           Except.ok.injEq, Prod.mk.injEq] at hplan
-        obtain ⟨⟨oldValues, trO⟩, holdValues, backing, hbacking, hplan⟩ := hplan
+        obtain ⟨pointerful, hhp, ⟨oldValues, trO⟩, holdValues, backing, hbacking, hplan⟩ := hplan
         try dsimp only at hbacking hplan
         subst hplan
         try dsimp only at h

@@ -364,13 +364,15 @@ def mapIterFacts (s : Store) (base : Option Loc)
 
 /-- Append-spill facts (R2): the DECLARED envelope [newLen, upper] with
 upper = `appendSpillUpper`; every slot realizes a capacity ≥ newLen (the
-spec floor) and ≤ upper; slot 0 is the growth-formula point; the slot map
-is a bijection onto the envelope. -/
+spec floor) and ≤ upper; slot 0 is gc's realized capacity (`gcGrowsliceCap`
+of the element's size and pointer scan — G18, 2026-10-23; before it the
+growth-formula point); the slot map (`appendSpillCapAt`, Ops.lean) is a
+bijection onto the envelope. -/
 def spillFacts (s : Store) (c : Config) : MenuFacts :=
   let bad := fun (why : String) =>
     ({ specWidth := none, invariants := [(why, false)], pickCheck := fun _ => [] } : MenuFacts)
   match c with
-  | .retV v (.stmtOpK (.appendSlice _) _ done [] _ _) =>
+  | .retV v (.stmtOpK (.appendSlice elem) _ done [] _ _) =>
       match (v :: done).reverse with
       | [_, sliceV, elemsV] =>
           match valueAsSlice sliceV, valueAsSlice elemsV with
@@ -378,24 +380,28 @@ def spillFacts (s : Store) (c : Config) : MenuFacts :=
               match sliceVisibleValues ctx s elems with
               | .error _ => bad "appended elements readable"
               | .ok elemValues =>
+                  match tySizeBytes ctx.types elem, tyHasPointers ctx.types elem with
+                  | .error _, _ => bad "element size computable"
+                  | _, .error _ => bad "element pointer scan computable"
+                  | .ok elemSize, .ok pointerful =>
                   let newLen := slice.len + elemValues.size
-                  let growth := appendGrowthCap slice.cap newLen
+                  let realized := gcGrowsliceCap elemSize pointerful slice.cap newLen
                   let upper := appendSpillUpper slice.cap newLen
                   let width := upper - newLen + 1
-                  let capOf := fun (e : Nat) => newLen + ((growth - newLen + e) % width)
+                  let capOf := fun (e : Nat) => appendSpillCapAt elemSize pointerful slice.cap newLen e
                   let bij := if width ≤ 8192 then
                       sortNats ((List.range width).map capOf) == (List.range width).map (newLen + ·)
                     else true
                   { specWidth := some width
                     invariants :=
                       [ ("spill only when newLen > cap", newLen > slice.cap),
-                        ("newLen ≤ growth ≤ upper", newLen ≤ growth && growth ≤ upper),
+                        ("newLen ≤ realized ≤ upper", newLen ≤ realized && realized ≤ upper),
                         (s!"slot map is a bijection onto [newLen, upper]{if width > 8192 then " (skipped: width > 8192)" else ""}", bij) ]
                     pickCheck := fun p =>
                       let cap := capOf p
                       (if cap < newLen then [s!"realized cap {cap} below the spec floor newLen={newLen}"] else []) ++
                       (if cap > upper then [s!"realized cap {cap} above the declared upper {upper}"] else []) ++
-                      (if p == 0 && cap != growth then [s!"slot 0 is not the growth-formula point ({cap} ≠ {growth})"] else []) }
+                      (if p == 0 && cap != realized then [s!"slot 0 is not gc's realized capacity ({cap} ≠ {realized})"] else []) }
           | _, _ => bad "append operands are slices"
       | _ => bad "append operand arity"
   | _ => bad "append apply shape recognized"

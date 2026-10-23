@@ -106,7 +106,7 @@ between sweeps (the reconciler's C12 checks row COUNT, not lines).
 | Site | Code | Bound | Consumed when | Empty-stream default |
 |---|---|---|---|---|
 | Map-iteration pick (`mapIter`) | StepFn.lean `.mapIterK` arm | live candidates + conditional stop slot | every iteration with ≥ 2 slots — the LAST mandatory candidate is a bound-1 consult and pops nothing (G-U 2026-09-04; before it this site alone popped at width 1) | first remaining candidate in cell order, stop LAST (columns re-synced 2026-08-22 — the Bound/default cells were still describing the RETIRED snapshot design; launch audit D2-F1) |
-| Append spill capacity (`appendSpill`) | Machine.lean:963 | `appendSpillWidth` (Ops.lean:1972) | every spill | gc growth-formula point |
+| Append spill capacity (`appendSpill`) | Machine.lean:963 | `appendSpillWidth` (Ops.lean:1972) | every spill | gc's realized capacity `gcGrowsliceCap` (G18, 2026-10-23 — before it the growth-formula point) |
 | L2 select pick, entry path (`l2Entry`) | Machine.lean:2819 | ready-clause count | only width > 1 | first ready clause (clause order) |
 | L2 select pick, arrival path (`l2Arrival`) | Multi.lean:853 | `.multi` outcome count | only `.multi` | first ready clause |
 | L4 waiter pick (`l4Waiter`) | Multi.lean:1039 | matching-candidate count | only width > 1 | lowest (goroutine order, clause order) |
@@ -2251,8 +2251,9 @@ row so the axis stops being invisible, nothing more.
   underlying array" — ANY capacity ≥ newLen conforms (unbounded
   latitude). Machine: envelope [newLen, max(32, 2·growth)]
   (`appendSpillUpper` Ops.lean:1944–1972 with the containment argument;
-  consumption Machine.lean:954–970, empty stream = the gc
-  growth-formula point).
+  consumption Machine.lean:954–970, empty stream = gc's REALIZED
+  capacity since G18, 2026-10-23 — below; before it the growth-formula
+  point).
 - NOT maximal, deliberately: the plausible upper bound is unbounded;
   the envelope is a PRAGMATIC SUBSET believed ⊇ gc across probed
   regimes (BUG-021's widening: stack buffer, size-class rounding,
@@ -2262,6 +2263,61 @@ row so the axis stops being invisible, nothing more.
 - EVIDENCE: GC probe sweep over element sizes (go1.26.5); the -race
   allocator lands on other members (cap-zero → 1) — live validation.
   XIMPL (gccgo/tinygo allocators) would stress the upper end.
+
+**SLOT 0 = gc's REALIZED CAPACITY; THE SLOT ORDER (G18, [USER] ruling
+2026-10-23, Mike, relayed by the [AGENT] coordinator — backlog row 49; the
+raft-proofs ask `2026-10-23_golean-ask-append-capacity.md`, option 1; lane
+`core/g18-append-capacity-1023`).** The envelope above is UNCHANGED — the
+same set `[newLen, max(32, 2·growth)]`, the same width `appendSpillWidth`,
+so every tape that was valid stays valid and the modeled set is the same —
+and only the member the EMPTY tape selects moved. Slot 0 was the
+element-size-free growth formula (`appendGrowthCap`, gc's `nextslicecap`
+alone: at the customer's `[]*pb.Entry` 64 → 65 it gave 128 where gc gives
+143); it is now gc's `growslice` capacity `gcGrowsliceCap elemSize
+pointerful oldCap newLen = roundupsize(nextslicecap(newLen, oldCap) ·
+elemSize, noscan) / elemSize` (Ops.lean, with `gcNextSliceCap`, the
+header-aware `gcRoundupSizeOf` over the pinned size-class tables, and the
+element's pointer scan `tyHasPointers` — gc's `et.Pointers()`, the
+`noscan` bit that charges the 8-byte malloc header to a pointerful
+allocation over 512 bytes; `runtime/slice.go:178`, `msize.go:16`,
+`internal/runtime/gc/malloc.go:17,47` @ go1.26.5). SLOT ORDER
+(`appendSpillCapAt elemSize pointerful oldCap newLen extra = newLen +
+((gcGrowsliceCap − newLen + extra) mod width)`): the envelope walked
+UPWARD from gc's point, wrapping to `newLen` after the upper end — a
+bijection onto the envelope, as before with the growth formula in the
+seat. Kernel-checked: `appendSpillCapAt_zero` (slot 0 IS gc's capacity on
+every spill, the customer-citable lemma), `appendSpillCapAt_ge` /
+`appendSpillCapAt_le_upper` (every slot inside the envelope),
+`gcGrowsliceCap_ge` / `gcGrowsliceCap_le_appendSpillUpper` (gc's point is
+a member — the containment argument above is now a theorem for every
+element size and both scan kinds), `gcRoundupSizeOf_noscan` (the noscan
+rounding is R3's `gcRoundupSize`); concrete instances as `example`s (the
+`[]*T` sequence 1 2 4 … 64 143 287 607 1023, `[]int` … 128 256 512 848,
+bytes, strings, a 608-byte and a 1024-byte element, `[]struct{}`),
+cross-checked against gc and raft-proofs' mirror `GoSlice.lean`.
+REGIMES slot 0 does NOT realize (members still, other picks, the
+membership rows): the compiler's 32-byte STACK buffer for a non-escaping
+result's FIRST append (`ssagen/ssa.go` `getBackingStoreInfoForAppend`,
+`K = 32 / elemSize` elements, `newLen ≤ K`) — which is what the old
+formula's `oldCap = 0 → max 4 newLen` arm coincided with for 8-byte
+elements — and the `-race` allocator's points. No strict row observes a
+spill's capacity (the strict lane's tape-invariance re-run refuses any
+program whose observation depends on a pick), so no existing row moved:
+the 259 strict and membership rows whose programs mention `cap` were
+re-run at the change with no flip either way, and the four membership rows
+`slices/append-cap-gc-{pointer-elem,noscan-elem,header-elem,
+header-elem-noscan}` (the customer's `[]*T` 64 → 65, its noscan twin, a
+1024-byte pointerful element 4 → 5 where the header shows, its noscan
+twin; `members=` pins the envelope's cardinality) version-track gc's point
+at those shapes, while the default itself is pinned at the machine level
+by the eval tests (`Tests/GoCoreEval.lean`, G18) and `appendSpillCapAt_zero`.
+The element size
+is `tySizeBytes` (the R16 pin, computed before the consult already, for
+the `growslice` refusal); where it refuses (an `.unsupported` type, an
+opaque declaration, an untyped integer kind) the arm refuses by name
+before the consult, as before; `tyHasPointers` refuses only where the
+size does. `choice-trace`'s menu check `spillFacts` recomputes the slot
+map at every consult and names a slot 0 that is not gc's capacity.
 
 **OVER-WIDTH FINDING (R3 / b6 design, 2026-10-07 — a later R2 narrowing lane,
 PENDING [USER]).** Under the standing rule of 2026-10-07 (semantic widenings are allowed only where they match real Go — a widening admits only what the
@@ -2277,7 +2333,9 @@ list, not an interval), with the membership rows `slices/append-spill-*`
 re-pinned to the narrower set; the site's `canonicalSlot0` («width ≥ 2 always
 — `one_lt_appendSpillWidth`») and `spillFacts`' bijection invariant would
 change with it. Not scheduled by this lane; rowed here so the over-admission
-is not forgotten (every detected gap is rowed).
+is not forgotten (every detected gap is rowed). G18 (2026-10-23, above) did
+NOT take it either: it moved slot 0 onto gc's realized point and left the
+interval as it is, by the ruling's terms (the envelope unchanged).
 
 **`strings.Builder.grow` rides this envelope (added 2026-09-03,
 `stdlib-source-2`).** Upstream's `bytealg.MakeNoZero(2*cap+n)` — a

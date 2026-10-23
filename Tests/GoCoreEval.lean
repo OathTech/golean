@@ -1786,6 +1786,27 @@ private def coreEnumFirstKeyFunction : GoCore.Func := {
 }
 
 private def enumCapPanicProgram : GoCore.Program := { funcs := #[coreEnumCapPanicFunction] }
+
+/-- G18 (2026-10-23): the DEFAULT tape's spill capacity through the arm itself — `make` a
+slice of `elem` at `oldCap`/`oldCap`, append ONE element, read `cap`. Under the empty stream
+slot 0 is gc's realized capacity (`appendSpillCapAt_zero`); these pin it end to end, with
+the element's size and pointer scan computed in context. -/
+private def coreAppendCapFunction (name : String) (elem : GoCore.Ty) (oldCap : Int) : GoCore.Func := {
+  id := ⟨name⟩,
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[
+      { id := vid "s", typ := .slice elem },
+      { id := vid "e", typ := .slice elem }
+    ]
+    #[
+      .makeSlice (.var (vid "s")) elem (.intLit oldCap) (some (.intLit oldCap)),
+      .makeSlice (.var (vid "e")) elem (.intLit 1) none,
+      .appendSlice (.var (vid "s")) elem (.var (vid "s")) (.var (vid "e")),
+      .assign (.var (vid "z")) (.capacity (.var (vid "s")))
+    ]
+}
 private def enumFirstKeyProgram : GoCore.Program := { funcs := #[coreEnumFirstKeyFunction] }
 
 /-- Init-slice driver-agreement shape: `$pkginit` consumes choices (a
@@ -3600,6 +3621,26 @@ def main : IO UInt32 := do
     (GoCore.appendGrowthCap 2 5) 5)
   passed := passed && (← expectNatEq "GoCore appendGrowthCap large-cap 1.25x regime"
     (GoCore.appendGrowthCap 256 257) 512)
+  -- G18 (2026-10-23, backlog row 49): the default tape's spill capacity IS gc's realized
+  -- capacity, through the arm (`tySizeBytes` + `tyHasPointers` in context, then
+  -- `appendSpillCapAt … 0`): the customer's `[]*T` 64 → 65 is 143 (the malloc header on a
+  -- 1024-byte pointerful backing), its noscan twin 128, a 1024-byte pointerful element
+  -- 4 → 5 is 9 where its noscan twin is 8, a zero-size element is newLen, and bytes 3 → 4
+  -- is the heap 8 (the stack buffer's 32 is another member). gc-probed 2026-10-23.
+  passed := passed && (← expectIntResult "G18 default spill capacity: []*int 64 -> 65 is 143 (malloc header)"
+    (GoCore.Machine.runFunctionM 100000 (coreAppendCapFunction "append_cap_ptr_F" (.pointer .int) 64) #[]) 143)
+  passed := passed && (← expectIntResult "G18 default spill capacity: []int 64 -> 65 is 128 (noscan)"
+    (GoCore.Machine.runFunctionM 100000 (coreAppendCapFunction "append_cap_int_F" .int 64) #[]) 128)
+  passed := passed && (← expectIntResult "G18 default spill capacity: [][128]*int 4 -> 5 is 9 (header on a 1024-byte element)"
+    (GoCore.Machine.runFunctionM 100000 (coreAppendCapFunction "append_cap_bigptr_F" (.array 128 (.pointer .int)) 4) #[]) 9)
+  passed := passed && (← expectIntResult "G18 default spill capacity: [][128]int 4 -> 5 is 8 (noscan 1024-byte element)"
+    (GoCore.Machine.runFunctionM 100000 (coreAppendCapFunction "append_cap_bignoscan_F" (.array 128 .int) 4) #[]) 8)
+  passed := passed && (← expectIntResult "G18 default spill capacity: [][0]int 4 -> 5 is 5 (zero-size element: newLen)"
+    (GoCore.Machine.runFunctionM 100000 (coreAppendCapFunction "append_cap_zero_F" (.array 0 .int) 4) #[]) 5)
+  passed := passed && (← expectIntResult "G18 default spill capacity: []uint8 3 -> 4 is 8 (heap bytes)"
+    (GoCore.Machine.runFunctionM 100000 (coreAppendCapFunction "append_cap_byte_F" (.int .uint8) 3) #[]) 8)
+  passed := passed && (← expectIntResult "G18 default spill capacity: []int 100 -> 101 is 224 (size-class rounding)"
+    (GoCore.Machine.runFunctionM 100000 (coreAppendCapFunction "append_cap_sizeclass_F" .int 100) #[]) 224)
   -- F1 guardrail: the stream-panicking shape (panic iff spill capacity
   -- lands on 7) must FAIL an expect-status=ok enumeration loudly.
   passed := passed && (← expectEnumFailure "GoCore enumerator rejects stream-dependent panic under expect-status ok"
@@ -3613,11 +3654,13 @@ def main : IO UInt32 := do
   passed := passed && (← expectEnumMembers "GoCore enumerator first-key set is {1,2,3}"
     (enumerate enumFirstKeyProgram "enum_first_key_F" (some ["ok"])) 3)
   -- F5: driver-agreement pins, per consumption-site class (incl. the
-  -- panic-observation path via stream [3] on the append shape: the
-  -- envelope offset keeps extra 3 landing on cap 7 — newLen 1 +
-  -- ((growth 4 - 1 + 3) % 32) = 7).
+  -- panic-observation path via stream [6] on the append shape: the
+  -- envelope offset puts extra 6 on cap 7 — newLen 1 +
+  -- ((realized 1 - 1 + 6) % 32) = 7, slot 0 being gc's heap capacity
+  -- roundupsize(1 · 8) / 8 = 1 for an 8-byte noscan element since G18
+  -- (2026-10-23; before it the growth-formula point 4 put extra 3 there)).
   passed := passed && (← expectDriverAgreement "GoCore enumerator agrees with the single-run driver (append spill incl. panic path)"
-    enumCapPanicProgram "enum_cap_panic_F" none [[], [1], [3], [7], [12, 9]])
+    enumCapPanicProgram "enum_cap_panic_F" none [[], [1], [6], [7], [12, 9]])
   passed := passed && (← expectDriverAgreement "GoCore enumerator agrees with the single-run driver (map-range pick-next)"
     enumFirstKeyProgram "enum_first_key_F" (some ["ok"]) [[], [1], [2], [5, 3, 1], [9, 8, 7, 6]])
   -- Init slice: $pkginit's choice consumption is part of the run in
