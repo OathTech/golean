@@ -4305,14 +4305,30 @@ MallocHeaderSize = 32760`) for a POINTERFUL element type whose byte size exceeds
 the ALLOCATION's bytes `newcap · elemSize`, not on the element's) is charged the 8-byte
 malloc header before the class lookup and credited it after; a noscan request never is
 (`gcRoundupSizeOf_noscan`: the existing `gcRoundupSize`); a large request rounds up to the
-8 KiB page. `pointerful` is gc's `et.Pointers()` (`tyHasPointers`, above). The regimes slot 0
-does NOT realize — still members of the envelope, selected by the other picks, and
-version-tracked by the membership rows `slices/append-spill-*` — are the compiler's stack
-buffer (above; the customer's slices are heap fields, where it never applies) and the
-`-race` allocator's points. Overflow: gc's `int`/`uintptr` wraps in `nextslicecap` and
-`roundupsize` lie behind the arm's own refusal (`newLen < 2^63`, `newLen · elemSize ≤
-maxAllocBytes`, decided before the consult), so the pure-`Nat` formulas agree with gc on the
-arm's whole domain.
+8 KiB page. `pointerful` is gc's `et.Pointers()` (`tyHasPointers`, above). THE MEMBERS gc
+REALIZES OUTSIDE SLOT 0 — still members of the envelope, selected by the other picks, and
+version-tracked by the membership rows `slices/append-spill-*` — are the compiler's two
+STACK-BACKING optimisations for a local slice that does not escape, or escapes only after
+its appends (gc 1.26; neither applies to a heap field such as the customer's
+`MemoryStorage.ents`): (a) the 32-byte stack buffer (above) — a non-escaping result's
+FIRST append with `newLen ≤ K = 32 / elemSize` gets the whole `[K]T` buffer, e.g. `var s
+[]int; s = append(s, 1)` → cap 4 where slot 0 gives 1; (b) the `growsliceBuf` size-class
+LADDER (`cmd/compile/internal/slice/slice.go:400-452`: an exclusive slice with at least two
+dynamic appends that later escapes, with `cap` used → `UseBuf`; `runtime/slice.go:510`
+`growsliceBuf`: capacity `roundupsize(newLen · elemSize) / elemSize`, no doubling, while
+`newLen ≤ K`, then `moveSlice` preserves it), e.g. `var s []int; for i := 0; i < 3; i++ { s
+= append(s, i) }; c := cap(s); sink = s` → cap 3 where slot 0 gives 4 (inside the envelope
+[3, 32]; measured 2026-10-23). The `-race` build is NOT a further regime: it switches both
+optimisations off and lands on slot 0 (the review's 121 heap-regime points across 27
+element kinds equal under plain and `-race`; the two examples above read 1 and 4 under
+`-race`). Overflow: gc's `int`/`uintptr` wraps in `nextslicecap` and `roundupsize` lie
+behind the arm's own refusal (`newLen < 2^63`, `newLen · elemSize ≤ maxAllocBytes`, decided
+before the consult), so the pure-`Nat` formulas agree with gc on the arm's domain — with
+ONE stated edge: the arm refuses on `newLen · elemSize > maxAllocBytes` BEFORE rounding
+while gc (and the customer's mirror) panics on the ROUNDED `capmem > maxAlloc`, so in the
+window `newLen · elemSize ≤ 2^48 < roundupsize(nextslicecap · elemSize)` gc raises
+`growslice: len out of range` where slot 0 realizes a page-rounded capacity — a slice of at
+least 2^47 bytes, unreachable in practice (the arm's R16 note records the band).
 
 THE SLOT MAP (`appendSpillCapAt`): pick `extra` selects
 `newLen + ((gcGrowsliceCap − newLen + extra) mod width)` — the envelope walked upward from

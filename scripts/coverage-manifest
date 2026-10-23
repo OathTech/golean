@@ -350,7 +350,7 @@ validate_lane_params() {
     key="${kv%%=*}"
     value="${kv#*=}"
     case "$key" in
-      width|sites|cap|work|members|statuses|backedge|iters|engine) ;;
+      width|sites|cap|work|members|statuses|backedge|iters|engine|default) ;;
       nonterm)
         # RETIRED 2026-10-06 (docs/2026-10-06_spin-bounds.md): a per-branch
         # budget in pool STEPS moved with every step-count refactor (C4,
@@ -414,6 +414,22 @@ validate_lane_params() {
       fi
       if [[ "$value" == *ok*ok* || "$value" == *panic*panic* ]]; then
         echo "coverage-manifest: $cases_file: statuses has a duplicate entry: $kv" >&2
+        return 1
+      fi
+      continue
+    fi
+    if [[ "$key" == "default" ]]; then
+      # default=gc (G18, 2026-10-23): the membership stage also compares
+      # every plain gc draw with the empty-tape observation (the default
+      # run) — the customer's premise «the default run is gc's run» as a
+      # differential check (scripts/diff-coverage run_membership_case_rows).
+      # Membership only; the one value is gc.
+      if [[ "$lane_ctx" != "membership" ]]; then
+        echo "coverage-manifest: $cases_file: default= is a membership-lane param (the strict lane compares the default run with gc already): $kv (lane=$lane_ctx)" >&2
+        return 1
+      fi
+      if [[ "$value" != "gc" ]]; then
+        echo "coverage-manifest: $cases_file: default= must be 'gc' (every plain gc draw equals the empty-tape observation): $kv" >&2
         return 1
       fi
       continue

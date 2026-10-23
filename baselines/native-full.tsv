@@ -16,6 +16,12 @@
 #     slices/append-cap-gc-header-elem-noscan  PASS/membership — its noscan twin: gc 8 (8192 is a class), members=28
 #   Negative lane: no move (415/415). Measured by CAPPED_MEM_MAX=64G capped scripts/ci --diff at the lane tip 1eeb5a35 (its only red: these
 #   four NEW ids; 760 s wall including the lake check speedbump, 220 s).
+#   STATED PLAINLY (the lane review's F2): as pinned at 1eeb5a35 these four rows turned red only if the envelope's cardinality moved or
+#   gc's draw left the set — NOT if gc's realized point left slot 0; the default was pinned only by seven eval tests and the formula ↔
+#   slot-0 lemma, and formula ↔ gc rested on the lane's and the review's probes. The fix round gives the four rows `default=gc`
+#   (scripts/diff-coverage, the membership stage): every plain gc draw must equal the empty-tape observation, else the row FAILS by
+#   name — the customer's premise «the default run is gc's run» as a differential check at these four shapes (shown red in scratch on
+#   slices/append-spill-stack-buffer, gc 32 ≠ slot 0's 8; green on the four). Results, stages and causes unchanged by it.
 # re-pinned: 2026-10-14 [AGENT], lane frontend/blank-fields-1013 — the [USER]'s ruling on the blank-field OPERAND (Mike 2026-10-14,
 #   both halves agreed, relayed by the [AGENT] coordinator; the recommendation agreed to: at a blank field, a constant, `nil`,
 #   or a plain variable read gives the zero value with nothing evaluated, and any other operand is refused by name): the lane's

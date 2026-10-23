@@ -2077,7 +2077,10 @@ emitting the zero-target chan-recv statement directly.
   mechanisms (32-byte stack buffer ≤ 32 elements; size-class step ratio
   < 1.5 < 2 above 32 bytes). The choice is offset so the empty stream
   keeps the growth-formula point (strict lane unchanged — zero baseline
-  drift outside the three pins); the site bound consumed from the
+  drift outside the three pins) — until G18, 2026-10-23, when the empty
+  stream's pick became gc's realized capacity (`gcGrowsliceCap`, the
+  size-class rounded `growslice` result; the envelope and the offset
+  shape unchanged; latitude inventory R2); the site bound consumed from the
   stream is now the shape-dependent `appendSpillWidth`, absorbed by the
   shared applyStmtOp (relation and stepFn move in lockstep) and the
   obliviousness metatheory; enumerator width metadata updated

@@ -130,7 +130,17 @@ Optional lane columns (membership lane, arc slice 3,
   consumption depth, default 8), `cap` (max distinct observations,
   default 64), `work` (enumerator work cap, default 200000), `members`
   (the certified set's exact cardinality — a mechanical pin; also the
-  sampling rule's early-stop target, below). Under `engine=dedup` (the
+  sampling rule's early-stop target, below), `default` (`gc`, membership
+  only; G18, 2026-10-23: the membership stage ALSO compares every PLAIN gc
+  draw with the empty-tape observation — the default run, the
+  driver-coupling pin's stream-`[]` run — and fails the row by name if
+  they differ: «gc's realized point has left slot 0». The `-race` draws
+  are not compared: that build switches gc's stack-backing optimisations
+  off and lands on slot 0 by construction. It is the customer's premise
+  «the default run is gc's run» as a differential check, for rows whose
+  observable is a choice site's realized member — the strict lane cannot
+  carry such a row, its tape-invariance re-run refuses it; set on the
+  four `slices/append-cap-gc-*` rows). Under `engine=dedup` (the
   verified whole-graph certificate) only `work=`, `members=` and
   `statuses=` are read: `width=`, `sites=`, `cap=` and `backedge=` are
   REFUSED there as inert — by the manifest, by the harness, and at the CLI

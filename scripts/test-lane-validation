@@ -126,6 +126,19 @@ expect_accept "explicit strict row" \
   '-\trangeFirstKey\t-\tok\t-\tmaps\tstrict\t-\t-'
 expect_accept "well-formed membership row" \
   '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=16'
+# default=gc (G18, 2026-10-23): membership-only, the one value gc — the
+# membership stage's plain-draw = empty-tape pin.
+expect_reject "default= on a strict row (the strict-lane param rule fires first)" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tstrict\t-\tdefault=gc' \
+  "strict-lane params may only declare"
+expect_reject "default= on a confluent row" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tconfluent\twhy text\twidth=4,default=gc' \
+  "default= is a membership-lane param"
+expect_reject "default= with a value other than gc" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=16,default=lean' \
+  "default= must be 'gc'"
+expect_accept "membership row with default=gc" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=16,members=3,default=gc'
 # ---- slice-4 lane shapes (confluent / racy / members pin).
 expect_reject "confluent without why" \
   '-\trangeFirstKey\t-\tok\t-\tmaps\tconfluent\t-\twidth=4' \

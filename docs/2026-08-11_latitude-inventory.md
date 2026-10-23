@@ -2295,22 +2295,49 @@ rounding is R3's `gcRoundupSize`); concrete instances as `example`s (the
 `[]*T` sequence 1 2 4 … 64 143 287 607 1023, `[]int` … 128 256 512 848,
 bytes, strings, a 608-byte and a 1024-byte element, `[]struct{}`),
 cross-checked against gc and raft-proofs' mirror `GoSlice.lean`.
-REGIMES slot 0 does NOT realize (members still, other picks, the
-membership rows): the compiler's 32-byte STACK buffer for a non-escaping
+THE MEMBERS gc REALIZES OUTSIDE SLOT 0 (members still, other picks, the
+membership rows): the compiler's two stack-backing optimisations for a
+local slice that does not escape, or escapes only after its appends (gc
+1.26; neither applies to a heap field such as the customer's
+`MemoryStorage.ents`) — (a) the 32-byte STACK buffer for a non-escaping
 result's FIRST append (`ssagen/ssa.go` `getBackingStoreInfoForAppend`,
-`K = 32 / elemSize` elements, `newLen ≤ K`) — which is what the old
-formula's `oldCap = 0 → max 4 newLen` arm coincided with for 8-byte
-elements — and the `-race` allocator's points. No strict row observes a
-spill's capacity (the strict lane's tape-invariance re-run refuses any
-program whose observation depends on a pick), so no existing row moved:
-the 259 strict and membership rows whose programs mention `cap` were
-re-run at the change with no flip either way, and the four membership rows
+`K = 32 / elemSize` elements, `newLen ≤ K`: `var s []int; s = append(s,
+1)` → cap 4, slot 0 gives 1 — what the old formula's `oldCap = 0 → max 4
+newLen` arm coincided with for 8-byte elements), and (b) the
+`growsliceBuf` size-class LADDER (`cmd/compile/internal/slice/slice.go:
+400-452`: an exclusive slice with at least two dynamic appends that
+later escapes, `cap` used → `UseBuf`; `runtime/slice.go:510`: capacity
+`roundupsize(newLen · elemSize) / elemSize`, no doubling, while `newLen ≤
+K`, then `moveSlice` preserves it: `var s []int; for i := 0; i < 3; i++ {
+s = append(s, i) }; c := cap(s); sink = s` → cap 3, slot 0 gives 4, inside
+the envelope [3, 32]; measured 2026-10-23). The `-race` build is NOT a
+regime of its own: it switches both optimisations off and lands on slot 0
+(the lane review's 121 heap-regime points across 27 element kinds equal
+under plain and `-race`; the two examples read 1 and 4 under `-race`).
+WHAT TURNS RED IF gc's POINT LEAVES SLOT 0 — stated plainly: the four
+membership rows' `members=` pins and the membership check say only that
+the envelope's cardinality is unchanged and that gc's draw is a member;
+the formula ↔ slot-0 link is the lemma and the seven eval tests
+(`Tests/GoCoreEval.lean`, G18), and the formula ↔ gc link rested on the
+lane's and the review's probes alone — no gate check. Since the review's
+fix round the four rows carry `default=gc` (`scripts/diff-coverage`,
+the membership stage; `docs/coverage-suite-structure.md`): every PLAIN gc
+draw must equal the empty-tape observation, failing the row by name
+otherwise — the customer's premise «the default run is gc's run» as a
+differential check at the four shapes; shown red on
+`slices/append-spill-stack-buffer` (gc 32 ≠ slot 0's 8) and green on the
+four. No strict row observes a spill's capacity (the strict lane's
+tape-invariance re-run refuses any program whose observation depends on
+a pick), so no existing row moved: the 259 existing rows whose programs
+mention `cap` (258 PASS + the pre-existing FAIL `noodler/frontier/
+short-circuit-alloc-make`; the lane's run had 263 verdicts, the other
+four its three then-strict drafts and the membership draft) were re-run
+at the change with no flip either way, and the four membership rows
 `slices/append-cap-gc-{pointer-elem,noscan-elem,header-elem,
 header-elem-noscan}` (the customer's `[]*T` 64 → 65, its noscan twin, a
 1024-byte pointerful element 4 → 5 where the header shows, its noscan
 twin; `members=` pins the envelope's cardinality) version-track gc's point
-at those shapes, while the default itself is pinned at the machine level
-by the eval tests (`Tests/GoCoreEval.lean`, G18) and `appendSpillCapAt_zero`.
+at those shapes.
 The element size
 is `tySizeBytes` (the R16 pin, computed before the consult already, for
 the `growslice` refusal); where it refuses (an `.unsupported` type, an
