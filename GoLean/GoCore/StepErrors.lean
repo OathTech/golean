@@ -594,6 +594,41 @@ theorem tyHasPointersTy_strict' {types : TypeEnv} {b : Nat} {ty : Ty} :
   tyHasPointersTy_strict (tyHasPointersAt_strict types b) ty
 macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact tyHasPointersTy_strict')
 
+-- The element's leaf count (release-readiness row 31(d), 2026-10-25): the same descent
+-- as the size and the pointer scan, the same leaves — a refusal or nothing.
+theorem fieldsLeafCount_strict {f : Ty → Except Stop Nat}
+    (hf : ∀ t, ErrP Stop.Strict (f t)) (fs : List FieldDef) :
+    ErrP Stop.Strict (fieldsLeafCount f fs) := by
+  fun_induction fieldsLeafCount f fs <;> errp
+
+theorem tyLeafCountTy_strict {f : TypeIdx → Except Stop Nat}
+    (hf : ∀ i, ErrP Stop.Strict (f i)) (ty : Ty) : ErrP Stop.Strict (tyLeafCountTy f ty) := by
+  induction ty using Ty.arrayInduction with
+  | array n e ih => unfold tyLeafCountTy; errp
+  | leaf t hne =>
+    unfold tyLeafCountTy
+    split
+    all_goals first
+      | exact absurd rfl (hne _ _)
+      | errp
+
+theorem tyLeafCountAt_strict (types : TypeEnv) :
+    ∀ (bound : Nat) (i : TypeIdx), ErrP Stop.Strict (tyLeafCountAt types bound i) := by
+  intro bound
+  induction bound with
+  | zero => intro i; unfold tyLeafCountAt; errp
+  | succ n ih =>
+    intro i
+    have h1 := tyLeafCountTy_strict ih
+    have h2 := fieldsLeafCount_strict (tyLeafCountTy_strict ih)
+    unfold tyLeafCountAt
+    errp
+
+theorem tyLeafCountTy_strict' {types : TypeEnv} {b : Nat} {ty : Ty} :
+    ErrP Stop.Strict (tyLeafCountTy (tyLeafCountAt types b) ty) :=
+  tyLeafCountTy_strict (tyLeafCountAt_strict types b) ty
+macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact tyLeafCountTy_strict')
+
 theorem renderPrint_strict {nl : Bool} : ∀ {vs : List GoValue}, ErrP Stop.Strict (renderPrint nl vs)
   | [] => by unfold renderPrint; errp
   | v :: vs => by

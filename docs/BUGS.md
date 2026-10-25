@@ -4600,7 +4600,8 @@ the issue53619 family was wrong.
   entries and struct fields) and BUG-090's `sliceCapBudget`; the
   paragraph «FAIL-CLOSED (2026-10-12)» at the end of this entry has the
   measurements, the one residual that is NOT closed — the large-element
-  `make`, (2b) — and the finding that (1)'s quadratic term was already
+  `make`, (2b); its RUN-TIME-count half CLOSED BY REFUSAL 2026-10-25,
+  BUG-131 — and the finding that (1)'s quadratic term was already
   gone)
 - Expect: FAIL
 - Pinned-by: none (the refusal surfaces at `frontend-export` since
@@ -8988,3 +8989,60 @@ sample), the four gc-drop shapes (`negative-shift` gc 2, `interface-compare` gc 
 not an admitted operand, so the headline program now refuses by name instead of answering), and the two package-level
 rows (`pkg-init-call` gc 20, `pkg-init-shift` gc 2 — both WHOLE-EXPORT refusals, neither isolated). The ledger §5.1
 item 9 carries the deferred support; `docs/release.md` §4 states the limit.
+
+## BUG-131 — a `make` whose count is a RUN-TIME value and whose count × element footprint is past the materialization footprint budget BUILT its backing and died under the box's memory cap (exit 137, a `killed:137` non-verdict, never a named refusal; on a machine without the cap a memory runaway) — the owed core half of BUG-078's residual (2b) [semantic core; apparatus kill, no wrong answer; release-readiness rows 30 and 31(d), [USER] ruling 2026-10-25 relayed by the [AGENT] coordinator; FIXED BY REFUSAL the same day, lane `core/row31-fillers-1025`]
+
+- Status: fixed
+- Expect: FAIL
+- Pinned-by: none (the two Cases below are RED-BY-DESIGN refusal pins at `lean-observation`, cause
+  `unsupported:make-footprint-budget-runtime` (`scripts/machine-causes.tsv`), red forever at the oracle's `ok`
+  — gc allocates the backing and answers; the three admitted/panic controls of the same package PASS and sit
+  on no Cases line)
+- Cases: arrays/materialization-budget-runtime/make-over-budget, arrays/materialization-budget-runtime/make-cap-over-budget
+- Discovered: BUG-078's fix round (2026-10-12, review MEDIUM-1) closed the CONSTANT-count form at the decoder
+  (`checkMakeFootprint`) and named the run-time form as the owed core half (release-readiness row 30, then
+  31(d)); the lane reproduced it RED on main 541d8340's binary before the fix — `make([][1024]byte, n)` with
+  `n := 1 << 19` (2^29 leaves; gc answers 524295 after allocating 512 MiB) killed under `CAPPED_MEM_MAX=4G capped`
+  in 0.4 s and under 8G in 6.3 s (exit 137, the KILLED banner), while a 1<<10-row control answered under 4G in
+  0.15 s. Entry: [AGENT] lane worker, 2026-10-25.
+
+WHAT WAS WRONG. `sliceCapBudget` (BUG-090) bounds the element COUNT of a `make` and the decoder's
+`checkMakeFootprint` (BUG-078 (2b)) bounds count × footprint only for a CONSTANT count read off the wire; a
+count computed at run time — a variable, a parameter, an expression — passed both and `buildDefaultArrayValue`
+materialized count × leaves `GoValue` nodes. Past the box's cap that is a cgroup kill the runner records as
+`killed:137` (a non-verdict, honest but not a refusal, and not reproducible on a machine without `capped`,
+where it is an OOM).
+
+THE GUARD (`GoLean/GoCore/Machine.lean`, the `makeSlice` arm of `applyStmtOpCore.plan`): after gc's own
+`makeslice` panics (a request gc rejects keeps gc's panic text) and after the `sliceCapBudget` refusal (a count
+past it keeps that refusal), before any backing is built, `cap × tyLeafCount(elem) > arrayFootprintBudget`
+refuses by name — `make([]T, len L, cap C): a slice backing of C elements of F scalar elements each materializes
+C·F scalar elements, past the interpreter's footprint budget for a run-time-length make (16777216 elements,
+arrayFootprintBudget — the constant-length form refuses at decode, checkMakeFootprint; BUG-131 cost boundary,
+refused by name)`. The budget constant MOVED to the core (`Machine.arrayFootprintBudget`, beside
+`sliceCapBudget`; `NativeToIR.arrayFootprintBudget` reads it, `tools/nativefrontend/budgets.tsv` transcribes it
+and `budgetsTableTests` pins the transcription — one number). The element footprint is `tyLeafCount`
+(`GoLean/GoCore/Ops.lean`), the decoder's `tyFootprint?`/`typeDefFootprint?` restated over the machine's type
+table on the `tyHasPointers` descent: `[n]T` is n × T's leaves, a struct the sum of its fields (at least 1), a
+defined type its underlying's, everything else one leaf; it refuses exactly where `tySizeBytes` (read first in
+the arm) already does. The unit is LEAVES, not bytes ([AGENT] 2026-10-25): the backing is a tree of one
+`GoValue` per leaf, the decoder's constant-count check measures leaves, and a byte unit at this budget would
+have refused `make([]int, 1<<22)` — inside `sliceCapBudget` and running today. MAPS: `make(map[K]V, n)`
+allocates NOTHING for the hint here (an empty payload; gc clamps the hint and allocates lazily too), so there
+is no footprint to guard and a huge hint runs as gc does (`builtins/make-maxalloc/map-hint-over`). CHANNELS:
+`make(chan T, n)`'s buffer is a capacity NUMBER, never materialized (`chanPayload #[] n`), so after gc's own
+`makechan: size out of range` panic there is nothing to guard (`builtins/make-maxalloc/chan-zero-size-elem-huge`
+realizes `make(chan struct{}, 1<<62)` as gc does). ARRAYS by `new([n]T)`: an array type's length is a
+constant in Go, so there is no run-time count there; the decoder's `arrayLenBudget`/`arrayFootprintBudget`
+checks on the TYPE already cover it. The precedence (gc's panic → the count bound → the footprint) is pinned
+by `Tests/GoCoreEval.lean` `makeFootprintRuntimeTests` (ten pins: the refusal's text, one element past the
+budget, the cap form, two admitted controls, `1<<40` and `-1` as gc's panic, `1<<24` as the count bound's
+refusal, a defined struct element's summed leaves and its admitted control).
+
+THE ROWS (`Corpus/coverage/exec/arrays/materialization-budget-runtime/`): `make-over-budget` — `make([][1024]byte,
+n)`, `n = 1<<15` (2^25 leaves; gc 32775) and `make-cap-over-budget` — `make([][1024]byte, 1, n)` (the cap sizes
+the backing; gc 32775), both RED BY DESIGN; `make-at-budget` — `n = 1<<14`, exactly 1<<24 leaves, admitted
+(strict `>`; gc 16400, PASS); `make-small-elem` — `make([]byte, n)` at `n = 1<<15` (PASS: the element
+footprint is what the count-only bound misses); `make-maxalloc-first` — `n = 1<<40`, 2^50 bytes, gc's own
+`makeslice: len out of range` on both sides (status panic, PASS). The kill never recorded a PASS, so no
+existing row moved.

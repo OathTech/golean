@@ -5382,6 +5382,12 @@ theorem applyStmtOpCore_wf {σ : Store} {op : StmtOp}
         -- the allocation too: its refusal branch is an error, never `.ok`.
         split at hplan
         · simp [Bind.bind, Except.bind] at hplan
+        -- The footprint budget (`arrayFootprintBudget`, row 31(d)) follows it:
+        -- the leaf count binds, and its refusal branch is an error as well.
+        simp only [bind_eq_ok] at hplan
+        obtain ⟨elemLeaves, hleaves, hplan⟩ := hplan
+        split at hplan
+        · simp [Bind.bind, Except.bind] at hplan
         simp only [pure_bind, bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hplan
         obtain ⟨backing, hbacking, loc, hloc, rfl⟩ := hplan
         have hb0 := buildDefaultArrayValue_locSup hbacking
@@ -5406,6 +5412,12 @@ theorem applyStmtOpCore_wf {σ : Store} {op : StmtOp}
       · split at hplan <;> simp [Bind.bind, Except.bind] at hplan
       · -- The materialization budget (`sliceCapBudget`, BUG-090) precedes
         -- the allocation too: its refusal branch is an error, never `.ok`.
+        split at hplan
+        · simp [Bind.bind, Except.bind] at hplan
+        -- The footprint budget (`arrayFootprintBudget`, row 31(d)) follows it:
+        -- the leaf count binds, and its refusal branch is an error as well.
+        simp only [bind_eq_ok] at hplan
+        obtain ⟨elemLeaves, hleaves, hplan⟩ := hplan
         split at hplan
         · simp [Bind.bind, Except.bind] at hplan
         simp only [pure_bind, bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hplan

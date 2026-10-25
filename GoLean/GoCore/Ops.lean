@@ -499,6 +499,75 @@ def tyHasPointersAt (types : TypeEnv) : Nat → TypeIdx → Except Stop Bool
 def tyHasPointers (types : TypeEnv) (ty : Ty) : Except Stop Bool :=
   tyHasPointersTy (tyHasPointersAt types types.size) ty
 
+/-! ### Materialization footprint: the scalar LEAVES of a type (release-readiness row 31(d), 2026-10-25)
+
+The decoder's `tyFootprint?` / `typeDefFootprint?` (NativeToIR.lean) restated over the
+machine's type table, so the `make` arm can charge `arrayFootprintBudget` to a RUN-TIME
+count ([USER] ruling 2026-10-25, relayed): the leaf values one value of the type holds —
+`[n]T` is `n` times `T`'s; a struct is the SUM of its fields and at least one leaf
+(`[n]struct{}` still materializes `n` values); a defined type is its underlying's; an
+interface declaration is one leaf (a box); everything else — scalars, strings, pointers,
+slices, maps, channels, funcs, interfaces, sync primitives — is one leaf, since a value of
+such a type never contains its pointee. The unit is LEAVES, not bytes: the machine's backing
+is a tree of `GoValue`s, one node per leaf, so a `[1024]int` element costs what a `[1024]byte`
+element costs, and the decoder's constant-count check (`checkMakeFootprint`) measures the same
+unit — a shape admitted there with a constant count is admitted here with the same count
+as a run-time value, and vice versa ([AGENT] 2026-10-25: a byte unit at this budget would
+have refused `make([]int, 1<<22)`, inside `sliceCapBudget` and running today). The descent
+is `tyHasPointersTy`'s (the type layer structural on the type, the index layer
+`bound`-structural on the table) and refuses EXACTLY where the size does — an `.unsupported`
+type, an opaque declaration, an unknown index, an exhausted bound — so at the `make` site,
+where the element size is read first, a refusal here can only arise where the size already
+refused; it never guesses. (The decoder counts an opaque marker as one leaf because its uses
+refuse before any value exists; here the size's refusal precedes, the same outcome.) -/
+
+/-- The TYPE layer: structural on the type; `.defined` handed to `atDefined`. -/
+def tyLeafCountTy (atDefined : TypeIdx → Except Stop Nat) : Ty → Except Stop Nat
+  | .bool => pure 1
+  | .int _ => pure 1
+  | .float _ => pure 1
+  | .string => pure 1
+  | .array n elem => do
+      let f ← tyLeafCountTy atDefined elem
+      pure (n * f)
+  | .slice _ => pure 1
+  | .map _ _ => pure 1
+  | .chan _ _ => pure 1
+  | .pointer _ => pure 1
+  | .funcType _ _ _ => pure 1
+  | .interface _ => pure 1
+  | .defined i => atDefined i
+  | .unsupported feature => unsupported s!"materialization-footprint computation: {feature}"
+  | .sync _ => pure 1
+
+/-- Every field is visited (a refusal on any field is the struct's refusal, as in
+`fieldsHavePointers`); the struct's leaves are the sum of its fields'. -/
+def fieldsLeafCount (fieldLeaves : Ty → Except Stop Nat) : List FieldDef → Except Stop Nat
+  | [] => pure 0
+  | field :: rest => do
+      let f ← fieldLeaves field.typ
+      let r ← fieldsLeafCount fieldLeaves rest
+      pure (f + r)
+
+/-- The INDEX layer: the declaration at index `i`, descending only to smaller indices
+(`bound`-structural, as `tyHasPointersAt`). -/
+def tyLeafCountAt (types : TypeEnv) : Nat → TypeIdx → Except Stop Nat
+  | 0, i => typeIndexExhausted "materialization-footprint computation" i
+  | bound + 1, i =>
+      match types[i]? with
+      | some (_, .struct fields) => do
+          let total ← fieldsLeafCount (tyLeafCountTy (tyLeafCountAt types bound)) fields.toList
+          pure (max 1 total)
+      | some (_, .defined underlying) => tyLeafCountTy (tyLeafCountAt types bound) underlying
+      | some (_, .interfaceDef _) => pure 1
+      | some (_, .opaqueDecl feature) => unsupported s!"materialization-footprint computation: {feature}"
+      | none => unsupported s!"materialization-footprint computation: unknown type index {i}"
+
+/-- The scalar leaves of one value of type `ty`, over the type table (the descent seeded at
+`types.size`, as `tySizeAlign` and `tyHasPointers`). -/
+def tyLeafCount (types : TypeEnv) (ty : Ty) : Except Stop Nat :=
+  tyLeafCountTy (tyLeafCountAt types types.size) ty
+
 /-! ### Struct field offsets (gc-verified request (a1), 2026-10-07)
 
 The per-field offsets `structSizeAlignWith` computes and discards, EXPORTED

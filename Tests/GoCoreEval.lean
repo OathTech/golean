@@ -3082,7 +3082,7 @@ private def budgetsTableTests : IO Bool := do
   let path := "tools/nativefrontend/budgets.tsv"
   let expected : List (String × Nat) :=
     [("arrayLenBudget", GoLean.NativeToIR.arrayLenBudget),
-     ("arrayFootprintBudget", GoLean.NativeToIR.arrayFootprintBudget),
+     ("arrayFootprintBudget", GoLean.GoCore.Machine.arrayFootprintBudget),
      ("sliceCapBudget", GoLean.GoCore.Machine.sliceCapBudget),
      ("maxAllocBytes", GoLean.GoCore.maxAllocBytes)]
   let text ← try IO.FS.readFile path catch e => do
@@ -3127,6 +3127,69 @@ private def budgetsTableTests : IO Bool := do
             return false
       IO.println s!"ok: BUG-078/F2: {path} equals the Lean budgets (arrayLenBudget, arrayFootprintBudget, sliceCapBudget, maxAllocBytes)"
       return true
+
+/-- Release-readiness row 31(d) (2026-10-25, [USER] ruling relayed): the `makeSlice` arm's
+RUN-TIME footprint guard — `cap × tyLeafCount(elem) > Machine.arrayFootprintBudget` refuses by
+name, after gc's own `makeslice` panic and after `sliceCapBudget`, before any backing is built.
+The count arrives as the subject's ARGUMENT, a run-time value the decoder's constant check
+(`checkMakeFootprint`) never sees; the programs are hand-built GoCore, run on the sequential
+driver (`runProgramIntsM`). Its own definition (the file's split pattern). -/
+private def makeFootprintRuntimeTests : IO Bool := do
+  let mut passed := true
+  let row1024 : GoCore.Ty := .array 1024 (.int .uint8)
+  -- `F(n int) { b := make([]elem, n) }` / `F(n int) { b := make([]elem, 1, n) }`
+  let prog (types : GoCore.TypeEnv) (elem : GoCore.Ty) (capForm : Bool) : GoCore.Program := {
+    funcs := #[{
+      id := ⟨"F"⟩,
+      args := #[{ id := vid "n", typ := .int .int }],
+      results := #[],
+      body := .block #[{ id := vid "b", typ := .slice elem }] #[
+        if capForm
+          then .makeSlice (.var (vid "b")) elem (.intLit 1 .int) (some (.var (vid "n")))
+          else .makeSlice (.var (vid "b")) elem (.var (vid "n")) none] }],
+    typeDefs := types }
+  let run (types : GoCore.TypeEnv) (elem : GoCore.Ty) (capForm : Bool) (n : Int) : Except Stop GoCore.Readout :=
+    GoCore.Machine.runProgramIntsM 1000 (prog types elem capForm) "F" #[n]
+  let refusesWith (r : Except Stop GoCore.Readout) (needles : List String) (absent : List String) : Bool :=
+    match r with
+    | .error (.unsupported msg) => needles.all (fun s => (msg.splitOn s).length > 1) && absent.all (fun s => (msg.splitOn s).length == 1)
+    | _ => false
+  let panicsWith (r : Except Stop GoCore.Readout) (text : String) : Bool :=
+    match r with
+    | .error (.panic msg) => msg == text
+    | _ => false
+  let budget := GoCore.Machine.arrayFootprintBudget
+  passed := passed && (← expectTrue "row 31(d): make([][1024]uint8, n) at n = 1<<15 (2^25 leaves) REFUSES by name — the count, the leaves per element, the product, the budget, the cause"
+    (refusesWith (run GoCore.TypeEnv.reserved row1024 false (1 <<< 15))
+      ["cap 32768", "32768 elements of 1024 scalar elements each", s!"materializes {32768 * 1024} scalar elements", "footprint budget for a run-time-length make", s!"({budget} elements, arrayFootprintBudget", "BUG-131"]
+      ["sliceCapBudget"]))
+  passed := passed && (← expectTrue "row 31(d): one element past the budget refuses (1<<14 + 1 rows of 1024 leaves = 2^24 + 1024)"
+    (refusesWith (run GoCore.TypeEnv.reserved row1024 false ((1 <<< 14) + 1)) ["footprint budget for a run-time-length make", s!"materializes {((1 <<< 14) + 1) * 1024} scalar elements"] []))
+  passed := passed && (← expectTrue "row 31(d): a RUN-TIME cap past the budget refuses even with len 1 (the backing is cap-sized)"
+    (refusesWith (run GoCore.TypeEnv.reserved row1024 true (1 <<< 15)) ["len 1, cap 32768", "footprint budget for a run-time-length make"] []))
+  passed := passed && (← expectTrue "row 31(d): well inside the budget the backing is built and the run ends ok (8 rows = 8192 leaves)"
+    (run GoCore.TypeEnv.reserved row1024 false 8).isOk)
+  passed := passed && (← expectTrue "row 31(d): a scalar element at a count the row shape refuses runs fine (make([]uint8, 1<<15): the element footprint is what the count-only bound misses)"
+    (run GoCore.TypeEnv.reserved (.int .uint8) false (1 <<< 15)).isOk)
+  -- PRECEDENCE, the make site's order: gc's own panic first, then the
+  -- count bound, only then the footprint.
+  passed := passed && (← expectTrue "row 31(d) precedence (i): make([][1024]uint8, 1<<40) — 2^50 bytes, past maxAllocBytes — is gc's own `makeslice: len out of range` panic, never pre-empted by the footprint guard"
+    (panicsWith (run GoCore.TypeEnv.reserved row1024 false (1 <<< 40)) "runtime error: makeslice: len out of range"))
+  passed := passed && (← expectTrue "row 31(d) precedence (i'): a negative run-time count is gc's panic too"
+    (panicsWith (run GoCore.TypeEnv.reserved row1024 false (-1)) "runtime error: makeslice: len out of range"))
+  passed := passed && (← expectTrue "row 31(d) precedence (ii): make([][1024]uint8, 1<<24) — a count past sliceCapBudget — keeps the COUNT bound's refusal, not the footprint's"
+    (refusesWith (run GoCore.TypeEnv.reserved row1024 false (1 <<< 24)) ["sliceCapBudget", "BUG-090"] ["run-time-length"]))
+  -- A DEFINED struct element: the leaves are the SUM of its fields through the
+  -- type table (the decoder's `typeDefFootprint?` restated), so two [1024]uint8
+  -- fields cost 2048 per element and 1<<13 + 1 elements are over.
+  let sIdx : TypeIdx := GoCore.TypeEnv.reserved.size
+  let types : GoCore.TypeEnv := GoCore.TypeEnv.reserved.push
+    (⟨"main.S"⟩, .struct #[{ name := "a", typ := row1024 }, { name := "b", typ := row1024 }])
+  passed := passed && (← expectTrue "row 31(d): a defined struct element's leaves are the sum of its fields (2 × 1024): make([]S, 1<<13 + 1) refuses naming 2048 per element"
+    (refusesWith (run types (.defined sIdx) false ((1 <<< 13) + 1)) ["elements of 2048 scalar elements each", "footprint budget for a run-time-length make"] []))
+  passed := passed && (← expectTrue "row 31(d): the same struct element at 4 elements runs"
+    (run types (.defined sIdx) false 4).isOk)
+  pure passed
 
 /-- BUG-078 residuals (3) and (2b), the decoder's budgets (2026-10-12; its own definition so
 `main`'s LCNF compile stays inside the heartbeat budget — the file's existing split pattern). -/
@@ -4183,6 +4246,7 @@ def main : IO UInt32 := do
      | .ok _ => false))
   passed := passed && (← bug078BudgetTests)
   passed := passed && (← budgetsTableTests)
+  passed := passed && (← makeFootprintRuntimeTests)
   -- The class pin proper: main.T has a TypeDef on the wire (the OLD
   -- guard's presence key) but NO method-set record — satisfaction must
   -- refuse `unsupported`, proving the guard keys on the RECORD.

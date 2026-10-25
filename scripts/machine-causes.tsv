@@ -22,6 +22,7 @@ init-print	unsupported	package init: print/println during package initialization
 init-go	unsupported	package init: go spawn outside the thread pool
 imported-type-hashability	unsupported	map key hashability for unknown defined type
 slice-cap-budget	unsupported	sliceCapBudget
+make-footprint-budget-runtime	unsupported	footprint budget for a run-time-length make
 array-materialization-budget	error	elements exceeds the interpreter's materialization budget
 nil-slice-base	stuck	expected array or slice value for slice expression, got GoLean.GoValue.nil
 race	race	data race detected

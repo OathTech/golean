@@ -1,0 +1,16 @@
+# id	subject	args	expected_status	expected_reason	features
+# Release-readiness row 31(d) ([USER] ruling 2026-10-25, relayed): the
+# RUN-TIME-count make footprint guard at the machine's make site (BUG-131;
+# the shapes and numbers are in main.go). make-over-budget and
+# make-cap-over-budget are RED BY DESIGN — FAIL/lean-observation, cause
+# unsupported:make-footprint-budget-runtime; the expected column records the
+# oracle's truth (gc allocates 32 MiB and answers); before the guard the
+# same programs were memory KILLS under capped (exit 137), never a verdict.
+# make-at-budget (exactly 1<<24 leaves, admitted) and make-small-elem are the
+# admitted controls; make-maxalloc-first is gc's own makeslice panic, first
+# in the make site's order on both sides.
+make-over-budget	makeOverBudget	-	ok	-	arrays,slices,make
+make-cap-over-budget	makeCapOverBudget	-	ok	-	arrays,slices,make,cap
+make-at-budget	makeAtBudget	-	ok	-	arrays,slices,make
+make-small-elem	makeSmallElem	-	ok	-	slices,make
+make-maxalloc-first	makeMaxAllocFirst	-	panic	makeslice: len out of range	arrays,slices,make,panic

@@ -52,6 +52,11 @@ package main
 //     (n × Sizeof(E) > maxAllocBytes, gc/amd64 sizes), then the
 //     machine's count bound (n > sliceCapBudget); both stay Go-
 //     observable / the machine's own refusal, never pre-empted here.
+//     A RUN-TIME count is the machine's: its makeSlice arm charges the
+//     same budget in the same order (GoLean/GoCore/Machine.lean
+//     `arrayFootprintBudget`, release-readiness row 31(d), 2026-10-25),
+//     so a count this file cannot read is refused by name at run time,
+//     never built.
 //
 // A NAMED type is refused at every mention outside SIGNATURE-OPAQUE mode
 // when it REACHES a violation — through arrays, struct fields, pointers,

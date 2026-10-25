@@ -1,5 +1,21 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 4029 (3771 PASS / 258 FAIL)
+# cases: 4034 (3774 PASS / 260 FAIL)
+# re-pinned: 2026-10-25 [AGENT], lane core/row31-fillers-1025 — release-readiness rows 30/31(d) ([USER] ruling 2026-10-25, Mike, relayed
+#   by the [AGENT] coordinator: the variable-length `make` core guard, a refusal by name on the sliceCapBudget template, gc's own panic
+#   first). WHY: the makeSlice arm now charges `cap × tyLeafCount(elem)` to `arrayFootprintBudget` (1<<24 leaves; the constant moved to
+#   Machine.lean beside sliceCapBudget, the decoder reads it) after gc's `makeslice` panic and after sliceCapBudget, before any backing is
+#   built — a RUN-TIME count past the budget was a memory KILL under capped (exit 137: 4G in 0.4 s, 8G in 6.3 s on main 541d8340's
+#   binary), never a verdict, so NO existing row moved (a kill never recorded a PASS): 4029 + 5 = 4034; PASS 3771 + 3 = 3774; FAIL 258 + 2
+#   = 260. No flip, no removal, no cause change. NEW rows (5, one package arrays/materialization-budget-runtime/, every count a variable):
+#     arrays/materialization-budget-runtime/make-over-budget      FAIL/lean-observation unsupported:make-footprint-budget-runtime — make([][1024]byte, n), n = 1<<15: 2^25 leaves; gc 32775. BUG-131 Cases (Expect: FAIL)
+#     arrays/materialization-budget-runtime/make-cap-over-budget  FAIL/lean-observation unsupported:make-footprint-budget-runtime — make([][1024]byte, 1, n): the CAP sizes the backing; gc 32775. BUG-131 Cases
+#     arrays/materialization-budget-runtime/make-at-budget        PASS — n = 1<<14, exactly 1<<24 leaves, admitted (strict >); gc 16400
+#     arrays/materialization-budget-runtime/make-small-elem       PASS — make([]byte, n), n = 1<<15: the element footprint is what the count-only bound misses; gc 32784
+#     arrays/materialization-budget-runtime/make-maxalloc-first   PASS — n = 1<<40, 2^50 bytes past maxAlloc: gc's own `makeslice: len out of range` panic on both sides (status panic), never pre-empted
+#   The new cause key is scripts/machine-causes.tsv's `make-footprint-budget-runtime` (substring «footprint budget for a run-time-length
+#   make»). Negative lane: no move (415/415). Measured by CAPPED_MEM_MAX=64G capped scripts/ci --diff at the lane tree before the re-pin
+#   (its only red: these five NEW ids), the rows and causes taken from that run's artifacts/coverage/latest.tsv (scripts/coverage-cause
+#   --apply accepted the result); the --diff at the tip judges.
 # re-pinned: 2026-10-23 [AGENT], lane core/g18-append-capacity-1023 — G18 (backlog row 49; [USER] ruling 2026-10-23, Mike, relayed by
 #   the [AGENT] coordinator: option 1 of the raft-proofs ask 2026-10-23_golean-ask-append-capacity.md — slot 0 of `appendSpill` realizes
 #   gc's capacity, the envelope unchanged). WHY: the default tape's spill capacity is now gc's `growslice` result — size-class rounded,
@@ -2317,6 +2333,11 @@ PASS	arrays/materialization-budget-quarantine/unrelated-struct	-	-
 PASS	arrays/materialization-budget-quarantine/alias-satisfaction	-	-
 FAIL	arrays/materialization-budget-quarantine-init/reader-over-budget	frontend-export	by-design/materialization-budget
 PASS	arrays/materialization-budget-quarantine-init/unrelated	-	-
+FAIL	arrays/materialization-budget-runtime/make-over-budget	lean-observation	unsupported:make-footprint-budget-runtime
+FAIL	arrays/materialization-budget-runtime/make-cap-over-budget	lean-observation	unsupported:make-footprint-budget-runtime
+PASS	arrays/materialization-budget-runtime/make-at-budget	-	-
+PASS	arrays/materialization-budget-runtime/make-small-elem	-	-
+PASS	arrays/materialization-budget-runtime/make-maxalloc-first	-	-
 FAIL	arrays/materialization-budget/over-budget	frontend-export	by-design/materialization-budget
 PASS	arrays/nested-arrays	-	-
 PASS	arrays/nested-copy-value	-	-

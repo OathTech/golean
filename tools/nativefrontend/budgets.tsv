@@ -12,13 +12,15 @@
 # Columns: name <TAB> value (decimal) <TAB> the Lean constant it transcribes.
 #   arrayLenBudget        per-dimension array length bound (decoder: the array arm)
 #   arrayFootprintBudget  nested footprint bound in scalar leaves, also the
-#                         constant-count make bound (checkMakeFootprint)
+#                         constant-count make bound (checkMakeFootprint) and, in
+#                         the core, the RUN-TIME-count make bound (the makeSlice
+#                         arm, row 31(d) 2026-10-25; the decoder reads the core's)
 #   sliceCapBudget        the machine's make COUNT bound (its own named refusal —
 #                         the make precedence: never quarantined by the frontend)
 #   maxAllocBytes         gc's makeslice limit (Platform; gc's own panic — the make
 #                         precedence: never quarantined by the frontend)
 name	value	lean
 arrayLenBudget	65536	GoLean.NativeToIR.arrayLenBudget
-arrayFootprintBudget	16777216	GoLean.NativeToIR.arrayFootprintBudget
+arrayFootprintBudget	16777216	GoLean.GoCore.Machine.arrayFootprintBudget
 sliceCapBudget	8388608	GoLean.GoCore.Machine.sliceCapBudget
 maxAllocBytes	281474976710656	GoLean.GoCore.maxAllocBytes

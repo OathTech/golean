@@ -542,11 +542,12 @@ would otherwise materialize — behind gc's own `makeslice` panic and
 decoder's half: `make([][1024]byte, 1<<19)`, 2^29 leaves at a count
 16× under `sliceCapBudget`, was a kill — exit 137 at 16.7 GB after
 57 s under `CAPPED_MEM_MAX=16G capped`, the reviewer's reproduction; `1<<18` ran
-37.0 s / 13.6 GB). What it does NOT bound, STILL OPEN: a `make` whose
-count is a run-time value — `sliceCapBudget` (Machine.lean) bounds the
-element COUNT only, so `make([][1024]byte, n)` with `n` a variable at
-1<<19 is still an honest kill; the fix is the core's `make` site
-(release-readiness item 30).
+37.0 s / 13.6 GB). A `make` whose count is a RUN-TIME value is the
+core's since 2026-10-25 (release-readiness rows 30/31(d), [USER] ruling,
+relayed): the `makeSlice` arm charges `cap × tyLeafCount(elem)` to the same
+budget after gc's panic and `sliceCapBudget`, so `make([][1024]byte, n)`
+with `n` a variable at 1<<19 — a memory kill under the box cap before —
+refuses by name (`Machine.arrayFootprintBudget`, the constant this one reads).
 
 TWO DOORS (BUG-078 / F2, 2026-10-13, lane `frontend/decl-budgets-1013` [AGENT]): this refusal is
 the WHOLE-WIRE BACKSTOP — for a forged or hand-built wire, and for anything the frontend
@@ -555,8 +556,11 @@ under-estimates. The PER-DECLARATION FRONT DOOR is the native frontend
 the declaration (an H-3 stub, an FR-24-poisoned var, a marker TypeDef), so one over-budget
 declaration no longer turns every subject of its package into `error` (the fresh-eyes pass's F2).
 The frontend reads the number from `tools/nativefrontend/budgets.tsv`, which
-`Tests/GoCoreEval.lean` (`budgetsTableTests`) pins equal to this constant: move both together. -/
-def arrayFootprintBudget : Nat := 1 <<< 24
+`Tests/GoCoreEval.lean` (`budgetsTableTests`) pins equal to this constant: move both together.
+SINCE 2026-10-25 (row 31(d)) the number LIVES in the core, `Machine.arrayFootprintBudget`,
+beside `sliceCapBudget` — the `make` arm charges it to a run-time count — and this name
+reads it, so the decoder's refusal texts and the table stay one source. -/
+def arrayFootprintBudget : Nat := Machine.arrayFootprintBudget
 
 /-- The MATERIALIZATION FOOTPRINT of a type, in scalar elements: the leaf
 values one value of the type holds — `[n]T` is `n` times `T`'s, a
@@ -1525,11 +1529,11 @@ is a lower bound on the backing only on the non-panicking path — when the run-
 smaller, gc panics «makeslice: cap out of range» before any backing exists, so refusing at
 decode would pre-empt that panic, the same wrong-answer class as the make-maxalloc catch
 below. A negative constant's `Int.toNat` is 0 (go/types rejects negative constants;
-harmless). A non-constant count is the machine's at run time — the OWED core half
-(release-readiness item 30: the guard at
-Machine.lean's `sliceCapBudget` site has the element type in scope; `cap × footprint >
-budget → unsupported` on that template, with the relational `make` rule and its
-soundness/completeness cases in lockstep). Negative constants are not this check's
+harmless). A non-constant count is the machine's at run time — the core half, LANDED
+2026-10-25 (release-readiness rows 30/31(d)): the guard at Machine.lean's `sliceCapBudget`
+site has the element type in scope and charges `cap × tyLeafCount(elem)` to
+`Machine.arrayFootprintBudget` on this check's template (same order, same unit — leaves —
+and the same number, which this file now reads from the core). Negative constants are not this check's
 (go/types rejects them; the unseq arm's `unseqCheckConstSize` names them; `Int.toNat` makes
 them 0 here). Both `make-slice` arms (the statement and the unseq allocation) call this;
 a `.defined` element with no footprint cannot occur in a body (the table is asserted

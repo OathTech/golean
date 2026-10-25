@@ -13,7 +13,8 @@ package main
 // 16G` (exit 137 at 16.7 GB after 57 s; 1<<18 ran 37.0 s / 13.6 GB).
 // The expected column records the oracle's truth: gc allocates the
 // 512 MiB backing fine and reads back the 7. A make with a RUN-TIME
-// count is the owed core half (release-readiness item 30).
+// count is the CORE's guard since 2026-10-25 (release-readiness row 31(d),
+// BUG-131; the rows arrays/materialization-budget-runtime/*).
 //
 // SINCE 2026-10-13 (F2, BUG-078 «PER DECLARATION»): the native frontend
 // applies the same budget per declaration (tools/nativefrontend/

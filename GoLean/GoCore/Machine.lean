@@ -1597,6 +1597,30 @@ bearing pair: `loadElems_locSup`, `storeElems_pres`, `_tame`, `_noPanic`),
 not a larger number. -/
 def sliceCapBudget : Nat := 1 <<< 23
 
+/-- The MATERIALIZATION FOOTPRINT budget, in scalar leaves (BUG-078 residual (3)'s
+`arrayFootprintBudget`, 1<<24 — the number's derivation is the decoder's docstring
+in `NativeToIR.lean`, whose `arrayFootprintBudget` now READS this constant: one
+source, transcribed by `tools/nativefrontend/budgets.tsv` and pinned there by
+`Tests/GoCoreEval.lean`'s `budgetsTableTests`). The decoder charges it to array
+TYPES through their nesting and to a `make` whose count is CONSTANT
+(`checkMakeFootprint`); the `makeSlice` arm below charges it to a RUN-TIME count
+(release-readiness rows 30 and 31(d), [USER] ruling 2026-10-25, relayed): `cap ×
+tyLeafCount(elem) > arrayFootprintBudget` refuses by name — the count, the leaves
+per element, the product and the budget in the text — AFTER gc's own `makeslice`
+panic (a request gc rejects keeps gc's panic) and AFTER `sliceCapBudget` (the
+count bound keeps its refusal), BEFORE any backing is built: the same order as
+`checkMakeFootprint`. Before the guard such a make BUILT its backing and died
+under the box's memory cap — exit 137, which the apparatus records as
+`killed:137`, a loud kill but not a named refusal, and on a machine without the
+cap a memory runaway: `make([][1024]byte, n)` with `n = 1<<19` (2^29 leaves; gc
+allocates the 512 MiB and answers) was killed at 4G in 0.4 s and at 8G in 6.3 s
+(the lane's reproduction on main 541d8340's binary; the same shape with a
+CONSTANT count has refused at decode since 2026-10-12). A modeled-resource bound,
+not Go behaviour: a program over it is a standing machine-refuses / gc-succeeds
+red (`unsupported:make-footprint-budget-runtime`, `scripts/machine-causes.tsv`),
+never a wrong answer. -/
+def arrayFootprintBudget : Nat := 1 <<< 24
+
 /-- The choices-FREE core of `applyStmtOp`: every wide-op arm except
 `appendSlice` (whose spill path consumes a capacity choice; its arm HERE
 is an unreachable fail-closed `.internal` — real dispatch happens in the
@@ -1667,6 +1691,16 @@ def applyStmtOpCore.plan (s : Store) (op : StmtOp)
       -- path the budget bounds.
       if cap > sliceCapBudget then
         unsupported s!"make([]T, len {len}, cap {cap}): a slice backing of {cap} elements exceeds the interpreter's materialization budget ({sliceCapBudget} elements, sliceCapBudget — the element-wise whole-backing read `Mem.loadElems` overflows the native stack past it; BUG-090 cost boundary, refused by name)"
+      -- The FOOTPRINT budget (`arrayFootprintBudget`, its docstring the
+      -- derivation and the kill it replaces; row 31(d)): the element's
+      -- scalar leaves times the backing's count, AFTER the count bound
+      -- (a count past `sliceCapBudget` keeps that refusal) and BEFORE any
+      -- backing is built. The decoder's `checkMakeFootprint` refuses the
+      -- CONSTANT-count form at the wire; a run-time count reaches here.
+      -- `tyLeafCount` refuses only where `tySizeBytes` above already did.
+      let elemLeaves ← tyLeafCount ctx.types elem
+      if cap * elemLeaves > arrayFootprintBudget then
+        unsupported s!"make([]T, len {len}, cap {cap}): a slice backing of {cap} elements of {elemLeaves} scalar elements each materializes {cap * elemLeaves} scalar elements, past the interpreter's footprint budget for a run-time-length make ({arrayFootprintBudget} elements, arrayFootprintBudget — the constant-length form refuses at decode, checkMakeFootprint; BUG-131 cost boundary, refused by name)"
       let backing ← buildDefaultArrayValue ctx cap elem
       -- S3: the target's nil check precedes the allocation (a pure reorder —
       -- before S3 the allocation came first and the panic rolled it back).
