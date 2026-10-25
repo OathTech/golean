@@ -356,6 +356,7 @@ private def stmtAllowedKeys : String → Option (List String)
   | "map-delete" => some ["stmt", "base", "index", "keyType"]
   | "clear-map" => some ["stmt", "base"]
   | "clear-slice" => some ["stmt", "base", "elem"]
+  | "sort-slice" => some ["stmt", "base", "elem"]
   | "print" => some ["stmt", "newline", "args"]
   | "append" => some ["stmt", "target", "elem", "slice", "elems"]
   | "copy" => some ["stmt", "target", "dst", "src"]
@@ -2429,14 +2430,21 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
         throw s!"{path}.args: print/println with zero operands has no machine shape (refused by name; stdlib slice 3)"
       let args ← argsJ.mapIdxM (fun i j => decodeExpr s!"{path}.args[{i}]" j)
       pure (.print newline args)
-  -- `sort-slice` (the quorum-pilot `sortSlice` machine op's wire node) is
-  -- NOT decoded since 2026-09-04 (memo §3 row M, lane fr4-rowm audit fix
-  -- round A3): the frontend never emits it — `slices.Sort` is the real
-  -- source-through generic — and a hand-edited wire carrying it would
-  -- realize a DIFFERENT sort member than the one the frontend now emits.
-  -- It falls to the `unsupported statement` refusal below, by name. The
-  -- `Stmt.sortSlice` constructor and its Machine/Ops arms are GoCore's;
-  -- their deletion is the design-hygiene arc's item A11.
+  | "sort-slice" =>
+      -- `slices.Sort(s)` at an INTEGER element kind, the `sortSlice` machine
+      -- op (`Stmt.sortSlice base elem`): the frontend emits it for the
+      -- direct call in expression-statement position only
+      -- (tools/nativefrontend/emit.go emitSortStmt, the register's
+      -- `intercept` class). Decoded again since 2026-10-25 ([USER] ruling
+      -- of 2026-10-25, backlog row 50 option 1, relayed — a deliberate
+      -- partial reversal, for integer kinds, of memo §3 row M, under which
+      -- the node was refused by name from 2026-09-04, audit fix round A3).
+      -- The op's operand check (`intElems`) refuses a non-integer element
+      -- at the step; its specification is the kept equation family
+      -- `applyStmtOp_sortSlice*` (GoLean/GoCore/Equations.lean).
+      let base ← decodeExpr s!"{path}.base" (← StrictJson.field path obj "base")
+      let elemTy ← decodeTy s!"{path}.elem" (← StrictJson.field path obj "elem")
+      pure (.sortSlice base elemTy)
   | "append" =>
       let t ← decodeTarget s!"{path}.target" (← StrictJson.field path obj "target")
       let elemTy ← decodeTy s!"{path}.elem" (← StrictJson.field path obj "elem")

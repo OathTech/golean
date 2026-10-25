@@ -372,7 +372,8 @@ expression. In expression position they are refused by name.
 `type-assert`, `var`, `if`, `for {init, cond, post, condPre, body}`, `range` (per `kind`: `map`,
 `chan`, `slice`, `array`, `int`, `array-pointer`, `string`), `incdec`, `compound-assign`,
 `expr`, `new`, `make-slice`, `make-map`, `make-chan`, `chan-send`, `chan-recv`, `chan-close`,
-`sync-op`, `select`, `map-delete`, `clear-map`, `clear-slice`, `print`, `append`, `copy`,
+`sync-op`, `select`, `map-delete`, `clear-map`, `clear-slice`, `sort-slice` (`slices.Sort` at an
+integer element kind, since 2026-10-25), `print`, `append`, `copy`,
 `unseq-probe`, `unseq`, `map-compound-assign`, `map-assign`, `slice-lit`, `map-lit`, `break`,
 `continue`, `break-to`, `continue-to`, `labeled`. **Assignment targets** (`target`): `declare`,
 `var`, `blank`, `addr`, `map`.

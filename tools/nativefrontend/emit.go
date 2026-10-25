@@ -3204,20 +3204,37 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 					}
 				}
 			}
-			// `slices.Sort(s)` used to be intercepted HERE onto the
-			// quorum-pilot `sortSlice` MACHINE OP at integer element
-			// kinds (docs/2026-07-30_quorum-extern-policy.md; non-integer
-			// kinds refused by name). RETIRED 2026-09-04 (lane fr4-rowm,
-			// memo docs/2026-09-03_stdlib-boundary-design.md §3 row M —
-			// the G1-G9 plan approved [USER] 2026-09-03, item (3),
-			// relayed): every `slices` member, Sort included,
-			// lowers from the source-through unit through the ordinary
-			// call path below — `slices.Sort` → `pdqsortOrdered`
-			// stenciled per element type by mono.go, gc's exact member at
-			// EVERY ordered kind (strings, floats with NaN-first, named
-			// kinds). The machine op and the `sort-slice` wire node are
-			// now unreferenced by the frontend (their deletion is the
-			// hygiene arc's; the decoder key stays — no wire-schema change).
+			// A FRONTEND-INTERCEPTED library member in expression-statement
+			// position (stdlibreach.go frontendInterceptedLibraryMembers /
+			// interceptedLibraryCall — the ONE predicate the reach walk
+			// consulted when it left the callee unreached): `slices.Sort(s)`
+			// at an INTEGER element kind lowers to the `sortSlice` MACHINE
+			// OP (`sort-slice`; emitSortStmt). Re-admitted 2026-10-25
+			// ([USER] ruling of 2026-10-25, backlog row 50 option 1,
+			// relayed) as a deliberate partial reversal, for integer kinds
+			// only, of memo §3 row M (lane fr4-rowm, 2026-09-04, which
+			// retired the intercept so that every `slices` member lowered
+			// from the source-through unit). A non-integer element kind is
+			// NOT intercepted and takes the ordinary call path below —
+			// `slices.Sort` → `pdqsortOrdered` stenciled per element type
+			// by mono.go, gc's exact member (strings, floats with
+			// NaN-first, named non-integer kinds); so do `defer`/`go` of
+			// the function value (the DeferStmt/GoStmt arms). A
+			// library-unit body never reaches the intercept (library-
+			// internal calls lower as library text).
+			if e.curUnit == nil || !e.curUnit.library {
+				path, member, intercepted, ierr := interceptedLibraryCall(e.info, call)
+				if ierr != nil {
+					return nil, ierr
+				}
+				if intercepted {
+					switch path + "." + member {
+					case "slices.Sort":
+						return e.emitSortStmt(call)
+					}
+					return nil, unsup("library member %s.%s is frontend-intercepted (register class `intercept`) but the expression-statement emitter has no lowering for it — table and emitter disagree (fail closed)", path, member)
+				}
+			}
 			// Sync-primitive method calls in statement position
 			// (spec-parity slice 2, design note §7): the whole modeled
 			// sync surface. Recognized-but-out-of-scope members fail
@@ -3276,9 +3293,14 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 		// pending call is prepended to the frame's chain and runs at frame
 		// exit (W3 §9). A method value or closure callee is just an
 		// expression, so this reuses the func-value machinery.
-		if err := e.refuseInterceptedLibraryCallee("defer", st.Call); err != nil {
-			return nil, err
-		}
+		// A frontend-INTERCEPTED library member (`slices.Sort`) in defer
+		// position is the real library FUNCTION VALUE — the reach walk
+		// marked it reached (stdlibreach.go spawnCalls) and it lowers
+		// through the value path below with its closure on the wire;
+		// the by-name refusal of this shape (audit fix round F1,
+		// 2026-09-04, refuseInterceptedLibraryCallee) is RETIRED with the
+		// 2026-10-25 re-admission (backlog row 50; row
+		// stdlib-source/sort-op-shapes/defer-sort stays the generic).
 		if err := e.refuseRandIntnDeferGo("defer", st.Call); err != nil {
 			return nil, err
 		}
@@ -3340,9 +3362,9 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 				return nil, unsup("go of builtin %s", id.Name)
 			}
 		}
-		if err := e.refuseInterceptedLibraryCallee("go", st.Call); err != nil {
-			return nil, err
-		}
+		// An intercepted library member in go position is the real
+		// function value, as in the DeferStmt arm above (row
+		// stdlib-source/sort-op-shapes/go-sort stays the generic).
 		if err := e.refuseRandIntnDeferGo("go", st.Call); err != nil {
 			return nil, err
 		}
@@ -9482,38 +9504,12 @@ func (e *emitter) qualifiedPkgRef(sel *ast.SelectorExpr) (*types.PkgName, bool) 
 // like local generics); a func-typed package VARIABLE becomes a call
 // through the value read from its seeded cell. Anything else refuses
 // loudly.
-// refuseInterceptedLibraryCallee (audit fix round F1): a `defer`/`go` whose
-// callee is a FRONTEND-INTERCEPTED library member (stdlibreach.go
-// frontendInterceptedLibraryMembers / interceptedLibraryCall) refuses BY
-// NAME. An interception is a lowering of the direct CALL in expression-
-// statement position; in defer/go position the callee is a FUNCTION VALUE,
-// which the shared predicate says the reach walk did not mark reached —
-// lowering the real generic there left its closure (`math/bits.Len`) off
-// the wire and the machine `stuck`, a wrong shape where a refusal was
-// owed (rows stdlib-source/sort-op-shapes/*, green since row M). The
-// table is EMPTY since 2026-09-04 (the `slices.Sort` machine op retired,
-// memo §3 row M; the cmp.Compare desugar retired the same day), so this
-// is dead until a member is admitted to the intercept class again — a
-// register widening. A library-unit body never reaches here
-// (library-internal calls are never intercepted).
-func (e *emitter) refuseInterceptedLibraryCallee(keyword string, c *ast.CallExpr) error {
-	if e.curUnit != nil && e.curUnit.library {
-		return nil
-	}
-	path, member, intercepted, ierr := interceptedLibraryCall(e.info, c)
-	if ierr != nil {
-		return ierr
-	}
-	if intercepted {
-		why := frontendInterceptedLibraryMembers[path][member]
-		if i := strings.IndexByte(why, '('); i > 0 {
-			why = why[:i]
-		}
-		return unsup("%s %s.%s: the direct call of this library member is frontend-intercepted (%s) in expression-statement position only; as a deferred/spawned FUNCTION VALUE it has no lowering — refused by name rather than lowering the real body the reach walk pruned",
-			keyword, path, member, why)
-	}
-	return nil
-}
+// (refuseInterceptedLibraryCallee — the by-name refusal of `defer`/`go` of a
+// frontend-intercepted library member, audit fix round F1 of 2026-09-04 —
+// was here until 2026-10-25. RETIRED with the `slices.Sort` re-admission
+// (backlog row 50): in spawn position the member is the real library
+// function value, which the reach walk now marks reached (stdlibreach.go
+// spawnCalls), so the value path lowers it with its closure on the wire.)
 
 func (e *emitter) emitQualifiedCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, bool, error) {
 	pkgName, ok := e.qualifiedPkgRef(sel)
@@ -10138,12 +10134,42 @@ func (e *emitter) emitDeleteStmt(c *ast.CallExpr) (any, error) {
 	return map[string]any{"stmt": "map-delete", "base": base, "index": index, "keyType": keyTy}, nil
 }
 
-// (emitSortStmt — `slices.Sort` onto the machine's `sortSlice` op at integer
-// element kinds, `sort-slice` wire node — was here until 2026-09-04; RETIRED
-// by memo §3 row M, lane fr4-rowm: slices.Sort is the real generic through
-// the source-through unit at every ordered kind. The wire node's decoder
-// arm in NativeToIR.lean and the op in GoLean/GoCore are unreferenced by
-// the frontend and owed to the hygiene arc — not deleted here.)
+// emitSortStmt lowers `slices.Sort(s)` at an INTEGER element kind onto the
+// machine's `sortSlice` op (`Stmt.sortSlice base elem`; wire node
+// `sort-slice` {base, elem}): the op loads the window's elements, sorts
+// them by integer value (the normalized Lean `Int`, so unsigned order is
+// exact above 2^63) and writes the sorted run back in place — the
+// specification is the kept equation family `applyStmtOp_sortSlice*` /
+// `retV_stmtOpK_sortSlice*` (GoLean/GoCore/Equations.lean). Here until
+// 2026-09-04 (retired by memo §3 row M, lane fr4-rowm), restored
+// 2026-10-25 ([USER] ruling of 2026-10-25, backlog row 50 option 1,
+// relayed). Reached ONLY through interceptedLibraryCall's `slices.Sort`
+// arm (interceptSortSlice), which admits exactly the shapes below; the
+// three refusals are fail-closed guards for a program that bypasses the
+// predicate (none can: go/types rejects a non-slice or wrong-arity call,
+// and a non-integer kind is routed to the generic before this runs).
+func (e *emitter) emitSortStmt(c *ast.CallExpr) (any, error) {
+	if len(c.Args) != 1 {
+		return nil, unsup("slices.Sort with %d arguments", len(c.Args))
+	}
+	sl, ok := e.goTypeOf(c.Args[0]).Underlying().(*types.Slice)
+	if !ok {
+		return nil, unsup("slices.Sort on non-slice %s", e.goTypeOf(c.Args[0]))
+	}
+	b, ok := sl.Elem().Underlying().(*types.Basic)
+	if !ok || b.Info()&types.IsInteger == 0 {
+		return nil, unsup("slices.Sort at non-integer element type %s", sl.Elem())
+	}
+	base, err := e.emitExpr(c.Args[0])
+	if err != nil {
+		return nil, err
+	}
+	elemTy, err := e.emitType(sl.Elem())
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"stmt": "sort-slice", "base": base, "elem": elemTy}, nil
+}
 
 // emitClearStmt lowers `clear(m)` / `clear(s)` onto the machine's clear ops.
 func (e *emitter) emitClearStmt(c *ast.CallExpr) (any, error) {

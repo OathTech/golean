@@ -653,6 +653,84 @@ theorem phaseMark_string :
     phaseMark ctx (.interface .string v) = .ok .none :=
   GoCore.Equations.phaseMark_string
 
+/-! raft-proofs G19 (backlog row 50, [USER]-ruled 2026-10-25, option 1; lane
+`frontend/g19-sort-intercept-1025`; `GoLean/GoCore/Equations.lean`): the `sortSlice` machine op —
+`slices.Sort(s)` at an integer element kind — and its SPECIFICATION. The plan arm, the apply written
+out over the memory primitives, the apply and the apply step read back as «the run written from
+visible index 0 is a `List.Perm` of the run read, ascending by value, the tape untouched, no pick,
+the label the reads then the writes», and the integer sort laws they rest on. -/
+theorem exec_sortSlice :
+    ∀ {ctx : ProgramCtx} (s : Store) (base : Expr) (elem : Ty) (env : LocalEnv) (k : Cont) (ch : Choices),
+    stepFn ctx s (.exec (.sortSlice base elem) env k) ch
+      = .ok (.evalE base env (.stmtOpK (.sortSlice elem) 0 [] [] env k), s, ch, ⟨[], [], []⟩) :=
+  GoCore.Equations.exec_sortSlice
+
+theorem applyStmtOp_sortSlice :
+    ∀ {ctx : ProgramCtx} {s s' : Store} {baseV : GoValue} {sl : SliceValue} {vs : Array GoValue}
+      {trR trW : AccessTrace} {pairs : List (Int × IntKind)} (elem : Ty) (ch : Choices),
+    valueAsSlice baseV = .ok sl → Mem.loadSlice ctx s sl = .ok (vs, trR) → intElems vs.toList = .ok pairs →
+    Mem.storeRun ctx s sl 0 ((sortLe (fun a b => a.1 ≤ b.1) pairs).map fun p => GoValue.int p.1 p.2)
+      = .ok (s', trW) →
+    applyStmtOp ctx s ch (.sortSlice elem) 0 [baseV] = .ok (s', ch, [], trR ++ trW) :=
+  GoCore.Equations.applyStmtOp_sortSlice
+
+theorem applyStmtOp_sortSlice_spec :
+    ∀ {ctx : ProgramCtx} {s s' : Store} {ch ch' : Choices} {ps : List PickRecord} {tr : AccessTrace}
+      {elem : Ty} {baseV : GoValue},
+    applyStmtOp ctx s ch (.sortSlice elem) 0 [baseV] = .ok (s', ch', ps, tr) →
+    ∃ (sl : SliceValue) (vs : Array GoValue) (trR : AccessTrace) (pairs sorted : List (Int × IntKind))
+      (trW : AccessTrace),
+      valueAsSlice baseV = .ok sl ∧ Mem.loadSlice ctx s sl = .ok (vs, trR) ∧ intElems vs.toList = .ok pairs ∧
+      List.Perm sorted pairs ∧ sorted.Pairwise (fun a b => a.1 ≤ b.1) ∧
+      Mem.storeRun ctx s sl 0 (sorted.map fun p => GoValue.int p.1 p.2) = .ok (s', trW) ∧
+      ch' = ch ∧ ps = [] ∧ tr = trR ++ trW :=
+  GoCore.Equations.applyStmtOp_sortSlice_spec
+
+theorem retV_stmtOpK_sortSlice :
+    ∀ {ctx : ProgramCtx} {s s' : Store} {baseV : GoValue} {sl : SliceValue} {vs : Array GoValue}
+      {trR trW : AccessTrace} {pairs : List (Int × IntKind)} (elem : Ty) (env : LocalEnv) (k' : Cont)
+      (ch : Choices),
+    valueAsSlice baseV = .ok sl → Mem.loadSlice ctx s sl = .ok (vs, trR) → intElems vs.toList = .ok pairs →
+    Mem.storeRun ctx s sl 0 ((sortLe (fun a b => a.1 ≤ b.1) pairs).map fun p => GoValue.int p.1 p.2)
+      = .ok (s', trW) →
+    stepFn ctx s (.retV baseV (.stmtOpK (.sortSlice elem) 0 [] [] env k')) ch
+      = .ok (.next k', s', ch, ⟨trR ++ trW, [], []⟩) :=
+  GoCore.Equations.retV_stmtOpK_sortSlice
+
+theorem retV_stmtOpK_sortSlice_spec :
+    ∀ {ctx : ProgramCtx} {s s' : Store} {ch ch' : Choices} {lbl : StepLabel} {elem : Ty} {baseV : GoValue}
+      (env : LocalEnv) (k' : Cont),
+    stepFn ctx s (.retV baseV (.stmtOpK (.sortSlice elem) 0 [] [] env k')) ch = .ok (.next k', s', ch', lbl) →
+    ∃ (sl : SliceValue) (vs : Array GoValue) (trR : AccessTrace) (pairs sorted : List (Int × IntKind))
+      (trW : AccessTrace),
+      valueAsSlice baseV = .ok sl ∧ Mem.loadSlice ctx s sl = .ok (vs, trR) ∧ intElems vs.toList = .ok pairs ∧
+      List.Perm sorted pairs ∧ sorted.Pairwise (fun a b => a.1 ≤ b.1) ∧
+      Mem.storeRun ctx s sl 0 (sorted.map fun p => GoValue.int p.1 p.2) = .ok (s', trW) ∧
+      ch' = ch ∧ lbl = ⟨trR ++ trW, [], []⟩ :=
+  GoCore.Equations.retV_stmtOpK_sortSlice_spec
+
+theorem sortLe_int_perm :
+    ∀ (ps : List (Int × IntKind)), List.Perm (sortLe (fun a b => a.1 ≤ b.1) ps) ps :=
+  GoCore.Equations.sortLe_int_perm
+
+theorem sortLe_int_pairwise :
+    ∀ (ps : List (Int × IntKind)), (sortLe (fun a b => a.1 ≤ b.1) ps).Pairwise (fun a b => a.1 ≤ b.1) :=
+  GoCore.Equations.sortLe_int_pairwise
+
+end GoLean.GoCore.ContractTests.Pin
+
+/-! ## §E Provisional statements (pinned for build-time drift; NOT in the comparator contract)
+
+The G16 table-monotonicity statements below are proved and pinned like §D, but they are kept
+OUT of `comparator.json`'s frozen surface until backlog row 48's ruling settles the relation
+`ProgramCtx.SubTables` (the review of 2026-10-23 measured that the first cut's premises defeat
+the customer's slicing; the per-key relation of lane `core/g16-raise-mark-1023` is the proposed
+final form — the coordinator moves these pins to §D and the contract at the ask).
+`scripts/gen-contract --check` reads §D only, so a pin here does not demand a contract entry.
+Move a statement to §D when it is settled. -/
+namespace GoLean.GoCore.ContractTests.Provisional
+
+open GoCore GoCore.Machine GoCore.ExecutionStatement
 
 /-! raft-proofs G16 (backlog row 48, 2026-10-23; `GoLean/GoCore/TableMonotonicity.lean`, lanes
 `core/g16-table-monotonicity-1023` and `core/g16-raise-mark-1023`; pinned in the former §E

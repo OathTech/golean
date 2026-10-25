@@ -2212,6 +2212,91 @@ theorem Pin.signal_labelK_contTo_self : ∀ {ctx : ProgramCtx} (s : Store) (name
     (ch : Choices),
     stepFn ctx s (.signal (.contTo name) (.labelK name k')) ch = .error (.stuck s!"continue to non-loop label {name}") :=
   @GoLean.GoCore.Equations.signal_labelK_contTo_self
+-- The sort's floor and the `sortSlice` specification (2026-10-25, backlog row 50 — raft-proofs G19)
+theorem Pin.insertLe_perm : ∀ {α : Type} (le : α → α → Bool) (x : α) (l : List α),
+    List.Perm (insertLe le x l) (x :: l) :=
+  @GoLean.GoCore.Equations.insertLe_perm
+
+theorem Pin.sortLe_perm : ∀ {α : Type} (le : α → α → Bool) (l : List α),
+    List.Perm (sortLe le l) l :=
+  @GoLean.GoCore.Equations.sortLe_perm
+
+theorem Pin.insertLe_pairwise : ∀ {α : Type} {le : α → α → Bool}
+    (_htot : ∀ a b, le a b = true ∨ le b a = true)
+    (_htrans : ∀ a b c, le a b = true → le b c = true → le a c = true) (x : α) {l : List α},
+    l.Pairwise (fun a b => le a b = true) → (insertLe le x l).Pairwise (fun a b => le a b = true) :=
+  @GoLean.GoCore.Equations.insertLe_pairwise
+
+theorem Pin.sortLe_pairwise : ∀ {α : Type} {le : α → α → Bool}
+    (_htot : ∀ a b, le a b = true ∨ le b a = true)
+    (_htrans : ∀ a b c, le a b = true → le b c = true → le a c = true) (l : List α),
+    (sortLe le l).Pairwise (fun a b => le a b = true) :=
+  @GoLean.GoCore.Equations.sortLe_pairwise
+
+theorem Pin.sortLe_int_perm : ∀ (ps : List (Int × IntKind)),
+    List.Perm (sortLe (fun a b => a.1 ≤ b.1) ps) ps :=
+  @GoLean.GoCore.Equations.sortLe_int_perm
+
+theorem Pin.sortLe_int_pairwise : ∀ (ps : List (Int × IntKind)),
+    (sortLe (fun a b => a.1 ≤ b.1) ps).Pairwise (fun a b => a.1 ≤ b.1) :=
+  @GoLean.GoCore.Equations.sortLe_int_pairwise
+
+theorem Pin.intElems_map_int : ∀ (ps : List (Int × IntKind)),
+    intElems (ps.map fun p => GoValue.int p.1 p.2) = .ok ps :=
+  @GoLean.GoCore.Equations.intElems_map_int
+
+theorem Pin.intElems_ok_eq : ∀ {vs : List GoValue} {ps : List (Int × IntKind)} (_h : intElems vs = .ok ps),
+    vs = ps.map fun p => GoValue.int p.1 p.2 :=
+  @GoLean.GoCore.Equations.intElems_ok_eq
+
+theorem Pin.exec_sortSlice : ∀ {ctx : ProgramCtx} (s : Store) (base : Expr) (elem : Ty) (env : LocalEnv) (k : Cont)
+    (ch : Choices),
+    stepFn ctx s (.exec (.sortSlice base elem) env k) ch
+      = .ok (.evalE base env (.stmtOpK (.sortSlice elem) 0 [] [] env k), s, ch, ⟨[], [], []⟩) :=
+  @GoLean.GoCore.Equations.exec_sortSlice
+
+theorem Pin.applyStmtOp_sortSlice : ∀ {ctx : ProgramCtx} {s s' : Store} {baseV : GoValue} {sl : SliceValue}
+    {vs : Array GoValue} {trR trW : AccessTrace} {pairs : List (Int × IntKind)} (elem : Ty) (ch : Choices)
+    (_h1 : valueAsSlice baseV = .ok sl) (_h2 : Mem.loadSlice ctx s sl = .ok (vs, trR))
+    (_h3 : intElems vs.toList = .ok pairs)
+    (_h4 : Mem.storeRun ctx s sl 0 ((sortLe (fun a b => a.1 ≤ b.1) pairs).map fun p => GoValue.int p.1 p.2)
+      = .ok (s', trW)),
+    applyStmtOp ctx s ch (.sortSlice elem) 0 [baseV] = .ok (s', ch, [], trR ++ trW) :=
+  @GoLean.GoCore.Equations.applyStmtOp_sortSlice
+
+theorem Pin.applyStmtOp_sortSlice_spec : ∀ {ctx : ProgramCtx} {s s' : Store} {ch ch' : Choices} {ps : List PickRecord}
+    {tr : AccessTrace} {elem : Ty} {baseV : GoValue}
+    (_h : applyStmtOp ctx s ch (.sortSlice elem) 0 [baseV] = .ok (s', ch', ps, tr)),
+    ∃ (sl : SliceValue) (vs : Array GoValue) (trR : AccessTrace) (pairs sorted : List (Int × IntKind))
+      (trW : AccessTrace),
+      valueAsSlice baseV = .ok sl ∧ Mem.loadSlice ctx s sl = .ok (vs, trR) ∧ intElems vs.toList = .ok pairs ∧
+      List.Perm sorted pairs ∧ sorted.Pairwise (fun a b => a.1 ≤ b.1) ∧
+      Mem.storeRun ctx s sl 0 (sorted.map fun p => GoValue.int p.1 p.2) = .ok (s', trW) ∧
+      ch' = ch ∧ ps = [] ∧ tr = trR ++ trW :=
+  @GoLean.GoCore.Equations.applyStmtOp_sortSlice_spec
+
+theorem Pin.retV_stmtOpK_sortSlice : ∀ {ctx : ProgramCtx} {s s' : Store} {baseV : GoValue} {sl : SliceValue}
+    {vs : Array GoValue} {trR trW : AccessTrace} {pairs : List (Int × IntKind)} (elem : Ty) (env : LocalEnv)
+    (k' : Cont) (ch : Choices)
+    (_h1 : valueAsSlice baseV = .ok sl) (_h2 : Mem.loadSlice ctx s sl = .ok (vs, trR))
+    (_h3 : intElems vs.toList = .ok pairs)
+    (_h4 : Mem.storeRun ctx s sl 0 ((sortLe (fun a b => a.1 ≤ b.1) pairs).map fun p => GoValue.int p.1 p.2)
+      = .ok (s', trW)),
+    stepFn ctx s (.retV baseV (.stmtOpK (.sortSlice elem) 0 [] [] env k')) ch
+      = .ok (.next k', s', ch, ⟨trR ++ trW, [], []⟩) :=
+  @GoLean.GoCore.Equations.retV_stmtOpK_sortSlice
+
+theorem Pin.retV_stmtOpK_sortSlice_spec : ∀ {ctx : ProgramCtx} {s s' : Store} {ch ch' : Choices} {lbl : StepLabel}
+    {elem : Ty} {baseV : GoValue} (env : LocalEnv) (k' : Cont)
+    (_h : stepFn ctx s (.retV baseV (.stmtOpK (.sortSlice elem) 0 [] [] env k')) ch = .ok (.next k', s', ch', lbl)),
+    ∃ (sl : SliceValue) (vs : Array GoValue) (trR : AccessTrace) (pairs sorted : List (Int × IntKind))
+      (trW : AccessTrace),
+      valueAsSlice baseV = .ok sl ∧ Mem.loadSlice ctx s sl = .ok (vs, trR) ∧ intElems vs.toList = .ok pairs ∧
+      List.Perm sorted pairs ∧ sorted.Pairwise (fun a b => a.1 ≤ b.1) ∧
+      Mem.storeRun ctx s sl 0 (sorted.map fun p => GoValue.int p.1 p.2) = .ok (s', trW) ∧
+      ch' = ch ∧ lbl = ⟨trR ++ trW, [], []⟩ :=
+  @GoLean.GoCore.Equations.retV_stmtOpK_sortSlice_spec
+
 -- PINS-END
 end Pins
 

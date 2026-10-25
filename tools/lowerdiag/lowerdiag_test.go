@@ -154,13 +154,13 @@ func TestRegisterIsRead(t *testing.T) {
 	if !sup.sourceThrough["strings"] || sup.shim["fmt.Sprintf"] == "" || !sup.sourceThrough["slices"] {
 		t.Fatalf("register not read: source-through strings=%v shim fmt.Sprintf=%q source-through slices=%v", sup.sourceThrough["strings"], sup.shim["fmt.Sprintf"], sup.sourceThrough["slices"])
 	}
-	// The intercept class is EMPTY since 2026-09-04 (slices.Sort retired by
-	// memo §3 row M, lane fr4-rowm; cmp.Compare by lane fr24): the register
-	// must carry no intercept row — a row here without the code table is
-	// what check-stdlib-register catches, and the static pass must not
-	// treat slices.Sort as supplied-by-intercept any more.
-	if len(sup.intercept) != 0 {
-		t.Fatalf("register lists intercept rows %v — the class is frozen at 0", sup.intercept)
+	// The intercept class lists exactly `slices.Sort` since 2026-10-25
+	// (backlog row 50: re-admitted at integer element kinds; cmp.Compare
+	// stays retired since lane fr24, 2026-09-04): a row here without the
+	// code table is what check-stdlib-register catches; the static pass
+	// judges the member by position and element kind (interceptAppliesHere).
+	if len(sup.intercept) != 1 || !sup.intercept["slices.Sort"] {
+		t.Fatalf("register intercept rows %v — expected exactly slices.Sort", sup.intercept)
 	}
 	if sup.registerRows < 20 {
 		t.Fatalf("only %d register rows read", sup.registerRows)
@@ -1122,9 +1122,10 @@ func TestCalibrationAgainstWire(t *testing.T) {
 	// (errors.Is itself), so the static finding is CALL-scoped and the
 	// declaration agrees with the wire.
 	// sortStrings / deferSort LOWER since memo §3 row M (lane fr4-rowm,
-	// 2026-09-04): slices.Sort is the real generic at every ordered kind
-	// and nothing is intercepted, so the string sort and the deferred
-	// function value both reach pdqsortOrdered.
+	// 2026-09-04): slices.Sort at a string kind and the deferred function
+	// value both reach pdqsortOrdered; sortInts LOWERS as the sortSlice
+	// machine op since 2026-10-25 (backlog row 50 — the intercept
+	// re-admitted at integer kinds, statement position only).
 	// drawIntn / drawIntNv2 LOWER since window unit 5b (the rand-intn
 	// primitive); deferIntn and drawInt63n stay refused (route-A review Q7,
 	// 2026-10-04: lowerdiag had judged rand.Intn refused).

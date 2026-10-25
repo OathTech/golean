@@ -271,9 +271,30 @@ where it was fail-open (`docs/2026-10-03_panic-preprint-audit.md` F3). For the s
 `phaseMark_string` and `phaseMark_nonCarrier` (`Equations.lean`, §D pins, the contract) discharge
 the decision step's premise for a `string` or any non-carrier payload.
 
+A fourth addition (backlog row 50, [USER]-ruled 2026-10-25, option 1; raft-proofs G19; lane
+`frontend/g19-sort-intercept-1025`): the `sortSlice` machine op — `slices.Sort(s)` at an INTEGER
+element kind, which the frontend lowers to `Stmt.sortSlice` again (a deliberate partial reversal,
+for integer kinds only, of the 2026-09-04 ruling that retired the intercept; every other shape —
+a non-integer element kind, `defer`/`go` of the function value — stays gc's generic) — and its
+SPECIFICATION in `Equations.lean`, pinned in `Tests/GoCoreContract.lean` §D, required by the core
+audit and in the comparator contract: `exec_sortSlice` (the plan arm), `applyStmtOp_sortSlice` and
+`retV_stmtOpK_sortSlice` (the apply and the apply step written out over the memory primitives —
+`valueAsSlice`, `Mem.loadSlice`, `intElems`, `Mem.storeRun` from visible index 0 of the run
+`sortLe` sorted by value — the tape untouched, no pick, the label the reads then the writes), and
+their inversions `applyStmtOp_sortSlice_spec` / `retV_stmtOpK_sortSlice_spec`: after a successful
+apply (or a step from the apply position to `.next k'`) the run written back is a `List.Perm` of
+the run read, `List.Pairwise (· ≤ ·)` by integer value — the sorted permutation of the window, in
+place; elements beyond `len` and every other cell are untouched by construction of `storeRun`.
+The sort laws they rest on (`insertLe_perm`, `sortLe_perm`, `insertLe_pairwise`,
+`sortLe_pairwise`, the integer instance `sortLe_int_perm` / `sortLe_int_pairwise`) and the
+operand check's read-back (`intElems_map_int`, `intElems_ok_eq`) are theorems of the same module.
+Stated, not claimed exact: the op records every element of the window as read AND written, a
+conservative access set for the detector where gc's pdqsort might leave an already-placed element
+unwritten (within an implementation's latitude for an unspecified library sort).
+
 Since 2026-10-23 (release-readiness row 43, [USER]-ruled) that kept surface is a COMPARATOR
 CONTRACT: `Contract/Challenge.lean` restates all 366 of its theorems — every theorem of
-`Equations.lean` (300; 234 of them `@[stepFn_eqns]` simp-set members — the `signalStep_*` rows,
+`Equations.lean` (313; 236 of them `@[stepFn_eqns]` simp-set members — the `signalStep_*` rows,
 `runProgramSetup_noInit`, the `allocDecls_*`/`bindParams_*`/`setup_*` facts and the rest are plain
 theorems of the module), the 27 public theorems of `InitDriverFacts.lean` (G11), the five
 `Prefix`/`Finish` laws above, the six output-fold statements, `enterFrame_declared`, the fourteen

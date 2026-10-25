@@ -1,0 +1,13 @@
+# id	subject	args	expected_status	expected_reason	features
+# BORN 2026-10-25 (lane frontend/g19-sort-intercept-1025, backlog row 50): the
+# sortSlice MACHINE OP's shapes — the direct integer-kind slices.Sort lowers to
+# the op again; the deferred shape is the generic path.
+alias-two-headers	sortAliasTwoHeaders	-	ok	-	slices,sort,externs,arrays,slicing,aliasing
+spare-capacity	sortSpareCapacity	-	ok	-	slices,sort,externs,slicing,aliasing,make,cap
+empty-window-spare-capacity	sortEmptyWindowSpareCapacity	-	ok	-	slices,sort,externs,slicing,aliasing,make,cap,zero_len
+deferred-generic	sortDeferredGeneric	-	ok	-	slices,sort,externs,defer,closures,named-results,widths
+named-unsigned-kind	sortNamedUnsignedKind	-	ok	-	slices,sort,externs,defined_type,widths,ints
+uintptr	sortUintptr	-	ok	-	slices,sort,externs,widths,ints
+int8-negatives	sortInt8Negatives	-	ok	-	slices,sort,externs,widths,ints
+duplicates	sortDuplicates	-	ok	-	slices,sort,externs
+in-init	sortInInit	-	ok	-	slices,sort,externs,init,globals

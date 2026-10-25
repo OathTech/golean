@@ -478,6 +478,18 @@ def exports : List Name := [
     ``GoLean.GoCore.ContractTests.Pin.execProgLoopOut_snd,
     -- the phase's mark of a non-carrier payload (lane core/g16-raise-mark-1023, fix round F2, 2026-10-23)
     ``GoLean.GoCore.ContractTests.Pin.phaseMark_nonCarrier, ``GoLean.GoCore.ContractTests.Pin.phaseMark_string,
+    -- raft-proofs G19 (backlog row 50, 2026-10-25; lane frontend/g19-sort-intercept-1025): the `sortSlice`
+    -- op's plan arm, its apply written out, the apply/step specifications (a sorted permutation of the
+    -- window, in place) and the integer sort laws, with their pins (`Tests/GoCoreContract.lean` §D)
+    ``GoLean.GoCore.Equations.exec_sortSlice, ``GoLean.GoCore.Equations.applyStmtOp_sortSlice,
+    ``GoLean.GoCore.Equations.applyStmtOp_sortSlice_spec, ``GoLean.GoCore.Equations.retV_stmtOpK_sortSlice,
+    ``GoLean.GoCore.Equations.retV_stmtOpK_sortSlice_spec,
+    ``GoLean.GoCore.Equations.sortLe_int_perm, ``GoLean.GoCore.Equations.sortLe_int_pairwise,
+    ``GoLean.GoCore.ContractTests.Pin.exec_sortSlice, ``GoLean.GoCore.ContractTests.Pin.applyStmtOp_sortSlice,
+    ``GoLean.GoCore.ContractTests.Pin.applyStmtOp_sortSlice_spec,
+    ``GoLean.GoCore.ContractTests.Pin.retV_stmtOpK_sortSlice,
+    ``GoLean.GoCore.ContractTests.Pin.retV_stmtOpK_sortSlice_spec,
+    ``GoLean.GoCore.ContractTests.Pin.sortLe_int_perm, ``GoLean.GoCore.ContractTests.Pin.sortLe_int_pairwise,
     ``GoLean.GoCore.ContractTests.Pin.execProgLoopOut_acc,
     ``GoLean.GoCore.ContractTests.Pin.execProgLoopOut_eq_execProgLoop,
     ``GoLean.GoCore.ContractTests.Pin.init_print_refused_control,

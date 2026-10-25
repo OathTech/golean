@@ -119,6 +119,108 @@ BOXED one; an unboxed `.string` is not a Go interface value and `renderPanicPayl
 theorem applyStrictOp_toInterface_string (s : Store) (tgt : Loc → Loc) (ty : Ty) (v : GoValue) :
     applyStrictOp ctx s tgt (.toInterface ty .string) [v] = .ok (.interface .string v, s, []) := rfl
 
+/-! ### The sort's floor (2026-10-25, backlog row 50 — raft-proofs G19): `sortLe` is a sorted permutation
+
+`sortSlice`'s apply sorts the window's `(value, kind)` pairs with the structural insertion sort
+`sortLe` (`Ops.lean`; `List.mergeSort` is well-founded-compiled and kernel-irreducible, de-WF
+2026-08-03) by the NORMALIZED integer value — so unsigned order is exact above 2^63 and equal
+values are indistinguishable (stability is unobservable). The laws below are what the sort
+equations rest on: `insertLe`/`sortLe` permute their input and, for a total and transitive `le`,
+leave it `le`-sorted; the integer instance follows from `Int.le_total`/`Int.le_trans`. -/
+
+/-- Inserting into a list is a permutation of consing onto it. -/
+theorem insertLe_perm {α : Type} (le : α → α → Bool) (x : α) :
+    ∀ (l : List α), List.Perm (insertLe le x l) (x :: l)
+  | [] => List.Perm.refl _
+  | y :: ys => by
+      unfold insertLe
+      split
+      · exact List.Perm.refl _
+      · exact ((insertLe_perm le x ys).cons y).trans (List.Perm.swap x y ys)
+
+/-- The structural insertion sort is a permutation of its input. -/
+theorem sortLe_perm {α : Type} (le : α → α → Bool) :
+    ∀ (l : List α), List.Perm (sortLe le l) l
+  | [] => List.Perm.refl _
+  | x :: xs => (insertLe_perm le x (sortLe le xs)).trans ((sortLe_perm le xs).cons x)
+
+/-- Insertion keeps a `le`-sorted list sorted, for a total and transitive `le`. -/
+theorem insertLe_pairwise {α : Type} {le : α → α → Bool}
+    (htot : ∀ a b, le a b = true ∨ le b a = true)
+    (htrans : ∀ a b c, le a b = true → le b c = true → le a c = true) (x : α) :
+    ∀ {l : List α}, l.Pairwise (fun a b => le a b = true) →
+      (insertLe le x l).Pairwise (fun a b => le a b = true)
+  | [], _ => by simp [insertLe]
+  | y :: ys, h => by
+      rw [List.pairwise_cons] at h
+      obtain ⟨hy, hys⟩ := h
+      unfold insertLe
+      split
+      · rename_i hxy
+        rw [List.pairwise_cons]
+        refine ⟨?_, List.pairwise_cons.mpr ⟨hy, hys⟩⟩
+        intro z hz
+        rcases List.mem_cons.mp hz with rfl | hz
+        · exact hxy
+        · exact htrans _ _ _ hxy (hy z hz)
+      · rename_i hxy
+        have hyx : le y x = true := by
+          rcases htot x y with h | h
+          · exact absurd h hxy
+          · exact h
+        rw [List.pairwise_cons]
+        refine ⟨?_, insertLe_pairwise htot htrans x hys⟩
+        intro z hz
+        rcases List.mem_cons.mp ((insertLe_perm le x ys).mem_iff.mp hz) with rfl | hz'
+        · exact hyx
+        · exact hy z hz'
+
+/-- The structural insertion sort is sorted, for a total and transitive `le`. -/
+theorem sortLe_pairwise {α : Type} {le : α → α → Bool}
+    (htot : ∀ a b, le a b = true ∨ le b a = true)
+    (htrans : ∀ a b c, le a b = true → le b c = true → le a c = true) :
+    ∀ (l : List α), (sortLe le l).Pairwise (fun a b => le a b = true)
+  | [] => List.Pairwise.nil
+  | x :: xs => insertLe_pairwise htot htrans x (sortLe_pairwise htot htrans xs)
+
+/-- The machine's integer order (`sortSlice` sorts `(value, kind)` pairs by the normalized value):
+`sortLe` is a permutation of the pairs … -/
+theorem sortLe_int_perm (ps : List (Int × IntKind)) :
+    List.Perm (sortLe (fun a b => a.1 ≤ b.1) ps) ps :=
+  sortLe_perm _ ps
+
+/-- … ascending by value. -/
+theorem sortLe_int_pairwise (ps : List (Int × IntKind)) :
+    (sortLe (fun a b => a.1 ≤ b.1) ps).Pairwise (fun a b => a.1 ≤ b.1) :=
+  (sortLe_pairwise (le := fun a b : Int × IntKind => decide (a.1 ≤ b.1))
+    (fun a b => by
+      rcases Int.le_total a.1 b.1 with h | h
+      · exact Or.inl (decide_eq_true h)
+      · exact Or.inr (decide_eq_true h))
+    (fun a b c hab hbc =>
+      decide_eq_true (Int.le_trans (of_decide_eq_true hab) (of_decide_eq_true hbc)))
+    ps).imp (fun h => of_decide_eq_true h)
+
+/-- `intElems` (the op's operand check) reads a run of integer values back as its pairs … -/
+theorem intElems_map_int : ∀ (ps : List (Int × IntKind)),
+    intElems (ps.map fun p => GoValue.int p.1 p.2) = .ok ps
+  | [] => rfl
+  | p :: ps => by simp [intElems, intElems_map_int ps, Bind.bind, Except.bind]
+
+/-- … and a run it accepts IS the pairs' values (so a `List.Perm` of pairs lifts to the values by
+`List.Perm.map`). -/
+theorem intElems_ok_eq {vs : List GoValue} {ps : List (Int × IntKind)} (h : intElems vs = .ok ps) :
+    vs = ps.map fun p => GoValue.int p.1 p.2 := by
+  induction vs generalizing ps with
+  | nil => simp [intElems] at h; subst h; rfl
+  | cons v rest ih =>
+      cases v
+      case int n k =>
+        simp only [intElems, bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
+        obtain ⟨qs, hqs, rfl⟩ := h
+        simp [ih hqs]
+      all_goals simp [intElems] at h
+
 /-! ## The root-cell read/write laws (request 1: the arm premises' floor) -/
 
 /-- The read of a root cell IS the heap lookup. -/
@@ -1185,6 +1287,12 @@ AHEAD of any consult (`convRefuse`: a `stuck`, never a panic), the step's `Stop`
       = .ok (.evalE e env (.stmtOpK (.print newline) 0 [] rest env k), s, ch, ⟨[], [], []⟩) := by
   simp [stepFn, stmtPlan, hargs]
 
+/-- `sortSlice` (the `slices.Sort(s)` intercept at an integer element kind, 2026-10-25, backlog
+row 50): no target, the one operand is the slice. -/
+@[stepFn_eqns] theorem exec_sortSlice (s : Store) (base : Expr) (elem : Ty) (env : LocalEnv) (k : Cont) (ch : Choices) :
+    stepFn ctx s (.exec (.sortSlice base elem) env k) ch
+      = .ok (.evalE base env (.stmtOpK (.sortSlice elem) 0 [] [] env k), s, ch, ⟨[], [], []⟩) := by defn_eq
+
 /-- The wide operand walk: a TARGET address is checked as it arrives when more operands follow
 (interpreter panic timing). -/
 @[stepFn_eqns] theorem retV_stmtOpK_more_target {s : Store} {v : GoValue} {loc : Loc} {nt : Nat} {done : List GoValue} (op : StmtOp) (e : Expr)
@@ -1221,6 +1329,102 @@ output on the label (`stmtOpOut`: the `print` bytes). -/
     (env : LocalEnv) (k' : Cont) (ch : Choices) (h : applyStmtOp ctx s ch op nt (v :: done).reverse = .error (.panic msg)) :
     stepFn ctx s (.retV v (.stmtOpK op nt done [] env k')) ch = .ok (.panicking [panicEntry msg] k', s, ch, ⟨[], [], []⟩) := by
   simp only [stepFn, applyStmtOp_inv_panic h, toResult_panic, Bind.bind, Except.bind, deliverV_panic, List.nil_append]
+
+/-! ### `sortSlice`'s apply, written out, and its SPECIFICATION (2026-10-25, backlog row 50 — raft-proofs G19)
+
+The op (`applyStmtOpCore.plan`'s `.sortSlice` arm; `Machine.lean`): the slice operand
+(`valueAsSlice`), the visible window read (`Mem.loadSlice` — `validateSlice`, then one `.data`
+read per element at `.index base (offset + i)`, `i < len`; a nil slice and an empty window read
+nothing), checked all-int (`intElems`, `stuck` by name at the first non-integer element), sorted
+by value (`sortLe` on the normalized `Int`) and written back in place from visible index 0
+(`Mem.storeRun` — one `.data` write per element at the same paths, so the elements beyond `len`
+and every other cell are untouched, and every alias of the backing array observes the sort). No
+draw, no pick, the tape rides through. The forward EQUATIONS take the four primitive results as
+premises (the library's convention: applied by instantiation); the `_spec` inversions read a
+successful apply/step back as «the run written is a sorted permutation of the run read». -/
+
+/-- `sortSlice`'s apply: the window read, the pairs sorted, the sorted run written back. -/
+theorem applyStmtOp_sortSlice {s s' : Store} {baseV : GoValue} {sl : SliceValue} {vs : Array GoValue}
+    {trR trW : AccessTrace} {pairs : List (Int × IntKind)} (elem : Ty) (ch : Choices)
+    (h1 : valueAsSlice baseV = .ok sl) (h2 : Mem.loadSlice ctx s sl = .ok (vs, trR))
+    (h3 : intElems vs.toList = .ok pairs)
+    (h4 : Mem.storeRun ctx s sl 0 ((sortLe (fun a b => a.1 ≤ b.1) pairs).map fun p => GoValue.int p.1 p.2)
+      = .ok (s', trW)) :
+    applyStmtOp ctx s ch (.sortSlice elem) 0 [baseV] = .ok (s', ch, [], trR ++ trW) := by
+  simp only [applyStmtOp, applyStmtOp.plan, applyStmtOpCore.plan, h1, h2, h3, h4, Commit.withStream,
+    Bind.bind, Except.bind, pure, Except.pure]
+
+/-- A successful `sortSlice` apply, read back: the operand is a slice `sl`, its window read `vs` is
+all-int with pairs `pairs`, and the run written back from visible index 0 is a `List.Perm` of
+`pairs` ascending by value; the tape is untouched, no pick, the label the reads then the writes. -/
+theorem applyStmtOp_sortSlice_spec {s s' : Store} {ch ch' : Choices} {ps : List PickRecord} {tr : AccessTrace}
+    {elem : Ty} {baseV : GoValue}
+    (h : applyStmtOp ctx s ch (.sortSlice elem) 0 [baseV] = .ok (s', ch', ps, tr)) :
+    ∃ (sl : SliceValue) (vs : Array GoValue) (trR : AccessTrace) (pairs sorted : List (Int × IntKind))
+      (trW : AccessTrace),
+      valueAsSlice baseV = .ok sl ∧ Mem.loadSlice ctx s sl = .ok (vs, trR) ∧ intElems vs.toList = .ok pairs ∧
+      List.Perm sorted pairs ∧ sorted.Pairwise (fun a b => a.1 ≤ b.1) ∧
+      Mem.storeRun ctx s sl 0 (sorted.map fun p => GoValue.int p.1 p.2) = .ok (s', trW) ∧
+      ch' = ch ∧ ps = [] ∧ tr = trR ++ trW := by
+  obtain ⟨c, hc, hcs⟩ := applyStmtOp_inv_ok h
+  simp only [applyStmtOp.plan, applyStmtOpCore.plan, bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hc
+  obtain ⟨c₀, ⟨sl, hsl, ⟨vs, trR⟩, hvs, pairs, hpairs, rfl⟩, rfl⟩ := hc
+  simp only [Commit.withStream, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hcs
+  obtain ⟨⟨s₁, trW⟩, hst, rfl, rfl, rfl, rfl⟩ := hcs
+  simp only [Prod.mk.injEq] at hst
+  obtain ⟨⟨s₂, trW'⟩, hst, rfl, rfl⟩ := hst
+  exact ⟨sl, vs, trR, pairs, _, trW', hsl, hvs, hpairs, sortLe_int_perm pairs, sortLe_int_pairwise pairs,
+    hst, rfl, rfl, rfl⟩
+
+/-- The apply STEP of a `sortSlice` statement, written out (`retV_stmtOpK_apply` at the sort's
+premises): one step, the window sorted in place, the successor `.next k'`, the label the reads then
+the writes, no output. -/
+@[stepFn_eqns] theorem retV_stmtOpK_sortSlice {s s' : Store} {baseV : GoValue} {sl : SliceValue} {vs : Array GoValue}
+    {trR trW : AccessTrace} {pairs : List (Int × IntKind)} (elem : Ty) (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (h1 : valueAsSlice baseV = .ok sl) (h2 : Mem.loadSlice ctx s sl = .ok (vs, trR))
+    (h3 : intElems vs.toList = .ok pairs)
+    (h4 : Mem.storeRun ctx s sl 0 ((sortLe (fun a b => a.1 ≤ b.1) pairs).map fun p => GoValue.int p.1 p.2)
+      = .ok (s', trW)) :
+    stepFn ctx s (.retV baseV (.stmtOpK (.sortSlice elem) 0 [] [] env k')) ch
+      = .ok (.next k', s', ch, ⟨trR ++ trW, [], []⟩) := by
+  rw [retV_stmtOpK_apply env k' ch (applyStmtOp_sortSlice elem ch h1 h2 h3 h4)]
+  rfl
+
+/-- A successful apply step of a `sortSlice` statement, read back (the `stepFn`-level
+specification: a step from the apply position to `.next k'` sorted the window in place). -/
+theorem retV_stmtOpK_sortSlice_spec {s s' : Store} {ch ch' : Choices} {lbl : StepLabel} {elem : Ty} {baseV : GoValue}
+    (env : LocalEnv) (k' : Cont)
+    (h : stepFn ctx s (.retV baseV (.stmtOpK (.sortSlice elem) 0 [] [] env k')) ch = .ok (.next k', s', ch', lbl)) :
+    ∃ (sl : SliceValue) (vs : Array GoValue) (trR : AccessTrace) (pairs sorted : List (Int × IntKind))
+      (trW : AccessTrace),
+      valueAsSlice baseV = .ok sl ∧ Mem.loadSlice ctx s sl = .ok (vs, trR) ∧ intElems vs.toList = .ok pairs ∧
+      List.Perm sorted pairs ∧ sorted.Pairwise (fun a b => a.1 ≤ b.1) ∧
+      Mem.storeRun ctx s sl 0 (sorted.map fun p => GoValue.int p.1 p.2) = .ok (s', trW) ∧
+      ch' = ch ∧ lbl = ⟨trR ++ trW, [], []⟩ := by
+  simp only [stepFn, List.reverse_cons, List.reverse_nil, List.nil_append] at h
+  cases hr : toResult (applyStmtOp.plan ctx s ch (.sortSlice elem) 0 [baseV]) with
+  | error e => rw [hr] at h; simp [Bind.bind, Except.bind] at h
+  | ok r =>
+    rw [hr] at h
+    cases r with
+    | panic msg => simp [Bind.bind, Except.bind, deliverV_panic] at h
+    | ok c =>
+      have hc := toResult_eq_ok_ok.mp hr
+      simp only [Bind.bind, Except.bind, deliverV_ok, Functor.map, Except.map] at h
+      cases hrc : runCommit c s with
+      | error e => rw [hrc] at h; simp at h
+      | ok a =>
+        rw [hrc] at h
+        obtain ⟨s₁, ch₁, ps, tr⟩ := a
+        simp only [Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨-, rfl, rfl, rfl⟩ := h
+        have happ : applyStmtOp ctx s ch (.sortSlice elem) 0 [baseV] = .ok (s₁, ch₁, ps, tr) := by
+          unfold applyStmtOp
+          simp only [hc, Bind.bind, Except.bind]
+          exact runCommit_eq_ok.mp hrc
+        obtain ⟨sl, vs, trR, pairs, sorted, trW, hsl, hvs, hpairs, hperm, hsorted, hst, rfl, rfl, rfl⟩ :=
+          applyStmtOp_sortSlice_spec happ
+        exact ⟨sl, vs, trR, pairs, sorted, trW, hsl, hvs, hpairs, hperm, hsorted, hst, rfl, rfl⟩
 
 /-! ## (3) Ranges over maps -/
 

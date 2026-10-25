@@ -3992,22 +3992,39 @@ def main : IO UInt32 := do
     (match Lean.Json.parse (bcWire "\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},") with
      | .error _ => false
      | .ok j => (GoLean.NativeToIR.decodeProgram j).isOk))
-  -- Row M (memo §3; lane fr4-rowm audit fix round A3): the `sort-slice`
-  -- wire node is no longer decoded — the frontend never emits it, and a
-  -- hand-edited wire must be REFUSED by name rather than run the retired
-  -- one-step insertion sort (a different member than the real pdqsort the
-  -- frontend now emits). A `clear-slice` of the same shape still decodes,
-  -- so the refusal is the node's, not the shape's.
-  let sortSliceWire (tag : String) : String :=
-    "{\"schema\":\"golean-native-v3\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"types\":[],\"methods\":[],\"methodSets\":[],\"promotions\":[],\"globals\":[],\"funcs\":[{\"name\":\"f\",\"params\":[],\"results\":[],\"variadic\":false,\"locals\":[],\"body\":{\"stmt\":\"block\",\"body\":[{\"stmt\":\"" ++ tag ++ "\",\"base\":{\"expr\":\"nil\"},\"elem\":{\"kind\":\"int\",\"int\":\"int\"}}]}}]}"
-  passed := passed && (← expectTrue "row M: decode refuses the retired sort-slice statement by name"
-    (match Lean.Json.parse (sortSliceWire "sort-slice") with
+  -- The `sort-slice` wire node (`Stmt.sortSlice`): REFUSED by name from
+  -- 2026-09-04 (memo §3 row M; lane fr4-rowm audit fix round A3 — the
+  -- frontend never emitted it) and DECODED AGAIN since 2026-10-25 ([USER]
+  -- ruling of 2026-10-25, backlog row 50 option 1, relayed: the
+  -- `slices.Sort` intercept re-admitted at integer element kinds, lane
+  -- frontend/g19-sort-intercept-1025). The pin is now the acceptance: the
+  -- node decodes to the op's statement beside its `clear-slice` twin of
+  -- the same shape, and a node missing its `elem` field is refused by name
+  -- (the strict decoder's field check, so a malformed node never reaches
+  -- the op).
+  let sortSliceWire (tag : String) (elemField : String) : String :=
+    "{\"schema\":\"golean-native-v3\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"types\":[],\"methods\":[],\"methodSets\":[],\"promotions\":[],\"globals\":[],\"funcs\":[{\"name\":\"f\",\"params\":[],\"results\":[],\"variadic\":false,\"locals\":[],\"body\":{\"stmt\":\"block\",\"body\":[{\"stmt\":\"" ++ tag ++ "\",\"base\":{\"expr\":\"nil\"}" ++ elemField ++ "}]}}]}"
+  let elemInt := ",\"elem\":{\"kind\":\"int\",\"int\":\"int\"}"
+  passed := passed && (← expectTrue "G19 (row 50): decode ACCEPTS the sort-slice statement as Stmt.sortSlice (re-admitted 2026-10-25)"
+    (match Lean.Json.parse (sortSliceWire "sort-slice" elemInt) with
+     | .error _ => false
+     | .ok j => match GoLean.NativeToIR.decodeProgram j with
+       | .error _ => false
+       | .ok prog => prog.funcs.any fun f =>
+           match f.body with
+           | .block _ stmts => stmts.any fun st =>
+               match st with
+               | .sortSlice (.nil none) (.int .int) => true
+               | _ => false
+           | _ => false))
+  passed := passed && (← expectTrue "G19 (row 50): a sort-slice node missing its elem field is refused by name"
+    (match Lean.Json.parse (sortSliceWire "sort-slice" "") with
      | .error _ => false
      | .ok j => match GoLean.NativeToIR.decodeProgram j with
        | .ok _ => false
-       | .error e => (e.splitOn "unsupported statement sort-slice").length > 1))
-  passed := passed && (← expectTrue "row M: the same wire shape as clear-slice still decodes (the refusal is the node's, not the shape's)"
-    (match Lean.Json.parse (sortSliceWire "clear-slice") with
+       | .error e => (e.splitOn "elem").length > 1))
+  passed := passed && (← expectTrue "G19 (row 50): the clear-slice twin of the same shape decodes too (control)"
+    (match Lean.Json.parse (sortSliceWire "clear-slice" elemInt) with
      | .error _ => false
      | .ok j => (GoLean.NativeToIR.decodeProgram j).isOk))
   -- C2 — the type-table ACCEPTANCE clause at the decoder (G-C2, 2026-09-05,

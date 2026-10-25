@@ -413,13 +413,13 @@ func TestStdlibRegisterDumpCaps(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"count\toverlay\t5 / cap 12", "count\toverlay-import\t5 / cap 8", "count\tintercept\t0 ", "count\tprimitive\t3 / cap 3", "primitive\trand-intn\t", "source-through\tstrings\t", "substitution\tinternal/bytealg/indexbyte_native.go -> indexbyte_generic.go\t", "count\tshim\t6 ", "count\tshadow-type\t5", "source-through\tbytes\t", "source-through\tslices\t", "source-through\tcmp\t", "source-through\tencoding/binary\t", "shim\tfmt.Sprintf\t", "overlay\tinternal/stringslite/strings.go:149\t`unsafe.String(&b[0], len(b))` -> `string(b)`", "overlay\tstrings/builder.go:47\t", "overlay-import\tstrings/builder.go:11\t`\"unsafe\"` -> `_ \"unsafe\"`"} {
+	for _, want := range []string{"count\toverlay\t5 / cap 12", "count\toverlay-import\t5 / cap 8", "count\tintercept\t1 ", "intercept\tslices.Sort\t", "count\tprimitive\t3 / cap 3", "primitive\trand-intn\t", "source-through\tstrings\t", "substitution\tinternal/bytealg/indexbyte_native.go -> indexbyte_generic.go\t", "count\tshim\t6 ", "count\tshadow-type\t5", "source-through\tbytes\t", "source-through\tslices\t", "source-through\tcmp\t", "source-through\tencoding/binary\t", "shim\tfmt.Sprintf\t", "overlay\tinternal/stringslite/strings.go:149\t`unsafe.String(&b[0], len(b))` -> `string(b)`", "overlay\tstrings/builder.go:47\t", "overlay-import\tstrings/builder.go:11\t`\"unsafe\"` -> `_ \"unsafe\"`"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("register dump lacks %q:\n%s", want, out)
 		}
 	}
 	for _, retired := range []string{"shim\tstrings.Fields\t", "shim\tstrings.Split\t", "shim\tstrings.TrimSpace\t", "shim\tstrconv.FormatUint\t", "shim\tstrconv.FormatInt\t", "shim\tstrconv.ParseUint\t",
-		"shim\tstrings.Join\t", "shim\tstrings.Repeat\t", "shim\terrors.New\t", "shim\tbytes.Equal\t", "shim\tslices.SortFunc\t", "shim\tencoding/binary.LittleEndian.Uint64\t", "shim\tencoding/binary.LittleEndian.PutUint64\t", "shadow-type\tstrings.Builder\t", "shadow-type\tbytes.Buffer\t", "intercept\tslices.Sort\t", "intercept\tcmp.Compare\t"} {
+		"shim\tstrings.Join\t", "shim\tstrings.Repeat\t", "shim\terrors.New\t", "shim\tbytes.Equal\t", "shim\tslices.SortFunc\t", "shim\tencoding/binary.LittleEndian.Uint64\t", "shim\tencoding/binary.LittleEndian.PutUint64\t", "shadow-type\tstrings.Builder\t", "shadow-type\tbytes.Buffer\t", "intercept\tcmp.Compare\t"} {
 		if strings.Contains(out, retired) {
 			t.Fatalf("register dump still lists a retired shim %q", retired)
 		}
@@ -571,19 +571,19 @@ func main() { subject() }
 	}
 }
 
-// TestSlicesSortIsTheRealGenericEverywhere (memo §3 row M, lane fr4-rowm,
-// 2026-09-04): the `slices.Sort` intercept onto the `sortSlice` machine op
-// is RETIRED, so every shape — the direct call, `defer`, `go` — reaches the
+// TestSlicesSortNonIntegerKindIsTheRealGenericEverywhere: at a NON-integer
+// element kind every shape — the direct call, `defer`, `go` — reaches the
 // real source-through generic: the `slices.Sort[…]` stencil and its
 // `pdqsortOrdered` closure are on the wire, the subject is NOT quarantined,
-// and NO `sort-slice` node is emitted (the op is unreferenced). Before row
-// M the defer/go shapes refused by name (audit fix round F1) and the
-// direct call was the machine op at integer kinds only; the intercept
-// table is empty now, and the predicate says so for slices.Sort.
-func TestSlicesSortIsTheRealGenericEverywhere(t *testing.T) {
+// and NO `sort-slice` node is emitted. The intercept table lists exactly
+// `slices.Sort` (re-admitted 2026-10-25, backlog row 50, for INTEGER kinds
+// only — the sibling test below), and interceptSortSlice says NO for a
+// string element: the generic, not a refusal (memo §3 row M's posture at
+// every non-integer kind, unchanged).
+func TestSlicesSortNonIntegerKindIsTheRealGenericEverywhere(t *testing.T) {
 	withStdlibRoots(t)
-	if len(frontendInterceptedLibraryMembers) != 0 {
-		t.Fatalf("the intercept table must be EMPTY since row M (a new entry is a register widening): %v", frontendInterceptedLibraryMembers)
+	if len(frontendInterceptedLibraryMembers) != 1 || len(frontendInterceptedLibraryMembers["slices"]) != 1 || frontendInterceptedLibraryMembers["slices"]["Sort"] == "" {
+		t.Fatalf("the intercept table must list exactly slices.Sort since 2026-10-25 (a further entry is a register widening): %v", frontendInterceptedLibraryMembers)
 	}
 	for _, shape := range []string{"", "defer", "go"} {
 		dir := writeMain(t, `package main
@@ -604,7 +604,7 @@ func main() { subject() }
 			t.Fatalf("%q: subject not on the wire", shape)
 		}
 		if reason, stubbed := subj["unsupported"]; stubbed {
-			t.Fatalf("%q: subject quarantined — slices.Sort must lower through the real generic; got %v", shape, reason)
+			t.Fatalf("%q: subject quarantined — slices.Sort at a string kind must lower through the real generic; got %v", shape, reason)
 		}
 		if _, real := fns["slices.Sort[[]string,string]"]; !real {
 			t.Fatalf("%q: the real slices.Sort stencil is not on the wire; funcs: %v", shape, keysOf(fns))
@@ -613,8 +613,81 @@ func main() { subject() }
 			t.Fatalf("%q: pdqsortOrdered[string] not stenciled; funcs: %v", shape, keysOf(fns))
 		}
 		if strings.Contains(mustJSON(t, program), `"sort-slice"`) {
-			t.Fatalf("%q: a sort-slice machine-op node was emitted — the intercept is retired", shape)
+			t.Fatalf("%q: a sort-slice machine-op node was emitted at a string kind — the intercept is integer-only", shape)
 		}
+	}
+}
+
+// TestSlicesSortIntegerKindIsTheOpInStatementPositionOnly (2026-10-25,
+// backlog row 50 option 1, [USER]-ruled, relayed): at an INTEGER element
+// kind — a basic kind, `uintptr`, a DEFINED type over one — the DIRECT call
+// in expression-statement position is the `sortSlice` machine op (one
+// `sort-slice` node, no `slices.Sort[…]` stencil and no pdqsort closure on
+// the wire), while `defer`/`go` of the same call are the real FUNCTION
+// VALUE: the stencil and its closure (`pdqsortOrdered`, reached
+// `math/bits`) on the wire, no `sort-slice` node, no refusal (the F1
+// by-name refusal of 2026-09-04 is retired). A float kind beside it stays
+// the generic in every position.
+func TestSlicesSortIntegerKindIsTheOpInStatementPositionOnly(t *testing.T) {
+	withStdlibRoots(t)
+	for _, elem := range []struct{ decl, ty, stencil, pdq string }{
+		{"", "int", "slices.Sort[[]int,int]", "slices.pdqsortOrdered[int]"},
+		{"", "uint64", "slices.Sort[[]uint64,uint64]", "slices.pdqsortOrdered[uint64]"},
+		{"", "uintptr", "slices.Sort[[]uintptr,uintptr]", "slices.pdqsortOrdered[uintptr]"},
+		{"type idx uint64\n", "idx", "slices.Sort[[]main.idx,main.idx]", "slices.pdqsortOrdered[main.idx]"},
+	} {
+		for _, shape := range []string{"", "defer", "go"} {
+			dir := writeMain(t, `package main
+
+import "slices"
+
+`+elem.decl+`
+func subject() int { s := []`+elem.ty+`{3, 1, 2}; `+shape+` slices.Sort(s); return len(s) }
+
+func main() { subject() }
+`)
+			program, err := lowerProgramDir(t, dir)
+			if err != nil {
+				t.Fatalf("%s %q: lower: %v", elem.ty, shape, err)
+			}
+			fns := funcNames(program)
+			subj, ok := fns["subject"]
+			if !ok {
+				t.Fatalf("%s %q: subject not on the wire", elem.ty, shape)
+			}
+			if reason, stubbed := subj["unsupported"]; stubbed {
+				t.Fatalf("%s %q: subject quarantined: %v", elem.ty, shape, reason)
+			}
+			_, real := fns[elem.stencil]
+			_, pdq := fns[elem.pdq]
+			node := strings.Contains(mustJSON(t, subj), `"sort-slice"`)
+			if shape == "" {
+				if !node || real || pdq {
+					t.Fatalf("%s direct call: want the sort-slice op and no generic; got node=%v stencil=%v pdqsort=%v funcs: %v", elem.ty, node, real, pdq, keysOf(fns))
+				}
+				continue
+			}
+			if node || !real || !pdq {
+				t.Fatalf("%s %q: want the real generic with its closure and no sort-slice node; got node=%v stencil=%v pdqsort=%v funcs: %v", elem.ty, shape, node, real, pdq, keysOf(fns))
+			}
+		}
+	}
+	// A float kind: the generic in statement position too.
+	dir := writeMain(t, `package main
+
+import "slices"
+
+func subject() int { s := []float64{3, 1, 2}; slices.Sort(s); return len(s) }
+
+func main() { subject() }
+`)
+	program, err := lowerProgramDir(t, dir)
+	if err != nil {
+		t.Fatalf("float64: lower: %v", err)
+	}
+	fns := funcNames(program)
+	if _, real := fns["slices.Sort[[]float64,float64]"]; !real || strings.Contains(mustJSON(t, program), `"sort-slice"`) {
+		t.Fatalf("float64 direct call: want the real generic and no sort-slice node; funcs: %v", keysOf(fns))
 	}
 }
 
@@ -860,20 +933,20 @@ func loadLibraryUnitForTest(t *testing.T, path string) (*sourcePkg, libTestIdx, 
 // intercepts it), never "not intercepted"; the empty table is explicit.
 func TestInterceptedLibraryCallFailsClosedOnListedMemberWithoutArm(t *testing.T) {
 	withStdlibRoots(t)
-	if len(frontendInterceptedLibraryMembers) != 0 {
-		t.Fatalf("precondition: the table is empty since row M, got %v", frontendInterceptedLibraryMembers)
+	if _, listed := frontendInterceptedLibraryMembers["slices"]["Reverse"]; listed {
+		t.Fatalf("precondition: slices.Reverse is not an intercepted member, got %v", frontendInterceptedLibraryMembers)
 	}
 	saved := frontendInterceptedLibraryMembers
 	defer func() { frontendInterceptedLibraryMembers = saved }()
-	frontendInterceptedLibraryMembers = map[string]map[string]string{"slices": {"Sort": "probe: listed without an arm"}}
-	if _, _, ok, err := interceptedMemberArm("slices", "Sort"); ok || err == nil || !strings.Contains(err.Error(), "slices.Sort is listed in frontendInterceptedLibraryMembers") || !strings.Contains(err.Error(), "no arm") {
+	frontendInterceptedLibraryMembers = map[string]map[string]string{"slices": {"Reverse": "probe: listed without an arm"}}
+	if _, _, ok, err := interceptedMemberArm(nil, nil, "slices", "Reverse"); ok || err == nil || !strings.Contains(err.Error(), "slices.Reverse is listed in frontendInterceptedLibraryMembers") || !strings.Contains(err.Error(), "no arm") {
 		t.Fatalf("listed-without-arm must be a named refusal, got ok=%v err=%v", ok, err)
 	}
 	dir := writeMain(t, `package main
 
 import "slices"
 
-func subject() int { s := []int{3, 1, 2}; slices.Sort(s); return s[0] }
+func subject() int { s := []int{3, 1, 2}; slices.Reverse(s); return s[0] }
 
 func main() { subject() }
 `)
@@ -882,6 +955,6 @@ func main() { subject() }
 	}
 	frontendInterceptedLibraryMembers = saved
 	if _, err := lowerProgramDir(t, dir); err != nil {
-		t.Fatalf("with the empty table the same program lowers: %v", err)
+		t.Fatalf("with the real table the same program lowers: %v", err)
 	}
 }

@@ -2301,6 +2301,20 @@
 #   embedding/promoted-stub-dispatch package's wire; its other four rows are unmoved (diff-one: 3 PASS / 2 FAIL as pinned).
 #   Measured by scripts/diff-one at the tree and on the archive build; the full gate line is in the handoff §6.
 #   3790 + 1 = 3791; 3553 + 1 = 3554; 237 FAIL unchanged. No PASS -> non-PASS flip.
+# re-pinned: 2026-10-25 [AGENT], frontend/g19-sort-intercept-1025, raft-proofs G19 (backlog row 50, [USER]-ruled 2026-10-25,
+#   option 1, relayed) — the `slices.Sort` intercept RE-ADMITTED at INTEGER element kinds: a direct `slices.Sort(s)` in
+#   expression-statement position whose element kind is an integer basic kind lowers to the `sortSlice` MACHINE OP (`sort-slice`)
+#   again, a deliberate partial reversal, for integer kinds only, of memo §3 row M (2026-09-04); every other shape (non-integer
+#   element kinds, defer/go of the function value) stays the real generic. WHY no existing row moves: the sorted result of an
+#   integer slice is unique, so the op and gc's pdqsort agree on every observation. Measured by scripts/diff-one at the tree on
+#   every row whose program calls slices.Sort — slices/slices-sort/*, slices/slices-sort-edges/*, slices/slices-sort-kinds/*,
+#   slices/slices-sort-non-integer-refusal, stdlib-source/sort-op-shapes/*, quorum/committed-index-real/*,
+#   stdlib-source/slices-sortfunc/*, slices/sortfunc-cmp/* — 55 rows, 55 PASS as pinned. 9 rows BORN, all PASS, the op's shapes:
+#   slices/slices-sort-op/{alias-two-headers (a second header over the sorted window's backing array sees the sort, the elements
+#   outside the window keep their places), spare-capacity (the elements beyond len are untouched), empty-window-spare-capacity,
+#   deferred-generic (defer slices.Sort at uint8 — the generic path, the F1 refusal retired), named-unsigned-kind (a defined uint64
+#   kind above 2^63), uintptr, int8-negatives, duplicates, in-init (the op inside init())}. 4029 + 9 = 4038; 3771 + 9 = 3780;
+#   258 FAIL unchanged. No PASS -> non-PASS flip.
 result	id	stage	cause
 PASS	arrays/array-bounds	-	-
 PASS	arrays/array-comparable	-	-
@@ -5571,6 +5585,15 @@ PASS	slices/slices-sort-kinds/named-string	-	-
 PASS	slices/slices-sort-kinds/string	-	-
 PASS	slices/slices-sort-kinds/string-large	-	-
 PASS	slices/slices-sort-non-integer-refusal	-	-
+PASS	slices/slices-sort-op/alias-two-headers	-	-
+PASS	slices/slices-sort-op/deferred-generic	-	-
+PASS	slices/slices-sort-op/duplicates	-	-
+PASS	slices/slices-sort-op/empty-window-spare-capacity	-	-
+PASS	slices/slices-sort-op/in-init	-	-
+PASS	slices/slices-sort-op/int8-negatives	-	-
+PASS	slices/slices-sort-op/named-unsigned-kind	-	-
+PASS	slices/slices-sort-op/spare-capacity	-	-
+PASS	slices/slices-sort-op/uintptr	-	-
 PASS	slices/slices-sort/ints	-	-
 PASS	slices/slices-sort/uint64	-	-
 PASS	slices/sortfunc-cmp/cmp-compare-kinds	-	-

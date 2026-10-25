@@ -352,6 +352,12 @@ type analyzer struct {
 	// local type declarations, no longer a finding)
 	localTypes map[string][]*declReport
 	pkgTypes   map[string]bool
+	// The calls in `defer`/`go` position of the body under analysis (the
+	// statements' own `.Call`; recorded by the GoStmt/DeferStmt arms,
+	// which the walk visits before the call). The frontend's intercept
+	// rule is positional (tools/nativefrontend/stdlibreach.go spawnCalls):
+	// an intercepted member in spawn position is the real function value.
+	spawnCalls map[*ast.CallExpr]bool
 }
 
 func typeStr(t types.Type) string {
@@ -889,7 +895,19 @@ func (a *analyzer) classifyPkgCall(d *declReport, path, member string, at ast.No
 		// and defer/go of it refuses by name (interceptedSpawn).
 		d.supplied(key, "machine rand-intn")
 	case sup.intercept[key]:
-		d.supplied(key, "intercept")
+		// A register `intercept` member (`slices.Sort`, re-admitted
+		// 2026-10-25, backlog row 50): the frontend lowers the DIRECT call
+		// in expression-statement position at an INTEGER element kind to
+		// the `sortSlice` machine op (stdlibreach.go interceptSortSlice /
+		// emit.go emitSortStmt) and every other shape — a non-integer
+		// element kind, `defer`/`go` of the function value — through the
+		// real source-through generic. Both LOWER; the supply class says
+		// which (the static twin of the predicate).
+		if call, isCall := at.(*ast.CallExpr); isCall && a.interceptAppliesHere(key, call) {
+			d.supplied(key, "intercept")
+		} else {
+			d.supplied(key, "source-through")
+		}
 	case sup.sourceThrough[path]:
 		if lr, ok := sup.libRefused[key]; ok {
 			// The library function itself is quarantined (FR-21 / reflect);
@@ -1064,12 +1082,6 @@ func (a *analyzer) body(d *declReport, root ast.Node, fd *ast.FuncDecl) {
 				if path, member, obj, ok := a.stdlibSel(sel); ok {
 					if _, isType := obj.(*types.TypeName); !isType {
 						a.classifyPkgCall(d, path, member, x)
-						// (slices.Sort's element-kind check — the sortSlice
-						// MACHINE OP's integer-kinds-only intercept — was
-						// here until 2026-09-04; RETIRED with the op by memo
-						// §3 row M, lane fr4-rowm: slices.Sort is a
-						// source-through member like the rest of `slices`,
-						// judged by classifyPkgCall's source-through arm.)
 					}
 					break
 				}
@@ -1168,11 +1180,13 @@ func (a *analyzer) body(d *declReport, root ast.Node, fd *ast.FuncDecl) {
 				}
 			}
 		case *ast.GoStmt:
+			a.markSpawn(x.Call)
 			if name, ok := isBuiltin(a, x.Call.Fun); ok {
 				d.add(finding{Cause: mustCause("go-of-builtin"), Key: name, Pos: pos, Certain: true})
 			}
 			a.interceptedSpawn(d, "go", x.Call, pos)
 		case *ast.DeferStmt:
+			a.markSpawn(x.Call)
 			if name, ok := isBuiltin(a, x.Call.Fun); ok && name != "recover" && name != "close" {
 				d.add(finding{Cause: mustCause("defer-of-builtin"), Key: name, Pos: pos, Certain: true})
 			}
@@ -1359,14 +1373,54 @@ func syncMethodPrim(s *types.Selection) string {
 	return ""
 }
 
-// interceptedSpawn: defer/go of a frontend-INTERCEPTED library member
-// (slices.Sort, cmp.Compare) refuses by name (emit.go: "the direct call of
-// this library member is frontend-intercepted … in expression-statement
-// position only"); so does defer/go of a rand-intn primitive callee
-// (math/rand.Intn, math/rand/v2.IntN — randintn.go refuseRandIntnDeferGo);
-// and defer/go of every other NON-source-through stdlib member (fmt,
-// sync/atomic, math.Float64bits & siblings, …) refuses as a value-position
-// selector — the frontend lowers the callee as a value.
+// markSpawn records a `defer`/`go` statement's own call (the GoStmt/
+// DeferStmt arms, visited before the call itself).
+func (a *analyzer) markSpawn(call *ast.CallExpr) {
+	if a.spawnCalls == nil {
+		a.spawnCalls = map[*ast.CallExpr]bool{}
+	}
+	a.spawnCalls[call] = true
+}
+
+// interceptAppliesHere: the static twin of the frontend's intercept
+// predicate for a register `intercept` member (tools/nativefrontend/
+// stdlibreach.go interceptedLibraryCall + the positional rule) — today
+// `slices.Sort` only: the call is NOT in defer/go position and its one
+// argument is a slice whose element type's underlying is an integer basic
+// kind (interceptSortSlice). A member this tool does not know is reported
+// as the op wherever the register lists it (fail toward the register).
+func (a *analyzer) interceptAppliesHere(key string, call *ast.CallExpr) bool {
+	if a.spawnCalls[call] {
+		return false
+	}
+	if key != "slices.Sort" {
+		return true
+	}
+	if len(call.Args) != 1 {
+		return false
+	}
+	tv, ok := a.info.Types[call.Args[0]]
+	if !ok || tv.Type == nil {
+		return false
+	}
+	sl, ok := tv.Type.Underlying().(*types.Slice)
+	if !ok {
+		return false
+	}
+	b, ok := sl.Elem().Underlying().(*types.Basic)
+	return ok && b.Info()&types.IsInteger != 0
+}
+
+// interceptedSpawn: defer/go of a rand-intn primitive callee
+// (math/rand.Intn, math/rand/v2.IntN — randintn.go refuseRandIntnDeferGo)
+// refuses by name; so does defer/go of every other NON-source-through
+// stdlib member (fmt, sync/atomic, math.Float64bits & siblings, …), as a
+// value-position selector — the frontend lowers the callee as a value.
+// Defer/go of a frontend-INTERCEPTED library member (`slices.Sort`) is the
+// real source-through FUNCTION VALUE and lowers (2026-10-25, backlog row
+// 50: the intercept applies in expression-statement position only; the
+// by-name refusal of 2026-09-04's audit fix round F1 is retired with the
+// re-admission — cause row intercepted-defer-go stays as «NONE remains»).
 func (a *analyzer) interceptedSpawn(d *declReport, how string, call *ast.CallExpr, pos string) {
 	// FR-36 (2026-10-06): defer/go of a DOT-IMPORTED stdlib function — the
 	// frontend evaluates the callee as a VALUE (emitIdent) and refuses a
@@ -1384,9 +1438,6 @@ func (a *analyzer) interceptedSpawn(d *declReport, how string, call *ast.CallExp
 	sel, ok := call.Fun.(*ast.SelectorExpr)
 	if !ok {
 		return
-	}
-	if path, member, _, ok := a.stdlibSel(sel); ok && a.p.sup.intercept[path+"."+member] {
-		d.add(finding{Cause: mustCause("intercepted-defer-go"), Key: how + " " + path + "." + member, Pos: pos, Certain: true})
 	}
 	// defer/go of the rand-intn primitive's callee: randintn.go
 	// refuseRandIntnDeferGo (the draw lowers at direct-call sites only).

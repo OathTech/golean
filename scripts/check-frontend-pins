@@ -377,6 +377,20 @@ echo "check-frontend-pins: ok [hidden-dep-order] — realized deviation order ma
 # byte-identical (ok; «end viol=0 claims=1 committed=6 complete=1 floor=1 rounds=30»; sha256 76d2bc87… both); the codec's
 # own behaviour is validated by difftest.py section 8 (exact vs protobuf-go) and codeccheck.py (both oracles).
 # d5186f43… -> 661022b9….
+# [AGENT lane worker, lane frontend/g19-sort-intercept-1025] 2026-10-25 twin re-pin: the `slices.Sort` intercept
+# RE-ADMITTED at integer element kinds ([USER] ruling of 2026-10-25, backlog row 50 option 1, relayed — raft-proofs G19,
+# a deliberate partial reversal, for integer kinds only, of memo §3 row M's 2026-09-04 retirement). The nine direct
+# `slices.Sort` sites at uint64 (quorum.MajorityConfig.{CommittedIndex,Slice,String}, tracker.ProgressMap.String,
+# tracker.ProgressTracker.{LearnerNodes,Visit,VoterNodes}, raft.raft.campaign, raftpb.ConfState.Equivalent's literal)
+# are `sort-slice` nodes again (0 -> 9) and the pdqsort closure leaves the wire: funcs 471 -> 456 — 15 removed
+# (slices.Sort[[]uint64,uint64], cmp.Less[uint64], and the 13 slices.*Ordered[uint64] stencils: breakPatterns,
+# choosePivot, heapSort, insertionSort, medianAdjacent, median, order2, partialInsertionSort, partitionEqual,
+# partition, pdqsort, reverseRange, siftDown), 0 added; the 11 slices.*CmpFunc[quorum.tup·1] stencils differ only by the
+# renumbering of hoist/switch temporaries ($c/$sw/$swi/$swf, emitted after the departed stencils); methods 534 (8 bodies
+# changed: the sort sites above, each one `sort-slice` node for one static call, renumbering otherwise); schema, package,
+# buildContext, fileOrder 20, types 94, globals 56, promotions 71, methodSets 82 IDENTICAL (key-by-key JSON comparison, the
+# structural diff in the re-pin commit's message). Observations unchanged by construction: the sorted result of an
+# integer slice is unique. 661022b9… -> fc471d2b….
 # ---- 2. Twin wire pin ----
 TWIN_BASE="baselines/pins/twin-chdriver.wire.json"
 [ -f "$TWIN_BASE" ] || { echo "check-frontend-pins: FAIL — no wire pin at $TWIN_BASE" >&2; exit 1; }
