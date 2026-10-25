@@ -526,24 +526,33 @@ cr_expect "alternation member -> killed:139 without a Cases line -> FAIL by name
 printf 'result\tid\tstage\tcause\nFAIL\tfx/fe\tlean-observation\ttimeout\n' > "$CR/new.tsv"
 cr_expect "named -> timeout at another stage -> FAIL by name" 1 $'UNEXPLAINED\tfx/fe'
 # Row REMOVALS across a re-pin (confirmation pass LOW): the ci re-pin guard
-# calls scripts/check-row-removals OLD NEW.
-RM="$TMP/row-removals"; mkdir -p "$RM"
-printf 'result\tid\tstage\nFAIL\tfx/red\tfrontend-accepts\nPASS\tfx/p\t-\n' > "$RM/old.tsv"
+# calls scripts/check-row-removals OLD NEW <exec|negative>. The fixture lookup
+# (row 31(a), 2026-10-25: a named removal's fixture must be GONE from the corpus
+# directory and the manifest) runs against a scratch exec corpus holding one
+# live fixture, `fx/live` (a copy of a real `-`-row case so the manifest lists
+# it); `fx/red`, `fx/p` and `fx/gone` have no fixture there.
+RM="$TMP/row-removals"; mkdir -p "$RM/corpus/fx/live"
+cp Corpus/coverage/exec/directives/debug-panicnil/cases.tsv Corpus/coverage/exec/directives/debug-panicnil/main.go "$RM/corpus/fx/live/"
+printf 'result\tid\tstage\nFAIL\tfx/red\tfrontend-accepts\nPASS\tfx/p\t-\nPASS\tfx/live\t-\n' > "$RM/old.tsv"
 rm_expect() {  # $1 name, $2 expected exit, $3 required text
   local name="$1" want="$2" needle="$3" out rc=0
-  out="$(scripts/check-row-removals "$RM/old.tsv" "$RM/new.tsv" 2>&1)" || rc=$?
+  out="$(ROW_REMOVALS_EXEC_ROOT="$RM/corpus" scripts/check-row-removals "$RM/old.tsv" "$RM/new.tsv" exec 2>&1)" || rc=$?
   if [ "$rc" -ne "$want" ]; then echo "FAIL: row-removals $name: exit $rc, expected $want: $out"; fail=1
   elif [[ "$out" != *"$needle"* ]]; then echo "FAIL: row-removals $name: exit $want but without the expected text ($needle): $out"; fail=1
   else echo "ok: row-removals $name"; fi
 }
-printf 'result\tid\tstage\nPASS\tfx/p\t-\n' > "$RM/new.tsv"
+printf 'result\tid\tstage\nPASS\tfx/p\t-\nPASS\tfx/live\t-\n' > "$RM/new.tsv"
 rm_expect "a FAIL row removed silently -> FAIL by name" 1 $'REMOVED\tfx/red'
-printf 'result\tid\tstage\nFAIL\tfx/red\tfrontend-accepts\n' > "$RM/new.tsv"
-rm_expect "a PASS row removed silently -> FAIL by name" 1 $'REMOVED\tfx/p'
-printf '# removed: fx/red — fixture: the case directory was retired\nresult\tid\tstage\nPASS\tfx/p\t-\n' > "$RM/new.tsv"
-rm_expect "a removal named by a # removed: header line -> ok with a note" 0 $'NOTE\tfx/red'
-printf 'result\tid\tstage\nPASS\tfx/p\t-\nFAIL\tfx/red\tfrontend-accepts\nPASS\tfx/new\t-\n' > "$RM/new.tsv"
+printf 'result\tid\tstage\nFAIL\tfx/red\tfrontend-accepts\nPASS\tfx/live\t-\n' > "$RM/new.tsv"
+rm_expect "a PASS row removed silently (fixture gone, no header) -> FAIL by name" 1 $'REMOVED\tfx/p'
+printf '# removed: fx/red — fixture: the case directory was retired\nresult\tid\tstage\nPASS\tfx/p\t-\nPASS\tfx/live\t-\n' > "$RM/new.tsv"
+rm_expect "a removal named by a # removed: header line, fixture gone -> ok with a note" 0 $'NOTE\tfx/red'
+printf '# removed: fx/live — a try at retiring a row whose fixture is still in the corpus\nresult\tid\tstage\nFAIL\tfx/red\tfrontend-accepts\nPASS\tfx/p\t-\n' > "$RM/new.tsv"
+rm_expect "a removal named by a header line while the FIXTURE IS PRESENT (directory and manifest) -> FAIL by name" 1 $'PRESENT\tfx/live'
+printf 'result\tid\tstage\nPASS\tfx/p\t-\nFAIL\tfx/red\tfrontend-accepts\nPASS\tfx/new\t-\nPASS\tfx/live\t-\n' > "$RM/new.tsv"
 rm_expect "every row kept (a born row is not a removal) -> ok" 0 ""
+rc=0; out="$(scripts/check-row-removals "$RM/old.tsv" "$RM/new.tsv" 2>&1)" || rc=$?
+if [ "$rc" -eq 2 ]; then echo "ok: row-removals without the corpus argument -> exit 2"; else echo "FAIL: row-removals without the corpus argument exited $rc, expected 2: $out"; fail=1; fi
 # check-bugs: the alternation row is counted, by name.
 printf '## BUG-901 — fixture\n\n- Status: fixed\n- Pinned-by: none (fixture)\n- Cases: fx/other\n' > "$CB/bugs.md"
 printf 'result\tid\tstage\nFAIL\tfx/other\tlean-observation\nFAIL\tfx/alt\tnondet|differential\n' > "$CB/baseline.tsv"

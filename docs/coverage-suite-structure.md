@@ -667,11 +667,21 @@ A FAIL row whose cause is re-pinned from a named key into the
 non-verdict/crash family (`killed:`, `timeout`, `undecided:`, `crash:`)
 needs a `docs/BUGS.md` `- Cases:` line, like a PASS→non-PASS flip
 (`scripts/check-cause-regressions`, run by `scripts/ci`'s re-pin guard).
-A re-pin that REMOVES a row — PASS or FAIL, e.g. with its retired fixture —
+A re-pin that REMOVES a row — PASS or FAIL, with its retired fixture —
 must name it in the new baseline's header: `# removed: <id> — <why>`
 (`scripts/check-row-removals`, the same guard; a `# alternation removed:` line satisfies it too — one line retires an alternation row; the `# alternation removed:`
-convention). A removed PASS row still needs its `BUGS.md` Cases line as
-well (the flip rule is unchanged).
+convention), and the FIXTURE MUST BE GONE: the check looks the id up in the
+corpus directory (the row of its `cases.tsv`, or the `case.tsv` directory of
+the negative corpus) and in the manifest the runner enumerates
+(`scripts/coverage-manifest --list --id`, `scripts/coverage-negative-manifest
+--list --id`); a row named removed while its fixture is still present is a
+hard failure, a lookup that cannot answer refuses to certify (exit 2). The
+header line alone retires a vanished fixture — retiring a fixture is not a
+fidelity bug, so no `BUGS.md` Cases: line is needed for it (release-readiness
+row 31(a), [USER] ruling 2026-10-25; before it the flip rule counted a vanished
+PASS id as a flip and demanded the Cases: line as well). The flip rule is
+unchanged for SURVIVING rows: a PASS→non-PASS flip of a row that is still in
+the baseline needs its Cases: line.
 
 Non-verdict exits of a comparator, oracle, driver or enumerator run are
 reported at the stage of the CHECK that could not complete — the stage

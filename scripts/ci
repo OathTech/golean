@@ -569,15 +569,18 @@ if [ -f artifacts/coverage/latest.tsv ]; then
   run_bump "every FAIL row's refusal cause classified (scripts/coverage-cause --unclassified)" ./scripts/coverage-cause --unclassified artifacts/coverage/latest.tsv
 fi
 
-# ── GATE: the re-pin guard. A re-pin that flips a case PASS -> non-PASS, or
-# moves a FAIL row's cause from a named key into the non-verdict/crash family
+# ── GATE: the re-pin guard. A re-pin that flips a SURVIVING case PASS -> non-PASS,
+# or moves a FAIL row's cause from a named key into the non-verdict/crash family
 # (scripts/check-cause-regressions), must list it on a `- Cases:` line in
-# docs/BUGS.md; a removed row (PASS or FAIL) must be named by a
-# `# removed: <id> — <why>` header line (scripts/check-row-removals); a stage alternation of the old
+# docs/BUGS.md; a REMOVED row (PASS or FAIL) must be named by a
+# `# removed: <id> — <why>` header line AND its fixture must be gone from the
+# corpus directory and the manifest (scripts/check-row-removals — a removal is
+# not a flip: release-readiness row 31(a), [USER] ruling 2026-10-25; before it a
+# vanished PASS fixture needed the Cases: line too); a stage alternation of the old
 # baseline must survive unless the new one names its removal. Dirty tree:
 # worktree vs HEAD; clean tree: HEAD vs HEAD~1 (a shallow clone fails closed).
-repin_guard() {  # <baseline file>
-  local base=$1 wt_rc c_rc mode old newfile oldbase newbase flips awk_rc id nfl pin_bad=0 surv_new surv_rc=0 surv_out
+repin_guard() {  # <baseline file> <exec|negative>
+  local base=$1 corpus=$2 wt_rc c_rc mode old newfile oldbase newbase flips awk_rc id nfl pin_bad=0 surv_new surv_rc=0 surv_out
   git diff --quiet HEAD -- "$base" 2>/dev/null; wt_rc=$?
   if [ "$wt_rc" -eq 1 ]; then mode="worktree-vs-HEAD"; old=HEAD; newfile="$base"
   elif [ "$wt_rc" -ge 2 ]; then bad "re-pin guard ($base: git diff errored rc=$wt_rc — refusing to certify)"; return
@@ -597,8 +600,9 @@ repin_guard() {  # <baseline file>
     /^===NEW===$/ { sec = 2; next }
     /^#/ { next }
     sec == 1 && $1 == "PASS" && NF >= 2 { oldpass[$2] = 1 }
+    sec == 2 && NF >= 2 && $1 != "result" { newany[$2] = 1 }
     sec == 2 && $1 == "PASS" && NF >= 2 { nowpass[$2] = 1 }
-    END { for (id in oldpass) if (!(id in nowpass)) print id }')"; awk_rc=$?
+    END { for (id in oldpass) if ((id in newany) && !(id in nowpass)) print id }')"; awk_rc=$?
   [ "$awk_rc" -eq 0 ] || { bad "re-pin guard ($base: internal comparison error rc=$awk_rc — refusing to certify)"; return; }
   flips="$(printf '%s\n' "$flips" | LC_ALL=C sort | grep -v '^$' || true)"
   while read -r id; do
@@ -609,7 +613,7 @@ repin_guard() {  # <baseline file>
   done <<< "$flips"
   nfl="$(printf '%s' "$flips" | grep -c . || true)"
   if [ "$pin_bad" -ne 0 ]; then bad "re-pin guard ($base: regressions baked into the baseline unexplained — add them to a BUGS.md Cases: line)"
-  else ok "re-pin guard ($base: $nfl PASS→non-PASS flip(s), all on BUGS.md Cases lines)"; fi
+  else ok "re-pin guard ($base: $nfl PASS→non-PASS flip(s) of surviving rows, all on BUGS.md Cases lines; removed rows are the row-removal check's)"; fi
   if [ -n "$newfile" ]; then surv_new="$newfile"; else surv_new="git:HEAD:$base"; fi
   surv_out="$(./scripts/check-alternation-survival "git:$old:$base" "$surv_new" 2>&1)" || surv_rc=$?
   if [ "$surv_rc" -eq 0 ]; then [ -n "$surv_out" ] && printf '%s\n' "$surv_out" | sed 's/^/  /'
@@ -621,15 +625,16 @@ repin_guard() {  # <baseline file>
   cause_out="$(./scripts/check-cause-regressions "git:$old:$base" "$surv_new" 2>&1)" || cause_rc=$?
   if [ "$cause_rc" -eq 0 ]; then [ -n "$cause_out" ] && printf '%s\n' "$cause_out" | sed 's/^/  /'
   else printf '%s\n' "$cause_out" | sed 's/^/  /'; bad "re-pin guard ($base: a FAIL row's cause regressed into the non-verdict/crash family without a BUGS.md Cases: line, or the check could not run — exit $cause_rc)"; fi
-  # Row removals (PASS or FAIL) need a `# removed: <id> — <why>` header line.
+  # Row removals (PASS or FAIL) need a `# removed: <id> — <why>` header line
+  # and a fixture that is really gone (directory and manifest; row 31(a)).
   local rem_rc=0 rem_out
-  rem_out="$(./scripts/check-row-removals "git:$old:$base" "$surv_new" 2>&1)" || rem_rc=$?
+  rem_out="$(./scripts/check-row-removals "git:$old:$base" "$surv_new" "$corpus" 2>&1)" || rem_rc=$?
   if [ "$rem_rc" -eq 0 ]; then [ -n "$rem_out" ] && printf '%s\n' "$rem_out" | sed 's/^/  /'
-  else printf '%s\n' "$rem_out" | sed 's/^/  /'; bad "re-pin guard ($base: a baseline row removed without a \`# removed:\` header line, or the check could not run — exit $rem_rc)"; fi
+  else printf '%s\n' "$rem_out" | sed 's/^/  /'; bad "re-pin guard ($base: a baseline row removed without a \`# removed:\` header line, or named removed while its fixture is still in the corpus, or the check could not run — exit $rem_rc)"; fi
 }
-step "baseline re-pin guard (PASS→non-PASS flips must be on a BUGS.md Cases: line; alternations survive)"
-repin_guard baselines/native-full.tsv
-repin_guard baselines/negative-full.tsv
+step "baseline re-pin guard (PASS→non-PASS flips of surviving rows must be on a BUGS.md Cases: line; a removed row needs its # removed: header line and a vanished fixture; alternations survive)"
+repin_guard baselines/native-full.tsv exec
+repin_guard baselines/negative-full.tsv negative
 
 # ── Summary. Gate lines decide RESULT; speedbumps are listed, never decide.
 printf '\n\033[1m══ scripts/ci summary (%s) ══\033[0m\n' "$MODE"

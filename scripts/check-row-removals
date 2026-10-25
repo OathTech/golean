@@ -6,17 +6,44 @@
 # every id with a data row in OLD must have one in NEW, unless a header line
 # of NEW names its removal: `# removed: <id> — <why>` (the
 # `# alternation removed:` convention of scripts/check-alternation-survival).
-# PASS and FAIL alike; a vanished PASS row ALSO still needs its BUGS.md Cases
-# line (the guard's flip rule, unchanged).
+# PASS and FAIL alike.
 #
-# Usage: scripts/check-row-removals <old> <new>
-#   <old>/<new> are a file path or `git:<rev>:<path>`.
-# Exit 0 = none removed silently (each named removal printed as a note);
-#   1 = at least one removed silently (ids printed); 2 = unreadable input.
+# THE FIXTURE MUST REALLY BE GONE (release-readiness row 31(a), [USER] ruling
+# 2026-10-25: the header line alone retires a VANISHED fixture — retiring a
+# fixture is not a fidelity bug, so the BUGS.md Cases: line is no longer
+# demanded for it; a removed row whose fixture SURVIVES stays a hard failure;
+# a PASS→non-PASS flip of a surviving row still needs the Cases: line, in
+# scripts/ci). This check does not take the header's word: for every named
+# removal it looks the fixture up TWICE — in the corpus directory (the exec
+# corpus: a `-` row of `<root>/<id>/cases.tsv` or the row `<basename>` of
+# `<root>/<dirname>/cases.tsv`, the id formation of scripts/coverage-manifest;
+# the negative corpus: `<root>/<id>/case.tsv`, scripts/coverage-negative-
+# manifest's) and in the manifest the runner enumerates (`--list --id <id>`,
+# which exits 2 with `no … case id <id>` when the id is absent and 0 with the
+# row when present). Present in either → PRESENT, exit 1. A manifest that
+# cannot answer (any other exit or text) → exit 2, refusing to certify.
+#
+# Usage: scripts/check-row-removals <old> <new> <corpus>
+#   <old>/<new> are a file path or `git:<rev>:<path>`; <corpus> is `exec`
+#   (baselines/native-full.tsv) or `negative` (baselines/negative-full.tsv).
+#   The corpus roots are overridable for fixture tests ONLY
+#   (scripts/test-lane-validation): ROW_REMOVALS_EXEC_ROOT,
+#   ROW_REMOVALS_NEGATIVE_ROOT. Unset = the tracked corpus.
+# Exit 0 = none removed silently and every named removal's fixture is gone
+#   (each printed as a note); 1 = at least one removed silently, or named
+#   while its fixture is still present (ids printed); 2 = unreadable input or
+#   an unverifiable fixture lookup.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
-[ $# -eq 2 ] || { echo "usage: $0 <old> <new>   (file path or git:<rev>:<path>)" >&2; exit 2; }
+[ $# -eq 3 ] || { echo "usage: $0 <old> <new> <exec|negative>   (<old>/<new>: file path or git:<rev>:<path>)" >&2; exit 2; }
+corpus=$3
+case "$corpus" in
+  exec)     root="${ROW_REMOVALS_EXEC_ROOT:-Corpus/coverage/exec}"; manifest=scripts/coverage-manifest; rootflag=--exec-root; absent_re='^coverage-manifest: no executable case id ' ;;
+  negative) root="${ROW_REMOVALS_NEGATIVE_ROOT:-Corpus/coverage/negative/compile}"; manifest=scripts/coverage-negative-manifest; rootflag=--root; absent_re='^coverage-negative-manifest: no compile-negative case id ' ;;
+  *) echo "check-row-removals: corpus must be exec or negative, got '$corpus'" >&2; exit 2 ;;
+esac
+[ -d "$root" ] || { echo "check-row-removals: corpus root $root is not a directory — refusing to certify" >&2; exit 2; }
 
 slurp() {
   case "$1" in
@@ -25,6 +52,36 @@ slurp() {
   esac
 }
 old="$(slurp "$1")"; new="$(slurp "$2")"
+
+# fixture_in_dir <id>: 0 = a fixture for the id is in the corpus directory,
+# 1 = none, 2 = the id is not a path the corpus could hold (refuse).
+fixture_in_dir() {
+  local id=$1 dir base
+  case "$id" in ''|/*|*/|*//*|*/../*|../*|*/..|..) return 2 ;; esac
+  if [ "$corpus" = negative ]; then
+    [ -f "$root/$id/case.tsv" ] && return 0
+    return 1
+  fi
+  # A `-` row names its package directory.
+  if [ -f "$root/$id/cases.tsv" ] && awk -F'\t' '!/^#/ && NF >= 2 && $1 == "-" { f = 1 } END { exit !f }' "$root/$id/cases.tsv"; then return 0; fi
+  case "$id" in */*) dir=${id%/*}; base=${id##*/} ;; *) return 1 ;; esac
+  if [ -f "$root/$dir/cases.tsv" ] && awk -F'\t' -v b="$base" '!/^#/ && NF >= 2 && $1 == b { f = 1 } END { exit !f }' "$root/$dir/cases.tsv"; then return 0; fi
+  return 1
+}
+# fixture_in_manifest <id>: 0 = the manifest lists it, 1 = the manifest says
+# it has no such id, 2 = the manifest could not answer.
+fixture_in_manifest() {
+  local id=$1 out err rc=0
+  out="$("$manifest" --list "$rootflag" "$root" --id "$id" 2>"$TMPERR")" || rc=$?
+  err="$(cat "$TMPERR")"
+  if [ "$rc" -eq 0 ]; then
+    if printf '%s\n' "$out" | awk -F'\t' -v id="$id" '$1 == id { f = 1 } END { exit !f }'; then return 0; fi
+    echo "check-row-removals: $manifest exited 0 for --id $id without listing it — refusing to certify" >&2; return 2
+  fi
+  if [ "$rc" -eq 2 ] && printf '%s\n' "$err" | grep -qE "${absent_re}$(printf '%s' "$id" | sed 's/[][\.*^$/]/\\&/g')\$"; then return 1; fi
+  echo "check-row-removals: $manifest could not answer for --id $id (exit $rc): $err" >&2; return 2
+}
+TMPERR="$(mktemp)"; trap 'rm -f "$TMPERR"' EXIT
 
 rc=0
 out="$(printf '===OLD===\n%s\n===NEW===\n%s\n' "$old" "$new" | awk -F'\t' '
@@ -37,7 +94,7 @@ out="$(printf '===OLD===\n%s\n===NEW===\n%s\n' "$old" "$new" | awk -F'\t' '
   END {
     for (id in oldrow) {
       if (id in newrow) continue
-      if (id in named) { print "NOTE\t" id "\trow [" oldrow[id] "] removed, named by the header: " named[id]; continue }
+      if (id in named) { print "NAMED\t" id "\trow [" oldrow[id] "] removed, named by the header: " named[id]; continue }
       print "REMOVED\t" id "\trow [" oldrow[id] "] is absent from the new baseline and no `# removed: " id " — <why>` header line names it"
       bad = 1
     }
@@ -48,9 +105,26 @@ if [ "$rc" -ge 2 ]; then
   { printf '%s\n' "$out" | grep . >&2; } || true
   exit 2
 fi
-{ printf '%s\n' "$out" | grep . | LC_ALL=C sort; } || true
+# Every NAMED removal: the fixture must be gone from the directory AND the manifest.
+final=""
+while IFS=$'\t' read -r kind id rest; do
+  [ -z "$kind" ] && continue
+  if [ "$kind" != NAMED ]; then final+="$kind	$id	$rest"$'\n'; continue; fi
+  d=0; fixture_in_dir "$id" || d=$?
+  if [ "$d" -eq 2 ]; then echo "check-row-removals: id $id is not a corpus path — refusing to certify" >&2; exit 2; fi
+  m=0; fixture_in_manifest "$id" || m=$?
+  [ "$m" -eq 2 ] && exit 2
+  if [ "$d" -eq 0 ] || [ "$m" -eq 0 ]; then
+    where=""; [ "$d" -eq 0 ] && where="the corpus directory $root"; [ "$m" -eq 0 ] && where="${where:+$where and }the manifest ($manifest)"
+    final+="PRESENT	$id	$rest — but its FIXTURE IS STILL PRESENT in $where: a row whose fixture survives cannot be retired by a header line (restore the row, or retire the fixture)"$'\n'
+    rc=1
+  else
+    final+="NOTE	$id	$rest; fixture absent from $root and from the manifest"$'\n'
+  fi
+done <<< "$out"
+{ printf '%s' "$final" | grep . | LC_ALL=C sort; } || true
 if [ "$rc" -eq 1 ]; then
-  echo "check-row-removals: FAIL — baseline row(s) removed without a \`# removed: <id> — <why>\` header line"
+  echo "check-row-removals: FAIL — baseline row(s) removed without a \`# removed: <id> — <why>\` header line, or named while the fixture is still in the corpus"
   exit 1
 fi
 exit 0
