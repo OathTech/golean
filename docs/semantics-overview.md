@@ -288,9 +288,13 @@ place; elements beyond `len` and every other cell are untouched by construction 
 The sort laws they rest on (`insertLe_perm`, `sortLe_perm`, `insertLe_pairwise`,
 `sortLe_pairwise`, the integer instance `sortLe_int_perm` / `sortLe_int_pairwise`) and the
 operand check's read-back (`intElems_map_int`, `intElems_ok_eq`) are theorems of the same module.
-Stated, not claimed exact: the op records every element of the window as read AND written, a
-conservative access set for the detector where gc's pdqsort might leave an already-placed element
-unwritten (within an implementation's latitude for an unspecified library sort).
+One observation class the op adds (BUG-131, a red pin pending the owner's ruling; review fix round F1,
+2026-10-25): the op records every element of the window as read AND written — a conservative access set —
+so the race detector refuses `race` on a read concurrent with the sort of an already-ordered window where
+gc's pdqsort writes nothing and `go run -race` is green; the verdict is a differential observation (row
+`race/sort-op/sorted-window-concurrent-read`, expected `ok`). The write set is not narrowed, because pdqsort
+may write an element it leaves in place and a dropped write would be a false `ok`. raft's sorts are on local
+temporaries, unaffected.
 
 Since 2026-10-23 (release-readiness row 43, [USER]-ruled) that kept surface is a COMPARATOR
 CONTRACT: `Contract/Challenge.lean` restates all 366 of its theorems — every theorem of

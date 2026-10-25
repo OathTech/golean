@@ -2315,6 +2315,18 @@
 #   deferred-generic (defer slices.Sort at uint8 — the generic path, the F1 refusal retired), named-unsigned-kind (a defined uint64
 #   kind above 2^63), uintptr, int8-negatives, duplicates, in-init (the op inside init())}. 4029 + 9 = 4038; 3771 + 9 = 3780;
 #   258 FAIL unchanged. No PASS -> non-PASS flip.
+# re-pinned: 2026-10-25 [AGENT], frontend/g19-sort-intercept-1025, REVIEW FIX ROUND F1 — the `sortSlice` op's write set
+#   against the race detector (BUG-131; the lane's adversarial review, relayed): the op records EVERY window element as read
+#   then WRITTEN, where gc's pdqsort on an already-ordered window performs no write, so a read concurrent with the sort is
+#   refused `race` where `go run -race` is green and the answer is determined — an OVER-REFUSAL (the machine refuses ⊇ gc), the
+#   verdict a status-level differential observation. 2 rows BORN, no existing row moved. BORN FAIL BY DESIGN (1):
+#   race/sort-op/sorted-window-concurrent-read FAIL/lean-observation race:race (expected ok 1123; the machine's message is the
+#   bare «data race detected», so the cause key is the generic race key — no substring distinguishes this class, the
+#   classification is BUG-131's Cases line). BORN PASS (1): race/sort-op/sorted-window-concurrent-read-generic — the same
+#   program with `go slices.Sort(s)`: the spawned function value is the generic (statement-position intercept only), whose
+#   insertion sort of the ordered window never writes, race-free in both. The write set is NOT narrowed (pdqsort may write
+#   an element it leaves in place; a dropped write would be a false ok); the class is posed for the owner's ruling. Measured
+#   by scripts/diff-one at the tree. 4038 + 2 = 4040; 3780 + 1 = 3781; 258 + 1 = 259 FAIL. No PASS -> non-PASS flip.
 result	id	stage	cause
 PASS	arrays/array-bounds	-	-
 PASS	arrays/array-comparable	-	-
@@ -5409,6 +5421,8 @@ PASS	race/negative/spawn-dispatch	racy	-
 PASS	race/negative/struct-tag-alias-array-field	racy	-
 PASS	race/negative/struct-tag-alias-field	racy	-
 PASS	race/negative/write-write	racy	-
+FAIL	race/sort-op/sorted-window-concurrent-read	lean-observation	race:race
+PASS	race/sort-op/sorted-window-concurrent-read-generic	-	-
 PASS	range/assign-form-interface-target/assert-escalation	-	-
 PASS	range/assign-form-interface-target/index	-	-
 PASS	range/assign-form-interface-target/map-key	-	-

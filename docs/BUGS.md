@@ -8901,6 +8901,37 @@ blank operand together with its run-time panic, (F2) gc never evaluates a packag
 The disposition is the [USER]'s ruling of 2026-10-14 and the record is BUG-130's: the operand is NOT evaluated; a
 constant, nil or a plain variable read gives the zero value, anything else refuses the literal by name.
 
+## BUG-131 — the `sortSlice` machine op records EVERY window element as WRITTEN, so a concurrent READ of a slice being sorted is refused `race` where gc's pdqsort on an already-ordered window (or suffix) performs no write and `go run -race` is green [semantic core, race-detector footprint; over-refusal (the machine refuses ⊇ gc), a status-level differential observation; found by the pre-merge adversarial review of lane `frontend/g19-sort-intercept-1025` (F1, relayed by the [AGENT] coordinator), 2026-10-25; recorded as a red pin pending the owner's ruling]
+
+- Status: open
+- Expect: FAIL
+- Pinned-by: differential
+- Cases: race/sort-op/sorted-window-concurrent-read
+- Discovered: the reviewer's program `s := []int{1,2,3}` with the sort in one goroutine and `seen = s[0]` in
+  another: the lane answers `status=race`, main (the generic path at the time) answers `ok 1 1 2 3`, and
+  `go run -race` is green. Entry: [AGENT] lane worker, 2026-10-25 (the review's F1, relayed).
+
+WHAT the op does (`GoLean/GoCore/Machine.lean`, the `.sortSlice` apply arm, unchanged by the re-admission): the
+visible window is read (`Mem.loadSlice`: one `.data` read per element), sorted, and written back in full
+(`Mem.storeRun` from visible index 0: one `.data` WRITE per element) — the write set is the whole window
+whatever the input order. WHAT gc does (`deps/go/src/slices/zsortordered.go` @ go1.26.5): `pdqsortOrdered` on
+a window of at most 12 elements runs `insertionSortOrdered`, which swaps only out-of-order neighbours — an
+already-ordered window, or the ordered suffix of one, is never written; longer windows take the pattern-
+breaking and partition paths, which write what they move. So a read concurrent with the sort races in the
+machine on the elements gc leaves untouched. The machine's verdict (`status=race`) is a differential
+observation: the row's expected status is `ok` and the row FAILS at `lean-observation` with the cause
+`race:race`. DIRECTION: fail-closed — the machine refuses a race-free program; it never answers `ok` where gc
+reports a race (a write the op records that gc also performs is a true race on both sides). NOT NARROWED:
+restricting the recorded writes to the elements that change would be unsound the other way — pdqsort may
+write an element it leaves in place (a swap chain through it, the partition's moves), and a write the machine
+drops is a false `ok` under a concurrent read. The faithful set would be pdqsort's own, which is what the
+retired generic path realized (the control row `race/sort-op/sorted-window-concurrent-read-generic`: `go
+slices.Sort(s)` is the function value, the generic, race-free in both). The 2026-10-25 ruling (backlog row
+50, option 1) accepted the op as the default lowering for the sorted result's uniqueness; this entry records
+the class the detector's verdict adds, for the owner's ruling. raft's `slices.Sort` sites sort LOCAL
+temporaries (`CommittedIndex`'s stack array, `Slice`/`Visit`/`VoterNodes`/`LearnerNodes`' fresh slices,
+`String`'s copies) that no other goroutine reads: unaffected. Latitude inventory C10, alignment fact (iii).
+
 ## BUG-130 — a BLANK struct field's operand that is not a constant, `nil` or a plain variable read is REFUSED by name — gc's realization is not an evaluation: it elides a side-effect-free blank operand WITH its run-time panic (negative shifts, interface comparisons over an uncomparable dynamic type, under any pure wrapper) and never evaluates a package-level struct literal's blank operand at all, calls included [native frontend lowering; a REFUSAL BY RULING, support deferred, not a coverage gap; found by the pre-merge review of lane `frontend/blank-fields-1013` (2026-10-13, relayed) on BUG-129's first lowering; RULED [USER] Mike 2026-10-14; the two classes were pre-existing wrong answers (observed ∉ modeled) at the branch base and on the 2026-10-13 lowering alike]
 
 - Status: fixed

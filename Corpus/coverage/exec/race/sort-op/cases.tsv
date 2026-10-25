@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+# BUG-131 (born 2026-10-25, review of lane frontend/g19-sort-intercept-1025, F1):
+# the sortSlice op records every window element as written; gc's pdqsort on an
+# ordered window writes nothing. RED PIN by design (over-refusal: the machine
+# refuses `race` where gc is green, expected ok 1123); the generic shape beside
+# it is the green control.
+sorted-window-concurrent-read	sortedWindowConcurrentRead	-	ok	-	goroutines,channels,slices,sort,externs,race
+sorted-window-concurrent-read-generic	sortedWindowConcurrentReadGeneric	-	ok	-	goroutines,channels,slices,sort,externs,race

@@ -634,7 +634,22 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
   litmus `selectPollVsClose`: gc 3/5 and 2/5 racy by pollorder luck; the
   machine RACE-ALL. Fail-closed; consistent with the racy lane's oracle
   («one red sample proves the race»; pre-existing BUG-046 class). The
-  `selectPoll` docstring says so since this round.
+  `selectPoll` docstring says so since this round. (iii) **the
+  `sortSlice` op's write set** (BUG-131; lane
+  `frontend/g19-sort-intercept-1025`, review F1, 2026-10-25): the
+  intercepted integer `slices.Sort(s)` is one apply step that records
+  EVERY window element as read then WRITTEN (`Mem.storeRun` of the whole
+  sorted run), where gc's pdqsort writes only what it moves — an
+  already-ordered window or suffix is never written
+  (`insertionSortOrdered` swaps out-of-order neighbours only). A read
+  concurrent with the sort is refused `race` on those elements where
+  `go run -race` is green: the machine refuses ⊇ gc, the verdict a
+  status-level observation (red pin
+  `race/sort-op/sorted-window-concurrent-read`, expected `ok`; the
+  `go slices.Sort(s)` control beside it is the generic and race-free in
+  both). Not narrowed to the changed elements — pdqsort may write an
+  element it leaves in place, and a dropped write is a false `ok`.
+  Pending the owner's ruling on the class.
 
 ### C11. Tie-breaks that look like latitude but are unreachable/unobservable — (c) FORCED
 
