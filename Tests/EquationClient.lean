@@ -25,7 +25,11 @@ that can reach `stepFn`, the classical trio at most). The `#eval` at the end is 
 runs at BUILD time: it fails the module — so the build, `lake check` and the gate — when a fact (or a helper it
 uses) unfolds `stepFn`, an equation is unenrolled or a pin has drifted, and on success it logs the enrollment
 line and the PASS line that `scripts/check-equations` reads from the build's output (printed fresh when the
-module is rebuilt, replayed by Lake from the module's saved log when it is cached). No top-level `main` since
+module is rebuilt, replayed by Lake from the module's saved log when it is cached). The lines are NOT a proof
+that everything above elaborated: Lean continues past an error, so a module with a broken pin still logs them
+beside the `error:` lines and exits nonzero. The load-bearing guards are the script's: `set -Eeuo pipefail` on
+its `tee` pipeline fails the gate on the build's exit FIRST, and any `^error:` line in the output is refused
+(fix round F5, 2026-10-25). No top-level `main` since
 2026-10-25 (lane `gate/contract-pins-1025`, release-readiness row 42's follow-up): the library `EquationTests`
 is a DEFAULT target, so `lake check` exports and kernel-replays the pins and facts below.
 -/
@@ -2469,8 +2473,9 @@ def checkEnrollment : CoreM Unit := do
     | some _ => throwError "Equation client: {pin} exists but is not a theorem"
     | none => throwError "Equation client: UNENROLLED equation {n} — no pin {pin} in Tests/EquationClient.lean"
   logInfo s!"Equation client: enrollment complete — {pinned} equation theorems pinned, {facts.length} facts and {nHelpers} traversed helpers up to the published API, none unfolds stepFn"
-  -- The PASS line `scripts/check-equations` reads from the build output (reached only if every
-  -- declaration above — the facts, the pins — elaborated and every check above passed).
+  -- The PASS line `scripts/check-equations` reads from the build output. Reached when every check in
+  -- this `#eval` passed — NOT a witness that every declaration above elaborated: Lean continues past an
+  -- error, and the script's guards (the build's exit first, then no `^error:` line) carry that.
   logInfo s!"Equation client: PASS — {factCount} facts by the equation set and the published API; {pinned} equation theorems pinned"
 
 #eval checkEnrollment

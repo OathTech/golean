@@ -31,11 +31,14 @@
 # follow-up: the two theorem-bearing test libraries became default targets, and the line must
 # show it): `lake check`'s export half imports every module of the default targets into one
 # environment and dumps that environment (Lake/CLI/Main.lean, `checkExport`), so the covered set
-# is that import closure. After a green run this script imports the same modules (the default
-# targets' modules from lakefile.toml, scripts/lakefile-targets.sh — the parser scripts/ci uses)
-# in a scratch `lake env lean` and counts the environment's modules: the project's (`GoLean.*`,
-# `Tests.*`, `Contract.*`) and all. A count that cannot be computed is a FAIL (the line would
-# otherwise claim a coverage it cannot name).
+# is that import closure. After a green run this script imports the same modules — the default
+# libraries' glob'd modules, or for a library without globs its ROOT module alone, Lake's own
+# `Glob.one` default (`lakefile_lib_roots`, scripts/lakefile-targets.sh, beside the parser
+# scripts/ci uses) — in a scratch `lake env lean`, and counts the resulting environment's
+# modules: the project's (`GoLean.*`, `Tests.*`, `Contract.*`) and all. That is the closure as
+# Lake computes it: a `GoLean/**` file unreachable from `GoLean.lean` is NOT counted (fix round
+# F6, 2026-10-25; the kernel replay's directory walk would have counted it). A count that cannot
+# be computed is a FAIL (the line would otherwise claim a coverage it cannot name).
 # The line this script prints carries the sandbox form, the exit code, the wall and the peak RSS
 # of the checker process tree (GNU time's %M is the largest single process; the cgroup peak is
 # the gate's). The run goes through `cap` (scripts/cap.sh): the box tool `capped` when it is on
@@ -93,14 +96,15 @@ if [ "$rc" -ne 0 ] || [ -z "$verdict" ] || [ -z "$accepted" ]; then
 fi
 rm -f "$log"
 
-# What the export covered: the default targets' modules, imported as `lake check` imports them.
+# What the export covered: the default targets' modules as Lake defines them (globs, else the root
+# module alone), imported as `lake check` imports them; the count is the resulting closure's.
 defaults="$(lakefile_default_targets)"
 [ -n "$defaults" ] || { echo "check-lake-check: FAIL — no defaultTargets read from lakefile.toml; the covered set cannot be named" >&2; exit 1; }
 mods=""
 for d in $defaults; do
   line="$(lakefile_targets | grep -E "^lib $d( |$)" || true)"
   [ -n "$line" ] || { echo "check-lake-check: FAIL — default target '$d' is not a declared library (lakefile.toml); the covered set cannot be named" >&2; exit 1; }
-  m="$(lakefile_lib_modules "$line")"
+  m="$(lakefile_lib_roots "$line")"
   [ -n "$m" ] || { echo "check-lake-check: FAIL — default library '$d' has no modules to import (no globs and no root module file)" >&2; exit 1; }
   mods="$mods $m"
 done
@@ -125,4 +129,4 @@ if [ "$count_rc" -ne 0 ] || [ -z "$covered" ]; then
 fi
 n_project="$(printf '%s\n' "$covered" | sed -n 's/.*project=\([0-9]*\).*/\1/p')"
 n_all="$(printf '%s\n' "$covered" | sed -n 's/.*all=\([0-9]*\).*/\1/p')"
-echo "lake check speedbump: PASS — $form; $cost; the default targets ($defaults) export and replay through the kernel on standard axioms only («$accepted»; «$verdict»); the exported environment holds $n_project project modules ($n_all with the toolchain's)"
+echo "lake check speedbump: PASS — $form; $cost; the default targets ($defaults) export and replay through the kernel on standard axioms only («$accepted»; «$verdict»); the exported environment — the import closure of their $(echo $mods | wc -w | tr -d ' ') root/glob modules, as Lake builds it — holds $n_project project modules ($n_all with the toolchain's)"

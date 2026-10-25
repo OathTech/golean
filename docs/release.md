@@ -93,9 +93,9 @@ push rule). Pushing the tag is a separate sign-off.
      «fatal runtime error: stack overflow, aborting», SIGABRT, exit 134 — after about 249 s at 43.5 GB, twice on the
      export alone; `RUST_MIN_STACK=4G` is ignored (nanoda sizes its worker stacks itself; its help has no stack
      option); the other four kernels and Lean's own accept the same export. That is the report to file upstream.
-   - (c) `lake comparator` — the surface kept on main for the raft-proofs customer (365 theorems: every theorem of
+   - (c) `lake comparator` — the surface kept on main for the raft-proofs customer (366 theorems: every theorem of
      `Equations.lean` (300; 234 of them `@[stepFn_eqns]` simp-set members), the G11 family, the `Prefix`/`Finish`
-     laws, the output-fold bridge, `enterFrame_declared`, the `Choices.consumeAt*` laws, the twelve G16
+     laws, the output-fold bridge, `enterFrame_declared`, the `Choices.consumeAt*` laws, the thirteen G16
      table-monotonicity statements) judged against its FROZEN
      challenge `Contract/Challenge.lean` per `comparator.json`
      at the root (release-readiness row 43, [USER] 2026-10-23): `CAPPED_MEM_MAX=64G capped lake comparator` (the box

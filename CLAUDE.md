@@ -208,11 +208,12 @@ Everything else is untrusted tooling.
   default since 2026-10-25, their `main`s turned into build-time checks,
   [USER] 2026-10-25, row 42's follow-up; sandboxed where `bwrap` can start,
   `--inadvisably-no-sandbox` where it cannot, saying which) and `lake
-  comparator` (`scripts/check-comparator`, about 20 s: the 365 statements
+  comparator` (`scripts/check-comparator`, about 20 s: the 366 statements
   of the surface kept on main for the raft-proofs customer — every theorem
   of `Equations.lean`, the G11 family, the `Prefix`/`Finish` laws, the
-  output-fold bridge, `enterFrame_declared`, the `Choices.consumeAt*` laws
-  — FROZEN as text in `Contract/Challenge.lean`, judged against GoLean's
+  output-fold bridge, `enterFrame_declared`, the `Choices.consumeAt*` laws,
+  the thirteen G16 table-monotonicity statements — FROZEN as text in
+  `Contract/Challenge.lean`, judged against GoLean's
   own theorems through the generated aliases of
   `GoLean/Contract/Solution.lean` per `comparator.json`: Lake's judge
   compares the two exports' statements syntactically, requires standard
@@ -238,8 +239,9 @@ Everything else is untrusted tooling.
   nanoda crashes on this export (`docs/release.md` §3 gives the form that
   works). The kernel replay above stays in the fast tier (9.1 s at 4
   threads, 6.8 s at 8; no sandbox; it checks the on-disk olean set, which
-  `lake check` does not). Outside BOTH kernel checks: the nine modules that
-  are neither default targets nor `GoLean.*` — the executables' roots
+  `lake check` does not). Outside BOTH kernel checks: nine modules, plus
+  the challenge module `Contract.Challenge`, which the comparator judges —
+  the nine being neither default targets nor `GoLean.*`: the executables' roots
   (`Main`, `Tests.GoCoreEval`) and the `main`-bearing harness modules with
   their library-mates (`Tests.StrictJsonParse` with `Tests.DeclarationWire`
   and `Tests.DeclarationUnicode`; `Tests.UnseqScheduler` with

@@ -51,8 +51,8 @@ lakefile_default_targets() {
 
 # The modules of ONE library, by its `lakefile_targets` line (`lib <name> <module>...`): the
 # globs when it has them, else the root module plus every module under the root's directory
-# (the walk the kernel replay does). Prints nothing for a library without globs whose root
-# module file is missing — the caller fails closed on that.
+# (the walk the kernel replay does; scripts/ci's split check). Prints nothing for a library
+# without globs whose root module file is missing — the caller fails closed on that.
 lakefile_lib_modules() { # <lib line>
   local kind name rest
   read -r kind name rest <<< "$1"
@@ -61,5 +61,22 @@ lakefile_lib_modules() { # <lib line>
   elif [ -f "$name.lean" ]; then
     printf '%s\n' "$name"
     [ -d "$name" ] && find "$name" -name '*.lean' -not -path '*/.lake/*' | sed 's|\.lean$||; s|/|.|g' | LC_ALL=C sort
+  fi
+}
+
+# The modules LAKE puts in a library, by the same line — Lake's own rule (Lake/Config/
+# LeanLibConfig.lean: `roots` defaults to the library's name, `globs` to `Glob.one` of each root):
+# the globs when it has them, else the ROOT MODULE ALONE; what the root imports comes along as the
+# import closure when the module is imported, never by a directory walk. This is the set
+# `lake check` imports (`ws.root.defaultModules`), so scripts/check-lake-check counts the
+# export's coverage from it (fix round F6, 2026-10-25: the walk above would count a `GoLean/**`
+# file unreachable from `GoLean.lean` as exported when `lake check` never saw it). Prints nothing
+# for a library without globs whose root module file is missing — the caller fails closed.
+lakefile_lib_roots() { # <lib line>
+  local kind name rest
+  read -r kind name rest <<< "$1"
+  [ "$kind" = lib ] || return 1
+  if [ -n "$rest" ]; then printf '%s\n' $rest
+  elif [ -f "$name.lean" ]; then printf '%s\n' "$name"
   fi
 }

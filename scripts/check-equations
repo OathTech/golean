@@ -12,7 +12,11 @@
 # facts; this script reads the `#eval`'s two lines from the BUILD output — printed fresh when the
 # module is rebuilt, REPLAYED by Lake from the module's saved log when it is cached (`Replayed
 # Tests.EquationClient`; measured 2026-10-25 at 4.35) — and FAILS when either line is missing,
-# whatever the build's exit; a module that does not build is a FAIL by the build's exit; (c) the
+# whatever the build's exit. The lines alone are NOT the guard: Lean continues past an error, so
+# a module with one broken pin still logs both lines beside `error:` lines and exits nonzero
+# (seen by the review, fix round F5). The load-bearing guards, in order: `set -Eeuo pipefail` on
+# the `tee` pipeline fails the script on the build's exit FIRST; then any `^error:` line in the
+# output is refused; then the two lines are required; (c) the
 # NO-UNFOLD guard — a cheap regex PRE-FILTER (the client never spells `unfold stepFn`, `simp [... stepFn
 # ...]`, `cbv` or `decide`); the LOAD-BEARING check is the client's own Lean-level proof-term check
 # (packet D audit F2: no `stepFn.*` constant, no reflexivity on `stepFn`, the term re-type-checked with
@@ -40,12 +44,12 @@ GUARD='unfold stepFn|simp \[[^]]*stepFn|\b(cbv|decide)\b'
 # replayed from the module's saved log — and BOTH its lines must be there. `set -o pipefail`
 # makes a failed build the exit of the pipeline; the two greps then fail closed on their own.
 cap lake build GoLean EquationTests 2>&1 | tee "$gate_scratch/client.log"
+! grep -qE '^error: ' "$gate_scratch/client.log" || {
+  echo "check-equations: FAIL — the build output carries an error line" >&2; exit 1; }
 grep -q 'Equation client: PASS — ' "$gate_scratch/client.log" || {
   echo "check-equations: FAIL — the build output carries no 'Equation client: PASS' line (the client's build-time check did not pass, or its log was neither printed nor replayed)" >&2; exit 1; }
 grep -q 'Equation client: enrollment complete — ' "$gate_scratch/client.log" || {
   echo "check-equations: FAIL — the client's enrollment check did not report completion" >&2; exit 1; }
-! grep -qE '^error: ' "$gate_scratch/client.log" || {
-  echo "check-equations: FAIL — the build output carries an error line" >&2; exit 1; }
 echo "ok [build-time checks] $(grep -o 'Equation client: PASS.*' "$gate_scratch/client.log" | head -1)"
 
 # (c) the NO-UNFOLD guard over the tracked client

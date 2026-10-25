@@ -491,6 +491,7 @@ def exports : List Name := [
     ``GoLean.GoCore.ProgramCtx.SubTables.findFunctionIn?_mono,
     ``GoLean.GoCore.ProgramCtx.SubTables.methodInfoByFuncId?_mono,
     ``GoLean.GoCore.ProgramCtx.SubTables.methodDecl?_mono, ``GoLean.GoCore.ProgramCtx.SubTables.promotion?_mono,
+    ``GoLean.GoCore.ProgramCtx.SubTables.methodSetCoverage?_mono,
     ``GoLean.GoCore.ProgramCtx.SubTables.resolveMethod?_mono, ``GoLean.GoCore.ProgramCtx.SubTables.callee?_mono,
     ``GoLean.GoCore.ProgramCtx.SubTables.enterFramePickV_mono,
     -- their pins (`Tests/GoCoreContract.lean` §D; in the comparator contract as family `g16` since
@@ -502,6 +503,7 @@ def exports : List Name := [
     ``GoLean.GoCore.ContractTests.Pin.findFunctionIn?_mono,
     ``GoLean.GoCore.ContractTests.Pin.methodInfoByFuncId?_mono,
     ``GoLean.GoCore.ContractTests.Pin.methodDecl?_mono, ``GoLean.GoCore.ContractTests.Pin.promotion?_mono,
+    ``GoLean.GoCore.ContractTests.Pin.methodSetCoverage?_mono,
     ``GoLean.GoCore.ContractTests.Pin.resolveMethod?_mono, ``GoLean.GoCore.ContractTests.Pin.callee?_mono,
     ``GoLean.GoCore.ContractTests.Pin.enterFramePickV_mono,
     -- the contract regressions (`Tests/GoCoreContract.lean` §A/§B/§C)

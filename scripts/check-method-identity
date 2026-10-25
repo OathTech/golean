@@ -8,6 +8,12 @@
 # output — printed fresh when the module is rebuilt, REPLAYED by Lake from the
 # module's saved log when it is cached; this script builds the library and
 # requires BOTH lines (a missing line is a FAIL whatever the build's exit).
+# The lines alone are NOT the guard: Lean continues past an error, so a
+# module with one broken theorem still prints both PASS lines beside
+# `error:` lines and exits nonzero (fix round F5, 2026-10-25). The
+# load-bearing guards, in order: `set -Eeuo pipefail` on the `tee` pipeline
+# fails the script on the build's exit FIRST; then any `^error:` line in the
+# output is refused; then the two lines are required.
 # The library is a default target since 2026-10-25 (lane gate/contract-pins-1025,
 # release-readiness row 42's follow-up), so `lake check` exports and replays the
 # theorems. (2) BY NAME, the residue that cannot run at build time: a FRESH
@@ -27,12 +33,12 @@ cd "$ROOT"
 . "$ROOT/scripts/typed-gate-scratch.sh"
 # (1) the build-time half: the library builds and both control lines are in the build output
 cap lake build MethodIdentityTests MethodIdentityFixtureTests golean 2>&1 | tee "$gate_scratch/build.log"
+! grep -qE '^error: ' "$gate_scratch/build.log" || {
+  echo "check-method-identity: FAIL — the build output carries an error line" >&2; exit 1; }
 grep -q 'Method satisfaction: PASS; ' "$gate_scratch/build.log" || {
   echo "check-method-identity: FAIL — the build output carries no 'Method satisfaction: PASS' line (the build-time control did not pass, or its log was neither printed nor replayed)" >&2; exit 1; }
 grep -q 'Method targets: PASS; ' "$gate_scratch/build.log" || {
   echo "check-method-identity: FAIL — the build output carries no 'Method targets: PASS' line" >&2; exit 1; }
-! grep -qE '^error: ' "$gate_scratch/build.log" || {
-  echo "check-method-identity: FAIL — the build output carries an error line" >&2; exit 1; }
 echo "ok [build-time controls] both control lines present in the build output"
 
 # (2) the by-name half: the fresh wire from the Go tests, read by the strict decoder

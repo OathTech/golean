@@ -17,9 +17,11 @@ raft-proofs repository — `Prefix`/`Finish` and their laws, the equation librar
 `enterFrame_declared`, the `Choices.consumeAt*` laws, the G11 family, the output-fold bridge and
 what `Tests/GoCoreContract.lean` §D pins; a statement drift in that set must become a mismatch
 the judge names, not a text diff). Since 2026-10-25 (lane `gate/contract-pins-1025`, [USER]-ruled 2026-10-25, backlog row 48's
-follow-up) the set also carries G16's twelve table-monotonicity statements (`TableMonotonicity.lean`,
+follow-up) the set also carries G16's thirteen table-monotonicity statements (`TableMonotonicity.lean`,
 family `g16` of scripts/contract-names.lean), moved here from `Tests/GoCoreContract.lean`'s former
-§E Provisional once the per-key relation of train 17 was ruled final: 365 statements in all. The equation family is EVERY public theorem of
+§E Provisional once the per-key relation of train 17 was ruled final, plus `methodSetCoverage?_mono` at
+the fix round the same day (the coordinator's decision: a first-match lookup of the same kind, named in
+the customer's ask): 366 statements in all. The equation family is EVERY public theorem of
 `Equations.lean` (300 since lane `core/g16-raise-mark-1023`; 234 of them `@[stepFn_eqns]` simp-set members — the customer's rewriting
 library is the module, and its `signalStep_*` rows, `runProgramSetup_noInit`, the
 `allocDecls_*`/`bindParams_*`/`setup_*` facts and the rest are plain theorems there): widened
@@ -106,7 +108,7 @@ constant.
 * **The text is the delaborator's, verified.** scripts/contract-challenge-draft prints every
   kept statement from the environment and checks that the printed command re-elaborates, in
   this file's scope, to the identical `Expr` — the comparator's own test. 341 of the 349 at the freeze
-  round-trip as printed (357 of the 365 since the G16 family joined, the same eight exceptions); the three with a `match`/`do` are printed with `pp.match false` and
+  round-trip as printed (358 of the 366 since the G16 family joined, the same eight exceptions); the three with a `match`/`do` are printed with `pp.match false` and
   parenthesised (a `do` block would otherwise read the theorem's `:=` as a reassignment); four
   (`applyRhsOp_vals`, `applyStrictOp_toInterface_string`, `loadResults_nil`, `applyStmtOp_print`)
   in the source's dot-form `.ok` (the printed `Except.ok (…, [])` elaborates a tuple's
@@ -4069,6 +4071,15 @@ theorem GoLean.Contract.GoCore.ProgramCtx.SubTables.promotion?_mono :
       a.SubTables b →
         ∀ {c : TypeId} {M : Declaration.MemberId} {p : Promotion},
           promotion? a c M = some p → promotion? b c M = some p
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.ProgramCtx.SubTables.methodSetCoverage?_mono` (GoLean.GoCore.TableMonotonicity) -/
+theorem GoLean.Contract.GoCore.ProgramCtx.SubTables.methodSetCoverage?_mono :
+    ∀ {a b : ProgramCtx},
+      a.SubTables b →
+        ∀ {key : String} {cov : MethodSetCoverage},
+          methodSetCoverage? a key = some cov → methodSetCoverage? b key = some cov
     := sorry
 
 set_option warn.sorry false in

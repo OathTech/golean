@@ -364,6 +364,7 @@
     "GoLean.Contract.GoCore.ProgramCtx.SubTables.methodInfoByFuncId?_mono",
     "GoLean.Contract.GoCore.ProgramCtx.SubTables.methodDecl?_mono",
     "GoLean.Contract.GoCore.ProgramCtx.SubTables.promotion?_mono",
+    "GoLean.Contract.GoCore.ProgramCtx.SubTables.methodSetCoverage?_mono",
     "GoLean.Contract.GoCore.ProgramCtx.SubTables.resolveMethod?_mono",
     "GoLean.Contract.GoCore.ProgramCtx.SubTables.callee?_mono",
     "GoLean.Contract.GoCore.ProgramCtx.SubTables.enterFramePickV_mono"

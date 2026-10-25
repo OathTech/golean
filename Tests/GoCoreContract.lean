@@ -717,6 +717,13 @@ theorem promotion?_mono :
     promotion? a c M = some p → promotion? b c M = some p :=
   GoCore.ProgramCtx.SubTables.promotion?_mono
 
+/-- Added at the fix round of 2026-10-25 (the coordinator's decision, relayed): the method-set record
+lookup is a first-match lookup of the same kind as the six above, and the customer's ask names it. -/
+theorem methodSetCoverage?_mono :
+    ∀ {a b : ProgramCtx}, a.SubTables b → ∀ {key : String} {cov : MethodSetCoverage},
+    methodSetCoverage? a key = some cov → methodSetCoverage? b key = some cov :=
+  GoCore.ProgramCtx.SubTables.methodSetCoverage?_mono
+
 theorem resolveMethod?_mono :
     ∀ {a b : ProgramCtx}, a.SubTables b →
     ∀ {t : Ty} {M : Declaration.MemberId} {r : MethodResolution},

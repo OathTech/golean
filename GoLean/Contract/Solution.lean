@@ -1447,7 +1447,7 @@ theorem GoLean.Contract.GoCore.Machine.execProgLoopOut_acc :
     stmt_of% GoLean.GoCore.Machine.execProgLoopOut_acc :=
   GoLean.GoCore.Machine.execProgLoopOut_acc
 
-/-! ## g16 (12) -/
+/-! ## g16 (13) -/
 
 theorem GoLean.Contract.GoCore.ProgramCtx.SubTables.stepFn_mono :
     stmt_of% GoLean.GoCore.ProgramCtx.SubTables.stepFn_mono :=
@@ -1484,6 +1484,10 @@ theorem GoLean.Contract.GoCore.ProgramCtx.SubTables.methodDecl?_mono :
 theorem GoLean.Contract.GoCore.ProgramCtx.SubTables.promotion?_mono :
     stmt_of% GoLean.GoCore.ProgramCtx.SubTables.promotion?_mono :=
   GoLean.GoCore.ProgramCtx.SubTables.promotion?_mono
+
+theorem GoLean.Contract.GoCore.ProgramCtx.SubTables.methodSetCoverage?_mono :
+    stmt_of% GoLean.GoCore.ProgramCtx.SubTables.methodSetCoverage?_mono :=
+  GoLean.GoCore.ProgramCtx.SubTables.methodSetCoverage?_mono
 
 theorem GoLean.Contract.GoCore.ProgramCtx.SubTables.resolveMethod?_mono :
     stmt_of% GoLean.GoCore.ProgramCtx.SubTables.resolveMethod?_mono :=

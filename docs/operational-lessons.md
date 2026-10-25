@@ -829,9 +829,15 @@ lane's probes: a client whose PASS line reads `OK` → FAIL; a control whose
 `PASS`, which `PASSED` also matches — tightened to the exact phrase with
 its separator.) `EquationTests` and `MethodIdentityTests` are default
 targets (six defaults), and `lake check` imports their modules: the
-speedbump's line now counts what the export covered — 61 project modules
-(2,435 with the toolchain's), measured 2026-10-25 at 260.6 s, 2.7 GB,
-`--inadvisably-no-sandbox`. The RESIDUE that cannot run at build time: the
+speedbump's line now counts what the export covered, by Lake's own rule —
+the default libraries' glob'd modules, or the ROOT module alone for a
+library without globs (`Glob.one`, `LeanLibConfig.lean`), imported in a
+scratch `lake env lean`, the resulting environment counted: 9 root/glob
+modules, a closure of 61 project modules (2,435 with the toolchain's),
+measured 2026-10-25 at 260.6 s, 2.7 GB, `--inadvisably-no-sandbox`. (The
+first cut walked `GoLean/**` as the kernel replay does; the review's F6: a
+file unreachable from `GoLean.lean` would have been counted as exported
+when `lake check` never saw it.) The RESIDUE that cannot run at build time: the
 method-identity check's fresh executable member wire, written by the
 frontend's own Go tests (`GOLEAN_METHOD_IDENTITY_FIXTURE`) and read with a
 path argument — a subprocess, the filesystem, an argument; and a build-time
@@ -842,7 +848,13 @@ theorem), run by `lean --run` from the gate script as before. Nine modules
 remain outside both checks, none carrying a theorem: `Main`,
 `Tests.GoCoreEval`, `Tests.DeclarationWire`, `Tests.StrictJsonParse`,
 `Tests.DeclarationUnicode`, `Tests.UnseqHarness`, `Tests.UnseqScheduler`,
-`Tests.UnseqWire`, `Tests.MethodIdentityFixture`. Also:
+`Tests.UnseqWire`, `Tests.MethodIdentityFixture` — plus the challenge
+module `Contract.Challenge`, neither default nor `GoLean.*` by design,
+which the comparator judges. And the PASS lines a build logs are not the
+guard (review F5): Lean continues past an error, so a module with one
+broken pin logs both lines beside `error:` lines and exits nonzero; the
+scripts check the build's exit first (`set -Eeuo pipefail` on the `tee`
+pipeline), refuse any `^error:` line, then require the lines. Also:
 `scripts/diff-coverage`'s up-front build names `golean`, which is no
 longer a default (a bare `lake build` now builds the libraries only — the
 README's cold-build line says so).
@@ -902,9 +914,10 @@ A fail-open shape found by the lane's own probe while writing that check:
 `! printf … | grep -q … || fail` under `set -o pipefail` — `grep -q` exits
 on its first match, the writer dies of SIGPIPE, the pipeline reports 141,
 and the negation reads a FOUND line as «not found»; a here-string, not a
-pipeline, is the fix. G16's twelve table-monotonicity statements joined the
-contract the same day as family `g16`, 365 names: `lake comparator` 25.3 s,
-largest process 1.9 GB, inside the agent sandbox.) The list is read from
+pipeline, is the fix. G16's thirteen table-monotonicity statements joined the
+contract the same day as family `g16` (twelve, then `methodSetCoverage?_mono`
+at the review's F2), 366 names: `lake comparator` 23.2 s, largest process
+1.9 GB, inside the agent sandbox.) The list is read from
 the built environment (`scripts/contract-names.lean`: every public theorem
 of `Equations.lean` — 296, of which 232 carry `@[stepFn_eqns]`; the family
 was first the simp set's membership and was WIDENED at the fix round
