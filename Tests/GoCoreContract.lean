@@ -360,7 +360,9 @@ inhabited: at a print position the init loop refuses where the entry loop steps 
 `SetupStatement.lean`'s negative control, kept). Fix round F2/F5 (2026-10-21): the `Prefix`
 determinism laws, the apply-position lemmas, the silent-run converse and the init loop's one-step
 rewriting surface (`runInitConfig_unfold`/`_blocked`/`_nonZero`/`_refused`,
-`initPrintRefusal?_zeroCost`) are frozen here too. -/
+`initPrintRefusal?_zeroCost`) are frozen here too. The G16 table-monotonicity statements of
+`GoLean/GoCore/TableMonotonicity.lean` (backlog row 48) close the section: pinned here and in the
+contract since 2026-10-25 (lane `gate/contract-pins-1025`), after the relation was ruled final. -/
 
 namespace GoLean.GoCore.ContractTests.Pin
 open GoCore GoCore.Machine GoCore.ExecutionStatement
@@ -651,23 +653,12 @@ theorem phaseMark_string :
     phaseMark ctx (.interface .string v) = .ok .none :=
   GoCore.Equations.phaseMark_string
 
-end GoLean.GoCore.ContractTests.Pin
-
-/-! ## §E Provisional statements (pinned for build-time drift; NOT in the comparator contract)
-
-The G16 table-monotonicity statements below are proved and pinned like §D, but they are kept
-OUT of `comparator.json`'s frozen surface until backlog row 48's ruling settles the relation
-`ProgramCtx.SubTables` (the review of 2026-10-23 measured that the first cut's premises defeat
-the customer's slicing; the per-key relation of lane `core/g16-raise-mark-1023` is the proposed
-final form — the coordinator moves these pins to §D and the contract at the ask).
-`scripts/gen-contract --check` reads §D only, so a pin here does not demand a contract entry.
-Move a statement to §D when it is settled. -/
-namespace GoLean.GoCore.ContractTests.Provisional
-
-open GoCore GoCore.Machine GoCore.ExecutionStatement
 
 /-! raft-proofs G16 (backlog row 48, 2026-10-23; `GoLean/GoCore/TableMonotonicity.lean`, lanes
-`core/g16-table-monotonicity-1023` and `core/g16-raise-mark-1023`): a successful step under a
+`core/g16-table-monotonicity-1023` and `core/g16-raise-mark-1023`; pinned in the former §E
+Provisional while the relation was being redesigned, moved here and into the comparator contract
+(family `g16`, `scripts/contract-names.lean`) by lane `gate/contract-pins-1025` on the [USER] ruling
+of 2026-10-25 that the per-key relation of train 17 is final): a successful step under a
 SLICE of the function, method, method-set and promotion tables (`ProgramCtx.SubTables`: same
 `typeDefs`/`globals`/`typeDisplays`, sublists of the four tables, the whole's key discipline, the
 slice's PER-KEY closure — a kept record's carrier keeps its methods and promotions with their
@@ -744,4 +735,4 @@ theorem enterFramePickV_mono :
     enterFramePickV a s fid args ch = .ok x → enterFramePickV b s fid args ch = .ok x :=
   GoCore.ProgramCtx.SubTables.enterFramePickV_mono
 
-end GoLean.GoCore.ContractTests.Provisional
+end GoLean.GoCore.ContractTests.Pin

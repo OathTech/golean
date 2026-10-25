@@ -115,3 +115,18 @@ other non-carrier payloads by `rfl` on your table. Statements that changed:
 `panicking_stop_raised`, `panicking_stop_raised_error`. All in the comparator
 contract, so your `--challenge-from-export` run against your pin will name
 exactly these.
+
+## Addendum, 2026-10-25: G16's twelve statements are in the comparator contract
+
+Branch `gate/contract-pins-1025`, at the merge ask (not yet on `main`). With the per-key relation
+final since train 17, the twelve table-monotonicity statements — `stepFn_mono`, `prefix_mono`,
+`finish_aborted_mono`, `execStmtLoop_ok_mono`, `execStmtLoop_panic_mono`, the six lookup lemmas
+and `enterFramePickV_mono`, all `GoLean.GoCore.ProgramCtx.SubTables.*` — are family `g16` of
+`comparator.json` (365 `theorem_names`), frozen as text in `Contract/Challenge.lean` under the
+aliases `GoLean.Contract.GoCore.ProgramCtx.SubTables.*`; their §E Provisional pins are §D pins.
+Your `--challenge-from-export` run against a pin before that commit names the twelve as names
+the pin's challenge lacks; from that commit on, a move of `SubTables`, `TablesKeyed` or
+`SliceClosed` is named by that route too, as every definition the statements reach is. The
+module's other theorems (the `tablesFree` congruence sweep, the per-arm helpers) are not in the
+contract: the lift's scaffolding, not a surface — say so if you consume one. The `Bool` checker for
+`TablesKeyed`/`SliceClosed` you asked about is still open.

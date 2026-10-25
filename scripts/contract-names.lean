@@ -35,6 +35,21 @@ or a theorem added to or removed from `InitDriverFacts.lean`, changes the list (
   pool        the output-fold bridge: execProgLoopOut_snd (`Multi.lean`), execProgLoopOut_single,
               execProgLoopOut_single_prefix, seqOut_of_prefix (`PoolProjection.lean`),
               execProgLoopOut_eq_execProgLoop, execProgLoopOut_acc (`PoolFacts.lean`).
+  g16         the twelve table-monotonicity statements of `TableMonotonicity.lean` (raft-proofs G16,
+              backlog row 48; moved into the contract 2026-10-25, lane gate/contract-pins-1025, on the
+              [USER] ruling that the per-key relation of train 17 is final): the lifts `stepFn_mono`,
+              `prefix_mono`, `finish_aborted_mono`, `execStmtLoop_ok_mono`, `execStmtLoop_panic_mono`,
+              the first-match lookups `findFunctionIn?_mono`, `methodInfoByFuncId?_mono`,
+              `methodDecl?_mono`, `promotion?_mono`, `resolveMethod?_mono`, `callee?_mono` and the
+              frame-entry funnel `enterFramePickV_mono` — all in namespace `ProgramCtx.SubTables`. An
+              EXPLICIT list, like `prefix` and `pool`, not the module's theorem set ([AGENT]
+              2026-10-25): the module's other ~250 theorems are the lift's scaffolding — the
+              `tablesFree` congruence sweep in `TableMono`, the per-arm `*_mono`/`*_eq_of_recorded`
+              helpers — named for the proof's shape, not the customer's use (the reply
+              docs/2026-10-23_reply-to-raft-proofs-g16-g18.md names these twelve, as do the §D pins
+              and the core audit's required list); freezing the scaffolding would make a refactor
+              of the sweep a contract change. The relation's DEFINITIONS (`SubTables`, `TablesKeyed`,
+              `SliceClosed`) are reached by the statements and compared whole, as every definition is.
 
 Fails closed (a Lean error, exit 1) when a named theorem is missing, is not a theorem, carries
 universe parameters, lies outside the `GoLean` namespace, or when a family is empty.
@@ -113,7 +128,16 @@ open ContractNames in
     ("g11", moduleTheorems env `GoLean.GoCore.InitDriverFacts),
     ("pool", #[`GoLean.GoCore.Machine.execProgLoopOut_snd, `GoLean.GoCore.Machine.execProgLoopOut_single,
       `GoLean.GoCore.Machine.execProgLoopOut_single_prefix, `GoLean.GoCore.Machine.seqOut_of_prefix,
-      `GoLean.GoCore.Machine.execProgLoopOut_eq_execProgLoop, `GoLean.GoCore.Machine.execProgLoopOut_acc])]
+      `GoLean.GoCore.Machine.execProgLoopOut_eq_execProgLoop, `GoLean.GoCore.Machine.execProgLoopOut_acc]),
+    ("g16", #[`GoLean.GoCore.ProgramCtx.SubTables.stepFn_mono, `GoLean.GoCore.ProgramCtx.SubTables.prefix_mono,
+      `GoLean.GoCore.ProgramCtx.SubTables.finish_aborted_mono,
+      `GoLean.GoCore.ProgramCtx.SubTables.execStmtLoop_ok_mono,
+      `GoLean.GoCore.ProgramCtx.SubTables.execStmtLoop_panic_mono,
+      `GoLean.GoCore.ProgramCtx.SubTables.findFunctionIn?_mono,
+      `GoLean.GoCore.ProgramCtx.SubTables.methodInfoByFuncId?_mono,
+      `GoLean.GoCore.ProgramCtx.SubTables.methodDecl?_mono, `GoLean.GoCore.ProgramCtx.SubTables.promotion?_mono,
+      `GoLean.GoCore.ProgramCtx.SubTables.resolveMethod?_mono, `GoLean.GoCore.ProgramCtx.SubTables.callee?_mono,
+      `GoLean.GoCore.ProgramCtx.SubTables.enterFramePickV_mono])]
   let mut seen : Std.HashSet Lean.Name := {}
   for (family, names) in families do
     if names.isEmpty then throwError "contract-names: the family {family} is empty"

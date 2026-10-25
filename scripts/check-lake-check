@@ -26,7 +26,16 @@
 #
 # Fail closed: any nonzero exit of `lake check` is a FAIL that names the toolchain's first error
 # line; a run that prints no acceptance line («… kernel accepts …») or no axiom verdict («Uses
-# no axioms» / «Uses axioms: …») is a FAIL too; a green run prints both lines.
+# no axioms» / «Uses axioms: …») is a FAIL too; a green run prints both lines, and then SAYS WHAT
+# THE EXPORT COVERED (lane gate/contract-pins-1025, 2026-10-25, release-readiness row 42's
+# follow-up: the two theorem-bearing test libraries became default targets, and the line must
+# show it): `lake check`'s export half imports every module of the default targets into one
+# environment and dumps that environment (Lake/CLI/Main.lean, `checkExport`), so the covered set
+# is that import closure. After a green run this script imports the same modules (the default
+# targets' modules from lakefile.toml, scripts/lakefile-targets.sh — the parser scripts/ci uses)
+# in a scratch `lake env lean` and counts the environment's modules: the project's (`GoLean.*`,
+# `Tests.*`, `Contract.*`) and all. A count that cannot be computed is a FAIL (the line would
+# otherwise claim a coverage it cannot name).
 # The line this script prints carries the sandbox form, the exit code, the wall and the peak RSS
 # of the checker process tree (GNU time's %M is the largest single process; the cgroup peak is
 # the gate's). The run goes through `cap` (scripts/cap.sh): the box tool `capped` when it is on
@@ -34,6 +43,7 @@
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 . "$ROOT/scripts/cap.sh"
+. "$ROOT/scripts/lakefile-targets.sh"
 cd "$ROOT" || { echo "check-lake-check: cannot cd to $ROOT" >&2; exit 1; }
 [[ $# = 0 ]] || { echo 'check-lake-check: expected no arguments' >&2; exit 2; }
 export TMPDIR="$ROOT/.tmp"
@@ -82,4 +92,37 @@ if [ "$rc" -ne 0 ] || [ -z "$verdict" ] || [ -z "$accepted" ]; then
   exit 1
 fi
 rm -f "$log"
-echo "lake check speedbump: PASS — $form; $cost; the default targets export and replay through the kernel on standard axioms only («$accepted»; «$verdict»)"
+
+# What the export covered: the default targets' modules, imported as `lake check` imports them.
+defaults="$(lakefile_default_targets)"
+[ -n "$defaults" ] || { echo "check-lake-check: FAIL — no defaultTargets read from lakefile.toml; the covered set cannot be named" >&2; exit 1; }
+mods=""
+for d in $defaults; do
+  line="$(lakefile_targets | grep -E "^lib $d( |$)" || true)"
+  [ -n "$line" ] || { echo "check-lake-check: FAIL — default target '$d' is not a declared library (lakefile.toml); the covered set cannot be named" >&2; exit 1; }
+  m="$(lakefile_lib_modules "$line")"
+  [ -n "$m" ] || { echo "check-lake-check: FAIL — default library '$d' has no modules to import (no globs and no root module file)" >&2; exit 1; }
+  mods="$mods $m"
+done
+scratch="$(mktemp "$TMPDIR/lake-check-modules.XXXXXX.lean")"
+{
+  for m in $mods; do echo "import $m"; done
+  cat <<'LEAN'
+open Lean Elab Command in
+#eval show CommandElabM Unit from do
+  let names := (← getEnv).header.moduleNames
+  let project := names.filter fun n => [`GoLean, `Tests, `Contract].any (fun r => r.isPrefixOf n)
+  IO.println s!"lake-check-modules project={project.size} all={names.size}"
+LEAN
+} > "$scratch"
+count_out="$(cap lake env lean "$scratch" 2>&1)"; count_rc=$?
+rm -f "$scratch"
+covered="$(printf '%s\n' "$count_out" | grep -m1 '^lake-check-modules ' || true)"
+if [ "$count_rc" -ne 0 ] || [ -z "$covered" ]; then
+  printf '%s\n' "$count_out" | head -5 >&2
+  echo "check-lake-check: FAIL — the default targets' modules could not be imported to count the covered set (above)" >&2
+  exit 1
+fi
+n_project="$(printf '%s\n' "$covered" | sed -n 's/.*project=\([0-9]*\).*/\1/p')"
+n_all="$(printf '%s\n' "$covered" | sed -n 's/.*all=\([0-9]*\).*/\1/p')"
+echo "lake check speedbump: PASS — $form; $cost; the default targets ($defaults) export and replay through the kernel on standard axioms only («$accepted»; «$verdict»); the exported environment holds $n_project project modules ($n_all with the toolchain's)"

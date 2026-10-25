@@ -354,7 +354,19 @@
     "GoLean.Contract.GoCore.Machine.execProgLoopOut_single_prefix",
     "GoLean.Contract.GoCore.Machine.seqOut_of_prefix",
     "GoLean.Contract.GoCore.Machine.execProgLoopOut_eq_execProgLoop",
-    "GoLean.Contract.GoCore.Machine.execProgLoopOut_acc"
+    "GoLean.Contract.GoCore.Machine.execProgLoopOut_acc",
+    "GoLean.Contract.GoCore.ProgramCtx.SubTables.stepFn_mono",
+    "GoLean.Contract.GoCore.ProgramCtx.SubTables.prefix_mono",
+    "GoLean.Contract.GoCore.ProgramCtx.SubTables.finish_aborted_mono",
+    "GoLean.Contract.GoCore.ProgramCtx.SubTables.execStmtLoop_ok_mono",
+    "GoLean.Contract.GoCore.ProgramCtx.SubTables.execStmtLoop_panic_mono",
+    "GoLean.Contract.GoCore.ProgramCtx.SubTables.findFunctionIn?_mono",
+    "GoLean.Contract.GoCore.ProgramCtx.SubTables.methodInfoByFuncId?_mono",
+    "GoLean.Contract.GoCore.ProgramCtx.SubTables.methodDecl?_mono",
+    "GoLean.Contract.GoCore.ProgramCtx.SubTables.promotion?_mono",
+    "GoLean.Contract.GoCore.ProgramCtx.SubTables.resolveMethod?_mono",
+    "GoLean.Contract.GoCore.ProgramCtx.SubTables.callee?_mono",
+    "GoLean.Contract.GoCore.ProgramCtx.SubTables.enterFramePickV_mono"
   ],
   "definition_names": [],
   "permitted_axioms": [

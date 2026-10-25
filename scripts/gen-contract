@@ -6,7 +6,8 @@
 #
 # From the kept-surface name list that scripts/contract-names.lean reads out of the BUILT
 # environment (the `stepFn_eqns` simp set, the public theorems of InitDriverFacts.lean, the
-# named Prefix/Finish, enterFrame, Choices.consumeAt* and output-fold laws), this script writes:
+# named Prefix/Finish, enterFrame, Choices.consumeAt*, output-fold and G16 table-monotonicity laws),
+# this script writes:
 #
 #   comparator.json                  `lake comparator`'s configuration at its default path:
 #                                    challenge `Contract.Challenge`, solution
@@ -41,6 +42,8 @@
 #     `*_stmt` constant, `Contract.Solution`, an `import GoLean.Contract…` — the challenge
 #     must spell every statement out from the definitions, or it pins nothing;
 #   * every theorem that Tests/GoCoreContract.lean §D pins (`:= GoCore.<name>`) is a kept name.
+#   * the `sorry` warning is silenced per declaration (`set_option warn.sorry false in` ahead of
+#     every entry, one per theorem, none file-wide) — the charter's one allowed warning suppression.
 # Fail closed on every step: the name script's error, an empty list, a line it cannot parse.
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
@@ -155,7 +158,29 @@ extra="$(LC_ALL=C comm -13 <(printf '%s\n' "$expected") <(printf '%s\n' "$declar
 [ -z "$extra" ] || { printf '%s\n' "$extra" | head -10 >&2; fail "$CHALLENGE declares $(printf '%s\n' "$extra" | wc -l | tr -d ' ') theorem(s) that are not kept names (above) — the comparator would never look at them"; }
 circ="$(printf '%s\n' "$chal_code" | grep -nE 'stmt_of%|type_of%|[A-Za-z0-9_]_stmt\b|Contract\.Solution|^import GoLean\.Contract' || true)"
 [ -z "$circ" ] || { printf '%s\n' "$circ" | head -5 >&2; fail "$CHALLENGE spells a statement through the solution side (above): a challenge that names the kept theorem's type or a *_stmt constant pins nothing"; }
-grep -q '^set_option warn.sorry false' "$CHALLENGE" || fail "$CHALLENGE must carry 'set_option warn.sorry false' (its holes are sorry; the build is warning-free by that option, not by a regex)"
+# The `sorry` warning is silenced PER DECLARATION — `set_option warn.sorry false in` ahead of each
+# entry (its docstring, its notes, the theorem), never file-wide: the charter's one allowed warning
+# suppression, scoped to the declaration whose hole it silences (lane gate/contract-pins-1025,
+# 2026-10-25; the box rule: as narrowly as possible, the reason beside it, listed in CLAUDE.md).
+# Checked on the comment-stripped code: no file-wide form; every `set_option warn.sorry false in`
+# is followed, as the next non-blank code line, by a `theorem GoLean.Contract.…`, and every such
+# theorem is preceded by one — a hole with no option is a warning the gate's build names, an
+# option with no theorem is dead text.
+# (A here-string, not a pipeline: under `pipefail` a `grep -q` that exits on its first match
+# leaves the writer with SIGPIPE, and the negated pipeline status then reads as «not found» —
+# a fail-open shape, caught by the lane's own probe 2026-10-25.)
+if grep -qE '^[[:space:]]*set_option[[:space:]]+warn\.sorry[[:space:]]+false[[:space:]]*$' <<< "$chal_code"; then
+  fail "$CHALLENGE sets warn.sorry file-wide; the allowed form is per declaration ('set_option warn.sorry false in' ahead of each entry)"
+fi
+pair_bad="$(printf '%s\n' "$chal_code" | awk '
+  /^[[:space:]]*$/ { next }
+  { if (pending != "") { if ($0 !~ /^theorem GoLean\.Contract\./) print "line " pending ": set_option warn.sorry false in is not followed by a theorem GoLean.Contract.… (got: " $0 ")"; pending = "" }
+    else if ($0 ~ /^theorem GoLean\.Contract\./) print "line " NR ": " $1 " " $2 " has no set_option warn.sorry false in ahead of it" }
+  /^set_option warn\.sorry false in$/ { pending = NR }
+  END { if (pending != "") print "line " pending ": a trailing set_option warn.sorry false in with no theorem" }')"
+[ -z "$pair_bad" ] || { printf '%s\n' "$pair_bad" | head -5 >&2; fail "$CHALLENGE: the per-declaration warn.sorry form is broken (above)"; }
+n_opts="$(printf '%s\n' "$chal_code" | grep -c '^set_option warn\.sorry false in$' || true)"
+[ "$n_opts" -eq "$(printf '%s\n' "$declared" | wc -l | tr -d ' ')" ] || fail "$CHALLENGE: $n_opts 'set_option warn.sorry false in' lines for $(printf '%s\n' "$declared" | wc -l | tr -d ' ') theorems"
 
 # ── 6. Tests/GoCoreContract.lean §D: every pinned theorem is a kept name.
 pins="$(awk '/^namespace GoLean\.GoCore\.ContractTests\.Pin/{p=1} /^end GoLean\.GoCore\.ContractTests\.Pin/{p=0} p' Tests/GoCoreContract.lean \

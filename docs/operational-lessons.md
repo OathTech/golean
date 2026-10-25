@@ -796,28 +796,53 @@ module's built `.ilean` (the elaborated constant names, so a namespaced
 `Tests.X.main` is not `main`; an unreadable or reshaped `.ilean` is a FAIL,
 never «main-free»): a main-free library that is not default, a default
 executable or `main`-bearing library, a default name no target declares —
-each a FAIL. The COVERAGE GAP this leaves (review F3, 2026-10-22): ten
-modules are outside BOTH kernel checks — not default targets, so not in
-`lake check`'s export, and not `GoLean.*`, so not in the replay's prefix:
-`Main`, `Tests.GoCoreEval`, `Tests.DeclarationWire`,
-`Tests.StrictJsonParse`, `Tests.DeclarationUnicode`, `Tests.MethodIdentity`,
-`Tests.UnseqHarness`, `Tests.UnseqScheduler`, `Tests.UnseqWire`,
-`Tests.EquationClient`. Two of them carry theorems:
-`Tests/EquationClient.lean` (296 equation pins and 12 facts, plus two
-witnesses, under its `main`; built and run by `scripts/check-equations`)
-and `Tests/MethodIdentity.lean` (12: `requirement_identity_is_semantic`,
-`method_identity_is_semantic`, `private_same_package_accepted`,
-`private_cross_package_rejected`, `pointer_inherits_private_value`,
-`value_does_not_inherit_private_pointer`, `variadic_is_part_of_signature`,
-`nil_text_ignores_foreign_declaration`,
+each a FAIL. The COVERAGE GAP this left (review F3, 2026-10-22): ten
+modules were outside BOTH kernel checks — not default targets, so not in
+`lake check`'s export, and not `GoLean.*`, so not in the replay's prefix —
+two of them with theorems: `Tests/EquationClient.lean` (the equation pins
+and facts under its `main`) and `Tests/MethodIdentity.lean` (12 theorems:
+`requirement_identity_is_semantic`, `method_identity_is_semantic`,
+`private_same_package_accepted`, `private_cross_package_rejected`,
+`pointer_inherits_private_value`, `value_does_not_inherit_private_pointer`,
+`variadic_is_part_of_signature`, `nil_text_ignores_foreign_declaration`,
 `nil_text_promoted_entry_outside_family`,
 `nil_text_requires_matching_package`, `private_targets_are_distinct`,
-`utf8_target_vector`; run by `scripts/check-method-identity`). Those are
-kernel-checked at elaboration (the build) but NOT replayed against
-tampering by either check. The remedy is a follow-up, not made here: turn
-the `lean --run` `main`s into build-time checks (as the enrollment `#eval`
-in `Tests/EquationClient.lean` already is), after which the libraries
-become main-free and default, and `lake check` covers them. Also:
+`utf8_target_vector`), kernel-checked at elaboration but not replayed
+against tampering by either check. CLOSED 2026-10-25 (lane
+`gate/contract-pins-1025`, [USER] 2026-10-25, row 42's follow-up): the two
+`main`s are BUILD-TIME checks. The equation client's `main` only printed
+the PASS line after the enrollment `#eval` had elaborated, so the `#eval`
+now logs that line itself (`logInfo`); the method-identity controls
+(`satisfactionControls`, `receiverControls` — pure computations wrapped in
+`IO`) are `#eval`s that throw on the first failed cell, which fails the
+module's elaboration, and print their PASS lines into the build output.
+The mechanism the gate scripts rely on: Lake REPLAYS a cached module's
+saved log (`ℹ [n/m] Replayed Tests.EquationClient`, then the `info:`
+lines), so `lake build` prints the checks' lines whether the module was
+rebuilt or not, and `scripts/check-equations` /
+`scripts/check-method-identity` build the library, `tee` the output and
+require each exact line (`Equation client: PASS — …`, `Equation client:
+enrollment complete — …`; `Method satisfaction: PASS; …`, `Method targets:
+PASS; …`), fail-closed on a missing line whatever the build's exit; the
+lane's probes: a client whose PASS line reads `OK` → FAIL; a control whose
+`#eval` is commented out → FAIL. (The first greps matched the substring
+`PASS`, which `PASSED` also matches — tightened to the exact phrase with
+its separator.) `EquationTests` and `MethodIdentityTests` are default
+targets (six defaults), and `lake check` imports their modules: the
+speedbump's line now counts what the export covered — 61 project modules
+(2,435 with the toolchain's), measured 2026-10-25 at 260.6 s, 2.7 GB,
+`--inadvisably-no-sandbox`. The RESIDUE that cannot run at build time: the
+method-identity check's fresh executable member wire, written by the
+frontend's own Go tests (`GOLEAN_METHOD_IDENTITY_FIXTURE`) and read with a
+path argument — a subprocess, the filesystem, an argument; and a build-time
+read of a fixed path would be CACHED by Lake's trace (a changed fixture
+would not rebuild the module: fail-open). It is `Tests/MethodIdentityFixture.lean`
+(library `MethodIdentityFixtureTests`, `main`-bearing, built by name, no
+theorem), run by `lean --run` from the gate script as before. Nine modules
+remain outside both checks, none carrying a theorem: `Main`,
+`Tests.GoCoreEval`, `Tests.DeclarationWire`, `Tests.StrictJsonParse`,
+`Tests.DeclarationUnicode`, `Tests.UnseqHarness`, `Tests.UnseqScheduler`,
+`Tests.UnseqWire`, `Tests.MethodIdentityFixture`. Also:
 `scripts/diff-coverage`'s up-front build names `golean`, which is no
 longer a default (a bare `lake build` now builds the libraries only — the
 README's cold-build line says so).
@@ -867,7 +892,19 @@ would make a challenge that names `X_stmt` compare one definition with
 itself; (3) `sorry` holes with `set_option warn.sorry false` (4.35's
 option) keep the warning-free build honest without a regex exemption, and
 keep the challenge out of `lake check` (which would refuse `sorryAx`);
-(4) `permitted_axioms` is the classical trio only. The list is read from
+(4) `permitted_axioms` is the classical trio only. (Since 2026-10-25 the
+option is PER DECLARATION — `set_option warn.sorry false in` ahead of each
+entry's docstring and theorem, never file-wide — the box rule for a warning
+that cannot be removed for a project-level reason, listed in CLAUDE.md as the
+charter's one allowed suppression; `scripts/gen-contract` checks the form on
+the comment-stripped code, and `scripts/contract-challenge-draft` prints it.
+A fail-open shape found by the lane's own probe while writing that check:
+`! printf … | grep -q … || fail` under `set -o pipefail` — `grep -q` exits
+on its first match, the writer dies of SIGPIPE, the pipeline reports 141,
+and the negation reads a FOUND line as «not found»; a here-string, not a
+pipeline, is the fix. G16's twelve table-monotonicity statements joined the
+contract the same day as family `g16`, 365 names: `lake comparator` 25.3 s,
+largest process 1.9 GB, inside the agent sandbox.) The list is read from
 the built environment (`scripts/contract-names.lean`: every public theorem
 of `Equations.lean` — 296, of which 232 carry `@[stepFn_eqns]`; the family
 was first the simp set's membership and was WIDENED at the fix round

@@ -5,6 +5,7 @@ import GoLean.GoCore.ExecutionStatement
 import GoLean.GoCore.PoolFacts
 import GoLean.GoCore.PoolProjection
 import GoLean.GoCore.InitDriverFacts
+import GoLean.GoCore.TableMonotonicity
 
 /-!
 # The comparator CHALLENGE — the kept customer surface, frozen as statements
@@ -15,7 +16,10 @@ the appropriate challenge is the statement set GoLean keeps on main under stable
 raft-proofs repository — `Prefix`/`Finish` and their laws, the equation library,
 `enterFrame_declared`, the `Choices.consumeAt*` laws, the G11 family, the output-fold bridge and
 what `Tests/GoCoreContract.lean` §D pins; a statement drift in that set must become a mismatch
-the judge names, not a text diff). The equation family is EVERY public theorem of
+the judge names, not a text diff). Since 2026-10-25 (lane `gate/contract-pins-1025`, [USER]-ruled 2026-10-25, backlog row 48's
+follow-up) the set also carries G16's twelve table-monotonicity statements (`TableMonotonicity.lean`,
+family `g16` of scripts/contract-names.lean), moved here from `Tests/GoCoreContract.lean`'s former
+§E Provisional once the per-key relation of train 17 was ruled final: 365 statements in all. The equation family is EVERY public theorem of
 `Equations.lean` (300 since lane `core/g16-raise-mark-1023`; 234 of them `@[stepFn_eqns]` simp-set members — the customer's rewriting
 library is the module, and its `signalStep_*` rows, `runProgramSetup_noInit`, the
 `allocDecls_*`/`bindParams_*`/`setup_*` facts and the rest are plain theorems there): widened
@@ -59,9 +63,18 @@ constant.
   file spells the proposition out and the solution's `stmt_of%` unfolds the `_stmt` head.
   scripts/gen-contract refuses a `*_stmt`, `stmt_of%`, `type_of%` or `Contract.Solution`
   spelling in this file's code.
-* **Holes are `sorry`, the warning off.** `set_option warn.sorry false` (toolchain ≥ 4.35) keeps
-  the gate's warning-free build honest without a regex exemption; `sorryAx` is the universally
-  recognised hole; the comparator never trusts the challenge's proofs. So this module is NOT a
+* **Holes are `sorry`, the warning off PER DECLARATION.** Every entry is `set_option warn.sorry
+  false in` (toolchain ≥ 4.35) ahead of its docstring and theorem — the option scoped to the one
+  declaration whose hole it silences, never file-wide (lane `gate/contract-pins-1025`, 2026-10-25;
+  the box rule for a warning that cannot be removed for a project-level reason: suppressed as
+  narrowly as possible, the reason beside it, listed in the working-practices doc — CLAUDE.md
+  «Speedbumps report» names this as the charter's one allowed warning suppression). The reason:
+  a hole IS the challenge's form — the statement frozen, the proof the solution's — so the
+  warning would name a defect that is the design; `sorryAx` is the universally recognised hole,
+  and the comparator never trusts the challenge's proofs. scripts/gen-contract checks the form on
+  the comment-stripped code: no file-wide option, one `set_option … in` per theorem, each followed
+  by its `theorem GoLean.Contract.…`. This keeps the gate's warning-free build honest without a
+  regex exemption. So this module is NOT a
   default target — `lake check` would refuse `sorryAx`, and its names would clash with the
   Solution's in one environment — but the non-default library `ContractChallenge`, built by
   name in the gate's `lake build` (so a renamed definition breaks it loudly there) and imported
@@ -70,7 +83,8 @@ constant.
 * **Imports: the vocabulary.** The executable core (`State`, `Machine`, `Multi`) and the
   definitions the statements name (`Prefix`/`Finish`/`FinishOutcome`/`replays`/`ZeroCost`/
   `Blocked` in ExecutionStatement.lean; `transferable`/`seqOpCount` in PoolFacts.lean;
-  `seqOut`/`outFold` in PoolProjection.lean; `initPrintRefusal?` in Machine.lean).
+  `seqOut`/`outFold` in PoolProjection.lean; `initPrintRefusal?` in Machine.lean;
+  `ProgramCtx.SubTables` and the lookups it governs in TableMonotonicity.lean, since 2026-10-25).
   InitDriverFacts.lean is imported for one reason: two of its statements contain a `match`,
   which mints an auxiliary matcher constant per module (the cache behind
   `Lean.Meta.Match.mkMatcherAuxDefinition` is module-local), so the challenge names the kept
@@ -92,7 +106,7 @@ constant.
 * **The text is the delaborator's, verified.** scripts/contract-challenge-draft prints every
   kept statement from the environment and checks that the printed command re-elaborates, in
   this file's scope, to the identical `Expr` — the comparator's own test. 341 of the 349 at the freeze
-  round-trip as printed; the three with a `match`/`do` are printed with `pp.match false` and
+  round-trip as printed (357 of the 365 since the G16 family joined, the same eight exceptions); the three with a `match`/`do` are printed with `pp.match false` and
   parenthesised (a `do` block would otherwise read the theorem's `:=` as a reassignment); four
   (`applyRhsOp_vals`, `applyStrictOp_toInterface_string`, `loadResults_nil`, `applyStmtOp_print`)
   in the source's dot-form `.ok` (the printed `Except.ok (…, [])` elaborates a tuple's
@@ -121,13 +135,13 @@ build-time controls. The no-unfold discipline of `Tests/EquationClient.lean`:
 scripts/check-equations.
 -/
 
-set_option warn.sorry false
 set_option autoImplicit false
 
 open GoLean GoLean.GoCore GoLean.GoCore.Machine GoLean.GoCore.ExecutionStatement
 
 /-! ## GoLean.GoCore.Prefix -/
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.ExecutionStatement.prefix_comp` (GoLean.GoCore.Prefix) -/
 theorem GoLean.Contract.GoCore.ExecutionStatement.prefix_comp :
     ∀ (ctx : ProgramCtx) (n m : Nat) (s s₁ sf : Store) (c c₁ cf : Config) (ch ch₁ chf : Choices)
@@ -136,6 +150,7 @@ theorem GoLean.Contract.GoCore.ExecutionStatement.prefix_comp :
         Prefix ctx m s₁ c₁ ch₁ ls' sf cf chf → Prefix ctx (n + m) s c ch (ls ++ ls') sf cf chf
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.ExecutionStatement.prefix_split` (GoLean.GoCore.Prefix) -/
 theorem GoLean.Contract.GoCore.ExecutionStatement.prefix_split :
     ∀ (ctx : ProgramCtx) (n m : Nat) (s sf : Store) (c cf : Config) (ch chf : Choices)
@@ -150,6 +165,7 @@ theorem GoLean.Contract.GoCore.ExecutionStatement.prefix_split :
                     Prefix ctx n s c ch ls₁ s₁ c₁ ch₁ ∧ Prefix ctx m s₁ c₁ ch₁ ls₂ sf cf chf
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.ExecutionStatement.run_ok_iff` (GoLean.GoCore.Prefix) -/
 theorem GoLean.Contract.GoCore.ExecutionStatement.run_ok_iff :
     ∀ (ctx : ProgramCtx) (fuel : Nat) (s sf : Store) (c : Config) (ch chf : Choices),
@@ -158,6 +174,7 @@ theorem GoLean.Contract.GoCore.ExecutionStatement.run_ok_iff :
           n ≤ fuel ∧ ∃ (ls : List StepLabel), Prefix ctx n s c ch ls sf (Config.next Cont.stop) chf
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.ExecutionStatement.run_panic_iff` (GoLean.GoCore.Prefix) -/
 theorem GoLean.Contract.GoCore.ExecutionStatement.run_panic_iff :
     ∀ (ctx : ProgramCtx) (fuel : Nat) (s : Store) (c : Config) (ch : Choices) (t : String),
@@ -174,6 +191,7 @@ theorem GoLean.Contract.GoCore.ExecutionStatement.run_panic_iff :
                           Finish ctx sf cf chf rec (FinishOutcome.aborted t sf ch'') 1
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.ExecutionStatement.replay_coverage` (GoLean.GoCore.Prefix) -/
 theorem GoLean.Contract.GoCore.ExecutionStatement.replay_coverage :
     ∀ (ctx : ProgramCtx) (s s' : Store) (c c' : Config) (ch ch' : Choices) (l : StepLabel),
@@ -184,6 +202,7 @@ theorem GoLean.Contract.GoCore.ExecutionStatement.replay_coverage :
 
 /-! ## GoLean.GoCore.Machine -/
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Machine.enterFrame_declared` (GoLean.GoCore.Machine) -/
 -- Stated through the original's matcher constants (`pp.match false`): a `match` in a
 -- statement mints a matcher per module, so the challenge names the kept theorem's own.
@@ -208,6 +227,7 @@ theorem GoLean.Contract.GoCore.Machine.enterFrame_declared :
 
 /-! ## GoLean.GoCore.State -/
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Choices.consumeAtE_eq` (GoLean.GoCore.State) -/
 theorem GoLean.Contract.GoCore.Choices.consumeAtE_eq :
     ∀ {site : ChoiceSite} {bound : Nat} {ch : Choices},
@@ -216,6 +236,7 @@ theorem GoLean.Contract.GoCore.Choices.consumeAtE_eq :
           PickRecord.ofPick site bound (Choices.consumeAt site bound ch).fst)
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Choices.consumeAtE_fst_snd` (GoLean.GoCore.State) -/
 theorem GoLean.Contract.GoCore.Choices.consumeAtE_fst_snd :
     ∀ {site : ChoiceSite} {bound : Nat} {ch : Choices},
@@ -223,6 +244,7 @@ theorem GoLean.Contract.GoCore.Choices.consumeAtE_fst_snd :
         Choices.consumeAt site bound ch
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Choices.consumeAtE_inv` (GoLean.GoCore.State) -/
 theorem GoLean.Contract.GoCore.Choices.consumeAtE_inv :
     ∀ {site : ChoiceSite} {bound : Nat} {ch : Choices} {p : Nat} {ch' : Choices} {ps : List PickRecord},
@@ -230,12 +252,14 @@ theorem GoLean.Contract.GoCore.Choices.consumeAtE_inv :
         ps = PickRecord.ofPick site bound p ∧ Choices.consumeAt site bound ch = (p, ch')
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Choices.consumeAtE_le_one` (GoLean.GoCore.State) -/
 theorem GoLean.Contract.GoCore.Choices.consumeAtE_le_one :
     ∀ {site : ChoiceSite} {bound : Nat} {ch : Choices},
       bound ≤ 1 → Choices.consumeAtE site bound ch = (0, ch, [])
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Choices.consumeAtE_of_lt` (GoLean.GoCore.State) -/
 theorem GoLean.Contract.GoCore.Choices.consumeAtE_of_lt :
     ∀ {site : ChoiceSite} {bound : Nat} {ch : Choices},
@@ -245,35 +269,41 @@ theorem GoLean.Contract.GoCore.Choices.consumeAtE_of_lt :
             [{ site := site, bound := bound, pick := (ch.consume bound).fst }])
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Choices.consumeAt_fst_lt` (GoLean.GoCore.State) -/
 theorem GoLean.Contract.GoCore.Choices.consumeAt_fst_lt :
     ∀ {site : ChoiceSite} {ch : Choices} {bound : Nat},
       0 < bound → (Choices.consumeAt site bound ch).fst < bound
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Choices.consumeAt_fst_singleton` (GoLean.GoCore.State) -/
 theorem GoLean.Contract.GoCore.Choices.consumeAt_fst_singleton :
     ∀ {site : ChoiceSite} {bound idx : Nat},
       idx < bound → (Choices.consumeAt site bound [idx]).fst = idx
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Choices.consumeAt_le_one` (GoLean.GoCore.State) -/
 theorem GoLean.Contract.GoCore.Choices.consumeAt_le_one :
     ∀ {site : ChoiceSite} {bound : Nat} {ch : Choices},
       bound ≤ 1 → Choices.consumeAt site bound ch = (0, ch)
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Choices.consumeAt_of_lt` (GoLean.GoCore.State) -/
 theorem GoLean.Contract.GoCore.Choices.consumeAt_of_lt :
     ∀ {site : ChoiceSite} {bound : Nat} {ch : Choices},
       1 < bound → Choices.consumeAt site bound ch = ch.consume bound
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Choices.consumeAt_one` (GoLean.GoCore.State) -/
 theorem GoLean.Contract.GoCore.Choices.consumeAt_one :
     ∀ {site : ChoiceSite} {ch : Choices}, Choices.consumeAt site 1 ch = (0, ch)
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Choices.consumeAt_zero` (GoLean.GoCore.State) -/
 theorem GoLean.Contract.GoCore.Choices.consumeAt_zero :
     ∀ {site : ChoiceSite} {ch : Choices}, Choices.consumeAt site 0 ch = (0, ch)
@@ -281,6 +311,7 @@ theorem GoLean.Contract.GoCore.Choices.consumeAt_zero :
 
 /-! ## GoLean.GoCore.Machine -/
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Machine.Choices.consumeAtE_appendSpill` (GoLean.GoCore.Machine) -/
 theorem GoLean.Contract.GoCore.Machine.Choices.consumeAtE_appendSpill :
     ∀ {oldCap newLen : Nat} {ch : Choices},
@@ -291,6 +322,7 @@ theorem GoLean.Contract.GoCore.Machine.Choices.consumeAtE_appendSpill :
               pick := (ch.consume (appendSpillWidth oldCap newLen)).fst }])
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Machine.Choices.consumeAt_appendSpill` (GoLean.GoCore.Machine) -/
 theorem GoLean.Contract.GoCore.Machine.Choices.consumeAt_appendSpill :
     ∀ {oldCap newLen : Nat} {ch : Choices},
@@ -298,6 +330,7 @@ theorem GoLean.Contract.GoCore.Machine.Choices.consumeAt_appendSpill :
         ch.consume (appendSpillWidth oldCap newLen)
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Machine.Choices.consumeAt_nilValueMethodText_one` (GoLean.GoCore.Machine) -/
 theorem GoLean.Contract.GoCore.Machine.Choices.consumeAt_nilValueMethodText_one :
     ∀ {ch : Choices}, Choices.consumeAt ChoiceSite.nilValueMethodText 1 ch = (0, ch)
@@ -305,17 +338,20 @@ theorem GoLean.Contract.GoCore.Machine.Choices.consumeAt_nilValueMethodText_one 
 
 /-! ## GoLean.GoCore.Equations -/
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.Heap.lookup_push_self` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.Heap.lookup_push_self :
     ∀ {h : Heap} {c : HeapCell}, Heap.lookup (Array.push h c) (Loc.base { id := Array.size h }) = some c
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.Heap.lookup_set_self` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.Heap.lookup_set_self :
     ∀ {h : Heap} {i : Nat} {c : HeapCell} {hi : i < Array.size h},
       Heap.lookup (Array.set h i c hi) (Loc.base { id := i }) = some c
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.allocDecls_cons` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.allocDecls_cons :
     ∀ {ctx : ProgramCtx} {env : LocalEnv} {s s₁ : Store} {p : Param} {v : GoValue} {loc : Loc}
@@ -325,11 +361,13 @@ theorem GoLean.Contract.GoCore.Equations.allocDecls_cons :
           allocDecls ctx env s (p :: rest) = allocDecls ctx (env.declare p.id loc) s₁ rest
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.allocDecls_nil` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.allocDecls_nil :
     ∀ {ctx : ProgramCtx} (env : LocalEnv) (s : Store), allocDecls ctx env s [] = Except.ok (env, s)
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.applyRhsOp_vals` (GoLean.GoCore.Equations) -/
 -- `.ok` in the source's dot-form: the printed `Except.ok (…)` elaborates a tuple's `AccessTrace`
 -- component as `List MemEvent` (definitionally, not syntactically, the kept statement).
@@ -338,6 +376,7 @@ theorem GoLean.Contract.GoCore.Equations.applyRhsOp_vals :
       applyRhsOp ctx s RhsOp.vals vs = .ok (vs, [])
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.applyStmtOp_inv_panic` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.applyStmtOp_inv_panic :
     ∀ {ctx : ProgramCtx} {s : Store} {ch : Choices} {op : StmtOp} {nt : Nat} {vs : List GoValue}
@@ -346,6 +385,7 @@ theorem GoLean.Contract.GoCore.Equations.applyStmtOp_inv_panic :
         applyStmtOp.plan ctx s ch op nt vs = Except.error (Stop.panic msg)
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.applyStrictOp_toInterface_string` (GoLean.GoCore.Equations) -/
 -- `.ok` in the source's dot-form: the printed `Except.ok (…)` elaborates a tuple's `AccessTrace`
 -- component as `List MemEvent` (definitionally, not syntactically, the kept statement).
@@ -355,6 +395,7 @@ theorem GoLean.Contract.GoCore.Equations.applyStrictOp_toInterface_string :
         .ok (GoValue.interface Ty.string v, s, [])
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.bindParams_cons` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.bindParams_cons :
     ∀ {ctx : ProgramCtx} {env : LocalEnv} {s s₁ : Store} {p : Param} {v v' : GoValue} {loc : Loc}
@@ -364,17 +405,20 @@ theorem GoLean.Contract.GoCore.Equations.bindParams_cons :
           bindParams ctx env s (p :: ps) (v :: vs) = bindParams ctx (env.declare p.id loc) s₁ ps vs
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.bindParams_nil` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.bindParams_nil :
     ∀ {ctx : ProgramCtx} (env : LocalEnv) (s : Store), bindParams ctx env s [] [] = Except.ok (env, s)
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.bind_eq_error` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.bind_eq_error :
     ∀ {ε α β : Type} {x : Except ε α} {f : α → Except ε β} {e : ε},
       x >>= f = Except.error e → x = Except.error e ∨ ∃ (a : α), x = Except.ok a ∧ f a = Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.blockedRecv` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.blockedRecv :
     ∀ {ctx : ProgramCtx} (s : Store) (chl : Option Loc) (targets : List Assignee) (elem : Ty)
@@ -382,29 +426,34 @@ theorem GoLean.Contract.GoCore.Equations.blockedRecv :
       stepFn ctx s (Config.blockedRecv chl targets elem env k) ch = Except.error Stop.deadlock
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.blockedSelect` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.blockedSelect :
     ∀ {ctx : ProgramCtx} (s : Store) (clauses : List EvClause) (env : LocalEnv) (k : Cont)
       (ch : Choices), stepFn ctx s (Config.blockedSelect clauses env k) ch = Except.error Stop.deadlock
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.blockedSend` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.blockedSend :
     ∀ {ctx : ProgramCtx} (s : Store) (chl : Option Loc) (v : GoValue) (k : Cont) (ch : Choices),
       stepFn ctx s (Config.blockedSend chl v k) ch = Except.error Stop.deadlock
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.blockedSync` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.blockedSync :
     ∀ {ctx : ProgramCtx} (s : Store) (op : SyncOp) (loc : Loc) (env : LocalEnv) (k : Cont)
       (ch : Choices), stepFn ctx s (Config.blockedSync op loc env k) ch = Except.error Stop.deadlock
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.completeTargetRef_var` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.completeTargetRef_var :
     ∀ (a : GoValue), completeTargetRef (TargetShape.chain []) [a] = some (TargetRef.chain a [] [])
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.contHeadLabel_frame` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.contHeadLabel_frame :
     ∀ (t : List (TargetShape × List Expr)) (te : LocalEnv) (r : List Loc)
@@ -412,16 +461,19 @@ theorem GoLean.Contract.GoCore.Equations.contHeadLabel_frame :
       contHeadLabel (Cont.frame t te r ds k fr) = none
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.contHeadLabel_labelK` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.contHeadLabel_labelK :
     ∀ (name : String) (k : Cont), contHeadLabel (Cont.labelK name k) = some name
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.contHeadLabel_stop` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.contHeadLabel_stop :
     contHeadLabel Cont.stop = none
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.deferrableCallee_false` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.deferrableCallee_false :
     ∀ {cv : GoValue},
@@ -429,6 +481,7 @@ theorem GoLean.Contract.GoCore.Equations.deferrableCallee_false :
         cv ≠ GoValue.nil → deferrableCallee cv = false
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.enterFramePickV_of_plan_error` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.enterFramePickV_of_plan_error :
     ∀ {ctx : ProgramCtx} {s : Store} {fid : FuncId} {args : List GoValue} {e : Stop} (ch : Choices),
@@ -436,6 +489,7 @@ theorem GoLean.Contract.GoCore.Equations.enterFramePickV_of_plan_error :
         (∀ (msg : String), e ≠ Stop.panic msg) → enterFramePickV ctx s fid args ch = Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.enterFrame_inv_error` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.enterFrame_inv_error :
     ∀ {ctx : ProgramCtx} {s : Store} {fid : FuncId} {args : List GoValue} {e : Stop},
@@ -445,6 +499,7 @@ theorem GoLean.Contract.GoCore.Equations.enterFrame_inv_error :
             enterFrame.plan ctx s fid args = Except.ok c ∧ c s = Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.evalE_and` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.evalE_and :
     ∀ {ctx : ProgramCtx} (s : Store) (l r : Expr) (env : LocalEnv) (k : Cont) (ch : Choices),
@@ -453,6 +508,7 @@ theorem GoLean.Contract.GoCore.Equations.evalE_and :
           (Config.evalE l env (Cont.andK r env k), s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.evalE_boolLit` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.evalE_boolLit :
     ∀ {ctx : ProgramCtx} (s : Store) (value : Bool) (env : LocalEnv) (k : Cont) (ch : Choices),
@@ -460,6 +516,7 @@ theorem GoLean.Contract.GoCore.Equations.evalE_boolLit :
         Except.ok (Config.retV (GoValue.bool value) k, s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.evalE_global` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.evalE_global :
     ∀ {ctx : ProgramCtx} {s : Store} {gid : Nat} (env : LocalEnv) (k : Cont) (ch : Choices),
@@ -470,6 +527,7 @@ theorem GoLean.Contract.GoCore.Equations.evalE_global :
               { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.evalE_global_oob` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.evalE_global_oob :
     ∀ {ctx : ProgramCtx} {s : Store} {gid : Nat} (env : LocalEnv) (k : Cont) (ch : Choices),
@@ -482,6 +540,7 @@ theorem GoLean.Contract.GoCore.Equations.evalE_global_oob :
                 toString " cell(s)"))
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.evalE_intLit` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.evalE_intLit :
     ∀ {ctx : ProgramCtx} (s : Store) (value : Int) (kind : IntKind) (env : LocalEnv) (k : Cont)
@@ -492,6 +551,7 @@ theorem GoLean.Contract.GoCore.Equations.evalE_intLit :
             { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.evalE_or` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.evalE_or :
     ∀ {ctx : ProgramCtx} (s : Store) (l r : Expr) (env : LocalEnv) (k : Cont) (ch : Choices),
@@ -500,6 +560,7 @@ theorem GoLean.Contract.GoCore.Equations.evalE_or :
           (Config.evalE l env (Cont.orK r env k), s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.evalE_recoverCall` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.evalE_recoverCall :
     ∀ {ctx : ProgramCtx} (s : Store) (env : LocalEnv) (k : Cont) (ch : Choices),
@@ -509,6 +570,7 @@ theorem GoLean.Contract.GoCore.Equations.evalE_recoverCall :
             { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.evalE_ref` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.evalE_ref :
     ∀ {ctx : ProgramCtx} {s : Store} {id : VarId} {loc : Loc} (env : LocalEnv) (k : Cont)
@@ -518,6 +580,7 @@ theorem GoLean.Contract.GoCore.Equations.evalE_ref :
           Except.ok (Config.retV (GoValue.addr loc) k, s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.evalE_ref_unbound` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.evalE_ref_unbound :
     ∀ {ctx : ProgramCtx} {s : Store} {id : VarId} (env : LocalEnv) (k : Cont) (ch : Choices),
@@ -526,6 +589,7 @@ theorem GoLean.Contract.GoCore.Equations.evalE_ref_unbound :
           Except.error (Stop.stuck (toString "unbound GoCore variable address: " ++ toString id))
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.evalE_strict_more` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.evalE_strict_more :
     ∀ {ctx : ProgramCtx} {s : Store} {e e₁ : Expr} {op : StrictOp} {rest : List Expr} (env : LocalEnv)
@@ -537,6 +601,7 @@ theorem GoLean.Contract.GoCore.Equations.evalE_strict_more :
               { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.evalE_strict_nullary` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.evalE_strict_nullary :
     ∀ {ctx : ProgramCtx} {s s' : Store} {e : Expr} {op : StrictOp} {v : GoValue} {tr : AccessTrace}
@@ -547,6 +612,7 @@ theorem GoLean.Contract.GoCore.Equations.evalE_strict_nullary :
             Except.ok (Config.retV v k, s', ch, { trace := tr, picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.evalE_strict_nullary_error` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.evalE_strict_nullary_error :
     ∀ {ctx : ProgramCtx} {s : Store} {e : Expr} {op : StrictOp} {st : Stop} (env : LocalEnv) (k : Cont)
@@ -557,6 +623,7 @@ theorem GoLean.Contract.GoCore.Equations.evalE_strict_nullary_error :
             stepFn ctx s (Config.evalE e env k) ch = Except.error st
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.evalE_stringLit` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.evalE_stringLit :
     ∀ {ctx : ProgramCtx} (s : Store) (value : GoString) (env : LocalEnv) (k : Cont) (ch : Choices),
@@ -564,6 +631,7 @@ theorem GoLean.Contract.GoCore.Equations.evalE_stringLit :
         Except.ok (Config.retV (GoValue.string value) k, s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.evalE_unsupported` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.evalE_unsupported :
     ∀ {ctx : ProgramCtx} (s : Store) (feature : String) (env : LocalEnv) (k : Cont) (ch : Choices),
@@ -571,6 +639,7 @@ theorem GoLean.Contract.GoCore.Equations.evalE_unsupported :
         Except.error (Stop.unsupported feature)
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.evalE_var` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.evalE_var :
     ∀ {ctx : ProgramCtx} {s : Store} {id : VarId} {loc : Loc} {v : GoValue} (env : LocalEnv) (k : Cont)
@@ -587,6 +656,7 @@ theorem GoLean.Contract.GoCore.Equations.evalE_var :
                   picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.evalE_var_error` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.evalE_var_error :
     ∀ {ctx : ProgramCtx} {s : Store} {id : VarId} {loc : Loc} {e : Stop} (env : LocalEnv) (k : Cont)
@@ -596,6 +666,7 @@ theorem GoLean.Contract.GoCore.Equations.evalE_var_error :
           stepFn ctx s (Config.evalE (Expr.var id) env k) ch = Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.evalE_var_unbound` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.evalE_var_unbound :
     ∀ {ctx : ProgramCtx} {s : Store} {id : VarId} (env : LocalEnv) (k : Cont) (ch : Choices),
@@ -604,6 +675,7 @@ theorem GoLean.Contract.GoCore.Equations.evalE_var_unbound :
           Except.error (Stop.stuck (toString "unbound GoCore variable address: " ++ toString id))
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_allocNew` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_allocNew :
     ∀ {ctx : ProgramCtx} {s : Store} {target : Assignee} {te : Expr} (value : Expr) (typ : Ty)
@@ -615,6 +687,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_allocNew :
               { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_appendSlice` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_appendSlice :
     ∀ {ctx : ProgramCtx} {s : Store} {target : Assignee} {te : Expr} (elem : Ty) (slice elems : Expr)
@@ -626,6 +699,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_appendSlice :
               ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_assign` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_assign :
     ∀ {ctx : ProgramCtx} {s : Store} {lhs : Assignee} {sh : TargetShape} {e : Expr} {ops : List Expr}
@@ -637,6 +711,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_assign :
               s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_assignMany` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_assignMany :
     ∀ {ctx : ProgramCtx} {s : Store} {left : Array Assignee} {right : Array Expr} {sh : TargetShape}
@@ -651,6 +726,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_assignMany :
                 s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_assignMany_arity` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_assignMany_arity :
     ∀ {ctx : ProgramCtx} {s : Store} {left : Array Assignee} {right : Array Expr} (env : LocalEnv)
@@ -664,6 +740,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_assignMany_arity :
                 toString right.size))
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_assign_unsupported` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_assign_unsupported :
     ∀ {ctx : ProgramCtx} (s : Store) (feature : String) (rhs : Expr) (env : LocalEnv) (k : Cont)
@@ -672,6 +749,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_assign_unsupported :
         Except.error (Stop.unsupported feature)
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_assign_var` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_assign_var :
     ∀ {ctx : ProgramCtx} (s : Store) (id : VarId) (rhs : Expr) (env : LocalEnv) (k : Cont)
@@ -684,6 +762,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_assign_var :
             s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_atomicStmt` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_atomicStmt :
     ∀ {ctx : ProgramCtx} {s : Store} {op : AtomicStmtOp} {kind : IntKind} {args : Array Expr}
@@ -696,6 +775,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_atomicStmt :
               { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_block` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_block :
     ∀ {ctx : ProgramCtx} {s s' : Store} {decls : Array Param} {env env' : LocalEnv} (ss : Array Stmt)
@@ -706,6 +786,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_block :
             (Config.next (Cont.seq ss.toList env' k), s', ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_block_error` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_block_error :
     ∀ {ctx : ProgramCtx} {s : Store} {decls : Array Param} {env : LocalEnv} {e : Stop} (ss : Array Stmt)
@@ -714,6 +795,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_block_error :
         stepFn ctx s (Config.exec (Stmt.block decls ss) env k) ch = Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_breakStmt` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_breakStmt :
     ∀ {ctx : ProgramCtx} (s : Store) (env : LocalEnv) (k : Cont) (ch : Choices),
@@ -721,6 +803,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_breakStmt :
         Except.ok (Config.signal Signal.brk k, s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_breakTo` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_breakTo :
     ∀ {ctx : ProgramCtx} (s : Store) (name : String) (env : LocalEnv) (k : Cont) (ch : Choices),
@@ -728,6 +811,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_breakTo :
         Except.ok (Config.signal (Signal.brkTo name) k, s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_breakable` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_breakable :
     ∀ {ctx : ProgramCtx} (s : Store) (b : Stmt) (env : LocalEnv) (k : Cont) (ch : Choices),
@@ -735,6 +819,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_breakable :
         Except.ok (Config.exec b env k.breakableK, s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_callValue` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_callValue :
     ∀ {ctx : ProgramCtx} {s : Store} {targets : Array Assignee} {callee : Expr} {args : Array Expr}
@@ -746,6 +831,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_callValue :
               { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_callValue_unsupported` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_callValue_unsupported :
     ∀ {ctx : ProgramCtx} {s : Store} {targets : Array Assignee} {callee : Expr} {args : Array Expr}
@@ -755,6 +841,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_callValue_unsupported :
           Except.error (Stop.unsupported "unsupported value-call target assignee")
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_call_args` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_call_args :
     ∀ {ctx : ProgramCtx} {s : Store} {targets : Array Assignee} {fid : FuncId} {args : Array Expr}
@@ -768,6 +855,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_call_args :
                 { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_call_nullary` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_call_nullary :
     ∀ {ctx : ProgramCtx} {s s' : Store} {targets : Array Assignee} {fid : FuncId} {args : Array Expr}
@@ -781,6 +869,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_call_nullary :
                 (Entry.callConfig plans env k e, s', ch, { trace := tr, picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_call_nullary_error` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_call_nullary_error :
     ∀ {ctx : ProgramCtx} {s : Store} {targets : Array Assignee} {fid : FuncId} {args : Array Expr}
@@ -792,6 +881,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_call_nullary_error :
               stepFn ctx s (Config.exec (Stmt.call targets fid args) env k) ch = Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_call_nullary_panic` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_call_nullary_panic :
     ∀ {ctx : ProgramCtx} {s : Store} {targets : Array Assignee} {fid : FuncId} {args : Array Expr}
@@ -819,6 +909,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_call_nullary_panic :
                     out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_call_unsupported` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_call_unsupported :
     ∀ {ctx : ProgramCtx} {s : Store} {targets : Array Assignee} {fid : FuncId} {args : Array Expr}
@@ -828,6 +919,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_call_unsupported :
           Except.error (Stop.unsupported "unsupported call target assignee")
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_chanRecv` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_chanRecv :
     ∀ {ctx : ProgramCtx} {s : Store} {targets : Array Assignee} {plans : List (TargetShape × List Expr)}
@@ -840,6 +932,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_chanRecv :
                 ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_chanSend` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_chanSend :
     ∀ {ctx : ProgramCtx} (s : Store) (chE value : Expr) (elem : Ty) (env : LocalEnv) (k : Cont)
@@ -850,6 +943,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_chanSend :
             { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_closeChan` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_closeChan :
     ∀ {ctx : ProgramCtx} (s : Store) (chE : Expr) (env : LocalEnv) (k : Cont) (ch : Choices),
@@ -859,6 +953,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_closeChan :
             { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_continueStmt` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_continueStmt :
     ∀ {ctx : ProgramCtx} (s : Store) (env : LocalEnv) (k : Cont) (ch : Choices),
@@ -866,6 +961,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_continueStmt :
         Except.ok (Config.signal Signal.cont k, s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_continueTo` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_continueTo :
     ∀ {ctx : ProgramCtx} (s : Store) (name : String) (env : LocalEnv) (k : Cont) (ch : Choices),
@@ -873,6 +969,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_continueTo :
         Except.ok (Config.signal (Signal.contTo name) k, s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_deferCall` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_deferCall :
     ∀ {ctx : ProgramCtx} (s : Store) (callee : Expr) (args : Array Expr) (env : LocalEnv) (k : Cont)
@@ -883,6 +980,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_deferCall :
             { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_goStmt` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_goStmt :
     ∀ {ctx : ProgramCtx} (s : Store) (callee : Expr) (args : Array Expr) (env : LocalEnv) (k : Cont)
@@ -893,6 +991,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_goStmt :
             { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_ifThenElse` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_ifThenElse :
     ∀ {ctx : ProgramCtx} (s : Store) (c : Expr) (t e : Stmt) (env : LocalEnv) (k : Cont) (ch : Choices),
@@ -901,6 +1000,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_ifThenElse :
           (Config.evalE c env (Cont.ifK t e env k), s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_inertLabel` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_inertLabel :
     ∀ {ctx : ProgramCtx} (s : Store) (name : String) (env : LocalEnv) (k : Cont) (ch : Choices),
@@ -908,6 +1008,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_inertLabel :
         Except.ok (Config.next k, s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_labeled` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_labeled :
     ∀ {ctx : ProgramCtx} (s : Store) (name : String) (b : Stmt) (env : LocalEnv) (k : Cont)
@@ -917,6 +1018,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_labeled :
           (Config.exec b env (Cont.labelK name k), s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_mapAssign` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_mapAssign :
     ∀ {ctx : ProgramCtx} (s : Store) (base index value : Expr) (keyTy valueTy : Ty) (env : LocalEnv)
@@ -928,6 +1030,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_mapAssign :
             s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_mapLookup` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_mapLookup :
     ∀ {ctx : ProgramCtx} {s : Store} {t okT : Assignee} {sh : TargetShape} {e : Expr} {ops : List Expr}
@@ -942,6 +1045,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_mapLookup :
               s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_mapRange` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_mapRange :
     ∀ {ctx : ProgramCtx} (s : Store) (keyVar valVar : Option VarId) (mapExpr : Expr) (keyTy valTy : Ty)
@@ -952,6 +1056,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_mapRange :
             { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_panicStmt` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_panicStmt :
     ∀ {ctx : ProgramCtx} (s : Store) (e : Expr) (env : LocalEnv) (k : Cont) (ch : Choices),
@@ -959,6 +1064,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_panicStmt :
         Except.ok (Config.evalE e env k.panicArgK, s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_print` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_print :
     ∀ {ctx : ProgramCtx} {s : Store} {args : Array Expr} {e : Expr} {rest : List Expr} (newline : Bool)
@@ -970,6 +1076,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_print :
               { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_returnStmt` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_returnStmt :
     ∀ {ctx : ProgramCtx} (s : Store) (env : LocalEnv) (k : Cont) (ch : Choices),
@@ -977,6 +1084,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_returnStmt :
         Except.ok (Config.signal Signal.ret k, s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_selectStmt` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_selectStmt :
     ∀ {ctx : ProgramCtx} {s : Store} {clauses : Array (SelectClauseHead × Stmt)} {e : Expr}
@@ -988,6 +1096,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_selectStmt :
               { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_selectStmt_block` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_selectStmt_block :
     ∀ {ctx : ProgramCtx} {s : Store} {clauses : Array (SelectClauseHead × Stmt)} (env : LocalEnv)
@@ -997,6 +1106,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_selectStmt_block :
           Except.ok (Config.blockedSelect [] env k, s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_selectStmt_default` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_selectStmt_default :
     ∀ {ctx : ProgramCtx} {s : Store} {clauses : Array (SelectClauseHead × Stmt)} (d : Stmt)
@@ -1006,6 +1116,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_selectStmt_default :
           Except.ok (Config.exec d env k, s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_seqn` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_seqn :
     ∀ {ctx : ProgramCtx} (s : Store) (ss : Array Stmt) (env : LocalEnv) (k : Cont) (ch : Choices),
@@ -1014,6 +1125,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_seqn :
           (Config.next (seqCont ss.toList env k), s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_syncStmt` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_syncStmt :
     ∀ {ctx : ProgramCtx} {s : Store} {op : SyncStmtOp} {args : Array Expr} {targets : Array Assignee}
@@ -1025,6 +1137,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_syncStmt :
               { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_typeAssert` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_typeAssert :
     ∀ {ctx : ProgramCtx} {s : Store} {t okT : Assignee} {sh : TargetShape} {e : Expr} {ops : List Expr}
@@ -1039,6 +1152,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_typeAssert :
               s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_unseq` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_unseq :
     ∀ {ctx : ProgramCtx} (s : Store) (g : UnseqGraph) (thenB : Stmt) (env : LocalEnv) (k : Cont)
@@ -1046,6 +1160,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_unseq :
       stepFn ctx s (Config.exec (Stmt.unseq g thenB) env k) ch = stepUnseqEnter ctx s g thenB env k ch
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_unseqProbe` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_unseqProbe :
     ∀ {ctx : ProgramCtx} (s : Store) (e : Expr) (env : LocalEnv) (k : Cont) (ch : Choices),
@@ -1053,6 +1168,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_unseqProbe :
         Except.ok (Config.evalE e env k.probeK, s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_unsupported` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_unsupported :
     ∀ {ctx : ProgramCtx} (s : Store) (feature : String) (env : LocalEnv) (k : Cont) (ch : Choices),
@@ -1060,6 +1176,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_unsupported :
         Except.error (Stop.unsupported feature)
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_while` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_while :
     ∀ {ctx : ProgramCtx} (s : Store) (c : Expr) (b : Stmt) (env : LocalEnv) (k : Cont) (ch : Choices),
@@ -1068,6 +1185,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_while :
           (Config.evalE c env (Cont.whileK c b env k), s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.exec_wide` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.exec_wide :
     ∀ {ctx : ProgramCtx} {s : Store} {stmt : Stmt} {op : StmtOp} {nt : Nat} {e : Expr}
@@ -1079,6 +1197,7 @@ theorem GoLean.Contract.GoCore.Equations.exec_wide :
               { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.frameExit_defer` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.frameExit_defer :
     ∀ {ctx : ProgramCtx} {s s' : Store} {fid : FuncId} {captured args : List GoValue} {e : Entry}
@@ -1095,6 +1214,7 @@ theorem GoLean.Contract.GoCore.Equations.frameExit_defer :
               s', ch, { trace := tr, picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.frameExit_defer_error` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.frameExit_defer_error :
     ∀ {ctx : ProgramCtx} {s : Store} {fid : FuncId} {captured args : List GoValue} {e : Stop}
@@ -1107,6 +1227,7 @@ theorem GoLean.Contract.GoCore.Equations.frameExit_defer_error :
             Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.frameExit_defer_nil` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.frameExit_defer_nil :
     ∀ {ctx : ProgramCtx} (s : Store) (args : List GoValue) (targets : List (TargetShape × List Expr))
@@ -1118,6 +1239,7 @@ theorem GoLean.Contract.GoCore.Equations.frameExit_defer_nil :
             s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.frameExit_defer_notfunc` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.frameExit_defer_notfunc :
     ∀ {ctx : ProgramCtx} {s : Store} {cv : GoValue} (args : List GoValue)
@@ -1130,6 +1252,7 @@ theorem GoLean.Contract.GoCore.Equations.frameExit_defer_notfunc :
               (Stop.stuck (toString "deferred callee is not a function value: " ++ toString (repr cv)))
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.frameExit_defer_panic` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.frameExit_defer_panic :
     ∀ {ctx : ProgramCtx} {s : Store} {fid : FuncId} {captured args : List GoValue} {msg : String}
@@ -1156,6 +1279,7 @@ theorem GoLean.Contract.GoCore.Equations.frameExit_defer_panic :
                 out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.frameExit_defer_run` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.frameExit_defer_run :
     ∀ {ctx : ProgramCtx} {s s' : Store} {fid : FuncId} {captured args : List GoValue} {func : Func}
@@ -1170,6 +1294,7 @@ theorem GoLean.Contract.GoCore.Equations.frameExit_defer_run :
               s', ch, { trace := tr, picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.frameExit_extra_results` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.frameExit_extra_results :
     ∀ {ctx : ProgramCtx} {s : Store} {rl : Loc} {rls : List Loc} {vs : List GoValue} {tr : AccessTrace}
@@ -1181,6 +1306,7 @@ theorem GoLean.Contract.GoCore.Equations.frameExit_extra_results :
             Except.error (Stop.stuck "extra GoCore assignment value")
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.frameExit_malformed` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.frameExit_malformed :
     ∀ {ctx : ProgramCtx} (s : Store) (sh : TargetShape) (rest : List (TargetShape × List Expr))
@@ -1189,6 +1315,7 @@ theorem GoLean.Contract.GoCore.Equations.frameExit_malformed :
         Except.error (Stop.internal "malformed call target plan")
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.frameExit_nil` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.frameExit_nil :
     ∀ {ctx : ProgramCtx} (s : Store) (tenv : LocalEnv) (k' : Cont) (fr : FuncId) (ch : Choices),
@@ -1196,6 +1323,7 @@ theorem GoLean.Contract.GoCore.Equations.frameExit_nil :
         Except.ok (Config.next k', s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.frameExit_preprint` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.frameExit_preprint :
     ∀ {ctx : ProgramCtx} {s : Store} {rl : Loc} {v : GoValue} (tenv : LocalEnv)
@@ -1209,6 +1337,7 @@ theorem GoLean.Contract.GoCore.Equations.frameExit_preprint :
                 out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.frameExit_preprint_error` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.frameExit_preprint_error :
     ∀ {ctx : ProgramCtx} {s : Store} {rl : Loc} {e : Stop} (tenv : LocalEnv) (older : List PanicEntry)
@@ -1218,6 +1347,7 @@ theorem GoLean.Contract.GoCore.Equations.frameExit_preprint_error :
           Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.frameExit_targets` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.frameExit_targets :
     ∀ {ctx : ProgramCtx} {s : Store} {results : List Loc} {vs : List GoValue} {tr : AccessTrace}
@@ -1231,6 +1361,7 @@ theorem GoLean.Contract.GoCore.Equations.frameExit_targets :
               s, ch, { trace := tr, picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.frameExit_targets_error` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.frameExit_targets_error :
     ∀ {ctx : ProgramCtx} {s : Store} {results : List Loc} {e : Stop} (sh : TargetShape) (ex : Expr)
@@ -1240,6 +1371,7 @@ theorem GoLean.Contract.GoCore.Equations.frameExit_targets_error :
         stepFrameExit ctx s ((sh, ex :: ops) :: rest) tenv results [] k' fr ch = Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.loadResults_cons` (GoLean.GoCore.Equations) -/
 -- Spelled by hand in the source's form (the only one, 2026-10-23): the printed
 -- `[MemEvent.access AccessKind.read (ShadowKey.data l.canon)] ++ tr` fixes the list's element type
@@ -1251,6 +1383,7 @@ theorem GoLean.Contract.GoCore.Equations.loadResults_cons :
       loadResults ctx s (l :: ls) = .ok (v :: vs, [.access .read (.data l.canon)] ++ tr)
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.loadResults_nil` (GoLean.GoCore.Equations) -/
 -- `.ok` in the source's dot-form: the printed `Except.ok (…)` elaborates a tuple's `AccessTrace`
 -- component as `List MemEvent` (definitionally, not syntactically, the kept statement).
@@ -1258,6 +1391,7 @@ theorem GoLean.Contract.GoCore.Equations.loadResults_nil :
     ∀ {ctx : ProgramCtx} (s : Store), loadResults ctx s [] = .ok ([], [])
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.loadRoot_base` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.loadRoot_base :
     ∀ {ctx : ProgramCtx} {s : Store} {a : Addr} {ty : Ty} {v : GoValue},
@@ -1265,6 +1399,7 @@ theorem GoLean.Contract.GoCore.Equations.loadRoot_base :
         loadRoot ctx s (Loc.base a) = Except.ok v
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.next_breakableK` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.next_breakableK :
     ∀ {ctx : ProgramCtx} (s : Store) (k' : Cont) (ch : Choices),
@@ -1272,6 +1407,7 @@ theorem GoLean.Contract.GoCore.Equations.next_breakableK :
         Except.ok (Config.next k', s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.next_callArgsK` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.next_callArgsK :
     ∀ {ctx : ProgramCtx} (s : Store) (fid : FuncId) (plans : List (TargetShape × List Expr))
@@ -1280,6 +1416,7 @@ theorem GoLean.Contract.GoCore.Equations.next_callArgsK :
         Except.error (Stop.internal "completion delivered to expression continuation")
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.next_frame` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.next_frame :
     ∀ {ctx : ProgramCtx} (s : Store) (targets : List (TargetShape × List Expr)) (tenv : LocalEnv)
@@ -1289,6 +1426,7 @@ theorem GoLean.Contract.GoCore.Equations.next_frame :
         stepFrameExit ctx s targets tenv results ds k' fr ch
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.next_ifK` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.next_ifK :
     ∀ {ctx : ProgramCtx} (s : Store) (t e : Stmt) (env : LocalEnv) (k' : Cont) (ch : Choices),
@@ -1296,6 +1434,7 @@ theorem GoLean.Contract.GoCore.Equations.next_ifK :
         Except.error (Stop.internal "completion delivered to expression continuation")
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.next_labelK` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.next_labelK :
     ∀ {ctx : ProgramCtx} (s : Store) (name : String) (k' : Cont) (ch : Choices),
@@ -1303,6 +1442,7 @@ theorem GoLean.Contract.GoCore.Equations.next_labelK :
         Except.ok (Config.next k', s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.next_loop` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.next_loop :
     ∀ {ctx : ProgramCtx} (s : Store) (c : Expr) (b : Stmt) (env : LocalEnv) (k' : Cont) (ch : Choices),
@@ -1310,6 +1450,7 @@ theorem GoLean.Contract.GoCore.Equations.next_loop :
         Except.ok (Config.exec (Stmt.while c b) env k', s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.next_mapIterK_done` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.next_mapIterK_done :
     ∀ {ctx : ProgramCtx} {s : Store} {keyTy valTy : Ty} {base : Option Loc} {produced : Array Nat}
@@ -1321,6 +1462,7 @@ theorem GoLean.Contract.GoCore.Equations.next_mapIterK_done :
           Except.ok (Config.next k', s, ch, { trace := tr, picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.next_mapIterK_error` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.next_mapIterK_error :
     ∀ {ctx : ProgramCtx} {s : Store} {keyTy valTy : Ty} {base : Option Loc} {produced : Array Nat}
@@ -1332,6 +1474,7 @@ theorem GoLean.Contract.GoCore.Equations.next_mapIterK_error :
           Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.next_mapIterK_pick` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.next_mapIterK_pick :
     ∀ {ctx : ProgramCtx} {s s' : Store} {keyTy valTy : Ty} {base : Option Loc}
@@ -1356,6 +1499,7 @@ theorem GoLean.Contract.GoCore.Equations.next_mapIterK_pick :
                         s', ch', { trace := tr, picks := ps, out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.next_mapIterK_stop` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.next_mapIterK_stop :
     ∀ {ctx : ProgramCtx} {s : Store} {keyTy valTy : Ty} {base : Option Loc} {produced start : Array Nat}
@@ -1374,6 +1518,7 @@ theorem GoLean.Contract.GoCore.Equations.next_mapIterK_stop :
                   Except.ok (Config.next k', s, ch', { trace := tr, picks := ps, out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.next_panicResumeK_recovered` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.next_panicResumeK_recovered :
     ∀ {ctx : ProgramCtx} {s : Store} {chain : List PanicEntry} (k' : Cont) (ch : Choices),
@@ -1382,6 +1527,7 @@ theorem GoLean.Contract.GoCore.Equations.next_panicResumeK_recovered :
           Except.ok (Config.next k', s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.next_panicResumeK_unrecovered` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.next_panicResumeK_unrecovered :
     ∀ {ctx : ProgramCtx} {s : Store} {chain : List PanicEntry} (k' : Cont) (ch : Choices),
@@ -1390,6 +1536,7 @@ theorem GoLean.Contract.GoCore.Equations.next_panicResumeK_unrecovered :
           Except.ok (Config.panicking chain k', s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.next_preprintK` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.next_preprintK :
     ∀ {ctx : ProgramCtx} {s : Store} {older : List PanicEntry} {entry : PanicEntry}
@@ -1403,6 +1550,7 @@ theorem GoLean.Contract.GoCore.Equations.next_preprintK :
               s, ch, { trace := tr, picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.next_preprintK_error` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.next_preprintK_error :
     ∀ {ctx : ProgramCtx} {s : Store} {older : List PanicEntry} {entry : PanicEntry}
@@ -1412,6 +1560,7 @@ theorem GoLean.Contract.GoCore.Equations.next_preprintK_error :
           stepFn ctx s (Config.next (Cont.preprintK older entry newer k')) ch = Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.next_preprintK_panic` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.next_preprintK_panic :
     ∀ {ctx : ProgramCtx} {s : Store} {older : List PanicEntry} {entry : PanicEntry}
@@ -1423,6 +1572,7 @@ theorem GoLean.Contract.GoCore.Equations.next_preprintK_panic :
               { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.next_seq_cons` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.next_seq_cons :
     ∀ {ctx : ProgramCtx} (s : Store) (t : Stmt) (rest : List Stmt) (env : LocalEnv) (k' : Cont)
@@ -1432,6 +1582,7 @@ theorem GoLean.Contract.GoCore.Equations.next_seq_cons :
           (Config.exec t env (Cont.seq rest env k'), s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.next_seq_nil` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.next_seq_nil :
     ∀ {ctx : ProgramCtx} (s : Store) (env : LocalEnv) (k' : Cont) (ch : Choices),
@@ -1439,6 +1590,7 @@ theorem GoLean.Contract.GoCore.Equations.next_seq_nil :
         Except.ok (Config.next k', s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.next_stop` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.next_stop :
     ∀ {ctx : ProgramCtx} (s : Store) (ch : Choices),
@@ -1446,6 +1598,7 @@ theorem GoLean.Contract.GoCore.Equations.next_stop :
         Except.error (Stop.internal "step on terminal configuration")
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.next_storeK_arity_refs` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.next_storeK_arity_refs :
     ∀ {ctx : ProgramCtx} (s : Store) (r : TargetRef) (rs : List TargetRef) (body : Stmt)
@@ -1456,6 +1609,7 @@ theorem GoLean.Contract.GoCore.Equations.next_storeK_arity_refs :
             "storeK value/target arity mismatch (the shared phase-2 spine: receive delivery, assignment, comma-ok, call write-back)")
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.next_storeK_arity_vals` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.next_storeK_arity_vals :
     ∀ {ctx : ProgramCtx} (s : Store) (v : GoValue) (vs : List GoValue) (body : Stmt) (env : LocalEnv)
@@ -1466,6 +1620,7 @@ theorem GoLean.Contract.GoCore.Equations.next_storeK_arity_vals :
             "storeK value/target arity mismatch (the shared phase-2 spine: receive delivery, assignment, comma-ok, call write-back)")
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.next_storeK_chain` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.next_storeK_chain :
     ∀ {ctx : ProgramCtx} {s s' : Store} {anchor : GoValue} {idxs : List GoValue}
@@ -1484,6 +1639,7 @@ theorem GoLean.Contract.GoCore.Equations.next_storeK_chain :
                     out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.next_storeK_done` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.next_storeK_done :
     ∀ {ctx : ProgramCtx} (s : Store) (body : Stmt) (env : LocalEnv) (k' : Cont) (ch : Choices),
@@ -1491,6 +1647,7 @@ theorem GoLean.Contract.GoCore.Equations.next_storeK_done :
         Except.ok (Config.exec body env k', s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.next_storeK_error` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.next_storeK_error :
     ∀ {ctx : ProgramCtx} {s : Store} {ref : TargetRef} {val : GoValue} {e : Stop} (rs : List TargetRef)
@@ -1501,6 +1658,7 @@ theorem GoLean.Contract.GoCore.Equations.next_storeK_error :
             Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.next_storeK_panic` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.next_storeK_panic :
     ∀ {ctx : ProgramCtx} {s : Store} {ref : TargetRef} {val : GoValue} {msg : String}
@@ -1512,6 +1670,7 @@ theorem GoLean.Contract.GoCore.Equations.next_storeK_panic :
             (Config.panicking [panicEntry msg] k', s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.next_storeK_store` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.next_storeK_store :
     ∀ {ctx : ProgramCtx} {s s' : Store} {ref : TargetRef} {val : GoValue} {tr : AccessTrace}
@@ -1524,6 +1683,7 @@ theorem GoLean.Contract.GoCore.Equations.next_storeK_store :
               { trace := tr, picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.next_storeK_var` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.next_storeK_var :
     ∀ {ctx : ProgramCtx} {s s' : Store} {loc : Loc} {val : GoValue} (rs : List TargetRef)
@@ -1539,6 +1699,7 @@ theorem GoLean.Contract.GoCore.Equations.next_storeK_var :
                 out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.next_strictK` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.next_strictK :
     ∀ {ctx : ProgramCtx} (s : Store) (op : StrictOp) (done : List GoValue) (pending : List Expr)
@@ -1547,6 +1708,7 @@ theorem GoLean.Contract.GoCore.Equations.next_strictK :
         Except.error (Stop.internal "completion delivered to expression continuation")
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.next_unseqK` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.next_unseqK :
     ∀ {ctx : ProgramCtx} (s : Store) (g : UnseqGraph) (thenB : Stmt) (st : List UnseqStatus)
@@ -1555,6 +1717,7 @@ theorem GoLean.Contract.GoCore.Equations.next_unseqK :
         stepUnseqNext ctx s g thenB st tg env ph k' ch
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.panicking_breakableK` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.panicking_breakableK :
     ∀ {ctx : ProgramCtx} (s : Store) (chain : List PanicEntry) (k : Cont) (ch : Choices),
@@ -1562,6 +1725,7 @@ theorem GoLean.Contract.GoCore.Equations.panicking_breakableK :
         Except.ok (Config.panicking chain k, s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.panicking_frame_defer` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.panicking_frame_defer :
     ∀ {ctx : ProgramCtx} {s s' : Store} {chain : List PanicEntry} {fid : FuncId}
@@ -1581,6 +1745,7 @@ theorem GoLean.Contract.GoCore.Equations.panicking_frame_defer :
               s', ch, { trace := tr, picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.panicking_frame_defer_error` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.panicking_frame_defer_error :
     ∀ {ctx : ProgramCtx} {s : Store} {chain : List PanicEntry} {fid : FuncId}
@@ -1595,6 +1760,7 @@ theorem GoLean.Contract.GoCore.Equations.panicking_frame_defer_error :
             Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.panicking_frame_defer_nil` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.panicking_frame_defer_nil :
     ∀ {ctx : ProgramCtx} (s : Store) (chain : List PanicEntry) (args : List GoValue)
@@ -1606,6 +1772,7 @@ theorem GoLean.Contract.GoCore.Equations.panicking_frame_defer_nil :
             ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.panicking_frame_defer_notfunc` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.panicking_frame_defer_notfunc :
     ∀ {ctx : ProgramCtx} {s : Store} {chain : List PanicEntry} {cv : GoValue} (args : List GoValue)
@@ -1618,6 +1785,7 @@ theorem GoLean.Contract.GoCore.Equations.panicking_frame_defer_notfunc :
               (Stop.stuck (toString "deferred callee is not a function value: " ++ toString (repr cv)))
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.panicking_frame_defer_panic` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.panicking_frame_defer_panic :
     ∀ {ctx : ProgramCtx} {s : Store} {chain : List PanicEntry} {fid : FuncId}
@@ -1648,6 +1816,7 @@ theorem GoLean.Contract.GoCore.Equations.panicking_frame_defer_panic :
                 out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.panicking_frame_defer_run` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.panicking_frame_defer_run :
     ∀ {ctx : ProgramCtx} {s s' : Store} {chain : List PanicEntry} {fid : FuncId}
@@ -1665,6 +1834,7 @@ theorem GoLean.Contract.GoCore.Equations.panicking_frame_defer_run :
               s', ch, { trace := tr, picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.panicking_frame_empty` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.panicking_frame_empty :
     ∀ {ctx : ProgramCtx} (s : Store) (chain : List PanicEntry) (t : List (TargetShape × List Expr))
@@ -1673,6 +1843,7 @@ theorem GoLean.Contract.GoCore.Equations.panicking_frame_empty :
         Except.ok (Config.panicking chain k', s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.panicking_glue` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.panicking_glue :
     ∀ {ctx : ProgramCtx} {s : Store} {chain : List PanicEntry} {g : Frame} (k : Cont) (ch : Choices),
@@ -1681,6 +1852,7 @@ theorem GoLean.Contract.GoCore.Equations.panicking_glue :
           Except.ok (Config.panicking chain k, s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.panicking_labelK` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.panicking_labelK :
     ∀ {ctx : ProgramCtx} (s : Store) (chain : List PanicEntry) (name : String) (k : Cont)
@@ -1689,6 +1861,7 @@ theorem GoLean.Contract.GoCore.Equations.panicking_labelK :
         Except.ok (Config.panicking chain k, s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.panicking_loop` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.panicking_loop :
     ∀ {ctx : ProgramCtx} (s : Store) (chain : List PanicEntry) (c : Expr) (b : Stmt) (env : LocalEnv)
@@ -1697,6 +1870,7 @@ theorem GoLean.Contract.GoCore.Equations.panicking_loop :
         Except.ok (Config.panicking chain k, s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.panicking_nil_stop` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.panicking_nil_stop :
     ∀ {ctx : ProgramCtx} (s : Store) (ch : Choices),
@@ -1704,6 +1878,7 @@ theorem GoLean.Contract.GoCore.Equations.panicking_nil_stop :
         Except.error (Stop.internal "empty panic chain at stop")
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.panicking_panicResumeK` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.panicking_panicResumeK :
     ∀ {ctx : ProgramCtx} (s : Store) (chain suspended : List PanicEntry) (k' : Cont) (ch : Choices),
@@ -1712,6 +1887,7 @@ theorem GoLean.Contract.GoCore.Equations.panicking_panicResumeK :
           (Config.panicking (suspended ++ chain) k', s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.panicking_preprintK` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.panicking_preprintK :
     ∀ {ctx : ProgramCtx} (s : Store) (chain older : List PanicEntry) (entry : PanicEntry)
@@ -1720,6 +1896,7 @@ theorem GoLean.Contract.GoCore.Equations.panicking_preprintK :
         Except.error (preprintFatalStop ctx chain)
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.panicking_probeK` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.panicking_probeK :
     ∀ {ctx : ProgramCtx} (s : Store) (chain : List PanicEntry) (k' : Cont) (ch : Choices),
@@ -1732,6 +1909,7 @@ theorem GoLean.Contract.GoCore.Equations.panicking_probeK :
               out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.panicking_seq` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.panicking_seq :
     ∀ {ctx : ProgramCtx} (s : Store) (chain : List PanicEntry) (rest : List Stmt) (env : LocalEnv)
@@ -1740,6 +1918,7 @@ theorem GoLean.Contract.GoCore.Equations.panicking_seq :
         Except.ok (Config.panicking chain k, s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.panicking_stop_pending` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.panicking_stop_pending :
     ∀ {ctx : ProgramCtx} {s : Store} {first : PanicEntry} {rest older : List PanicEntry}
@@ -1766,6 +1945,7 @@ theorem GoLean.Contract.GoCore.Equations.panicking_stop_pending :
                   out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.panicking_stop_settled` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.panicking_stop_settled :
     (∀ {ctx : ProgramCtx} {s : Store} {first : PanicEntry} {rest : List PanicEntry} (ch : Choices),
@@ -1775,6 +1955,7 @@ theorem GoLean.Contract.GoCore.Equations.panicking_stop_settled :
                throw (Stop.panic msg))
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.panicking_stop_raised` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.panicking_stop_raised :
     ∀ {ctx : ProgramCtx} {s : Store} {first : PanicEntry} {rest older : List PanicEntry}
@@ -1793,6 +1974,7 @@ theorem GoLean.Contract.GoCore.Equations.panicking_stop_raised :
                   s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.panicking_stop_raised_error` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.panicking_stop_raised_error :
     ∀ {ctx : ProgramCtx} {s : Store} {first : PanicEntry} {rest older : List PanicEntry}
@@ -1803,6 +1985,7 @@ theorem GoLean.Contract.GoCore.Equations.panicking_stop_raised_error :
             stepFn ctx s (Config.panicking (first :: rest) Cont.stop) ch = Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.panicking_storeK` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.panicking_storeK :
     ∀ {ctx : ProgramCtx} (s : Store) (chain : List PanicEntry) (refs : List TargetRef)
@@ -1811,6 +1994,7 @@ theorem GoLean.Contract.GoCore.Equations.panicking_storeK :
         Except.ok (Config.panicking chain k, s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.panicking_strictK` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.panicking_strictK :
     ∀ {ctx : ProgramCtx} (s : Store) (chain : List PanicEntry) (op : StrictOp) (done : List GoValue)
@@ -1819,6 +2003,7 @@ theorem GoLean.Contract.GoCore.Equations.panicking_strictK :
         Except.ok (Config.panicking chain k, s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.pinResultLocs_eq_of_lookup` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.pinResultLocs_eq_of_lookup :
     ∀ (env : LocalEnv) (ps : List Param) (f : Nat → Loc),
@@ -1826,11 +2011,13 @@ theorem GoLean.Contract.GoCore.Equations.pinResultLocs_eq_of_lookup :
         pinResultLocs env ps = Except.ok (List.map f (List.range ps.length))
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.resolveChain_nil` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.resolveChain_nil :
     ∀ {ctx : ProgramCtx} (s : Store) (a : GoValue), resolveChain ctx s a [] [] = Except.ok a
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_andK_error` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_andK_error :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {e : Stop} (r : Expr) (env : LocalEnv) (k' : Cont)
@@ -1839,6 +2026,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_andK_error :
         stepFn ctx s (Config.retV v (Cont.andK r env k')) ch = Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_andK_false` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_andK_false :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} (r : Expr) (env : LocalEnv) (k' : Cont)
@@ -1849,6 +2037,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_andK_false :
             (Config.retV (GoValue.bool false) k', s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_andK_true` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_andK_true :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} (r : Expr) (env : LocalEnv) (k' : Cont)
@@ -1858,6 +2047,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_andK_true :
           Except.ok (Config.evalE r env k'.boolK, s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_atomicStK_apply` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_atomicStK_apply :
     ∀ {ctx : ProgramCtx} {s s' : Store} {v : GoValue} {op : AtomicOp} {done : List GoValue}
@@ -1867,6 +2057,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_atomicStK_apply :
           Except.ok (c', s', ch, { trace := tr, picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_atomicStK_apply_error` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_atomicStK_apply_error :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {op : AtomicOp} {done : List GoValue} {e : Stop}
@@ -1876,6 +2067,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_atomicStK_apply_error :
           stepFn ctx s (Config.retV v (Cont.atomicStK op done [] env k')) ch = Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_atomicStK_apply_panic` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_atomicStK_apply_panic :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {op : AtomicOp} {done : List GoValue} {msg : String}
@@ -1886,6 +2078,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_atomicStK_apply_panic :
             (Config.panicking [panicEntry msg] k', s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_atomicStK_more` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_atomicStK_more :
     ∀ {ctx : ProgramCtx} (s : Store) (v : GoValue) (op : AtomicOp) (done : List GoValue) (e : Expr)
@@ -1896,6 +2089,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_atomicStK_more :
             { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_boolK` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_boolK :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {b : Bool} (k' : Cont) (ch : Choices),
@@ -1904,12 +2098,14 @@ theorem GoLean.Contract.GoCore.Equations.retV_boolK :
           Except.ok (Config.retV (GoValue.bool b) k', s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_boolK_error` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_boolK_error :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {e : Stop} (k' : Cont) (ch : Choices),
       valueAsBool v = Except.error e → stepFn ctx s (Config.retV v k'.boolK) ch = Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_callArgsK_enter` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_callArgsK_enter :
     ∀ {ctx : ProgramCtx} {s s' : Store} {v : GoValue} {fid : FuncId}
@@ -1920,6 +2116,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_callArgsK_enter :
           Except.ok (Entry.callConfig plans env k' e, s', ch, { trace := tr, picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_callArgsK_enter_error` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_callArgsK_enter_error :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {fid : FuncId}
@@ -1930,6 +2127,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_callArgsK_enter_error :
           stepFn ctx s (Config.retV v (Cont.callArgsK fid plans vals [] env k')) ch = Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_callArgsK_enter_panic` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_callArgsK_enter_panic :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {fid : FuncId}
@@ -1956,6 +2154,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_callArgsK_enter_panic :
                 out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_callArgsK_more` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_callArgsK_more :
     ∀ {ctx : ProgramCtx} (s : Store) (v : GoValue) (fid : FuncId)
@@ -1967,6 +2166,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_callArgsK_more :
             { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_callValArgsK_enter` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_callValArgsK_enter :
     ∀ {ctx : ProgramCtx} {s s' : Store} {v : GoValue} {fid : FuncId} {captured vals : List GoValue}
@@ -1978,6 +2178,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_callValArgsK_enter :
           Except.ok (Entry.callConfig plans env k' e, s', ch, { trace := tr, picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_callValArgsK_enter_error` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_callValArgsK_enter_error :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {fid : FuncId} {captured vals : List GoValue}
@@ -1990,6 +2191,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_callValArgsK_enter_error :
             Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_callValArgsK_enter_panic` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_callValArgsK_enter_panic :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {fid : FuncId} {captured vals : List GoValue}
@@ -2017,6 +2219,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_callValArgsK_enter_panic :
                 out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_callValArgsK_more` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_callValArgsK_more :
     ∀ {ctx : ProgramCtx} (s : Store) (v cv : GoValue) (plans : List (TargetShape × List Expr))
@@ -2027,6 +2230,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_callValArgsK_more :
             { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_callValArgsK_nil` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_callValArgsK_nil :
     ∀ {ctx : ProgramCtx} (s : Store) (v : GoValue) (plans : List (TargetShape × List Expr))
@@ -2037,6 +2241,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_callValArgsK_nil :
             { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_callValCalleeK_args` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_callValCalleeK_args :
     ∀ {ctx : ProgramCtx} {s : Store} {cv : GoValue} (plans : List (TargetShape × List Expr)) (a : Expr)
@@ -2048,6 +2253,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_callValCalleeK_args :
               { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_callValCalleeK_args_notfunc` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_callValCalleeK_args_notfunc :
     ∀ {ctx : ProgramCtx} {s : Store} {cv : GoValue} (plans : List (TargetShape × List Expr)) (a : Expr)
@@ -2057,6 +2263,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_callValCalleeK_args_notfunc :
           Except.error (Stop.stuck (toString "expected function value, got " ++ toString (repr cv)))
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_callValCalleeK_enter` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_callValCalleeK_enter :
     ∀ {ctx : ProgramCtx} {s s' : Store} {fid : FuncId} {captured : List GoValue}
@@ -2068,6 +2275,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_callValCalleeK_enter :
           Except.ok (Entry.callConfig plans env k' e, s', ch, { trace := tr, picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_callValCalleeK_enter_error` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_callValCalleeK_enter_error :
     ∀ {ctx : ProgramCtx} {s : Store} {fid : FuncId} {captured : List GoValue}
@@ -2079,6 +2287,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_callValCalleeK_enter_error :
             Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_callValCalleeK_enter_panic` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_callValCalleeK_enter_panic :
     ∀ {ctx : ProgramCtx} {s : Store} {fid : FuncId} {captured : List GoValue}
@@ -2105,6 +2314,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_callValCalleeK_enter_panic :
                 out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_callValCalleeK_nil` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_callValCalleeK_nil :
     ∀ {ctx : ProgramCtx} (s : Store) (plans : List (TargetShape × List Expr)) (env : LocalEnv)
@@ -2115,6 +2325,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_callValCalleeK_nil :
             { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_chanStK_apply` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_chanStK_apply :
     ∀ {ctx : ProgramCtx} {s s' : Store} {v : GoValue} {op : ChanStOp} {done : List GoValue}
@@ -2124,6 +2335,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_chanStK_apply :
           Except.ok (c', s', ch, { trace := tr, picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_chanStK_apply_error` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_chanStK_apply_error :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {op : ChanStOp} {done : List GoValue} {e : Stop}
@@ -2133,6 +2345,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_chanStK_apply_error :
           stepFn ctx s (Config.retV v (Cont.chanStK op done [] env k')) ch = Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_chanStK_apply_panic` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_chanStK_apply_panic :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {op : ChanStOp} {done : List GoValue} {msg : String}
@@ -2143,6 +2356,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_chanStK_apply_panic :
             (Config.panicking [panicEntry msg] k', s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_chanStK_more` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_chanStK_more :
     ∀ {ctx : ProgramCtx} (s : Store) (v : GoValue) (op : ChanStOp) (done : List GoValue) (e : Expr)
@@ -2153,6 +2367,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_chanStK_more :
             { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_deferArgsK_more` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_deferArgsK_more :
     ∀ {ctx : ProgramCtx} (s : Store) (v cv : GoValue) (vals : List GoValue) (a : Expr)
@@ -2163,6 +2378,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_deferArgsK_more :
             { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_deferArgsK_outside` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_deferArgsK_outside :
     ∀ {ctx : ProgramCtx} {s : Store} {v cv : GoValue} {vals : List GoValue} {k' : Cont} (env : LocalEnv)
@@ -2172,6 +2388,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_deferArgsK_outside :
           Except.error (Stop.stuck "defer outside a call frame")
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_deferArgsK_push` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_deferArgsK_push :
     ∀ {ctx : ProgramCtx} {s : Store} {v cv : GoValue} {vals : List GoValue} {k' k'' : Cont}
@@ -2181,6 +2398,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_deferArgsK_push :
           Except.ok (Config.next k'', s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_deferArgsK_push_frame` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_deferArgsK_push_frame :
     ∀ {ctx : ProgramCtx} (s : Store) (v cv : GoValue) (vals : List GoValue) (env : LocalEnv)
@@ -2192,6 +2410,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_deferArgsK_push_frame :
             { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_deferCalleeK_args` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_deferCalleeK_args :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} (a : Expr) (rest : List Expr) (env : LocalEnv)
@@ -2203,6 +2422,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_deferCalleeK_args :
               { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_deferCalleeK_notfunc` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_deferCalleeK_notfunc :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} (args : List Expr) (env : LocalEnv) (k' : Cont)
@@ -2213,6 +2433,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_deferCalleeK_notfunc :
             (Stop.stuck (toString "expected function value in defer, got " ++ toString (repr v)))
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_deferCalleeK_outside` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_deferCalleeK_outside :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {k' : Cont} (env : LocalEnv) (ch : Choices),
@@ -2222,6 +2443,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_deferCalleeK_outside :
             Except.error (Stop.stuck "defer outside a call frame")
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_deferCalleeK_push` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_deferCalleeK_push :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {k' k'' : Cont} (env : LocalEnv) (ch : Choices),
@@ -2231,6 +2453,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_deferCalleeK_push :
             Except.ok (Config.next k'', s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_deferCalleeK_push_frame` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_deferCalleeK_push_frame :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} (env : LocalEnv) (ch : Choices)
@@ -2243,6 +2466,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_deferCalleeK_push_frame :
               { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_frame` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_frame :
     ∀ {ctx : ProgramCtx} (s : Store) (v : GoValue) (targets : List (TargetShape × List Expr))
@@ -2252,6 +2476,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_frame :
         Except.error (Stop.internal "value delivered to statement continuation")
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_goArgsK_more` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_goArgsK_more :
     ∀ {ctx : ProgramCtx} (s : Store) (v cv : GoValue) (vals : List GoValue) (a : Expr)
@@ -2262,6 +2487,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_goArgsK_more :
             { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_goArgsK_spawn` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_goArgsK_spawn :
     ∀ {ctx : ProgramCtx} (s : Store) (v cv : GoValue) (vals : List GoValue) (env : LocalEnv) (k' : Cont)
@@ -2272,6 +2498,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_goArgsK_spawn :
             "go spawn outside the thread pool (goroutine spawn is a pool step; go during package init is refused this slice)")
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_goCalleeK_args` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_goCalleeK_args :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} (a : Expr) (rest : List Expr) (env : LocalEnv)
@@ -2283,6 +2510,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_goCalleeK_args :
               { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_goCalleeK_notfunc` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_goCalleeK_notfunc :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} (args : List Expr) (env : LocalEnv) (k' : Cont)
@@ -2293,6 +2521,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_goCalleeK_notfunc :
             (Stop.stuck (toString "expected function value in go statement, got " ++ toString (repr v)))
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_goCalleeK_spawn` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_goCalleeK_spawn :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} (env : LocalEnv) (k' : Cont) (ch : Choices),
@@ -2303,6 +2532,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_goCalleeK_spawn :
               "go spawn outside the thread pool (goroutine spawn is a pool step; go during package init is refused this slice)")
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_ifK_error` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_ifK_error :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {e : Stop} (t el : Stmt) (env : LocalEnv) (k' : Cont)
@@ -2311,6 +2541,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_ifK_error :
         stepFn ctx s (Config.retV v (Cont.ifK t el env k')) ch = Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_ifK_false` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_ifK_false :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} (t e : Stmt) (env : LocalEnv) (k' : Cont)
@@ -2320,6 +2551,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_ifK_false :
           Except.ok (Config.exec e env k', s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_ifK_true` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_ifK_true :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} (t e : Stmt) (env : LocalEnv) (k' : Cont)
@@ -2329,6 +2561,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_ifK_true :
           Except.ok (Config.exec t env k', s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_mapRangeK` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_mapRangeK :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {base : Option Loc} {start : Array Nat}
@@ -2341,6 +2574,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_mapRangeK :
               { trace := tr, picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_mapRangeK_error` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_mapRangeK_error :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {e : Stop} (keyVar valVar : Option VarId)
@@ -2350,6 +2584,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_mapRangeK_error :
           Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_orK_error` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_orK_error :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {e : Stop} (r : Expr) (env : LocalEnv) (k' : Cont)
@@ -2358,6 +2593,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_orK_error :
         stepFn ctx s (Config.retV v (Cont.orK r env k')) ch = Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_orK_false` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_orK_false :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} (r : Expr) (env : LocalEnv) (k' : Cont)
@@ -2367,6 +2603,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_orK_false :
           Except.ok (Config.evalE r env k'.boolK, s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_orK_true` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_orK_true :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} (r : Expr) (env : LocalEnv) (k' : Cont)
@@ -2376,6 +2613,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_orK_true :
           Except.ok (Config.retV (GoValue.bool true) k', s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_panicArgK` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_panicArgK :
     ∀ {ctx : ProgramCtx} (s : Store) (v : GoValue) (k' : Cont) (ch : Choices),
@@ -2385,6 +2623,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_panicArgK :
             { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.phaseMark_nonCarrier` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.phaseMark_nonCarrier :
     ∀ {ctx : ProgramCtx} {t : Ty} (v : GoValue),
@@ -2394,6 +2633,7 @@ theorem GoLean.Contract.GoCore.Equations.phaseMark_nonCarrier :
             phaseMark ctx (GoValue.interface t v) = Except.ok Rewrite.none
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.phaseMark_string` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.phaseMark_string :
     ∀ {ctx : ProgramCtx} (v : GoValue),
@@ -2401,6 +2641,7 @@ theorem GoLean.Contract.GoCore.Equations.phaseMark_string :
         phaseMark ctx (GoValue.interface Ty.string v) = Except.ok Rewrite.none
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_preprintK_nonstring` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_preprintK_nonstring :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} (older : List PanicEntry) (entry : PanicEntry)
@@ -2413,6 +2654,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_preprintK_nonstring :
                 toString (repr v)))
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_preprintK_string` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_preprintK_string :
     ∀ {ctx : ProgramCtx} (s : Store) (text : GoString) (older : List PanicEntry) (entry : PanicEntry)
@@ -2428,6 +2670,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_preprintK_string :
             s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_probeK` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_probeK :
     ∀ {ctx : ProgramCtx} (s : Store) (v : GoValue) (k' : Cont) (ch : Choices),
@@ -2435,6 +2678,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_probeK :
         Except.ok (Config.next k', s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_rhsK_apply` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_rhsK_apply :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {rop : RhsOp} {done vals : List GoValue}
@@ -2447,6 +2691,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_rhsK_apply :
               { trace := tr, picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_rhsK_apply_error` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_rhsK_apply_error :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {rop : RhsOp} {done : List GoValue} {e : Stop}
@@ -2456,6 +2701,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_rhsK_apply_error :
           stepFn ctx s (Config.retV v (Cont.rhsK rop refs done [] body env k')) ch = Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_rhsK_apply_panic` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_rhsK_apply_panic :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {rop : RhsOp} {done : List GoValue} {msg : String}
@@ -2466,6 +2712,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_rhsK_apply_panic :
             (Config.panicking [panicEntry msg] k', s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_rhsK_more` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_rhsK_more :
     ∀ {ctx : ProgramCtx} (s : Store) (v : GoValue) (rop : RhsOp) (refs : List TargetRef)
@@ -2477,6 +2724,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_rhsK_more :
             { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_selectOpsK_apply` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_selectOpsK_apply :
     ∀ {ctx : ProgramCtx} {s s' : Store} {v : GoValue} {clauses : List (SelectClauseHead × Stmt)}
@@ -2489,6 +2737,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_selectOpsK_apply :
           Except.ok (c', s', ch', { trace := tr, picks := ps, out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_selectOpsK_apply_error` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_selectOpsK_apply_error :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {clauses : List (SelectClauseHead × Stmt)}
@@ -2500,6 +2749,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_selectOpsK_apply_error :
             Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_selectOpsK_apply_panic` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_selectOpsK_apply_panic :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {clauses : List (SelectClauseHead × Stmt)}
@@ -2511,6 +2761,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_selectOpsK_apply_panic :
             (Config.panicking [panicEntry msg] k', s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_selectOpsK_more` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_selectOpsK_more :
     ∀ {ctx : ProgramCtx} (s : Store) (v : GoValue) (clauses : List (SelectClauseHead × Stmt))
@@ -2522,6 +2773,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_selectOpsK_more :
             { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_seq` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_seq :
     ∀ {ctx : ProgramCtx} (s : Store) (v : GoValue) (rest : List Stmt) (env : LocalEnv) (k' : Cont)
@@ -2530,6 +2782,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_seq :
         Except.error (Stop.internal "value delivered to statement continuation")
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_stmtOpK_apply` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_stmtOpK_apply :
     ∀ {ctx : ProgramCtx} {s s' : Store} {v : GoValue} {op : StmtOp} {nt : Nat} {done : List GoValue}
@@ -2542,6 +2795,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_stmtOpK_apply :
               { trace := tr, picks := ps, out := stmtOpOut op (v :: done).reverse })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_stmtOpK_apply_error` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_stmtOpK_apply_error :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {op : StmtOp} {nt : Nat} {done : List GoValue}
@@ -2551,6 +2805,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_stmtOpK_apply_error :
           stepFn ctx s (Config.retV v (Cont.stmtOpK op nt done [] env k')) ch = Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_stmtOpK_apply_panic` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_stmtOpK_apply_panic :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {op : StmtOp} {nt : Nat} {done : List GoValue}
@@ -2561,6 +2816,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_stmtOpK_apply_panic :
             (Config.panicking [panicEntry msg] k', s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_stmtOpK_more_operand` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_stmtOpK_more_operand :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {nt : Nat} {done : List GoValue} (op : StmtOp)
@@ -2572,6 +2828,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_stmtOpK_more_operand :
               { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_stmtOpK_more_target` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_stmtOpK_more_target :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {loc : Loc} {nt : Nat} {done : List GoValue}
@@ -2584,6 +2841,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_stmtOpK_more_target :
                 { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_stmtOpK_more_target_nil` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_stmtOpK_more_target_nil :
     ∀ {ctx : ProgramCtx} {s : Store} {nt : Nat} {done : List GoValue} (op : StmtOp) (e : Expr)
@@ -2595,6 +2853,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_stmtOpK_more_target_nil :
               { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_stop` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_stop :
     ∀ {ctx : ProgramCtx} (s : Store) (v : GoValue) (ch : Choices),
@@ -2602,6 +2861,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_stop :
         Except.error (Stop.internal "value delivered to empty continuation")
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_storeK` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_storeK :
     ∀ {ctx : ProgramCtx} (s : Store) (v : GoValue) (refs : List TargetRef) (vals : List GoValue)
@@ -2610,6 +2870,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_storeK :
         Except.error (Stop.internal "value delivered to statement continuation")
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_strictK_apply` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_strictK_apply :
     ∀ {ctx : ProgramCtx} {s s' : Store} {v out : GoValue} {op : StrictOp} {done : List GoValue}
@@ -2621,6 +2882,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_strictK_apply :
             Except.ok (Config.retV out k', s', ch, { trace := tr, picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_strictK_apply_error` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_strictK_apply_error :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {op : StrictOp} {done : List GoValue} {e : Stop}
@@ -2631,6 +2893,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_strictK_apply_error :
             stepFn ctx s (Config.retV v (Cont.strictK op done [] env k')) ch = Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_strictK_apply_panic` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_strictK_apply_panic :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {op : StrictOp} {done : List GoValue} {msg : String}
@@ -2643,6 +2906,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_strictK_apply_panic :
               (Config.panicking [panicEntry msg] k', s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_strictK_conv` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_strictK_conv :
     ∀ {ctx : ProgramCtx} {s s' : Store} {v out : GoValue} {op : StrictOp} {done : List GoValue}
@@ -2664,6 +2928,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_strictK_conv :
                     out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_strictK_conv_nopop` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_strictK_conv_nopop :
     ∀ {ctx : ProgramCtx} {s s' : Store} {v out : GoValue} {op : StrictOp} {done : List GoValue}
@@ -2677,6 +2942,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_strictK_conv_nopop :
                 Except.ok (Config.retV out k', s', ch, { trace := tr, picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_strictK_conv_refuse` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_strictK_conv_refuse :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {op : StrictOp} {done : List GoValue}
@@ -2688,6 +2954,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_strictK_conv_refuse :
               stepFn ctx s (Config.retV v (Cont.strictK op done [] env k')) ch = Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_strictK_more` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_strictK_more :
     ∀ {ctx : ProgramCtx} (s : Store) (v : GoValue) (op : StrictOp) (done : List GoValue) (e : Expr)
@@ -2698,6 +2965,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_strictK_more :
             { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_syncStK_apply` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_syncStK_apply :
     ∀ {ctx : ProgramCtx} {s s' : Store} {v : GoValue} {op : SyncOp} {done : List GoValue} {c' : Config}
@@ -2708,6 +2976,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_syncStK_apply :
           Except.ok (c', s', ch', { trace := tr, picks := ps, out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_syncStK_apply_error` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_syncStK_apply_error :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {op : SyncOp} {done : List GoValue} {e : Stop}
@@ -2717,6 +2986,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_syncStK_apply_error :
           stepFn ctx s (Config.retV v (Cont.syncStK op done [] env k')) ch = Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_syncStK_apply_panic` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_syncStK_apply_panic :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {op : SyncOp} {done : List GoValue} {msg : String}
@@ -2727,6 +2997,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_syncStK_apply_panic :
             (Config.panicking [panicEntry msg] k', s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_syncStK_more` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_syncStK_more :
     ∀ {ctx : ProgramCtx} (s : Store) (v : GoValue) (op : SyncOp) (done : List GoValue) (e : Expr)
@@ -2737,6 +3008,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_syncStK_more :
             { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_tgtOpK_malformed` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_tgtOpK_malformed :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {sh : TargetShape} {ops : List GoValue}
@@ -2747,6 +3019,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_tgtOpK_malformed :
           Except.error (Stop.internal "malformed receive target operands")
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_tgtOpK_more` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_tgtOpK_more :
     ∀ {ctx : ProgramCtx} (s : Store) (v : GoValue) (sh : TargetShape) (ops : List GoValue) (e : Expr)
@@ -2760,6 +3033,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_tgtOpK_more :
             ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_tgtOpK_next_target` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_tgtOpK_next_target :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {sh : TargetShape} {ops : List GoValue}
@@ -2776,6 +3050,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_tgtOpK_next_target :
               s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_tgtOpK_rhs` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_tgtOpK_rhs :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {sh : TargetShape} {ops : List GoValue}
@@ -2789,6 +3064,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_tgtOpK_rhs :
               { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_tgtOpK_store` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_tgtOpK_store :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {sh : TargetShape} {ops : List GoValue}
@@ -2801,6 +3077,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_tgtOpK_store :
               { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_unseqK` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_unseqK :
     ∀ {ctx : ProgramCtx} (s : Store) (v : GoValue) (g : UnseqGraph) (thenB : Stmt)
@@ -2810,6 +3087,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_unseqK :
         stepUnseqValue ctx s v g thenB st tg env ph k' ch
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_whileK_error` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_whileK_error :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {e : Stop} (c : Expr) (b : Stmt) (env : LocalEnv)
@@ -2818,6 +3096,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_whileK_error :
         stepFn ctx s (Config.retV v (Cont.whileK c b env k')) ch = Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_whileK_false` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_whileK_false :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} (c : Expr) (b : Stmt) (env : LocalEnv) (k' : Cont)
@@ -2827,6 +3106,7 @@ theorem GoLean.Contract.GoCore.Equations.retV_whileK_false :
           Except.ok (Config.next k', s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.retV_whileK_true` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.retV_whileK_true :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} (c : Expr) (b : Stmt) (env : LocalEnv) (k' : Cont)
@@ -2837,18 +3117,21 @@ theorem GoLean.Contract.GoCore.Equations.retV_whileK_true :
             (Config.exec b env (Cont.loop c b env k'), s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.runCommit_error` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.runCommit_error :
     ∀ {α : Type} {c : Commit α} {s : Store} {e : Stop},
       c s = Except.error e → (∀ (msg : String), e ≠ Stop.panic msg) → runCommit c s = Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.runPkgInitM_none` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.runPkgInitM_none :
     ∀ {ctx : ProgramCtx} {fuel : Nat} {s : Store} {ch : Choices},
       findFunctionIn? ctx.functions pkgInitFuncId = none → runPkgInitM ctx fuel s ch = Except.ok (s, ch)
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.runProgramSetup_noInit` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.runProgramSetup_noInit :
     ∀ {fuel : Nat} {program : Program} {name : String} {args : Array GoValue} {choices : Choices}
@@ -2870,11 +3153,13 @@ theorem GoLean.Contract.GoCore.Equations.runProgramSetup_noInit :
                             s₃, resultLocs, choices)
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.seedGlobals_nil` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.seedGlobals_nil :
     ∀ {ctx : ProgramCtx}, seedGlobals ctx { } #[] = Except.ok { }
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.setup_heap_size` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.setup_heap_size :
     ∀ {program : Program} {func : Func} {args : Array GoValue} {env frameEnv : LocalEnv}
@@ -2884,6 +3169,7 @@ theorem GoLean.Contract.GoCore.Equations.setup_heap_size :
           Array.size s₃.heap = func.args.size + func.results.size
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.setup_lookup_arg` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.setup_lookup_arg :
     ∀ {program : Program} {func : Func} {args : Array GoValue} {env frameEnv : LocalEnv}
@@ -2895,6 +3181,7 @@ theorem GoLean.Contract.GoCore.Equations.setup_lookup_arg :
               frameEnv.lookup func.args[i].id = some (Loc.base { id := i })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.setup_lookup_result` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.setup_lookup_result :
     ∀ {program : Program} {func : Func} {args : Array GoValue} {env frameEnv : LocalEnv}
@@ -2906,6 +3193,7 @@ theorem GoLean.Contract.GoCore.Equations.setup_lookup_result :
               frameEnv.lookup func.results[j].id = some (Loc.base { id := func.args.size + j })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.setup_resultLocs` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.setup_resultLocs :
     ∀ {program : Program} {func : Func} {args : Array GoValue} {env frameEnv : LocalEnv} {s₂ s₃ : Store}
@@ -2919,39 +3207,46 @@ theorem GoLean.Contract.GoCore.Equations.setup_resultLocs :
                   (List.range func.results.size)
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.signalStep_breakableK_brk` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.signalStep_breakableK_brk :
     ∀ (k' : Cont), signalStep Signal.brk k'.breakableK = some (Config.next k')
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.signalStep_breakableK_brkTo` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.signalStep_breakableK_brkTo :
     ∀ (L : String) (k' : Cont),
       signalStep (Signal.brkTo L) k'.breakableK = some (Config.signal (Signal.brkTo L) k')
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.signalStep_breakableK_cont` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.signalStep_breakableK_cont :
     ∀ (k' : Cont), signalStep Signal.cont k'.breakableK = some (Config.signal Signal.cont k')
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.signalStep_breakableK_contTo` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.signalStep_breakableK_contTo :
     ∀ (L : String) (k' : Cont),
       signalStep (Signal.contTo L) k'.breakableK = some (Config.signal (Signal.contTo L) k')
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.signalStep_breakableK_ret` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.signalStep_breakableK_ret :
     ∀ (k' : Cont), signalStep Signal.ret k'.breakableK = some (Config.signal Signal.ret k')
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.signalStep_labelK_brk` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.signalStep_labelK_brk :
     ∀ (name : String) (k' : Cont),
       signalStep Signal.brk (Cont.labelK name k') = some (Config.signal Signal.brk k')
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.signalStep_labelK_brkTo_ne` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.signalStep_labelK_brkTo_ne :
     ∀ {name L : String} (k' : Cont),
@@ -2959,18 +3254,21 @@ theorem GoLean.Contract.GoCore.Equations.signalStep_labelK_brkTo_ne :
         signalStep (Signal.brkTo L) (Cont.labelK name k') = some (Config.signal (Signal.brkTo L) k')
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.signalStep_labelK_brkTo_self` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.signalStep_labelK_brkTo_self :
     ∀ (name : String) (k' : Cont),
       signalStep (Signal.brkTo name) (Cont.labelK name k') = some (Config.next k')
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.signalStep_labelK_cont` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.signalStep_labelK_cont :
     ∀ (name : String) (k' : Cont),
       signalStep Signal.cont (Cont.labelK name k') = some (Config.signal Signal.cont k')
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.signalStep_labelK_contTo_ne` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.signalStep_labelK_contTo_ne :
     ∀ {name L : String} (k' : Cont),
@@ -2978,35 +3276,41 @@ theorem GoLean.Contract.GoCore.Equations.signalStep_labelK_contTo_ne :
         signalStep (Signal.contTo L) (Cont.labelK name k') = some (Config.signal (Signal.contTo L) k')
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.signalStep_labelK_contTo_self` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.signalStep_labelK_contTo_self :
     ∀ (name : String) (k' : Cont), signalStep (Signal.contTo name) (Cont.labelK name k') = none
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.signalStep_labelK_ret` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.signalStep_labelK_ret :
     ∀ (name : String) (k' : Cont),
       signalStep Signal.ret (Cont.labelK name k') = some (Config.signal Signal.ret k')
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.signalStep_loop_brk` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.signalStep_loop_brk :
     ∀ (c : Expr) (b : Stmt) (env : LocalEnv) (k' : Cont),
       signalStep Signal.brk (Cont.loop c b env k') = some (Config.next k')
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.signalStep_loop_brkTo` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.signalStep_loop_brkTo :
     ∀ (L : String) (c : Expr) (b : Stmt) (env : LocalEnv) (k' : Cont),
       signalStep (Signal.brkTo L) (Cont.loop c b env k') = some (Config.signal (Signal.brkTo L) k')
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.signalStep_loop_cont` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.signalStep_loop_cont :
     ∀ (c : Expr) (b : Stmt) (env : LocalEnv) (k' : Cont),
       signalStep Signal.cont (Cont.loop c b env k') = some (Config.exec (Stmt.while c b) env k')
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.signalStep_loop_contTo_ne` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.signalStep_loop_contTo_ne :
     ∀ {L : String} (c : Expr) (b : Stmt) (env : LocalEnv) {k' : Cont},
@@ -3014,6 +3318,7 @@ theorem GoLean.Contract.GoCore.Equations.signalStep_loop_contTo_ne :
         signalStep (Signal.contTo L) (Cont.loop c b env k') = some (Config.signal (Signal.contTo L) k')
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.signalStep_loop_contTo_self` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.signalStep_loop_contTo_self :
     ∀ {L : String} (c : Expr) (b : Stmt) (env : LocalEnv) {k' : Cont},
@@ -3021,12 +3326,14 @@ theorem GoLean.Contract.GoCore.Equations.signalStep_loop_contTo_self :
         signalStep (Signal.contTo L) (Cont.loop c b env k') = some (Config.exec (Stmt.while c b) env k')
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.signalStep_loop_ret` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.signalStep_loop_ret :
     ∀ (c : Expr) (b : Stmt) (env : LocalEnv) (k' : Cont),
       signalStep Signal.ret (Cont.loop c b env k') = some (Config.signal Signal.ret k')
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.signalStep_mapIterK_brk` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.signalStep_mapIterK_brk :
     ∀ (keyVar valVar : Option VarId) (keyTy valTy : Ty) (body : Stmt) (base : Option Loc)
@@ -3035,6 +3342,7 @@ theorem GoLean.Contract.GoCore.Equations.signalStep_mapIterK_brk :
         some (Config.next k')
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.signalStep_mapIterK_brkTo` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.signalStep_mapIterK_brkTo :
     ∀ (L : String) (keyVar valVar : Option VarId) (keyTy valTy : Ty) (body : Stmt) (base : Option Loc)
@@ -3044,6 +3352,7 @@ theorem GoLean.Contract.GoCore.Equations.signalStep_mapIterK_brkTo :
         some (Config.signal (Signal.brkTo L) k')
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.signalStep_mapIterK_cont` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.signalStep_mapIterK_cont :
     ∀ (keyVar valVar : Option VarId) (keyTy valTy : Ty) (body : Stmt) (base : Option Loc)
@@ -3052,6 +3361,7 @@ theorem GoLean.Contract.GoCore.Equations.signalStep_mapIterK_cont :
         some (Config.next (Cont.mapIterK keyVar valVar keyTy valTy body base produced start env k'))
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.signalStep_mapIterK_contTo_ne` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.signalStep_mapIterK_contTo_ne :
     ∀ {L : String} (keyVar valVar : Option VarId) (keyTy valTy : Ty) (body : Stmt) (base : Option Loc)
@@ -3062,6 +3372,7 @@ theorem GoLean.Contract.GoCore.Equations.signalStep_mapIterK_contTo_ne :
           some (Config.signal (Signal.contTo L) k')
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.signalStep_mapIterK_contTo_self` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.signalStep_mapIterK_contTo_self :
     ∀ {L : String} (keyVar valVar : Option VarId) (keyTy valTy : Ty) (body : Stmt) (base : Option Loc)
@@ -3072,6 +3383,7 @@ theorem GoLean.Contract.GoCore.Equations.signalStep_mapIterK_contTo_self :
           some (Config.next (Cont.mapIterK keyVar valVar keyTy valTy body base produced start env k'))
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.signalStep_mapIterK_ret` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.signalStep_mapIterK_ret :
     ∀ (keyVar valVar : Option VarId) (keyTy valTy : Ty) (body : Stmt) (base : Option Loc)
@@ -3080,12 +3392,14 @@ theorem GoLean.Contract.GoCore.Equations.signalStep_mapIterK_ret :
         some (Config.signal Signal.ret k')
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.signalStep_seq` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.signalStep_seq :
     ∀ (sg : Signal) (rest : List Stmt) (env : LocalEnv) (k' : Cont),
       signalStep sg (Cont.seq rest env k') = some (Config.signal sg k')
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.signal_frame_escape` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.signal_frame_escape :
     ∀ {ctx : ProgramCtx} {s : Store} {sg : Signal} (targets : List (TargetShape × List Expr))
@@ -3096,6 +3410,7 @@ theorem GoLean.Contract.GoCore.Equations.signal_frame_escape :
           Except.error (signalRefusal sg (Cont.frame targets tenv results ds k' fr))
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.signal_labelK_contTo_self` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.signal_labelK_contTo_self :
     ∀ {ctx : ProgramCtx} (s : Store) (name : String) (k' : Cont) (ch : Choices),
@@ -3103,6 +3418,7 @@ theorem GoLean.Contract.GoCore.Equations.signal_labelK_contTo_self :
         Except.error (Stop.stuck (toString "continue to non-loop label " ++ toString name))
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.signal_ret_frame` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.signal_ret_frame :
     ∀ {ctx : ProgramCtx} (s : Store) (targets : List (TargetShape × List Expr)) (tenv : LocalEnv)
@@ -3112,12 +3428,14 @@ theorem GoLean.Contract.GoCore.Equations.signal_ret_frame :
         stepFrameExit ctx s targets tenv results ds k' fr ch
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.signal_stop` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.signal_stop :
     ∀ {ctx : ProgramCtx} (s : Store) (sg : Signal) (ch : Choices),
       stepFn ctx s (Config.signal sg Cont.stop) ch = Except.error (signalRefusal sg Cont.stop)
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.signal_table` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.signal_table :
     ∀ {ctx : ProgramCtx} {s : Store} {sg : Signal} {k : Cont} {c' : Config} (ch : Choices),
@@ -3126,11 +3444,13 @@ theorem GoLean.Contract.GoCore.Equations.signal_table :
           Except.ok (c', s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.stateWf_empty` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.stateWf_empty :
     ∀ {ctx : ProgramCtx}, StateWf ctx { }
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.storeLoc_root` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.storeLoc_root :
     ∀ {ctx : ProgramCtx} {s : Store} {a : Addr} {ty : Ty} {old v v' : GoValue}
@@ -3140,6 +3460,7 @@ theorem GoLean.Contract.GoCore.Equations.storeLoc_root :
           Except.ok { heap := Array.set s.heap a.id (HeapCell.value ty v') (Heap.lookup_lt hl) }
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.storeTarget_inv_panic` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.storeTarget_inv_panic :
     ∀ {ctx : ProgramCtx} {s : Store} {r : TargetRef} {v : GoValue} {msg : String},
@@ -3147,17 +3468,20 @@ theorem GoLean.Contract.GoCore.Equations.storeTarget_inv_panic :
         storeTarget.plan ctx s r v = Except.error (Stop.panic msg)
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.targetPlan_var` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.targetPlan_var :
     ∀ (id : VarId), targetPlan (Assignee.var id) = some (TargetShape.chain [], [Expr.ref id])
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.toResult_of_error` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.toResult_of_error :
     ∀ {α : Type} {x : Except Stop α} {e : Stop},
       x = Except.error e → (∀ (msg : String), e ≠ Stop.panic msg) → toResult x = Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.unseqEnter` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.unseqEnter :
     ∀ {ctx : ProgramCtx} {s s' : Store} {g : UnseqGraph} {env env' : LocalEnv} (thenB : Stmt)
@@ -3172,6 +3496,7 @@ theorem GoLean.Contract.GoCore.Equations.unseqEnter :
                   s', ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.unseqEnter_error` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.unseqEnter_error :
     ∀ {ctx : ProgramCtx} {s : Store} {g : UnseqGraph} {env : LocalEnv} {e : Stop} (thenB : Stmt)
@@ -3183,6 +3508,7 @@ theorem GoLean.Contract.GoCore.Equations.unseqEnter_error :
               Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.unseqRun_eval` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.unseqRun_eval :
     ∀ {ctx : ProgramCtx} {s : Store} {g : UnseqGraph} {i : Nat} {o : UnseqOcc} {bind : VarId}
@@ -3196,6 +3522,7 @@ theorem GoLean.Contract.GoCore.Equations.unseqRun_eval :
                 { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.unseqValue` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.unseqValue :
     ∀ {ctx : ProgramCtx} {s s' : Store} {v : GoValue} {g : UnseqGraph} {i : Nat} {o : UnseqOcc}
@@ -3214,6 +3541,7 @@ theorem GoLean.Contract.GoCore.Equations.unseqValue :
                       picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.unseqValue_error` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.unseqValue_error :
     ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {g : UnseqGraph} {i : Nat} {o : UnseqOcc}
@@ -3227,6 +3555,7 @@ theorem GoLean.Contract.GoCore.Equations.unseqValue_error :
                 Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.unseqWait_invoke` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.unseqWait_invoke :
     ∀ {ctx : ProgramCtx} {s : Store} {g : UnseqGraph} {i : Nat} {o : UnseqOcc} {binds : List VarId}
@@ -3240,11 +3569,13 @@ theorem GoLean.Contract.GoCore.Equations.unseqWait_invoke :
                 s, ch, { trace := [], picks := [], out := [] })
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.valueAsBool_bool` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.valueAsBool_bool :
     ∀ (b : Bool), valueAsBool (GoValue.bool b) = Except.ok b
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.valueAsBool_nonbool` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.valueAsBool_nonbool :
     ∀ {v : GoValue},
@@ -3253,11 +3584,13 @@ theorem GoLean.Contract.GoCore.Equations.valueAsBool_nonbool :
           Except.error (Stop.stuck (toString "expected bool value, got " ++ toString (repr v)))
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.valueAsLoc_addr` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.valueAsLoc_addr :
     ∀ (loc : Loc), valueAsLoc (GoValue.addr loc) = Except.ok loc
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Equations.valueAsLoc_nil` (GoLean.GoCore.Equations) -/
 theorem GoLean.Contract.GoCore.Equations.valueAsLoc_nil :
     valueAsLoc GoValue.nil = Except.error (Stop.panic nilDerefPanicText)
@@ -3265,6 +3598,7 @@ theorem GoLean.Contract.GoCore.Equations.valueAsLoc_nil :
 
 /-! ## GoLean.GoCore.InitDriverFacts -/
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.ExecutionStatement.applyStmtOp_print` (GoLean.GoCore.InitDriverFacts) -/
 -- `.ok` in the source's dot-form: the printed `Except.ok (…)` elaborates a tuple's `AccessTrace`
 -- component as `List MemEvent` (definitionally, not syntactically, the kept statement).
@@ -3275,16 +3609,19 @@ theorem GoLean.Contract.GoCore.ExecutionStatement.applyStmtOp_print :
         applyStmtOp ctx s ch (StmtOp.print newline) nt vs = .ok (s, ch, [], [])
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.ExecutionStatement.initPrintRefusal?_eq_none_iff` (GoLean.GoCore.InitDriverFacts) -/
 theorem GoLean.Contract.GoCore.ExecutionStatement.initPrintRefusal?_eq_none_iff :
     ∀ {c : Config}, initPrintRefusal? c = none ↔ printOut? c = none
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.ExecutionStatement.initPrintRefusal?_zeroCost` (GoLean.GoCore.InitDriverFacts) -/
 theorem GoLean.Contract.GoCore.ExecutionStatement.initPrintRefusal?_zeroCost :
     ∀ {c : Config}, ZeroCost c → initPrintRefusal? c = none
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.ExecutionStatement.noPrint_of_prefix_silent` (GoLean.GoCore.InitDriverFacts) -/
 theorem GoLean.Contract.GoCore.ExecutionStatement.noPrint_of_prefix_silent :
     ∀ {ctx : ProgramCtx} {n : Nat} {s sf : Store} {c : Config} {ch chf : Choices} {ls : List StepLabel},
@@ -3294,6 +3631,7 @@ theorem GoLean.Contract.GoCore.ExecutionStatement.noPrint_of_prefix_silent :
             Prefix ctx m s c ch ls' σ' c' ch' → initPrintRefusal? c' = none
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.ExecutionStatement.prefix_det` (GoLean.GoCore.InitDriverFacts) -/
 theorem GoLean.Contract.GoCore.ExecutionStatement.prefix_det :
     ∀ {ctx : ProgramCtx} {n : Nat} {s σ₁ σ₂ : Store} {c c₁ c₂ : Config} {ch ch₁ ch₂ : Choices}
@@ -3302,6 +3640,7 @@ theorem GoLean.Contract.GoCore.ExecutionStatement.prefix_det :
         Prefix ctx n s c ch ls' σ₂ c₂ ch₂ → ls = ls' ∧ σ₁ = σ₂ ∧ c₁ = c₂ ∧ ch₁ = ch₂
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.ExecutionStatement.prefix_det_le` (GoLean.GoCore.InitDriverFacts) -/
 theorem GoLean.Contract.GoCore.ExecutionStatement.prefix_det_le :
     ∀ {ctx : ProgramCtx} {m n : Nat} {s σ₁ σ₂ : Store} {c c₁ c₂ : Config} {ch ch₁ ch₂ : Choices}
@@ -3311,12 +3650,14 @@ theorem GoLean.Contract.GoCore.ExecutionStatement.prefix_det_le :
           m ≤ n → ∃ (ls₂ : List StepLabel), ls' = ls ++ ls₂ ∧ Prefix ctx (n - m) σ₁ c₁ ch₁ ls₂ σ₂ c₂ ch₂
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.ExecutionStatement.runInitConfig_blocked` (GoLean.GoCore.InitDriverFacts) -/
 theorem GoLean.Contract.GoCore.ExecutionStatement.runInitConfig_blocked :
     ∀ {ctx : ProgramCtx} {fuel : Nat} {s : Store} {c : Config} {ch : Choices},
       Blocked c → runInitConfig ctx fuel s c ch = Except.error (Stop.terminal Terminal.deadlock)
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.ExecutionStatement.runInitConfig_cases` (GoLean.GoCore.InitDriverFacts) -/
 theorem GoLean.Contract.GoCore.ExecutionStatement.runInitConfig_cases :
     ∀ (ctx : ProgramCtx) (fuel : Nat) (s : Store) (c : Config) (ch : Choices),
@@ -3335,6 +3676,7 @@ theorem GoLean.Contract.GoCore.ExecutionStatement.runInitConfig_cases :
                           initPrintRefusal? cf = some e ∧ runInitConfig ctx fuel s c ch = Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.ExecutionStatement.runInitConfig_deadlock_iff` (GoLean.GoCore.InitDriverFacts) -/
 theorem GoLean.Contract.GoCore.ExecutionStatement.runInitConfig_deadlock_iff :
     ∀ (ctx : ProgramCtx) (fuel : Nat) (s : Store) (c : Config) (ch : Choices),
@@ -3351,6 +3693,7 @@ theorem GoLean.Contract.GoCore.ExecutionStatement.runInitConfig_deadlock_iff :
                         Finish ctx sf cf chf [] (FinishOutcome.deadlock sf chf) 0)
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.ExecutionStatement.runInitConfig_eq_execStmtLoop` (GoLean.GoCore.InitDriverFacts) -/
 theorem GoLean.Contract.GoCore.ExecutionStatement.runInitConfig_eq_execStmtLoop :
     ∀ {ctx : ProgramCtx} {fuel : Nat} {σ : Store} {c : Config} {ch : Choices},
@@ -3359,6 +3702,7 @@ theorem GoLean.Contract.GoCore.ExecutionStatement.runInitConfig_eq_execStmtLoop 
         runInitConfig ctx fuel σ c ch = execStmtLoop ctx fuel σ c ch
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.ExecutionStatement.runInitConfig_fuelOut_iff` (GoLean.GoCore.InitDriverFacts) -/
 theorem GoLean.Contract.GoCore.ExecutionStatement.runInitConfig_fuelOut_iff :
     ∀ (ctx : ProgramCtx) (fuel : Nat) (s : Store) (c : Config) (ch : Choices),
@@ -3370,6 +3714,7 @@ theorem GoLean.Contract.GoCore.ExecutionStatement.runInitConfig_fuelOut_iff :
               ∃ (cf : Config), ∃ (chf : Choices), Prefix ctx fuel s c ch ls sf cf chf ∧ ¬ZeroCost cf)
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.ExecutionStatement.runInitConfig_nonZero` (GoLean.GoCore.InitDriverFacts) -/
 -- Stated through the original's matcher constants (`pp.match false`): a `match` in a
 -- statement mints a matcher per module, so the challenge names the kept theorem's own.
@@ -3384,6 +3729,7 @@ theorem GoLean.Contract.GoCore.ExecutionStatement.runInitConfig_nonZero :
                 runInitConfig ctx f r.snd.fst r.fst r.snd.snd.fst
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.ExecutionStatement.runInitConfig_ok_execStmtLoop` (GoLean.GoCore.InitDriverFacts) -/
 theorem GoLean.Contract.GoCore.ExecutionStatement.runInitConfig_ok_execStmtLoop :
     ∀ {ctx : ProgramCtx} {fuel : Nat} {s sf : Store} {c : Config} {ch chf : Choices},
@@ -3391,6 +3737,7 @@ theorem GoLean.Contract.GoCore.ExecutionStatement.runInitConfig_ok_execStmtLoop 
         execStmtLoop ctx fuel s c ch = Except.ok (sf, chf)
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.ExecutionStatement.runInitConfig_ok_iff` (GoLean.GoCore.InitDriverFacts) -/
 theorem GoLean.Contract.GoCore.ExecutionStatement.runInitConfig_ok_iff :
     ∀ (ctx : ProgramCtx) (fuel : Nat) (s sf : Store) (c : Config) (ch chf : Choices),
@@ -3401,6 +3748,7 @@ theorem GoLean.Contract.GoCore.ExecutionStatement.runInitConfig_ok_iff :
             n ≤ fuel ∧ ∃ (ls : List StepLabel), Prefix ctx n s c ch ls sf (Config.next Cont.stop) chf)
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.ExecutionStatement.runInitConfig_ok_iff_execStmtLoop` (GoLean.GoCore.InitDriverFacts) -/
 theorem GoLean.Contract.GoCore.ExecutionStatement.runInitConfig_ok_iff_execStmtLoop :
     ∀ (ctx : ProgramCtx) (fuel : Nat) (s sf : Store) (c : Config) (ch chf : Choices),
@@ -3410,6 +3758,7 @@ theorem GoLean.Contract.GoCore.ExecutionStatement.runInitConfig_ok_iff_execStmtL
             Prefix ctx n s c ch ls σ' c' ch' → n ≤ fuel → initPrintRefusal? c' = none
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.ExecutionStatement.runInitConfig_ok_noPrint` (GoLean.GoCore.InitDriverFacts) -/
 theorem GoLean.Contract.GoCore.ExecutionStatement.runInitConfig_ok_noPrint :
     ∀ {ctx : ProgramCtx} {fuel : Nat} {s sf : Store} {c : Config} {ch chf : Choices},
@@ -3418,6 +3767,7 @@ theorem GoLean.Contract.GoCore.ExecutionStatement.runInitConfig_ok_noPrint :
           Prefix ctx n s c ch ls σ' c' ch' → n ≤ fuel → initPrintRefusal? c' = none
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.ExecutionStatement.runInitConfig_ok_of_prefix_silent` (GoLean.GoCore.InitDriverFacts) -/
 theorem GoLean.Contract.GoCore.ExecutionStatement.runInitConfig_ok_of_prefix_silent :
     ∀ {ctx : ProgramCtx} {fuel n : Nat} {s sf : Store} {c : Config} {ch chf : Choices}
@@ -3427,6 +3777,7 @@ theorem GoLean.Contract.GoCore.ExecutionStatement.runInitConfig_ok_of_prefix_sil
           (∀ (l : StepLabel), l ∈ ls → l.out = []) → runInitConfig ctx fuel s c ch = Except.ok (sf, chf)
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.ExecutionStatement.runInitConfig_ok_prefix` (GoLean.GoCore.InitDriverFacts) -/
 theorem GoLean.Contract.GoCore.ExecutionStatement.runInitConfig_ok_prefix :
     ∀ {ctx : ProgramCtx} {fuel : Nat} {s sf : Store} {c : Config} {ch chf : Choices},
@@ -3435,6 +3786,7 @@ theorem GoLean.Contract.GoCore.ExecutionStatement.runInitConfig_ok_prefix :
           n ≤ fuel ∧ ∃ (ls : List StepLabel), Prefix ctx n s c ch ls sf (Config.next Cont.stop) chf
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.ExecutionStatement.runInitConfig_panic_iff` (GoLean.GoCore.InitDriverFacts) -/
 theorem GoLean.Contract.GoCore.ExecutionStatement.runInitConfig_panic_iff :
     ∀ (ctx : ProgramCtx) (fuel : Nat) (s : Store) (c : Config) (ch : Choices) (t : String),
@@ -3453,12 +3805,14 @@ theorem GoLean.Contract.GoCore.ExecutionStatement.runInitConfig_panic_iff :
                             Finish ctx sf cf chf rec (FinishOutcome.aborted t sf ch'') 1)
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.ExecutionStatement.runInitConfig_refused` (GoLean.GoCore.InitDriverFacts) -/
 theorem GoLean.Contract.GoCore.ExecutionStatement.runInitConfig_refused :
     ∀ {ctx : ProgramCtx} {fuel : Nat} {s : Store} {c : Config} {ch : Choices} {e : Stop},
       ¬ZeroCost c → initPrintRefusal? c = some e → runInitConfig ctx fuel s c ch = Except.error e
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.ExecutionStatement.runInitConfig_unfold` (GoLean.GoCore.InitDriverFacts) -/
 -- Stated through the original's matcher constants (`pp.match false`): a `match` in a
 -- statement mints a matcher per module, so the challenge names the kept theorem's own.
@@ -3484,6 +3838,7 @@ theorem GoLean.Contract.GoCore.ExecutionStatement.runInitConfig_unfold :
                        runInitConfig ctx fuel s' c' choices')
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.ExecutionStatement.runPkgInitM_ok_cases` (GoLean.GoCore.InitDriverFacts) -/
 theorem GoLean.Contract.GoCore.ExecutionStatement.runPkgInitM_ok_cases :
     ∀ {ctx : ProgramCtx} {fuel : Nat} {s s₁ : Store} {ch ch₁ : Choices},
@@ -3499,6 +3854,7 @@ theorem GoLean.Contract.GoCore.ExecutionStatement.runPkgInitM_ok_cases :
                       (Config.next Cont.stop) ch₁
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.ExecutionStatement.runPkgInitM_ok_iff` (GoLean.GoCore.InitDriverFacts) -/
 theorem GoLean.Contract.GoCore.ExecutionStatement.runPkgInitM_ok_iff :
     ∀ {ctx : ProgramCtx} {fuel : Nat} {s s₁ : Store} {ch ch₁ : Choices} {initF : Func},
@@ -3511,6 +3867,7 @@ theorem GoLean.Contract.GoCore.ExecutionStatement.runPkgInitM_ok_iff :
                 Except.ok (s₁, ch₁))
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.ExecutionStatement.runPkgInitM_ok_of_prefix_silent` (GoLean.GoCore.InitDriverFacts) -/
 theorem GoLean.Contract.GoCore.ExecutionStatement.runPkgInitM_ok_of_prefix_silent :
     ∀ {ctx : ProgramCtx} {fuel n : Nat} {s s₁ : Store} {ch ch₁ : Choices} {initF : Func}
@@ -3525,6 +3882,7 @@ theorem GoLean.Contract.GoCore.ExecutionStatement.runPkgInitM_ok_of_prefix_silen
                   runPkgInitM ctx fuel s ch = Except.ok (s₁, ch₁)
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.ExecutionStatement.runPkgInitM_ok_prefix` (GoLean.GoCore.InitDriverFacts) -/
 theorem GoLean.Contract.GoCore.ExecutionStatement.runPkgInitM_ok_prefix :
     ∀ {ctx : ProgramCtx} {fuel : Nat} {s s₁ : Store} {ch ch₁ : Choices} {initF : Func},
@@ -3537,6 +3895,7 @@ theorem GoLean.Contract.GoCore.ExecutionStatement.runPkgInitM_ok_prefix :
                   ch ls s₁ (Config.next Cont.stop) ch₁
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.ExecutionStatement.runPkgInitM_some` (GoLean.GoCore.InitDriverFacts) -/
 theorem GoLean.Contract.GoCore.ExecutionStatement.runPkgInitM_some :
     ∀ {ctx : ProgramCtx} {fuel : Nat} {s : Store} {ch : Choices} {initF : Func},
@@ -3549,6 +3908,7 @@ theorem GoLean.Contract.GoCore.ExecutionStatement.runPkgInitM_some :
                   (Config.exec initF.body [] (Cont.frame [] [] [] [] Cont.stop initF.id)) ch)
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.ExecutionStatement.stepFn_out_of_printOut?` (GoLean.GoCore.InitDriverFacts) -/
 theorem GoLean.Contract.GoCore.ExecutionStatement.stepFn_out_of_printOut? :
     ∀ {ctx : ProgramCtx} {s s' : Store} {c c' : Config} {ch ch' : Choices} {l : StepLabel}
@@ -3558,6 +3918,7 @@ theorem GoLean.Contract.GoCore.ExecutionStatement.stepFn_out_of_printOut? :
 
 /-! ## GoLean.GoCore.Multi -/
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Machine.execProgLoopOut_snd` (GoLean.GoCore.Multi) -/
 theorem GoLean.Contract.GoCore.Machine.execProgLoopOut_snd :
     ∀ {ctx : ProgramCtx} (fuel : Nat) (m : MultiConfig) (r : RaceState) (choices : Choices)
@@ -3567,6 +3928,7 @@ theorem GoLean.Contract.GoCore.Machine.execProgLoopOut_snd :
 
 /-! ## GoLean.GoCore.PoolProjection -/
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Machine.execProgLoopOut_single` (GoLean.GoCore.PoolProjection) -/
 theorem GoLean.Contract.GoCore.Machine.execProgLoopOut_single :
     ∀ {ctx : ProgramCtx} {fuel : Nat} {σ : Store} {c : Config} {ch : Choices} {rs : RaceState}
@@ -3578,6 +3940,7 @@ theorem GoLean.Contract.GoCore.Machine.execProgLoopOut_single :
             (seqOut ctx fuel σ c ch acc, r)
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Machine.execProgLoopOut_single_prefix` (GoLean.GoCore.PoolProjection) -/
 theorem GoLean.Contract.GoCore.Machine.execProgLoopOut_single_prefix :
     ∀ {ctx : ProgramCtx} {fuel n : Nat} {σ sf : Store} {c cf : Config} {ch chf : Choices}
@@ -3592,6 +3955,7 @@ theorem GoLean.Contract.GoCore.Machine.execProgLoopOut_single_prefix :
                   (outFold ls acc, r)
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Machine.seqOut_of_prefix` (GoLean.GoCore.PoolProjection) -/
 theorem GoLean.Contract.GoCore.Machine.seqOut_of_prefix :
     ∀ {ctx : ProgramCtx} {n : Nat} {σ sf : Store} {c cf : Config} {ch chf : Choices}
@@ -3605,6 +3969,7 @@ theorem GoLean.Contract.GoCore.Machine.seqOut_of_prefix :
 
 /-! ## GoLean.GoCore.PoolFacts -/
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Machine.execProgLoopOut_eq_execProgLoop` (GoLean.GoCore.PoolFacts) -/
 theorem GoLean.Contract.GoCore.Machine.execProgLoopOut_eq_execProgLoop :
     ∀ {ctx : ProgramCtx} (fuel : Nat) (m : MultiConfig) (r : RaceState) (ch : Choices) (acc : GoString),
@@ -3612,9 +3977,122 @@ theorem GoLean.Contract.GoCore.Machine.execProgLoopOut_eq_execProgLoop :
         (acc.append (execProgLoopOut ctx fuel m r ch GoString.empty).fst, execProgLoop ctx fuel m r ch)
     := sorry
 
+set_option warn.sorry false in
 /-- `GoLean.GoCore.Machine.execProgLoopOut_acc` (GoLean.GoCore.PoolFacts) -/
 theorem GoLean.Contract.GoCore.Machine.execProgLoopOut_acc :
     ∀ {ctx : ProgramCtx} (fuel : Nat) (m : MultiConfig) (r : RaceState) (ch : Choices) (acc : GoString),
       (execProgLoopOut ctx fuel m r ch acc).fst =
         acc.append (execProgLoopOut ctx fuel m r ch GoString.empty).fst
+    := sorry
+
+/-! ## GoLean.GoCore.TableMonotonicity -/
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.ProgramCtx.SubTables.stepFn_mono` (GoLean.GoCore.TableMonotonicity) -/
+theorem GoLean.Contract.GoCore.ProgramCtx.SubTables.stepFn_mono :
+    ∀ {a b : ProgramCtx},
+      a.SubTables b →
+        ∀ {s : Store} {c : Config} {ch : Choices} {r : Config × Store × Choices × StepLabel},
+          stepFn a s c ch = Except.ok r → stepFn b s c ch = Except.ok r
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.ProgramCtx.SubTables.prefix_mono` (GoLean.GoCore.TableMonotonicity) -/
+theorem GoLean.Contract.GoCore.ProgramCtx.SubTables.prefix_mono :
+    ∀ {a b : ProgramCtx},
+      a.SubTables b →
+        ∀ {n : Nat} {s sf : Store} {c cf : Config} {ch chf : Choices} {ls : List StepLabel},
+          Prefix a n s c ch ls sf cf chf → Prefix b n s c ch ls sf cf chf
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.ProgramCtx.SubTables.finish_aborted_mono` (GoLean.GoCore.TableMonotonicity) -/
+theorem GoLean.Contract.GoCore.ProgramCtx.SubTables.finish_aborted_mono :
+    ∀ {a b : ProgramCtx},
+      a.SubTables b →
+        ∀ {s : Store} {c : Config} {ch ch'' : Choices} {rec : List PickRecord} {t : String},
+          Finish a s c ch rec (FinishOutcome.aborted t s ch'') 1 →
+            Finish b s c ch rec (FinishOutcome.aborted t s ch'') 1
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.ProgramCtx.SubTables.execStmtLoop_ok_mono` (GoLean.GoCore.TableMonotonicity) -/
+theorem GoLean.Contract.GoCore.ProgramCtx.SubTables.execStmtLoop_ok_mono :
+    ∀ {a b : ProgramCtx},
+      a.SubTables b →
+        ∀ {fuel : Nat} {s sf : Store} {c : Config} {ch chf : Choices},
+          execStmtLoop a fuel s c ch = Except.ok (sf, chf) →
+            execStmtLoop b fuel s c ch = Except.ok (sf, chf)
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.ProgramCtx.SubTables.execStmtLoop_panic_mono` (GoLean.GoCore.TableMonotonicity) -/
+theorem GoLean.Contract.GoCore.ProgramCtx.SubTables.execStmtLoop_panic_mono :
+    ∀ {a b : ProgramCtx},
+      a.SubTables b →
+        ∀ {fuel : Nat} {s : Store} {c : Config} {ch : Choices} {t : String},
+          execStmtLoop a fuel s c ch = Except.error (Stop.terminal (Terminal.panic t)) →
+            execStmtLoop b fuel s c ch = Except.error (Stop.terminal (Terminal.panic t))
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.ProgramCtx.SubTables.findFunctionIn?_mono` (GoLean.GoCore.TableMonotonicity) -/
+theorem GoLean.Contract.GoCore.ProgramCtx.SubTables.findFunctionIn?_mono :
+    ∀ {a b : ProgramCtx},
+      a.SubTables b →
+        ∀ {fid : FuncId} {f : Func},
+          findFunctionIn? a.functions fid = some f → findFunctionIn? b.functions fid = some f
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.ProgramCtx.SubTables.methodInfoByFuncId?_mono` (GoLean.GoCore.TableMonotonicity) -/
+theorem GoLean.Contract.GoCore.ProgramCtx.SubTables.methodInfoByFuncId?_mono :
+    ∀ {a b : ProgramCtx},
+      a.SubTables b →
+        ∀ {fid : FuncId} {m : MethodInfo},
+          methodInfoByFuncId? a fid = some m → methodInfoByFuncId? b fid = some m
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.ProgramCtx.SubTables.methodDecl?_mono` (GoLean.GoCore.TableMonotonicity) -/
+theorem GoLean.Contract.GoCore.ProgramCtx.SubTables.methodDecl?_mono :
+    ∀ {a b : ProgramCtx},
+      a.SubTables b →
+        ∀ {t : Ty} {M : Declaration.MemberId} {m : MethodInfo},
+          methodDecl? a t M = some m → methodDecl? b t M = some m
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.ProgramCtx.SubTables.promotion?_mono` (GoLean.GoCore.TableMonotonicity) -/
+theorem GoLean.Contract.GoCore.ProgramCtx.SubTables.promotion?_mono :
+    ∀ {a b : ProgramCtx},
+      a.SubTables b →
+        ∀ {c : TypeId} {M : Declaration.MemberId} {p : Promotion},
+          promotion? a c M = some p → promotion? b c M = some p
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.ProgramCtx.SubTables.resolveMethod?_mono` (GoLean.GoCore.TableMonotonicity) -/
+theorem GoLean.Contract.GoCore.ProgramCtx.SubTables.resolveMethod?_mono :
+    ∀ {a b : ProgramCtx},
+      a.SubTables b →
+        ∀ {t : Ty} {M : Declaration.MemberId} {r : MethodResolution},
+          resolveMethod? a t M = some r → resolveMethod? b t M = some r
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.ProgramCtx.SubTables.callee?_mono` (GoLean.GoCore.TableMonotonicity) -/
+theorem GoLean.Contract.GoCore.ProgramCtx.SubTables.callee?_mono :
+    ∀ {a b : ProgramCtx},
+      a.SubTables b → ∀ {fid : FuncId} {c : Callee}, callee? a fid = some c → callee? b fid = some c
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.ProgramCtx.SubTables.enterFramePickV_mono` (GoLean.GoCore.TableMonotonicity) -/
+theorem GoLean.Contract.GoCore.ProgramCtx.SubTables.enterFramePickV_mono :
+    ∀ {a b : ProgramCtx},
+      a.SubTables b →
+        ∀ {s : Store} {fid : FuncId} {args : List GoValue} {ch : Choices}
+          {x : Result (Commit (Entry × Store × AccessTrace)) × Choices × List PickRecord},
+          enterFramePickV a s fid args ch = Except.ok x → enterFramePickV b s fid args ch = Except.ok x
     := sorry

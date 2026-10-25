@@ -21,9 +21,13 @@ IS the theorem's type up to alpha-equivalence — a statement drift fails here a
 `BridgeSet.lean`) — and the NO-UNFOLD CHECK of every fact's PROOF TERM and of every declaration of this file
 the proof depends on, transitively, up to the PUBLISHED API (`apiModules`; the client's imports are WHITELISTED — pre-landing round, audit F2; window review F2; the re-verification's R1: no `stepFn.*` constant, no
 reflexivity on a `stepFn`-headed term, the term re-type-checked with `stepFn` irreducible on every obligation
-that can reach `stepFn`, the classical trio at most). `main` prints the PASS line the gate greps for; the
-`#eval` fails the file before `main` can run when a fact — or a helper it uses — unfolds `stepFn`, an equation
-is unenrolled or a pin has drifted.
+that can reach `stepFn`, the classical trio at most). The `#eval` at the end is the whole gate's check and it
+runs at BUILD time: it fails the module — so the build, `lake check` and the gate — when a fact (or a helper it
+uses) unfolds `stepFn`, an equation is unenrolled or a pin has drifted, and on success it logs the enrollment
+line and the PASS line that `scripts/check-equations` reads from the build's output (printed fresh when the
+module is rebuilt, replayed by Lake from the module's saved log when it is cached). No top-level `main` since
+2026-10-25 (lane `gate/contract-pins-1025`, release-readiness row 42's follow-up): the library `EquationTests`
+is a DEFAULT target, so `lake check` exports and kernel-replays the pins and facts below.
 -/
 
 namespace Tests.EquationClient
@@ -2465,12 +2469,10 @@ def checkEnrollment : CoreM Unit := do
     | some _ => throwError "Equation client: {pin} exists but is not a theorem"
     | none => throwError "Equation client: UNENROLLED equation {n} — no pin {pin} in Tests/EquationClient.lean"
   logInfo s!"Equation client: enrollment complete — {pinned} equation theorems pinned, {facts.length} facts and {nHelpers} traversed helpers up to the published API, none unfolds stepFn"
+  -- The PASS line `scripts/check-equations` reads from the build output (reached only if every
+  -- declaration above — the facts, the pins — elaborated and every check above passed).
+  logInfo s!"Equation client: PASS — {factCount} facts by the equation set and the published API; {pinned} equation theorems pinned"
 
 #eval checkEnrollment
 
 end Tests.EquationClient
-
-/-- The PASS line `scripts/check-equations` greps for (reached only if every declaration above —
-the facts, the pins and the enrollment `#eval` — elaborated). -/
-def main (_args : List String) : IO Unit := do
-  IO.println s!"Equation client: PASS — {Tests.EquationClient.factCount} facts by the equation set and the published API"

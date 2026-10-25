@@ -6,7 +6,8 @@ checkout root through scripts/contract-challenge-draft (it adds the header and r
     lake env lean scripts/contract-draft.lean > draft.lean
 
 For every alias in comparator.json's `theorem_names` (`GoLean.Contract.<rest>` ↦ the kept theorem
-`GoLean.<rest>`) this prints `theorem GoLean.Contract.<rest> : <statement> := sorry`, the statement
+`GoLean.<rest>`) this prints `set_option warn.sorry false in theorem GoLean.Contract.<rest> : <statement> := sorry` (the option
+ahead of each entry's docstring, the challenge's per-declaration form), the statement
 being the kept theorem's type as the kernel holds it (a `*_stmt` constant unfolded, as `stmt_of%`
 does), printed by the delaborator and then CHECKED: the printed command is elaborated here, in
 the challenge's own scope (the same `open`s, the same declaration shape), and the declared type
@@ -34,9 +35,12 @@ import GoLean.GoCore.ExecutionStatement
 import GoLean.GoCore.PoolFacts
 import GoLean.GoCore.PoolProjection
 import GoLean.GoCore.InitDriverFacts
+import GoLean.GoCore.TableMonotonicity
 import Lean
 
-set_option warn.sorry false
+-- No file-wide `warn.sorry` here: each drafted statement carries its own `set_option warn.sorry
+-- false in`, the challenge's per-declaration form (the charter's one allowed warning suppression,
+-- scoped to the declaration whose hole it silences; lane gate/contract-pins-1025, 2026-10-25).
 
 open GoLean GoLean.GoCore GoLean.GoCore.Machine GoLean.GoCore.ExecutionStatement
 
@@ -117,7 +121,9 @@ open ContractDraft in
       -- Parenthesised when the bare form does not parse: a statement ending in a `do` block
       -- would read the theorem's `:=` as a reassignment inside the block.
       let body := if parens then s!"({(indent printed "     ").drop 5})" else printed
-      let text := s!"theorem {alias} :\n{indent body "    "}\n    := sorry"
+      let thm := s!"theorem {alias} :\n{indent body "    "}\n    := sorry"
+      -- Elaborated exactly as the challenge states it: under the per-declaration `warn.sorry` option.
+      let text := s!"set_option warn.sorry false in\n{thm}"
       match Lean.Parser.runParserCategory env0 `command text with
       | .error e => IO.eprintln s!"contract-draft: {orig}: the printed statement does not parse{if parens then " (parenthesised)" else ""}{if dotOk then " (dot-form .ok)" else ""} ({e})"
       | .ok stx =>
@@ -139,7 +145,7 @@ open ContractDraft in
           if dotOk then
             viaDotOk := viaDotOk.push orig
             note := note ++ "-- `.ok` in the source's dot-form: the printed `Except.ok (…)` elaborates a tuple's `AccessTrace`\n-- component as `List MemEvent` (definitionally, not syntactically, the kept statement).\n"
-          IO.println s!"\n/-- `{orig}` ({m}) -/\n{note}{text}"
+          IO.println s!"\nset_option warn.sorry false in\n/-- `{orig}` ({m}) -/\n{note}{thm}"
           emitted := true
         else
           IO.eprintln s!"contract-draft: {orig}: the printed statement elaborates to a DIFFERENT expression{if matchOff then " (pp.match off)" else ""}{if parens then " (parenthesised)" else ""}{if dotOk then " (dot-form .ok)" else ""}"
@@ -147,7 +153,7 @@ open ContractDraft in
       failures := failures.push orig
       let opts := ppOptions (← Lean.getOptions) false
       let fmt ← Lean.Elab.Command.liftTermElabM do Lean.withOptions (fun _ => opts) do Lean.Meta.ppExpr ty
-      IO.println s!"\n/-- `{orig}` ({m}) -/\n-- CONTRACT DRAFT: the printed form below does NOT re-elaborate to the kept theorem's statement;\n-- spell it by hand (see the hand-spelled entries in Contract/Challenge.lean).\ntheorem {alias} :\n{indent (fmt.pretty 100) "    "}\n    := sorry"
+      IO.println s!"\nset_option warn.sorry false in\n/-- `{orig}` ({m}) -/\n-- CONTRACT DRAFT: the printed form below does NOT re-elaborate to the kept theorem's statement;\n-- spell it by hand (see the hand-spelled entries in Contract/Challenge.lean).\ntheorem {alias} :\n{indent (fmt.pretty 100) "    "}\n    := sorry"
   IO.eprintln s!"contract-draft: {aliases.size} statements; {viaMatcher.size} through matcher constants {viaMatcher}; {viaDotOk.size} in the dot-form .ok {viaDotOk}; {failures.size} not round-tripping {failures}"
   unless failures.isEmpty do
     throwError "contract-draft: {failures.size} statement(s) need hand spelling: {failures}"

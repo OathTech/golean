@@ -3,30 +3,42 @@ import GoLean.GoCore.Ops
 import GoLean.NativeToIR
 import GoLean.GoCore.SyntaxEqb
 
+/-! Package-correct method identity (I1): the twelve theorems below and the two in-memory controls
+(`satisfactionControls`, `receiverControls`) are BUILD-TIME checks — each control is an `#eval` of an
+`IO` action that throws on the first failed cell, so a failure fails this module's elaboration (the
+build, `lake check`, the gate) and a pass logs the control's PASS line into the build output, which
+`scripts/check-method-identity` reads (fresh or replayed from Lake's saved log). No top-level `main`
+since 2026-10-25 (lane `gate/contract-pins-1025`, release-readiness row 42's follow-up): the library
+`MethodIdentityTests` is a DEFAULT target, so `lake check` exports and kernel-replays the theorems.
+The one check that cannot run at build time — the FRESH executable member wire produced by the
+frontend's own Go tests, read by the strict decoder — is `Tests/MethodIdentityFixture.lean` (library
+`MethodIdentityFixtureTests`, built by name, run by `lean --run` with the fixture path), which imports
+this module for the wire-building helpers `member`/`requirement`/`method`/`program`/`reject`/`check`. -/
+
 open Lean GoLean GoLean.GoCore
 
 namespace GoLean.MethodIdentityTests
 /-- B6 (2026-09-30): a spelling interned injectively into a `VarId` (test-local). -/
 def vid (s : String) : GoLean.GoCore.VarId := s.toUTF8.foldl (fun n b => n * 256 + b.toNat) 0
 
-private def check (b : Bool) (message : String) : IO Unit :=
+def check (b : Bool) (message : String) : IO Unit :=
   unless b do throw (IO.userError message)
 
-private def member (name pkg : String) : Json :=
+def member (name pkg : String) : Json :=
   Json.mkObj [("name", .str name), ("package", .str pkg)]
 
-private def requirement (id : Json) : Json :=
+def requirement (id : Json) : Json :=
   Json.mkObj [("id", id), ("params", .arr #[]), ("results", .arr #[]),
     ("variadic", .bool false)]
 
-private def method (id : Json) : Json :=
+def method (id : Json) : Json :=
   Json.mkObj [("id", id), ("recvType", .str "main.T"),
     ("recv", Json.mkObj [("id", .str "$recv"),
       ("type", Json.mkObj [("kind", .str "named"), ("name", .str "main.T")])]),
     ("params", .arr #[]), ("results", .arr #[]), ("variadic", .bool false), ("locals", .arr #[]),
     ("unsupported", .str "identity-only test stub")]
 
-private def program (requirements methods : Array Json) : Json :=
+def program (requirements methods : Array Json) : Json :=
   Json.mkObj [("schema", .str "golean-native-v3"), ("funcs", .arr #[]),
     ("buildContext", Json.mkObj [("goos", .str "linux"), ("goarch", .str "amd64"),
       ("compiler", .str "gc"), ("cgoEnabled", .bool true), ("buildTags", .arr #[])]),
@@ -37,7 +49,7 @@ private def program (requirements methods : Array Json) : Json :=
       Json.mkObj [("name", .str "main.I"), ("display", .str "main.I"), ("pkg", .str "main"),
         ("def", Json.mkObj [("kind", .str "interface"), ("methods", .arr requirements)])]])]
 
-private def reject (wire : Json) (path reason : String) : IO Unit := do
+def reject (wire : Json) (path reason : String) : IO Unit := do
   match NativeToIR.decodeProgram wire with
   | .ok _ => throw (IO.userError s!"accepted malformed identity: {wire.compress}")
   | .error message =>
@@ -175,6 +187,10 @@ private def satisfactionControls : IO Unit := do
           "exported-only refusal does not describe the record's coverage limit"
   IO.println "Method satisfaction: PASS; 1620 identity/signature/receiver cells; full/exported/absent coverage and bare display"
 
+-- Build-time: a failed cell throws, which fails this module's elaboration; the PASS line lands in
+-- the build output for scripts/check-method-identity.
+#eval satisfactionControls
+
 theorem private_targets_are_distinct :
     methodFuncId "main.Mix" ⟨"m", "red/inner"⟩ ≠
       methodFuncId "main.Mix" ⟨"m", "blue/inner"⟩ := by decide +kernel
@@ -209,60 +225,6 @@ private def receiverControls : IO Unit := do
     "distinct promoted function ids collided"
   IO.println "Method targets: PASS; UTF-8 key vector, receiver agreement, duplicate target control"
 
-def main (args : List String) : IO Unit := do
-  satisfactionControls
-  receiverControls
-  let [fixture] := args | throw (IO.userError "expected fresh executable member fixture")
-  let p ← IO.ofExcept (NativeToIR.decodeProgram (← IO.ofExcept
-    (StrictJson.parseBytes (← IO.FS.readBinFile fixture))))
-  for recv in ["main.T", "main.I"] do
-    for (name, pkg) in [("m", "main"), ("M", ""), ("é", "main"), ("É", ""),
-        ("ǅ", "main"), ("𐐀", "")] do
-      check (p.methods.any fun m => m.funcId == methodFuncId recv ⟨name, pkg⟩ &&
-        m.id == Declaration.MemberId.mk name pkg) s!"lost checked identity {recv}.{pkg}:{name}"
-  -- main.S's entries are PROMOTED (G-P S2): promotion records on the same
-  -- checked identity, each resolving to main.T's declared method.
-  for (name, pkg) in [("m", "main"), ("M", ""), ("é", "main"), ("É", ""),
-      ("ǅ", "main"), ("𐐀", "")] do
-    check (p.promotions.any fun r => r.type == ⟨"main.S"⟩ &&
-      r.member == Declaration.MemberId.mk name pkg &&
-      r.target == .method (methodFuncId "main.T" ⟨name, pkg⟩))
-      s!"lost checked promoted identity main.S.{pkg}:{name}"
-  for (name, pkg) in [("M", ""), ("É", ""), ("Σ", ""), ("𐐀", ""),
-      ("m", "red/inner"), ("é", "blue/inner"), ("ǅ", "main")] do
-    let id := member name pkg
-    check (NativeToIR.decodeProgram (program #[requirement id] #[method id])).isOk
-      s!"valid executable identity refused: {id.compress}"
-  for (id, reason) in [
-      (member "m" "", "unexported member has no package identity"),
-      (member "ǅ" "", "unexported member has no package identity"),
-      (member "M" "p", "exported member carries a package identity"),
-      (member "𐐀" "p", "exported member carries a package identity"),
-      (member "" "p", "empty member name"),
-      (Json.mkObj [("name", .str "m")], "package"),
-      (Json.mkObj [("name", .str "m"), ("package", .num 4)], "String expected"),
-      (Json.mkObj [("name", .num 4), ("package", .str "p")], "String expected"),
-      (Json.mkObj [("name", .str "m"), ("package", .str "p"), ("pkg", .str "q")], "pkg")] do
-    reject (program #[requirement id] #[]) "program.types[1].def.methods[0].id" reason
-    reject (program #[] #[method id]) "program.methods[0].id" reason
-  let id := member "m" "p"
-  let oldReq := Json.mkObj [("name", .str "m"), ("params", .arr #[]),
-    ("results", .arr #[]), ("variadic", .bool false)]
-  reject (program #[oldReq] #[]) "program.types[1].def.methods[0]" "name"
-  let withoutId := Json.mkObj [("params", .arr #[]), ("results", .arr #[]), ("variadic", .bool false)]
-  reject (program #[withoutId] #[]) "program.types[1].def.methods[0]" "missing field 'id'"
-  let methodObj ← IO.ofExcept ((method id).getObj?)
-  let legacyMethod := Json.mkObj ((methodObj.toList.filter fun x => x.1 != "id") ++ [("name", .str "m")])
-  reject (program #[] #[legacyMethod]) "program.methods[0]" "name"
-  let missingMethod := Json.mkObj (methodObj.toList.filter fun x => x.1 != "id")
-  reject (program #[] #[missingMethod]) "program.methods[0]" "missing field 'id'"
-  let conflicting := Json.mkObj (methodObj.toList ++ [("name", .str "other")])
-  reject (program #[] #[conflicting]) "program.methods[0]" "name"
-  reject (program #[requirement id, requirement id] #[]) "program.types[1]" "duplicate interface member"
-  check (NativeToIR.decodeProgram (program #[requirement id, requirement (member "m" "q")] #[])).isOk
-    "distinct package requirements collapsed"
-  IO.println "Method identity: PASS; fresh checked-object fixture, exact member schema, named malformed controls"
+#eval receiverControls
 
 end GoLean.MethodIdentityTests
-
-def main := GoLean.MethodIdentityTests.main

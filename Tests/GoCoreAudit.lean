@@ -493,16 +493,17 @@ def exports : List Name := [
     ``GoLean.GoCore.ProgramCtx.SubTables.methodDecl?_mono, ``GoLean.GoCore.ProgramCtx.SubTables.promotion?_mono,
     ``GoLean.GoCore.ProgramCtx.SubTables.resolveMethod?_mono, ``GoLean.GoCore.ProgramCtx.SubTables.callee?_mono,
     ``GoLean.GoCore.ProgramCtx.SubTables.enterFramePickV_mono,
-    -- their pins (`Tests/GoCoreContract.lean` §D)
-    ``GoLean.GoCore.ContractTests.Provisional.stepFn_mono, ``GoLean.GoCore.ContractTests.Provisional.prefix_mono,
-    ``GoLean.GoCore.ContractTests.Provisional.finish_aborted_mono,
-    ``GoLean.GoCore.ContractTests.Provisional.execStmtLoop_ok_mono,
-    ``GoLean.GoCore.ContractTests.Provisional.execStmtLoop_panic_mono,
-    ``GoLean.GoCore.ContractTests.Provisional.findFunctionIn?_mono,
-    ``GoLean.GoCore.ContractTests.Provisional.methodInfoByFuncId?_mono,
-    ``GoLean.GoCore.ContractTests.Provisional.methodDecl?_mono, ``GoLean.GoCore.ContractTests.Provisional.promotion?_mono,
-    ``GoLean.GoCore.ContractTests.Provisional.resolveMethod?_mono, ``GoLean.GoCore.ContractTests.Provisional.callee?_mono,
-    ``GoLean.GoCore.ContractTests.Provisional.enterFramePickV_mono,
+    -- their pins (`Tests/GoCoreContract.lean` §D; in the comparator contract as family `g16` since
+    -- 2026-10-25, lane `gate/contract-pins-1025`)
+    ``GoLean.GoCore.ContractTests.Pin.stepFn_mono, ``GoLean.GoCore.ContractTests.Pin.prefix_mono,
+    ``GoLean.GoCore.ContractTests.Pin.finish_aborted_mono,
+    ``GoLean.GoCore.ContractTests.Pin.execStmtLoop_ok_mono,
+    ``GoLean.GoCore.ContractTests.Pin.execStmtLoop_panic_mono,
+    ``GoLean.GoCore.ContractTests.Pin.findFunctionIn?_mono,
+    ``GoLean.GoCore.ContractTests.Pin.methodInfoByFuncId?_mono,
+    ``GoLean.GoCore.ContractTests.Pin.methodDecl?_mono, ``GoLean.GoCore.ContractTests.Pin.promotion?_mono,
+    ``GoLean.GoCore.ContractTests.Pin.resolveMethod?_mono, ``GoLean.GoCore.ContractTests.Pin.callee?_mono,
+    ``GoLean.GoCore.ContractTests.Pin.enterFramePickV_mono,
     -- the contract regressions (`Tests/GoCoreContract.lean` §A/§B/§C)
     ``GoLean.GoCore.ContractTests.address_bound_admits_ill_typed,
     ``GoLean.GoCore.ContractTests.print_before_panic,

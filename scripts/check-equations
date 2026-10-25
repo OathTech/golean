@@ -3,9 +3,16 @@
 # checks — BridgeSet's statements left the build with the relational layer 2026-10-20, this
 # library stays on main for the raft-proofs customer): (a) the equation file GoLean/GoCore/Equations.lean —
 # one PROVED lemma per `stepFn` arm, the `stepFn_eqns` rewrite set — builds with the toy client
-# library; (b) the client Tests/EquationClient.lean runs and reports PASS — its facts are proved
-# by the equation set alone, and its in-file `#eval` checks EXHAUSTIVE enrollment (every theorem
-# of namespace GoLean.GoCore.Equations has a `Pin.<name>` whose type IS the theorem's); (c) the
+# library; (b) the client Tests/EquationClient.lean BUILDS and its build-time `#eval` reports PASS
+# — its facts are proved by the equation set alone, and the `#eval` checks EXHAUSTIVE enrollment
+# (every theorem of namespace GoLean.GoCore.Equations has a `Pin.<name>` whose type IS the
+# theorem's). Since 2026-10-25 (lane gate/contract-pins-1025, release-readiness row 42's
+# follow-up) the client has NO `main`: the check is the module's elaboration, so the library
+# `EquationTests` is a default target and `lake check` exports and kernel-replays its pins and
+# facts; this script reads the `#eval`'s two lines from the BUILD output — printed fresh when the
+# module is rebuilt, REPLAYED by Lake from the module's saved log when it is cached (`Replayed
+# Tests.EquationClient`; measured 2026-10-25 at 4.35) — and FAILS when either line is missing,
+# whatever the build's exit; a module that does not build is a FAIL by the build's exit; (c) the
 # NO-UNFOLD guard — a cheap regex PRE-FILTER (the client never spells `unfold stepFn`, `simp [... stepFn
 # ...]`, `cbv` or `decide`); the LOAD-BEARING check is the client's own Lean-level proof-term check
 # (packet D audit F2: no `stepFn.*` constant, no reflexivity on `stepFn`, the term re-type-checked with
@@ -28,14 +35,18 @@ CLIENT=Tests/EquationClient.lean
 # case-sensitive; the load-bearing check is the client's own Lean-level proof-term check ((b) above).
 GUARD='unfold stepFn|simp \[[^]]*stepFn|\b(cbv|decide)\b'
 
-# (a) the equation file and the client library build
-cap lake build GoLean EquationTests
-
-# (b) + (d) the client runs — its `#eval` enrollment check elaborates first — and reports PASS
-cap lake env lean --run "$CLIENT" | tee "$gate_scratch/client.log"
-grep -q '^Equation client: PASS' "$gate_scratch/client.log"
-grep -q 'enrollment complete' "$gate_scratch/client.log" || {
+# (a) + (b) + (d) the equation file and the client library build; the client's build-time `#eval`
+# (the facts' no-unfold check, the exhaustive enrollment) reports in the build output — fresh or
+# replayed from the module's saved log — and BOTH its lines must be there. `set -o pipefail`
+# makes a failed build the exit of the pipeline; the two greps then fail closed on their own.
+cap lake build GoLean EquationTests 2>&1 | tee "$gate_scratch/client.log"
+grep -q 'Equation client: PASS — ' "$gate_scratch/client.log" || {
+  echo "check-equations: FAIL — the build output carries no 'Equation client: PASS' line (the client's build-time check did not pass, or its log was neither printed nor replayed)" >&2; exit 1; }
+grep -q 'Equation client: enrollment complete — ' "$gate_scratch/client.log" || {
   echo "check-equations: FAIL — the client's enrollment check did not report completion" >&2; exit 1; }
+! grep -qE '^error: ' "$gate_scratch/client.log" || {
+  echo "check-equations: FAIL — the build output carries an error line" >&2; exit 1; }
+echo "ok [build-time checks] $(grep -o 'Equation client: PASS.*' "$gate_scratch/client.log" | head -1)"
 
 # (c) the NO-UNFOLD guard over the tracked client
 if git --no-pager grep -n -E "$GUARD" -- "$CLIENT"; then
@@ -56,4 +67,4 @@ while IFS= read -r impline; do
 done < <(grep -E '^import ' "$CLIENT")
 echo "ok [imports] every import of $CLIENT is a toolchain root or a published API module"
 
-printf '%s\n' "Equation gate: PASS (client PASS, exhaustive enrollment, the Lean-level no-unfold check over the closure up to the published API, the import whitelist, the regex pre-filter)"
+printf '%s\n' "Equation gate: PASS (client PASS at build time, exhaustive enrollment, the Lean-level no-unfold check over the closure up to the published API, the import whitelist, the regex pre-filter)"

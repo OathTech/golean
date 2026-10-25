@@ -13,14 +13,19 @@ version = "0.1.0"
 # the executables `golean` (Main) and `gocore-eval-tests` (Tests.GoCoreEval),
 # and the libraries whose modules define `main` for `lean --run` — EvalTests
 # (Tests.GoCoreEval), DeclarationTests (Tests.StrictJsonParse),
-# MethodIdentityTests (Tests.MethodIdentity), UnseqSchedulerTests
-# (Tests.UnseqScheduler), UnseqWireTests (Tests.UnseqWire), EquationTests
-# (Tests.EquationClient: its 310 pin theorems sit under that `main`, so they
-# are outside `lake check`; scripts/check-equations builds and runs them).
+# UnseqSchedulerTests (Tests.UnseqScheduler), UnseqWireTests (Tests.UnseqWire),
+# MethodIdentityFixtureTests (Tests.MethodIdentityFixture) — none carrying a
+# theorem. Since 2026-10-25 (lane gate/contract-pins-1025, row 42's follow-up)
+# the two theorem-bearing test libraries are DEFAULT: EquationTests
+# (Tests.EquationClient: the equation pins and facts, its `main` turned into
+# the build-time `#eval` that scripts/check-equations reads from the build
+# output) and MethodIdentityTests (Tests.MethodIdentity: twelve theorems and
+# two build-time `#eval` controls; the fresh-wire fixture half that needs a Go
+# subprocess and a path argument is the by-name MethodIdentityFixtureTests).
 # scripts/ci checks this split both ways from the built .ilean files: a
 # main-free library that is not default FAILS, a default executable or
 # main-bearing library FAILS.
-defaultTargets = ["GoLean", "TestsData", "AdmissionTests", "GoCoreAuditTests"]
+defaultTargets = ["GoLean", "TestsData", "AdmissionTests", "GoCoreAuditTests", "MethodIdentityTests", "EquationTests"]
 
 [[lean_lib]]
 name = "GoLean"
@@ -54,9 +59,17 @@ name = "DeclarationTests"
 globs = ["Tests.DeclarationWire", "Tests.StrictJsonParse", "Tests.DeclarationUnicode"]
 
 [[lean_lib]]
-# Shared I1/executable member identity and decoder.
+# Shared I1/executable member identity and decoder: twelve theorems and two build-time `#eval`
+# controls (a default target, under `lake check`, since 2026-10-25).
 name = "MethodIdentityTests"
 globs = ["Tests.MethodIdentity"]
+
+[[lean_lib]]
+# The method-identity residue that cannot run at build time: the FRESH executable member wire the
+# frontend's Go tests write, read by the strict decoder under `lean --run` with the fixture's path
+# (scripts/check-method-identity). `main`-bearing, built by name, no theorem.
+name = "MethodIdentityFixtureTests"
+globs = ["Tests.MethodIdentityFixture"]
 
 [[lean_lib]]
 # The `unseq` scheduler on hand-built graphs (evaluation-order model v2.1
@@ -96,7 +109,8 @@ globs = ["Contract.Challenge"]
 [[lean_lib]]
 # The toy semantic-equation CLIENT (window packet D, 2026-10-03; charter row 7, decision 8): GoCore
 # only, symbolic state and continuations, proves its facts by the `stepFn_eqns` rewrite set and
-# pins every equation theorem (exhaustive enrollment); run by scripts/check-equations. No runtime
-# module imports it.
+# pins every equation theorem (exhaustive enrollment) in a build-time `#eval` whose two lines
+# scripts/check-equations reads from the build output (no `main` since 2026-10-25: a default target,
+# under `lake check`). No runtime module imports it.
 name = "EquationTests"
 globs = ["Tests.EquationClient"]

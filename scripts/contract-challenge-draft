@@ -22,8 +22,9 @@ mkdir -p "$TMPDIR"
 out="$(mktemp "$TMPDIR/contract-draft.XXXXXX")"
 trap 'rm -f "$out"' EXIT
 cap lake env lean scripts/contract-draft.lean > "$out" 2>&1; rc=$?
-# The statements, after the challenge's own preamble so the draft is a loadable module.
-sed -n '/^set_option warn.sorry false/,/^open /p' Contract/Challenge.lean
+# The statements, after the challenge's own preamble (its `autoImplicit` option and `open` line; the
+# `warn.sorry` option is per declaration, printed ahead of each entry) so the draft is a loadable module.
+sed -n '/^set_option autoImplicit false/,/^open /p' Contract/Challenge.lean
 grep -vE '^contract-draft:|^scripts/contract-draft\.lean:' "$out"
 grep -E '^contract-draft:|^scripts/contract-draft\.lean:' "$out" >&2
 exit "$rc"

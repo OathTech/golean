@@ -242,9 +242,10 @@ are gone since the raise stopped deciding the rendering mark, below) and `stepFn
 `prefix_mono`, `finish_aborted_mono`, `execStmtLoop_ok_mono`, `execStmtLoop_panic_mono`: a
 successful step, a labelled run, an abort's finish and the sequential driver's completion or
 panic under a slice of the tables are the same under the whole — pinned in
-`Tests/GoCoreContract.lean` §E (Provisional; the coordinator moves them to §D and the comparator
-contract when the relation is ruled final) with the lookups and the frame-entry funnel it rests
-on, required by the core audit. Refusals are not claimed (a slice refuses where the whole
+`Tests/GoCoreContract.lean` §D and frozen in the comparator contract (family `g16`, twelve
+statements, since 2026-10-25 — lane `gate/contract-pins-1025`, on the [USER] ruling that the per-key
+relation of train 17 is final; they sat in a §E Provisional outside the contract while the relation
+was redesigned) with the lookups and the frame-entry funnel it rests on, required by the core audit. Refusals are not claimed (a slice refuses where the whole
 dispatches; a slice without the carrier's record refuses where the whole decides from it).
 
 The change that made the per-key relation provable ([USER]-ruled 2026-10-23, backlog row 48,
@@ -269,12 +270,13 @@ where it was fail-open (`docs/2026-10-03_panic-preprint-audit.md` F3). For the s
 the decision step's premise for a `string` or any non-carrier payload.
 
 Since 2026-10-23 (release-readiness row 43, [USER]-ruled) that kept surface is a COMPARATOR
-CONTRACT: `Contract/Challenge.lean` restates all 353 of its theorems — every theorem of
+CONTRACT: `Contract/Challenge.lean` restates all 365 of its theorems — every theorem of
 `Equations.lean` (300; 234 of them `@[stepFn_eqns]` simp-set members — the `signalStep_*` rows,
 `runProgramSetup_noInit`, the `allocDecls_*`/`bindParams_*`/`setup_*` facts and the rest are plain
 theorems of the module), the 27 public theorems of `InitDriverFacts.lean` (G11), the five
-`Prefix`/`Finish` laws above, the six output-fold statements, `enterFrame_declared` and the fourteen
-`Choices.consumeAt*` laws (the list, read from the built environment: `scripts/contract-names.lean`)
+`Prefix`/`Finish` laws above, the six output-fold statements, `enterFrame_declared`, the fourteen
+`Choices.consumeAt*` laws and, since 2026-10-25, the twelve G16 table-monotonicity statements above
+(the list, read from the built environment: `scripts/contract-names.lean`)
 — as frozen text with `sorry` holes, under alias names `GoLean.Contract.<rest>`; the generated
 `GoLean/Contract/Solution.lean` presents GoLean's own theorems under the same names with their own
 types; and `lake comparator` (`comparator.json` at the root; the `--diff`-tier speedbump

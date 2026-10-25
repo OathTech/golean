@@ -202,11 +202,13 @@ Everything else is untrusted tooling.
   (`scripts/check-lake-check`, about four minutes: the toolchain's build +
   export + kernel replay + non-standard-axiom refusal over the default
   targets, which are the main-free libraries `GoLean`, `TestsData`,
-  `AdmissionTests`, `GoCoreAuditTests` — the executables and the
-  `main`-bearing test libraries are built by name, [USER] 2026-10-21,
-  backlog row 42; sandboxed where `bwrap` can start,
+  `AdmissionTests`, `GoCoreAuditTests`, `MethodIdentityTests`,
+  `EquationTests` — the executables and the `main`-bearing test libraries
+  are built by name, [USER] 2026-10-21, backlog row 42; the last two
+  default since 2026-10-25, their `main`s turned into build-time checks,
+  [USER] 2026-10-25, row 42's follow-up; sandboxed where `bwrap` can start,
   `--inadvisably-no-sandbox` where it cannot, saying which) and `lake
-  comparator` (`scripts/check-comparator`, about 20 s: the 349 statements
+  comparator` (`scripts/check-comparator`, about 20 s: the 365 statements
   of the surface kept on main for the raft-proofs customer — every theorem
   of `Equations.lean`, the G11 family, the `Prefix`/`Finish` laws, the
   output-fold bridge, `enterFrame_declared`, the `Choices.consumeAt*` laws
@@ -220,7 +222,11 @@ Everything else is untrusted tooling.
   definitions, so a drift that enters through a definition's signature is
   caught only across a pin, by the consumer's `--challenge-from-export`
   route; the challenge is updated deliberately with a changelog row;
-  [USER] 2026-10-23, backlog row 43; the same sandbox detection)) under
+  [USER] 2026-10-23, backlog row 43; the same sandbox detection; its
+  `sorry` holes are the challenge's form, so each entry carries
+  `set_option warn.sorry false in` — the charter's one allowed warning
+  suppression, per declaration, the reason in the file's header,
+  [USER] 2026-10-25)) under
   their own heading. A red one never fails the
   gate; it is read at the merge ask and fixed or waived there, by name.
   The owner's `lake check` and `lake comparator` outside the sandbox are
@@ -232,13 +238,19 @@ Everything else is untrusted tooling.
   nanoda crashes on this export (`docs/release.md` §3 gives the form that
   works). The kernel replay above stays in the fast tier (9.1 s at 4
   threads, 6.8 s at 8; no sandbox; it checks the on-disk olean set, which
-  `lake check` does not). Outside BOTH kernel checks: the ten modules that
-  are neither default targets nor `GoLean.*` — the executables' roots and
-  the `main`-bearing test modules — two of which carry theorems
-  (`Tests/EquationClient.lean`: 296 equation pins + 12 facts;
-  `Tests/MethodIdentity.lean`: 12), kernel-checked at elaboration, not
-  replayed against tampering; the follow-up is to turn their `main`s into
-  build-time checks.
+  `lake check` does not). Outside BOTH kernel checks: the nine modules that
+  are neither default targets nor `GoLean.*` — the executables' roots
+  (`Main`, `Tests.GoCoreEval`) and the `main`-bearing harness modules with
+  their library-mates (`Tests.StrictJsonParse` with `Tests.DeclarationWire`
+  and `Tests.DeclarationUnicode`; `Tests.UnseqScheduler` with
+  `Tests.UnseqHarness`; `Tests.UnseqWire`; `Tests.MethodIdentityFixture`,
+  the fresh-wire half of the method-identity check, which needs a Go
+  subprocess and a path argument) — none carrying a theorem. The two
+  theorem-bearing test modules (`Tests/EquationClient.lean`: 300 equation
+  pins + 12 facts; `Tests/MethodIdentity.lean`: 12) are default targets
+  since 2026-10-25, their `main`s build-time `#eval` checks whose lines the
+  gate scripts read from the build output, so `lake check` exports and
+  replays them ([USER] 2026-10-25, row 42's follow-up).
 - **Self-tests are not gates.** `scripts/test-*` run by hand when the
   script they test changes.
 - The pre-merge adversarial audit: the ask is unconditional; scope and
