@@ -410,12 +410,14 @@ func computeLibraryReach(units []*sourcePkg) error {
 			// `slices.Sort` at an integer element kind, the `sortSlice`
 			// op) — never lowers to the library function: the callee is
 			// not reached, only its arguments are walked. The VALUE shape
-			// (`f := slices.Sort`), the `defer`/`go` shapes (spawnCalls
-			// above) and every library-internal call reach the real
-			// declaration (the VALUE shape then REFUSES — explicit generic
-			// instantiation as a value is outside the fragment; the
-			// spawned/deferred function value and library-internal calls
-			// lower as ordinary library text).
+			// (`f := slices.Sort[[]int]; f(s)` — a `func-value` of the
+			// stencil, its closure on the wire), the `defer`/`go` shapes
+			// (spawnCalls above), a call inside a USER GENERIC body (the
+			// argument's type is the pre-stencil type parameter, never a
+			// slice of an integer basic kind), a dot-imported `Sort(s)`
+			// (a bare identifier, not a qualified selector) and every
+			// library-internal call reach the real declaration and lower
+			// as the real generic (review fix round F2/F3, 2026-10-25).
 			if c, isCall := n.(*ast.CallExpr); isCall && !it.unit.library && !spawnCalls[c] {
 				if sel, isSel := c.Fun.(*ast.SelectorExpr); isSel {
 					if x, isIdent := sel.X.(*ast.Ident); isIdent {
@@ -506,8 +508,15 @@ func computeLibraryReach(units []*sourcePkg) error {
 //     non-integer element kind (rows slices/slices-sort-kinds/*,
 //     slices/slices-sort-non-integer-refusal), `defer`/`go` of the
 //     function value at any kind (rows stdlib-source/sort-op-shapes/*),
-//     the VALUE shape (refused as every explicit generic instantiation
-//     as a value is). The raft-proofs customer's ask:
+//     the VALUE shape (`f := slices.Sort[[]int]; f(s)` — a `func-value`
+//     of the stencil with its pdqsort closure on the wire, runs
+//     correctly), a call inside a USER GENERIC body
+//     (`func sortAll[S ~[]E, E cmp.Ordered](s S) { slices.Sort(s) }`,
+//     the `~int` / `interface{~[]int}` constraint forms — the predicate
+//     judges the PRE-STENCIL type parameter, whose underlying is the
+//     constraint interface, so the stencil lowers the generic), and a
+//     dot-imported `Sort(s)` (a bare identifier is never a qualified
+//     selector; the real function lowers). The raft-proofs customer's ask:
 //     ~/projects/raft-proofs/docs/2026-10-23_golean-ask-slices-sort.md.
 //
 // The former second entry, cmp.Compare's kind-dispatch desugar, stays
@@ -518,7 +527,7 @@ func computeLibraryReach(units []*sourcePkg) error {
 // interceptedMemberArm's switch (the predicate fails closed on a listed
 // member without an arm — see below).
 var frontendInterceptedLibraryMembers = map[string]map[string]string{
-	"slices": {"Sort": "the `sortSlice` MACHINE OP (Stmt.sortSlice, wire node `sort-slice`; emit.go emitSortStmt) for a DIRECT call in expression-statement position at an INTEGER element kind — int/int8..int64/uint/uint8..uint64/uintptr and defined types over them (the op's intElems operand check); every other shape is the real source-through generic, not a refusal: non-integer element kinds (rows slices/slices-sort-kinds/*), defer/go of the function value at any kind (rows stdlib-source/sort-op-shapes/*); re-admitted 2026-10-25 ([USER] ruling, backlog row 50 option 1, relayed) as a deliberate partial reversal of memo §3 row M for integer kinds only — the sorted result is unique there, so no observable result differs; the op's specification is the kept equation family applyStmtOp_sortSlice*/retV_stmtOpK_sortSlice* (GoLean/GoCore/Equations.lean)"},
+	"slices": {"Sort": "the `sortSlice` MACHINE OP (Stmt.sortSlice, wire node `sort-slice`; emit.go emitSortStmt) for a DIRECT call in expression-statement position at an INTEGER element kind — int/int8..int64/uint/uint8..uint64/uintptr and defined types over them (the op's intElems operand check); every other shape is the real source-through generic, not a refusal: non-integer element kinds (rows slices/slices-sort-kinds/*), defer/go of the function value at any kind (rows stdlib-source/sort-op-shapes/*), the value shape `f := slices.Sort[[]int]; f(s)` (a func-value of the stencil, its closure on the wire), a call inside a user generic body (the pre-stencil type parameter is judged: the stencil lowers the generic) and a dot-imported `Sort(s)`; re-admitted 2026-10-25 ([USER] ruling, backlog row 50 option 1, relayed) as a deliberate partial reversal of memo §3 row M for integer kinds only — the sorted result is unique there, so no observable result differs; the op's specification is the kept equation family applyStmtOp_sortSlice*/retV_stmtOpK_sortSlice* (GoLean/GoCore/Equations.lean)"},
 }
 
 // interceptedLibraryCall reports whether a direct qualified CALL of a

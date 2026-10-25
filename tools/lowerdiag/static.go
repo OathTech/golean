@@ -1385,12 +1385,21 @@ func (a *analyzer) markSpawn(call *ast.CallExpr) {
 // interceptAppliesHere: the static twin of the frontend's intercept
 // predicate for a register `intercept` member (tools/nativefrontend/
 // stdlibreach.go interceptedLibraryCall + the positional rule) — today
-// `slices.Sort` only: the call is NOT in defer/go position and its one
-// argument is a slice whose element type's underlying is an integer basic
-// kind (interceptSortSlice). A member this tool does not know is reported
-// as the op wherever the register lists it (fail toward the register).
+// `slices.Sort` only: the call is NOT in defer/go position, it is the
+// QUALIFIED-selector spelling (a dot-imported `Sort(s)` is a bare
+// identifier and lowers as the real function), and its one argument is a
+// slice whose element type's underlying is an integer basic kind
+// (interceptSortSlice) — inside a USER GENERIC body the argument's type is
+// the pre-stencil type parameter, whose underlying is the constraint
+// interface, so `func sortAll[S ~[]E, E cmp.Ordered](s S)` and the `~int`
+// / `interface{~[]int}` forms are the generic too (review fix round F3,
+// 2026-10-25). A member this tool does not know is reported as the op
+// wherever the register lists it (fail toward the register).
 func (a *analyzer) interceptAppliesHere(key string, call *ast.CallExpr) bool {
 	if a.spawnCalls[call] {
+		return false
+	}
+	if _, qualified := call.Fun.(*ast.SelectorExpr); !qualified {
 		return false
 	}
 	if key != "slices.Sort" {

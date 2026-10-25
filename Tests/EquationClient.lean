@@ -2297,6 +2297,38 @@ theorem Pin.retV_stmtOpK_sortSlice_spec : ∀ {ctx : ProgramCtx} {s s' : Store} 
       ch' = ch ∧ lbl = ⟨trR ++ trW, [], []⟩ :=
   @GoLean.GoCore.Equations.retV_stmtOpK_sortSlice_spec
 
+-- The exact stored run and the sorted-permutation uniqueness bridge (review fix round F5, 2026-10-25)
+theorem Pin.applyStmtOp_sortSlice_exact : ∀ {ctx : ProgramCtx} {s s' : Store} {ch ch' : Choices} {ps : List PickRecord}
+    {tr : AccessTrace} {elem : Ty} {baseV : GoValue}
+    (_h : applyStmtOp ctx s ch (.sortSlice elem) 0 [baseV] = .ok (s', ch', ps, tr)),
+    ∃ (sl : SliceValue) (vs : Array GoValue) (trR : AccessTrace) (pairs : List (Int × IntKind))
+      (trW : AccessTrace),
+      valueAsSlice baseV = .ok sl ∧ Mem.loadSlice ctx s sl = .ok (vs, trR) ∧ intElems vs.toList = .ok pairs ∧
+      Mem.storeRun ctx s sl 0 ((sortLe (fun a b => a.1 ≤ b.1) pairs).map fun p => GoValue.int p.1 p.2)
+        = .ok (s', trW) ∧
+      ch' = ch ∧ ps = [] ∧ tr = trR ++ trW :=
+  @GoLean.GoCore.Equations.applyStmtOp_sortSlice_exact
+
+theorem Pin.retV_stmtOpK_sortSlice_exact : ∀ {ctx : ProgramCtx} {s s' : Store} {ch ch' : Choices} {lbl : StepLabel}
+    {elem : Ty} {baseV : GoValue} (env : LocalEnv) (k' : Cont)
+    (_h : stepFn ctx s (.retV baseV (.stmtOpK (.sortSlice elem) 0 [] [] env k')) ch = .ok (.next k', s', ch', lbl)),
+    ∃ (sl : SliceValue) (vs : Array GoValue) (trR : AccessTrace) (pairs : List (Int × IntKind))
+      (trW : AccessTrace),
+      valueAsSlice baseV = .ok sl ∧ Mem.loadSlice ctx s sl = .ok (vs, trR) ∧ intElems vs.toList = .ok pairs ∧
+      Mem.storeRun ctx s sl 0 ((sortLe (fun a b => a.1 ≤ b.1) pairs).map fun p => GoValue.int p.1 p.2)
+        = .ok (s', trW) ∧
+      ch' = ch ∧ lbl = ⟨trR ++ trW, [], []⟩ :=
+  @GoLean.GoCore.Equations.retV_stmtOpK_sortSlice_exact
+
+theorem Pin.sortedPairs_unique : ∀ {l₁ l₂ : List (Int × IntKind)} (k : IntKind) (_hk : ∀ p ∈ l₁, p.2 = k)
+    (_h₁ : l₁.Pairwise (fun a b => a.1 ≤ b.1)) (_h₂ : l₂.Pairwise (fun a b => a.1 ≤ b.1))
+    (_hp : List.Perm l₁ l₂), l₁ = l₂ :=
+  @GoLean.GoCore.Equations.sortedPairs_unique
+
+theorem Pin.sortLe_int_eq_of_pairwise : ∀ {pairs : List (Int × IntKind)} (k : IntKind) (_hk : ∀ p ∈ pairs, p.2 = k)
+    (_h : pairs.Pairwise (fun a b => a.1 ≤ b.1)), sortLe (fun a b => a.1 ≤ b.1) pairs = pairs :=
+  @GoLean.GoCore.Equations.sortLe_int_eq_of_pairwise
+
 -- PINS-END
 end Pins
 

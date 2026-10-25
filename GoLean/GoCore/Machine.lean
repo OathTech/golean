@@ -1839,11 +1839,23 @@ def applyStmtOpCore.plan (s : Store) (op : StmtOp)
       -- (insertion sort — de-WF 2026-08-03; normalized ints compare
       -- exactly as Go's unsigned/signed order; equal ints are
       -- indistinguishable, so sort stability is unobservable), store
-      -- back. Non-int elements fail closed. DEAD since 2026-09-04: the
-      -- frontend has never emitted `sort-slice` since memo §3 row M
-      -- (slices.Sort is the real pdqsort stencil) and the decoder refuses
-      -- the node by name (NativeToIR.lean); this op's deletion is owed to
-      -- the design-hygiene arc (item A11).
+      -- back. Non-int elements fail closed. History: unreferenced from
+      -- 2026-09-04 (memo §3 row M retired the frontend's intercept and
+      -- the decoder refused the node by name) to 2026-10-25, when the
+      -- [USER] ruling of backlog row 50 (option 1, relayed) re-admitted
+      -- the intercept at INTEGER element kinds — `slices.Sort(s)` in
+      -- expression-statement position lowers to this op again and the
+      -- decoder accepts `sort-slice`; the op's specification is the
+      -- kept equation family `applyStmtOp_sortSlice*` /
+      -- `retV_stmtOpK_sortSlice*` (Equations.lean). Every window element
+      -- is recorded READ then WRITTEN (one `.data` access each at
+      -- `.index base (offset + i)`): a conservative access set — gc's
+      -- pdqsort leaves an already-placed element unwritten, so a
+      -- concurrent read of a window the op sorts is refused `race` where
+      -- gc's detector is green (BUG-131, the recorded over-refusal
+      -- class; the write set is NOT narrowed, because pdqsort may also
+      -- write an element it leaves in place). The code below is as it
+      -- was at row M (review fix round F4: comment-only correction).
       match vs with
       | [baseV] => do
           let slice ← valueAsSlice baseV

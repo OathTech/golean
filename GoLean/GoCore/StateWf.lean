@@ -5612,8 +5612,9 @@ theorem applyStmtOpCore_wf {σ : Store} {op : StmtOp}
       have := goValueListSup_replicate (v := zero) (n := sl.len)
       omega
     · simp at hplan
-  · -- sortSlice (dead op): the visible elements read (`Mem.loadSlice`), the
-    -- sorted ints written back (`Mem.storeRun`; ints are loc-free)
+  · -- sortSlice (live again since 2026-10-25, backlog row 50 — the `slices.Sort`
+    -- intercept at integer kinds): the visible elements read (`Mem.loadSlice`),
+    -- the sorted ints written back (`Mem.storeRun`; ints are loc-free)
     rename_i elem
     split at hplan
     · rename_i baseV

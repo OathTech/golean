@@ -109,7 +109,7 @@ theorem GoLean.Contract.GoCore.Machine.Choices.consumeAt_nilValueMethodText_one 
     stmt_of% GoLean.GoCore.Machine.Choices.consumeAt_nilValueMethodText_one :=
   GoLean.GoCore.Machine.Choices.consumeAt_nilValueMethodText_one
 
-/-! ## eqns (313) -/
+/-! ## eqns (317) -/
 
 theorem GoLean.Contract.GoCore.Equations.Heap.lookup_push_self :
     stmt_of% GoLean.GoCore.Equations.Heap.lookup_push_self :=
@@ -138,6 +138,10 @@ theorem GoLean.Contract.GoCore.Equations.applyStmtOp_inv_panic :
 theorem GoLean.Contract.GoCore.Equations.applyStmtOp_sortSlice :
     stmt_of% GoLean.GoCore.Equations.applyStmtOp_sortSlice :=
   GoLean.GoCore.Equations.applyStmtOp_sortSlice
+
+theorem GoLean.Contract.GoCore.Equations.applyStmtOp_sortSlice_exact :
+    stmt_of% GoLean.GoCore.Equations.applyStmtOp_sortSlice_exact :=
+  GoLean.GoCore.Equations.applyStmtOp_sortSlice_exact
 
 theorem GoLean.Contract.GoCore.Equations.applyStmtOp_sortSlice_spec :
     stmt_of% GoLean.GoCore.Equations.applyStmtOp_sortSlice_spec :=
@@ -1043,6 +1047,10 @@ theorem GoLean.Contract.GoCore.Equations.retV_stmtOpK_sortSlice :
     stmt_of% GoLean.GoCore.Equations.retV_stmtOpK_sortSlice :=
   GoLean.GoCore.Equations.retV_stmtOpK_sortSlice
 
+theorem GoLean.Contract.GoCore.Equations.retV_stmtOpK_sortSlice_exact :
+    stmt_of% GoLean.GoCore.Equations.retV_stmtOpK_sortSlice_exact :=
+  GoLean.GoCore.Equations.retV_stmtOpK_sortSlice_exact
+
 theorem GoLean.Contract.GoCore.Equations.retV_stmtOpK_sortSlice_spec :
     stmt_of% GoLean.GoCore.Equations.retV_stmtOpK_sortSlice_spec :=
   GoLean.GoCore.Equations.retV_stmtOpK_sortSlice_spec
@@ -1287,6 +1295,10 @@ theorem GoLean.Contract.GoCore.Equations.signal_table :
     stmt_of% GoLean.GoCore.Equations.signal_table :=
   GoLean.GoCore.Equations.signal_table
 
+theorem GoLean.Contract.GoCore.Equations.sortLe_int_eq_of_pairwise :
+    stmt_of% GoLean.GoCore.Equations.sortLe_int_eq_of_pairwise :=
+  GoLean.GoCore.Equations.sortLe_int_eq_of_pairwise
+
 theorem GoLean.Contract.GoCore.Equations.sortLe_int_pairwise :
     stmt_of% GoLean.GoCore.Equations.sortLe_int_pairwise :=
   GoLean.GoCore.Equations.sortLe_int_pairwise
@@ -1302,6 +1314,10 @@ theorem GoLean.Contract.GoCore.Equations.sortLe_pairwise :
 theorem GoLean.Contract.GoCore.Equations.sortLe_perm :
     stmt_of% GoLean.GoCore.Equations.sortLe_perm :=
   GoLean.GoCore.Equations.sortLe_perm
+
+theorem GoLean.Contract.GoCore.Equations.sortedPairs_unique :
+    stmt_of% GoLean.GoCore.Equations.sortedPairs_unique :=
+  GoLean.GoCore.Equations.sortedPairs_unique
 
 theorem GoLean.Contract.GoCore.Equations.stateWf_empty :
     stmt_of% GoLean.GoCore.Equations.stateWf_empty :=

@@ -490,6 +490,12 @@ def exports : List Name := [
     ``GoLean.GoCore.ContractTests.Pin.retV_stmtOpK_sortSlice,
     ``GoLean.GoCore.ContractTests.Pin.retV_stmtOpK_sortSlice_spec,
     ``GoLean.GoCore.ContractTests.Pin.sortLe_int_perm, ``GoLean.GoCore.ContractTests.Pin.sortLe_int_pairwise,
+    -- review fix round F5 (2026-10-25): the exact stored run and the uniqueness bridge, with their pins
+    ``GoLean.GoCore.Equations.applyStmtOp_sortSlice_exact, ``GoLean.GoCore.Equations.retV_stmtOpK_sortSlice_exact,
+    ``GoLean.GoCore.Equations.sortedPairs_unique, ``GoLean.GoCore.Equations.sortLe_int_eq_of_pairwise,
+    ``GoLean.GoCore.ContractTests.Pin.applyStmtOp_sortSlice_exact,
+    ``GoLean.GoCore.ContractTests.Pin.retV_stmtOpK_sortSlice_exact,
+    ``GoLean.GoCore.ContractTests.Pin.sortedPairs_unique, ``GoLean.GoCore.ContractTests.Pin.sortLe_int_eq_of_pairwise,
     ``GoLean.GoCore.ContractTests.Pin.execProgLoopOut_acc,
     ``GoLean.GoCore.ContractTests.Pin.execProgLoopOut_eq_execProgLoop,
     ``GoLean.GoCore.ContractTests.Pin.init_print_refused_control,

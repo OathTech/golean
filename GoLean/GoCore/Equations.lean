@@ -1354,9 +1354,32 @@ theorem applyStmtOp_sortSlice {s s' : Store} {baseV : GoValue} {sl : SliceValue}
   simp only [applyStmtOp, applyStmtOp.plan, applyStmtOpCore.plan, h1, h2, h3, h4, Commit.withStream,
     Bind.bind, Except.bind, pure, Except.pure]
 
-/-- A successful `sortSlice` apply, read back: the operand is a slice `sl`, its window read `vs` is
-all-int with pairs `pairs`, and the run written back from visible index 0 is a `List.Perm` of
-`pairs` ascending by value; the tape is untouched, no pick, the label the reads then the writes. -/
+/-- The EXACT stored run of a successful `sortSlice` apply: the operand is a slice `sl`, its window read `vs`
+is all-int with pairs `pairs`, and the run written back from visible index 0 is `sortLe` of `pairs` by value
+— no premise beyond the apply's success, and `sortLe` is structural, so a concrete window's run reduces
+by `rfl`/`decide` (review fix round F5, 2026-10-25: the customer's target is the exact sorted list). The
+tape is untouched, no pick, the label the reads then the writes. -/
+theorem applyStmtOp_sortSlice_exact {s s' : Store} {ch ch' : Choices} {ps : List PickRecord} {tr : AccessTrace}
+    {elem : Ty} {baseV : GoValue}
+    (h : applyStmtOp ctx s ch (.sortSlice elem) 0 [baseV] = .ok (s', ch', ps, tr)) :
+    ∃ (sl : SliceValue) (vs : Array GoValue) (trR : AccessTrace) (pairs : List (Int × IntKind))
+      (trW : AccessTrace),
+      valueAsSlice baseV = .ok sl ∧ Mem.loadSlice ctx s sl = .ok (vs, trR) ∧ intElems vs.toList = .ok pairs ∧
+      Mem.storeRun ctx s sl 0 ((sortLe (fun a b => a.1 ≤ b.1) pairs).map fun p => GoValue.int p.1 p.2)
+        = .ok (s', trW) ∧
+      ch' = ch ∧ ps = [] ∧ tr = trR ++ trW := by
+  obtain ⟨c, hc, hcs⟩ := applyStmtOp_inv_ok h
+  simp only [applyStmtOp.plan, applyStmtOpCore.plan, bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hc
+  obtain ⟨c₀, ⟨sl, hsl, ⟨vs, trR⟩, hvs, pairs, hpairs, rfl⟩, rfl⟩ := hc
+  simp only [Commit.withStream, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hcs
+  obtain ⟨⟨s₁, trW⟩, hst, rfl, rfl, rfl, rfl⟩ := hcs
+  simp only [Prod.mk.injEq] at hst
+  obtain ⟨⟨s₂, trW'⟩, hst, rfl, rfl⟩ := hst
+  exact ⟨sl, vs, trR, pairs, trW', hsl, hvs, hpairs, hst, rfl, rfl, rfl⟩
+
+/-- A successful `sortSlice` apply, read back as a SPECIFICATION: the run written back from visible index
+0 is a `List.Perm` of the pairs read, ascending by value; the tape is untouched, no pick, the label the
+reads then the writes (the sorted-permutation reading of `applyStmtOp_sortSlice_exact`). -/
 theorem applyStmtOp_sortSlice_spec {s s' : Store} {ch ch' : Choices} {ps : List PickRecord} {tr : AccessTrace}
     {elem : Ty} {baseV : GoValue}
     (h : applyStmtOp ctx s ch (.sortSlice elem) 0 [baseV] = .ok (s', ch', ps, tr)) :
@@ -1366,14 +1389,8 @@ theorem applyStmtOp_sortSlice_spec {s s' : Store} {ch ch' : Choices} {ps : List 
       List.Perm sorted pairs ∧ sorted.Pairwise (fun a b => a.1 ≤ b.1) ∧
       Mem.storeRun ctx s sl 0 (sorted.map fun p => GoValue.int p.1 p.2) = .ok (s', trW) ∧
       ch' = ch ∧ ps = [] ∧ tr = trR ++ trW := by
-  obtain ⟨c, hc, hcs⟩ := applyStmtOp_inv_ok h
-  simp only [applyStmtOp.plan, applyStmtOpCore.plan, bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hc
-  obtain ⟨c₀, ⟨sl, hsl, ⟨vs, trR⟩, hvs, pairs, hpairs, rfl⟩, rfl⟩ := hc
-  simp only [Commit.withStream, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hcs
-  obtain ⟨⟨s₁, trW⟩, hst, rfl, rfl, rfl, rfl⟩ := hcs
-  simp only [Prod.mk.injEq] at hst
-  obtain ⟨⟨s₂, trW'⟩, hst, rfl, rfl⟩ := hst
-  exact ⟨sl, vs, trR, pairs, _, trW', hsl, hvs, hpairs, sortLe_int_perm pairs, sortLe_int_pairwise pairs,
+  obtain ⟨sl, vs, trR, pairs, trW, hsl, hvs, hpairs, hst, rfl, rfl, rfl⟩ := applyStmtOp_sortSlice_exact h
+  exact ⟨sl, vs, trR, pairs, _, trW, hsl, hvs, hpairs, sortLe_int_perm pairs, sortLe_int_pairwise pairs,
     hst, rfl, rfl, rfl⟩
 
 /-- The apply STEP of a `sortSlice` statement, written out (`retV_stmtOpK_apply` at the sort's
@@ -1390,16 +1407,17 @@ the writes, no output. -/
   rw [retV_stmtOpK_apply env k' ch (applyStmtOp_sortSlice elem ch h1 h2 h3 h4)]
   rfl
 
-/-- A successful apply step of a `sortSlice` statement, read back (the `stepFn`-level
-specification: a step from the apply position to `.next k'` sorted the window in place). -/
-theorem retV_stmtOpK_sortSlice_spec {s s' : Store} {ch ch' : Choices} {lbl : StepLabel} {elem : Ty} {baseV : GoValue}
+/-- The EXACT stored run of a successful apply STEP of a `sortSlice` statement (the `stepFn`-level form of
+`applyStmtOp_sortSlice_exact`): a step from the apply position to `.next k'` wrote `sortLe` of the pairs
+read, the tape untouched, the label the reads then the writes. -/
+theorem retV_stmtOpK_sortSlice_exact {s s' : Store} {ch ch' : Choices} {lbl : StepLabel} {elem : Ty} {baseV : GoValue}
     (env : LocalEnv) (k' : Cont)
     (h : stepFn ctx s (.retV baseV (.stmtOpK (.sortSlice elem) 0 [] [] env k')) ch = .ok (.next k', s', ch', lbl)) :
-    ∃ (sl : SliceValue) (vs : Array GoValue) (trR : AccessTrace) (pairs sorted : List (Int × IntKind))
+    ∃ (sl : SliceValue) (vs : Array GoValue) (trR : AccessTrace) (pairs : List (Int × IntKind))
       (trW : AccessTrace),
       valueAsSlice baseV = .ok sl ∧ Mem.loadSlice ctx s sl = .ok (vs, trR) ∧ intElems vs.toList = .ok pairs ∧
-      List.Perm sorted pairs ∧ sorted.Pairwise (fun a b => a.1 ≤ b.1) ∧
-      Mem.storeRun ctx s sl 0 (sorted.map fun p => GoValue.int p.1 p.2) = .ok (s', trW) ∧
+      Mem.storeRun ctx s sl 0 ((sortLe (fun a b => a.1 ≤ b.1) pairs).map fun p => GoValue.int p.1 p.2)
+        = .ok (s', trW) ∧
       ch' = ch ∧ lbl = ⟨trR ++ trW, [], []⟩ := by
   simp only [stepFn, List.reverse_cons, List.reverse_nil, List.nil_append] at h
   cases hr : toResult (applyStmtOp.plan ctx s ch (.sortSlice elem) 0 [baseV]) with
@@ -1422,9 +1440,44 @@ theorem retV_stmtOpK_sortSlice_spec {s s' : Store} {ch ch' : Choices} {lbl : Ste
           unfold applyStmtOp
           simp only [hc, Bind.bind, Except.bind]
           exact runCommit_eq_ok.mp hrc
-        obtain ⟨sl, vs, trR, pairs, sorted, trW, hsl, hvs, hpairs, hperm, hsorted, hst, rfl, rfl, rfl⟩ :=
-          applyStmtOp_sortSlice_spec happ
-        exact ⟨sl, vs, trR, pairs, sorted, trW, hsl, hvs, hpairs, hperm, hsorted, hst, rfl, rfl⟩
+        obtain ⟨sl, vs, trR, pairs, trW, hsl, hvs, hpairs, hst, rfl, rfl, rfl⟩ :=
+          applyStmtOp_sortSlice_exact happ
+        exact ⟨sl, vs, trR, pairs, trW, hsl, hvs, hpairs, hst, rfl, rfl⟩
+
+/-- A successful apply step of a `sortSlice` statement, read back (the `stepFn`-level
+specification: a step from the apply position to `.next k'` sorted the window in place — the
+sorted-permutation reading of `retV_stmtOpK_sortSlice_exact`). -/
+theorem retV_stmtOpK_sortSlice_spec {s s' : Store} {ch ch' : Choices} {lbl : StepLabel} {elem : Ty} {baseV : GoValue}
+    (env : LocalEnv) (k' : Cont)
+    (h : stepFn ctx s (.retV baseV (.stmtOpK (.sortSlice elem) 0 [] [] env k')) ch = .ok (.next k', s', ch', lbl)) :
+    ∃ (sl : SliceValue) (vs : Array GoValue) (trR : AccessTrace) (pairs sorted : List (Int × IntKind))
+      (trW : AccessTrace),
+      valueAsSlice baseV = .ok sl ∧ Mem.loadSlice ctx s sl = .ok (vs, trR) ∧ intElems vs.toList = .ok pairs ∧
+      List.Perm sorted pairs ∧ sorted.Pairwise (fun a b => a.1 ≤ b.1) ∧
+      Mem.storeRun ctx s sl 0 (sorted.map fun p => GoValue.int p.1 p.2) = .ok (s', trW) ∧
+      ch' = ch ∧ lbl = ⟨trR ++ trW, [], []⟩ := by
+  obtain ⟨sl, vs, trR, pairs, trW, hsl, hvs, hpairs, hst, rfl, rfl⟩ := retV_stmtOpK_sortSlice_exact env k' h
+  exact ⟨sl, vs, trR, pairs, _, trW, hsl, hvs, hpairs, sortLe_int_perm pairs, sortLe_int_pairwise pairs,
+    hst, rfl, rfl⟩
+
+/-- Sorted permutations of KIND-UNIFORM pairs are unique: two lists ascending by value, permutations of each
+other, every element of the first at the kind `k`, are equal — the bridge from a consumer's own sorted list
+(a mirror's sorted ids) to the run the op stored. The kind-uniformity premise is the consumer's state
+invariant (a normalized backing array holds one element kind), not `intElems`'s, which keeps each element's
+own kind; without it two pairs of equal value and different kinds are both `≤` each other and distinct. -/
+theorem sortedPairs_unique {l₁ l₂ : List (Int × IntKind)} (k : IntKind) (hk : ∀ p ∈ l₁, p.2 = k)
+    (h₁ : l₁.Pairwise (fun a b => a.1 ≤ b.1)) (h₂ : l₂.Pairwise (fun a b => a.1 ≤ b.1))
+    (hp : List.Perm l₁ l₂) : l₁ = l₂ :=
+  List.Perm.eq_of_pairwise (le := fun a b => a.1 ≤ b.1)
+    (fun a b ha hb hab hba =>
+      Prod.ext (Int.le_antisymm hab hba) ((hk a ha).trans (hk b (hp.mem_iff.mpr hb)).symm))
+    h₁ h₂ hp
+
+/-- An already-ordered, kind-uniform window is stored unchanged by the sort. -/
+theorem sortLe_int_eq_of_pairwise {pairs : List (Int × IntKind)} (k : IntKind) (hk : ∀ p ∈ pairs, p.2 = k)
+    (h : pairs.Pairwise (fun a b => a.1 ≤ b.1)) : sortLe (fun a b => a.1 ≤ b.1) pairs = pairs :=
+  sortedPairs_unique k (fun p hp => hk p ((sortLe_int_perm pairs).mem_iff.mp hp))
+    (sortLe_int_pairwise pairs) h (sortLe_int_perm pairs)
 
 /-! ## (3) Ranges over maps -/
 

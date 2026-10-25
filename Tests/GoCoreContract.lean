@@ -717,6 +717,43 @@ theorem sortLe_int_pairwise :
     ∀ (ps : List (Int × IntKind)), (sortLe (fun a b => a.1 ≤ b.1) ps).Pairwise (fun a b => a.1 ≤ b.1) :=
   GoCore.Equations.sortLe_int_pairwise
 
+/-! Review fix round F5 (2026-10-25): the EXACT stored run — `sortLe` of the pairs read, no premise beyond
+the apply's / the step's success — and the sorted-permutation uniqueness bridge (kind-uniform pairs) that
+takes a consumer's own sorted list to it. -/
+theorem applyStmtOp_sortSlice_exact :
+    ∀ {ctx : ProgramCtx} {s s' : Store} {ch ch' : Choices} {ps : List PickRecord} {tr : AccessTrace}
+      {elem : Ty} {baseV : GoValue},
+    applyStmtOp ctx s ch (.sortSlice elem) 0 [baseV] = .ok (s', ch', ps, tr) →
+    ∃ (sl : SliceValue) (vs : Array GoValue) (trR : AccessTrace) (pairs : List (Int × IntKind))
+      (trW : AccessTrace),
+      valueAsSlice baseV = .ok sl ∧ Mem.loadSlice ctx s sl = .ok (vs, trR) ∧ intElems vs.toList = .ok pairs ∧
+      Mem.storeRun ctx s sl 0 ((sortLe (fun a b => a.1 ≤ b.1) pairs).map fun p => GoValue.int p.1 p.2)
+        = .ok (s', trW) ∧
+      ch' = ch ∧ ps = [] ∧ tr = trR ++ trW :=
+  GoCore.Equations.applyStmtOp_sortSlice_exact
+
+theorem retV_stmtOpK_sortSlice_exact :
+    ∀ {ctx : ProgramCtx} {s s' : Store} {ch ch' : Choices} {lbl : StepLabel} {elem : Ty} {baseV : GoValue}
+      (env : LocalEnv) (k' : Cont),
+    stepFn ctx s (.retV baseV (.stmtOpK (.sortSlice elem) 0 [] [] env k')) ch = .ok (.next k', s', ch', lbl) →
+    ∃ (sl : SliceValue) (vs : Array GoValue) (trR : AccessTrace) (pairs : List (Int × IntKind))
+      (trW : AccessTrace),
+      valueAsSlice baseV = .ok sl ∧ Mem.loadSlice ctx s sl = .ok (vs, trR) ∧ intElems vs.toList = .ok pairs ∧
+      Mem.storeRun ctx s sl 0 ((sortLe (fun a b => a.1 ≤ b.1) pairs).map fun p => GoValue.int p.1 p.2)
+        = .ok (s', trW) ∧
+      ch' = ch ∧ lbl = ⟨trR ++ trW, [], []⟩ :=
+  GoCore.Equations.retV_stmtOpK_sortSlice_exact
+
+theorem sortedPairs_unique :
+    ∀ {l₁ l₂ : List (Int × IntKind)} (k : IntKind), (∀ p ∈ l₁, p.2 = k) →
+    l₁.Pairwise (fun a b => a.1 ≤ b.1) → l₂.Pairwise (fun a b => a.1 ≤ b.1) → List.Perm l₁ l₂ → l₁ = l₂ :=
+  GoCore.Equations.sortedPairs_unique
+
+theorem sortLe_int_eq_of_pairwise :
+    ∀ {pairs : List (Int × IntKind)} (k : IntKind), (∀ p ∈ pairs, p.2 = k) →
+    pairs.Pairwise (fun a b => a.1 ≤ b.1) → sortLe (fun a b => a.1 ≤ b.1) pairs = pairs :=
+  GoCore.Equations.sortLe_int_eq_of_pairwise
+
 end GoLean.GoCore.ContractTests.Pin
 
 /-! ## §E Provisional statements (pinned for build-time drift; NOT in the comparator contract)
