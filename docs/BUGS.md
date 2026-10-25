@@ -9028,11 +9028,17 @@ defined type its underlying's, everything else one leaf; it refuses exactly wher
 the arm) already does. The unit is LEAVES, not bytes ([AGENT] 2026-10-25): the backing is a tree of one
 `GoValue` per leaf, the decoder's constant-count check measures leaves, and a byte unit at this budget would
 have refused `make([]int, 1<<22)` — inside `sliceCapBudget` and running today. MAPS: `make(map[K]V, n)`
-allocates NOTHING for the hint here (an empty payload; gc clamps the hint and allocates lazily too), so there
-is no footprint to guard and a huge hint runs as gc does (`builtins/make-maxalloc/map-hint-over`). CHANNELS:
+allocates NOTHING for the hint here (an empty payload, filled on insert), so no kill is possible and there is
+nothing to guard; a huge hint runs as gc does (`builtins/make-maxalloc/map-hint-over`, 0.13 s). The REASON as first
+written — that gc clamps the hint and allocates lazily — was WRONG (the lane's review, F2, 2026-10-25): gc's
+`NewMap` (`deps/go/src/internal/runtime/maps/map.go:264–330` @ go1.26.5) allocates EAGERLY for any hint > 8, a
+directory of tables sized for `hint·8/7` (`make(map[int]int, 1<<20)` measured +36 MB of heap), and returns an
+empty map only where that would exceed `maxAlloc`; what carries the conclusion is the MODEL's behaviour (no
+allocation for the hint), not gc's. CHANNELS:
 `make(chan T, n)`'s buffer is a capacity NUMBER, never materialized (`chanPayload #[] n`), so after gc's own
 `makechan: size out of range` panic there is nothing to guard (`builtins/make-maxalloc/chan-zero-size-elem-huge`
-realizes `make(chan struct{}, 1<<62)` as gc does). ARRAYS by `new([n]T)`: an array type's length is a
+realizes `make(chan struct{}, 1<<62)` as gc does; gc itself allocates the buffer eagerly — `make(chan
+[1024]byte, 1<<16)` measured +64 MB — the model's 0.11 s run allocates none of it). ARRAYS by `new([n]T)`: an array type's length is a
 constant in Go, so there is no run-time count there; the decoder's `arrayLenBudget`/`arrayFootprintBudget`
 checks on the TYPE already cover it. The precedence (gc's panic → the count bound → the footprint) is pinned
 by `Tests/GoCoreEval.lean` `makeFootprintRuntimeTests` (ten pins: the refusal's text, one element past the
@@ -9046,3 +9052,18 @@ the backing; gc 32775), both RED BY DESIGN; `make-at-budget` — `n = 1<<14`, ex
 footprint is what the count-only bound misses); `make-maxalloc-first` — `n = 1<<40`, 2^50 bytes, gc's own
 `makeslice: len out of range` on both sides (status panic, PASS). The kill never recorded a PASS, so no
 existing row moved.
+
+SCOPE — THE `make` DOOR ONLY (the lane's adversarial review, F1, 2026-10-25, relayed by the [AGENT]
+coordinator). This guard closes the run-time count at `make`; it does NOT close the CLASS. The identical
+backing reaches the heap through two other doors, neither consulting `sliceCapBudget` or
+`arrayFootprintBudget`: (1) `append`'s SPILL — the spill arm checks gc's `growslice` panic and then builds
+`buildAppendBackingValue … newCap` unbounded; measured by the reviewer: `s := make([][1024]byte, 1<<14); for
+i := 0; i < 3; i++ { s = append(s, s...) }` — gc 131072, the model exit 137 under `CAPPED_MEM_MAX=4G` AND under
+8G (8.4 GB RSS); ONE doubling, 2^25 leaves — exactly the footprint `make-over-budget` REFUSES — RUNS through
+`append` (10.8 s, 2.6 GB): the same backing is refused at one door and admitted at the other; (2) the `[]byte(s)`
+CONVERSION of a long string — `len([]byte(s))` on a 2^26-char string, exit 137 under 4G. Both stay honest
+kills under the cap (never a wrong answer; `killed:137` is a non-verdict the runner names) and memory runaways
+without it. The obvious fix is this guard's own template at those two sites — `newCap × tyLeafCount(elem) >
+arrayFootprintBudget` after the spill arm's `growslice` panic, and the conversion's length against the same
+budget — refusing by name on the `make-footprint-budget-runtime` vocabulary; it is a FOLLOW-UP for the
+owner's word (the 2026-10-25 ruling covered the `make` site), not part of this entry's fix.

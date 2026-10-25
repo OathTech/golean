@@ -231,6 +231,29 @@ linear normalize. Lesson: a budget's docstring states WHICH path
 each number was measured on; a number without its path is not a
 derivation.
 
+A BUDGET AT ONE DOOR DOES NOT CLOSE THE CLASS (2026-10-25, the
+`core/row31-fillers-1025` review's F1). The run-time-count `make` guard
+(BUG-131: `cap × tyLeafCount(elem) > arrayFootprintBudget` refuses by
+name at the `make` site, after gc's `makeslice` panic and
+`sliceCapBudget`) turned a `capped` kill (exit 137 at 4G in 0.4 s, at
+8G in 6.3 s) into a named refusal — at `make` ONLY. The identical
+backing still reaches the heap through two doors that consult neither
+budget: `append`'s spill (`buildAppendBackingValue … newCap`, built
+unbounded after the `growslice` panic check: three self-appends of a
+1<<14-row `[][1024]byte` slice — gc 131072 — exit 137 under 4G AND 8G,
+8.4 GB RSS; ONE doubling, the 2^25 leaves `make` refuses, runs in 10.8 s
+/ 2.6 GB — refused at one door, admitted at the other) and the
+`[]byte(s)` conversion (`len([]byte(s))` on a 2^26-char string, exit
+137 under 4G). Both are honest kills (never a wrong answer; `killed:137`
+is a named non-verdict), and memory runaways without the cap. The fix is
+the same template at both sites — `newCap × tyLeafCount(elem)` after the
+spill arm's `growslice` panic, the conversion's length against the same
+budget — on the owner's word (outside the 2026-10-25 ruling). Lesson:
+when a resource bound is added, enumerate every ARM that builds the same
+shape (grep the builder, not the keyword) and either bound them all or
+record the open doors with measurements where the bound lands; a record
+that says «closed» for a class closed at one door is the finding.
+
 ## ARG_MAX is a cliff whose height is set by TMPDIR length; one dead fan-out must not look like N dead workers
 
 `scripts/diff-coverage` fanned rows out as `ls "$ROWDIR"/*.in | xargs

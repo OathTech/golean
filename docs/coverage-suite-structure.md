@@ -681,7 +681,10 @@ fidelity bug, so no `BUGS.md` Cases: line is needed for it (release-readiness
 row 31(a), [USER] ruling 2026-10-25; before it the flip rule counted a vanished
 PASS id as a flip and demanded the Cases: line as well). The flip rule is
 unchanged for SURVIVING rows: a PASS→non-PASS flip of a row that is still in
-the baseline needs its Cases: line.
+the baseline needs its Cases: line. The lookup is by ID, so a RENAMED fixture
+is a removal plus a birth to this check: the old id's row is retired by its
+`# removed:` header line (the old fixture is absent) and the born row under
+the new id needs only its cause key — note the rename in the `<why>`.
 
 Non-verdict exits of a comparator, oracle, driver or enumerator run are
 reported at the stage of the CHECK that could not complete — the stage

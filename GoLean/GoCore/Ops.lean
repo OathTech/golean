@@ -515,11 +515,14 @@ unit — a shape admitted there with a constant count is admitted here with the 
 as a run-time value, and vice versa ([AGENT] 2026-10-25: a byte unit at this budget would
 have refused `make([]int, 1<<22)`, inside `sliceCapBudget` and running today). The descent
 is `tyHasPointersTy`'s (the type layer structural on the type, the index layer
-`bound`-structural on the table) and refuses EXACTLY where the size does — an `.unsupported`
-type, an opaque declaration, an unknown index, an exhausted bound — so at the `make` site,
-where the element size is read first, a refusal here can only arise where the size already
-refused; it never guesses. (The decoder counts an opaque marker as one leaf because its uses
-refuse before any value exists; here the size's refusal precedes, the same outcome.) -/
+`bound`-structural on the table) and refuses where the size does — an `.unsupported` type, an
+opaque declaration, an unknown index, an exhausted bound — with ONE asymmetry, the pointer
+scan's too: the size also refuses an untyped integer kind (`.int (.unbounded _)`,
+`IntKind.bitsAt = none`), which this counts as one leaf. So at the `make` site, where the
+element size is read first, a refusal here can only arise where the size already refused, and
+no shape the size admits is refused here; it never guesses. (The decoder counts an opaque
+marker as one leaf because its uses refuse before any value exists; here the size's refusal
+precedes, the same outcome.) -/
 
 /-- The TYPE layer: structural on the type; `.defined` handed to `atDefined`. -/
 def tyLeafCountTy (atDefined : TypeIdx → Except Stop Nat) : Ty → Except Stop Nat
