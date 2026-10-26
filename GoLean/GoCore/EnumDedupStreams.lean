@@ -600,7 +600,7 @@ theorem execProgLoop_unfold (fuel : Nat) (m : MultiConfig) (r : RaceState)
                         execProgLoop ctx fuel m' r' choices')
             | none =>
               if (runnableIdxs ctx m.shared m.threads).isEmpty then
-                throw .deadlock
+                deadlockOrRefusal ctx m.shared m.threads
               else
                 match fuel with
                 | 0 => throw .fuelOut
