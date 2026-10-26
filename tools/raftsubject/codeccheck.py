@@ -46,6 +46,8 @@ import shutil
 import subprocess
 import sys
 
+import ownedout
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
 
@@ -712,8 +714,8 @@ def main():
         if not os.path.exists(tool):
             sys.exit("codeccheck.py: missing %s (build it: %s)" % (tool, hint))
 
-    out = args.out
-    shutil.rmtree(out, ignore_errors=True)
+    # CLAIMED, never blindly erased (DC10, ownedout.py).
+    out = ownedout.claim(args.out, "codeccheck.py")
     # One program tree, used by both oracles: main.go + raftpb/ + proto/ is
     # exactly the frontend's case-local layout; for go run the same packages
     # are exposed through a GOPATH src/ symlink-free copy.
@@ -753,25 +755,31 @@ def main():
     r = subprocess.run([args.golean, "native-json-run", "--no-choice-report", "--input", wire,
                         "--function", "codecBattery", "--fuel", MACHINE_FUEL],
                        capture_output=True, text=True)
-    if r.returncode != 0 and not r.stdout.strip():
-        sys.exit("codeccheck.py: machine run failed:\n%s" % r.stderr)
+    # Process status FIRST, and it must agree with the observation (DC09 / validation V3;
+    # ownedout.machine_exit_agrees: 0 iff ok). The old test — a failed process only when it
+    # printed nothing — let a machine killed after flushing a matching verdict count as agreement.
+    if r.returncode not in (0, 1):
+        sys.exit("codeccheck.py: %s:\n%s%s" % (ownedout.machine_exit_agrees(r.returncode, None), r.stdout[-2000:], r.stderr[-2000:]))
     try:
         obs = json.loads(r.stdout.strip().splitlines()[-1])
     except (ValueError, IndexError):
         sys.exit("codeccheck.py: unreadable machine observation:\n%s%s" % (r.stdout, r.stderr))
+    disagree = ownedout.machine_exit_agrees(r.returncode, obs.get("status"))
+    if disagree is not None:
+        sys.exit("codeccheck.py: %s:\n%s" % (disagree, r.stdout.strip()[:2000]))
     if obs.get("status") != "ok" or len(obs.get("values", [])) != 1:
         sys.exit("codeccheck.py: machine verdict is not a clean value: %s" % r.stdout.strip())
     machine_verdict = str(obs["values"][0].get("value"))
     print("codeccheck: machine verdict: %s" % machine_verdict)
 
-    if not args.keep:
-        shutil.rmtree(out, ignore_errors=True)
     if go_verdict != machine_verdict:
         sys.exit("codeccheck.py: ORACLES DISAGREE (go=%s machine=%s)"
                  % (go_verdict, machine_verdict))
     if go_verdict != "0":
         sys.exit("codeccheck.py: battery check %s FAILED under both oracles"
                  % go_verdict)
+    if not args.keep and not ownedout.release(out, "codeccheck.py"):
+        sys.exit(1)
     print("codeccheck: PASS — checks 1-51 + the 26 imported corpus entries (100-125), both oracles agree, verdict 0")
 
 

@@ -86,6 +86,11 @@ if ! mkdir -p "$OUT/wire" "$GO_BUILD_CACHE" 2>/dev/null || ! : > "$OUT/.write-pr
   echo "choice-trace-corpus: --out directory is not writable: $OUT" >&2; exit 2
 fi
 rm -f "$OUT/.write-probe"
+# Normalized ONCE, to an absolute path (deep-clean review 2026-10-26, DC18 / robustness R5):
+# --out is both the directory written here and, inside batch.tsv, the path the tracer LOADS
+# the wires from; the old `$ROOT/$w` prefixed an absolute --out a second time and the tracer
+# reported every row as ERROR.
+OUT="$(cd "$OUT" && pwd -P)" || { echo "choice-trace-corpus: cannot resolve --out $OUT" >&2; exit 2; }
 
 manifest_args=()
 for id in ${IDS[@]+"${IDS[@]}"}; do manifest_args+=(--id "$id"); done
@@ -114,7 +119,7 @@ while IFS=$'\t' read -r id go_dir fn args status features reason lane why params
   fe_flags=(--subject)
   [[ "$id" == "init/hidden-dep-order" ]] && fe_flags+=(--allow-hidden-dep-init-order)
   if err="$(GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run ./tools/nativefrontend ${fe_flags[@]+"${fe_flags[@]}"} --dir "$go_dir" --out "$w" 2>&1)"; then
-    printf '%s\t%s\t%s\t%s\t%s\n' "$id" "$ROOT/$w" "$fn" "$args" "$STREAMS" >> "$OUT/batch.tsv"
+    printf '%s\t%s\t%s\t%s\t%s\n' "$id" "$w" "$fn" "$args" "$STREAMS" >> "$OUT/batch.tsv"
   else
     printf '%s\t%s\n' "$id" "$(printf '%s' "$err" | head -1)" >> "$OUT/export-fail.tsv"
   fi
@@ -125,11 +130,18 @@ if [[ "$total" -eq 0 ]]; then
   echo "choice-trace-corpus: nothing to trace (every selected row was excluded or refused export)" >&2; exit 2
 fi
 
-# Chunked, parallel tracing; each chunk's TSV is resumable.
+# Chunked, parallel tracing; each chunk's TSV is resumable. THIS run's chunks are
+# results-0 … results-(JOBS-1), listed in `chunks`; only they reach the summarizer
+# (deep-clean review 2026-10-26, DC18 / robustness R1: the old `results-*.tsv` glob
+# also fed a previous run's higher-numbered chunks, and the summarizer's merge rule —
+# a successful entry supersedes an ERROR for the same id — let a stale success hide a
+# fresh ERROR; a stale chunk is named on stderr and left in place, never read).
 per=$(( (total + JOBS - 1) / JOBS ))
 pids=()
+chunks=()
 for ((k = 0; k < JOBS; k++)); do
   rm -f "$OUT/results-$k.tsv" "$OUT/dump-$k.tsv"
+  chunks+=("$OUT/results-$k.tsv")
   dump_args=()
   [[ "$DUMP" -eq 1 ]] && dump_args=(--dump "$OUT/dump-$k.tsv")
   "$GOLEAN_BIN" choice-trace --batch "$OUT/batch.tsv" --out "$OUT/results-$k.tsv" ${dump_args[@]+"${dump_args[@]}"} --fuel "$FUEL" --skip $((k * per)) --take "$per" 2> "$OUT/results-$k.log" &
@@ -142,14 +154,29 @@ if [[ "$rc" -ne 0 ]]; then
   exit 2
 fi
 
+stale="$(ls "$OUT"/results-*.tsv 2>/dev/null | grep -vxF -f <(printf '%s\n' "${chunks[@]}") || true)"
+if [[ -n "$stale" ]]; then
+  echo "choice-trace-corpus: NOTE — result chunk(s) from an earlier run are in $OUT and are NOT part of this run's summary: $(printf '%s\n' "$stale" | tr '\n' ' ')" >&2
+fi
+for c in "${chunks[@]}"; do
+  [[ -f "$c" ]] || { echo "choice-trace-corpus: this run's chunk $c was not written (see ${c%.tsv}.log) — no verdict" >&2; exit 2; }
+done
 {
   if [[ -s "$OUT/excluded.tsv" ]]; then
     echo "EXCLUDED rows (not traced in this run — trace separately, e.g. with a lower --fuel):"
     sed 's/^/  /' "$OUT/excluded.tsv"
     echo
   fi
-  scripts/choice-trace-summarize --manifest "$OUT/manifest.tsv" --tsv-out "$OUT" "$OUT"/results-*.tsv
+  scripts/choice-trace-summarize --manifest "$OUT/manifest.tsv" --tsv-out "$OUT" "${chunks[@]}"
 } | tee "$OUT/summary.txt"
+# The summarizer's status is the pipeline's verdict (DC18 / robustness R4): a summarizer that
+# died (a traceback, a malformed chunk) printed no finding line, and the finding grep below
+# then read its silence as «no findings» — exit 0 from a run that summarized nothing.
+sum_rc=${PIPESTATUS[0]}
+if [[ "$sum_rc" -ne 0 ]]; then
+  echo "choice-trace-corpus: the summarizer failed (exit $sum_rc; its output above and in $OUT/summary.txt) — no verdict (infrastructure)" >&2
+  exit 2
+fi
 if grep -Eq '^    (VIOLATION|ALARM|MISMATCH|ERROR) ' "$OUT/summary.txt"; then
   echo "choice-trace-corpus: FINDINGS present (see above)" >&2
   exit 1

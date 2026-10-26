@@ -43,6 +43,12 @@ GOCACHE="$PWD/../artifacts/go-build-cache" go run -race . -iters 5
 Seed 0 (default) draws a random base seed and prints it; rerun with
 `-seed` to reproduce a failure's chaos schedule (goroutine interleaving
 is NOT reproduced — that residual nondeterminism is the point).
+Since 2026-10-26 (deep-clean review DC08) the selection is validated
+before anything runs: `-scenario` must name a scenario of the table or
+`all`, `-iters` must be at least 1, and positional arguments are refused
+(exit 2) — an unknown name or a zero-iteration campaign used to run
+nothing and print «all green». The green line names the runs it rests on
+(`N run(s): S scenario(s) x K iteration(s)`).
 
 ## The executable specification (`checkSafety`)
 

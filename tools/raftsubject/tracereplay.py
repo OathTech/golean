@@ -62,6 +62,8 @@ import shutil
 import subprocess
 import sys
 
+import ownedout
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
 TESTDATA = os.path.join(REPO, "deps", "raft", "testdata")
@@ -308,8 +310,9 @@ def run_one(name, blocks, prefix, args, report, rec=None, resumed=None):
     # analysis; --resume reuses recorded stages so a crash never costs
     # more than the stage in flight.
     resumed = resumed or {}
-    scratch = os.path.join(REPO, "artifacts", "tracereplay", name)
-    shutil.rmtree(scratch, ignore_errors=True)
+    # CLAIMED, never blindly erased (DC10, ownedout.py): a populated directory these tools did
+    # not create under artifacts/tracereplay/<name> is refused.
+    scratch = ownedout.claim(os.path.join(REPO, "artifacts", "tracereplay", name), "tracereplay.py")
     prog = os.path.join(scratch, "prog")
     os.makedirs(prog)
     for pkg in SUBJECT_PKGS:
@@ -392,49 +395,50 @@ def run_one(name, blocks, prefix, args, report, rec=None, resumed=None):
             rep["machine"] = "export refused: %s" % r.stderr.strip()[-300:]
         else:
             if "machine-raw" in resumed:
+                # A resumed machine stage must carry the process's exit status (DC09 /
+                # validation V3): a record from before 2026-10-26 stored stdout only, so a
+                # matching observation in it cannot certify a COMPLETED process — refused by
+                # name, never reused silently as evidence.
+                if "returncode" not in resumed["machine-raw"]:
+                    sys.exit("tracereplay.py: --resume: the recorded machine-raw stage of %s in %s has no "
+                             "returncode (a record written before 2026-10-26) — it cannot certify a completed "
+                             "machine process; move the record aside or run without --resume" % (name, args.record))
                 raw = resumed["machine-raw"]["stdout"]
                 mach_stderr = resumed["machine-raw"].get("stderr", "")
+                mach_rc = resumed["machine-raw"]["returncode"]
                 print("  [%s] machine run reused from record" % name)
             else:
-                # Engine choice (P2R, campaign arc-2): "fast" runs the
-                # VERIFIED fast evaluator (proofs exe `fastreplay`:
-                # compiled `stepFast` + the pinned transfer theorems)
-                # with progress emission and a durable per-chunk
-                # record. ENTRY-POINT NOTE (audit fix round 2,
-                # 2026-08-25): an ok verdict certifies BOTH
-                # whole-program entries — `runProgramM` (sequential,
-                # via `GoLean.FastEval.fastRun_transfer_eqb`) AND
-                # `runProgramPoolIntsM`'s underlying `runProgramPoolM`
-                # (the thread-pool entry the "slow" engine below
-                # computes, via `fastRun_transfer_pool_eqb`); their
-                # agreement on accepted runs is itself the pinned
-                # theorem `runProgram_pool_seq_bridge` (singleton-pool
-                # conservation, `execProgLoop_single`). Measured
-                # 44.3 s on probe_and_replicate with the direct
-                # premise-3 check vs the slow engine's >20 h DNF.
-                # "slow" is the original compiled-interpreter path.
-                if args.engine == "fast":
-                    cmd = [args.fastreplay, "--input", wire,
-                           "--function", "runTrace", "--fuel", args.fuel,
-                           "--record", os.path.join(scratch, "fast-record.jsonl")]
-                else:
-                    # --no-choice-report: only stdout's observation is read; the
-                    # choice-report line (docs/cli.md §2.1) would land in the recorded
-                    # machine stderr.
-                    cmd = [args.golean, "native-json-run", "--no-choice-report", "--input", wire,
-                           "--function", "runTrace", "--fuel", args.fuel]
+                # The compiled interpreter is the one engine (deep-clean DC17, 2026-10-26: the
+                # former `--engine fast` route — the proofs/ `fastreplay` executable and its
+                # transfer theorems — left this repository with the 2026-08-31 split; the
+                # option and its default path advertised a producer that no longer exists and
+                # are removed, so an old `--engine fast` invocation is argparse's own refusal).
+                # --no-choice-report: only stdout's observation is read; the choice-report line
+                # (docs/cli.md §2.1) would land in the recorded machine stderr.
+                cmd = [args.golean, "native-json-run", "--no-choice-report", "--input", wire,
+                       "--function", "runTrace", "--fuel", args.fuel]
                 r = subprocess.run(cmd, capture_output=True, text=True)
                 raw = r.stdout.strip()
                 mach_stderr = r.stderr.strip()
+                mach_rc = r.returncode
                 if rec:
-                    rec({"name": name, "stage": "machine-raw",
+                    rec({"name": name, "stage": "machine-raw", "returncode": mach_rc,
                          "stdout": raw, "stderr": mach_stderr[-2000:]})
+            rep["machine_rc"] = mach_rc
             try:
                 obs = json.loads(raw.splitlines()[-1])
             except (ValueError, IndexError):
                 obs = None
-            if obs is None:
+            # The exit status and the observation must agree (DC09; ownedout.machine_exit_agrees:
+            # 0 iff ok, 1 for any other status, nothing else is a verdict) BEFORE the output is
+            # compared: a machine killed after flushing a matching trace is not agreement.
+            disagree = ownedout.machine_exit_agrees(mach_rc, obs.get("status") if obs else None)
+            if mach_rc not in (0, 1):
+                rep["machine"] = "no verdict: %s (%s)" % (disagree, mach_stderr[-300:])
+            elif obs is None:
                 rep["machine"] = "no observation: %s" % (mach_stderr[-300:])
+            elif disagree is not None:
+                rep["machine"] = "no verdict: %s" % disagree
             elif obs.get("status") != "ok":
                 rep["machine"] = "machine stop: %s" % raw[:300]
             else:
@@ -458,7 +462,8 @@ def run_one(name, blocks, prefix, args, report, rec=None, resumed=None):
     if rec:
         rec({"name": name, "stage": "final", "rep": rep})
     if not args.keep and report[name].get("machine") in ("AGREE", None):
-        shutil.rmtree(scratch, ignore_errors=True)
+        if not ownedout.release(scratch, "tracereplay.py"):
+            report[name]["cleanup"] = "FAILED (reported above)"
 
 
 def main():
@@ -470,10 +475,6 @@ def main():
     ap.add_argument("--keep", action="store_true")
     ap.add_argument("--frontend", default=os.path.join(REPO, "artifacts", "nativefrontend"))
     ap.add_argument("--golean", default=os.path.join(REPO, ".lake", "build", "bin", "golean"))
-    ap.add_argument("--engine", choices=["slow", "fast"], default="slow",
-                    help="machine engine: slow = compiled interpreter (native-json-run); "
-                         "fast = verified fast evaluator (fastreplay exe + pinned transfer theorem)")
-    ap.add_argument("--fastreplay", default=os.path.join(REPO, "proofs", ".lake", "build", "bin", "fastreplay"))
     ap.add_argument("--record", default=os.path.join(REPO, "artifacts", "tracereplay", "records.jsonl"),
                     help="durable per-stage JSONL record (fsync'd; the mid-job-failure principle)")
     ap.add_argument("--resume", action="store_true",
@@ -482,8 +483,11 @@ def main():
     sys.stdout.reconfigure(line_buffering=True)
 
     os.makedirs(os.path.dirname(args.record), exist_ok=True)
+    # "engine" stays in the record's configuration key as the constant "slow" — the one engine
+    # since DC17 — so records written with it still match on --resume (a record written by the
+    # retired fast route carries "fast" and never matches).
     _cfg = {"fuel": args.fuel, "machine": not args.no_machine,
-            "engine": args.engine}
+            "engine": "slow"}
     _recf = open(args.record, "a")
     def rec(obj):
         obj = dict(obj); obj.update(_cfg)
@@ -526,7 +530,14 @@ def main():
             continue
         rz = resumed_all.get(name, {})
         if "final" in rz:
-            report[name] = rz["final"]["rep"]
+            rep = rz["final"]["rep"]
+            if "machine" in rep and "machine_rc" not in rep:
+                # The final verdict of a record that never stored the machine's exit status
+                # (before 2026-10-26) rests on output alone: refused, not reused (DC09).
+                sys.exit("tracereplay.py: --resume: the recorded final stage of %s in %s carries a machine "
+                         "verdict without the machine's exit status (a record written before 2026-10-26) — "
+                         "not reusable as evidence; move the record aside or run without --resume" % (name, args.record))
+            report[name] = rep
             print("  [%s] final result reused from record" % name)
         else:
             run_one(name, blocks, prefix, args, report, rec=rec, resumed=rz)

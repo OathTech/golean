@@ -32,6 +32,13 @@ own). `\\uXXXX` escapes in TEXT are decoded (the U+00A0 spelling).
 
 Needs `artifacts/nativefrontend` and `.lake/build/bin/golean`.
 Uncapped — point it only at this small tree.
+
+Since 2026-10-26 (deep-clean review DC09/DC10): the machine leg's exit
+status must agree with its observation (0 iff `ok`; a killed process is a
+failure, never agreement); the negative modes require the Go PROGRAM's own
+stop (`go run`'s `exit status N` trailer), not any nonzero `go run`; and
+`--out` is CLAIMED (ownedout.py) — a populated directory this tool did not
+create is refused, never erased, and a failed cleanup is reported.
 """
 
 import argparse
@@ -41,6 +48,8 @@ import re
 import shutil
 import subprocess
 import sys
+
+import ownedout
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
@@ -106,8 +115,10 @@ def main():
         if not os.path.exists(tool):
             sys.exit("runprobe.py: missing %s (build it: %s)" % (tool, hint))
 
-    out = args.out
-    shutil.rmtree(out, ignore_errors=True)
+    # The scratch directory is CLAIMED, never blindly erased (DC10, ownedout.py): a
+    # populated --out this tool did not create is refused; an absolute path, so the
+    # go-run leg's GOPATH is absolute (the README's relative --out issue).
+    out = ownedout.claim(args.out, "runprobe.py")
     prog = os.path.join(out, "prog")
     os.makedirs(prog)
     for pkg in SUBJECT_PKGS:
@@ -126,18 +137,35 @@ def main():
     env["GOPATH"] = gopath
     r = subprocess.run(["go", "run", "."], cwd=prog, env=env,
                        capture_output=True, text=True)
+    # `go run` reports a program that stopped with a nonzero status as its own
+    # exit 1 plus a trailing `exit status N` line; a compile error, a missing
+    # dependency or a killed `go run` has no such trailer. The negative modes
+    # below require the TRAILER (the program ran and stopped), never a bare
+    # nonzero exit (deep-clean DC09 / validation V3: an unrelated build failure
+    # used to pass as the expected stop).
+    go_stop = re.search(r"^exit status (\d+)$", r.stderr.strip(), re.M)
+    if r.returncode < 0:
+        sys.exit("runprobe.py: go run died on signal %d (no verdict):\n%s" % (-r.returncode, r.stderr))
     if args.expect_stop is not None:
         if r.returncode == 0:
             sys.exit("runprobe.py: expect-stop probe: go run SUCCEEDED, but "
                      "the probe expects a loud failure on both oracles:\n%s"
                      % r.stderr)
+        if r.returncode != 1 or go_stop is None or go_stop.group(1) == "0":
+            sys.exit("runprobe.py: expect-stop probe: go run failed (exit %d) but NOT as the "
+                     "program's own stop (no `exit status N` trailer: a compiler, dependency "
+                     "or process failure is not the expected stop):\n%s" % (r.returncode, r.stderr))
         print("runprobe: go run refused loudly, as the probe expects "
-              "(last lines):\n  %s"
-              % "\n  ".join(r.stderr.strip().splitlines()[-3:]))
+              "(the program stopped with exit status %s; last lines):\n  %s"
+              % (go_stop.group(1), "\n  ".join(r.stderr.strip().splitlines()[-3:])))
     elif members is not None:
         if r.returncode == 0:
             sys.exit("runprobe.py: expect-panic probe: go run SUCCEEDED, but "
                      "the probe expects an abort:\n%s" % r.stderr)
+        if r.returncode != 1 or go_stop is None or go_stop.group(1) != "2":
+            sys.exit("runprobe.py: expect-panic probe: go run failed (exit %d) but not as a "
+                     "runtime panic (gc's panic exit is the `exit status 2` trailer):\n%s"
+                     % (r.returncode, r.stderr))
         plines = [l for l in r.stderr.splitlines() if l.startswith("panic: ")]
         if len(plines) != 1:
             sys.exit("runprobe.py: expect-panic probe: go run's stderr has "
@@ -168,12 +196,22 @@ def main():
         cmd += ["--choices", args.choices]
     r = subprocess.run(cmd, capture_output=True, text=True)
     raw = r.stdout.strip()
+    # Process status FIRST (DC09 / validation V3): a machine that printed a matching
+    # observation and then died — SIGKILL, a cap kill, a crash after the flush — used to
+    # count as agreement. The exit code and the observation's status must agree
+    # (ownedout.machine_exit_agrees: 0 iff ok, 1 for any other status, nothing else).
+    if r.returncode not in (0, 1):
+        sys.exit("runprobe.py: %s:\n%s%s"
+                 % (ownedout.machine_exit_agrees(r.returncode, None), raw[:2000], r.stderr[-2000:]))
     if not raw:
         sys.exit("runprobe.py: machine produced no observation:\n%s" % r.stderr)
     try:
         obs = json.loads(raw.splitlines()[-1])
     except ValueError:
         sys.exit("runprobe.py: unreadable machine observation:\n%s%s" % (r.stdout, r.stderr))
+    disagree = ownedout.machine_exit_agrees(r.returncode, obs.get("status"))
+    if disagree is not None:
+        sys.exit("runprobe.py: %s:\n%s" % (disagree, raw[:2000]))
     if args.expect_stop is not None:
         if obs.get("status") == "ok":
             sys.exit("runprobe.py: expect-stop probe: the machine ran CLEAN "
@@ -184,8 +222,8 @@ def main():
                      % (args.expect_stop, raw))
         print("runprobe: machine first stop contains %r, verbatim:\n  %s"
               % (args.expect_stop, raw))
-        if not args.keep:
-            shutil.rmtree(out, ignore_errors=True)
+        if not args.keep and not ownedout.release(out, "runprobe.py"):
+            sys.exit(1)
         print("runprobe: PASS (expect-stop) — both oracles refuse this drive "
               "loudly; the fail-closed stub has teeth")
         return
@@ -200,8 +238,8 @@ def main():
                      "with %r, NOT a member of %r" % (m_text, members))
         print("runprobe: machine aborted with member %d: %r"
               % (members.index(m_text), m_text))
-        if not args.keep:
-            shutil.rmtree(out, ignore_errors=True)
+        if not args.keep and not ownedout.release(out, "runprobe.py"):
+            sys.exit(1)
         print("runprobe: PASS (expect-panic) — both oracles abort with a "
               "member text (go: member %d, machine: member %d)"
               % (members.index(go_text), members.index(m_text)))
@@ -217,11 +255,11 @@ def main():
                  "nor a string 'bytes' form): %s" % raw[:400])
     print("runprobe: machine %s -> %s" % (args.function, machine_verdict))
 
-    if not args.keep:
-        shutil.rmtree(out, ignore_errors=True)
     if go_verdict != machine_verdict:
         sys.exit("runprobe.py: ORACLES DISAGREE (go=%s machine=%s)"
                  % (go_verdict, machine_verdict))
+    if not args.keep and not ownedout.release(out, "runprobe.py"):
+        sys.exit(1)
     print("runprobe: PASS — both oracles agree: %s" % machine_verdict)
 
 
