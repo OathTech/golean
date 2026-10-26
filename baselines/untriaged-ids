@@ -191,18 +191,23 @@
 #   BUG-070/071/072 precedent), where check-bugs counts it as explained
 #   — parking it here with a ceiling raise was avoidable. Entry retired;
 #   the row stays red by design on BUG-078's Cases line.]
+# 2026-10-27 (the defect-neighbourhood campaign, step 1 fix round, review F7;
+#   [AGENT] lane records/defect-shapes-1027): init/hidden-dep-order (E7) and
+#   pointers/zero-size-address/escaped-same (R15) LEAVE this set — both are
+#   now OPEN differential entries, BUG-171 and BUG-170, whose Cases lines hold
+#   the rows (check (1): an open entry's row must FAIL, which they do until
+#   their envelopes land). Same rows, same reds, same latitude; only the
+#   accounting moves. latitude 4 -> 2; coverage 10 and wrong-answer 0 unchanged.
 channels/select-select/beside-loop	coverage
 channels/select-select/core	coverage
 floats/to-int-out-of-range/nan	latitude
 floats/to-int-out-of-range/range	latitude
 goroutines/spawn-in-init/in-init	coverage
-init/hidden-dep-order	latitude
 pointers/nil-array-ptr-slice-elided-high/deref-elided-high	coverage
 pointers/nil-array-ptr-slice-elided-high/deref-low-only	coverage
 pointers/nil-array-ptr-slice-elided-high/pointer-form	coverage
 pointers/nil-array-ptr-slice-elided-high/zero-length-array	coverage
 pointers/nil-array-ptr-slice/slice-expr-nil	coverage
-pointers/zero-size-address/escaped-same	latitude
 spec-examples-decl/slice-to-array/ok-forms	coverage
 # 2026-09-03 (atomics arc wave 1): sync/atomic-frontier/mp-litmus
 #   RETIRED — flipped PASS (membership exactly {0, 1, 11});

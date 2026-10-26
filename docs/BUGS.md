@@ -36,8 +36,12 @@ line (the defect-neighbourhood campaign, `docs/2026-10-27_defect-neighbourhood-c
 §4–§5; the classification is `docs/defect-shapes.md`): once swept it reads
 `- Neighbourhood: <shape> — <the matrix's extent (cells probed)>; <rows added>;
 <cells left and why>`, and until then `- Neighbourhood: to be swept in step 2,
-shape <S-id> (<shape name>)`. check-bugs reports (never fails) an entry whose
-Status date is on or after 2026-10-27 that lacks the line.
+shape <S-id> (<shape name>)`. check-bugs reports (never fails) a fixed entry
+whose Status date is on or after 2026-10-27 that lacks the line, and names a
+fixed entry whose Status line carries no date at all (every Status line
+carries one since 2026-10-27). An entry fixed before the campaign and re-fixed
+later by an amendment keeps its first date and is outside the check; the
+re-fix is named in its Neighbourhood line.
 
 ---
 
@@ -1180,7 +1184,12 @@ verbatim, gc realization version-tracked).
   POINTER hop reads the pointer field, a value receiver at the end of the
   path reads its cell — the path's cells, never the whole pointee (gc's
   wrapper loads). `race/free/promoted-ptr-hop` PASS/confluent (|set|=1
-  certified over all schedules), off this Cases line; the four guards
+  certified over all schedules), off this Cases line; the SPAWN instance
+  of the same retired mechanism — `race/free/promoted-spawn-disjoint`,
+  `go i.M()` dispatching to a promoted method beside a disjoint write,
+  race-free, which main's binary refused as a race — flipped at the same
+  S2 (ledger §8ap, audit F5) and is named here as this entry's class, not
+  a separate entry (2026-10-27); the four guards
   `race/negative/{promoted-ptr-hop-target,promoted-ptr-hop-field,
   promoted-dispatch,iface-dispatch}` stay PASS/racy and
   `race/free/promoted-ptr-box` PASS/confluent. A DECLARED value-receiver
@@ -2131,10 +2140,15 @@ envelope; these three pins cover the escaping regimes.
   identical-underlying check, the machine passes the unchanged runtime
   representation through and every other value shape stays at the
   fail-closed catch-all, so string→[]rune/[]byte remain refused and the
-  five untriaged strings/*-conversion reds are unchanged. The
+  five untriaged strings/*-conversion reds are unchanged [2026-10-27:
+  stale — `[]byte(s)`/`string(b)`/`string(r)` got their operators on
+  2026-07-26 (BUG-163) and the rune directions on 2026-08-19 (triage L1,
+  BUG-160); no `strings/*-conversion` red remains]. The
   tag-CHANGING pointer shape stays fail-closed downstream at the
   struct-tag check (structs/tag-pointer-conversion red, now stuck at
-  field access rather than refused at the conversion). The mis-scoped
+  field access rather than refused at the conversion) [2026-10-27: that
+  stuck was fixed 2026-08-19 by triage L7 — BUG-151; the whole value is
+  BUG-134, identity BUG-133]. The mis-scoped
   "alias one cell under two tags" rationale at the struct arm was
   corrected under F20. DELTA-REVIEW D3 (2026-08-06): the first cut's
   slice/map arms returned the RAW machine nil for a nil operand, so
@@ -2158,7 +2172,7 @@ missing arm). Fail-closed (never a wrong answer), but a refusal of
 legal, idiomatic Go — `(*T)(nil)` occurs 12× in deps/raft. The five
 untriaged `strings/*-conversion` reds (rune/string conversions) fail at
 the SAME catch-all but need real conversion logic, not a retag — they
-stay untriaged. NOTE the mis-scoped rationale at the struct arm
+stay untriaged [2026-10-27: closed since — BUG-160 (L1) and BUG-163]. NOTE the mis-scoped rationale at the struct arm
 ("pointer-to-struct conversions stay refused elsewhere: they ALIAS one
 cell under two tags") — identity retags like `(*Cell)(&c)` alias
 nothing; the true cause is that no target-kind arm exists. Fix shape:
@@ -2367,7 +2381,7 @@ wrapper frames as transparent.
 
 ## BUG-014 — untyped nil at defined-slice/defined-map map-literal elements stays a raw nil (stuck at len/ops)
 
-- Status: fixed
+- Status: fixed (2026-08-20)
 - Closed: 2026-08-20 (raft W4.1 item 5, branch `raft-w41` — found LIVE
   by the first RawNode probe: tracker.Config.Clone returns nil at the
   defined map type quorum.MajorityConfig and checkInvariants' map
@@ -2415,7 +2429,7 @@ cases flip.
 
 ## BUG-013 — CLI struct-observation typeName truncates mangled generic TypeIds
 
-- Status: fixed
+- Status: fixed (2026-08-05)
 - Closed: 2026-08-05 (generics slice, branch `general-coverage-generics`,
   coordinator-authorized follow-up to the slice's stop-and-report)
 - Fix: the private duplicate in `GoLean/CLI.lean` is DELETED — both use
@@ -2488,7 +2502,7 @@ machine's frame exit is untouched.)
 
 ## BUG-001 — struct-field / array-element WRITE lowers an address base as a value
 
-- Status: fixed
+- Status: fixed (2026-07-25)
 - Closed: 2026-07-25 (W4 slice 1, branch `seq-coverage-scoping`)
 - Fix: exactly where the 2026-07-19 diagnosis pointed — `emitAddressOf` in
   `tools/nativefrontend/emit.go` now emits ADDRESS chains (`a.b.c` →
@@ -3241,7 +3255,7 @@ entry until A7 lands.
 
 ## BUG-003 — for-clause per-iteration loop variables (Go 1.22) are not lowered
 
-- Status: fixed
+- Status: fixed (2026-08-04)
 - Pinned-by: differential
 - Cases: control-flow/for-loopvar-escape, functions/closure-loop-var-capture
 - Discovered: 2026-07-25 (pre-merge adversarial audit of `seq-coverage-scoping`)
@@ -7225,7 +7239,7 @@ stderr with `$(...)` — which drops NUL — and then escaped only backslash,
 quote, LF, CR and TAB by hand, so any other JSON control byte (SOH, …)
 produced an INVALID oracle observation. Red-first on the sprint (2026-09-06,
 `docs/2026-09-06_observer-controls-repair.md`): `nul` FAIL/differential (Go
-observation wrongly `ab`, Lean correctly `a b`); `soh`, `newline`,
+observation wrongly `ab`, Lean correctly `a` NUL `b` [2026-10-27: this entry carried the literal NUL byte between the two letters until the review's F12; spelled out so the index is text under POSIX tools]); `soh`, `newline`,
 `recovered-newline`, `output-prefix` FAIL/differential with comparator exit 2
 (an undecodable Go observation, not a decided inequality); `tab`, `cr`,
 `output-ok` PASS as pre-existing controls.
@@ -8623,7 +8637,7 @@ still PASS; the fresh `scripts/ci --diff` at the lane's tip is the measurement (
 
 ## BUG-125 — the native frontend LOWERS a `package main` with no `func main`, a program gc rejects («function main is undeclared in the main package») [frontend boundary; over-acceptance, no wrong answer observed; found by the negative corpus's new frontend leg, lane `apparatus/refusal-cause-1012` fix round (review MEDIUM-1), 2026-10-12] [FIXED BY REFUSAL 2026-10-13: the frontend refuses such a package by default; `--subject` is the corpus's explicit opt-in]
 
-- Status: fixed
+- Status: fixed (2026-10-13)
 - Pinned-by: none (the witness is a NEGATIVE-corpus row, `functions/main-undeclared`, born FAIL at
   `frontend-accepts` in `baselines/negative-full.tsv`, PASS at `frontend=type-check` since the fix;
   `scripts/check-bugs.sh` reads only the differential baseline, so it carries no Cases line here. The negative
@@ -8668,7 +8682,7 @@ FIX (2026-10-13, [AGENT] lane `frontend/main-undeclared-refuse-1013`), under the
 
 ## BUG-126 — the native frontend QUARANTINED a body-less user function per declaration and lowered the rest of the program, which gc rejects whole («missing function body») [frontend boundary; over-acceptance — a sibling subject was answered; found by the pre-merge review of lane `frontend/chan-elem-limit-1013` (MEDIUM-2, relayed by the [AGENT] coordinator), 2026-10-13; FIXED the same day in that lane]
 
-- Status: fixed
+- Status: fixed (2026-10-13)
 - Pinned-by: none (the witness is a NEGATIVE-corpus row, `functions/missing-function-body`, born PASS at
   `frontend=type-check` in `baselines/negative-full.tsv`; `scripts/check-bugs.sh` reads only the differential baseline.)
 - Discovered: lane worker `frontend/chan-elem-limit-1013` while measuring row 34's sibling limits ([AGENT], 2026-10-13);
@@ -8697,7 +8711,7 @@ units and was removed; g11 and g13 moved to `TestCompilerDirectives` as directiv
 
 ## BUG-127 — the native frontend LOWERED a user unit carrying an unmodeled COMPILER DIRECTIVE: a `//go:embed` string was answered as the zero value (gc 5), also with the file ABSENT where gc rejects the package; a user `//go:linkname` variable was answered 0 on a program gc's linker rejects; a `//line` directive was dropped [frontend boundary; wrong answer (embed: observed ∉ modeled) and over-acceptance; found by the Codex zero-context pass, F2 (`docs/2026-10-13_codex-zero-context-pass.md`), 2026-10-13] [FIXED BY REFUSAL 2026-10-13: every `//go:` directive outside the allowlist (`//go:build`, `//go:noinline`, `//go:generate`) and every `//line`/`/*line` directive refuses by name at file selection, in every user unit; lane `frontend/directives-1013`]
 
-- Status: fixed
+- Status: fixed (2026-10-13)
 - Expect: FAIL
 - Pinned-by: none (the three Cases below are RED-BY-DESIGN refusal pins at `frontend-export`, cause
   `by-design/compiler-directive`, red forever at the oracle's `ok` — the BUG-078 precedent; check-bugs verifies
@@ -8786,7 +8800,7 @@ each refusal names the placement and gc's text. Six NEGATIVE rows born PASS at `
 
 ## BUG-128 — `//go:debug` lines and go.mod `godebug` lines were IGNORED, and the runtime-defaults contract was unstated: `//go:debug panicnil=1` flips gc's answer (`recover() == nil` after `panic(nil)` is `true`) while the model keeps the Go 1.21+ semantics (`false`); a setting gc rejects was accepted [frontend boundary; wrong answer under the directive, over-acceptance; found by the Codex zero-context pass, F3 (`docs/2026-10-13_codex-zero-context-pass.md`), 2026-10-13] [FIXED BY REFUSAL 2026-10-13: `//go:debug` in any user unit and `godebug` in any go.mod the frontend reads refuse by name; the contract is stated in `docs/cli.md` §1 and `docs/release.md` §4; lane `frontend/directives-1013`]
 
-- Status: fixed
+- Status: fixed (2026-10-13)
 - Expect: FAIL
 - Pinned-by: none (`directives/debug-panicnil` is a RED-BY-DESIGN refusal pin at `frontend-export`, cause
   `by-design/runtime-setting`; the gc-REJECTED shape is the NEGATIVE row `directives/debug-unknown-setting`, born
@@ -8943,7 +8957,7 @@ temporaries (`CommittedIndex`'s stack array, `Slice`/`Visit`/`VoterNodes`/`Learn
 
 ## BUG-130 — a BLANK struct field's operand that is not a constant, `nil` or a plain variable read is REFUSED by name — gc's realization is not an evaluation: it elides a side-effect-free blank operand WITH its run-time panic (negative shifts, interface comparisons over an uncomparable dynamic type, under any pure wrapper) and never evaluates a package-level struct literal's blank operand at all, calls included [native frontend lowering; a REFUSAL BY RULING, support deferred, not a coverage gap; found by the pre-merge review of lane `frontend/blank-fields-1013` (2026-10-13, relayed) on BUG-129's first lowering; RULED [USER] Mike 2026-10-14; the two classes were pre-existing wrong answers (observed ∉ modeled) at the branch base and on the 2026-10-13 lowering alike]
 
-- Status: fixed
+- Status: fixed (2026-10-14)
 - Expect: FAIL
 - Pinned-by: none (the 14 Cases below are RED-BY-DESIGN refusal pins at `frontend-export`, cause
   `by-design/blank-field-operand` (`tools/lowerdiag/causes.tsv`); eight of them — `structs/blank-field-eval-order/*`
@@ -9032,7 +9046,7 @@ item 9 carries the deferred support; `docs/release.md` §4 states the limit.
 
 ## BUG-131 — a `make` whose count is a RUN-TIME value and whose count × element footprint is past the materialization footprint budget BUILT its backing and died under the box's memory cap (exit 137, a `killed:137` non-verdict, never a named refusal; on a machine without the cap a memory runaway) — the owed core half of BUG-078's residual (2b) [semantic core; apparatus kill, no wrong answer; release-readiness rows 30 and 31(d), [USER] ruling 2026-10-25 relayed by the [AGENT] coordinator; FIXED BY REFUSAL the same day, lane `core/row31-fillers-1025`]
 
-- Status: fixed
+- Status: fixed (2026-10-25)
 - Expect: FAIL
 - Pinned-by: none (the six Cases below are RED-BY-DESIGN refusal pins at `lean-observation`, causes
   `unsupported:make-footprint-budget-runtime`, `unsupported:append-footprint-budget` and
@@ -9750,11 +9764,11 @@ WHAT: Go ≥ 1.22 gives each iteration its own variable; every way a cell's iden
 
 - Status: fixed (2026-10-27, late entry — the fix landed 2026-08-05 with no entry (recorded only in the embedding/interfaces design note's build log as a pre-existing machine gap); found by the campaign's policy check, [AGENT] lane `records/defect-shapes-1027`, under the owner's approval of 2026-10-27)
 - Pinned-by: differential
-- Cases: interfaces/recover-nil-dispatch/nil-interface, interfaces/recover-nil-dispatch/nil-pointer-box
+- Cases: interfaces/recover-nil-dispatch/nil-interface, interfaces/recover-nil-dispatch/nil-pointer-box, defer/deferred-dispatch-entry-panic/return-drain, defer/deferred-dispatch-entry-panic/fallthrough-drain, defer/deferred-dispatch-entry-panic/during-panic
 - Discovered: commit 00c2bd56 (the general-coverage arc's interface riders exposed it; the two rows landed red first). Pre-existing: at e8e7ef20 `dynamicDispatch?` (Ops.lean) threw the nil-dereference text directly from `enterFrame`.
 - Neighbourhood: to be swept in step 2, shape S12 (panic and recover: payload, abort text, the recover walk)
 
-WHAT: spec#Handling_panics — a run-time panic raised while entering a call is an ordinary panic, recoverable by a deferred function of the calling frame; a thrown error that bypasses the panic chain cannot be. SITE: `GoLean/GoCore/Machine.lean` (`callImmediatePanic`, `callTargetsDoneEnterPanic`, `callArgsDoneEnterPanic`, `callValCalleeEnterPanic`, `callValArgsEnterPanic`) and `GoLean/GoCore/StepFn.lean` `enterFrameStep`; the deferred-call frame entry deliberately kept the thrown behaviour (a panic during unwinding, a recorded narrowing at the time). ROUTE: `i.M()` on a nil interface and a value-receiver method through a nil pointer box, under a deferred `recover`.
+WHAT: spec#Handling_panics — a run-time panic raised while entering a call is an ordinary panic, recoverable by a deferred function of the calling frame; a thrown error that bypasses the panic chain cannot be. SITE: `GoLean/GoCore/Machine.lean` (`callImmediatePanic`, `callTargetsDoneEnterPanic`, `callArgsDoneEnterPanic`, `callValCalleeEnterPanic`, `callValArgsEnterPanic`) and `GoLean/GoCore/StepFn.lean` `enterFrameStep`. The three DEFERRED-call drains kept the thrown behaviour for a few hours only: the same day's audit response (commit 31eeb6dd, findings F1+F5) made them recoverable too — on the normal drains the entry panic is the deferred INVOCATION's and unwinds from the draining frame with its remaining defers (`frameDeferFallEnterPanic` / `frameDeferReturnEnterPanic`), during an unwinding panic it JOINS the chain newest-last (`panicFrameDeferEnterPanic`, `enterFrameDeferPanicking`), gc's rule; the rows `defer/deferred-dispatch-entry-panic/{return-drain,fallthrough-drain,during-panic}` are on the Cases line above. (Corrected 2026-10-27 at the review's F4 — the first text of this entry called the deferred half a deliberate narrowing; the route `defer i.M()` was admitted by the same arc, so the drain half is recorded here rather than as its own entry.) ROUTE: `i.M()` on a nil interface and a value-receiver method through a nil pointer box, under a deferred `recover`; the same dispatch as a deferred call on the return, fallthrough and panicking drains.
 
 ## BUG-150 — `panic(nil)` was modeled with the PRE-1.21 semantics (`recover()` returns nil; the legacy abort line) where the Go 1.26 language the model implements raises `*runtime.PanicNilError` («panic called with nil argument»); the differential agreed only because the oracle ran in GOPATH mode, whose default keeps the legacy behaviour — an agreement by configuration coincidence [semantic core; wrong value and wrong panic identity against the language the model claims (stated since as the runtime-defaults contract, BUG-128); FIXED 2026-08-05 (commit a4ce5c5e, arc-final audit F21 — `panicPayload` maps nil to the PanicNilError runtime error; every oracle `go run` pins `GODEBUG=panicnil=0`); late entry 2026-10-27]
 
@@ -9844,6 +9858,8 @@ WHAT: gc sizes every type reachable from the non-generic declarations and the in
 
 WHAT: the module judgement (BUG-109, BUG-128) scanned a go.mod for its `go`/`godebug`/`toolchain` lines and skipped the rest; a file gc rejects outright therefore governed nothing and the program lowered where gc builds nothing. SITE: `tools/nativefrontend/modfile.go` (`goDirective`, the verb table `goModVerbs` and the block grammar). ROUTE: a go.mod at or above the lowered directory with a shape gc rejects (the workspace file is BUG-135's).
 
+SIBLINGS, PENDING (2026-10-27, the review's F9): the train-20 stage (commit 6ce62599, the shake review's F2) also fixed `go 1.26.5` beside a redundant `toolchain go1.26.5` line — accepted and RUN where gc refuses in module mode; its negative row `modules/toolchain-redundant` is born PASS on the stage and is folded into this entry's class rather than given its own ([AGENT] 2026-10-27: one scanner, one class; the row is named here because it does not exist on main's baseline yet and joins the Cases line when the train lands). The train-20 apparatus audit (branch `audit/train20-apparatus-1026`, 53df8e0d) is pending disposition by BUG-135's lane: its F1 shows a wrong value with status ok — an env-file `GOWORK`, or `GOFLAGS=-modfile` naming a go.mod with `godebug panicnil=1`, gives gc `true` and the machine `false` (cases w13/w27/w28), which contradicts BUG-135's over-refusal-only text (being corrected by that lane); its F4 lists six more go.mod shapes gc rejects that the scanner exports. Neither is entered until it lands; the S20 sweep takes them as instances.
+
 ## BUG-159 — the ABORT WINDOW: a goroutine's progress between main's last observable step and its abort is EXCLUDED — `go func(){ print("B"); done <- 1 }(); print("A"); panic("x")` enumerates exactly `{A, BA}`+panic where pinned gc at GOMAXPROCS=2 prints `AB` in 994 of 1000 runs (`A` 6, `BA` 0): the DOMINANT gc behaviour is outside the modeled set, race-free, no refusal [semantic core; scheduling boundaries; observed ∉ modeled; found by the sched-boundary lane's pre-merge review (MEDIUM-2) and measured by the coordinator 2026-10-12; RULED a STATED LIMIT (`docs/release.md` §4) rather than widened, release-readiness row 29; the index entry that row proposed was never written; late entry 2026-10-27]
 
 - Status: open (late entry 2026-10-27 — a known observed-∉-modeled with no entry; entered by the campaign's policy check so the index is the single record of known fidelity bugs, [AGENT] lane `records/defect-shapes-1027`, under the owner's approval of 2026-10-27; the 2026-10-12 ruling that it is a stated limit stands — this entry records, it does not schedule a fix)
@@ -9852,3 +9868,157 @@ WHAT: the module judgement (BUG-109, BUG-128) scanned a go.mod for its `go`/`god
 - Neighbourhood: to be swept in step 2, shape S15 (scheduling boundaries and the menu)
 
 WHAT: `.panicking _ .stop` is no scheduling boundary (`atBoundary_of_abort`, `MultiSound.lean`), no completion flag opens on an unwinding successor (`Config.completedFlag`), and the driver classifies the abort before stepping anyone else, while gc keeps the other P running through main's unwinding — FR-30's kind of silently admitted class (BUG-123 closed the `len(ch)`/print corners; BUG-152 the post-op and back-edge ones). SITE: `GoLean/GoCore/Multi.lean` `Config.atBoundary` and the drivers' terminal-priority classification (`execProgLoop`, `execProgLoopOut`). ROUTE: a goroutine's observable step racing main's abort. A widening touches `atBoundary_of_abort` and may move a pinned pool statement (a customer-visible re-pin), which is why the ruling named it a limit.
+
+## BUG-160 — `[]rune(s)` and `string([]rune)` were lowered by the frontend and REFUSED at the machine's conversion catch-all (`unsupported "conversion to …"`) where gc converts: nine rows red [semantic core; wrongly refused on a supported construct; FIXED 2026-08-19 (commit 67242a4c, the 19-red GoCore slice's family 1, triage L1 — two strict ops `runesFromString` / `stringFromRuneSlice` over the oracle-pinned kernels, the frontend routing both directions by underlying type); late entry 2026-10-27, the review's F1]
+
+- Status: fixed (2026-10-27, late entry — the fix landed 2026-08-19 with no entry (BUG-020's text still said the rune conversions «remain refused»); the triage table's L1, entered by the decorrelated review's F1, [AGENT] lane `records/defect-shapes-1027`)
+- Pinned-by: differential
+- Cases: strings/rune-slice-conversion, strings/rune-string-conversion, strings/string-to-rune-copy, strings/rune-slice-to-string-copy, strings/rune-invalid-values, strings/defined-slice-string-conversion, strings/nil-slice-string-conversion, spec-examples-decl/string-from-runes, spec-examples-lexical/string-to-runes
+- Discovered: the bug-fix arc's triage table, 2026-08-19 (`docs/2026-08-19_triage-table.md` §3.3, L1, category (a)); the rows were FAIL/lean-observation since the P3 spec-examples tranche (2026-08-18) and the earlier `strings/*` rows.
+- Neighbourhood: to be swept in step 2, shape S2 (conversions: a missing kernel arm or a value not retagged)
+
+WHAT: spec#Conversions to and from a string type — `[]rune(s)` yields the string's code points (U+FFFD per invalid byte) and `string(r)` for a rune slice concatenates them; the kernel had neither arm, so the conversion fell to the catch-all BUG-020 and BUG-103 record for other target kinds. SITE: `GoLean/GoCore/Ops.lean` `runesOfString` (the `decodeRuneAt` offset walk) and `stringFromRuneSlice` (`sliceVisibleValues` + `GoString.fromCodePoint`), the strict ops `runesFromString` / `stringFromRuneSlice`; the frontend classifier `isRuneSlice`. ROUTE: both conversion directions over named and unnamed rune-slice types, nil slices, invalid runes. The capacity of the result is BUG-118's axis (R3), measured at this fix and deliberately left unpinned then.
+
+## BUG-161 — a slice→array or slice→array-pointer conversion whose slice is SHORTER than the array was REFUSED at the conversion catch-all where gc raises the recoverable panic `cannot convert slice with length L to array or pointer to array with length N` [semantic core; wrongly refused — the panic the model did not raise; FIXED 2026-08-19 (commit 0a786453, family 2, triage L2a — two arms in `convertValueToTyFuel`: `len < N` → the gc-exact panic before any element is read; `len >= N` stays the L2b frontier refusal, `spec-examples-decl/slice-to-array/ok-forms`); late entry 2026-10-27, the review's F1]
+
+- Status: fixed (2026-10-27, late entry — the fix landed 2026-08-19 with no entry; the triage table's L2a, entered by the review's F1, [AGENT] lane `records/defect-shapes-1027`)
+- Pinned-by: differential
+- Cases: spec-examples-decl/slice-to-array/short-array, spec-examples-decl/slice-to-array/short-array-ptr, spec-examples-decl/slice-to-array/nil-to-longer-ptr
+- Discovered: the triage table, 2026-08-19 (§3.3, L2a, category (a)); the rows born FAIL/lean-observation at the P3 tranche.
+- Neighbourhood: to be swept in step 2, shape S2 (conversions: a missing kernel arm or a value not retagged)
+
+WHAT: spec#Conversions from slice to array or array pointer — a run-time panic when the slice is shorter; the kernel's array-target arm did not exist, so the refusal fired where Go panics (the message embeds `L` and `N` only). The succeeding form (`len >= N`) is still refused by name — `Loc` has no sub-array view constructor (frontier FR-10, `noodler/conversions/nil-slice-zero-array` its second witness). SITE: `GoLean/GoCore/Ops.lean` `convertValueToTyFuel`, the array and array-pointer target arms over a `.slice` operand (the kernel's first panicking conversion arm). ROUTE: `[N]T(s)`, `(*[N]T)(s)`, a nil slice to a longer array pointer.
+
+## BUG-162 — `min`/`max` over FLOAT operands were REFUSED (`unsupported "min builtin over float operands"`) where gc computes the IEEE result: NaN propagates, `-0`/`+0` ties break by sign, the result is always one of the operands [semantic core; wrongly refused; FIXED 2026-08-19 (commit e4b8c87c, family 3, triage L3 — the fold over the pure bits kernel `floatMinMaxBits`, softfloat `fcmp64`/`fcmp32`); late entry 2026-10-27, the review's F1]
+
+- Status: fixed (2026-10-27, late entry — the fix landed 2026-08-19 with no entry; the triage table's L3, entered by the review's F1, [AGENT] lane `records/defect-shapes-1027`)
+- Pinned-by: differential
+- Cases: spec-examples-stmt/min-max-float-specials/infinities, spec-examples-stmt/min-max-float-specials/nan, spec-examples-stmt/min-max-float-specials/signed-zero
+- Discovered: the triage table, 2026-08-19 (§3.3, L3); the rows born FAIL/lean-observation at the P3 tranche with go-run-derived expectations.
+- Neighbourhood: to be swept in step 2, shape S11 (kinds, widths and float bit patterns)
+
+WHAT: spec#Min_and_max's special-case table for floats; the machine's `minOf`/`maxOf` had the int and string arms only. The NaN PAYLOAD gc's lowering produces (an OR of the operands' bits) is BUG-094's later finding — this fix returned the NaN operand, correct in value, wrong in bit pattern once `math.Float64bits` became observable. SITE: `GoLean/GoCore/Machine.lean` `minOf`/`maxOf` float branches → `floatMinMaxBits` (`GoLean/GoCore/FloatBits.lean`). ROUTE: `min`/`max` over float32/float64 with infinities, NaN and signed zeros.
+
+## BUG-163 — `[]byte(s)`, `string(b)` and `string(r)` were lowered to the GENERIC `convert` node, which the machine refused, where gc converts: three rows red at the machine on a supported construct [native frontend lowering; wrongly refused; FIXED 2026-07-26 (commit 923e3ec0 — the three conversions route to their dedicated machine operators); late entry 2026-10-27, the review's F3]
+
+- Status: fixed (2026-10-27, late entry — the fix landed 2026-07-26 with no entry («latent backlog reds emitting the unsupported generic convert», the commit's own words); entered by the review's F3, [AGENT] lane `records/defect-shapes-1027`)
+- Pinned-by: differential
+- Cases: strings/byte-slice-to-string-copy, strings/string-byte-conversion, strings/string-int-rune
+- Discovered: commit 923e3ec0; the three rows were FAIL/lean-observation at the slice-0 re-pin `4dc23653` and PASS at `2b495d28` (the review's measurement).
+- Neighbourhood: to be swept in step 2, shape S2 (conversions: a missing kernel arm or a value not retagged)
+
+WHAT: the machine already had the string↔byte-slice and rune→string operators; the frontend's conversion emitter did not route to them, so the generic `convert` reached a kernel with no such arm. The same class as BUG-160 (the rune-slice directions, 2026-08-19) and BUG-020/BUG-103 (the kernel's own missing arms). SITE: `tools/nativefrontend/emit.go`, the conversion emission for string-typed targets and operands. ROUTE: `[]byte(s)`, `string(b)`, `string(r)` for an integer `r`.
+
+## BUG-164 — the assign-site speculative call emission ran the HOISTING built-in emitters TWICE: `x := len(f())`, `make([]T, f())`, `copy(…)` as a whole RHS evaluated their operands' calls twice (`copy` executed twice — `copy-edge/eval-order` traced 1212, `forward-overlap` re-copied mutated data) — a wrong value with status ok [native frontend lowering; evaluation count; FIXED 2026-07-26 (commit 923e3ec0 — built-in RHSes take the generic single-emit path); BUG-047 (2026-08-08) is the CONVERSION-of-a-call member of the same speculative path; late entry 2026-10-27, the review's F3]
+
+- Status: fixed (2026-10-27, late entry — the fix landed 2026-07-26 with no entry (BUG-047 cites the `isBuiltinCall` guard as context only); entered by the review's F3, [AGENT] lane `records/defect-shapes-1027`)
+- Pinned-by: differential
+- Cases: builtins/copy-edge/eval-order, builtins/copy-edge/forward-overlap
+- Discovered: commit 923e3ec0 («fixed en route»). Reachability on main before the fix: the `copy-edge` rows were `frontend-export` there because `copy` lowered on the same branch; the speculative path (`emitAssign` → `emitCallNode` → `emitBuiltin`, whose `len`/`cap`/`make` arms hoist and report `effectful = false`, so the generic path re-emitted the RHS) was on main — the same code argument BUG-140 makes for its slice-index form.
+- Neighbourhood: to be swept in step 2, shape S9 (evaluation count: twice, never, or re-read)
+
+WHAT: a built-in whose operand is a call hoists that call; an emitter that then re-emits the built-in from the generic path hoists it again. SITE: `tools/nativefrontend/emit.go` `emitAssign`'s speculative `emitCallNode` guard (`isBuiltinCall`; `isConversion` joined it at BUG-047). ROUTE: a built-in with an effectful operand as the whole right-hand side of a define or assignment.
+
+## BUG-165 — the pool's readiness check ABSORBED a load failure as «not ready»: a malformed parked goroutine (a channel block on an unbound address or a non-channel cell, a sync cell of the wrong shape) made the pool see no runnable goroutine and name Go's `deadlock` where `resumeThread` on the same state reports `stuck` — an absorbing default in the semantic core, LATENT (no path from admitted Go source shown) [semantic core; latent fail-open on the trusted surface, the BUG-085 class; deep-clean review 2026-10-26 DC11 / semantics S3; FIXED 2026-10-26 in BUG-133's lane (commit 35b752cd — `wakeReady?` is the fallible readiness, `deadlockOrRefusal` re-checks every parked goroutine before naming a deadlock); late entry 2026-10-27, the review's F2]
+
+- Status: fixed (2026-10-27, late entry — the fix landed 2026-10-26 recorded inside BUG-133's text only («a core API boundary, NOT a fidelity bug»); entered on the BUG-085 precedent (a latent absorbing default on the trusted surface is a defect regardless of reachability, the charter's fail-closed doctrine) so the core's absorbing-default shape has its instance list, [AGENT] lane `records/defect-shapes-1027`, the review's F2)
+- Pinned-by: none (LATENT — no corpus row can reach the arm; the pins are `Tests/GoCoreEval.lean` `malformedParkedStateFacts`: the malformed park refuses by name, two validly parked controls are `deadlock`. The enumeration driver's sibling — the train-19 shake review's F3, the driver classifying deadlock through the pool's own `deadlockStop` — is fixed on the train-20 stage (commit 8c87b3ce), pending.)
+- Discovered: `docs/2026-10-26_deep-clean-release-pass.md` DC11 (punch list P11), the reviewer's hand-built state; reproduced by BUG-133's lane.
+- Neighbourhood: to be swept in step 2, shape S26 (absorbing default in the semantic core)
+
+WHAT: `wakeReady` (`GoLean/GoCore/Multi.lean`) returned `false` on `chanPayload?`'s failure and on a sync cell's load failure or shape mismatch, so an error read as «not runnable»; with every goroutine «not runnable» the pool's empty menu was classified as a Go deadlock terminal — a named error laundered into a Go outcome. The main-exit window (`mainOutcome?` with nothing runnable) is outside the fix's claim, as BUG-133's text says. SITE: `Multi.lean` `wakeReady?` / `wakeReady` / `deadlockOrRefusal` (`stepMulti`'s empty menu and both drivers' empty runnable set; `choice-trace` mirrors it). ROUTE: none from admitted source; the sweep's unit is the core's default arms (S26's axes).
+
+## BUG-166 — the NEGATIVE corpus runner discarded `go build`'s EXIT STATUS before matching the expected diagnostic: an oracle that timed out (124) or was killed (137) after emitting the text read as a rejection, and the frontend leg then published PASS — a false green on a negative semantic verdict [apparatus; fail-open; deep-clean review 2026-10-26 DC02 / validation V1; FIXED 2026-10-26 (commit 348a7a78, lane `apparatus/dc-false-greens-1026` — the status is classified first: 1 is gc's rejection, 0 `go-compile`, every other status the new stage `go-crash` named by `undecided_cause`); late entry 2026-10-27 under the campaign's apparatus rule (the review's F5)]
+
+- Status: fixed (2026-10-27, late entry — the fix landed 2026-10-26 with no entry; entered under the rule the [AGENT] coordinator set for this campaign on 2026-10-27, the owner may overrule at the ask: an apparatus fail-open that could have produced a false green on a semantic verdict is entered, one that could not is not; [AGENT] lane `records/defect-shapes-1027`)
+- Pinned-by: none (apparatus: `scripts/coverage-negative`; the pins are the review's V1 harness modes re-run by the lane — the real fixture `arrays/array-compare-different-length` with the oracle subprocess controlled: exit 1 PASSes, 2/124/137/143 and a SIGKILL are FAIL `go-crash` with the cause named, runner exit 1 — and `scripts/run-with-timeout.sh`'s shared `undecided_cause`/`signal_cause`)
+- Discovered: `docs/2026-10-26_deep-clean-release-pass.md` DC02 (validation V1), 2026-10-26.
+- Neighbourhood: to be swept in step 2, shape S24 (fail-open defaults and unnamed stops at tool boundaries)
+
+WHAT: `if output="$(…)"` dropped the compiler's status; a non-verdict (timeout, kill, usage error) with the diagnostic text in its output counted as the deliberate rejection the row expects. SITE: `scripts/coverage-negative` (the oracle leg); the status vocabulary now shared with `scripts/diff-coverage` through `scripts/run-with-timeout.sh`. ROUTE: the negative lane's oracle leg under load or a kill; the lane's survey found every other subprocess status in the apparatus already sound (the commit's local-space table).
+
+## BUG-167 — the raft harness printed «all green» after running NOTHING: an unknown `-scenario` matched no table entry and a non-positive `-iters` entered no iteration, and the driver judged only its failure counter — a false green on the subject's verdict [apparatus (an instrument outside `scripts/ci`); fail-open; deep-clean review 2026-10-26 DC08 / validation V2; FIXED 2026-10-26 (commit d4bc0442 — the selection is validated before anything runs, the loop counts its runs and the green line names them); late entry 2026-10-27 under the campaign's apparatus rule]
+
+- Status: fixed (2026-10-27, late entry — the fix landed 2026-10-26 with no entry; entered under the coordinator's apparatus rule of 2026-10-27 (a false green on a verdict), [AGENT] lane `records/defect-shapes-1027`)
+- Pinned-by: none (an instrument outside the gate: `raftharness/main.go`; the pins are the review's V2 harness — the tracked `main.go` compiled with a fixture table of one failing and one green scenario: a typo, 0, −1 and a stray argument exit 2 by name; `basic×1` exits 1 «1 FAILURE(S) in 1 run(s)»; `green×2` exits 0 naming `2 run(s): 1 scenario(s) x 2 iteration(s)`. The dependency-backed full harness could not run offline.)
+- Discovered: `docs/2026-10-26_deep-clean-release-pass.md` DC08 (validation V2), 2026-10-26.
+- Neighbourhood: to be swept in step 2, shape S24 (fail-open defaults and unnamed stops at tool boundaries)
+
+WHAT: a verdict derived from a counter that nothing incremented. SITE: `raftharness/main.go` (scenario selection, the iteration loop, the summary line). ROUTE: every invocation whose selection is empty or malformed.
+
+## BUG-168 — the raft instruments parsed the machine's observation WITHOUT its exit status: a machine that flushed a matching `ok` observation and then died by SIGKILL was «both oracles agree», and a negative mode accepted any non-zero `go run` (a compile error or a missing dependency included) as the expected stop — false greens on the subject's verdicts [apparatus (instruments outside `scripts/ci`); fail-open; deep-clean review 2026-10-26 DC09 / validation V3; FIXED 2026-10-26 (commit d4bc0442 — `ownedout.machine_exit_agrees` applied first on every machine leg per `docs/cli.md` §2.1's exit contract; `--expect-stop` requires the program's own stop, `--expect-panic-member` a runtime panic's `exit status 2`; `tracereplay.py` records `returncode` and refuses status-less resumed records); late entry 2026-10-27 under the campaign's apparatus rule]
+
+- Status: fixed (2026-10-27, late entry — the fix landed 2026-10-26 with no entry; entered under the coordinator's apparatus rule of 2026-10-27, [AGENT] lane `records/defect-shapes-1027`)
+- Pinned-by: none (instruments outside the gate: `tools/raftsubject/runprobe.py`, `codeccheck.py`, `tracereplay.py`; the pins are the review's V3 harness re-run by the lane — a machine printing the matching observation then SIGKILLing itself → exit 1 «died on signal 9 (no verdict)»; an `ok` observation with exit 1 → «exit status 1 and observation status 'ok' disagree»; the ok/ok control passes; a `--resume` of a record without `returncode` refuses naming the record)
+- Discovered: `docs/2026-10-26_deep-clean-release-pass.md` DC09 (validation V3), 2026-10-26.
+- Neighbourhood: to be swept in step 2, shape S24 (fail-open defaults and unnamed stops at tool boundaries)
+
+WHAT: the CLI's contract is exit 0 iff status `ok`, 1 for any other status, nothing else a verdict; an instrument reading the observation alone cannot tell a completed machine from a killed one that flushed early. SITE: the three instruments' machine legs and `runprobe`'s negative modes. ROUTE: every machine and oracle leg of the raft probes.
+
+## BUG-169 — the observation COMPARATOR (`golean observation-eq`) accepts AMBIGUOUS or MALFORMED JSON and IMPOSSIBLE byte values: duplicate `status`/`output` keys collapse to one (`Lean.Json.parse` keeps the last), an unpaired surrogate escape is normalized to U+FFFD and compared equal, and a string observation accepts `bytes:[256]` — the exposed comparison protocol is less strict than it advertises, so a lossy or forged observation can compare equal [apparatus; byte transparency at the readout; OPEN; deep-clean review 2026-10-26 DC07 / frontend FE-02 and robustness, punch list P08 (route the observation text through the strict parser and validate the value domains); late entry 2026-10-27, the review's F6]
+
+- Status: open (late entry 2026-10-27 — a known apparatus fail-open with no entry, assigned to no lane; entered so the byte-transparency shape holds its open instance beside BUG-105 and BUG-138, [AGENT] lane `records/defect-shapes-1027`)
+- Pinned-by: none (apparatus; no corpus row — neither reviewer claims the Go observer produces these values today; the finding is the protocol's advertised strictness. The pins when fixed: duplicate-key, unpaired-surrogate and `bytes:[256]` inputs refuse by name through `observation-eq` and the harness's comparison path — the BUG-110 mutant style, in `scripts/check-wire-boundary`.)
+- Discovered: `docs/2026-10-26_deep-clean-release-pass.md` DC06–DC07 («admission and observation decoding are too permissive»), 2026-10-26; punch list P08.
+- Neighbourhood: to be swept in step 2, shape S27 (byte transparency of string-carrying channels)
+
+WHAT: the production wire is parsed strictly since BUG-110 (`GoLean.StrictJson.parseBytes`), but the observation comparison still reads both sides with `Lean.Json.parse`, so the same duplicate-key and surrogate collapse BUG-110 closed at the wire is open at the readout, and the byte-array decoder does not check `0 ≤ b ≤ 255`. SITE: `GoLean/CLI.lean` `observation-eq` and the observation decoder it shares with `scripts/diff-coverage`'s comparison. ROUTE: every differential comparison of a string-carrying observation (values, `output`, panic messages).
+
+## BUG-170 — the zero-size variable address latitude: `pointers/zero-size-address/escaped-same` is a LIVE differential red (machine 0, gc 1) — the machine holds the never-same singleton of spec#Size_and_alignment_guarantees' «may have the same address» while gc realizes distinct on the stack and equal on the heap; observed ∉ modeled-singleton at a latitude point [semantic core; envelope too narrow at a latitude point, the BUG-021/BUG-118/BUG-159 class; OPEN since 2026-08-19 as the latitude inventory's R15 deviation record, the re-envelope on the release-readiness backlog; late entry 2026-10-27, the review's F7]
+
+- Status: open (late entry 2026-10-27 — an open known observed-∉-modeled with no entry (a `latitude` row of `baselines/untriaged-ids` since 2026-08-19); entered under the rule the review's F7 asked to be applied alike to BUG-159, R15 and E7: an envelope narrower than gc at a latitude point is an open entry, its row on the Cases line where check (1) holds it, retiring by the envelope; the two rows leave `untriaged-ids` in the same commit, [AGENT] lane `records/defect-shapes-1027`)
+- Pinned-by: differential
+- Cases: pointers/zero-size-address/escaped-same
+- Discovered: 2026-08-19, the bug-fix arc's audit fix round F1 (the zero-size address latitude), recorded as R15 in `docs/2026-08-11_latitude-inventory.md` (gc probed non-single-valued: stack-distinct, heap-equal); the equality/identity review of 2026-10-26 (F5) re-states it as a latitude.
+- Neighbourhood: to be swept in step 2, shape S4 (identity, equality and nil-ness)
+
+WHAT: the spec permits two distinct zero-size variables to share an address; the machine allocates a fresh cell per variable (never the same), gc's escape analysis decides per variable, so a program comparing two escaped zero-size addresses observes `true` in gc and `false` here. FIX SHAPE (the inventory's R15 obligation): a two-member envelope at the zero-size allocation (same / fresh), routed to the membership lane; gc's member inside. SITE: `GoLean/GoCore/Machine.lean` / `State.lean`, the allocation of zero-size variables (`Store.alloc`); `valueEq`'s pointer arm compares the canonical location (BUG-133). ROUTE: `&a == &b` for zero-size `a`, `b` that escape.
+
+## BUG-171 — the hidden-dependency INIT ORDER: `init/hidden-dep-order` is a LIVE differential red — the machine realizes go/types' initialization order (`[hiddenX, hiddenB, hiddenA]`, 4242) and gc its own (4624242) on a shape whose order the spec leaves unspecified; a guard refuses the DIRECT and the transitively-called-helper shapes by name (`init/hidden-dep-refused`, `hiddendep.go`, 2026-09-01), dispatch through a function value still lowers [frontend lowering (the init schedule from go/types' `InitOrder`); envelope too narrow at a latitude point, the BUG-159 class; OPEN since 2026-08-05 as the latitude inventory's E7 deviation record (a `latitude` row of `untriaged-ids`, retiring only by an envelope); late entry 2026-10-27, the review's F7]
+
+- Status: open (late entry 2026-10-27 — entered under the same rule as BUG-170 (the review's F7); the row leaves `untriaged-ids` in the same commit; the step-1 §4 note that E7 «stays a latitude row, not an entry» is withdrawn, [AGENT] lane `records/defect-shapes-1027`)
+- Pinned-by: differential
+- Cases: init/hidden-dep-order
+- Discovered: 2026-08-05, the init slice (design note §1: the spec leaves hidden-dependency initialization order unspecified; go/types' conforming order differs from gc's conforming order on exactly this shape); the guard 2026-09-01 (T1 item 2, `tools/nativefrontend/hiddendep.go` `methodReadsInitVar`, made transitive at the T1 audit fix round, commit cdd45ad2 item 3); inventory E7 «known ≠ gc».
+- Neighbourhood: to be swept in step 2, shape S19 (package initialization order)
+
+WHAT: spec#Package_initialization makes a variable depend on the variables a referenced function's body reads, and orders initialization by repeatedly selecting the earliest variable with no uninitialized dependencies; where two conforming orders exist, go/types picks one and gc another. The machine's schedule is go/types'. FIX SHAPE: an envelope over the conforming orders at the init schedule, or a pin to gc's realization with the version tracked (BUG-061's staticinit guard is the sibling decision on the same schedule). SITE: `tools/nativefrontend/load.go` (`specInitOrder` over go/types' `InitOrder`), `hiddendep.go` (the guard). ROUTE: package-level initializers reaching variables through function bodies, method bodies and function values.
+
+## BUG-172 — the three-clause `for` desugar made `continue` SKIP the POST statement: the loop never advanced and ran out of fuel where gc completes [wire decoder; wrongly stuck (non-termination); FIXED 2026-07-18 (commit b0b75abe — the post runs at the top of the body except on the first iteration, under a guarded flag, mirroring the range desugar); late entry 2026-10-27, the review's F8 (the pre-index floor dropped)]
+
+- Status: fixed (2026-10-27, late entry — the fix landed 2026-07-18, one day before the index existed; the campaign plan has no date floor, so the floor the step-1 commit applied is withdrawn (the review's F8), [AGENT] lane `records/defect-shapes-1027`)
+- Pinned-by: differential
+- Cases: control-flow/for-continue-post-plain
+- Discovered: commit b0b75abe («two Go-divergence bugs found in review, with reproducing tests» — the row was born red first, Go-green).
+- Neighbourhood: to be swept in step 2, shape S17 (lowering coverage holes: statement forms the emitter or decoder mis-carries)
+
+WHAT: spec#For_statements — `continue` begins the next iteration, which runs the post statement first; a while-loop desugar that jumps to the condition skips it. SITE: `GoLean/NativeToIR.lean` `decodeFor` (the three-clause arm; BUG-003's per-iteration carrier desugar later built on the same shape). ROUTE: `continue` inside a three-clause `for` (and the `for … { … continue }` family with a post statement).
+
+## BUG-173 — BLANK call-result discard temps were always typed `int`, so a discarded non-int result (`_ = f()` with a string or struct result) stored a value at the wrong declared type — a wrong store, a stuck or wrong answer downstream [native frontend + wire decoder; kinds; FIXED 2026-07-18 (commit b0b75abe — the call's result types travel on the wire and each discard temp is typed by them; the `resultTypes` vector BUG-110 later made REQUIRED); late entry 2026-10-27, the review's F8]
+
+- Status: fixed (2026-10-27, late entry — the fix landed 2026-07-18 (pre-index; the floor withdrawn, the review's F8), [AGENT] lane `records/defect-shapes-1027`)
+- Pinned-by: differential
+- Cases: multi-assign/blank-discard-nonint
+- Discovered: commit b0b75abe (the row born red first; BUG-035 names it as a green control).
+- Neighbourhood: to be swept in step 2, shape S11 (kinds, widths and float bit patterns)
+
+WHAT: a discard temp needs the discarded value's type; defaulting it to `int` is the kind-defaulting class BUG-042/043 record for literals and loop variables, at the discard position. SITE: `tools/nativefrontend/emit.go` (the wire's `resultTypes`), `GoLean/NativeToIR.lean` (the blank-target discard temps; `resultTypes[i]?.getD .int` survived here until BUG-110). ROUTE: a blank target receiving a non-int call result.
+
+## BUG-174 — an INTEGER LITERAL typed at a DEFINED integer type (`1` in `counter + 1` with `type counter int8`) carried the DEFAULT `int` kind instead of the underlying kind, so the arithmetic mixed kinds (a stuck) or, at a wrapping width, took the wrong result [native frontend lowering; kinds; FIXED 2026-07-18 (commit b2d240d7 — `emitConstValue` resolves the literal's kind through the defined type's underlying); BUG-042 (2026-08-07) is the same defect at the IncDec desugar's synthetic literal; late entry 2026-10-27, the review's F8]
+
+- Status: fixed (2026-10-27, late entry — the fix landed 2026-07-18 (pre-index; the floor withdrawn, the review's F8), [AGENT] lane `records/defect-shapes-1027`)
+- Pinned-by: none (no row names the fix — the commit landed none and predates the corpus's defined-int rows; the shape is exercised by every later defined-integer arithmetic row, e.g. `ints/defined-incdec/*` (BUG-042), `ints/defined-int-conversion`, `builtins/min-max-edge/defined-int`, all PASS; a dedicated row is the sweep's to add)
+- Discovered: commit b2d240d7 (2026-07-18). The commit's second fix — a blank target in a comma-ok map lookup routed to a fresh temp instead of an unsupported assignee — lifted a refusal and is coverage, not entered.
+- Neighbourhood: to be swept in step 2, shape S11 (kinds, widths and float bit patterns)
+
+WHAT: go/types records the literal's type as the defined type; the emitter must take the underlying basic kind for the wire literal (`emitConstValue`'s `tv.Type.Underlying()`, the rule BUG-042 later cited as the established one). SITE: `tools/nativefrontend/emit.go` `emitConstValue`. ROUTE: untyped constants in arithmetic at defined integer types of every width.
+
+## BUG-175 — index, division, modulo and negative-shift run-time panics LACKED gc's texts: the index message carried no index and length, and the division and shift messages had no `runtime error: ` prefix — wrong panic texts [semantic core; wrong panic text, status panic on both sides; FIXED 2026-07-18 (commit 18df1672 — `indexOutOfRangePanic` renders gc's exact message with index and length; division, modulo and negative-shift panics carry the prefix); BUG-137 is the SLICE-expression member of the same class (2026-07-25); late entry 2026-10-27, the review's F8]
+
+- Status: fixed (2026-10-27, late entry — the fix landed 2026-07-18 (pre-index; the floor withdrawn, the review's F8); the commit closed «the three message-alignment differential failures from the Phase 0 baseline», [AGENT] lane `records/defect-shapes-1027`)
+- Pinned-by: differential
+- Cases: arrays/array-bounds, ints/divide-by-zero, ints/negative-shift
+- Discovered: commit 18df1672 (the Phase 0 differential baseline's three message-alignment failures).
+- Neighbourhood: to be swept in step 2, shape S12 (panic and recover: payload, abort text, the recover walk)
+
+WHAT: spec#Run_time_panics gives the kind; gc's texts (`runtime error: index out of range [i] with length n`, `runtime error: integer divide by zero`, `runtime error: negative shift amount`) are what a recovered `error`'s `Error()` and the abort line observe. SITE: `GoLean/GoCore/Ops.lean` `indexOutOfRangePanic` (used by the array/string index and store arms), the division and shift arms (then in `Eval.lean`, now `Ops.lean`). ROUTE: every run-time panic whose text is observed.

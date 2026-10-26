@@ -35,9 +35,13 @@
 #       date is on or after 2026-10-27 carries a `- Neighbourhood:` line (the
 #       sweep's record per entry; the classification is docs/defect-shapes.md).
 #       A miss is REPORTED by entry id, never a failure — the trust surface is
-#       unchanged. An entry whose Status line carries no date is exempt (the
-#       older entries' form). One awk, placed before the verdict so it prints
-#       on a red run too.
+#       unchanged. A `Status: fixed` entry whose Status line carries NO parsable
+#       date is NAMED as «undated» (never a silent exemption — review F12,
+#       2026-10-27; every Status line carries a date since that day). An entry
+#       fixed before the campaign and re-fixed by a later amendment keeps its
+#       first date and is outside the check by construction (the re-fix is
+#       named in its Neighbourhood line). One awk, placed before the verdict so
+#       it prints on a red run too.
 #
 #   scripts/check-bugs.sh --list   print that untriaged surface (id + stage),
 #                                  the concrete backlog to triage into BUGS.md.
@@ -344,15 +348,19 @@ fi
 
 # (7) NEIGHBOURHOOD, report-only (header): a fixed entry dated on or after the
 #     campaign's start without its `- Neighbourhood:` line is named, not failed.
-nbh_missing="$(awk '
-  function flush() { if (id != "" && st == "fixed" && d >= "2026-10-27" && !nb) print id }
+nbh_report="$(awk '
+  function flush() {
+    if (id == "" || st != "fixed") return
+    if (d == "") { print id "(undated)"; return }
+    if (d >= "2026-10-27" && !nb) print id
+  }
   /^## BUG-/          { flush(); id=$2; st=""; d=""; nb=0 }
   /^- Status:/        { st=$3; if (match($0, /20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]/)) d=substr($0, RSTART, RLENGTH) }
   /^- Neighbourhood:/ { nb=1 }
   END { flush() }
 ' "$BUGS" | tr '\n' ' ')"
-if [ -n "$nbh_missing" ]; then
-  echo "check-bugs: neighbourhood (report-only, never a failure) — fixed entries dated on or after 2026-10-27 without a '- Neighbourhood:' line (the campaign's per-entry sweep record, docs/defect-shapes.md): ${nbh_missing% }"
+if [ -n "$nbh_report" ]; then
+  echo "check-bugs: neighbourhood (report-only, never a failure) — fixed entries dated on or after 2026-10-27 without a '- Neighbourhood:' line, or fixed entries with NO date on their Status line (marked undated; the campaign's per-entry sweep record, docs/defect-shapes.md): ${nbh_report% }"
 fi
 
 if [ "$fail" -ne 0 ]; then echo "check-bugs: FAIL"; exit 1; fi
