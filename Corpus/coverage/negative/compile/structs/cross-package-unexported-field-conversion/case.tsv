@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot convert pa (variable of type *sub.A) to type *C	structs,conversions,fields,pointers,multipackage,compile_error

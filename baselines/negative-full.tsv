@@ -1,6 +1,19 @@
 # GoLean negative-corpus (compile-rejection) baseline
 # recorded: 2026-08-18  commit: f68a4d86+ (spec-truth P3 slice 2)  oracle: go build (rejection)  [header corrected 2026-08-31: the old "+ frontend fail-closed" conjunct claimed a check that does not exist — scripts/coverage-negative invokes no GoLean tool (p2-fact claim 5)]
-# manifest_cases: 436  pass: 436  fail: 0
+# manifest_cases: 437  pass: 437  fail: 0
+# re-pinned: 2026-10-26 [AGENT], lane frontend/workspace-and-oracle-1026 — the train-20 core audit's probe p11-cross-pkg-negative
+#   ([USER] ruling 2026-10-26, relayed: a negative row — gc rejects AND the frontend refuses as a type-check rejection — in this
+#   corpus, naming BUG-134's known limit). ONE BORN ROW: structs/cross-package-unexported-field-conversion — main.C spells sub.A's
+#   fields identically but the unexported x belongs to another package, so the types are not identical (spec#Type_identity) and
+#   `(*C)(pa)` is illegal: gc (go1.26.5, MODULE MODE from the row's directory — `require sub v0.0.0` + `replace sub => ./sub`, a
+#   module in sub/, built without any lookup under GOPROXY=off, GOTOOLCHAIN=local and scripts/go-env-pins.sh's pins) rejects with
+#   «cannot convert pa (variable of type *sub.A) to type *C», and the frontend refuses at frontend=type-check with go/types'
+#   identical text. THE GUARD: BUG-134's limit — the wire's FieldDef carries no package on a field name, so the machine's
+#   tag-compatibility predicate (structTagCompatible) would read the two as compatible; the frontend's rejection keeps the
+#   conversion off the wire. The control with the conversion replaced by a literal builds, exports and runs (the machine
+#   answers 2). No other row moves; no flip. Counts: 436 + 1 = 437; PASS 436 + 1 = 437; FAIL 0. Measured by
+#   CAPPED_MEM_MAX=64G capped scripts/ci --diff on the lane tree at 54126e25 plus this row (its only drift: this NEW id, PASS/-;
+#   the differential lane 4097/4097 no regression; lake check and lake comparator PASS); the --diff at the tip judges.
 # re-pinned: 2026-10-26 [AGENT], lane frontend/workspace-and-oracle-1026 — train-20 pre-merge audit F4 ([USER] ruling
 #   2026-10-26, relayed: six go.mod shapes gc refuses that the scanner exported, pre-existing on main, fixed as the shake
 #   review's F2 class with a negative row per shape). TEN BORN ROWS under modules/, each a go.mod beside a valid program that gc
@@ -536,6 +549,7 @@ PASS	strings/surrogate-rune-escape	-
 PASS	structs/ambiguous-promoted-field	-
 PASS	structs/blank-field-keyed	-
 PASS	structs/blank-field-selector	-
+PASS	structs/cross-package-unexported-field-conversion	-
 PASS	structs/duplicate-field	-
 PASS	structs/duplicate-literal-field	-
 PASS	structs/embedded-pointer-unnamed	-
