@@ -230,7 +230,11 @@ def derive(rows):
         keys[cid] = "-"
     if to_classify:
         texts = "".join(t.replace("\r", " ") + "\n" for _, t in to_classify)
-        env = dict(os.environ, GO111MODULE="off")
+        # scripts/go-env-pins.sh's pins (train-20 pre-merge audit F3, 2026-10-26: this is a GATE
+        # path — judge_record → coverage-baseline-diff → here — and an ambient GOFLAGS made the
+        # baseline judgement refuse); the same set, spelled out for Python.
+        env = dict(os.environ, GO111MODULE="off", GOFLAGS="", GOWORK="off", GOENV="off",
+                   GOTOOLCHAIN="local", GOOS="linux", GOARCH="amd64", GOAMD64="v1", GOEXPERIMENT="", GODEBUG="")
         env.setdefault("GOCACHE", os.path.join(ROOT, "artifacts", "go-build-cache"))
         try:
             p = subprocess.run(["go", "run", "./tools/lowerdiag", "classify"], cwd=ROOT, env=env,

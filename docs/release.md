@@ -188,9 +188,13 @@ push rule). Pushing the tag is a separate sign-off.
   an obligation on every future admission, `docs/stdlib-admission-register.md`); a `go.work` in scope for the
   lowered directory is REFUSED by name since 2026-10-26 (BUG-135: the go command applies a workspace's `godebug`,
   `go` and `toolchain` lines to its modules — measured, a `godebug panicnil=1` there flips a module's answer —
-  and before this the export succeeded unchanged), with `GOWORK=off` honoured from the process environment as the
-  go command honours it and pinned by the apparatus on every leg; `//go:debug panicnil=0`, the one source-level
-  match for the pin, is refused like every `//go:debug`. The contract is stated in `docs/cli.md` §1.
+  and before this the export succeeded unchanged); since the train-20 fix round the frontend reads the go
+  command's configuration with the go command's precedence (the process, the `go env -w` file, the toolchain's
+  go.env — `tools/nativefrontend/goenv.go`) and refuses by name a non-empty `GOFLAGS`, a `GOTOOLCHAIN` off the
+  pin, a target other than linux/amd64, a `GOAMD64` above v1, a `GOEXPERIMENT`, a process `GODEBUG` other than
+  `panicnil=0` and a `GOWORK` naming a file — every channel measured to move gc's answer — while the apparatus
+  pins all of them on every leg (`scripts/go-env-pins.sh`); `//go:debug panicnil=0`, the one source-level match
+  for the pin, is refused like every `//go:debug`. The contract is stated in `docs/cli.md` §1.
 - **A blank struct field's operand is not evaluated** (row 37; BUG-129/BUG-130): the field takes the zero
   value — spec#Comparison_operators compares «non-blank field values» only — and the operand may be a constant,
   `nil` or a plain variable read (an identifier naming a variable, a package-qualified variable, a struct VALUE's

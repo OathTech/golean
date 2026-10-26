@@ -9425,7 +9425,9 @@ target store's, recorded above.
 - Pinned-by: none (`TestWorkspaceRefusal`, `tools/nativefrontend/modfile_test.go`: the review's three-file
   reproduction verbatim, a go.work in a parent directory with and without a go.mod below it, `GOWORK=off`, an
   explicit, a missing and a relative `GOWORK`, a directory named go.work, and the whole pipeline through a
-  case-local package. No corpus row can pin it: gc ACCEPTS a program with a go.work, so no negative row rejects
+  case-local package; since the train-20 fix round also `TestGoEnvironmentRefusal`,
+  `TestGoEnvironmentGorootGoEnv` and `TestWorkspaceThroughGoEnv` (`goenv_test.go`): the env-file fixture,
+  the process-environment cases, the toolchain's go.env, `GOWORK=auto`. No corpus row can pin it: gc ACCEPTS a program with a go.work, so no negative row rejects
   it, and the positive corpus runs in GOPATH mode, where the go command ignores go.work (measured); both
   runners now pin `GOWORK=off` on their oracle AND frontend legs, so a row carrying a go.work would test
   nothing on either side. No `- Cases:` line on purpose: check-bugs requires every listed id to be a live
@@ -9489,9 +9491,8 @@ one puts the directory in a workspace); unset → `findGoWork`, the walk up to t
 regular file named go.work (a directory of that name is skipped, as gc skips it). The go command's one special
 case — it does not cross GOROOT — is not mirrored: a lowered directory inside a GOROOT is not an input of this
 frontend, and a go.work found above one would be refused where gc ignores it (the fail-closed direction). The
-go command also reads GOWORK from its env file (`go env -w GOWORK=off`), which the frontend does not: a
-workspace disabled only there is still refused, and the message names the remedy (`run gc and the frontend
-with GOWORK=off`). The refusal carries the `module directive: ` prefix — the negative runner's `module`
+go command also reads GOWORK from its env file and from the toolchain's go.env — which this first fix did NOT: the
+train-20 audit's F1, closed in the FIX ROUND below (GOWORK with gc's full precedence, `auto` as the walk). The refusal carries the `module directive: ` prefix — the negative runner's `module`
 class — but no row reaches it: both legs of both runners now run under `GOWORK=off`. Nothing in a go.work is
 read or modeled; the `toolchain`/`go`/`godebug` lines are not re-derived.
 
@@ -9509,13 +9510,48 @@ standing instruction; each disposed):
 | input | the go command | the frontend | disposition |
 |---|---|---|---|
 | go.work, GOWORK | above | refused by name; GOWORK honoured | this entry |
-| the go env file (`go env -w`, `$GOENV`) and `$GOROOT/go.env` | defaults for GOFLAGS, GOWORK, GOTOOLCHAIN, GODEBUG, GOPROXY… when the variable is unset | not read | every variable the verdict depends on is pinned in the process environment by the apparatus (GOFLAGS=, GOWORK=off, GO111MODULE per leg, GOTOOLCHAIN=local and GOPROXY=off on the module leg, GODEBUG=panicnil=0 on the oracle), which overrides the file; a consumer's env file is their configuration, and the one case it would hide (GOWORK=off there only) is an over-refusal here |
-| GOFLAGS in the environment | every flag: -tags, -mod, -toolexec, -race, -x | n/a | scrubbed on every apparatus invocation (F7); before, the negative runner's GOPATH leg inherited it |
+| the go env file (`go env -w`, `$GOENV`; default `os.UserConfigDir()/go/env`) and `$GOROOT/go.env` | the second and third source of every configuration key below (cfg.Getenv: the process when non-empty, else the user file, else the toolchain's go.env) — measured: a file `GOWORK=<path>` selects a workspace with no go.work in the walk (the audit's w13: gc `true`, the base frontend exported, the machine `false` with status ok), a file `GOFLAGS=-modfile=alt.mod` reads another module file (w28, the same), a file `-tags` reaches the build | READ with gc's precedence since the train-20 fix round (`tools/nativefrontend/goenv.go`): `GOENV` honoured (`off` = no file), an unreadable file absent as for gc; the value found is judged by the row of its key | CLOSED in this fix round — this row had said the file could hide an over-refusal only: false in the direction that matters (audit F1) |
+| GOFLAGS (the process, the env file, go.env) | every flag: -modfile (another module file: measured, w27/w28 flip the answer), -mod, -tags, -overlay, -toolexec, -race, -gcflags | any non-empty value (any field after gc's own splitting; whitespace alone is nothing) REFUSED by name with its source | fail closed; the apparatus scrubs it on every leg (scripts/go-env-pins.sh), so the gate never sees the refusal |
+| GOTOOLCHAIN (the three sources; the toolchain's go.env says `auto`) | which toolchain gc runs: `go1.24.9` switches (stopped here by GOSUMDB=off, with network a different oracle), `go1.26.4` downloads, `bogus` is gc's «invalid GOTOOLCHAIN»; `local`, `auto`, `path`, `local+auto|path`, the pin's name with or without `+auto|+path` run the local toolchain or at most the pin (this frontend bounds the go line at the pin and refuses go.work) | the admitted set accepted, everything else REFUSED by name | fail closed |
+| GOOS, GOARCH (the three sources, else the host) | the target: GOARCH=386 changes int's width (and killed the probe with SIGTRAP), GOOS=windows builds a binary the oracle cannot run | an effective target other than linux/amd64 REFUSED by name (the Platform instance; fileselect.go selects files for linux/amd64) | fail closed; pinned by the apparatus |
+| GOAMD64 (the three sources) | the codegen level: from v3 the compiler fuses x*y+z (measured over run-time operands: v1/v2 print 0, v3/v4 print -5.551115123125783e-17 for (1+2^-27)(1-2^-27)-1 — the spec's fusion latitude) | other than empty or v1 REFUSED by name | fail closed; pinned v1 |
+| GOEXPERIMENT (the three sources) | a different toolchain (runtime.Version() = go1.26.5-X:nogreenteagc; an unknown one is gc's own error, from the file too) | non-empty REFUSED by name | fail closed; pinned empty |
+| GODEBUG (the process only: `go env -w` refuses it and a file line never reaches the program — measured) | panicnil=1 flips the module-mode answer to `true` (measured) | any setting other than panicnil=0 (the apparatus's pin) REFUSED by name, read before the frontend appends its own gotypesalias=1 | fail closed |
+| CGO_ENABLED | cgo and the `cgo` build tag | nothing: `import "C"` refuses at file selection and the cgo tag is reserved; measured: CGO_ENABLED=0 prints the same | no refusal, said so |
 | `//go:build` / `// +build` constraints | file selection | `langversion.go`/`fileselect.go`: constrained files refuse except the inert all-custom-tags shape | already closed (BUG-108; p2 claim 3) |
 | a `vendor/` tree | GOPATH mode, for a tree under `$GOPATH/src`: `vendor/lib` resolves `import "lib"` (measured: gc prints 7; outside `$GOPATH/src` gc does not find it either); module mode: `-mod=vendor` with `vendor/modules.txt` | imports are the pinned stdlib or case-local directories; `import "lib"` with only `vendor/lib` refuses at type-check («could not import lib») on either tree — measured | fail-closed by construction (the frontend never consults vendor/); an over-refusal by name of a program gc compiles, no row (the corpus is never under `$GOPATH/src`) |
 | go.sum | checksums of requires | not read | the lowered program's imports never resolve through requires (modfile.go header); GOPROXY=off on the module leg makes a fetch a loud failure |
-| GOOS, GOARCH, GOEXPERIMENT, CGO_ENABLED in the environment | cross-compilation, experiments, cgo | the target is pinned linux/amd64 gc (the Platform instance; `fileselect.go` under that target) | NOT pinned by the apparatus — a box-level GOARCH would move the oracle while the frontend stays on the pin (`scripts/oracle-386-static` sets them deliberately for its own purpose). Outside this ruling; recorded here as an open hygiene item for the owner |
-| GO111MODULE | GOPATH vs module mode | not read: go.mod and go.work are judged in every mode (over-refusal by name) | the runners pin it per leg |
+| GOROOT | which toolchain gc runs | not verifiable here (the frontend does not exec go); read only to find the toolchain's go.env | the apparatus checks the pin (`go version`); a consumer's toolchain is their oracle setup — the standing limit, stated |
+| GOPROXY, GOSUMDB, GONOSUMDB, GOPRIVATE, GOINSECURE, GOCACHE, GOMODCACHE, GOTMPDIR; GOGC, GOMAXPROCS, GOMEMLIMIT, GOTRACEBACK | fetching and caching; the oracle program's runtime knobs | not read | no path to the lowered program's meaning (its imports are the pinned stdlib and case-local directories; a lookup fails loudly under GOPROXY=off); scheduling is the membership lane's domain, crash text is pinned by the runner's GOTRACEBACK=system |
+| GO111MODULE (the three sources) | GOPATH vs module mode; in GOPATH mode gc applies the go 1.16-era GODEBUG defaults (panicnil=1: measured `true`, `false` with GODEBUG=panicnil=0) | not read for the module judgement (go.mod and go.work are judged in every mode: over-refusal by name); the GOPATH-mode default is the stated contract of `docs/cli.md` §1 (the oracle runs with GODEBUG=panicnil=0 or inside a go 1.21+ module) | NOT refused — every module-less export (which gc can only build in GOPATH mode) would then need the pin in the frontend's environment too; recorded for the owner's word; the runners pin it per leg |
+
+FIX ROUND (train-20 pre-merge audit, `docs/reviews/2026-10-26_train20-audit-apparatus.md` F1/F2/F3/F4, 2026-10-26;
+[USER] ruling relayed by the [AGENT] coordinator: read what gc reads with gc's precedence, refuse by name in the
+fail-closed direction; close the class). THE AUDIT'S FINDING: two more of gc's configuration channels moved its
+answer under a clean export while the table above called the env-file gap an over-refusal — its w13 (no go.work
+in the walk, process GOWORK unset, the env file naming a go.work with `godebug panicnil=1`: gc `true`, the
+frontend exit 0, the machine `false` status ok), w27 (process `GOFLAGS=-modfile=alt.mod`) and w28 (the same from
+the env file). FIXED: `tools/nativefrontend/goenv.go` resolves each key as cfg.Getenv does — the process when
+non-empty, else the user env file ($GOENV; `off` = no file; the default `os.UserConfigDir()/go/env`), else the
+toolchain's go.env (the GOROOT the user file or $GOROOT names, else the `go` on PATH resolved to its install
+root) — and `refuseGoEnvironment` judges GOFLAGS, GOTOOLCHAIN, GOOS/GOARCH, GOAMD64, GOEXPERIMENT and the
+process GODEBUG by the table above before anything is lowered (`go environment: …` refusals); `refuseWorkspace`
+takes GOWORK from the same precedence, and `auto` is the walk (audit F2: it was refused by name). The table was
+rewritten from measurement (`.tmp` probes of this lane; gc go1.26.5). THE APPARATUS: every `go` and frontend run
+of the gate, the runners, the check scripts and the instruments carries one pin set, `scripts/go-env-pins.sh`
+(GOFLAGS= GOWORK=off GOENV=off GOTOOLCHAIN=local GOOS=linux GOARCH=amd64 GOAMD64=v1 GOEXPERIMENT= GODEBUG=),
+including the three invocations the first sweep missed (audit F3: `scripts/coverage-cause`'s lowerdiag run — a
+gate path — `scripts/check-imported-goose`, `scripts/choice-trace-corpus`); `scripts/test-oracle-env` is the
+self-test: the fast tier under a hostile environment and env file, every verdict unchanged. THE SAME CLASS IN THE
+go.mod SCANNER (audit F4, pre-existing on main): six shapes gc refuses that the scanner exported — NBSP and
+form-feed separators (`strings.Fields` split on every Unicode space; gc's lexer separates on space, tab and CR
+only), `{` in tool and replace paths (a token of its own in gc's lexer), a require whose version's major does
+not match its path's suffix (module.CheckPathMajor), `+build.1` metadata (only `+incompatible` is canonical) —
+closed by gc's rules (modfile.go's header, paragraph (4)), pinned by ten negative rows under
+`Corpus/coverage/negative/compile/modules/` (separator-nbsp-module, separator-nbsp-go, separator-formfeed,
+tool-path-brace, replace-target-brace, require-major-v2-on-v1-path, require-major-v1-on-v2-path,
+require-path-v1-suffix, require-build-metadata, retract-major-mismatch) and 22 unit cases. Also from the audit:
+the baseline count header is now checked against the rows by `scripts/coverage-baseline-diff` (F5).
 
 ## BUG-136 — untyped `nil` as the LEFT operand of `==`/`!=` (`nil == p`, `nil != np`) was REFUSED by name for the pointer, map, slice, func and channel kinds and in a tagless `switch` case — «frontend-quarantined: basic type untyped nil» — while `p == nil` lowered [native frontend lowering; over-refusal of a legal spelling, never a wrong answer; found by the equality/identity review, F2 (`docs/reviews/2026-10-26_equality-identity-review.md`, branch `review/equality-1026`), 2026-10-26; FIXED 2026-10-26, lane `frontend/workspace-and-oracle-1026`]
 

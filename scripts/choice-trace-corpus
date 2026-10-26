@@ -38,6 +38,11 @@
 # violations, zero self-check alarms and driver agreement; 1 = at least one
 # finding (listed by the summarizer); 2 = infrastructure.
 set -uo pipefail
+# The go environment pinned for every `go` and frontend run this script makes (scripts/go-env-pins.sh:
+# GOFLAGS, GOWORK, GOENV, GOTOOLCHAIN, GOOS/GOARCH, GOAMD64, GOEXPERIMENT, GODEBUG — the channels the
+# frontend refuses by name and no box environment may move; train-19 shake F7, train-20 audit F1/F3).
+. "$(dirname "${BASH_SOURCE[0]}")/go-env-pins.sh"
+export $GO_ENV_PINS
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"

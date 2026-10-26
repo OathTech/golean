@@ -1,0 +1,2 @@
+# expected_substring	features
+module lookup disabled by GOPROXY=off	functions,print,modules,compile_error

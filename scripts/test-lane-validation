@@ -332,7 +332,15 @@ BD="$TMP/baseline-diff"; mkdir -p "$BD"
 # result,id,stage,cause and results rows carry the detail scripts/coverage-cause
 # keys (it shells `go run ./tools/lowerdiag classify` for frontend texts — so
 # Part A4 needs go on PATH, like A2).
-bd_base() { printf 'result\tid\tstage\tcause\n%s\n' "$1" > "$BD/baseline.tsv"; }
+# The count header (train-20 audit F5, 2026-10-26): coverage-baseline-diff now refuses a
+# baseline whose `# cases:` claim is missing or disagrees with its rows, so every fixture
+# carries one computed from its rows (the fixtures under test are about the rows).
+bd_base() {
+  printf '%s\n' "$1" > "$BD/rows.tmp"
+  local t p f
+  read -r t p f < <(awk -F'\t' '!/^#/ && NF >= 2 { t++; if ($1 == "PASS") p++; else if ($1 == "FAIL") f++ } END { print t+0, p+0, f+0 }' "$BD/rows.tmp")
+  { printf '# cases: %s (%s PASS / %s FAIL)\nresult\tid\tstage\tcause\n' "$t" "$p" "$f"; cat "$BD/rows.tmp"; } > "$BD/baseline.tsv"
+}
 bd_res()  { printf 'result\tid\tfeatures\tstage\tdetail\n%s\n' "$1" > "$BD/results.tsv"; }
 bd_expect() {  # $1 name, $2 expected exit, $3 required output text, $4.. extra flags
   local name="$1" want="$2" needle="$3" out rc=0; shift 3

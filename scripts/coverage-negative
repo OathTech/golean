@@ -34,6 +34,11 @@ if [[ ! "$GO_TIMEOUT_SECONDS" =~ ^[1-9][0-9]*$ ]]; then
 fi
 
 . "$ROOT/scripts/run-with-timeout.sh"
+# THE GO ENVIRONMENT (scripts/go-env-pins.sh; train-19 shake F7, train-20 audit F1/F3): every
+# `go` and frontend run below carries the pins — exported here for the whole tree, and spelled
+# `env $GO_ENV_PINS …` at each verdict-bearing site.
+. "$ROOT/scripts/go-env-pins.sh"
+export $GO_ENV_PINS
 
 if ! command -v go >/dev/null 2>&1; then
   echo "go not found on PATH; install Go or expose it in the shell to run negative coverage" >&2
@@ -62,7 +67,7 @@ if [[ -n "$ORACLE_GOTOOLCHAIN" ]]; then
     echo "coverage-negative: GOLEAN_ORACLE_GOTOOLCHAIN: the frontend side's toolchain '${_fe_tc:-<go version failed>}' is not the pin '${_pin:-<baselines/go-oracle-pin unreadable>}'; refusing" >&2
     exit 2
   fi
-  if ! ORACLE_GOROOT="$(env -u GOROOT GO111MODULE=on GOFLAGS= GOWORK=off GOTOOLCHAIN="$ORACLE_GOTOOLCHAIN" go env GOROOT 2>&1)" \
+  if ! ORACLE_GOROOT="$(env -u GOROOT $GO_ENV_PINS GO111MODULE=on GOTOOLCHAIN="$ORACLE_GOTOOLCHAIN" go env GOROOT 2>&1)" \
       || [[ ! -x "$ORACLE_GOROOT/bin/go" ]]; then
     echo "coverage-negative: GOLEAN_ORACLE_GOTOOLCHAIN=$ORACLE_GOTOOLCHAIN does not resolve to a runnable toolchain here ($(printf '%s' "$ORACLE_GOROOT" | head -c 300)); refusing" >&2
     exit 2
@@ -71,7 +76,7 @@ if [[ -n "$ORACLE_GOTOOLCHAIN" ]]; then
   mkdir -p "$GO_BUILD_CACHE"
   _canary="$(mktemp -d "${TMPDIR:-/tmp}/golean-oracle-canary.XXXXXX")"
   printf 'package main\n\nimport (\n\t"fmt"\n\t"runtime"\n)\n\nfunc main() { fmt.Print(runtime.Version()) }\n' > "$_canary/main.go"
-  _said="$(cd "$_canary" && env GO111MODULE=off GOFLAGS= GOWORK=off GOCACHE="$GO_BUILD_CACHE" "${oracle_toolchain_env[@]}" go run . 2>&1)"
+  _said="$(cd "$_canary" && env $GO_ENV_PINS GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" "${oracle_toolchain_env[@]}" go run . 2>&1)"
   rm -rf "$_canary"
   if [[ "$_said" != "$ORACLE_GOTOOLCHAIN" ]]; then
     echo "coverage-negative: GOLEAN_ORACLE_GOTOOLCHAIN canary reports runtime.Version()='$(printf '%s' "$_said" | head -c 300)', not $ORACLE_GOTOOLCHAIN — the switch did not take; refusing" >&2
@@ -129,7 +134,7 @@ mkdir -p artifacts "$OUT" "$GO_BUILD_CACHE"
 # run); a build failure is an infrastructure refusal (exit 2, nothing
 # published), never a skipped leg.
 FRONTEND_BIN="$BUILD_OUT/nativefrontend"
-if ! fe_build="$(env GO111MODULE=off GOFLAGS= GOWORK=off GOCACHE="$GO_BUILD_CACHE" go build -o "$FRONTEND_BIN" ./tools/nativefrontend 2>&1)"; then
+if ! fe_build="$(env $GO_ENV_PINS GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go build -o "$FRONTEND_BIN" ./tools/nativefrontend 2>&1)"; then
   printf '%s\n' "$fe_build" >&2
   echo "coverage-negative: tools/nativefrontend does not build — the frontend leg cannot run; refusing (nothing published)" >&2
   exit 2
@@ -274,14 +279,15 @@ report_negative_pass() {
 # once its feature lands).
 # The leg passes NO --subject (BUG-125, tools/nativefrontend/entrymode.go):
 # it judges the WHOLE PROGRAM, under gc's rule that a `package main` declares
-# func main — the frontend's default. GOWORK=off, as on the oracle legs
-# (train-19 shake review F1/F7, 2026-10-26): the frontend refuses a go.work
-# in scope for the directory by name (BUG-135), and a workspace file above a
-# checkout must move no verdict on any box — both sides are blind to one.
+# func main — the frontend's default. The go environment pinned, as on the
+# oracle legs (scripts/go-env-pins.sh; train-19 shake review F1/F7, train-20
+# audit F1): the frontend refuses a go.work in scope, a GOFLAGS, another
+# target or toolchain by name (BUG-135), and none of them may move a verdict
+# on any box — both sides see the same pinned environment.
 FE_PARSE_RE='^nativefrontend: ([^:]+)\.go:[0-9]+:[0-9]+: '
 frontend_leg() {
   local go_dir="$1" out rc=0 first
-  out="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GOWORK=off "$FRONTEND_BIN" --dir "$go_dir" --out "$BUILD_OUT/wire.json" 2>&1)" || rc=$?
+  out="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env $GO_ENV_PINS "$FRONTEND_BIN" --dir "$go_dir" --out "$BUILD_OUT/wire.json" 2>&1)" || rc=$?
   rm -f "$BUILD_OUT/wire.json"
   first="${out%%$'\n'*}"
   fe_stage=""
@@ -347,8 +353,9 @@ while IFS=$'\t' read -r id go_dir expected_substring features extra || [[ -n "${
   # the mode in which gc reads go.mod at all (GOPATH mode ignores it, so a
   # go.mod row built the old way tested nothing on this leg); every other
   # row is built as before, GOPATH mode, from the root. BOTH legs run under
-  # GOWORK=off and with GOFLAGS scrubbed (train-19 shake review F1/F7,
-  # 2026-10-26): module mode reads a go.work found walking UP from the
+  # the pinned go environment (scripts/go-env-pins.sh — GOWORK=off, GOFLAGS
+  # scrubbed, GOENV=off, the target and toolchain; train-19 shake review
+  # F1/F7, train-20 audit F1): module mode reads a go.work found walking UP from the
   # directory — its go/toolchain/godebug lines change gc's verdict (measured:
   # a go.work `go 1.26.6` above a `go 1.26` module makes gc refuse) — so a
   # workspace file above a checkout could move a row on one box and not
@@ -358,10 +365,10 @@ while IFS=$'\t' read -r id go_dir expected_substring features extra || [[ -n "${
   # runner scrubbed it.
   go_rc=0
   if [[ -f "$go_dir/go.mod" ]]; then
-    output="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=on GOFLAGS= GOWORK=off GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local GOCACHE="$GO_BUILD_CACHE" ${oracle_toolchain_env[@]+"${oracle_toolchain_env[@]}"} \
+    output="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env $GO_ENV_PINS GO111MODULE=on GOPROXY=off GOSUMDB=off GOCACHE="$GO_BUILD_CACHE" ${oracle_toolchain_env[@]+"${oracle_toolchain_env[@]}"} \
       bash -c 'cd "$1" && exec go build -o "$2" .' go-build-oracle "$go_dir" "$binary" 2>&1)" || go_rc=$?
   else
-    output="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOFLAGS= GOWORK=off GOCACHE="$GO_BUILD_CACHE" ${oracle_toolchain_env[@]+"${oracle_toolchain_env[@]}"} go build -o "$binary" "./$go_dir" 2>&1)" || go_rc=$?
+    output="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env $GO_ENV_PINS GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" ${oracle_toolchain_env[@]+"${oracle_toolchain_env[@]}"} go build -o "$binary" "./$go_dir" 2>&1)" || go_rc=$?
   fi
   if [[ "$go_rc" -eq 0 ]]; then
     report_negative_fail "$id" "$features" "go-compile" "program unexpectedly compiled"

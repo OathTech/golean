@@ -49,6 +49,11 @@ export GIT_PAGER=cat PAGER=cat GIT_EDITOR=:
 # step by itself; a machine without the tool runs uncapped. The limit is
 # CAPPED_MEM_MAX (the box tool's own variable; default 32G).
 . "$ROOT/scripts/cap.sh"
+# THE GO ENVIRONMENT (scripts/go-env-pins.sh; train-19 shake F7, train-20 audit F1/F3): every
+# `go` and frontend run below carries the pins — exported here for the whole tree, and spelled
+# `env $GO_ENV_PINS …` at each verdict-bearing site.
+. "$ROOT/scripts/go-env-pins.sh"
+export $GO_ENV_PINS
 
 RUN_DIFF=0
 for arg in "$@"; do
@@ -390,15 +395,16 @@ run_gate "core totality audit (every GoLean/ module; required core theorems)" ba
 
 # ── GATE: the Go-side unit tests — the lowering's own tests and the lowering
 # tables, then the oracle observer (-count=1: its inertness test execs the
-# pinned `go run`, which the test cache cannot key). GOFLAGS scrubbed and
-# GOWORK=off on every `go` the gate runs itself (train-19 shake review F7,
-# 2026-10-26): an ambient -tags/-toolexec or a workspace file above the
-# checkout must not reach the gate's own builds and tests.
+# pinned `go run`, which the test cache cannot key). The go environment is
+# pinned on every `go` the gate runs itself (scripts/go-env-pins.sh; train-19
+# shake review F7, train-20 audit F3): an ambient GOFLAGS, a workspace file,
+# an env file, another target or toolchain must not reach the gate's own
+# builds and tests.
 step "go tests (tools/nativefrontend, tools/lowerdiag, tools/coverageharness)"
 run_gate "frontend + lowering-table unit tests (go test ./tools/nativefrontend ./tools/lowerdiag)" \
-  env GO111MODULE=off GOFLAGS= GOWORK=off GOCACHE="$GOCACHE_DIR" go test ./tools/nativefrontend ./tools/lowerdiag
+  env $GO_ENV_PINS GO111MODULE=off GOCACHE="$GOCACHE_DIR" go test ./tools/nativefrontend ./tools/lowerdiag
 run_gate "coverage-harness unit tests (go test -count=1 ./tools/coverageharness)" \
-  env GO111MODULE=off GOFLAGS= GOWORK=off GOCACHE="$GOCACHE_DIR" go test -count=1 ./tools/coverageharness
+  env $GO_ENV_PINS GO111MODULE=off GOCACHE="$GOCACHE_DIR" go test -count=1 ./tools/coverageharness
 
 # ── GATE: the interpreter's unit tests. A gutted exe exiting 0 with no output
 # is a degenerate run, not a pass.
@@ -448,7 +454,7 @@ if [ "$RUN_DIFF" -eq 1 ]; then
   # frontend). Regenerate and compare; a difference is an edit or a stale pin.
   step "derived oracle artifacts regenerate byte-identical (speedbump)"
   derive_tmp="$(mktemp -d "${TMPDIR%/}/golean-derived-guard.XXXXXX")"
-  if GOCACHE="$GOCACHE_DIR" GO111MODULE=off GOFLAGS= GOWORK=off go run ./tools/floatvectors > "$derive_tmp/fv.lean" 2>"$derive_tmp/fv.err"; then
+  if env $GO_ENV_PINS GOCACHE="$GOCACHE_DIR" GO111MODULE=off go run ./tools/floatvectors > "$derive_tmp/fv.lean" 2>"$derive_tmp/fv.err"; then
     if cmp -s "$derive_tmp/fv.lean" Tests/FloatVectors.lean; then bump_ok "Tests/FloatVectors.lean = fresh regeneration (byte-exact)"
     else cmp "$derive_tmp/fv.lean" Tests/FloatVectors.lean 2>&1 | head -3 | sed 's/^/  /'; bump_red "Tests/FloatVectors.lean DIFFERS from a fresh tools/floatvectors run (edited or stale — regenerate deliberately)"; fi
   else tail -5 "$derive_tmp/fv.err" | sed 's/^/  /'; bump_red "FloatVectors regeneration FAILED (the check could not run)"; fi

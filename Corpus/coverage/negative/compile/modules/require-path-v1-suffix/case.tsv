@@ -1,0 +1,2 @@
+# expected_substring	features
+malformed module path "a.b/c/v1"	functions,print,modules,compile_error

@@ -87,14 +87,15 @@ package main
 //	    Nothing in a go.work is read here: the lowered directory and
 //	    every case-local package are refused when a go.work is in scope
 //	    for them (refuseWorkspace). GOWORK is honoured as the go command
-//	    honours it, from the PROCESS ENVIRONMENT: `off` disables
-//	    workspace mode (the apparatus pins GOWORK=off on its oracle AND
-//	    frontend legs, so no workspace above a checkout can move a
-//	    verdict), any other value names a workspace file and is refused
-//	    by name. The go command also reads GOWORK from its env file
-//	    (`go env -w GOWORK=off`), which this scanner does not: a
-//	    workspace disabled only there is still refused here — the
-//	    over-refusing direction, and the message names the remedy. In
+//	    honours it (goenv.go, train-20 audit F1/F2, 2026-10-26): from the
+//	    process environment when non-empty, else the go env file, else
+//	    the toolchain's go.env — `off` disables workspace mode (the
+//	    apparatus pins GOWORK=off on its oracle AND frontend legs, so no
+//	    workspace above a checkout can move a verdict), empty or `auto`
+//	    is the walk, any other value names a workspace file and is
+//	    refused by name without reading it (measured: the env file's
+//	    GOWORK=off disables a go.work beside the module, its
+//	    GOWORK=<path> selects one with no go.work in the walk). In
 //	    GOPATH mode (GO111MODULE=off, the positive corpus's mode) the go
 //	    command ignores go.work (measured) while this scanner still
 //	    refuses one — the same over-refusal as for go.mod, by name.
@@ -122,6 +123,32 @@ package main
 //	    v1.2.3»). `go ()` and `toolchain ()` are gc parse errors
 //	    («unknown block type»), `module ()` has no path («missing module
 //	    declaration»): refused by name with those reasons.
+//	(4) Six shapes gc refuses that the scanner EXPORTED, pre-existing on
+//	    main (train-20 pre-merge audit F4, 2026-10-26; the same class as
+//	    (2): a wire for a module gc will not build), each measured and
+//	    closed by its rule, not its instance: (a) gc's LEXER (x/mod
+//	    modfile/read.go) separates tokens with space, tab and CR only and
+//	    takes any other printable non-space rune as an identifier byte —
+//	    so a NBSP, a form feed, a vertical tab, a NUL or a DEL is
+//	    «unexpected input character» — where `strings.Fields` split on
+//	    every Unicode space and read `module<NBSP>test` as two words; the
+//	    scanner now judges every rune of a line by gc's rule before
+//	    splitting, and `{`/`}` are tokens of their own as in gc's lexer,
+//	    so `tool foo{bar` has three arguments («tool directive expects
+//	    exactly one argument») and `replace a.b/c => ./x{y` fails the
+//	    usage rule, both gc's reasons. (b) MAJOR-VERSION AGREEMENT
+//	    (module.CheckPathMajor, module.SplitPathVersion): a require,
+//	    exclude or versioned replace side whose version's major does not
+//	    match its path's suffix («should be v0 or v1, not v2», «should be
+//	    v2, not v1»; `/v1`, `/v02` and `/v2.1` suffixes are «malformed
+//	    module path»; gopkg.in's `.vN` form included), and a retract
+//	    version against the module's own path, are refused with gc's
+//	    text. (c) BUILD METADATA: the only canonical form is
+//	    `+incompatible`; `v1.0.0+build.1` makes the go command resolve
+//	    the version by a module lookup, which the apparatus's GOPROXY=off
+//	    refuses («module lookup disabled by GOPROXY=off») and which could
+//	    not keep the written version — refused by name. The negative rows
+//	    under modules/ pin each shape on gc's side.
 
 import (
 	"bufio"
@@ -132,6 +159,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"unicode"
 )
 
 // modRefuse is every refusal of this file: `module directive: ` then the
@@ -221,10 +249,13 @@ var goModVersionRE = regexp.MustCompile(`^([1-9][0-9]*)\.(0|[1-9][0-9]*)(\.(0|[1
 
 // semverCanonicalRE is a canonical semantic version as go.mod requires one
 // (`v1.2.3`, a pseudo-version `v0.0.0-20240101000000-abcdef123456`,
-// `v2.0.0+incompatible`). Shortened forms (`v1.2`, `v1`) are refused: gc
-// canonicalizes them only under `go mod tidy`/`go get`, and this scanner
-// does not re-derive that.
-var semverCanonicalRE = regexp.MustCompile(`^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$`)
+// `v2.0.0+incompatible` — `+incompatible` is the ONE build-metadata form
+// module.CanonicalVersion keeps). Shortened forms (`v1.2`, `v1`) are
+// refused: gc canonicalizes them only under `go mod tidy`/`go get`, and
+// this scanner does not re-derive that. semverWithMetadataRE is the same
+// with any build metadata, named so the refusal can say what it is.
+var semverCanonicalRE = regexp.MustCompile(`^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+incompatible)?$`)
+var semverWithMetadataRE = regexp.MustCompile(`^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*$`)
 
 // modulePathElemRE is one element of a module path: the ASCII letters,
 // digits and `-._~` of module.CheckPath, not beginning or ending with a
@@ -253,6 +284,116 @@ func directoryPathOK(path string) bool {
 	return path == "." || path == ".." || strings.HasPrefix(path, "./") || strings.HasPrefix(path, "../") || strings.HasPrefix(path, "/")
 }
 
+// lexerRejects judges a line's runes by gc's lexer (x/mod modfile/read.go
+// readToken/isIdent): space, tab and CR separate tokens; `(`, `)`, `[`,
+// `]`, `{`, `}` and `,` are tokens; a quote opens a string (refused by name
+// elsewhere); every other rune must be printable and not a space, else gc
+// refuses «unexpected input character». Returns the 1-based byte column of
+// the first offending rune, as gc reports it.
+func lexerRejects(line string) (col int, r rune, bad bool) {
+	for i, r := range line {
+		switch r {
+		case ' ', '\t', '\r', '(', ')', '[', ']', '{', '}', ',', '"', '`':
+			continue
+		}
+		if unicode.IsSpace(r) || !unicode.IsPrint(r) {
+			return i + 1, r, true
+		}
+	}
+	return 0, 0, false
+}
+
+// pathMajor mirrors module.SplitPathVersion: the path's major-version suffix
+// (`/v2`, gopkg.in's `.v2`) or "", and whether the path is well formed in
+// that respect (`/v1`, `/v0`, `/v02`, `/v2.1` are not: «malformed module
+// path»).
+func pathMajor(path string) (major string, ok bool) {
+	if strings.HasPrefix(path, "gopkg.in/") {
+		i := len(path)
+		if strings.HasSuffix(path, "-unstable") {
+			i -= len("-unstable")
+		}
+		for i > 0 && '0' <= path[i-1] && path[i-1] <= '9' {
+			i--
+		}
+		if i <= 1 || path[i-1] != 'v' || path[i-2] != '.' {
+			return "", false
+		}
+		major = path[i-2:]
+		if len(major) <= 2 || major[2] == '0' && major != ".v0" {
+			return "", false
+		}
+		return major, true
+	}
+	i := len(path)
+	dot := false
+	for i > 0 && ('0' <= path[i-1] && path[i-1] <= '9' || path[i-1] == '.') {
+		if path[i-1] == '.' {
+			dot = true
+		}
+		i--
+	}
+	if i <= 1 || i == len(path) || path[i-1] != 'v' || path[i-2] != '/' {
+		return "", true
+	}
+	major = path[i-2:]
+	if dot || len(major) <= 2 || major[2] == '0' || major == "/v1" {
+		return "", false
+	}
+	return major, true
+}
+
+// majorMismatch mirrors module.CheckPathMajor: "" when version v agrees with
+// the path's major suffix, else gc's own reason («should be v2, not v1»).
+func majorMismatch(v, major string) string {
+	if strings.HasPrefix(major, ".v") && strings.HasSuffix(major, "-unstable") {
+		major = strings.TrimSuffix(major, "-unstable")
+	}
+	if strings.HasPrefix(v, "v0.0.0-") && major == ".v1" {
+		return ""
+	}
+	m := v
+	if i := strings.IndexAny(v, ".-+"); i >= 0 {
+		m = v[:i]
+	}
+	switch {
+	case major == "":
+		if m == "v0" || m == "v1" || strings.HasSuffix(v, "+incompatible") {
+			return ""
+		}
+		major = "v0 or v1"
+	case major[0] == '/' || major[0] == '.':
+		if m == major[1:] {
+			return ""
+		}
+		major = major[1:]
+	}
+	return "should be " + major + ", not " + m
+}
+
+// judgeVersionedPath judges a `path version` pair as gc parses one
+// (parseVersion, modulePathMajor, CheckPathMajor): the path's shape and
+// major suffix, the version's canonical form, their agreement.
+func (m *modScan) judgeVersionedPath(verb, path, v string, lineno int, usage func(string) error, form string) error {
+	if !modulePathOK(path) {
+		return usage(form)
+	}
+	major, ok := pathMajor(path)
+	if !ok {
+		return modRefuse("%s:%d: %s %s: version %q invalid: malformed module path %q — a /vN suffix must be v2 or higher without a leading zero or a dot (module.SplitPathVersion); gc refuses the go.mod the same way; fail closed", m.path, lineno, verb, path, v, path)
+	}
+	if !semverCanonicalRE.MatchString(v) {
+		if semverWithMetadataRE.MatchString(v) {
+			return modRefuse("%s:%d: %s %s: version %q is not a canonical module version (build metadata other than +incompatible): the go command resolves such a version by a module lookup, which the apparatus's GOPROXY=off refuses («module lookup disabled by GOPROXY=off») and which could not keep the version as written; fail closed", m.path, lineno, verb, path, v)
+		}
+		return usage(form)
+	}
+	if why := majorMismatch(v, major); why != "" {
+		return modRefuse("%s:%d: %s %s: version %q invalid: %s — gc refuses the go.mod the same way (module.CheckPathMajor); fail closed", m.path, lineno, verb, path, v, why)
+	}
+	return nil
+}
+
 // modScan is one go.mod being judged.
 type modScan struct {
 	path      string
@@ -262,6 +403,12 @@ type modScan struct {
 	toolchain string // the `toolchain` directive's name, "" until seen
 	blockVerb string // the open block's verb, "" outside a block
 	blockLine int
+	retracts  []retractVersion // judged at the end against the module path's major (gc's rule)
+}
+
+type retractVersion struct {
+	version string
+	lineno  int
 }
 
 // judgeArgs judges the arguments of an accepted verb — a line's tokens
@@ -286,11 +433,15 @@ func (m *modScan) judgeArgs(verb string, args []string, lineno int, raw string) 
 			return usage("module module/path")
 		}
 	case "require", "exclude":
-		if len(args) != 2 || !modulePathOK(args[0]) || !semverCanonicalRE.MatchString(args[1]) {
+		if len(args) != 2 {
 			return usage(verb + " module/path v1.2.3")
 		}
+		return m.judgeVersionedPath(verb, args[0], args[1], lineno, usage, verb+" module/path v1.2.3")
 	case "tool", "ignore":
-		if len(args) != 1 || strings.ContainsAny(args[0], "[],") {
+		if len(args) != 1 {
+			return modRefuse("%s:%d: %q — gc refuses the go.mod («%s directive expects exactly one argument»; `{`, `}`, `[`, `]` and `,` are tokens of their own in its lexer); fail closed", m.path, lineno, strings.TrimSpace(raw), verb)
+		}
+		if strings.ContainsAny(args[0], "[],{}") {
 			return usage(verb + " path")
 		}
 	case "replace":
@@ -307,24 +458,43 @@ func (m *modScan) judgeArgs(verb string, args []string, lineno int, raw string) 
 			return usage("replace module/path [v1.2.3] => other/module v1.4\n\t or replace module/path [v1.2.3] => ../local/directory")
 		}
 		left, right := args[:arrow], args[arrow+1:]
-		okLeft := (len(left) == 1 && modulePathOK(left[0])) || (len(left) == 2 && modulePathOK(left[0]) && semverCanonicalRE.MatchString(left[1]))
-		okRight := false
+		const replaceForm = "replace module/path [v1.2.3] => other/module v1.4\n\t or replace module/path [v1.2.3] => ../local/directory"
+		switch len(left) {
+		case 1:
+			if !modulePathOK(left[0]) {
+				return usage(replaceForm)
+			}
+			if _, ok := pathMajor(left[0]); !ok {
+				return modRefuse("%s:%d: replace %s: malformed module path %q — a /vN suffix must be v2 or higher without a leading zero or a dot (module.SplitPathVersion); gc refuses the go.mod the same way; fail closed", m.path, lineno, left[0], left[0])
+			}
+		case 2:
+			if err := m.judgeVersionedPath("replace", left[0], left[1], lineno, usage, replaceForm); err != nil {
+				return err
+			}
+		default:
+			return usage(replaceForm)
+		}
 		switch len(right) {
 		case 1:
 			if !directoryPathOK(right[0]) {
 				return modRefuse("%s:%d: %q — gc refuses the go.mod («replacement module without version must be directory path (rooted or starting with . or ..)»); fail closed", m.path, lineno, strings.TrimSpace(raw))
 			}
-			okRight = true
+			if strings.ContainsAny(right[0], "{}[],") {
+				return usage(replaceForm)
+			}
 		case 2:
-			okRight = modulePathOK(right[0]) && semverCanonicalRE.MatchString(right[1])
-		}
-		if !okLeft || !okRight {
-			return usage("replace module/path [v1.2.3] => other/module v1.4\n\t or replace module/path [v1.2.3] => ../local/directory")
+			if err := m.judgeVersionedPath("replace", right[0], right[1], lineno, usage, replaceForm); err != nil {
+				return err
+			}
+		default:
+			return usage(replaceForm)
 		}
 	case "retract":
 		switch {
 		case len(args) == 1 && semverCanonicalRE.MatchString(args[0]):
+			m.retracts = append(m.retracts, retractVersion{args[0], lineno})
 		case len(args) == 5 && args[0] == "[" && args[2] == "," && args[4] == "]" && semverCanonicalRE.MatchString(args[1]) && semverCanonicalRE.MatchString(args[3]):
+			m.retracts = append(m.retracts, retractVersion{args[1], lineno}, retractVersion{args[3], lineno})
 		default:
 			return usage("retract v1.2.3 | retract [v1.2.3, v1.2.5]")
 		}
@@ -351,7 +521,7 @@ func goDirective(path string) (string, error) {
 	m := &modScan{path: path, pinnedTC: pinnedTC}
 	sc := bufio.NewScanner(f)
 	sc.Buffer(make([]byte, 0, 64*1024), 1<<20)
-	tokens := strings.NewReplacer("(", " ( ", ")", " ) ", "[", " [ ", "]", " ] ", ",", " , ")
+	tokens := strings.NewReplacer("(", " ( ", ")", " ) ", "[", " [ ", "]", " ] ", "{", " { ", "}", " } ", ",", " , ")
 	lineno := 0
 	for sc.Scan() {
 		lineno++
@@ -359,6 +529,12 @@ func goDirective(path string) (string, error) {
 		line := raw
 		if i := strings.Index(line, "//"); i >= 0 {
 			line = line[:i]
+		}
+		if i := strings.Index(line, "/*"); i >= 0 {
+			return "", modRefuse("%s:%d:%d: a /* */ comment — gc refuses the go.mod («mod files must use // comments (not /* */ comments)»); fail closed", path, lineno, i+1)
+		}
+		if col, r, bad := lexerRejects(line); bad {
+			return "", modRefuse("%s:%d:%d: unexpected input character %#q — gc's lexer refuses the go.mod the same way (x/mod modfile/read.go: space, tab and CR separate tokens; an identifier is any printable non-space rune); fail closed", path, lineno, col, r)
 		}
 		if strings.ContainsAny(line, "\"`") {
 			return "", modRefuse("%s:%d: %q carries a quoted token — x/mod's quoted strings are not validated by this scanner; refuse by name (fail closed)", path, lineno, strings.TrimSpace(raw))
@@ -448,6 +624,18 @@ func goDirective(path string) (string, error) {
 	if err := m.judgeToolchain(); err != nil {
 		return "", err
 	}
+	// gc checks a retract version against the MODULE's own path (the
+	// `module test/v2` / `retract v1.0.0` shape: «retract test/v2: version
+	// "v1.0.0" invalid: should be v2, not v1», measured) once the file is
+	// read; the module line may follow the retract.
+	major, ok := pathMajor(m.module)
+	if ok {
+		for _, r := range m.retracts {
+			if why := majorMismatch(r.version, major); why != "" {
+				return "", modRefuse("%s:%d: retract %s: version %q invalid: %s — gc refuses the go.mod the same way (module.CheckPathMajor against the module path); fail closed", path, r.lineno, m.module, r.version, why)
+			}
+		}
+	}
 	return m.goVersion, nil
 }
 
@@ -525,21 +713,22 @@ func findGoWork(dir string) (string, error) {
 }
 
 // refuseWorkspace refuses the export when a Go WORKSPACE is in scope for
-// dir (BUG-135; the header's paragraph (1)). GOWORK from the process
-// environment first, as the go command reads it (cfg.Getenv("GOWORK") in
-// modload.Init): `off` disables workspace mode and nothing is looked for;
-// any other non-empty value names a workspace file — relative, missing or
-// a directory, gc refuses to run («invalid GOWORK: not an absolute path»,
-// «reading go.work: open …: no such file or directory», measured), and an
-// existing one puts dir in a workspace — so it is refused by name without
-// reading it. Unset: the walk.
+// dir (BUG-135; the header's paragraph (1)). GOWORK as the go command reads
+// it — cfg.Getenv("GOWORK") in modload.FindGoWork: the process environment
+// when non-empty, else the go env file, else the toolchain's go.env
+// (goenv.go): `off` disables workspace mode and nothing is looked for;
+// empty or `auto` is the walk; any other value names a workspace file —
+// relative, missing or a directory, gc refuses to run («invalid GOWORK: not
+// an absolute path», «reading go.work: open …: no such file or directory»,
+// measured), and an existing one puts dir in a workspace — so it is refused
+// by name without reading it.
 func refuseWorkspace(dir string) error {
 	const what = "the go command applies a go.work's go, toolchain and godebug lines to the workspace's modules (a `godebug panicnil=1` there flips a go 1.26 module's panic(nil) answer while the module's own go.mod is clean — measured) and resolves the module set from its use directives; workspaces are not modeled and nothing in the file is read here"
-	switch gowork := os.Getenv("GOWORK"); {
+	switch gowork, source := loadGoEnv().get("GOWORK"); {
 	case gowork == "off":
 		return nil
-	case gowork != "":
-		return modRefuse("%s is lowered with GOWORK=%s, which selects a workspace file — %s; run gc and the frontend with GOWORK=off, or outside the workspace; refuse by name (fail closed)", dir, gowork, what)
+	case gowork != "" && gowork != "auto":
+		return modRefuse("%s is lowered with GOWORK=%s (from %s), which selects a workspace file — %s; run gc and the frontend with GOWORK=off, or outside the workspace; refuse by name (fail closed)", dir, gowork, source, what)
 	}
 	workPath, err := findGoWork(dir)
 	if err != nil {

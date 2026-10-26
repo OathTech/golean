@@ -86,6 +86,29 @@ RESULTS="${1:-artifacts/coverage/latest.tsv}"
 [ -f "$BASELINE" ] || { echo "no baseline at $BASELINE" >&2; exit 2; }
 [ -f "$RESULTS" ]  || { echo "no results at $RESULTS" >&2; exit 2; }
 
+# THE COUNT HEADER (train-20 pre-merge audit F5, 2026-10-26): a baseline's
+# claim about itself — the differential file's `# cases: N (P PASS / F FAIL)`,
+# the negative file's `# manifest_cases: N  pass: P  fail: F` — must equal its
+# rows, or the judgement is REFUSED (exit 2): a wrong header is a wrong claim on
+# a trust-surface file, and until now nothing read it. The FIRST such line is
+# the claim (the differential file keeps a historical second `# cases:` line in
+# a 2026-09-05 note, not read); a baseline with no count line is refused too —
+# a deleted claim must not pass as an absent one. Rows: every non-comment line
+# but the column header.
+count_hdr="$(grep -m1 -E '^# (cases|manifest_cases):' "$BASELINE" || true)"
+if [[ "$count_hdr" =~ ^#\ cases:\ ([0-9]+)\ \(([0-9]+)\ PASS\ /\ ([0-9]+)\ FAIL\)$ ]] \
+   || [[ "$count_hdr" =~ ^#\ manifest_cases:\ ([0-9]+)\ +pass:\ ([0-9]+)\ +fail:\ ([0-9]+)$ ]]; then
+  hdr_total="${BASH_REMATCH[1]}"; hdr_pass="${BASH_REMATCH[2]}"; hdr_fail="${BASH_REMATCH[3]}"
+else
+  echo "REFUSED: $BASELINE has no count header (\`# cases: N (P PASS / F FAIL)\` or \`# manifest_cases: N  pass: P  fail: F\` as its first such line; found: '${count_hdr:-none}') — the baseline's claim about itself is missing or malformed; cannot judge (this is NOT a no-drift result)" >&2
+  exit 2
+fi
+read -r rows_total rows_pass rows_fail < <(awk -F'\t' '!/^#/ && $1 != "result" && NF >= 2 { t++; if ($1 == "PASS") p++; else if ($1 == "FAIL") f++ } END { print t+0, p+0, f+0 }' "$BASELINE")
+if [[ "$hdr_total" != "$rows_total" || "$hdr_pass" != "$rows_pass" || "$hdr_fail" != "$rows_fail" ]]; then
+  echo "REFUSED: $BASELINE's count header claims $hdr_total rows ($hdr_pass PASS / $hdr_fail FAIL) but its rows are $rows_total ($rows_pass PASS / $rows_fail FAIL) — a re-pin must correct the header with the rows; cannot judge (this is NOT a no-drift result)" >&2
+  exit 2
+fi
+
 # The stage words scripts/diff-coverage's report_fail/report_pass_lane
 # emit (grep 'report_fail "$id" "$features" "' scripts/diff-coverage).
 # Only alternation MEMBERS are checked against it; plain rows compare

@@ -79,10 +79,17 @@ the module's own go.mod is clean — and since 2026-10-26 a go.work IN SCOPE for
 (found walking up from it, as the go command finds one) REFUSES the export by name (BUG-135; before,
 the export succeeded unchanged: a wrong answer with status `ok`). `GOWORK=off` in the process
 environment disables workspace mode for the frontend exactly as for the go command (any other GOWORK
-value is refused by name; the go command's env file, `go env -w`, is not read — a workspace disabled
-only there is still refused, and the message names the remedy); the differential apparatus pins
-`GOWORK=off` on every oracle and frontend leg, and a consumer must run gc and the frontend under the
-same GOWORK; (c) `//go:debug panicnil=0`, the one source-level way to match the pin in GOPATH mode, is
+value is refused by name) — and since the train-20 fix round the frontend reads the go command's
+CONFIGURATION as the go command does (`tools/nativefrontend/goenv.go`: the process environment when
+non-empty, else the env file `go env -w` writes — `$GOENV`, `off` for none — else the toolchain's
+go.env) and refuses by name, as `go environment: …`, every channel that moves gc's answer under a
+clean export (each measured): a non-empty `GOFLAGS` (-modfile, -tags, -toolexec…), a `GOTOOLCHAIN`
+other than local/auto/path or the pinned toolchain's name, a target other than linux/amd64
+(`GOOS`/`GOARCH`, the host's default included), a `GOAMD64` above v1 (fused multiply-add), a
+non-empty `GOEXPERIMENT`, and a process `GODEBUG` other than `panicnil=0`; `CGO_ENABLED` changes no
+admitted program and is not read; `GO111MODULE=off` is the stated GOPATH-mode obligation above. The
+differential apparatus pins every one of these on every oracle and frontend leg
+(`scripts/go-env-pins.sh`), and a consumer must run gc in the environment the frontend accepted; (c) `//go:debug panicnil=0`, the one source-level way to match the pin in GOPATH mode, is
 refused like every other `//go:debug` line: the pin is the oracle's environment, never the source.
 
 Exit codes:

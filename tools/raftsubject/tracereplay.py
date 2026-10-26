@@ -330,6 +330,7 @@ def run_one(name, blocks, prefix, args, report, rec=None, resumed=None):
     env["GO111MODULE"] = "off"
     env["GOFLAGS"] = ""  # scrubbed, and GOWORK=off: no ambient flag or workspace reaches the oracle (2026-10-26)
     env["GOWORK"] = "off"
+    env["GOENV"] = "off"  # the env file too (train-20 audit F1)
     env["GOPATH"] = gopath
     if "go-side" in resumed:
         go_trace = resumed["go-side"]["go_trace"]

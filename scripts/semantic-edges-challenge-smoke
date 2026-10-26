@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
+# The go environment pinned for every `go` and frontend run this script makes (scripts/go-env-pins.sh:
+# GOFLAGS, GOWORK, GOENV, GOTOOLCHAIN, GOOS/GOARCH, GOAMD64, GOEXPERIMENT, GODEBUG — the channels the
+# frontend refuses by name and no box environment may move; train-19 shake F7, train-20 audit F1/F3).
+. "$(dirname "${BASH_SOURCE[0]}")/go-env-pins.sh"
+export $GO_ENV_PINS
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
-# GOFLAGS scrubbed, GOWORK=off for every `go` this script runs (train-19 shake review F7,
-# 2026-10-26): an ambient -tags/-mod/-toolexec and a workspace file above the checkout
-# must reach neither the tools built here nor the frontend, which refuses a go.work in
-# scope by name (BUG-135); the go command ignores go.work in GOPATH mode anyway.
-export GOFLAGS= GOWORK=off
 
 BASE="Corpus/challenges/semantic-edges"
 CASES="$BASE/cases"

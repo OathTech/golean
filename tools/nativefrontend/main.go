@@ -63,6 +63,9 @@ func enableMaterializedAliases() {
 var refusedDir string
 
 func run() error {
+	// The process GODEBUG as the frontend was started (goenv.go judges it;
+	// the next call appends this frontend's own go/types setting).
+	rawGODEBUG := os.Getenv("GODEBUG")
 	enableMaterializedAliases()
 
 	dir := flag.String("dir", "", "package directory to type-check and emit")
@@ -128,6 +131,15 @@ func run() error {
 		return fmt.Errorf("--dir is required")
 	}
 	refusedDir = *dir
+	// THE GO ENVIRONMENT (goenv.go; train-20 audit F1, BUG-135): the
+	// configuration channels gc reads that change what it builds or what
+	// the program means — GOFLAGS, GOTOOLCHAIN, GOOS/GOARCH, GOAMD64,
+	// GOEXPERIMENT from the process environment and the go env file,
+	// GODEBUG from the process — refused by name before anything is read;
+	// GOWORK is judged per directory with the go.work walk (modfile.go).
+	if err := refuseGoEnvironment(rawGODEBUG); err != nil {
+		return err
+	}
 
 	fset := token.NewFileSet()
 	// THE FILE SET is gc's under the pinned target (fileselect.go, BUG-108):

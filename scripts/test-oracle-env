@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# scripts/test-oracle-env — SELF-TEST, not a gate (train-20 pre-merge audit F3, 2026-10-26; the
+# charter: self-tests run by hand when the script they test changes — here scripts/go-env-pins.sh
+# and every script that sources it). THE CLAIM UNDER TEST: the fast tier is immune to the go
+# environment — every `go` and native-frontend run of the gate carries scripts/go-env-pins.sh's
+# pins, so a hostile process environment AND a hostile go env file move no verdict.
+#
+# HOW: scripts/ci (the fast tier) runs twice from this checkout, clean and then under the hostile
+# environment below, and the two summary blocks must agree line for line with RESULT: PASS on
+# both. The hostile environment names, in the process: a GOFLAGS whose -toolexec is a missing
+# binary (any inheriting go build dies with fork/exec), a GOWORK naming a missing workspace
+# file (any unpinned module-mode go or frontend run refuses it), a GOTOOLCHAIN that would switch
+# to a toolchain that does not exist, another target (GOOS/GOARCH), a codegen level, an unknown
+# experiment and a GODEBUG the frontend refuses; and, through GOENV, an env file naming more of
+# the same for every key the file can set. A step that reads any of them is a red in the hostile
+# summary or a changed verdict, and this test FAILS naming the first differing line.
+#
+# Cost: two fast-tier runs (about a minute each with a warm .lake). On the Oath boxes run it
+# under the build lock by hand, like any gate run; elsewhere plain. Exit 0 = the claim holds,
+# 1 = a verdict moved or a run went red, 2 = the test could not run.
+set -uo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+export TMPDIR="${TMPDIR:-$ROOT/.tmp}"
+mkdir -p "$TMPDIR"
+T="$(mktemp -d "$TMPDIR/golean-oracle-env.XXXXXX")" || { echo "test-oracle-env: cannot make a scratch directory under $TMPDIR" >&2; exit 2; }
+trap 'rm -rf "$T"' EXIT
+
+printf 'GOFLAGS=-tags=hostile\nGOWORK=/nonexistent/env-go.work\nGOTOOLCHAIN=go1.1.1\nGOOS=plan9\nGOARCH=386\nGOAMD64=v4\nGOEXPERIMENT=hostile\nGO111MODULE=off\n' > "$T/goenv"
+HOSTILE=(GOFLAGS=-toolexec=/nonexistent/toolexec GOWORK=/nonexistent/go.work GOENV="$T/goenv"
+         GOTOOLCHAIN=go1.1.1 GOOS=windows GOARCH=386 GOAMD64=v3 GOEXPERIMENT=hostile GODEBUG=panicnil=1)
+
+# The summary block's verdict lines, minus the two notes that describe the box (the cap, the cores).
+summary() {
+  sed -n '/scripts\/ci summary/,$p' "$1" | grep -E '^  (ok|FAIL|note|red|bump) ' | grep -v 'memory cap:\|build parallelism:'
+}
+
+echo "test-oracle-env: clean run of scripts/ci …"
+scripts/ci > "$T/clean.log" 2>&1; clean_rc=$?
+echo "test-oracle-env: hostile run of scripts/ci (${HOSTILE[*]}) …"
+env "${HOSTILE[@]}" scripts/ci > "$T/hostile.log" 2>&1; hostile_rc=$?
+
+summary "$T/clean.log" > "$T/clean.sum"
+summary "$T/hostile.log" > "$T/hostile.sum"
+n="$(grep -c '' "$T/clean.sum")"
+if [[ "$n" -lt 10 ]]; then
+  echo "test-oracle-env: FAIL — the clean run's summary has $n verdict lines (expected the fast tier's full block); its tail:" >&2
+  tail -20 "$T/clean.log" >&2
+  exit 2
+fi
+if [[ "$clean_rc" -ne 0 ]]; then
+  echo "test-oracle-env: FAIL — the CLEAN run is red (exit $clean_rc): the claim cannot be tested on a red tree; its reds:" >&2
+  grep -E '^  (FAIL|red) ' "$T/clean.log" >&2
+  exit 2
+fi
+if [[ "$hostile_rc" -ne 0 ]]; then
+  echo "test-oracle-env: FAIL — the HOSTILE run is red (exit $hostile_rc): a gate step read the environment; its reds and the refusal lines:" >&2
+  grep -E '^  (FAIL|red) |nonexistent|GOWORK|go environment' "$T/hostile.log" | head -20 >&2
+  exit 1
+fi
+if ! diff -u "$T/clean.sum" "$T/hostile.sum" > "$T/sum.diff"; then
+  echo "test-oracle-env: FAIL — a verdict MOVED between the clean and the hostile run (clean = -, hostile = +):" >&2
+  grep -E '^[-+]  ' "$T/sum.diff" >&2
+  exit 1
+fi
+echo "test-oracle-env: ok — the fast tier PASSES under the hostile go environment with every one of its $n verdict lines unchanged"

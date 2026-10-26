@@ -92,7 +92,7 @@ func goRunDir(t *testing.T, dir string, extraEnv ...string) (stdout, stderr []by
 	}
 	cmd := exec.Command("go", "run", ".")
 	cmd.Dir = dir
-	cmd.Env = append(os.Environ(), "GO111MODULE=off", "GOFLAGS=", "GOWORK=off", "GODEBUG=panicnil=0", "GOTRACEBACK=system", "GOCACHE="+cache)
+	cmd.Env = append(os.Environ(), "GO111MODULE=off", "GOFLAGS=", "GOWORK=off", "GOENV=off", "GODEBUG=panicnil=0", "GOTRACEBACK=system", "GOCACHE="+cache)
 	cmd.Env = append(cmd.Env, extraEnv...)
 	var out, errb bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &errb

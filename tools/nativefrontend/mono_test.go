@@ -23,6 +23,13 @@ import (
 // (types.Unalias paths, materialized *types.Alias) were unreachable in
 // tests and a future alias unit would have pinned gotypesalias=0.
 func TestMain(m *testing.M) {
+	// The go command's configuration (goenv.go) is read per call from the
+	// process environment and the go env file: pin both here so the box's
+	// `go env -w` settings and an ambient GOFLAGS/GOWORK reach no test; a
+	// test that exercises a channel sets it with t.Setenv.
+	os.Setenv("GOENV", "off")
+	os.Setenv("GOFLAGS", "")
+	os.Setenv("GOWORK", "")
 	enableMaterializedAliases()
 	os.Exit(m.Run())
 }

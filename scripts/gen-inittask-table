@@ -68,6 +68,12 @@ ENV["GO111MODULE"] = "off"
 # workspace file above the checkout must not reach `go list`/`go build` here.
 ENV["GOFLAGS"] = ""
 ENV["GOWORK"] = "off"
+ENV["GOENV"] = "off"  # the env file too (train-20 audit F1; scripts/go-env-pins.sh's set)
+ENV["GOTOOLCHAIN"] = "local"
+ENV["GOOS"] = "linux"
+ENV["GOARCH"] = "amd64"
+ENV["GOAMD64"] = "v1"
+ENV["GOEXPERIMENT"] = ""
 ENV.setdefault("GOCACHE", os.path.join(ROOT, "artifacts", "go-build-cache"))
 os.makedirs(ENV["GOCACHE"], exist_ok=True)
 

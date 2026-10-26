@@ -23,6 +23,11 @@
 # Fixture overrides (scripts/test-import-goose): --corpus-root, --goose-root,
 # --expect-rev.
 set -uo pipefail
+# The go environment pinned for every `go` and frontend run this script makes (scripts/go-env-pins.sh:
+# GOFLAGS, GOWORK, GOENV, GOTOOLCHAIN, GOOS/GOARCH, GOAMD64, GOEXPERIMENT, GODEBUG — the channels the
+# frontend refuses by name and no box environment may move; train-19 shake F7, train-20 audit F1/F3).
+. "$(dirname "${BASH_SOURCE[0]}")/go-env-pins.sh"
+export $GO_ENV_PINS
 # One collation and byte-wise character classes for every comparison, sort and pattern here
 # (deep-clean review DC19, 2026-10-26): the gate's verdict must not depend on the caller's locale.
 export LC_ALL=C

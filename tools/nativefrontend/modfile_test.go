@@ -120,6 +120,31 @@ func TestModuleGoDirectiveRefusal(t *testing.T) {
 		{"a one-line block WITH a body (gc «usage: require module/path v1.2.3»)", "module test\ngo 1.26\nrequire (a.b/c v1.0.0)\n", "has a parenthesis among its require arguments"},
 		{"module () (gc «missing module declaration»)", "module ()\ngo 1.26\n", "a `module (` block is not validated"},
 		{"godebug () (an empty block sets nothing; still refused by name, BUG-128)", "module test\ngo 1.26\ngodebug ()\n", "sets godebug (godebug ())"},
+		// Train-20 pre-merge audit F4 (2026-10-26): six shapes gc refuses that
+		// the scanner EXPORTED, pre-existing on main — closed by gc's rules
+		// (the header's paragraph (4)), each measured on gc go1.26.5.
+		{"NBSP between module and its path (gc «unexpected input character '\\u00a0'»)", "module\u00a0test\ngo 1.26\n", "go.mod:1:7: unexpected input character '\\u00a0'"},
+		{"NBSP between go and its version", "module test\ngo\u00a01.26\n", "go.mod:2:3: unexpected input character '\\u00a0'"},
+		{"form feed between module and its path", "module\x0ctest\ngo 1.26\n", "go.mod:1:7: unexpected input character '\\f'"},
+		{"vertical tab (gc's lexer, not a usage message)", "module test\x0bgo 1.26\n", "go.mod:1:12: unexpected input character '\\v'"},
+		{"a NUL byte", "module test\x00\ngo 1.26\n", "unexpected input character '\\x00'"},
+		{"a block comment (gc «mod files must use // comments»)", "module test /* m */\ngo 1.26\n", "mod files must use // comments"},
+		{"a brace in a tool path (gc «tool directive expects exactly one argument»)", "module test\ngo 1.26\ntool foo{bar\n", "tool directive expects exactly one argument"},
+		{"a brace in a replace target (gc «usage: replace …»)", "module test\ngo 1.26\nreplace a.b/c => ./x{y\n", "is not `replace module/path"},
+		{"require a.b/c v2.0.0 (gc «should be v0 or v1, not v2»)", "module test\ngo 1.26\nrequire a.b/c v2.0.0\n", "require a.b/c: version \"v2.0.0\" invalid: should be v0 or v1, not v2"},
+		{"require a.b/c/v2 v1.0.0 (gc «should be v2, not v1»)", "module test\ngo 1.26\nrequire a.b/c/v2 v1.0.0\n", "require a.b/c/v2: version \"v1.0.0\" invalid: should be v2, not v1"},
+		{"require a.b/c/v1 v1.0.0 (gc «malformed module path»)", "module test\ngo 1.26\nrequire a.b/c/v1 v1.0.0\n", "malformed module path \"a.b/c/v1\""},
+		{"require a.b/c/v02 v2.0.0 (a leading zero: malformed)", "module test\ngo 1.26\nrequire a.b/c/v02 v2.0.0\n", "malformed module path \"a.b/c/v02\""},
+		{"require a.b/c v1.0.0+build.1 (build metadata other than +incompatible)", "module test\ngo 1.26\nrequire a.b/c v1.0.0+build.1\n", "is not a canonical module version (build metadata other than +incompatible)"},
+		{"require a.b/c v2.0.0+incompatible: accepted (gc builds)", "module test\ngo 1.26\nrequire a.b/c v2.0.0+incompatible\n", ""},
+		{"require a.b/c/v2 v2.0.0, exclude on a /v2 path, replace to a /v2 path: accepted", "module test\ngo 1.26\nrequire a.b/c/v2 v2.0.0\nexclude a.b/c/v2 v2.1.0\nreplace a.b/c => d.e/f/v2 v2.0.0\n", ""},
+		{"gopkg.in/yaml.v2 v2.4.0: accepted; v3.0.0 refused (gc «should be v2, not v3»)", "module test\ngo 1.26\nrequire gopkg.in/yaml.v2 v2.4.0\nrequire gopkg.in/check.v1 v3.0.0\n", "require gopkg.in/check.v1: version \"v3.0.0\" invalid: should be v1, not v3"},
+		{"replace a.b/c v2.0.0 => ./x (the versioned left side, gc «should be v0 or v1, not v2»)", "module test\ngo 1.26\nreplace a.b/c v2.0.0 => ./x\n", "replace a.b/c: version \"v2.0.0\" invalid: should be v0 or v1, not v2"},
+		{"retract v2.0.0 in module test (gc «retract test: version … should be v0 or v1, not v2»)", "module test\ngo 1.26\nretract v2.0.0\n", "retract test: version \"v2.0.0\" invalid: should be v0 or v1, not v2"},
+		{"retract [v2.0.0, v2.0.1] in module test", "module test\ngo 1.26\nretract [v2.0.0, v2.0.1]\n", "retract test: version \"v2.0.0\" invalid"},
+		{"module test/v2 + retract v1.0.0 (gc «should be v2, not v1»)", "module test/v2\ngo 1.26\nretract v1.0.0\n", "retract test/v2: version \"v1.0.0\" invalid: should be v2, not v1"},
+		{"module test/v2 + retract v2.0.0, the retract before the module line: accepted", "retract v2.0.0\nmodule test/v2\ngo 1.26\n", ""},
+		{"a /v1 suffix on the MODULE line is accepted by gc (measured) and here", "module a.b/c/v1\ngo 1.26\n", ""},
 	}
 	for _, c := range cases {
 		t.Run(c.label, func(t *testing.T) {

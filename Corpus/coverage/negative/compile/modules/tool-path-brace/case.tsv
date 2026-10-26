@@ -1,0 +1,2 @@
+# expected_substring	features
+tool directive expects exactly one argument	functions,print,modules,compile_error

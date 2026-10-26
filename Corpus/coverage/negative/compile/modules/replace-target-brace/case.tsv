@@ -1,0 +1,2 @@
+# expected_substring	features
+usage: replace module/path [v1.2.3] => other/module v1.4	functions,print,modules,compile_error
