@@ -3159,6 +3159,83 @@ private def malformedParkedStateFacts : IO Bool := do
       | _ => false))
   pure passed
 
+/-- S26 sweep (lane `sweep/s26-core-defaults`, 2026-10-26; the defect-neighbourhood campaign,
+`docs/2026-10-27_defect-neighbourhood-campaign.md` §4, `docs/defect-shapes.md` S26): the two
+absorbing defaults the reading found, PINNED AT THEIR CURRENT BEHAVIOUR — red-by-design pins of
+open findings (`docs/BUGS.md` BUG-206, BUG-207), beside the valid controls. The fix lane flips
+each pinned fact to the named refusal and keeps the controls.
+
+BUG-206 — the MAIN-EXIT WINDOW's empty menu is DC11's sibling at the terminal: with main at
+`.next .stop`, every driver (`execProgLoop`, `execProgLoopOut`, `enumPoolRun`, `poolDFS`, the
+choice-trace and dedup mirrors) reads `runnableIdxs = []` through the Bool projection `wakeReady`
+— a MALFORMED parked goroutine (the DC11 probe: a send parked on an unbound address of an empty
+store) reads «not runnable» — and answers `ok` with main's readout; `parkedWellFormed` runs only
+on the no-main-outcome arm (`deadlockOrRefusal`). BUG-165 names this window as outside its fix's
+claim. No path from admitted Go source; the pin is the boundary.
+
+BUG-207 — `decodeRuneAt`'s out-of-range sentinel (`.getD 0x100`, every range check fails → U+FFFD,
+width 1) is Go's rule for a truncated sequence INSIDE the string, and the same benign answer for
+an offset AT OR PAST the end: the strict ops `.runeAt` / `.runeSizeAt` answer U+FFFD / width 1 on
+a malformed operand (`utf8.DecodeRuneInString` answers `(RuneError, 0)` at the end; the lowering's
+`for range` guards `rnext < len` and never decodes there). The other two decoders
+(`runesOfStringAux`, `utf8StringAux?`) guard `off < length` themselves. -/
+private def absorbingDefaultResidualFacts : IO Bool := do
+  let mut passed := true
+  let ctx := GoCore.ProgramCtx.ofTables (types := #[])
+  let absent : GoCore.Machine.Config :=
+    .blockedSend (some (.base ⟨0⟩)) (.int 3 .int) .stop
+  let emptyStore : GoCore.Store := {}
+  let mainDone : GoCore.Machine.Thread := .running (.next .stop) none
+  let pool (ts : Array GoCore.Machine.Thread) : Except Stop (GoCore.Store × GoCore.Choices) :=
+    GoCore.Machine.execProgLoop ctx 10 ⟨ts, emptyStore, 0⟩ {} []
+  -- BUG-206, the finding at its CURRENT behaviour.
+  passed := passed && (← expectTrue "BUG-206 (pinned CURRENT behaviour, open): execProgLoop answers ok at main's exit beside a MALFORMED parked goroutine — the refusal deadlockOrRefusal names away from the exit is absent here"
+    (match pool #[mainDone, .running absent none] with
+      | .ok _ => true
+      | _ => false))
+  passed := passed && (← expectTrue "BUG-206 (pinned CURRENT behaviour, open): execProgLoopOut's outcome is the same ok"
+    (match (GoCore.Machine.execProgLoopOut ctx 10 ⟨#[mainDone, .running absent none], emptyStore, 0⟩ {} [] GoString.empty).2 with
+      | .ok _ => true
+      | _ => false))
+  let enumPool (ts : Array GoCore.Machine.Thread) :=
+    CLI.enumPoolRun ctx [] #[] none 10 0 ⟨ts, emptyStore, 0⟩ {} [] GoString.empty
+  passed := passed && (← expectTrue "BUG-206 (pinned CURRENT behaviour, open): the enumeration driver's mirror reads the same ok"
+    (match enumPool #[mainDone, .running absent none] with
+      | .ok ("ok", _, _) => true
+      | _ => false))
+  -- BUG-206 controls: the same malformed goroutine away from main's exit is the NAMED refusal
+  -- (DC11), and a VALIDLY parked goroutine beside main's exit is Go's clean exit.
+  passed := passed && (← expectTrue "BUG-206 control: with main parked (no main outcome) the same malformed goroutine is the NAMED refusal (DC11)"
+    (match pool #[.running (.blockedSend none (.int 1 .int) .stop) none, .running absent none] with
+      | .error (Stop.stuck msg) => (msg.splitOn "unbound").length == 2
+      | _ => false))
+  passed := passed && (← expectTrue "BUG-206 control: a validly parked nil-channel send beside main's exit is Go's clean exit (main returns, the goroutine is discarded)"
+    (match pool #[mainDone, .running (.blockedSend none (.int 1 .int) .stop) none] with
+      | .ok _ => true
+      | _ => false))
+  -- BUG-207, the finding at its CURRENT behaviour.
+  let ab : GoValue := .string (GoString.fromLeanString "ab")
+  passed := passed && (← expectTrue "BUG-207 (pinned CURRENT behaviour, open): runeAt at an offset PAST the string's end answers U+FFFD, not a named refusal"
+    (match GoCore.Machine.applyStrictOp ctx emptyStore id .runeAt [ab, .int 5 .int] with
+      | .ok (.int 0xFFFD .int32, _, _) => true
+      | _ => false))
+  passed := passed && (← expectTrue "BUG-207 (pinned CURRENT behaviour, open): runeSizeAt AT the string's end answers width 1 (DecodeRuneInString answers 0 there; for range never decodes there)"
+    (match GoCore.Machine.applyStrictOp ctx emptyStore id .runeSizeAt [ab, .int 2 .int] with
+      | .ok (.int 1 .int, _, _) => true
+      | _ => false))
+  -- BUG-207 controls: in range, a valid rune decodes and a TRUNCATED sequence is Go's U+FFFD, width 1.
+  passed := passed && (← expectTrue "BUG-207 control: runeAt in range decodes the rune ('b' at offset 1)"
+    (match GoCore.Machine.applyStrictOp ctx emptyStore id .runeAt [ab, .int 1 .int] with
+      | .ok (.int 98 .int32, _, _) => true
+      | _ => false))
+  let truncated : GoValue := .string ⟨#[0x61, 0xE2]⟩
+  passed := passed && (← expectTrue "BUG-207 control: a truncated multi-byte sequence INSIDE the string is Go's U+FFFD with width 1 (the accept-range rule)"
+    (match GoCore.Machine.applyStrictOp ctx emptyStore id .runeAt [truncated, .int 1 .int],
+           GoCore.Machine.applyStrictOp ctx emptyStore id .runeSizeAt [truncated, .int 1 .int] with
+      | .ok (.int 0xFFFD .int32, _, _), .ok (.int 1 .int, _, _) => true
+      | _, _ => false))
+  pure passed
+
 /-- BUG-134 at the train-20 audit's F1 (2026-10-26, lane `core/struct-through-conversion-1026`):
 the whole-value retag for a struct value crossing a converted struct pointer lives at the
 pointee READS at a static type (`derefRetag`, `receiverRetag`) and at the WRITE through an
@@ -5033,6 +5110,8 @@ def main : IO UInt32 := do
   passed := passed && (← stepLabelAndSeedControls)
   -- DC11 (2026-10-26): the malformed-parked-state refusal and its valid deadlock controls.
   passed := passed && (← malformedParkedStateFacts)
+  -- S26 sweep (2026-10-26): the two absorbing-default residuals pinned at their current behaviour (BUG-206, BUG-207).
+  passed := passed && (← absorbingDefaultResidualFacts)
   if passed then
     return 0
   else
