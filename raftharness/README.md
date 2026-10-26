@@ -22,6 +22,18 @@ SPEC the twin is a twin OF — same properties, different mechanism
 
 ## Run
 
+Prerequisites: `deps/raft` at the revision the subject tree was derived from —
+`scripts/setup-deps` pins it (`56e32004…`, `tools/raftsubject/derive.py`
+`PINNED_RAFT_REV`), and `go.mod`'s `replace` directive points at it — and the Go
+module cache holding the modules `go.sum` lists: `google.golang.org/protobuf
+v1.36.11` (raft's wire types are protobuf messages) and raft's own requirements
+(`cockroachdb/datadriven`, `stretchr/testify`, their indirect modules). The first
+`go run` fetches them from the module proxy, which needs the network; offline, a
+populated cache suffices (`GOPROXY=off` turns a missing module into a refusal
+naming it rather than a wait on the network). On a box without the network and
+without the cache this family cannot run; the deep-clean review of 2026-10-26
+exercised its CLI only in isolation for that reason.
+
 ```
 cd raftharness
 GOCACHE="$PWD/../artifacts/go-build-cache" go run . [-scenario all|<name>] [-seed N] [-iters K]

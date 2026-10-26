@@ -85,8 +85,11 @@ refuse_if_populated() { # $1 = dest, $2 = label
 
 # name | pinned rev | public URL ("-" = none: --from required) | in default set
 # Pins' authoritative homes: goose = scripts/check-imported-goose PINNED_REV;
-# raft = north-star target (rev floats deliberately — recorded as "-" pin
-# meaning any rev accepted); go/covmap/go101/spectec/esmeta/gofrontend/
+# raft = tools/raftsubject/derive.py PINNED_RAFT_REV (the revision raftsubject/
+# is derived from; raftharness/go.mod's replace directive points at this
+# checkout — pinned 2026-10-26 on the [USER]'s ruling on the deep-clean
+# review's D4/DC15: the README promised pinned checkouts while raft floated;
+# before that the row was "-", any rev accepted); go/covmap/go101/spectec/esmeta/gofrontend/
 # tinygo/proposal = docs/spec-sources.md (the spec-and-community truth
 # campaign's pin index — go's SHA is tag go1.26.5, the language-version
 # pin; covmap = OathTech/covmap, public since the 2026-10-11 box move
@@ -100,7 +103,7 @@ refuse_if_populated() { # $1 = dest, $2 = label
 # subjects of scripts/cedar-census — never lowered from deps/ in place).
 PINS=$(cat <<'TABLE'
 goose            3be88bbb4982f58e5813b6f0344302d5582c8e8a  https://github.com/goose-lang/goose.git      default
-raft             -                                         https://github.com/etcd-io/raft.git          default
+raft             56e32004b1af3a4cb625fbfe5dbca24fb6023d09  https://github.com/etcd-io/raft.git          default
 grossmith        -                                         https://github.com/OathTech/grossmith.git    named
 go               c19862e5f8415b4f24b189d065ed739517c548ba  https://github.com/golang/go.git             default
 covmap           2978393a4aed26b9562f5cd040e74507b2a53812  https://github.com/OathTech/covmap.git       named
