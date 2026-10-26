@@ -175,6 +175,12 @@ push rule). Pushing the tag is a separate sign-off.
   or pointer cell holds only the constructor its type's producers emit (`isNormalForTyTy`, `Ops.lean`), and the
   normalizer refuses any other value by name at the cell's birth or first store. No typed Go program changes its
   answer (the full corpus); a consumer's `HeapNormal`/`StateWf` premise now excludes the heaps no typed run builds.
+- **A map payload's entry stamps are distinct and below its counter, as a `StateWf` clause** (G22, 2026-10-27):
+  `HeapCell.normal`'s `.mapPayload` arm is `mapPayloadWf` (`Ops.lean`) — what every run keeps (`makeMap` births
+  `mapPayload #[] 0`; an insert stamps with the counter and advances it; a replace keeps the stamp; `delete` and
+  `clear` keep the counter), now stated and preserved through the per-op family (`StateWf.lean`). No behaviour
+  changed (the full corpus); a consumer's `StateWf` premise now excludes the hand-built payload with a repeated
+  stamp on which the range iterator's candidate filter would skip a key.
 - **Compiler directives are refused by name** (the Codex zero-context pass F2, punch-list row 38; BUG-127;
   `tools/nativefrontend/directives.go`): in every user unit, any `//go:` directive outside the allowlist —
   `//go:build`, `//go:noinline`, `//go:generate`, the three with no effect on the compiled program — and any

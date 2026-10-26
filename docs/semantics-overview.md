@@ -52,9 +52,11 @@ inversions, and the stream lemmas — the consumption projection `seqConsumption
 `stepFn_consumption_*` theorems tie it to the executable. The executable predicates naming the
 consuming shapes (`consumesSelect`, `consumesAppendSlice`, …) are in `Consumes.lean`.
 
-**Well-formedness.** `StateWf` (`StateWf.lean`) states the store invariants, such as declared
-types and normal heap shapes; the setup path decides it (`StepFn.lean`), and `MachineWf` /
-`MultiWf` (`Multi.lean`) are built on it.
+**Well-formedness.** `StateWf` (`StateWf.lean`) states the store invariants: every heap
+location below the allocator bound, and the heap normal (`HeapNormal`, `Ops.lean`) — every
+value cell self-normalized at its declared type, and every map payload's entry stamps distinct
+and below the payload's counter (`mapPayloadWf`; raft-proofs' G22, 2026-10-26); the setup path
+decides it (`StepFn.lean`), and `MachineWf` / `MultiWf` (`Multi.lean`) are built on it.
 
 ## 3. The labelled step
 

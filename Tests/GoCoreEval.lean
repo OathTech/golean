@@ -3452,6 +3452,78 @@ private def g21NormalFormTests : IO Bool := do
      | _ => false))
   pure passed
 
+/-- raft-proofs' G22 (2026-10-27; the [USER]'s relay of 2026-10-26): a map payload's entry
+stamps are DISTINCT and BELOW its counter — `HeapCell.normal`'s `.mapPayload` arm is
+`mapPayloadWf`, so `HeapNormal` and `StateWf` state it for every map cell. Hand-built: a
+repeated stamp is refused, a stamp at or past the counter is refused, the shape every run
+builds (gaps included — a deleted stamp is never reused) is admitted. Through the machine: the
+payload `makeMap` births (`allocCell (.mapPayload #[] 0)`) edited by `mapAssignValue` (insert,
+replace), `mapDelete` (present and absent key) and `clearMap` is `StateWf` after every edit,
+with exactly the stamps and the counter the clause describes. -/
+private def g22MapStampTests : IO Bool := do
+  let mut passed := true
+  let wf (s : GoCore.Store) : Bool := decide (GoCore.Machine.StateWf emptyCtx s)
+  let normal (s : GoCore.Store) : Bool := decide (GoCore.HeapNormal emptyCtx s)
+  let e (id : Nat) (k : Int) (v : Bool) : Nat × GoValue × GoValue := (id, .int k, .bool v)
+  let payload (es : Array (Nat × GoValue × GoValue)) (n : Nat) : GoCore.Store :=
+    { heap := #[.mapPayload es n] }
+  passed := passed && (← expectTrue "G22: a hand-built payload with a REPEATED stamp is not HeapNormal, so not StateWf"
+    (!normal (payload #[e 0 1 true, e 0 2 false] 2) && !wf (payload #[e 0 1 true, e 0 2 false] 2)))
+  passed := passed && (← expectTrue "G22: a hand-built payload with a stamp AT the counter is not StateWf; one PAST it is not either"
+    (!wf (payload #[e 0 1 true, e 2 2 false] 2) && !wf (payload #[e 5 1 true] 3)))
+  passed := passed && (← expectTrue "G22: distinct stamps below the counter are StateWf — with a gap, empty at 0, empty at a kept counter"
+    (wf (payload #[e 0 1 true, e 3 2 false] 4) && wf (payload #[] 0) && wf (payload #[] 7)))
+  passed := passed && (← expectTrue "G22: mapPayloadWf is the clause, and mapStamps reads the stamps in entry order"
+    (GoCore.mapPayloadWf #[e 0 1 true, e 3 2 false] 4
+      && !GoCore.mapPayloadWf #[e 0 1 true, e 0 2 false] 2
+      && !GoCore.mapPayloadWf #[e 2 1 true] 2
+      && GoCore.mapStamps #[e 4 1 true, e 1 2 false] == [4, 1]))
+  -- Through the machine: the cell `makeMap` births, edited by the three payload writers.
+  let (base, s0) := ({} : GoCore.Store).allocCell (.mapPayload #[] 0)
+  let mapV : GoValue := .map { base := some base }
+  let stampsAt (s : GoCore.Store) : Option (List Nat × Nat) :=
+    match GoCore.mapPayload? s base with
+    | .ok (es, n) => some (GoCore.mapStamps es, n)
+    | .error _ => none
+  let assign (s : GoCore.Store) (k : Int) (v : Bool) : Option GoCore.Store :=
+    match GoCore.Machine.mapAssignValue emptyCtx s .int .bool mapV (.int k) (.bool v) with
+    | .ok (s', _) => some s'
+    | .error _ => none
+  let delete (s : GoCore.Store) (k : Int) : Option GoCore.Store :=
+    match GoCore.Machine.applyStmtOpCore emptyCtx s (.mapDelete .int) [mapV, .int k] with
+    | .ok (s', _) => some s'
+    | .error _ => none
+  let clear (s : GoCore.Store) : Option GoCore.Store :=
+    match GoCore.Machine.applyStmtOpCore emptyCtx s .clearMap [mapV] with
+    | .ok (s', _) => some s'
+    | .error _ => none
+  -- Every edit must answer: a refusal fails the pin, it never skips it.
+  let check (name : String) (s? : Option GoCore.Store) (stamps : List Nat) (counter : Nat) :
+      IO Bool :=
+    match s? with
+    | none => expectTrue s!"G22 machine: {name} answered" false
+    | some s => expectTrue s!"G22 machine: after {name} the stamps are {stamps} with counter {counter}, and the store is StateWf"
+        (stampsAt s == some (stamps, counter) && wf s)
+  passed := passed && (← expectTrue "G22 machine: the born payload is StateWf — no stamps, counter 0"
+    (wf s0 && stampsAt s0 == some ([], 0)))
+  let s1? := assign s0 1 true
+  passed := passed && (← check "the first insert" s1? [0] 1)
+  let s3? := (s1?.bind (assign · 2 true)).bind (assign · 3 false)
+  passed := passed && (← check "three inserts" s3? [0, 1, 2] 3)
+  let s4? := s3?.bind (assign · 2 false)
+  passed := passed && (← check "a replace at a present key (the entry keeps its stamp)" s4? [0, 1, 2] 3)
+  let s5? := s4?.bind (delete · 2)
+  passed := passed && (← check "a delete (the stamp leaves, the counter stays)" s5? [0, 2] 3)
+  let s6? := s5?.bind (assign · 2 true)
+  passed := passed && (← check "re-inserting the deleted key (a FRESH stamp, never the old one)" s6? [0, 2, 3] 4)
+  let s7? := s6?.bind (delete · 9)
+  passed := passed && (← check "an absent-key delete (the payload rewritten unchanged)" s7? [0, 2, 3] 4)
+  let s8? := s7?.bind clear
+  passed := passed && (← check "clear (empty, the counter kept)" s8? [] 4)
+  let s9? := s8?.bind (assign · 1 true)
+  passed := passed && (← check "an insert after clear (stamped from the kept counter)" s9? [4] 5)
+  pure passed
+
 /-- raft-proofs' G21 (2) (2026-10-27): the append SPILL and the string conversions are
 guarded by `arrayFootprintBudget` on their REALIZED capacity — the make site's guard at the
 two doors BUG-131's scope sentence named. The append pins use `[1<<20]uint8` rows (2^20
@@ -4630,6 +4702,7 @@ def main : IO UInt32 := do
   passed := passed && (← makeFootprintRuntimeTests)
   passed := passed && (← g21NormalFormTests)
   passed := passed && (← g21SpillBudgetTests)
+  passed := passed && (← g22MapStampTests)
   -- The class pin proper: main.T has a TypeDef on the wire (the OLD
   -- guard's presence key) but NO method-set record — satisfaction must
   -- refuse `unsupported`, proving the guard keys on the RECORD.

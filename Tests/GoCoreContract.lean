@@ -108,6 +108,27 @@ value»). The interface pins above are unchanged: `.interface` keeps its identit
 theorem slice_cell_not_normal :
     ¬ HeapNormal (ProgramCtx.ofTables (types := #[])) sliceArrayStore := by decide
 
+/-! G22 (2026-10-27; raft-proofs' ask of 2026-10-26): a map payload's entry stamps are DISTINCT
+and BELOW its counter — `HeapCell.normal`'s `.mapPayload` arm is `mapPayloadWf`, so `HeapNormal`,
+hence `StateWf`, refuses a hand-built payload with a repeated stamp (the shape on which the range
+iterator's candidate filter would skip a key) or with a stamp at the counter, and admits the
+shape every run builds: distinct stamps below the counter, gaps included (a deleted stamp is
+never reused). The map value cell of the admitted store points at the payload. -/
+def repeatedStampStore : Store :=
+  { heap := #[.mapPayload #[(0, .int 1, .bool true), (0, .int 2, .bool false)] 2] }
+def stampAtCounterStore : Store :=
+  { heap := #[.mapPayload #[(0, .int 1, .bool true), (2, .int 2, .bool false)] 2] }
+def distinctStampStore : Store :=
+  { heap := #[.value (.map .int .bool) (.map { base := some (.base ⟨1⟩) }),
+              .mapPayload #[(0, .int 1, .bool true), (3, .int 2, .bool false)] 4] }
+
+theorem repeated_stamp_refused :
+    ¬ StateWf (ProgramCtx.ofTables (types := #[])) repeatedStampStore := by decide
+theorem stamp_at_counter_refused :
+    ¬ StateWf (ProgramCtx.ofTables (types := #[])) stampAtCounterStore := by decide
+theorem distinct_stamps_admitted :
+    StateWf (ProgramCtx.ofTables (types := #[])) distinctStampStore := by decide
+
 theorem iface_cell_path_write_array :
     (storeLoc (ProgramCtx.ofTables (types := #[])) ifaceArrayStore leaf0 (.int 5 .int)).map
         (fun s => loadLoc (ProgramCtx.ofTables (types := #[])) s leaf0)

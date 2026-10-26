@@ -532,6 +532,10 @@ def exports : List Name := [
     -- the contract regressions (`Tests/GoCoreContract.lean` §A/§B/§C)
     ``GoLean.GoCore.ContractTests.ill_typed_cell_refused,
     ``GoLean.GoCore.ContractTests.slice_cell_not_normal,
+    -- G22 (2026-10-27): the map-payload stamp clause of `StateWf`, refused and admitted.
+    ``GoLean.GoCore.ContractTests.repeated_stamp_refused,
+    ``GoLean.GoCore.ContractTests.stamp_at_counter_refused,
+    ``GoLean.GoCore.ContractTests.distinct_stamps_admitted,
     ``GoLean.GoCore.ContractTests.slice_cell_path_write_refuses,
     ``GoLean.GoCore.ContractTests.print_before_panic,
     ``GoLean.GoCore.ContractTests.Interpreter.terminal_at_zero_fuel,

@@ -26,6 +26,13 @@ location occurs; a single location `l` contributes `l.rootBase + 1`).
   environment scan, `.tmp/probe_wfscan3.lean`), and kernel-reducible, so
   well-formedness of a concrete seeded state discharges by `decide`.
 
+**The map-payload clause** (raft-proofs' G22, 2026-10-26): `StateWf`'s second
+conjunct `HeapNormal` also states, per map payload cell, that the entry stamps
+are distinct and below the payload's counter (`mapPayloadWf`, `Ops.lean`; the
+lemmas under «The map-payload clause» below). The range iterator's candidate
+filter keys on stamps, so a payload violating it would make a range skip a
+key; no run builds one, and the clause is what every run keeps, now stated.
+
 Carrier inventory (checked against `Value.lean`/`State.lean`/`Syntax.lean`/
 `Machine.lean`, 2026-08-04):
 * `Loc` — the carrier itself (`.base`; recursion through `.field`/`.index`);
@@ -710,8 +717,12 @@ every walk/transparency lemma about them (`seqCont_`, `pushDefer_`,
 
 variable (ctx) in
 /-- State well-formedness: no location in the heap (values or payloads)
-dangles at or beyond `nextAddr`. Heap-only since B7 (the context half of
-the domain invariant is `Stmt.locSup_eq_zero`, a theorem, not a check). -/
+dangles at or beyond `nextAddr`, and the heap is normal — `HeapNormal`:
+every value cell self-normalized at its declared type (C1 S1), every map
+payload's entry stamps distinct and below its counter (raft-proofs' G22,
+2026-10-26; the clause's lemmas are under «The map-payload clause» below).
+Heap-only since B7 (the context half of the domain invariant is
+`Stmt.locSup_eq_zero`, a theorem, not a check). -/
 def StateWf (σ : Store) : Prop :=
   Store.locSup σ ≤ σ.nextAddr ∧ HeapNormal ctx σ
 
@@ -2707,6 +2718,116 @@ theorem HeapNormal.lookup_of {σ : Store} (h : HeapNormal ctx σ) {a : Addr} {c 
   obtain ⟨hi, rfl⟩ := Array.getElem?_eq_some_iff.mp hl
   exact HeapNormal.cell_of h hi
 
+/-! ### The map-payload clause (raft-proofs' G22, 2026-10-26): stamps distinct and below the counter
+
+`HeapCell.normal`'s `.mapPayload` arm is `mapPayloadWf` (`Ops.lean`), so `HeapNormal` — hence
+`StateWf` — states it for every map cell. Below: the Prop reading, the birth shape, the three
+payload edits the machine performs (a fresh entry stamped with the counter, an in-place
+replacement keeping the entry's stamp, a deletion) and the projections off a normal heap. -/
+
+theorem stampsDistinct_iff : ∀ {l : List Nat}, stampsDistinct l = true ↔ l.Nodup
+  | [] => by simp [stampsDistinct]
+  | x :: xs => by
+      simp only [stampsDistinct, Bool.and_eq_true, Bool.not_eq_eq_eq_not, Bool.not_true,
+        List.nodup_cons, stampsDistinct_iff (l := xs)]
+      constructor
+      · rintro ⟨h1, h2⟩; exact ⟨by simpa [List.contains_iff_mem] using h1, h2⟩
+      · rintro ⟨h1, h2⟩; exact ⟨by simpa [List.contains_iff_mem] using h1, h2⟩
+
+/-- The clause as a Prop: the stamp list is `Nodup` and every stamp is below the counter. -/
+theorem mapPayloadWf_iff {es : Array (Nat × GoValue × GoValue)} {n : Nat} :
+    mapPayloadWf es n = true ↔ (mapStamps es).Nodup ∧ ∀ id ∈ mapStamps es, id < n := by
+  simp [mapPayloadWf, stampsDistinct_iff, List.all_eq_true]
+
+/-- The birth shape (`makeMap`'s `mapPayload #[] 0`) and `clear`'s `#[]` at any counter. -/
+theorem mapPayloadWf_empty {n : Nat} : mapPayloadWf #[] n = true := rfl
+
+theorem mapStamps_push {es : Array (Nat × GoValue × GoValue)} {p : Nat × GoValue × GoValue} :
+    mapStamps (es.push p) = mapStamps es ++ [p.1] := by
+  simp [mapStamps, Array.toList_push]
+
+/-- An ABSENT key (`mapAssignValue.plan`): the new entry is stamped with the counter, which
+advances. -/
+theorem mapPayloadWf_push {es : Array (Nat × GoValue × GoValue)} {n : Nat} {k v : GoValue}
+    (h : mapPayloadWf es n = true) : mapPayloadWf (es.push (n, k, v)) (n + 1) = true := by
+  rw [mapPayloadWf_iff] at h ⊢
+  obtain ⟨hnd, hlt⟩ := h
+  rw [mapStamps_push]
+  refine ⟨?_, ?_⟩
+  · rw [List.nodup_append]
+    refine ⟨hnd, by simp, ?_⟩
+    intro a ha b hb
+    rw [List.mem_singleton] at hb
+    subst hb
+    exact Nat.ne_of_lt (hlt a ha)
+  · intro id hid
+    rcases List.mem_append.mp hid with hid | hid
+    · exact Nat.lt_succ_of_lt (hlt id hid)
+    · rw [List.mem_singleton] at hid
+      subst hid
+      exact Nat.lt_succ_self _
+
+/-- A PRESENT key (`mapAssignValue.plan`, the E10 always-replace): the entry keeps its stamp,
+so the stamp list is unchanged. -/
+theorem mapStamps_set!_same {es : Array (Nat × GoValue × GoValue)} {i id : Nat}
+    {k₀ v₀ k v : GoValue} (hget : es[i]? = some (id, k₀, v₀)) :
+    mapStamps (es.set! i (id, k, v)) = mapStamps es := by
+  rw [Array.set!]
+  simp only [mapStamps, Array.toList_setIfInBounds, List.map_set]
+  apply List.ext_getElem?
+  intro j
+  rw [List.getElem?_set]
+  split
+  · rename_i hij
+    subst hij
+    split
+    · rw [List.getElem?_map, Array.getElem?_toList, hget]
+      rfl
+    · rename_i hlen
+      exfalso
+      have h1 := (Array.getElem?_eq_some_iff.mp hget).1
+      simp only [List.length_map, Array.length_toList] at hlen
+      omega
+  · rfl
+
+theorem mapPayloadWf_set! {es : Array (Nat × GoValue × GoValue)} {n i id : Nat}
+    {k₀ v₀ k v : GoValue} (h : mapPayloadWf es n = true) (hget : es[i]? = some (id, k₀, v₀)) :
+    mapPayloadWf (es.set! i (id, k, v)) n = true := by
+  unfold mapPayloadWf at h ⊢
+  rw [mapStamps_set!_same hget]
+  exact h
+
+/-- A DELETION (`eraseIdx!`, in range or not): a sublist of distinct stamps below the counter. -/
+theorem mapPayloadWf_eraseIdx! {es : Array (Nat × GoValue × GoValue)} {n i : Nat}
+    (h : mapPayloadWf es n = true) : mapPayloadWf (es.eraseIdx! i) n = true := by
+  unfold Array.eraseIdx!
+  split
+  · rw [mapPayloadWf_iff] at h ⊢
+    obtain ⟨hnd, hlt⟩ := h
+    simp only [mapStamps, Array.toList_eraseIdx] at hnd hlt ⊢
+    refine ⟨hnd.sublist ((List.eraseIdx_sublist _ _).map _), ?_⟩
+    intro id hid
+    obtain ⟨e, he, rfl⟩ := List.mem_map.mp hid
+    exact hlt _ (List.mem_map.mpr ⟨e, List.mem_of_mem_eraseIdx he, rfl⟩)
+  · rw [Array.panicWithPosWithDecl_eq_empty]
+    rfl
+
+/-- The clause, read off a map cell of a normal heap (a non-root `Loc` finds no cell). -/
+theorem HeapNormal.mapPayload_of {σ : Store} (h : HeapNormal ctx σ) {l : Loc}
+    {es : Array (Nat × GoValue × GoValue)} {n : Nat}
+    (hl : Heap.lookup σ.heap l = some (.mapPayload es n)) : mapPayloadWf es n = true := by
+  cases l with
+  | base a => exact HeapNormal.lookup_of h hl
+  | field b t f => simp [Heap.lookup] at hl
+  | index b i => simp [Heap.lookup] at hl
+
+/-- The clause under `StateWf`, in Prop form: the consumer's projection. -/
+theorem StateWf.mapPayload_of {σ : Store} (h : StateWf ctx σ) {l : Loc}
+    {es : Array (Nat × GoValue × GoValue)} {n : Nat}
+    (hl : Heap.lookup σ.heap l = some (.mapPayload es n)) :
+    (mapStamps es).Nodup ∧ ∀ id ∈ mapStamps es, id < n :=
+  mapPayloadWf_iff.mp (HeapNormal.mapPayload_of h.normal hl)
+
 /-- A root-cell update by a normal-preserving cell function keeps the heap normal. -/
 theorem HeapNormal.of_updateCell {σ σ' : Store} {a : Addr} {f : HeapCell → Except Stop HeapCell}
     (h : HeapNormal ctx σ) (hst : σ.updateCell a f = .ok σ')
@@ -2755,15 +2876,18 @@ theorem HeapNormal.of_alloc {σ σ' : Store} {v : GoValue} {ty : Ty} {l : Loc}
   exact HeapNormal.of_allocCell h (c := .value ty v') (by
     simpa [HeapCell.normal] using normalizeValueForTy_isNormal ctx hv') hal
 
+/-- The map writer keeps the heap normal when the NEW payload satisfies the clause (`hwf`,
+G22); the old cell's shape is irrelevant (the writer replaces it whole). -/
 theorem HeapNormal.of_storeMapPayload {σ σ' : Store} {l : Loc}
     {entries : Array (Nat × GoValue × GoValue)} {nextId : Nat}
-    (h : HeapNormal ctx σ) (hst : storeMapPayload σ l entries nextId = .ok σ') :
+    (h : HeapNormal ctx σ) (hwf : mapPayloadWf entries nextId = true)
+    (hst : storeMapPayload σ l entries nextId = .ok σ') :
     HeapNormal ctx σ' := by
   unfold storeMapPayload at hst
   split at hst
   · exact HeapNormal.of_updateCell h hst fun cell cell' _ hf => by
       cases cell <;> simp [stuck, throw, throwThe, MonadExceptOf.throw, pure, Except.pure] at hf
-      subst hf; rfl
+      subst hf; exact hwf
   · simp [stuck, throw, throwThe, MonadExceptOf.throw] at hst
 
 theorem HeapNormal.of_storeChanPayload {σ σ' : Store} {l : Loc} {buf : Array GoValue}
@@ -3342,6 +3466,36 @@ theorem mapEntries_locSup {σ : Store} {m : MapValue}
     constructor
     · rw [heq]; exact Nat.le_refl _
     · exact mapPayload?_locSup hp
+
+/-- A map payload read off a normal heap satisfies the stamp clause (G22). -/
+theorem mapPayload?_wf {σ : Store} {l : Loc} {es : Array (Nat × GoValue × GoValue)} {n : Nat}
+    (h : HeapNormal ctx σ) (hp : mapPayload? σ l = .ok (es, n)) : mapPayloadWf es n = true := by
+  unfold mapPayload? at hp
+  split at hp
+  · rename_i entries nextId hcell
+    simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hp
+    obtain ⟨rfl, rfl⟩ := hp
+    exact HeapNormal.mapPayload_of h hcell
+  all_goals simp [stuck, throw, throwThe, MonadExceptOf.throw] at hp
+
+/-- `mapEntries`' peek of a backed map off a normal heap satisfies the stamp clause (G22):
+the premise every payload edit's preservation starts from. -/
+theorem mapEntries_wf {σ : Store} {m : MapValue}
+    {out : Option (Loc × Array (Nat × GoValue × GoValue) × Nat)}
+    (h : HeapNormal ctx σ) (hm : mapEntries σ m = .ok out) :
+    ∀ {baseLoc entries nextId}, out = some (baseLoc, entries, nextId) →
+      mapPayloadWf entries nextId = true := by
+  intro baseLoc entries nextId hout
+  subst hout
+  unfold mapEntries at hm
+  split at hm
+  · simp at hm
+  · rename_i base heq
+    try simp only [bind_eq_ok] at hm
+    obtain ⟨⟨es, n⟩, hp, hm⟩ := hm
+    simp only [pure_eq_ok, Except.ok.injEq, Option.some.injEq, Prod.mk.injEq] at hm
+    obtain ⟨rfl, rfl, rfl⟩ := hm
+    exact mapPayload?_wf h hp
 
 /-! ## The emitting operations (C1 S2a): each is its primitive plus a fixed emission -/
 
@@ -4079,6 +4233,45 @@ theorem mapIterCandidates_locSup {σ : Store} {keyTy valTy : Ty}
     obtain ⟨rfl, rfl⟩ := h
     simp only
     exact Nat.le_trans filterCandidateList_sup hlive
+  · simp [throw, throwThe, MonadExceptOf.throw] at h
+
+/-- The live entries of a range's map cell, off a normal heap, carry distinct stamps (G22; the
+nil map's `#[]` trivially). -/
+theorem mapIterLiveEntries_nodup {σ : Store} {base : Option Loc}
+    {es : Array (Nat × GoValue × GoValue)} {tr : AccessTrace}
+    (hn : HeapNormal ctx σ) (h : mapIterLiveEntries σ base = .ok (es, tr)) :
+    (mapStamps es).Nodup := by
+  cases base with
+  | none =>
+      simp only [mapIterLiveEntries, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      simp [mapStamps]
+  | some l =>
+      simp only [mapIterLiveEntries, bind_eq_ok] at h
+      obtain ⟨⟨⟨es', n⟩, tr₁⟩, hp, h⟩ := h
+      simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      exact (mapPayloadWf_iff.mp (mapPayload?_wf hn (Mem.mapRead_eq hp).1)).1
+
+/-- The pick-time candidates, off a normal heap, carry DISTINCT stamps (G22): the fact the
+range rule needs — `filterCandidateList` is a `List.filter` on stamps, so with distinct stamps
+it drops exactly the produced entries and never a second entry under a repeated stamp. -/
+theorem mapIterCandidates_nodup {σ : Store} {keyTy valTy : Ty}
+    {base : Option Loc} {produced : Array Nat}
+    {cands : Array (Nat × GoValue × GoValue)} {tr : AccessTrace}
+    (hn : HeapNormal ctx σ)
+    (h : mapIterCandidates ctx σ keyTy valTy base produced = .ok (cands, tr)) :
+    (mapStamps cands).Nodup := by
+  unfold mapIterCandidates at h
+  try simp only [bind_eq_ok] at h
+  obtain ⟨⟨es, tr₀⟩, hes, h⟩ := h
+  have hlive := mapIterLiveEntries_nodup hn hes
+  try dsimp only at h
+  split at h
+  · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    simp only [mapStamps, filterCandidateList] at hlive ⊢
+    exact hlive.sublist (List.filter_sublist.map _)
   · simp [throw, throwThe, MonadExceptOf.throw] at h
 
 /-! ## Literal/aggregate builders -/
@@ -5112,14 +5305,16 @@ theorem storeLoc_pres {σ : Store} {l : Loc} {v : GoValue} {σ' : Store}
   exact ⟨StateWf.mk' (by omega) (HeapNormal.of_storeLoc hw.normal h), by omega⟩
 
 /-- A whole-payload map store preserves the invariant (A3; the map-op
-cases' `storeLoc_pres` replacement). `hl` is unused on the dense heap (a
+cases' `storeLoc_pres` replacement) when the new payload is bounded (`he`)
+and well-stamped (`hwf`, G22). `hl` is unused on the dense heap (a
 root address is bounded by construction) and kept for call-site parity. -/
 theorem storeMapPayload_pres {σ σ' : Store} {l : Loc}
     {entries : Array (Nat × GoValue × GoValue)} {nextId : Nat}
     (hw : StateWf ctx σ) (hl : Loc.locSup l ≤ σ.nextAddr)
     (he : goValueEntriesSup entries.toList ≤ σ.nextAddr)
+    (hwf : mapPayloadWf entries nextId = true)
     (h : storeMapPayload σ l entries nextId = .ok σ') : StmtOpPres ctx σ σ' := by
-  have hn := HeapNormal.of_storeMapPayload hw.normal h
+  have hn := HeapNormal.of_storeMapPayload hw.normal hwf h
   unfold storeMapPayload at h
   split at h
   · obtain ⟨h4, cell, cell', hcell, hf, hsup⟩ :=
@@ -5301,6 +5496,8 @@ theorem mapAssignValue_pres {σ : Store} {keyTy valueTy : Ty}
   · simp at hplan
   · rename_i baseLoc entries nextId
     obtain ⟨hbl, hent⟩ := mapEntries_locSup hentries rfl
+    -- G22: the peeked payload is well-stamped; each arm's edit keeps it so.
+    have hwf := mapEntries_wf hw.normal hentries rfl
     have hblb : Loc.locSup baseLoc ≤ σ.nextAddr := by
       have := valueAsMap_locSup hm
       omega
@@ -5319,7 +5516,7 @@ theorem mapAssignValue_pres {σ : Store} {keyTy valueTy : Ty}
         simp only at hplan
         subst hplan
         try dsimp only at h
-        refine storeMapPayload_pres hw hblb ?_ (Mem.mapWrite_eq h).1
+        refine storeMapPayload_pres hw hblb ?_ (mapPayloadWf_set! hwf hget) (Mem.mapWrite_eq h).1
         show goValueEntriesSup (entries.set! i (id, key, value)).toList ≤ σ.nextAddr
         refine Nat.le_trans goValueEntriesSup_set! ?_
         simp only at *
@@ -5332,7 +5529,7 @@ theorem mapAssignValue_pres {σ : Store} {keyTy valueTy : Ty}
       simp only at hplan
       subst hplan
       try dsimp only at h
-      refine storeMapPayload_pres hw hblb ?_ (Mem.mapWrite_eq h).1
+      refine storeMapPayload_pres hw hblb ?_ (mapPayloadWf_push hwf) (Mem.mapWrite_eq h).1
       show goValueEntriesSup (entries.push (nextId, key, value)).toList ≤ σ.nextAddr
       rw [goValueEntriesSup_push]
       simp only at *
@@ -5661,6 +5858,8 @@ theorem applyStmtOpCore_wf {σ : Store} {op : StmtOp}
         exact stmtOpPres_refl hw
       · rename_i baseLoc entries nextId
         obtain ⟨hbl, hent⟩ := mapEntries_locSup hes rfl
+        -- G22: the peeked payload is well-stamped; a deletion keeps it so.
+        have hwf := mapEntries_wf hw.normal hes rfl
         have hblb : Loc.locSup baseLoc ≤ σ.nextAddr := by
           have := valueAsMap_locSup hm
           omega
@@ -5670,7 +5869,7 @@ theorem applyStmtOpCore_wf {σ : Store} {op : StmtOp}
         · simp only [Except.ok.injEq] at hplan
           subst hplan
           try dsimp only at h
-          refine storeMapPayload_pres hw hblb ?_ (Mem.mapWrite_eq h).1
+          refine storeMapPayload_pres hw hblb ?_ (mapPayloadWf_eraseIdx! hwf) (Mem.mapWrite_eq h).1
           show goValueEntriesSup _ ≤ σ.nextAddr
           refine Nat.le_trans goValueEntriesSup_eraseIdx! ?_
           omega
@@ -5678,7 +5877,7 @@ theorem applyStmtOpCore_wf {σ : Store} {op : StmtOp}
           simp only [Except.ok.injEq] at hplan
           subst hplan
           try dsimp only at h
-          refine storeMapPayload_pres hw hblb ?_ (Mem.mapWrite_eq h).1
+          refine storeMapPayload_pres hw hblb ?_ hwf (Mem.mapWrite_eq h).1
           show goValueEntriesSup entries.toList ≤ σ.nextAddr
           omega
     · simp at hplan
@@ -5703,7 +5902,7 @@ theorem applyStmtOpCore_wf {σ : Store} {op : StmtOp}
         simp only [Except.ok.injEq] at hplan
         subst hplan
         try dsimp only at h
-        refine storeMapPayload_pres hw hblb ?_ (Mem.mapWrite_eq h).1
+        refine storeMapPayload_pres hw hblb ?_ mapPayloadWf_empty (Mem.mapWrite_eq h).1
         show goValueEntriesSup (#[] : Array (Nat × GoValue × GoValue)).toList ≤ σ.nextAddr
         simp [goValueEntriesSup]
     · simp at hplan

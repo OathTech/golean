@@ -2889,13 +2889,41 @@ def storeLoc (state : Store) (l : Loc) (value : GoValue) : Except Stop Store :=
         | [] => stuck s!"value store into a channel payload cell {repr (Loc.base rp.1)}"
         | _ :: _ => stuck s!"value load from a channel payload cell {repr (Loc.base rp.1)}"
 
-/-! ## `HeapNormal` — every value cell normal at its declared type (C1 S1, D3) -/
+/-! ## The map payload's representation invariant (raft-proofs' G22, 2026-10-26) -/
 
-/-- A cell is normal when a VALUE cell's value is self-normalized at the
-cell's declared type; payload cells carry no declared value type. -/
+/-- The entry stamps of a map payload, in entry order (the `Nat` of each
+`(id, key, value)` triple; `HeapCell.mapPayload`, B1). -/
+def mapStamps (entries : Array (Nat × GoValue × GoValue)) : List Nat :=
+  entries.toList.map (·.1)
+
+/-- Distinctness of a stamp list — a structural `Bool`, kernel-reducible like the
+other checkers here, so that `decide` on a concrete store never meets an instance;
+it is `List.Nodup` by `stampsDistinct_iff` (`StateWf.lean`). -/
+def stampsDistinct : List Nat → Bool
+  | [] => true
+  | x :: xs => !xs.contains x && stampsDistinct xs
+
+/-- THE MAP-PAYLOAD INVARIANT (raft-proofs' G22, 2026-10-26): the entry stamps are
+distinct and every one is below the payload's counter `nextId`. `makeMap` births a
+payload as `mapPayload #[] 0`; only `mapAssignValue.plan` adds an entry — stamped
+with `nextId`, which it then advances — and a present key keeps its entry's stamp;
+`delete` and `clear` remove entries and keep the counter: every run keeps it, and
+`HeapCell.normal` (hence `HeapNormal`, hence `StateWf`) states it. It is what the
+range iterator's candidate filter (`filterCandidateList`, keyed on stamps) needs:
+on a payload with a repeated stamp a range would skip a key. -/
+def mapPayloadWf (entries : Array (Nat × GoValue × GoValue)) (nextId : Nat) : Bool :=
+  stampsDistinct (mapStamps entries) && (mapStamps entries).all (· < nextId)
+
+/-! ## `HeapNormal` — every value cell normal at its declared type, every map payload
+well-stamped (C1 S1, D3; G22) -/
+
+/-- A cell is normal when a VALUE cell's value is self-normalized at the cell's
+declared type, and when a MAP PAYLOAD's stamps are distinct and below its counter
+(`mapPayloadWf`, G22); a channel payload states nothing here (its buffer is bounded
+by `StateWf`'s address clause, and it carries no declared value type). -/
 def HeapCell.normal (types : TypeEnv) : HeapCell → Bool
   | .value ty v => isNormalForTy types ty v
-  | .mapPayload .. => true
+  | .mapPayload entries nextId => mapPayloadWf entries nextId
   | .chanPayload .. => true
 
 /-- The heap-wide check, structural on the cell list (kernel-reducible). -/
@@ -2903,11 +2931,15 @@ def Heap.normalB (types : TypeEnv) (h : Heap) : Bool :=
   h.toList.all (HeapCell.normal types)
 
 /-- THE NORMAL-FORM INVARIANT: every value cell of the store is normal at
-its declared type over the program's type table. Established by
-`Store.alloc` (which normalizes) and preserved by `storeLoc` (leaf
-normalization + the congruence «a normal root updated at one leaf by a
-value normal at the leaf's type is normal») and by the payload writers
-(they touch no value cell). A `StateWf` conjunct since C1 S1. -/
+its declared type over the program's type table, and every map payload is
+well-stamped (`mapPayloadWf`; raft-proofs' G22, 2026-10-26). Established by
+`Store.alloc` (which normalizes) and by `makeMap`'s birth cell
+`mapPayload #[] 0`; preserved by `storeLoc` (leaf normalization + the
+congruence «a normal root updated at one leaf by a value normal at the
+leaf's type is normal»), by the map writer `storeMapPayload` under the
+clause for the new payload (`HeapNormal.of_storeMapPayload`, discharged at
+each of the machine's payload edits in `StateWf.lean`) and by the channel
+writer (it touches no value or map cell). A `StateWf` conjunct since C1 S1. -/
 def HeapNormal (s : Store) : Prop :=
   Heap.normalB ctx.types s.heap = true
 
