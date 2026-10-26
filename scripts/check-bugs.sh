@@ -29,6 +29,15 @@
 #       Since 2026-08-20 the ratchet is PER DISPOSITION CLASS — see the
 #       disposition block below check (3) for what the classes mean and why
 #       one scalar was dishonest.
+#   (7) NEIGHBOURHOOD, REPORT-ONLY (the defect-neighbourhood campaign,
+#       docs/2026-10-27_defect-neighbourhood-campaign.md §5, approved [USER]
+#       2026-10-27): every `Status: fixed` entry whose Status line's first
+#       date is on or after 2026-10-27 carries a `- Neighbourhood:` line (the
+#       sweep's record per entry; the classification is docs/defect-shapes.md).
+#       A miss is REPORTED by entry id, never a failure — the trust surface is
+#       unchanged. An entry whose Status line carries no date is exempt (the
+#       older entries' form). One awk, placed before the verdict so it prints
+#       on a red run too.
 #
 #   scripts/check-bugs.sh --list   print that untriaged surface (id + stage),
 #                                  the concrete backlog to triage into BUGS.md.
@@ -331,6 +340,19 @@ if [ -f "$IDS_FILE" ]; then   # its absence already FAILed (4b) above
     printf '%s\n' "$gone_ids" | sed 's/^/  /'
     fail=1
   fi
+fi
+
+# (7) NEIGHBOURHOOD, report-only (header): a fixed entry dated on or after the
+#     campaign's start without its `- Neighbourhood:` line is named, not failed.
+nbh_missing="$(awk '
+  function flush() { if (id != "" && st == "fixed" && d >= "2026-10-27" && !nb) print id }
+  /^## BUG-/          { flush(); id=$2; st=""; d=""; nb=0 }
+  /^- Status:/        { st=$3; if (match($0, /20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]/)) d=substr($0, RSTART, RLENGTH) }
+  /^- Neighbourhood:/ { nb=1 }
+  END { flush() }
+' "$BUGS" | tr '\n' ' ')"
+if [ -n "$nbh_missing" ]; then
+  echo "check-bugs: neighbourhood (report-only, never a failure) — fixed entries dated on or after 2026-10-27 without a '- Neighbourhood:' line (the campaign's per-entry sweep record, docs/defect-shapes.md): ${nbh_missing% }"
 fi
 
 if [ "$fail" -ne 0 ]; then echo "check-bugs: FAIL"; exit 1; fi
