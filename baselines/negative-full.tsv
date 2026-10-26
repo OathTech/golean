@@ -1,6 +1,16 @@
 # GoLean negative-corpus (compile-rejection) baseline
 # recorded: 2026-08-18  commit: f68a4d86+ (spec-truth P3 slice 2)  oracle: go build (rejection)  [header corrected 2026-08-31: the old "+ frontend fail-closed" conjunct claimed a check that does not exist — scripts/coverage-negative invokes no GoLean tool (p2-fact claim 5)]
-# manifest_cases: 425  pass: 425  fail: 0
+# manifest_cases: 426  pass: 426  fail: 0
+# re-pinned: 2026-10-26 [AGENT], lane frontend/workspace-and-oracle-1026 — train-19 shake review F2 ([USER] ruling 2026-10-26,
+#   relayed: implement gc's own condition for the `toolchain` line plus the pin policy, with a negative row). ONE BORN ROW:
+#   modules/toolchain-redundant — `go 1.26.5` + `toolchain go1.26.5`, which gc (go1.26.5, MODULE MODE from the row's directory,
+#   GOPROXY=off, GOTOOLCHAIN=local, GOWORK=off) drops as redundant and then refuses under the default -mod=readonly with «updates to
+#   go.mod needed», and the frontend's module scanner (tools/nativefrontend/modfile.go judgeToolchain) refuses by name at
+#   frontend=module; frontend-accepts on main's frontend (a wire written for a go.mod gc refuses — the review's reproduction,
+#   re-measured here). No other row moves; no flip. Counts: 425 + 1 = 426; PASS 425 + 1 = 426; FAIL 0. The same run carries the
+#   review's F6/F7: the oracle leg refuses go build's masked child death (a line ending `signal: <name>`, exit 1) as a non-verdict at
+#   go-crash, and both oracle legs and the frontend leg run under GOWORK=off with GOFLAGS scrubbed — which moved no row. Measured by
+#   CAPPED_MEM_MAX=64G capped scripts/ci --diff at the lane commit aee99b3d (its only drift: this NEW id, PASS/-).
 # re-pinned: 2026-10-26 [AGENT], lane apparatus/dc-false-greens-1026 — deep-clean review DC06 (frontend FE-03/FE-04;
 #   [USER] ruling 2026-10-26, relayed: validate the complete go.mod version against the pin and refuse what the module
 #   scanner does not fully validate, with negative rows for each). TEN BORN ROWS under modules/, each a go.mod beside a
@@ -354,6 +364,7 @@ PASS	modules/replace-without-version	-
 PASS	modules/require-block-unterminated	-
 PASS	modules/require-malformed	-
 PASS	modules/retract-range-malformed	-
+PASS	modules/toolchain-redundant	-
 PASS	modules/toolchain-repeated	-
 PASS	multi-assign/assign-arity-too-many	-
 PASS	multi-assign/multi-result-mixed-rhs	-

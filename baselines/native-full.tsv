@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 4149 (3888 PASS / 261 FAIL)
+# cases: 4157 (3896 PASS / 261 FAIL)
 # re-pinned: 2026-10-26 [AGENT], lane core/struct-through-conversion-1026 — BUG-134 (the equality/identity review's F1 on train 19;
 #   [USER] ruling 2026-10-26, Mike, relayed by the [AGENT] coordinator: shake the tree, fix what the reviews found, close the class —
 #   a whole-struct load or store through a converted pointer yields or accepts the value at the pointer's static type when the two
@@ -80,6 +80,26 @@
 #     pointers/struct-through-conversion-shapes/embedded-pointer-field   PASS/- — expected = gc
 #     pointers/struct-through-conversion-shapes/double-pointer           PASS/- — expected = gc
 #     pointers/struct-through-conversion-shapes/inner-field              PASS/- — expected = gc
+# re-pinned: 2026-10-26 [AGENT], lane frontend/workspace-and-oracle-1026 — BUG-136 (the equality/identity review of 2026-10-26, F2;
+#   [USER] ruling 2026-10-26, relayed by the [AGENT] coordinator: fix the over-refusal of untyped nil as the LEFT operand so the
+#   comparison lowers as `p == nil` does, with differential rows born RED at the base). WHY: emitBinary (tools/nativefrontend/emit.go)
+#   took the comparison's operand type from the LEFT operand, and emitType has no arm for untyped nil, so `nil == p` quarantined the
+#   subject for every non-interface kind; the operand type is now the typed side's. NO existing row moved: 4089 + 8 = 4097; PASS
+#   3828 + 8 = 3836; FAIL 261 unchanged. No flip, no removal, no cause change. NEW rows (8, one package
+#   Corpus/coverage/exec/comparisons/nil-left-operand/, every strict row expected = gc), appended at the end of the file: six born
+#   RED at the base 6e05137a (pointer, map, slice, func, chan, switch-case — lean-observation `unsupported`, «frontend-quarantined:
+#   basic type untyped nil», measured on a base-built frontend's wire) and two green controls (interface, error: an interface right
+#   side already decided the operand type). Measured by CAPPED_MEM_MAX=64G capped scripts/ci --diff at the lane commit aee99b3d (its
+#   only drift: these 8 NEW ids, each PASS/- cause=-; lake check and lake comparator PASS), the rows taken from that run's
+#   artifacts/coverage/latest.tsv; the --diff at the tip judges.
+#     comparisons/nil-left-operand/chan         PASS/- — expected = gc
+#     comparisons/nil-left-operand/error        PASS/- — expected = gc
+#     comparisons/nil-left-operand/func         PASS/- — expected = gc
+#     comparisons/nil-left-operand/interface    PASS/- — expected = gc
+#     comparisons/nil-left-operand/map          PASS/- — expected = gc
+#     comparisons/nil-left-operand/pointer      PASS/- — expected = gc
+#     comparisons/nil-left-operand/slice        PASS/- — expected = gc
+#     comparisons/nil-left-operand/switch-case  PASS/- — expected = gc
 # re-pinned: 2026-10-26 [AGENT], lane core/dc01-pointer-identity-1026 — BUG-133 (the deep-clean review's DC01, semantics S1; [USER]
 #   ruling 2026-10-26, Mike, relayed by the [AGENT] coordinator: pointer identity as the canonical PHYSICAL location at every comparison
 #   and hashing site, Go's dynamic-type rule for interface values kept, the local space surveyed). WHY: `valueEq`'s pointer arm
@@ -6631,3 +6651,11 @@ PASS	pointers/struct-through-conversion-shapes/tag-only	-	-
 PASS	pointers/struct-through-conversion-shapes/embedded-pointer-field	-	-
 PASS	pointers/struct-through-conversion-shapes/double-pointer	-	-
 PASS	pointers/struct-through-conversion-shapes/inner-field	-	-
+PASS	comparisons/nil-left-operand/chan	-	-
+PASS	comparisons/nil-left-operand/error	-	-
+PASS	comparisons/nil-left-operand/func	-	-
+PASS	comparisons/nil-left-operand/interface	-	-
+PASS	comparisons/nil-left-operand/map	-	-
+PASS	comparisons/nil-left-operand/pointer	-	-
+PASS	comparisons/nil-left-operand/slice	-	-
+PASS	comparisons/nil-left-operand/switch-case	-	-

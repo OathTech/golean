@@ -9407,3 +9407,37 @@ standing instruction; each disposed):
 | go.sum | checksums of requires | not read | the lowered program's imports never resolve through requires (modfile.go header); GOPROXY=off on the module leg makes a fetch a loud failure |
 | GOOS, GOARCH, GOEXPERIMENT, CGO_ENABLED in the environment | cross-compilation, experiments, cgo | the target is pinned linux/amd64 gc (the Platform instance; `fileselect.go` under that target) | NOT pinned by the apparatus — a box-level GOARCH would move the oracle while the frontend stays on the pin (`scripts/oracle-386-static` sets them deliberately for its own purpose). Outside this ruling; recorded here as an open hygiene item for the owner |
 | GO111MODULE | GOPATH vs module mode | not read: go.mod and go.work are judged in every mode (over-refusal by name) | the runners pin it per leg |
+
+## BUG-136 — untyped `nil` as the LEFT operand of `==`/`!=` (`nil == p`, `nil != np`) was REFUSED by name for the pointer, map, slice, func and channel kinds and in a tagless `switch` case — «frontend-quarantined: basic type untyped nil» — while `p == nil` lowered [native frontend lowering; over-refusal of a legal spelling, never a wrong answer; found by the equality/identity review, F2 (`docs/reviews/2026-10-26_equality-identity-review.md`, branch `review/equality-1026`), 2026-10-26; FIXED 2026-10-26, lane `frontend/workspace-and-oracle-1026`]
+
+- Status: fixed
+- Pinned-by: differential
+- Cases: comparisons/nil-left-operand/pointer, comparisons/nil-left-operand/map, comparisons/nil-left-operand/slice, comparisons/nil-left-operand/func, comparisons/nil-left-operand/chan, comparisons/nil-left-operand/switch-case, comparisons/nil-left-operand/interface, comparisons/nil-left-operand/error
+- Discovered: the equality/identity review's F2 (low), 2026-10-26, probe `p15-nil-left` (eleven `println` lines
+  over every operand kind plus a tagless `switch` case; gc prints them, the base frontend quarantined the
+  subject). Entry: [AGENT] lane worker `frontend/workspace-and-oracle-1026`, 2026-10-26.
+
+WHAT (`tools/nativefrontend/emit.go` emitBinary): a comparison carries its operand type on the wire, taken
+from the LEFT operand (`operandTypeExpr = b.X`) and switched to the right only when the right side is the
+interface of a mixed interface/non-interface comparison (BUG-017). go/types records a bare `nil`'s type as
+`untyped nil`, and emitType has no arm for it (`wire.go`: `unsup("basic type %s", b)`), so `nil == p` for a
+pointer, map, slice, func or channel right side — and the `case nil == np:` of a tagless switch — quarantined
+the whole subject. `nil == i` for an interface or error right side already took the right side's type through
+the mixed-comparison rule and lowered; in the review's probe it was quarantined with the rest of the function
+by the first bare-nil comparison.
+
+RED FIRST (measured at the base 6e05137a): the review's p15 — gc prints its eleven lines; the base frontend
+exported the program with `run` quarantined and the machine answered `unsupported`, message
+`frontend-quarantined: basic type untyped nil`. The corpus rows: six subjects `unsupported` at the base
+(pointer, map, slice, func, chan, switch-case), the interface and error subjects already `10110` / `11001`.
+
+FIX: when the left operand's recorded type is untyped nil and the right's is not, the operand type is the
+right side's — the type of the comparison, exactly what `p == nil` carries (`isUntypedNilType`). THE LOCAL
+SPACE: both sides untyped nil is a type error go/types refuses before emission, with gc's own text («invalid
+operation: nil == nil (operator == not defined on untyped nil)», measured on both sides, the frontend's
+type-check stage); an untyped CONSTANT on the left — `1 == x`, `"a" == s`, `1.5 == f`, `true == b`,
+`'a' == r`, `3 == m` for a defined int, `1 == iface`, `2 < x`, `"b" > s` — is recorded by go/types with its
+converted type and already lowered (measured on both sides: `true true true true true true true false true
+true`); `nil == e` for an `error` and `nil == i` for `any` were already right (the two control rows). At the
+tip every row PASSes with gc's values (`110 10110 10110 10110 10110 11001 10110 10010`: the nil-left
+spellings score exactly as their nil-right twins).
