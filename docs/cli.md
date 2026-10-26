@@ -232,8 +232,17 @@ the **typing**, once, at setup (`GoLean/GoCore/Seed.lean`). Both refuse by name.
   along a bad path, a `ref` whose target type is not the pointer's element type, `nil` at a
   non-pointer type, and a value at any type outside v1 (a struct with a `string` field cannot be
   seeded).
+- **The materialization budget** (status `unsupported`, message `seed: cell k: …`; since
+  2026-10-26, deep-clean DC03): a cell's type is judged BEFORE anything is allocated, from the
+  core's own constants — every array dimension the spelling writes against `sliceCapBudget`
+  (2^23 elements, the run-time `make` guard's count bound) and the type's whole footprint, through
+  nested arrays and declared structs, against `arrayFootprintBudget` (2^24 scalar elements, the
+  wire decoder's and the `make` guard's bound); the message names the count and the budget. Every
+  cell's value is also resolved before any cell is allocated, so a wrong value shape (`[2]int`
+  given `[]`) refuses having allocated nothing. Before this, `{"type":"[67108864]int","value":[]}`
+  allocated the array first and the process was killed by the memory cap with no observation.
 
-All cells are allocated before any is filled, so sharing and cycles are ordinary. Sharing is
+All cells are judged and resolved, then allocated, then filled, so sharing and cycles are ordinary. Sharing is
 when two pointers name one cell; a cycle is when cells point at each other.
 
 ### 2.2 `observation-eq` — the comparator
@@ -296,7 +305,8 @@ golean choice-trace --batch <manifest.tsv> --out <results.tsv> [--dump <file>]
 ```
 
 This replays one or more tapes (`--stream`: `default` (the empty tape), `n,n,...`, or
-`rand:<seed>:<len>`). It records every consumption the machine makes (site, bound, the tape
+`rand:<seed>:<len>` — `len` at most `sliceCapBudget`, 2^23, refused by name past it: the one
+materialization a stream spec could ask for unboundedly, bounded since 2026-10-26). It records every consumption the machine makes (site, bound, the tape
 value drawn or EXHAUSTED, and the realized pick) and checks the per-site menu invariants. Its
 output is one TSV row per stream on stdout (columns: `id stream status consumed wide
 exhaustedAt wideAfterExhaustion perSite maxBound violations firstViolation alarms firstAlarm

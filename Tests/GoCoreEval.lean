@@ -2955,6 +2955,49 @@ private def seedFacts : IO Bool := do
     (baseReport seedIncInitProgram seedOne #[.ref 0 []]) "slot0 1; pool 1; seq 1")
   passed := passed && (← expectStrEq "SEED-BASE: the empty seed has no slot and base 0 (the erasure statements' literal)"
     (baseReport seedBaseNoArgProgram #[] #[]) "slot0 none; pool 0; seq 0")
+  -- DC03 (deep-clean review 2026-10-26; [USER] ruling 2026-10-26, relayed): the seed's
+  -- materialization budget — phase 0 of `seedCells` judges every cell's type against the core's
+  -- own budgets (`sliceCapBudget` per written dimension, `arrayFootprintBudget` for the footprint)
+  -- and resolves its value BEFORE any allocation. The review's reproduction (`[67108864]int`,
+  -- value `[]`, fuel 0) was a cap kill with no observation; it is now a named refusal at the
+  -- setup entry, with the budget in the message, at fuel 0 (setup allocation is not fuel-bounded).
+  -- `seedIncProgram` (no globals, no init: nothing runs before the seed) over `seedEvalTypes`
+  -- (`Node` at index 2: two leaves), fuel 0, the pointer argument `nil`.
+  let seedBudgetProgram : GoCore.Program := { seedIncProgram with typeDefs := seedEvalTypes }
+  let seedSetup (seed : Array GoCore.Machine.SeedCell) : String :=
+    match GoCore.Machine.runProgramSetupSeededM 0 seedBudgetProgram "F" seed #[.nil] with
+    | .ok _ => "ok"
+    | .error e => e.message
+  passed := passed && (← expectStrEq "SEED-BUDGET: the review's [67108864]int with [] refuses at the dimension bound, nothing allocated"
+    (seedSetup #[{ typ := .array 67108864 (.int .int), value := .array [] }])
+    "seed: cell 0: an array type of 67108864 elements exceeds the interpreter's materialization budget (8388608 elements, sliceCapBudget — the run-time make guard's count bound; BUG-090 cost boundary, refused by name)")
+  passed := passed && (← expectStrEq "SEED-BUDGET: one over the dimension bound refuses, even under a zero outer dimension (the decoder refuses the same spelling)"
+    (seedSetup #[{ typ := .array 0 (.array 8388609 (.int .int)), value := .array [] }])
+    "seed: cell 0: an array type of 8388609 elements exceeds the interpreter's materialization budget (8388608 elements, sliceCapBudget — the run-time make guard's count bound; BUG-090 cost boundary, refused by name)")
+  passed := passed && (← expectStrEq "SEED-BUDGET: dimensions in budget but the footprint through the nesting past arrayFootprintBudget refuses"
+    (seedSetup #[{ typ := .array 3 (.array 8388608 (.int .int)), value := .array [] }])
+    "seed: cell 0: type [3][8388608]int of 25165824 scalar elements through its nesting exceeds the interpreter's materialization budget (16777216 elements, arrayFootprintBudget — the bound the wire decoder and the run-time make guard charge; BUG-078 residual (3), refused by name)")
+  passed := passed && (← expectStrEq "SEED-BUDGET: a declared struct's fields count toward the footprint (a cell of [4194304]Node: 2 leaves each)"
+    (seedSetup #[{ typ := .array 4194304 (.defined 2), value := .array [] }])
+    "seed: cell 0: expected array(4194304), got 0 element(s)")
+  passed := passed && (← expectStrEq "SEED-BUDGET: the same over the footprint — [8388609]Node is 16777218 leaves"
+    (seedSetup #[{ typ := .array 8388609 (.defined 2), value := .array [] }])
+    "seed: cell 0: an array type of 8388609 elements exceeds the interpreter's materialization budget (8388608 elements, sliceCapBudget — the run-time make guard's count bound; BUG-090 cost boundary, refused by name)")
+  passed := passed && (← expectStrEq "SEED-BUDGET: [8388608]Node is 16777216 leaves — at the footprint budget, dimension at its bound: admitted past phase 0 (the value shape refuses next, nothing allocated)"
+    (seedSetup #[{ typ := .array 8388608 (.defined 2), value := .array [] }])
+    "seed: cell 0: expected array(8388608), got 0 element(s)")
+  passed := passed && (← expectStrEq "SEED-BUDGET: a wrong value shape still refuses by its own name, before any allocation"
+    (seedSetup #[{ typ := .array 2 (.int .int), value := .array [] }])
+    "seed: cell 0: expected array(2), got 0 element(s)")
+  passed := passed && (← expectStrEq "SEED-BUDGET: a later cell's budget refusal names its cell"
+    (seedSetup #[{ typ := .int .int, value := .int 1 }, { typ := .array 8388609 .bool, value := .array [] }])
+    "seed: cell 1: an array type of 8388609 elements exceeds the interpreter's materialization budget (8388608 elements, sliceCapBudget — the run-time make guard's count bound; BUG-090 cost boundary, refused by name)")
+  passed := passed && (← expectStrEq "SEED-BUDGET: at the dimension bound with a zero outer dimension ([0][8388608]int, footprint 0) the setup completes"
+    (seedSetup #[{ typ := .array 0 (.array 8388608 (.int .int)), value := .array [] }]) "ok")
+  passed := passed && (← expectStrEq "SEED-BUDGET: a small nested array with its value, and a two-cell cycle, complete (the controls)"
+    (seedSetup #[{ typ := .array 2 (.array 3 (.int .int)), value := .array [.array [.int 1, .int 2, .int 3], .array [.int 4, .int 5, .int 6]] },
+                 { typ := .defined 2, value := .struct [("next", .ref 2 []), ("val", .int 1)] },
+                 { typ := .defined 2, value := .struct [("next", .ref 1 []), ("val", .int 2)] }]) "ok")
   -- The seed-relative rendering over a synthetic readout: b = 4, two cells; a field pointer into
   -- cell 1 and an index pointer into cell 0 render as `seedRef`; a pointer below the seed
   -- refuses the WHOLE observation, naming the position.

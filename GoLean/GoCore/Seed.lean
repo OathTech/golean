@@ -16,10 +16,16 @@ seed data types. The pool twin (`runProgramPoolSeededOutM`) is `SeedPool.lean` (
 
 Placement (design §2, D1): the seed cells are allocated AFTER `runPkgInitM` and BEFORE `bindParams`,
 from the post-init allocator bound `b = s₁.heap.size` (init may allocate, so `b` is a run quantity):
-the core takes seed-RELATIVE values and resolves them here. Two phases: every cell's zero value is
-allocated first (cell `k` at `.base ⟨b + k⟩`, the `seedGlobals` mold with the same address check),
-then every cell's value is stored at its root (`storeLoc` normalizes at the declared type), so sharing
-and cycles between cells are plain stores. A `ref j path` at an expected `*T` is resolved against the
+the core takes seed-RELATIVE values and resolves them here. Three phases since 2026-10-26 (deep-clean
+review DC03 / FE-01 / R2; [USER] ruling of 2026-10-26, relayed): phase 0 judges every cell's TYPE
+against the core's own materialization budgets and RESOLVES its value — the resolver is store-free,
+a reference being an address computed from `b` — before anything is allocated; then every cell's
+zero value is allocated (cell `k` at `.base ⟨b + k⟩`, the `seedGlobals` mold with the same address
+check), then every resolved value is stored at its root (`storeLoc` normalizes at the declared type),
+so sharing and cycles between cells are plain stores. Before phase 0 existed, a 73-byte seed
+`{"type":"[67108864]int","value":[]}` allocated the whole array (phase 1) before the value's length
+was looked at (phase 2) and the process was killed by the cap — exit 137, no observation — where
+every other oversized shape refuses by name; `--fuel 0` bounds no setup allocation. A `ref j path` at an expected `*T` is resolved against the
 DECLARED type of cell `j` walked along `path` (`seedPathLoc`): the leaf type must be `T` (`Ty.eqb`,
 positional `.defined` identity) and the location is built root-first — exactly the `Loc` the
 machine's own `&c.f[i]` evaluates to. A refusal anywhere discards the WHOLE setup (an `Except`), so no
@@ -257,9 +263,57 @@ def resolveSeedArgs (types : TypeEnv) (b : Nat) (seed : Array SeedCell) (params 
     (args : Array SeedArg) : Except Stop (Array GoValue) :=
   (resolveSeedArgsList types b seed 0 params.toList args.toList).map List.toArray
 
-/-! ## The two-phase allocation -/
+/-! ## The materialization budget of a cell (deep-clean review 2026-10-26, DC03)
+
+A seed's type spelling is unbounded — `[67108864]int` is a 73-byte file — and the wire decoder's
+budgets (`NativeToIR.lean`: `arrayLenBudget` per dimension, `arrayFootprintBudget` through the
+nesting) never see it: the CLI builds the cell's `Ty` from the spelling, over the program's type
+table. So the budget is judged HERE, once, for every caller of `seedCells`, from the core's own
+constants — the same three the decoder and the run-time `make` guard read, so the three entries
+agree ([USER] ruling 2026-10-26, relayed): every array dimension the spelling writes against
+`sliceCapBudget` (the `make` guard's count bound, `Machine.lean`; the table's declared dimensions
+are decoder-bounded already, so the walk stops at a declared type, and at a pointer — a pointee is
+another cell, judged on its own), then the whole footprint `tyLeafCount` (`Ops.lean`: nested
+arrays, declared structs and their fields, through the table) against `arrayFootprintBudget`. The
+refusal is `.unsupported` on the `make` guard's template, naming the count and the budget. -/
+
+/-- The array dimensions a seed spelling writes, outermost first: `[n]T` contributes `n` and
+descends into `T`; a pointer or a declared type ends the descent (its own bounds are the
+decoder's). Structural on the type. -/
+def seedSpellingDims : Ty → List Nat
+  | .array n elem => n :: seedSpellingDims elem
+  | _ => []
+
+/-- Each written dimension against `sliceCapBudget`. -/
+def seedDimsBudget : List Nat → Except Stop Unit
+  | [] => .ok ()
+  | n :: rest =>
+      if n > sliceCapBudget then
+        throw (.unsupported s!"an array type of {n} elements exceeds the interpreter's materialization budget ({sliceCapBudget} elements, sliceCapBudget — the run-time make guard's count bound; BUG-090 cost boundary, refused by name)")
+      else seedDimsBudget rest
+
+/-- Phase 0's judgement of one cell's type: the dimensions, then the footprint. -/
+def seedCellBudget (types : TypeEnv) (ty : Ty) : Except Stop Unit := do
+  seedDimsBudget (seedSpellingDims ty)
+  let leaves ← tyLeafCount types ty
+  if leaves > arrayFootprintBudget then
+    throw (.unsupported s!"type {Ty.dynamicName types.nameOf? ty} of {leaves} scalar elements through its nesting exceeds the interpreter's materialization budget ({arrayFootprintBudget} elements, arrayFootprintBudget — the bound the wire decoder and the run-time make guard charge; BUG-078 residual (3), refused by name)")
+
+/-! ## The three-phase allocation -/
 
 variable (ctx : ProgramCtx)
+
+/-- Phase 0 from cell `k`: each cell's type judged against the budget, then its value resolved
+against the seed (store-free: a reference is an address computed from `b`) — every cell before
+any allocation, so an over-budget type or a wrong value refuses by name having allocated nothing
+(DC03). -/
+def seedResolveFrom (b : Nat) (seed : Array SeedCell) : Nat → List SeedCell → Except Stop (List GoValue)
+  | _, [] => .ok []
+  | k, c :: rest => do
+      (seedCellBudget ctx.types c.typ).mapError (markSeedCell k)
+      let v ← (resolveSeedValue ctx.types b seed c.typ c.value).mapError (markSeedCell k)
+      let vs ← seedResolveFrom b seed (k + 1) rest
+      pure (v :: vs)
 
 /-- Phase 1 from cell `k`: the zero cell of each declared type, allocated in order; the allocator's
 address is checked against `.base ⟨b + k⟩` (the `seedGlobals` mold; provably never fires —
@@ -273,26 +327,26 @@ def seedAllocFrom (b : Nat) : Store → Nat → List SeedCell → Except Stop St
         throw (.internal s!"seed: cell {k} allocated at {repr loc}, expected base {b + k}")
       seedAllocFrom b s' (k + 1) rest
 
-/-- Phase 2 from cell `k`: each cell's value, resolved against the seed, stored at its root (the
+/-- Phase 2 from cell `k`: each cell's RESOLVED value (phase 0's) stored at its root (the
 whole-root write normalizes at the declared type; every cell already exists, so references
 between cells — sharing, cycles — are plain stores). -/
-def seedStoreFrom (b : Nat) (seed : Array SeedCell) : Store → Nat → List SeedCell → Except Stop Store
+def seedStoreFrom (b : Nat) : Store → Nat → List GoValue → Except Stop Store
   | s, _, [] => .ok s
-  | s, k, c :: rest => do
-      let v ← (resolveSeedValue ctx.types b seed c.typ c.value).mapError (markSeedCell k)
+  | s, k, v :: rest => do
       let s' ← storeLoc ctx s (.base ⟨b + k⟩) v
-      seedStoreFrom b seed s' (k + 1) rest
+      seedStoreFrom b s' (k + 1) rest
 
 /-- The seed's slots: cell `k` at `.base ⟨b + k⟩` (`entrySlot s₁ k` for `b = s₁.heap.size`). -/
 def seedLocs (b n : Nat) : Array Loc :=
   ((List.range n).map (fun k => Loc.base ⟨b + k⟩)).toArray
 
-/-- The seeded store over the post-init store `s₁`: phase 1 then phase 2 from
-`b = s₁.heap.size`, and the slot list. -/
+/-- The seeded store over the post-init store `s₁`: phase 0 (budget and resolution, nothing
+allocated), phase 1, then phase 2 from `b = s₁.heap.size`, and the slot list. -/
 def seedCells (s₁ : Store) (seed : Array SeedCell) : Except Stop (Store × Array Loc) := do
   let b := s₁.heap.size
+  let vals ← seedResolveFrom ctx b seed 0 seed.toList
   let sA ← seedAllocFrom ctx b s₁ 0 seed.toList
-  let sS ← seedStoreFrom ctx b seed sA 0 seed.toList
+  let sS ← seedStoreFrom ctx b sA 0 vals
   return (sS, seedLocs b seed.size)
 
 /-! ## The entries -/

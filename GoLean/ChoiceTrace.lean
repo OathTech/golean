@@ -896,7 +896,13 @@ def parseStream (spec : String) : Except String (List Nat) :=
     match spec.splitOn ":" with
     | ["rand", seedS, lenS] =>
         match String.toNat? seedS, String.toNat? lenS with
-        | some seed, some len => .ok (randomStream seed len)
+        | some seed, some len =>
+            -- The length is the one unbounded materialization a `--stream` spec could ask for
+            -- (deep-clean DC03 local space, 2026-10-26): bounded by the core's count budget,
+            -- the bound the seed's dimensions and the run-time `make` guard share.
+            if len > sliceCapBudget then
+              .error s!"random stream spec {spec}: a stream of {len} entries exceeds the interpreter's materialization budget ({sliceCapBudget} entries, sliceCapBudget; refused by name)"
+            else .ok (randomStream seed len)
         | _, _ => .error s!"bad random stream spec: {spec}"
     | _ => .error s!"bad random stream spec: {spec}"
   else

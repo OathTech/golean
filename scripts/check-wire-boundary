@@ -54,6 +54,9 @@
 # it must refuse, a refusal that does not name its cause, or a positive
 # control that does not answer 42 all exit 1 naming the control.
 set -uo pipefail
+# One collation and byte-wise character classes for every comparison, sort and pattern here
+# (deep-clean review DC19, 2026-10-26): the gate's verdict must not depend on the caller's locale.
+export LC_ALL=C
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 . "$ROOT/scripts/cap.sh"
 cd "$ROOT"
@@ -933,6 +936,13 @@ seedfile blank  '{"schema":"golean-seed-v1","cells":[{"type":"B","value":{"x":1}
 seedfile range  '{"schema":"golean-seed-v1","cells":[{"type":"int","value":41},{"type":"int8","value":300}]}'
 seedfile oob    '{"schema":"golean-seed-v1","cells":[{"type":"int","value":41},{"type":"*int","value":{"ref":{"cell":5,"path":[]}}}]}'
 seedfile node1  '{"schema":"golean-seed-v1","cells":[{"type":"Node","value":{"next":{"nil":true},"val":1}}]}'
+# DC03 (deep-clean review 2026-10-26): the review's reproduction (73 bytes, a cap kill with no
+# observation before the fix), a footprint-only over-budget shape, a shape-before-allocation
+# control and the at-dimension-bound control, through the real CLI.
+seedfile huge   '{"schema":"golean-seed-v1","cells":[{"type":"[67108864]int","value":[]}]}'
+seedfile footp  '{"schema":"golean-seed-v1","cells":[{"type":"[3][8388608]int","value":[]}]}'
+seedfile shape  '{"schema":"golean-seed-v1","cells":[{"type":"[2]int","value":[]}]}'
+seedfile dimok  '{"schema":"golean-seed-v1","cells":[{"type":"[0][8388608]int","value":[]}]}'
 run_seed() { "$GOLEAN" native-json-run --input "$gate_scratch/seedw.json" "$@" 2>&1; }
 expect_seed() {  # name args... -- fragment...   (exit 0, status ok, every fragment present)
   local name="$1" out rc=0 frag; shift
@@ -1005,6 +1015,16 @@ expect_seed_refusal seed-blank-field  1 --function useB --seed "$sd/blank.json" 
   'seed: cell 0: struct main.B: a blank field (_) cannot be seeded'
 expect_seed_refusal seed-int-range    1 --function inc --seed "$sd/range.json" --arg-ref 0 -- 'seed: cell 1: int 300 out of range for int8'
 expect_seed_refusal seed-ref-oob      1 --function inc --seed "$sd/oob.json" --arg-ref 0 -- 'seed: cell 1: ref to cell 5 out of range (2 cells)'
+# DC03: a named refusal with the budget in the message, at --fuel 0 (setup allocation is not
+# fuel-bounded; the cell is never allocated), on the review's exact input; the footprint bound
+# through the nesting; the value shape judged before allocation; and the at-bound control.
+expect_seed_refusal seed-budget-dim   1 --function isNil --seed "$sd/huge.json" --arg-nil --fuel 0 -- \
+  '"status":"unsupported"' 'seed: cell 0: an array type of 67108864 elements exceeds the interpreter'"'"'s materialization budget (8388608 elements, sliceCapBudget'
+expect_seed_refusal seed-budget-footprint 1 --function isNil --seed "$sd/footp.json" --arg-nil --fuel 0 -- \
+  '"status":"unsupported"' 'seed: cell 0: type [3][8388608]int of 25165824 scalar elements' '(16777216 elements, arrayFootprintBudget'
+expect_seed_refusal seed-shape-first  1 --function isNil --seed "$sd/shape.json" --arg-nil --fuel 0 -- \
+  '"status":"stuck"' 'seed: cell 0: expected array(2), got 0 element(s)'
+expect_seed seed-budget-at-dim --function isNil --seed "$sd/dimok.json" --arg-nil -- '"values":[{"tag":"bool","value":true}]'
 expect_seed_refusal seed-arg-type     1 --function inc --seed "$sd/node1.json" --arg-ref 0 -- \
   '--arg-ref (argument 1): parameter p has type *int; --arg-ref 0 points at Node'
 expect_seed_refusal seed-arg-path     1 --function sum3 --seed "$sd/node1.json" --arg-ref 0.foo -- \
