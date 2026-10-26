@@ -1,5 +1,26 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 4157 (3896 PASS / 261 FAIL)
+# cases: 4166 (3901 PASS / 265 FAIL)
+# re-pinned: 2026-10-27 [AGENT], lane core/g21-normal-form-spill-1026 — raft-proofs' ask G21 (2026-10-26, relayed by the [USER]
+#   the same day): (1) the heap normal form is SHAPE-CHECKED at bool/string/slice/map/pointer (isNormalForTyTy's catch-all closed in
+#   lockstep with the normalizer, Ops.lean) and (2) the footprint budget (arrayFootprintBudget, 1<<24 leaves) guards the append
+#   SPILL on its realized capacity after gc's growslice panic and after the capacity consult, and the []byte(s)/[]rune(s)
+#   conversions after the convCap consult (Machine.lean: appendSpillFootprintCheck, convFootprintCheck) — BUG-131's two remaining
+#   doors, which were memory kills (exit 137) at the base. NO existing row moved: 4157 + 9 = 4166; PASS 3896 + 5 = 3901; FAIL
+#   261 + 4 = 265. No flip, no removal, no cause change — (1) changed no typed program's answer. NEW rows (9, two packages
+#   Corpus/coverage/exec/arrays/materialization-budget-{append,conv}/, every row strict, expected = gc), appended at the end of the
+#   file: 4 BORN RED BY DESIGN at gc's `ok` (the machine refuses by name where gc allocates and answers; on BUG-131's Cases line)
+#   and 5 controls born green. Measured by CAPPED_MEM_MAX=64G capped scripts/ci --diff at the lane tree d26b7f81 before the re-pin
+#   (its only drift: these 9 NEW ids; kernel replay, lake check and lake comparator ok), the rows taken from that run's
+#   artifacts/coverage/latest.tsv; the --diff at the tip judges.
+#     arrays/materialization-budget-append/append-over-budget      FAIL/lean-observation unsupported:append-footprint-budget — make([][1024]byte, 1<<14) then s = append(s, s...): 2^25 leaves, over at every envelope pick (gc 32782)
+#     arrays/materialization-budget-append/append-grow-over-budget FAIL/lean-observation unsupported:append-footprint-budget — the new LENGTH is exactly the budget, gc's realized capacity (16736 rows) is over it: the realized capacity is charged (gc 16398)
+#     arrays/materialization-budget-append/append-at-budget-spill  PASS/- — a spill whose realized capacity (13232 rows) is inside the budget
+#     arrays/materialization-budget-append/append-small-elem       PASS/- — []byte at 1<<15 appended to itself: the element footprint is what the count misses
+#     arrays/materialization-budget-append/append-in-place         PASS/- — capacity reserved by make, no spill, the guard never consulted
+#     arrays/materialization-budget-conv/bytes-over-budget         FAIL/lean-observation unsupported:conv-footprint-budget — []byte(s) of a 2^24 + 1-byte string (gc 16777217)
+#     arrays/materialization-budget-conv/runes-over-budget         FAIL/lean-observation unsupported:conv-footprint-budget — []rune(s) of the same string, realized cap 16779264 (gc 16777217)
+#     arrays/materialization-budget-conv/bytes-in-budget           PASS/- — a 2^20-byte string
+#     arrays/materialization-budget-conv/runes-in-budget           PASS/- — a 2^20-byte string
 # re-pinned: 2026-10-26 [AGENT], lane core/struct-through-conversion-1026 — BUG-134 (the equality/identity review's F1 on train 19;
 #   [USER] ruling 2026-10-26, Mike, relayed by the [AGENT] coordinator: shake the tree, fix what the reviews found, close the class —
 #   a whole-struct load or store through a converted pointer yields or accepts the value at the pointer's static type when the two
@@ -6661,3 +6682,12 @@ PASS	comparisons/nil-left-operand/map	-	-
 PASS	comparisons/nil-left-operand/pointer	-	-
 PASS	comparisons/nil-left-operand/slice	-	-
 PASS	comparisons/nil-left-operand/switch-case	-	-
+FAIL	arrays/materialization-budget-append/append-over-budget	lean-observation	unsupported:append-footprint-budget
+FAIL	arrays/materialization-budget-append/append-grow-over-budget	lean-observation	unsupported:append-footprint-budget
+PASS	arrays/materialization-budget-append/append-at-budget-spill	-	-
+PASS	arrays/materialization-budget-append/append-small-elem	-	-
+PASS	arrays/materialization-budget-append/append-in-place	-	-
+FAIL	arrays/materialization-budget-conv/bytes-over-budget	lean-observation	unsupported:conv-footprint-budget
+FAIL	arrays/materialization-budget-conv/runes-over-budget	lean-observation	unsupported:conv-footprint-budget
+PASS	arrays/materialization-budget-conv/bytes-in-budget	-	-
+PASS	arrays/materialization-budget-conv/runes-in-budget	-	-

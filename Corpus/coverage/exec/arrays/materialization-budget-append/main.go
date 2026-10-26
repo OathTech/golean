@@ -17,14 +17,14 @@ package main
 //                          budget, admitted by make); s = append(s, s...):
 //                          the new length is 2^15 rows = 2^25 leaves, over the
 //                          budget at EVERY capacity in the envelope. RED BY
-//                          DESIGN (gc 32768).
+//                          DESIGN (gc 32782).
 //   appendGrowOverBudget — s at 1<<13 rows, append 1<<13 rows: the new LENGTH
 //                          is exactly the budget (2^24 leaves, what make
 //                          admits), but gc's realized capacity (16736 rows:
 //                          nextslicecap 8192 → 16732, page-rounded) is over
 //                          it — the REALIZED capacity is what is built and
 //                          charged. RED BY DESIGN at the default tape (gc
-//                          16384).
+//                          16398).
 //   appendAtBudgetSpill  — s at 1<<13 rows, append 1<<12 rows: a spill (new
 //                          length 12288 > cap 8192) whose realized capacity
 //                          (13232 rows = 13,549,568 leaves) is inside the
