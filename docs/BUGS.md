@@ -4,6 +4,12 @@ A **fidelity bug** is a case where GoLean gives a *wrong* answer relative to rea
 Go: a wrong value, or a wrongly-*stuck* run on a construct we claim to support.
 (A construct we don't model yet is not a bug — it must fail closed at the
 frontend boundary as `frontend-export`, and is tracked as coverage, not here.)
+The class boundary is strict ([USER] 2026-10-27, paraphrased): a fidelity bug is
+a defect of the MODELLED surface — the interpreter, the lowering, the observation
+the machine produces — with an observable semantic effect, and this index is for
+that class only; a defect of the apparatus (a runner, instrument, harness or
+check — the fail-open that could have reported a false green above all) is a
+different, lesser class recorded in `docs/APPARATUS-DEFECTS.md`.
 
 This file is machine-cross-checked against the recorded differential **baseline**
 (`baselines/native-full.tsv`) by `scripts/check-bugs.sh` (part of `scripts/ci`),
@@ -42,6 +48,13 @@ fixed entry whose Status line carries no date at all (every Status line
 carries one since 2026-10-27). An entry fixed before the campaign and re-fixed
 later by an amendment keeps its first date and is outside the check; the
 re-fix is named in its Neighbourhood line.
+**Tombstones (2026-10-27):** an entry moved to `docs/APPARATUS-DEFECTS.md` keeps
+its number here as a tombstone — the heading `## BUG-NNN — [MOVED <date> to
+docs/APPARATUS-DEFECTS.md: …]`, `- Status: moved (<date>, docs/APPARATUS-DEFECTS.md)`,
+`- Pinned-by: none (…)`, no Cases/Expect line, one `Was:` line with the old title —
+so every citation of the number still resolves and the number is never reused.
+check-bugs counts tombstones apart from bugs and requires each to resolve to a
+heading in that record (check (8); a number live in both records fails).
 
 ---
 
@@ -7645,97 +7658,12 @@ language only`). [AGENT] detail: no `go.mod` → the pinned 1.26, unchanged
 (the corpus's mode). Per-file `//go:build go1.N` constraints and
 `//go:debug` settings are out of this entry's scope.
 
-## BUG-110 — the production wire decoder is fail-open at two points: `Lean.Json.parse` collapses DUPLICATE object keys before the schema validators see them (a forged leading `schema` field vanished behind the genuine one and the wire ran), and a call assigned to `_` with its `resultTypes` vector removed is reconstructed as `int` by `resultTypes[i]?.getD .int` [decoder; trusted surface #1 boundary; review 2026-09-11 F3 = 2026-09-05 gate audit F9, ACCEPTED (master plan §7.2), unfixed at filing — FIXED 2026-09-12, stage S3]
+## BUG-110 — [MOVED 2026-10-27 to docs/APPARATUS-DEFECTS.md: an apparatus defect, not a fidelity bug]
 
-- Status: fixed ([AGENT] lane `fix/review-boundary-0911` stage S3, 2026-09-12 — filed open by the coordinator 2026-09-11 from `docs/2026-09-11_project-review.md` §4 F3; the F9 disposition of 2026-09-05 named the same `.getD .int` sites)
-- Pinned-by: none (not a baseline row — the pin is `scripts/check-wire-boundary`, a `scripts/ci` step ("wire boundary (production byte decoder through the real CLI)"): the fixture `Tests/wire-boundary/main.go` (the review's discard-call probe) is lowered fresh by the frontend, its wire BYTES are mutated, and every mutant is driven through the real `golean native-json-run` — a forged leading duplicate `schema`, a duplicate key inside a call node, an absent `resultTypes` vector, a mis-sized one, a missing `buildContext`, an unpaired high / low surrogate escape in an UNREAD field, a raw invalid UTF-8 byte (all must refuse naming their cause), plus the untouched wire and a valid surrogate pair (must run and answer 42))
+- Status: moved (2026-10-27, docs/APPARATUS-DEFECTS.md)
+- Pinned-by: none (the entry and its pins live in docs/APPARATUS-DEFECTS.md under this number; the number is retired here)
 
-FIXED ([AGENT] S3, 2026-09-12). (1) The production wire is parsed from its
-BYTES by `GoLean.StrictJson.parseBytes` (`GoLean/StrictJsonParse.lean`) at
-every production entry — `GoLean/CLI.lean` `native-json-run` and
-`coverage-observations`, `GoLean/ChoiceTrace.lean` `loadProgram` — via
-`IO.FS.readBinFile`: a duplicate object key (at any depth), an unpaired
-surrogate escape and invalid UTF-8 refuse BEFORE any schema validator sees a
-collapsed object (`Lean.Json.parse` kept one value per key and substituted
-U+FFFD). (2) `resultTypes` is REQUIRED on every call-shaped node (`call`,
-`call-value`, `atomic-op`, `sync-op` — presence and array shape at
-recognition, `requireResultTypes`) and arity-checked where it is consumed
-(`decodeResultTypes`: the assignment consumers against the target count, the
-sync-op result against `bool`); the two `resultTypes[i]?.getD .int` sites
-(the `$cr`/`$cv` discard temps) and the expression-statement site's "absent →
-targetless" fallback are gone — an absent or mis-sized vector refuses by
-name, never reconstructed. This also discharges TODO.md's F5 item (the
-`sync-op`/`atomic-op` nodes accepted an absent key).
-
-[narrowed by audit F1 — `docs/2026-09-15_review-boundary-audit.md`, [AGENT]
-2026-09-15] What (2) validates is the ARITY, not the entry TYPES; the reading
-this paragraph invited as landed — «the vector is validated, never
-reconstructed» — is stronger than the code and is narrowed here. Measured
-(audit matrix (i), through the real CLI): arity mutations refuse BY NAME
-(`resultTypes arity N does not match the M target(s)`; i01, i02, i03, i09), a
-non-array (i11) and a non-type entry (i12) refuse, and a vector on a non-call
-node refuses (`unknown key 'resultTypes' …`, i07) — but the entry TYPES are
-TRUSTED: `_ = one()` with `resultTypes:[string]` (i08), `b, _ = two()` with
-`[string,string]` (i10) and `_, _ = two()` with `[string,string]` (i13) all RUN
-and answer 42 on `int`-returning callees, although the decoder holds the
-callee's declared results (the `funcs`/`methods` tables) and the callee
-expression's `type`. Expression-statement vectors (i04–i06) have no target
-count to check against and are caught only at RUN time by the machine (`extra
-GoCore assignment value` → status `stuck`; `storeK value/target arity
-mismatch` → status `error`) — fail-closed, but NOT a by-name refusal at the
-boundary. No observable is affected today (a discard temp is never read).
-OWED (audit F1 disposition (a)): a callee-signature cross-check of every
-`resultTypes` entry — a post-decode pass, refusing by name, which would also
-make the expression-statement vectors boundary refusals. Side observation,
-OUT OF LANE, for the state-cleanup arc: the machine stores an int into a
-`string`-typed discard cell without objection — a typing/normalization
-contract question, not a BUG-110 residual. The parser's nesting
-bound is a PARAMETER now: the declaration envelope keeps 64, the production
-wire uses `wireNestingDepth = 1024` — the 64 refused 105 real corpus wires at
-the stage's first gate (program ASTs reach depth 120 today; the finding and
-the histogram are in the evidence README). Movement: none — the
-frontend emits the vector on every call-shaped node (`emitResultTypes`), and
-every corpus wire is valid JSON without duplicate keys; the raft twin wire is
-byte-identical. Decode-time cost of the strict parser [corrected by audit F2 —
-`docs/2026-09-15_review-boundary-audit.md`, [AGENT] 2026-09-15. The superseded
-sentence, as landed, read: «A/B interleaved, 7 runs each, medians — the raft
-twin wire (11.4 MB) 0.124 s → 0.055 s (faster: the byte read replaces
-`IO.FS.readFile`'s `String` build — a hypothesis, not isolated), the largest
-corpus wire (3.5 MB, `stdlib-source/frontier/*`) 0.052 s → 0.075 s (+0.023 s,
-the strict parser's own cost), a 1.5 KB wire 0.021 → 0.020 s». The claimed
-SPEED-UP does not reproduce and is WITHDRAWN, together with the `readFile`/
-`String`-build hypothesis; the lane's timing binary (`dae23a5c…`) was NOT the
-committed one (`44c8ed60…`, the certified record's receipt), which is why the
-lane's number is not reproducible — the audit did not rebuild it]: re-measured
-A/B interleaved, THREE separate passes, NINE runs each, medians — the raft twin
-wire (11.4 MB) 0.132 s PRE → 0.214 s POST, +62% (passes 2 and 3: 0.129 →
-0.210, 0.123 → 0.212); the largest corpus wire (3.5 MB,
-`stdlib-source/frontier/*`) 0.049 s → 0.081 s, +65%; a 1.5 KB fixture wire
-0.020 s → 0.020 s, unchanged. The strict parser COSTS decode time on the large
-wires; it does not save it. What stands unchanged: against the runner's 30 s
-per-case budget the cost is far inside budget, and the parser is not weakened.
-The original fix sketch follows.
-
-Cause: `GoLean/CLI.lean:470` parses production wires with `Lean.Json.parse`,
-whose object representation keeps one value per key, so a duplicate key is
-gone before any validator runs. `GoLean/NativeToIR.lean:1508` and `:1585`
-type the discard temporary as `int` when the `resultTypes` entry is absent
-instead of refusing. `GoLean/StrictJsonParse.lean` already rejects duplicate
-keys and malformed surrogates for the declaration path and states (line 15)
-that it is not wired into production NativeToIR.
-
-Scope of the demonstration: the absent-vector mutation still returned the
-right value (42) because the callee returned an int; the defect is
-unvalidated reconstruction of semantic metadata (a fail-open default on the
-trusted boundary), not a shown wrong value. The duplicate-key acceptance is
-a validator bypass.
-
-Fix (dispositions §4 step 1): wire `StrictJsonParse` into the CLI's
-production entry; delete the `.getD .int` default — require the vector or
-refuse by name (or derive it from the validated callee signature); add
-production-byte-input mutation tests (duplicate keys, absent vectors,
-malformed surrogates) driven through the CLI, not through an already-parsed
-`Json` value.
+Was: the production wire decoder is fail-open at two points: `Lean.Json.parse` collapses DUPLICATE object keys before the schema validators see them (a forged lea…
 
 ## BUG-111 — the race detector's conflict relation compares `.field` path steps STRUCTURALLY, static `typeId` included, so a struct-tag-compatible pointer alias (`p.f` vs `(*B)(p).f`, triage L7) yields two «disjoint» shadow keys for ONE memory word: an HB-unordered write through one alias and a read through the other is NOT a conflict — a MISSED RACE, fail-OPEN vs `go run -race` [fidelity; race detector conflict relation (`locPrefix`/`ShadowKey.overlap`, Race.lean); found by the C1 S0 frame-law spike]
 
@@ -8219,53 +8147,12 @@ or wire-schema change (the plan node and its decoder arm pre-date the fix; the d
 the arm «consumed only by the channel-receive delivery plan» described BUG-030's era — the spine consumed it
 everywhere since E2).
 
-## BUG-117 — `scripts/gen-inittask-table` is FAIL-OPEN: a build or `nm` failure for a std package is recorded as the silent `?`/unknown row instead of dying [apparatus; derived oracle artifact `tools/nativefrontend/inittask-std.tsv` (the gate's inittask re-derivation, `scripts/ci`); trusted surface #2; found by the FR-37 lane's gate run 1 and its adversarial audit (apparatus finding), 2026-10-07; FIXED 2026-10-07, lane `lane/field-offsets-inittask-1007`]
+## BUG-117 — [MOVED 2026-10-27 to docs/APPARATUS-DEFECTS.md: an apparatus defect, not a fidelity bug]
 
-- Status: fixed ([AGENT] build worker, lane `lane/field-offsets-inittask-1007`, 2026-10-07, under [USER] Mike
-  2026-10-07 (items 1-4 approved as proposed), item 4, relayed; rowed open by the [AGENT] train worker r71 the same day —
-  every detected gap is rowed, [USER] Mike 2026-09-03, relayed. The fix lands with the lane's merge.)
-- Pinned-by: none (a transient tool failure under gate load, not a row state: seen ONCE — the FR-37 lane's gate run 1,
-  `ci --slow` at `10270c5a`, the `crypto/hmac` row read `unknown`; NOT reproduced in 3+4 re-runs (four hand
-  re-derivations at the same tree byte-identical; gate run 2 ok) — `docs/evidence/2026-10-07_fr37/ci-slow-run1.tail.txt`, removed from main by the 2026-10-12 evidence triage; in
-  history as `git show 63c9ea65:docs/evidence/2026-10-07_fr37/ci-slow-run1.tail.txt`)
-- Discovered: 2026-10-07, FR-37 lane gate run 1; classified fail-open by the lane's Fable adversarial audit (apparatus
-  finding, as relayed by the [AGENT] coordinator)
+- Status: moved (2026-10-27, docs/APPARATUS-DEFECTS.md)
+- Pinned-by: none (the entry and its pins live in docs/APPARATUS-DEFECTS.md under this number; the number is retired here)
 
-WHAT: `row_for` maps BOTH an empty `Export` from `go list -export -e` (any build failure, transient included — the
-script never reads `{{.Error}}`) AND a non-zero `go tool nm` (`inittask_symbols` returns `(None, None)`) to the silent
-`?`/unknown row. A transient failure under gate load is therefore RECORDED as "unknown" instead of dying with its
-cause; only the downstream byte-exact comparison against the tracked table (`scripts/ci`, «derived oracle artifacts
-re-derived») caught it. Run directly (`-o` to regenerate the tracked table), the script would have written the wrong
-row silently. Effect direction: not a wrong answer at the frontend (an `?` package refuses on import), but a
-fail-open record of the oracle's own facts — the doctrine's «unclassified case → explicit refusal naming its cause»
-violated in the apparatus.
-
-WHERE: `scripts/gen-inittask-table` — `inittask_symbols` (`if r.returncode != 0: return None, None`), `row_for` (the
-`not export_file` arm and the `defined is None` arm), and the `go list -export -e -f
-'{{.ImportPath}}\t{{.Export}}' std` format (no `.Error` field read).
-
-FIX PLAN (queued, [USER] approved 2026-10-07 (items 1-4 approved as proposed), item 4, relayed; batched with the field-offsets
-lane): die on `nm` non-zero, naming the package and `nm`'s stderr; add `{{if .Error}}{{.Error.Err}}{{end}}` to the
-`go list` format and die unless the error is of the known no-Go-files / build-constraints class (the legitimate
-no-archive directories the `?` arm documents). Fix criterion: a forced `nm` failure and a forced build error both
-make the script exit non-zero naming the package; the tracked table re-derives byte-identical.
-
-FIX (2026-10-07, lane `lane/field-offsets-inittask-1007`): `inittask_symbols` returns the failed run and `row_for`
-dies on it, naming the package, the archive and `nm`'s stderr. The `go list` step now reads JSON
-(`-json=ImportPath,Export,GoFiles,CgoFiles,Error,DepsErrors` — an error text may hold any byte, which a tab-separated
-`-f` format would split) and `row_for` dies on (i) any package `Error` unless it is of the no-Go-files class («no
-non-test Go files» / «build constraints exclude all Go files») on a package with no `GoFiles`/`CgoFiles`, (ii) any
-`DepsErrors`, (iii) an empty `Export` on a package that HAS Go files and reported no error (the transient
-`crypto/hmac` shape) — `unsafe` stays the documented `0`. A finding the plan did not anticipate: under go1.26.5 the
-six tracked `?` rows (`crypto/internal/fips140test`, `embed/internal/embedtest`, `internal/copyright`,
-`internal/coverage/test`, `internal/runtime/wasitest`, `net/internal/cgotest`) carry NO `go list` error at all — they
-are test-only directories (`GoFiles` = `CgoFiles` = 0) — so the `?` arm keys on "no non-test source files", and the
-no-Go-files error class is accepted only on that same condition. Fix criterion met: the regenerated table is
-byte-identical to the tracked one modulo the `# generated:` date line (the line `scripts/ci`'s re-derivation also
-excludes); `scripts/test-gen-inittask-table` (new, a fake `go` under `.tmp/`; wired into `scripts/ci`) forces an `nm`
-failure, a package error, a no-Go-files error on a buildable package, a dependency error, a missing archive, a failed
-`go list` and a malformed listing — each exits 1 naming its cause — plus two positive controls. Evidence
-`docs/evidence/2026-10-07_field-offsets/inittask-regen.txt`.
+Was: `scripts/gen-inittask-table` is FAIL-OPEN: a build or `nm` failure for a std package is recorded as the silent `?`/unknown row instead of dying
 
 ## BUG-118 — `cap([]rune(s))` for a NON-LITERAL `s`: the machine's pinned singleton cap = len was OUTSIDE gc on almost every input — gc realizes the 32-rune conversion buffer (`[32]rune`, every non-literal operand of ≤ 32 runes, written or not) or roundupsize(4·len)/4 (escaping, or > 32 runes); len itself is a member only when 4·len is a size class [semantic core; wrong answer (observed ∉ modeled); FIXED by the R3 / b6 widening `ChoiceSite.convCap` (lane `lane/conv-cap-1007`, 2026-10-07); known since the 2026-08-19 rune arm's own comment («cap([]rune("héllo")) = 32», deliberately left unpinned), measured as a wrong answer by the b6 design note's 140-row envelope (`docs/evidence/2026-10-07_conv-cap-design/envelope.tsv`)]
 
@@ -8304,84 +8191,19 @@ and 100 vs 104 — the witness file records the pre-change membership-shape run:
 singleton `n` was a gc member for every byte conversion — but the membership lane's singleton guard made them red
 there too).
 
-## BUG-119 — `golean coverage-observations --arg-int` is UNCHECKED against the entry parameters: an out-of-range literal wraps SILENTLY at its parameter's kind, and an `--arg-int` at a `bool`/`string`/interface parameter reaches the machine unchecked — `native-json-run` refuses both by name since train r73 [CLI; tool interface; PREDATES lane `lane/argbool-layout-1007` (the lane left `coverage-observations` unchanged by design); found by the lane's Opus adversarial audit (note), 2026-10-07; FIXED 2026-10-08, lane `fix/bug119-120-1008`]
+## BUG-119 — [MOVED 2026-10-27 to docs/APPARATUS-DEFECTS.md: an apparatus defect, not a fidelity bug]
 
-- Status: fixed ([AGENT] fix worker, lane `fix/bug119-120-1008`, 2026-10-08, under [USER] Mike 2026-10-08 (asked for bug fixes while things were calm), relayed by the [AGENT] coordinator. The fix lands with the lane's merge.)
-- Pinned-by: none (a CLI-interface gap; no corpus row passes an out-of-range or ill-typed `--arg-int` to
-  `coverage-observations`; the fix's controls are in `scripts/check-wire-boundary`)
-- Discovered: 2026-10-07, the argbool-layout lane's Opus adversarial audit (a note, not a blocking finding), as relayed
-  by the [AGENT] coordinator; rowed by the [AGENT] train worker r73 — every detected gap is rowed, [USER] Mike
-  2026-09-03, relayed.
+- Status: moved (2026-10-27, docs/APPARATUS-DEFECTS.md)
+- Pinned-by: none (the entry and its pins live in docs/APPARATUS-DEFECTS.md under this number; the number is retired here)
 
-WHAT: train r73 added `entryArgValues` (`GoLean/CLI.lean`), which type- and range-checks every entry argument against
-its parameter BEFORE any step and refuses by name (`status:error`). Only `native-json-run` calls it.
-`coverage-observations` parses `--arg-int` (`parseEnumArgs`) and hands `cfg.args.map GoValue.int` straight to
-`enumSetup`, so `--arg-int 300` at a `uint8` parameter is silently the value 44, and an `--arg-int` at a non-integer
-parameter is unchecked — the two drivers disagree on the same command line. Fail-open in the tool interface; not a
-wrong answer on any tracked row.
+Was: `golean coverage-observations --arg-int` is UNCHECKED against the entry parameters: an out-of-range literal wraps SILENTLY at its parameter's kind, and an `-…
 
-WHERE: `GoLean/CLI.lean` — `parseEnumArgs`' `--arg-int` arm and the `enumSetup program functionName (cfg.args.map
-GoValue.int)` call site.
+## BUG-120 — [MOVED 2026-10-27 to docs/APPARATUS-DEFECTS.md: an apparatus defect, not a fidelity bug]
 
-FIX PLAN (queued, [AGENT]; PENDING [USER] scheduling): route `coverage-observations`' arguments through
-`entryArgValues` (the same refusals, by name, `status:error`); add the out-of-range and ill-typed controls to
-`scripts/check-wire-boundary` for that subcommand. Fix criterion: the two subcommands refuse the same command lines
-with the same causes.
+- Status: moved (2026-10-27, docs/APPARATUS-DEFECTS.md)
+- Pinned-by: none (the entry and its pins live in docs/APPARATUS-DEFECTS.md under this number; the number is retired here)
 
-FIX (2026-10-08, lane `fix/bug119-120-1008`): `coverage-observations` AND `choice-trace` (the same unchecked
-`--arg-int` → `enumSetup` path, in `GoLean/ChoiceTrace.lean`: single-case mode and `--batch`) now pass their entry
-arguments through `entryArgValues` BEFORE `enumSetup` — the same refusals with the same texts (the flag, argument
-position, parameter name and type; out-of-range literal; arity; unknown entry function), exit 1. The refusal CHANNEL
-is each subcommand's own ([AGENT] decision): `native-json-run` prints a `status:error` JSON on stdout;
-`coverage-observations` and `choice-trace` print their `<subcommand>: <wire>: <cause>` line on STDERR, as every other
-refusal of theirs does — their stdout is the observation set / the trace table, which the harness reads line by line
-(a `status:error` JSON there would be one more «member» line to a consumer that ignored the exit code); `--batch`
-records a case's refusal as its named `ERROR` line, as for any other case failure. Both enumerators also gain
-`--arg-bool <true|false>` (parity: the same literal parser `parseBoolLiteral`, positional interleaving with
-`--arg-int`); the apparatus does not emit it (the manifest's args column is ints, and `tools/certification.py`'s flag
-whitelist refuses it by name — fail closed, left unchanged: [AGENT], no apparatus change in a CLI fix).
-`choice-trace`'s real-engine cross-check runs `runProgramPoolOutM` on the checked values (was
-`runProgramPoolOutIntsM` on the raw ints — the same function after `map GoValue.int`). Zero movement: every one of
-the 493 manifest rows with an `--arg-int` (491 strict, 2 membership) was run through `native-json-run`,
-`choice-trace` (two streams) and `coverage-observations` (the row's own params; strict rows under
-`detector-soundness`'s `--strict-enum` default) with main's binary (`6a90ba8d`, provenance-identical) and the lane's:
-stdout, stderr and exit code byte-identical on all 493 × 3 (one row, `noodler/budget/loop-100k`, timed out at 180 s
-under both binaries; re-run at `--work-cap 1000`, byte-identical, past the argument check) —
-`docs/evidence/2026-10-08_bug119-120/`. Controls: 12 enumerator entry-argument controls in
-`scripts/check-wire-boundary` (per subcommand: the mixed `--arg-int`/`--arg-bool` call answers; out-of-range,
-int-at-bool, int-at-declared-bool, bool-at-int and arity refuse by name, exit 1).
-
-## BUG-120 — a MISSING `--input` file makes `golean native-json-run` die with an UNCAUGHT IO exception instead of a named refusal [CLI; tool interface; PREDATES lane `lane/argbool-layout-1007`; found by the lane's Opus adversarial audit (note), 2026-10-07; FIXED 2026-10-08, lane `fix/bug119-120-1008`]
-
-- Status: fixed ([AGENT] fix worker, lane `fix/bug119-120-1008`, 2026-10-08, under [USER] Mike 2026-10-08 (asked for bug fixes while things were calm), relayed by the [AGENT] coordinator. The fix lands with the lane's merge.)
-- Pinned-by: none (no corpus row runs a missing wire; the harness always writes the wire before running; the fix's
-  controls are in `scripts/check-wire-boundary`)
-- Discovered: 2026-10-07, the argbool-layout lane's Opus adversarial audit (a note, not a blocking finding), as relayed
-  by the [AGENT] coordinator; rowed by the [AGENT] train worker r73 — every detected gap is rowed, [USER] Mike
-  2026-09-03, relayed.
-
-WHAT: `native-json-run` reads the wire with `IO.FS.readBinFile input` outside any `try`; a missing or unreadable file
-raises an IO error that escapes `main` as the runtime's uncaught-exception message, not the CLI's `cliErrorJson`
-refusal (`status:error` naming the file and the cause) that every other input failure (JSON parse, decode, entry
-arguments) produces. It still fails (non-zero exit), so not a wrong answer — but the refusal is not in the CLI's own
-named shape. The same unguarded read pattern may exist in other subcommands; the fix round should check them.
-
-WHERE: `GoLean/CLI.lean`, the `native-json-run` handler (`let bytes ← IO.FS.readBinFile input`).
-
-FIX PLAN (queued, [AGENT]; PENDING [USER] scheduling): catch the read's IO error and emit `cliErrorJson
-s!"{input}: cannot read input: {err}"` (exit 1); a missing-file control in `scripts/check-wire-boundary`. Fix
-criterion: a missing `--input` prints a `status:error` JSON naming the path.
-
-FIX (2026-10-08, lane `fix/bug119-120-1008`): the check the entry asked for found the same unguarded read in EVERY
-file-reading subcommand — `native-json-run`, `coverage-observations`, and `choice-trace` (its wire, its `--batch`
-manifest and the prior results file it resumes from); `observation-eq` reads no file. All now read through
-`readInputBytes` / `readInputText` (`GoLean/CLI.lean`), which catch the OS error and refuse naming the path and the
-cause on one line (`<path>: cannot read input: <OS error>`), exit 1: `native-json-run` as a `status:error` JSON,
-the enumerators on their stderr line, a `--batch` case with a missing wire as that case's named `ERROR` line (the
-batch continuing, as for any case failure), a missing `--batch` manifest before any results file is created.
-Before: `uncaught exception: no such file or directory …` from the runtime, exit 1, on all three (reproduced on
-main's binary). Controls: 5 missing-input controls in `scripts/check-wire-boundary`. Train r75 tidy: the refusal names the path
-ONCE (`oneLine` drops Lean's own `file: <path>` line). Out of scope, open: the batch loop's WRITES — BUG-122.
+Was: a MISSING `--input` file makes `golean native-json-run` die with an UNCAUGHT IO exception instead of a named refusal
 
 ## BUG-121 — zero-copy ALIASING of `[]byte(s)` is observable through element-address identity: two conversions of one string share their backing under gc (`&b[0] == &c[0]` is TRUE), the machine always allocates fresh (FALSE) [semantic core; allocation identity; PREDATES lane `lane/conv-cap-1007` — `main` fresh-allocates too; found by the lane's Fable adversarial audit, 2026-10-07]
 
@@ -8424,39 +8246,12 @@ FIX PLAN (NOT scheduled; a widening is a future [USER] decision under the standi
 regime, read-only by construction), or keep the fresh-allocation pin and record the deviation as an R15-style
 version-tracked red row. Fix criterion: a corpus row over the program above PASSES with gc's `true` in the modeled set.
 
-## BUG-122 — a failed WRITE of `golean choice-trace --batch`'s results file or its `--dump` file escapes as the runtime's UNCAUGHT IO exception instead of the subcommand's named refusal [CLI; tool interface; PREDATES lane `fix/bug119-120-1008` (outside BUG-120's read-side scope); found by the lane's Opus adversarial audit (informational note), 2026-10-08; FIXED 2026-10-12, lane `fix/release-runtime-1012` (release-readiness item 9)]
+## BUG-122 — [MOVED 2026-10-27 to docs/APPARATUS-DEFECTS.md: an apparatus defect, not a fidelity bug]
 
-- Status: fixed (2026-10-12, lane `fix/release-runtime-1012`, the commit «CLI + machine: two "fail-closed" stops that
-  were crashes» — release-readiness punch list item 9; [USER] Mike 2026-10-12 (starting with the items that need no input from the user), relayed by the [AGENT] coordinator)
-- Pinned-by: none (no corpus row runs `choice-trace --batch` against an unwritable output; the repro is in
-  `docs/evidence/2026-10-08_train-r75/repros.txt`, item 2; the standing controls are the two `unwritable-output`
-  controls of `scripts/check-wire-boundary` — the results path and the dump path under a missing directory, each
-  refused `choice-trace: <path>: cannot write output: <OS error>`, exit 1, no `uncaught`)
+- Status: moved (2026-10-27, docs/APPARATUS-DEFECTS.md)
+- Pinned-by: none (the entry and its pins live in docs/APPARATUS-DEFECTS.md under this number; the number is retired here)
 
-- Discovered: 2026-10-08, the bug119-120 lane's Opus adversarial audit (verdict MERGE-CLEAN; an informational note,
-  not a blocking finding), as relayed by the [AGENT] coordinator; rowed by the [AGENT] train worker r75 — every detected gap is rowed, [USER] Mike 2026-09-03, relayed.
-
-FIXED [AGENT] 2026-10-12: exactly the fix plan below — `CLI.writeOutputText` / `CLI.appendOutputLines`
-(`GoLean/CLI.lean`, beside `readInputText`) catch the OS error and refuse `<path>: cannot write output: <OS error>`
-(the path named once, Lean's `file:` line dropped by the same `oneLine`); `runBatch` routes the two headers and every
-per-case append through them, a per-case failure attributed `case <id>: …` (an unparsable manifest line's ERROR record
-`manifest line <n> (unparsable): …`), returned as the subcommand's `.error` → `choice-trace: …`, exit 1. Fix criterion
-met: both repro commands print the named refusal, exit 1, no `uncaught exception` (the two controls above run them).
-
-WHAT: BUG-120's fix made every input READ refuse by name; the batch loop's WRITES are still unguarded — the results
-header (`IO.FS.writeFile outPath`), the `--dump` header (`IO.FS.writeFile dp`) and the per-case appends
-(`IO.FS.withFile outPath .append`, `IO.FS.withFile dp .append`). An unwritable path (a missing directory, a
-permission failure, a full disk) raises an IO error that escapes `main` as `uncaught exception: <OS error>` with Lean's
-`file: <path>` line, exit 1 (reproduced for the two headers at train r75). It FAILS CLOSED (non-zero exit, no false
-result), and Lean's rendering happens to carry the path — but the refusal is not in the subcommand's own
-`choice-trace: <path>: <cause>` shape, and a per-case append failure mid-batch is not attributed to its case.
-
-WHERE: `GoLean/ChoiceTrace.lean` `runBatch` (the header writes and the batch loop's appends, ~1089–1106).
-
-FIX PLAN (NOT scheduled; [AGENT]): route the writes through a catching helper beside `CLI.readInputBytes` /
-`readInputText` that refuses `<path>: cannot write output: <OS error>` (exit 1, the path named once), and a control in
-`scripts/check-wire-boundary` (`--out` / `--dump` under a missing directory). Fix criterion: both repro commands print
-the subcommand's named refusal, exit 1, no `uncaught exception`.
+Was: a failed WRITE of `golean choice-trace --batch`'s results file or its `--dump` file escapes as the runtime's UNCAUGHT IO exception instead of the subcommand'…
 
 ## BUG-123 — two `len(ch)` reads in one registry-free segment could never observe a peer's send between them (and a goroutine's consecutive prints could never be interleaved by a peer's print): the channel-length read and the `print` apply opened NO scheduling boundary, so the pool's relation was narrower than gc on race-free programs [semantic core; wrong answer (observed ∉ modeled, no refusal); the Codex release-trust review's F1 and R2 (`docs/2026-10-12_release-trust-review.md`), relayed by the [USER] 2026-10-12; FIXED the same day, lane `core/sched-boundary-1012`]
 
@@ -9928,41 +9723,33 @@ WHAT: a built-in whose operand is a call hoists that call; an emitter that then 
 
 WHAT: `wakeReady` (`GoLean/GoCore/Multi.lean`) returned `false` on `chanPayload?`'s failure and on a sync cell's load failure or shape mismatch, so an error read as «not runnable»; with every goroutine «not runnable» the pool's empty menu was classified as a Go deadlock terminal — a named error laundered into a Go outcome. The main-exit window (`mainOutcome?` with nothing runnable) is outside the fix's claim, as BUG-133's text says. SITE: `Multi.lean` `wakeReady?` / `wakeReady` / `deadlockOrRefusal` (`stepMulti`'s empty menu and both drivers' empty runnable set; `choice-trace` mirrors it). ROUTE: none from admitted source; the sweep's unit is the core's default arms (S26's axes).
 
-## BUG-166 — the NEGATIVE corpus runner discarded `go build`'s EXIT STATUS before matching the expected diagnostic: an oracle that timed out (124) or was killed (137) after emitting the text read as a rejection, and the frontend leg then published PASS — a false green on a negative semantic verdict [apparatus; fail-open; deep-clean review 2026-10-26 DC02 / validation V1; FIXED 2026-10-26 (commit 348a7a78, lane `apparatus/dc-false-greens-1026` — the status is classified first: 1 is gc's rejection, 0 `go-compile`, every other status the new stage `go-crash` named by `undecided_cause`); late entry 2026-10-27 under the campaign's apparatus rule (the review's F5)]
+## BUG-166 — [MOVED 2026-10-27 to docs/APPARATUS-DEFECTS.md: an apparatus defect, not a fidelity bug]
 
-- Status: fixed (2026-10-27, late entry — the fix landed 2026-10-26 with no entry; entered under the rule the [AGENT] coordinator set for this campaign on 2026-10-27, the owner may overrule at the ask: an apparatus fail-open that could have produced a false green on a semantic verdict is entered, one that could not is not; [AGENT] lane `records/defect-shapes-1027`)
-- Pinned-by: none (apparatus: `scripts/coverage-negative`; the pins are the review's V1 harness modes re-run by the lane — the real fixture `arrays/array-compare-different-length` with the oracle subprocess controlled: exit 1 PASSes, 2/124/137/143 and a SIGKILL are FAIL `go-crash` with the cause named, runner exit 1 — and `scripts/run-with-timeout.sh`'s shared `undecided_cause`/`signal_cause`)
-- Discovered: `docs/2026-10-26_deep-clean-release-pass.md` DC02 (validation V1), 2026-10-26.
-- Neighbourhood: to be swept in step 2, shape S24 (fail-open defaults and unnamed stops at tool boundaries)
+- Status: moved (2026-10-27, docs/APPARATUS-DEFECTS.md)
+- Pinned-by: none (the entry and its pins live in docs/APPARATUS-DEFECTS.md under this number; the number is retired here)
 
-WHAT: `if output="$(…)"` dropped the compiler's status; a non-verdict (timeout, kill, usage error) with the diagnostic text in its output counted as the deliberate rejection the row expects. SITE: `scripts/coverage-negative` (the oracle leg); the status vocabulary now shared with `scripts/diff-coverage` through `scripts/run-with-timeout.sh`. ROUTE: the negative lane's oracle leg under load or a kill; the lane's survey found every other subprocess status in the apparatus already sound (the commit's local-space table).
+Was: the NEGATIVE corpus runner discarded `go build`'s EXIT STATUS before matching the expected diagnostic: an oracle that timed out (124) or was killed (137) aft…
 
-## BUG-167 — the raft harness printed «all green» after running NOTHING: an unknown `-scenario` matched no table entry and a non-positive `-iters` entered no iteration, and the driver judged only its failure counter — a false green on the subject's verdict [apparatus (an instrument outside `scripts/ci`); fail-open; deep-clean review 2026-10-26 DC08 / validation V2; FIXED 2026-10-26 (commit d4bc0442 — the selection is validated before anything runs, the loop counts its runs and the green line names them); late entry 2026-10-27 under the campaign's apparatus rule]
+## BUG-167 — [MOVED 2026-10-27 to docs/APPARATUS-DEFECTS.md: an apparatus defect, not a fidelity bug]
 
-- Status: fixed (2026-10-27, late entry — the fix landed 2026-10-26 with no entry; entered under the coordinator's apparatus rule of 2026-10-27 (a false green on a verdict), [AGENT] lane `records/defect-shapes-1027`)
-- Pinned-by: none (an instrument outside the gate: `raftharness/main.go`; the pins are the review's V2 harness — the tracked `main.go` compiled with a fixture table of one failing and one green scenario: a typo, 0, −1 and a stray argument exit 2 by name; `basic×1` exits 1 «1 FAILURE(S) in 1 run(s)»; `green×2` exits 0 naming `2 run(s): 1 scenario(s) x 2 iteration(s)`. The dependency-backed full harness could not run offline.)
-- Discovered: `docs/2026-10-26_deep-clean-release-pass.md` DC08 (validation V2), 2026-10-26.
-- Neighbourhood: to be swept in step 2, shape S24 (fail-open defaults and unnamed stops at tool boundaries)
+- Status: moved (2026-10-27, docs/APPARATUS-DEFECTS.md)
+- Pinned-by: none (the entry and its pins live in docs/APPARATUS-DEFECTS.md under this number; the number is retired here)
 
-WHAT: a verdict derived from a counter that nothing incremented. SITE: `raftharness/main.go` (scenario selection, the iteration loop, the summary line). ROUTE: every invocation whose selection is empty or malformed.
+Was: the raft harness printed «all green» after running NOTHING: an unknown `-scenario` matched no table entry and a non-positive `-iters` entered no iteration, a…
 
-## BUG-168 — the raft instruments parsed the machine's observation WITHOUT its exit status: a machine that flushed a matching `ok` observation and then died by SIGKILL was «both oracles agree», and a negative mode accepted any non-zero `go run` (a compile error or a missing dependency included) as the expected stop — false greens on the subject's verdicts [apparatus (instruments outside `scripts/ci`); fail-open; deep-clean review 2026-10-26 DC09 / validation V3; FIXED 2026-10-26 (commit d4bc0442 — `ownedout.machine_exit_agrees` applied first on every machine leg per `docs/cli.md` §2.1's exit contract; `--expect-stop` requires the program's own stop, `--expect-panic-member` a runtime panic's `exit status 2`; `tracereplay.py` records `returncode` and refuses status-less resumed records); late entry 2026-10-27 under the campaign's apparatus rule]
+## BUG-168 — [MOVED 2026-10-27 to docs/APPARATUS-DEFECTS.md: an apparatus defect, not a fidelity bug]
 
-- Status: fixed (2026-10-27, late entry — the fix landed 2026-10-26 with no entry; entered under the coordinator's apparatus rule of 2026-10-27, [AGENT] lane `records/defect-shapes-1027`)
-- Pinned-by: none (instruments outside the gate: `tools/raftsubject/runprobe.py`, `codeccheck.py`, `tracereplay.py`; the pins are the review's V3 harness re-run by the lane — a machine printing the matching observation then SIGKILLing itself → exit 1 «died on signal 9 (no verdict)»; an `ok` observation with exit 1 → «exit status 1 and observation status 'ok' disagree»; the ok/ok control passes; a `--resume` of a record without `returncode` refuses naming the record)
-- Discovered: `docs/2026-10-26_deep-clean-release-pass.md` DC09 (validation V3), 2026-10-26.
-- Neighbourhood: to be swept in step 2, shape S24 (fail-open defaults and unnamed stops at tool boundaries)
+- Status: moved (2026-10-27, docs/APPARATUS-DEFECTS.md)
+- Pinned-by: none (the entry and its pins live in docs/APPARATUS-DEFECTS.md under this number; the number is retired here)
 
-WHAT: the CLI's contract is exit 0 iff status `ok`, 1 for any other status, nothing else a verdict; an instrument reading the observation alone cannot tell a completed machine from a killed one that flushed early. SITE: the three instruments' machine legs and `runprobe`'s negative modes. ROUTE: every machine and oracle leg of the raft probes.
+Was: the raft instruments parsed the machine's observation WITHOUT its exit status: a machine that flushed a matching `ok` observation and then died by SIGKILL wa…
 
-## BUG-169 — the observation COMPARATOR (`golean observation-eq`) accepts AMBIGUOUS or MALFORMED JSON and IMPOSSIBLE byte values: duplicate `status`/`output` keys collapse to one (`Lean.Json.parse` keeps the last), an unpaired surrogate escape is normalized to U+FFFD and compared equal, and a string observation accepts `bytes:[256]` — the exposed comparison protocol is less strict than it advertises, so a lossy or forged observation can compare equal [apparatus; byte transparency at the readout; OPEN; deep-clean review 2026-10-26 DC07 / frontend FE-02 and robustness, punch list P08 (route the observation text through the strict parser and validate the value domains); late entry 2026-10-27, the review's F6]
+## BUG-169 — [MOVED 2026-10-27 to docs/APPARATUS-DEFECTS.md: an apparatus defect, not a fidelity bug]
 
-- Status: open (late entry 2026-10-27 — a known apparatus fail-open with no entry, assigned to no lane; entered so the byte-transparency shape holds its open instance beside BUG-105 and BUG-138, [AGENT] lane `records/defect-shapes-1027`)
-- Pinned-by: none (apparatus; no corpus row — neither reviewer claims the Go observer produces these values today; the finding is the protocol's advertised strictness. The pins when fixed: duplicate-key, unpaired-surrogate and `bytes:[256]` inputs refuse by name through `observation-eq` and the harness's comparison path — the BUG-110 mutant style, in `scripts/check-wire-boundary`.)
-- Discovered: `docs/2026-10-26_deep-clean-release-pass.md` DC06–DC07 («admission and observation decoding are too permissive»), 2026-10-26; punch list P08.
-- Neighbourhood: to be swept in step 2, shape S27 (byte transparency of string-carrying channels)
+- Status: moved (2026-10-27, docs/APPARATUS-DEFECTS.md)
+- Pinned-by: none (the entry and its pins live in docs/APPARATUS-DEFECTS.md under this number; the number is retired here)
 
-WHAT: the production wire is parsed strictly since BUG-110 (`GoLean.StrictJson.parseBytes`), but the observation comparison still reads both sides with `Lean.Json.parse`, so the same duplicate-key and surrogate collapse BUG-110 closed at the wire is open at the readout, and the byte-array decoder does not check `0 ≤ b ≤ 255`. SITE: `GoLean/CLI.lean` `observation-eq` and the observation decoder it shares with `scripts/diff-coverage`'s comparison. ROUTE: every differential comparison of a string-carrying observation (values, `output`, panic messages).
+Was: the observation COMPARATOR (`golean observation-eq`) accepts AMBIGUOUS or MALFORMED JSON and IMPOSSIBLE byte values: duplicate `status`/`output` keys collaps…
 
 ## BUG-170 — the zero-size variable address latitude: `pointers/zero-size-address/escaped-same` is a LIVE differential red (machine 0, gc 1) — the machine holds the never-same singleton of spec#Size_and_alignment_guarantees' «may have the same address» while gc realizes distinct on the stack and equal on the heap; observed ∉ modeled-singleton at a latitude point [semantic core; envelope too narrow at a latitude point, the BUG-021/BUG-118/BUG-159 class; OPEN since 2026-08-19 as the latitude inventory's R15 deviation record, the re-envelope on the release-readiness backlog; late entry 2026-10-27, the review's F7]
 

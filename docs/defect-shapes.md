@@ -7,6 +7,12 @@ per entry of `docs/BUGS.md` — the 133 on main at `aa49ebcf`, the three pending
 on `stage/train-20-1026` (BUG-134–136, marked «stage»), and the 39 late
 entries step 1 added (BUG-137–175; BUG-160–175 at the fix round of the
 decorrelated review `docs/reviews/2026-10-27_defect-shapes-review.md`).
+Nine of those — the apparatus entries BUG-110/117/119/120/122 and
+BUG-166/167/168/169 — left for `docs/APPARATUS-DEFECTS.md` on 2026-10-27
+([USER] ruling, relayed: an apparatus defect is not a fidelity bug; lane
+`records/apparatus-record-1027`): their rows are gone from §2, the
+tool-boundary shape S24 from the sweep order (its id stays in §1 as retired),
+and the counts below are over the 166 rows that remain.
 Written 2026-10-27 by the [AGENT] lane `records/defect-shapes-1027`; the
 sweep lanes fill the last column and update the counts in §3 as step 2 lands;
 dated and frozen at the release.
@@ -17,7 +23,8 @@ into the vocabulary of §1. The plan's §3 seed vocabulary was the starting
 point; the reading moved it: «representation leaks into identity» and «a
 value crosses a conversion without its effect» stay (S4, S2) but the identity
 KEYS the wire mints are a shape of their own (S3); «an absorbing default» is
-the core's own shape (S26), distinct from the tool boundaries (S24);
+the core's own shape (S26), distinct from the tool boundaries (S24, retired
+from this record 2026-10-27);
 «evaluation order» split into three shapes with different remedies (S6 the
 assignment phases, S7 spec-ordered events the hoist reorders, S8
 spec-unsequenced pairs realized as one member) plus evaluation COUNT (S9);
@@ -27,7 +34,8 @@ between the emitter's missing arms (S17), the spellings it admits (S28), its
 synthetic-symbol bookkeeping (S29) and the admission boundary (S20); byte
 transparency of a string-carrying channel is one shape at the wire and the
 readout (S27); and the apparatus between the readout (S22), the tool
-boundaries (S24) and the resource budgets (S23).
+boundaries (S24, since 2026-10-27 the apparatus record's) and the resource
+budgets (S23).
 
 ## 1. The shapes (the unit of step 2)
 
@@ -59,12 +67,17 @@ Member counts are over the 175 rows of §2. The `S<n>` ids are what the
 | S21 | Stdlib shims and source-through | A hand-written or injected library model diverging from the real library (Formatter precedence, Repeat's panic, a shim's missing dependency, a refusal the program could recover) or a source-through unit's `unsafe` idiom. | 6 |
 | S22 | The readout: observation naming, refusal text, output, the oracle observer | What is printed and how it is classified: observation type names, refusal texts that misname their cause, `print` coverage, the oracle observer's terminal classification, the enumerator's budget. | 8 |
 | S23 | Resource budgets: aborts and kills instead of refusals | A stop that was a native abort, a memory kill or a grind where a named refusal belongs: array materialization, the heap's cost, a run-time `make` footprint. | 3 |
-| S24 | Fail-open defaults and unnamed stops at tool boundaries | An absorbing default, a dropped process status or an uncaught error at the decoder, the CLI or an apparatus script or instrument — a malformed or forged input read as benign, a non-verdict read as a verdict, a crash in place of a refusal, a nondeterministic export text. Entered under the campaign's apparatus rule (§4): a fail-open that could have produced a FALSE GREEN on a semantic verdict is an entry; one that could not is not. | 9 |
+| S24 | (retired 2026-10-27) Fail-open defaults and unnamed stops at tool boundaries | Left this record with its members: an apparatus defect — a runner, instrument, harness or check that could have reported a false green, a crash in place of a refusal, a fail-open record — is not a fidelity bug ([USER] ruling 2026-10-27, relayed), so the entries moved to `docs/APPARATUS-DEFECTS.md` and the shape is out of the sweep order (§3). The id is kept so older `- Neighbourhood:` lines and the review still resolve; nothing is renumbered. | — |
 | S25 | Retired construct | The entry's mechanism is gone from the build (the big-step relation and the Iris layer of BUG-002); listed and marked, not swept. Its live residue is an obligation, not a differential defect. | 1 |
 | S26 | Absorbing default in the semantic core | A `\| _ => false / none / the input` (or an `Option` read as a value) in `Ops.lean`, `Machine.lean`, `Multi.lean`, `StepFn.lean` or `Seed.lean` that reads a malformed or unexpected state as benign instead of raising a named error — a phantom cell on a miss, a load failure read as «not ready» and classified as Go's deadlock. Found by reading, not by the differential; the verdict per arm is «reachable from admitted source?» (then a fidelity entry) or latent (then a named refusal, BUG-085's form). | 2 |
-| S27 | Byte transparency of string-carrying channels | A channel that carries Go string bytes — wire literals and constants, panic payloads, `print` output, the observation JSON, refusal texts, seed input — that is lossy for some byte class: invalid UTF-8 replaced by U+FFFD, NUL dropped by shell transport, surrogate escapes normalized, impossible byte values accepted. | 3 |
+| S27 | Byte transparency of string-carrying channels | A channel that carries Go string bytes — wire literals and constants, panic payloads, `print` output, the observation JSON, refusal texts, seed input — that is lossy for some byte class: invalid UTF-8 replaced by U+FFFD, NUL dropped by shell transport, surrogate escapes normalized, impossible byte values accepted. | 2 |
 | S28 | Spelling admission | A legal spelling of an admitted form the emitter declined or mis-routed — a parenthesised target, `nil` on the left of `==` — while the canonical spelling lowered. | 2 |
 | S29 | Synthetic-symbol bookkeeping | The emitter's own symbols and state — lifted literals, closers, discard temps, the quarantine's rollback — keyed by the wrong scope or not rolled back with the declaration they belong to, so an unrelated subject collides or dangles. | 2 |
+
+The tool-boundary shape S24 is retired from this record (2026-10-27): its
+nine members are entries of `docs/APPARATUS-DEFECTS.md` now, where the
+class boundary is stated, and the index keeps a tombstone under each number.
+An apparatus defect found by a sweep lane is entered there, not here.
 
 ## 2. The record, one row per entry
 
@@ -192,19 +205,14 @@ enumeration or a class probe along one axis; «no» = the instance alone);
 | BUG-107 | open (ruled a stated limit) | apparatus (classification refusal) | `tools/coverageharness` hook timing (pre-`main` aborts) | `init/init-panic`, `noodler/initpanic/*` | S22 | no | not scheduled (release.md §4 limit) |
 | BUG-108 | fixed | wrong value (clean export) | `tools/nativefrontend/fileselect.go` (`go/build.Context` pinned to the target) | `*_windows.go`, `_x.go`, `.x.go` files lowered; `source-selection/*` | S20 | partial — every filename shape go/build decides, unit-pinned | |
 | BUG-109 | fixed | wrong value → refusal | `tools/nativefrontend/modfile.go` (the `go` directive judged) | a `go 1.21` module's loop variable; unit tests (13 directive shapes) | S20 | partial — 13 directive shapes | |
-| BUG-110 | fixed | fail-open (decoder) | `CLI.lean` the strict byte parser; `NativeToIR.lean` `resultTypes` required and arity-checked | forged wires (duplicate keys, absent vectors); `scripts/check-wire-boundary` | S24 | partial — the mutant set | |
 | BUG-111 | fixed | fail-open (missed race) and false races | `Ops.lean` `Loc.canon` at every emitted key (`locPrefix` / `ShadowKey.overlap`) | struct-tag alias accesses across goroutines; `race/negative/struct-tag-alias-*`, `race/free-sync/struct-tag-alias-*` | S4 | partial — one row per key kind (S2c litmus set) | |
 | BUG-112 | fixed | wrong text (moved rows' fixed entry) | the Stage C `unseq` pilot (compound targets) | `x[fnine()] += wit(5)`; `e13-sibling-panic-order/compound-call-target-vs-*` | S8 | no | |
 | BUG-113 | fixed | wrong value | `emit.go` legacy ANF hoist (`&&`/`\|\|` beside a later call) → `unseq` E1 | `sinkL(left \|\| b, change())`; `evalorder/legacy-logical-vs-call/*` | S7 | no | |
 | BUG-114 | open | apparatus (draw-dependent refusal) | `tools/coverageharness/crashview.go` (a second report boundary) | `goroutines/wake-then-abort` | S22 | partial — 74,740 draws, the two sub-shapes named | |
 | BUG-115 | fixed | over-refusal (+ paren spellings stuck) | `emit.go` `emitAssignTargetPhase1` map-element arm (→ `Assignee.mapElem`); `ast.Unparen` at four sites | `m[k], y = 7, f()`, `(m[k])++`; `maps/multi-target/*` | S28 | partial — 19 born rows | |
 | BUG-116 | fixed | wrong text (panic identity) | `tools/nativefrontend/unseq.go` observability trigger (failing occurrences) | `s[i] + len(t[k:])` call-free; `e13-sibling-panic-order/*-left-vs-len-operand` | S8 | partial — fifteen audit shapes | |
-| BUG-117 | fixed | apparatus (fail-open record) | `scripts/gen-inittask-table` (`row_for`, `inittask_symbols`) | the derived `inittask-std.tsv`; `scripts/test-gen-inittask-table` | S24 | no | |
 | BUG-118 | fixed | envelope (too narrow) | `Ops.lean` `convCapMembers` / `ChoiceSite.convCap` (`Machine.lean` `convCapApplyAt`) | `cap([]rune(s))`, `cap([]byte(s))`; `strings/conv-cap/*` | S18 | partial — the 140-row envelope | |
-| BUG-119 | fixed | fail-open (CLI) | `CLI.lean` `parseEnumArgs` `--arg-int` → `entryArgValues` | enumerator entry arguments; `scripts/check-wire-boundary` controls | S24 | no | |
-| BUG-120 | fixed | apparatus (crash in place of a refusal) | `CLI.lean` `readInputBytes` / `readInputText` | a missing `--input`; `scripts/check-wire-boundary` controls | S24 | partial — every file-reading subcommand | |
 | BUG-121 | open | wrong value | `Machine.lean` `convCapApplyAt` (fresh backing per conversion) | `&b[0] == &c[0]` for two `[]byte(s)`; `strings/conv-identity/*` | S4 | no | |
-| BUG-122 | fixed | apparatus (crash in place of a refusal) | `GoLean/ChoiceTrace.lean` `runBatch` writes → `CLI.writeOutputText` / `appendOutputLines` | an unwritable `--out`/`--dump`; `scripts/check-wire-boundary` controls | S24 | no | |
 | BUG-123 | fixed | envelope (too narrow) | `Multi.lean` `Config.atBoundary` — the `len(ch)` apply and the `print` apply | two `len(ch)` reads around a peer's send; interleaved prints; `goroutines/sched-dependent/len-peer-send`, `builtins/print/goroutine-gap` | S15 | partial — the non-boundary operations argued by kind | |
 | BUG-124 | fixed | wrong value | `NativeToIR.lean` `intKindOfName`; `Value.lean` `IntKind.uintptr` | `uintptr` vs `uint64` identity: assertions, `==`, switches, map keys; `interfaces/uintptr-identity/*` | S3 | partial — 37 refusing / 25 lowering unit shapes, six probes | |
 | BUG-125 | fixed | over-acceptance → refusal | `tools/nativefrontend/entrymode.go` (`--subject` the corpus's opt-in) | `package main` with no `func main`; negative row `functions/main-undeclared` | S20 | no | |
@@ -248,10 +256,6 @@ enumeration or a class probe along one axis; «no» = the instance alone);
 | BUG-163 | fixed | over-refusal | `emit.go` conversion emission for string-typed targets/operands (routed to the dedicated operators) | `[]byte(s)`, `string(b)`, `string(r)`; `strings/byte-slice-to-string-copy`, `strings/string-byte-conversion`, `strings/string-int-rune` | S2 | no | |
 | BUG-164 | fixed | wrong value (double evaluation) | `emit.go` `emitAssign`'s speculative `emitCallNode` guard (`isBuiltinCall`) | `x := len(f())`, `make([]T, f())`, `copy(…)` as a whole RHS; `builtins/copy-edge/eval-order`, `builtins/copy-edge/forward-overlap` | S9 | partial — the 10 copy-edge rows | |
 | BUG-165 | fixed | latent fail-open (absorbing default) | `Multi.lean` `wakeReady?` / `wakeReady` / `deadlockOrRefusal` (`stepMulti`'s empty menu, both drivers' empty runnable set, `choice-trace`'s mirror) | a malformed parked goroutine (unbound channel address, non-channel cell, mis-shaped sync cell) named Go's deadlock; eval pins `malformedParkedStateFacts` (the enumeration driver's sibling F3 on the stage) | S26 | no | |
-| BUG-166 | fixed | apparatus (fail-open: a false green on the negative lane) | `scripts/coverage-negative` (the oracle leg's status classified before its text; `go-crash`); `scripts/run-with-timeout.sh` `undecided_cause` | a compiler timeout / kill with the diagnostic in its output; the review's V1 harness modes | S24 | partial — every subprocess status in the apparatus surveyed (the commit's local-space table) | |
-| BUG-167 | fixed | apparatus (fail-open: all green on nothing) | `raftharness/main.go` (selection validated; runs counted and named) | an unknown `-scenario` / non-positive `-iters`; the review's V2 fixture harness | S24 | partial — the V2 modes (typo, 0, −1, stray argument, basic, green, all) | |
-| BUG-168 | fixed | apparatus (fail-open: a killed machine's output as agreement) | `tools/raftsubject/runprobe.py`, `codeccheck.py`, `tracereplay.py` (`ownedout.machine_exit_agrees`; `--expect-stop`/`--expect-panic-member`; `returncode` in records) | a SIGKILLed machine that flushed a matching observation; a non-zero `go run` of any cause as the expected stop; the review's V3 harness | S24 | partial — the V3 probe matrix | |
-| BUG-169 | open | apparatus (fail-open: a lossy comparison) | `GoLean/CLI.lean` `observation-eq` and the shared observation decoder (`Lean.Json.parse`; the byte-array domain) | duplicate `status`/`output` keys, unpaired surrogates, `bytes:[256]`; no row (punch list P08) | S27 | no | |
 | BUG-170 | open | envelope (too narrow at a latitude point) | `Machine.lean`/`State.lean` zero-size variable allocation (`Store.alloc`, a fresh cell per variable); `valueEq`'s pointer arm | `&a == &b` for escaped zero-size `a`, `b`: machine 0, gc 1; `pointers/zero-size-address/escaped-same` (R15) | S4 | no | |
 | BUG-171 | open | envelope (too narrow at a latitude point) | `tools/nativefrontend/load.go` `specInitOrder` (go/types' `InitOrder`); `hiddendep.go` (the refusal guard, transitive over static calls) | package-level initializers reaching variables through function bodies: go/types' order vs gc's; `init/hidden-dep-order` (E7), `init/hidden-dep-refused` | S19 | partial — the direct and transitive-helper shapes refused; dispatch through a function value lowers | |
 | BUG-172 | fixed | wrongly stuck (non-termination) | `NativeToIR.lean` `decodeFor` (the three-clause arm's `continue`/post) | `continue` in a three-clause `for`; `control-flow/for-continue-post-plain` | S17 | no | |
@@ -259,14 +263,15 @@ enumeration or a class probe along one axis; «no» = the instance alone);
 | BUG-174 | fixed | wrongly stuck / wrong value (at a wrapping width) | `emit.go` `emitConstValue` (the literal's kind through the defined type's underlying) | an untyped constant in arithmetic at a defined integer type (`counter + 1`); no row names the fix (later defined-int rows exercise it) | S11 | no | |
 | BUG-175 | fixed | wrong text | `Ops.lean` `indexOutOfRangePanic`; the division, modulo and negative-shift panic arms | index, divide-by-zero and negative-shift panic texts; `arrays/array-bounds`, `ints/divide-by-zero`, `ints/negative-shift` | S12 | no | |
 
-Summary at this writing: 175 rows — 133 main entries, 3 stage, 39 late. By
-status: 155 fixed (3 on the stage), 20 open (one of them the retired
-construct); 12 red-by-design (`Expect: FAIL`, of which 8 fixed and 4 open).
-Already swept with a matrix: BUG-133, BUG-134, BUG-135 (the three entries
-written under the standing instruction of 2026-10-26); 72 more carry a
-partial neighbourhood (a probe matrix, an edge enumeration or a class probe
-along one axis); 99 carry the found instance alone; BUG-002 has nothing to
-sweep.
+Summary at this writing (2026-10-27, after the nine apparatus entries left —
+the step-1 figures were 175 rows, 155 fixed, 20 open, 72 partial, 99 alone):
+166 rows — 128 main entries, 3 stage, 35 late. By status: 147 fixed (3 on
+the stage), 19 open (one of them the retired construct); 12 red-by-design
+(`Expect: FAIL`, of which 8 fixed and 4 open). Already swept with a matrix:
+BUG-133, BUG-134, BUG-135 (the three entries written under the standing
+instruction of 2026-10-26); 67 more carry a partial neighbourhood (a probe
+matrix, an edge enumeration or a class probe along one axis); 95 carry the
+found instance alone; BUG-002 has nothing to sweep.
 
 ## 3. The step-2 order and each shape's matrix axes (the handoff)
 
@@ -300,7 +305,8 @@ the counts above.
 12. **S9 Evaluation count: twice, never, or re-read** — members 130 (designed), 082, 076, 074, 066, 047, 164, 140. Axes: constructs = conversions of calls, built-ins with call operands, elided slice bounds, read-modify-write lvalues, select operands, `make` operands, range operands (array, pointer-to-array, call), blank-field operands, `new(x)`, defer/go argument evaluation × effects = a call, a panic, a mutation × sites = every re-emission in `emit.go` (`emitAssign`'s speculative path, `emitReadWriteTarget`, `emitSliceExpr`, `emitMake`, `emitRange`, `emitSelect`, `emitStructLit`) and the decoder's desugars.
 13. **S13 Variable binding: scoping, shadowing, per-iteration cells** — members 069, 068, 148, 003, 142. Axes: binders = named results, predeclared identifiers, package-level names, loop variables (for-clause, range), type-switch guards, closures' captures × shadowing positions = nested blocks, if/switch/for inits, function literals, goto-restructured bodies × escapes = capture, `&`, pointer receiver, slicing, method value × sites = `emitIdent`, `resultshadow.go`, `emitForPerIteration`/`findAddrEscape`, the define pre-binding.
 14. **S8 Spec-unsequenced order realized as one member** — members 116, 104, 102, 112, 101, 156, 083, 052, 039, 032, 146. Axes: operand kinds gc evaluates early or late (assertion, slice expression, conversion, index, deref, division, shift, compound load, allocation payload) × sibling events (call, method call, receive, built-in, mutating closure) × positions (expression, assignment target, return, print root, sink root, defer) × sites = the `unseq` grammar's admission (`unseqClassify`) vs the legacy path, `hoistReordersUnprobedPanic`'s residue, the call rules' target timing, the single-RHS-call path.
-15. **S27 Byte transparency of string-carrying channels** — members 169 (open), 105, 138. Axes: channels = wire literals and constants, rune/byte literals, panic payloads, `print` output, the observation JSON (both sides), refusal texts, seed input, struct tags, the choice-trace records × byte classes = invalid UTF-8, NUL, the C0 controls (SOH…), surrogate escapes, values outside 0–255, embedded newlines × sites = `emitConstValue`, `decodeExpr`'s string arm, `StrictJson.parseBytes` vs `Lean.Json.parse` at every parse site (`observation-eq`, the harness's comparison), `tools/coverageharness`' transport, `scripts/diff-coverage`'s shell variables.
+15. **S27 Byte transparency of string-carrying channels** — members 105, 138 (the
+    comparator instance, BUG-169, is in the apparatus record since 2026-10-27). Axes: channels = wire literals and constants, rune/byte literals, panic payloads, `print` output, the observation JSON (both sides), refusal texts, seed input, struct tags, the choice-trace records × byte classes = invalid UTF-8, NUL, the C0 controls (SOH…), surrogate escapes, values outside 0–255, embedded newlines × sites = `emitConstValue`, `decodeExpr`'s string arm, `StrictJson.parseBytes` vs `Lean.Json.parse` at every parse site (`observation-eq`, the harness's comparison), `tools/coverageharness`' transport, `scripts/diff-coverage`'s shell variables.
 16. **S14 Map iteration over a mutating map** — members 088, 005. Axes: mutations during range = delete (reached/unreached), re-add, update, clear, insert, cross-goroutine (DRF and racy) × key kinds (NaN, aggregates holding NaN, interfaces) × sites = `Cont.mapIterK` picks, `mapDelete`/`clearMap`, the detector's per-pick read.
 17. **S19 Package initialization order** — members 064, 061 (open), 060, 171 (open, E7). Axes: node kinds (source packages with/without work, stdlib nodes, staticinit-foldable shapes) × edges (imports, hidden dependencies through function bodies, method bodies and function values, escaped prefixes) × tie-breaking (go/types' `InitOrder` vs gc's) × sites = `specInitOrder`, `buildInitGraph`, `staticinit.go`, `hiddendep.go`, the inittask table derivation.
 18. **S18 Implementation-specific sizes** — members 118, 021. Axes: operations = append growth, `[]byte(s)`/`[]rune(s)`, `make` with hint, string concatenation, `strings.Builder` growth × element sizes and lengths × observations (`cap`, aliasing through append) × sites = `appendSpillUpper`/`gcGrowsliceCap`, `convCapMembers`.
@@ -319,7 +325,7 @@ the counts above.
 ### Tier 3 — the readout and the tool boundaries
 
 27. **S22 The readout** — members 114 (open), 107 (limit), 106 (open), 093 (designed), 072, 065 (open), 019, 013. Axes: observed values of every kind × type-name renderings × abort/fatal/exit report shapes (ordinary, during unwinding, pre-main, concurrent) × refusal texts' causes × `print` operand kinds × sites = `CLI.lean` readout, `tools/coverageharness`, `scripts/diff-coverage`, the enumerator's budgets.
-28. **S24 Fail-open defaults and unnamed stops at tool boundaries** — members 168, 167, 166, 122, 120, 119, 117, 110, 091. Axes: inputs = every decoder arm with a default or `getD`, every CLI flag and file read/write, every subprocess status in the apparatus and the instruments (the DC02 survey's list), every record a tool resumes from × routes = forged/mutated wires (`check-wire-boundary`'s mutant set), missing/unwritable paths, out-of-range arguments, transient tool failures, killed children, empty selections × sites = `NativeToIR.lean` `| _ =>`/`getD` arms, `CLI.lean` and `ChoiceTrace.lean` IO, `scripts/*` and `tools/raftsubject/*` subprocess handling, map iteration in refusal texts. The probe is a mutant set and a review, not gc.
+28. *(S24 left the sweep order 2026-10-27 with its members: apparatus defects are `docs/APPARATUS-DEFECTS.md`'s, outside this campaign — the [USER] ruling of 2026-10-27, relayed. Its probe was a mutant set and a review, not gc; the number is kept so the tiers read as the review saw them.)*
 
 ### Not scheduled
 
@@ -364,7 +370,14 @@ the counts above.
   DC18 (a stale chunk masking a fresh error and a summarizer exit 0 — named by
   the coordinator as the non-entered kind; `d4bc0442`). S24 moved from the
   plan's slot 3 to Tier 3: its probe is a mutant set and a review, not gc; the
-  slot is S26's.
+  slot is S26's. SUPERSEDED the same day ([USER] ruling 2026-10-27, relayed by
+  the coordinator; lane `records/apparatus-record-1027`): the rule is withdrawn —
+  an apparatus defect is not a fidelity bug, whichever way it fails; the nine
+  entries it concerned (BUG-110/117/119/120/122 and BUG-166/167/168/169) moved
+  to `docs/APPARATUS-DEFECTS.md` with tombstones in the index, and S24 left this
+  record (the legend keeps its id as retired). The oracle-observer entries
+  BUG-105/106/107/114 and the enumerator budget BUG-065 stayed, for the reasons
+  that record's header gives; the owner may move them.
 - *(fix round, review F7)* An envelope narrower than gc at a latitude point
   is an open entry with its row on the Cases line (check (1) holds it FAIL),
   retiring by the envelope — applied alike to BUG-159 (no row), BUG-170 (R15,
@@ -393,7 +406,10 @@ is not the product's defect. Reasons: **same-branch** = introduced and fixed on
 one unmerged branch before reaching main (never the product's); **coverage** =
 an honest named refusal lifted or pinned, no wrong answer; **recorded** =
 recorded inside another entry of the same site and shape; **apparatus-not-a-verdict**
-= an apparatus defect that could not produce a false green (§4's rule);
+= an apparatus defect that could not produce a false green (§4's rule, withdrawn
+2026-10-27: every apparatus defect is outside this record now, and
+`docs/APPARATUS-DEFECTS.md` is where one is entered — these are not entered
+there either);
 **latitude** = a spec-open point where the model sits on a conforming member
 and gc's set contains it.
 
@@ -421,8 +437,8 @@ and gc's set contains it.
 | `923e3ec0` `new(expr)`/`f[int]` (`2b495d28`) | 07-26 | builtins emission new on `wrong-answers-builtins` | S17 | same-branch |
 | Stage B audit F1–F3/N3 (`920a11c6`), C1 audit F3 (`16029fa8`), Stage C F2/F3 (`e73c706f`), Stage E F1 `new(x)` (`bdd29170`), E5 F1/R1 (`263866da`), E5b's spec-example order (`f70903dc`), E6a F2 and re-verification R1 (`0ebe8c98`), `47d4c935`, `88b77623`, `fa4fce58`, `4baa53c7` F1, `102f4dae` A1, `8ddfd6f3` F1, `7a5cd534` R1, `42893297` R1'-1/2/4, `7bc0f9ca` R1, `67e0686b`, `7ab1c7b8`, `91356991`, `20e412ba`, `c6c80290` | 09 | the evaluation-order stages' and lanes' own fix rounds | S8, S9, S24 | same-branch (candidate defects caught by the pre-merge audits) |
 | `46fc682c` (BLOCKER-1), `b5ab2f00`, `9a17c081`, the seeded-heap rounds, `0ebe8c98` | 10 | budget-marker spelling identity; a decode refusal pre-empting gc's panic; directive placement; seed rounds | S3, S23, S20 | same-branch |
-| `f6f84f31`, `dd93725f`, readiness row 2 (`c88b8427`, `exprTypeOf` defaulting to `int`; «0 wire differences») | 09–10 | decoder strictness against forged wires only | S24 | latent at the decoder, no Go construct; BUG-110 is the entered precedent — a sweep lane may row them |
-| DC03 (`bea043c6`), DC10 (`d4bc0442`), DC18 (`d4bc0442`) | 10-26 | a seed cell allocating before validation (a kill, not a green); `--out` deletion; a stale chunk masking a fresh error, summarizer exit 0 | S23, S24 | apparatus-not-a-verdict (§4's rule); DC03 is a resource stop of BUG-131's kind |
+| `f6f84f31`, `dd93725f`, readiness row 2 (`c88b8427`, `exprTypeOf` defaulting to `int`; «0 wire differences») | 09–10 | decoder strictness against forged wires only | S24 | latent at the decoder, no Go construct; BUG-110 (in `docs/APPARATUS-DEFECTS.md` since 2026-10-27) is the precedent — not a fidelity sweep's to row |
+| DC03 (`bea043c6`), DC10 (`d4bc0442`), DC18 (`d4bc0442`) | 10-26 | a seed cell allocating before validation (a kill, not a green); `--out` deletion; a stale chunk masking a fresh error, summarizer exit 0 | S23, S24 | apparatus-not-a-verdict (§4's rule, withdrawn 2026-10-27 — see the legend); DC03 is a resource stop of BUG-131's kind |
 | DC04 (`0527bc35`), DC05, DC12–DC17, DC19 | 10-26 | the dedup theorem restored; notices; options; docs; locale | — | proof-layer / records / release hygiene, not fidelity |
 | Trust-review F2 (`c0e16122`, the oracle's import pruning), F3/F4 (`52d94101`, `6a3484a3`, `fa843d6b`); intn F3/F4 (`241f7917`, `64968905`, `3b6830bd`); packet A F1 (`fd3edf8e`); preprint F3 (`e5619ade`); Codex F4 (`3a9769e7`), F5 (`e28b67a3`); shake F3 (`8c87b3ce`, the enumeration driver's deadlock classification — BUG-165's sibling, stage), F4–F8; fresh-eyes F1–F5; readiness item 22 (`e361c72d`) | 09–10 | apparatus, CLI contract and records | S22, S24 | apparatus-not-a-verdict or coverage |
 | the stage's `modules/toolchain-redundant` (`6ce62599`, shake F2); the train-20 audit's F1 and F4 (`53df8e0d`) | 10-26 | a go.mod with a redundant `toolchain` line run where gc refuses; an env-file GOWORK / `GOFLAGS=-modfile` wrong value; six more go.mod shapes exported | S20 | folded into BUG-158 (the row) / pending at BUG-135's lane (the audit) |

@@ -39,6 +39,12 @@ These groups are suggestions, not restrictions on a reviewer or engineer.
 | P11 | DC11: malformed blocked core state | Decide the public validity contract; propagate load failures through readiness, or enforce/document a valid-state precondition at the entry that owns it. | Missing/wrong channel cell returns a named refusal at the supported entry. A genuine blocked valid program remains deadlock. State clearly whether a decoded-source reachability regression is needed; none was demonstrated in this review. |
 | P12 | DC12: broad Lean options | Remove broad warning suppressions, fix warnings, and narrow genuinely necessary resource or linter exceptions to declarations with justification. Obtain approval for any standing-rule exception. | Required build/checks pass; remaining exceptions are narrow and listed in the working-practices document if approved. Do not equate a suppressed warning with a fixed warning or raise global resource limits. |
 
+Pointer (2026-10-27, [AGENT] lane `records/apparatus-record-1027`): the apparatus
+findings above that have an entry — P02/DC02 → BUG-166, P08/DC07 → BUG-169 (open),
+P09/DC08 → BUG-167 and DC09 → BUG-168 — are recorded in `docs/APPARATUS-DEFECTS.md`,
+not in the fidelity index `docs/BUGS.md` ([USER] ruling 2026-10-27: an apparatus
+defect is a different class from a fidelity bug); DC03, DC10 and DC18 have no entry.
+
 ## Make the release legible and reproducible
 
 | Item | Finding | Proposed change | Acceptance evidence |

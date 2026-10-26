@@ -42,6 +42,18 @@
 #       first date and is outside the check by construction (the re-fix is
 #       named in its Neighbourhood line). One awk, placed before the verdict so
 #       it prints on a red run too.
+#   (8) TOMBSTONES AND NUMBERS (the class boundary, [USER] 2026-10-27: the index
+#       holds fidelity bugs only; apparatus defects live in
+#       docs/APPARATUS-DEFECTS.md under the same numbering): an entry moved there
+#       leaves a tombstone — heading `## BUG-NNN — [MOVED <date> to
+#       docs/APPARATUS-DEFECTS.md: …]`, `- Status: moved (…)`, `- Pinned-by: none
+#       (…)`, no Cases/Expect line. A tombstone is counted apart from the bugs
+#       and must resolve to a `## BUG-NNN` heading of that record; the marker
+#       and the status must agree; no heading may repeat in either record; no
+#       number may be live in both; and the apparatus record carries no
+#       `- Cases:`/`- Expect:` line (its pins are controls — a baseline-row pin
+#       there would be read by nothing, a dead pin). Every miss fails (8).
+#       Overridable for fixtures: CHECK_BUGS_APPARATUS.
 #
 #   scripts/check-bugs.sh --list   print that untriaged surface (id + stage),
 #                                  the concrete backlog to triage into BUGS.md.
@@ -54,28 +66,50 @@ LIST=0; [ "${1:-}" = "--list" ] && LIST=1
 
 BUGS=${CHECK_BUGS_BUGS:-docs/BUGS.md}
 BASELINE=${CHECK_BUGS_BASELINE:-baselines/native-full.tsv}
-[ -f "$BUGS" ]     || { echo "check-bugs: no $BUGS" >&2; exit 2; }
-[ -f "$BASELINE" ] || { echo "check-bugs: no $BASELINE" >&2; exit 2; }
+APPARATUS=${CHECK_BUGS_APPARATUS:-docs/APPARATUS-DEFECTS.md}
+[ -f "$BUGS" ]      || { echo "check-bugs: no $BUGS" >&2; exit 2; }
+[ -f "$BASELINE" ]  || { echo "check-bugs: no $BASELINE" >&2; exit 2; }
+[ -f "$APPARATUS" ] || { echo "check-bugs: no $APPARATUS (the apparatus-defect record the tombstones resolve to)" >&2; exit 2; }
 fail=0
 
 # Baseline lookup: id -> "RESULT/stage".
 blk() { awk -F'\t' -v id="$1" '!/^#/ && $2==id {print $1"/"$3; found=1} END{exit !found}' "$BASELINE"; }
 
-# Parse BUGS.md into: per open+differential bug, its id and Cases line.
-# Emit "BUG-NNN|status|pinned|expect|case,case,..." per bug.
+# Parse BUGS.md into: per entry, its id, status, pin, expectation, Cases line and
+# whether its heading carries the tombstone marker `[MOVED ` (check (8)).
+# Emit "BUG-NNN|status|pinned|expect|case,case,...|moved" per entry.
 bugs="$(awk '
-  /^## BUG-/       { if (id) print id"|"st"|"pb"|"ex"|"cs; id=$2; st=""; pb=""; ex=""; cs="" }
+  /^## BUG-/       { if (id) print id"|"st"|"pb"|"ex"|"cs"|"mv; id=$2; st=""; pb=""; ex=""; cs=""; mv=(index($0, "[MOVED ") > 0) ? 1 : 0 }
   /^- Status:/     { st=$3 }
   /^- Pinned-by:/  { pb=$3 }
   /^- Expect:/     { ex=$3 }
   /^- Cases:/      { sub(/^- Cases:[ ]*/,""); gsub(/[ ]/,""); cs=$0 }
-  END { if (id) print id"|"st"|"pb"|"ex"|"cs }
+  END { if (id) print id"|"st"|"pb"|"ex"|"cs"|"mv }
 ' "$BUGS")"
 
 declared_cases=""   # accumulate all cases named by any bug (for the ratchet)
-nbugs=0
-while IFS='|' read -r id st pb ex cs; do
+nbugs=0; ntomb=0
+while IFS='|' read -r id st pb ex cs mv; do
   [ -z "${id:-}" ] && continue
+  # (8) A tombstone: `Status: moved` with the heading marker, Pinned-by: none, no
+  # pin lines, and a heading of the same number in the apparatus record. Counted
+  # apart from the bugs; the marker and the status must agree in both directions.
+  if [ "$st" = moved ] || [ "$mv" = 1 ]; then
+    ntomb=$((ntomb+1))
+    if [ "$st" != moved ] || [ "$mv" != 1 ]; then
+      echo "FAIL (8): $id has 'Status: $st' with heading marker [MOVED=$mv] — a tombstone carries BOTH 'Status: moved' and the '[MOVED <date> to docs/APPARATUS-DEFECTS.md: …]' heading, a live entry neither"; fail=1; continue
+    fi
+    if [ "$pb" != none ]; then
+      echo "FAIL (8): $id is a tombstone but 'Pinned-by: $pb' (a tombstone is Pinned-by: none; its pins live with the entry in $APPARATUS)"; fail=1; continue
+    fi
+    if [ -n "$cs" ] || [ -n "$ex" ]; then
+      echo "FAIL (8): $id is a tombstone but carries a Cases:/Expect: line (a tombstone pins nothing)"; fail=1; continue
+    fi
+    if ! grep -q "^## $id " "$APPARATUS"; then
+      echo "FAIL (8): $id is a tombstone but $APPARATUS has no '## $id' heading — a moved number must resolve"; fail=1
+    fi
+    continue
+  fi
   nbugs=$((nbugs+1))
   # Optional `- Expect:` (audit fix F4): FAIL is the only recognized value.
   if [ -n "$ex" ] && [ "$ex" != FAIL ]; then
@@ -137,6 +171,28 @@ while IFS='|' read -r id st pb ex cs; do
     fi
   done
 done <<< "$bugs"
+
+# (8) Numbers: no heading repeats in either record, no number is live in both
+#     (a moved number is a tombstone here and an entry there, never two entries),
+#     and the apparatus record carries no baseline-row pin (nothing reads one).
+dup_idx="$(awk '/^## BUG-/ {print $2}' "$BUGS" | sort | uniq -d || true)"
+if [ -n "$dup_idx" ]; then
+  echo "FAIL (8): heading(s) repeated in $BUGS — a number is never reused: $(printf '%s' "$dup_idx" | tr '\n' ' ')"; fail=1
+fi
+dup_app="$(awk '/^## BUG-/ {print $2}' "$APPARATUS" | sort | uniq -d || true)"
+if [ -n "$dup_app" ]; then
+  echo "FAIL (8): heading(s) repeated in $APPARATUS — a number is never reused: $(printf '%s' "$dup_app" | tr '\n' ' ')"; fail=1
+fi
+live_both="$(comm -12 <(awk '/^## BUG-/ && index($0, "[MOVED ") == 0 {print $2}' "$BUGS" | sort -u) \
+                     <(awk '/^## BUG-/ {print $2}' "$APPARATUS" | sort -u) || true)"
+if [ -n "$live_both" ]; then
+  echo "FAIL (8): number(s) live in BOTH $BUGS and $APPARATUS (the index's copy must be a tombstone): $(printf '%s' "$live_both" | tr '\n' ' ')"; fail=1
+fi
+app_pins="$(awk '/^## BUG-/ {id=$2} /^- (Cases|Expect):/ {print id": "$0}' "$APPARATUS" || true)"
+if [ -n "$app_pins" ]; then
+  echo "FAIL (8): $APPARATUS carries a baseline-row pin line, which nothing cross-checks (a dead pin; an entry that needs a baseline row stays in $BUGS until this script reads the record's pins):"
+  printf '%s\n' "$app_pins" | sed 's/^/  /'; fail=1
+fi
 
 # (3) Unexplained fidelity failures: baseline FAILs at a fidelity stage not named
 #     by any bug. A warning (visible omission surface), not a hard failure.
@@ -364,7 +420,7 @@ if [ -n "$nbh_report" ]; then
 fi
 
 if [ "$fail" -ne 0 ]; then echo "check-bugs: FAIL"; exit 1; fi
-echo "check-bugs: ok ($nbugs bug(s); pinned cases behave as claimed)"
+echo "check-bugs: ok ($nbugs bug(s), $ntomb moved tombstone(s) resolving to $APPARATUS; pinned cases behave as claimed)"
 if [ "$nun" -gt 0 ]; then
   line=""
   for d in $DISPOSITIONS; do

@@ -34,7 +34,13 @@ reading everything else.
 
 **Fidelity and coverage**
 
-- `BUGS.md`: the single index of known fidelity bugs, open and fixed.
+- `BUGS.md`: the single index of known fidelity bugs, open and fixed — defects of the
+  modelled surface with a semantic effect, and that class only (the boundary ruled
+  2026-10-27).
+- `APPARATUS-DEFECTS.md`: the record of defects of the apparatus — runners, instruments,
+  harnesses and checks (fail-opens that could have reported a false green, crashes in
+  place of refusals, fail-open records) — kept apart from the fidelity index under the
+  same `BUG-NNN` numbering; the index holds a tombstone for each moved entry.
 - `defect-shapes.md`: the record of `BUGS.md` classified by shape for the defect-neighbourhood
   campaign — the shape vocabulary, one row per entry (site, route, shape, whether its
   neighbourhood is swept), and the step-2 sweep order with each shape's matrix axes. A living
