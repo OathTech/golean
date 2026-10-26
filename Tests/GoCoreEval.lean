@@ -3159,12 +3159,84 @@ private def malformedParkedStateFacts : IO Bool := do
       | _ => false))
   pure passed
 
+/-- BUG-134 at the train-20 audit's F1 (2026-10-26, lane `core/struct-through-conversion-1026`):
+the whole-value retag for a struct value crossing a converted struct pointer lives at the
+pointee READS at a static type (`derefRetag`, `receiverRetag`) and at the WRITE through an
+assignment target (`Mem.storeThrough`: the strict store first, then once retagged at the cell's
+declared type) — and NOWHERE in the normalizer. Hand-built on GoCore values: two struct types
+`main.A` / `main.B` with identical fields (tag-compatible) and a third `main.C` with a different
+field list. `Store.alloc`, a parameter, the root store and the bare normalizer receiving an
+`A`-tagged value at type `B` WITHOUT a conversion REFUSE BY NAME (the audit's p10 shape, hand-built:
+on the WIRE a declaration's initializer is an assignment and reaches the target store — BUG-134's
+recorded residual), while the store through a target of a `B`
+value into the `A` cell — the store through `(*B)(&a)` — lands under the cell's tag, the deref
+read of the `A` cell at static type `B` is `B`-tagged, a value-receiver read through a pointer
+is retagged at the receiver's type, and an INCOMPATIBLE tag (`C`) is refused by name on the
+target route too (the retry never absorbs it). -/
+private def structRetagBoundaryFacts : IO Bool := do
+  let mut passed := true
+  let tA : TypeId := ⟨"main.A"⟩
+  let tB : TypeId := ⟨"main.B"⟩
+  let tC : TypeId := ⟨"main.C"⟩
+  let fieldsX : Array GoCore.FieldDef := #[{ name := "X", typ := .int .int }]
+  let fieldsY : Array GoCore.FieldDef := #[{ name := "Y", typ := .int .int }]
+  let ctx := GoCore.ProgramCtx.ofTables
+    (types := #[(tA, .struct fieldsX), (tB, .struct fieldsX), (tC, .struct fieldsY)])
+  let tyA : GoCore.Ty := .defined 0
+  let tyB : GoCore.Ty := .defined 1
+  let vA (n : Int) : GoValue := .struct tA #[("X", .int n .int)]
+  let vB (n : Int) : GoValue := .struct tB #[("X", .int n .int)]
+  let vC (n : Int) : GoValue := .struct tC #[("Y", .int n .int)]
+  let s0 : GoCore.Store := {}
+  let (locA, s1) := s0.allocCell (.value tyA (vA 1))
+  let (locB, s2) := s1.allocCell (.value tyB (vB 2))
+  let tagMismatch {α : Type} (r : Except Stop α) : Bool :=
+    match r with
+    | .error (Stop.stuck msg) => (msg.splitOn "struct value type mismatch").length == 2
+    | _ => false
+  -- The STRICT sites (no conversion anywhere): refused by name, as at the base.
+  passed := passed && (← expectTrue "BUG-134/F1: a declaration at B of an A-tagged value (the audit's p10 wire) refuses by name"
+    (tagMismatch (GoCore.Store.alloc ctx s2 (vA 3) tyB)))
+  passed := passed && (← expectTrue "BUG-134/F1: a parameter at B bound to an A-tagged value refuses by name"
+    (tagMismatch (GoCore.Machine.bindParams ctx [] s2 [⟨0, tyB⟩] [vA 3])))
+  passed := passed && (← expectTrue "BUG-134/F1: the normalizer at B (map keys and values, channel elements, literals) refuses an A-tagged value by name"
+    (tagMismatch (GoCore.normalizeValueForTy ctx tyB (vA 3))))
+  passed := passed && (← expectTrue "BUG-134/F1: the root store (storeLoc) into the B cell of an A-tagged value refuses by name"
+    (tagMismatch (GoCore.storeLoc ctx s2 locB (vA 3))))
+  passed := passed && (← expectTrue "BUG-134/F1: the emitting store (Mem.store) into the B cell of an A-tagged value refuses by name"
+    (tagMismatch (GoCore.Mem.store ctx s2 locB (vA 3))))
+  -- The CONVERSION routes.
+  passed := passed && (← expectTrue "BUG-134/F1 control: the write through a target of a B value into the A cell (the store through (*B)(&a)) lands under the cell's tag"
+    (match GoCore.Machine.storeTarget ctx s2 (.chain (.addr locA) [] []) (vB 9) with
+      | .ok (s', tr) =>
+          tr == [.access .write (.data locA.canon)] &&
+          (match GoCore.loadLoc ctx s' locA with
+            | .ok (.struct t fs) => t == tA && fs == #[("X", .int 9 .int)]
+            | _ => false)
+      | _ => false))
+  passed := passed && (← expectTrue "BUG-134/F1 control: the deref read of the A cell at static type B is B-tagged"
+    (match GoCore.Machine.applyStrictOp ctx s2 id (.deref tyB) [.addr locA] with
+      | .ok (.struct t fs, _, _) => t == tB && fs == #[("X", .int 1 .int)]
+      | _ => false))
+  let recvB : GoCore.Func := { id := ⟨"main.B.M"⟩, args := #[⟨0, tyB⟩], results := #[], body := .seqn #[] }
+  passed := passed && (← expectTrue "BUG-134/F1 control: a value receiver read through a pointer (the deref adjust) is retagged at the receiver's type; the asIs adjust is untouched"
+    (GoCore.receiverRetag ctx recvB .deref (vA 1) == vB 1 &&
+     GoCore.receiverRetag ctx recvB .asIs (vA 1) == vA 1))
+  -- The retry never absorbs an INCOMPATIBLE tag: C into the A cell through a target.
+  passed := passed && (← expectTrue "BUG-134/F1: an incompatible tag (C) stored through a target into the A cell is refused by name (the strict store's own text)"
+    (match GoCore.Machine.storeTarget ctx s2 (.chain (.addr locA) [] []) (vC 5) with
+      | .error (Stop.stuck msg) =>
+          (msg.splitOn "struct value type mismatch: expected main.A, got main.C").length == 2
+      | _ => false))
+  pure passed
+
 /-- `stepLabelControls`, `seedFacts`, then `observationShapeFacts` (all always run). -/
 private def stepLabelAndSeedControls : IO Bool := do
   let a ← stepLabelControls
   let b ← seedFacts
   let c ← observationShapeFacts
-  pure (a && b && c)
+  let d ← structRetagBoundaryFacts
+  pure (a && b && c && d)
 
 /-- BUG-078 / F2 (2026-10-13, lane frontend/decl-budgets-1013 [AGENT]): the frontend applies
 the materialization budgets PER DECLARATION and reads their numbers from

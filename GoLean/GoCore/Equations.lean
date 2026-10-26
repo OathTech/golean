@@ -1047,7 +1047,7 @@ operands first. -/
     (hst : storeLoc ctx s loc val = .ok s') :
     stepFn ctx s (.next (.storeK (.chain anchor idxs steps :: rs) (val :: vrest) body env k')) ch
       = .ok (.next (.storeK rs vrest body env k'), s', ch, ⟨[.access .write (.data loc.canon)], [], []⟩) := by
-  simp [stepFn, storeTarget.plan, hres, hloc, Bind.bind, Except.bind, runCommit, Mem.store, hst, Functor.map, Except.map]
+  simp [stepFn, storeTarget.plan, hres, hloc, Bind.bind, Except.bind, runCommit, Mem.storeThrough, Mem.store, hst, Functor.map, Except.map]
 
 /-- The PLAIN-VARIABLE store (`x = v`: the anchor is the cell's address, no steps): one `storeLoc`. -/
 @[stepFn_eqns] theorem next_storeK_var {s s' : Store} {loc : Loc} {val : GoValue} (rs : List TargetRef) (vrest : List GoValue)

@@ -407,6 +407,18 @@ theorem structTagCompatible_eq (h : a.tablesFree = b.tablesFree) : @structTagCom
 theorem derefRetag_free (c : ProgramCtx) : @derefRetag c = @derefRetag c.tablesFree := rfl
 theorem derefRetag_eq (h : a.tablesFree = b.tablesFree) : @derefRetag a = @derefRetag b := by
   rw [derefRetag_free a, derefRetag_free b, h]
+theorem cellLeafTyFrom_eq_app (h : a.tablesFree = b.tablesFree) (bound : Nat) (ty : Ty) (p : List PathStep) :
+    cellLeafTyFrom a bound ty p = cellLeafTyFrom b bound ty p := by
+  fun_induction cellLeafTyFrom a bound ty p <;> (try simp only [types_eq h] at *) <;> simp +zetaDelta only [cellLeafTyFrom, *]
+theorem cellLeafTyFrom_eq (h : a.tablesFree = b.tablesFree) : @cellLeafTyFrom a = @cellLeafTyFrom b := by
+  funext bound ty p; exact cellLeafTyFrom_eq_app h bound ty p
+theorem cellLeafTy_eq (h : a.tablesFree = b.tablesFree) : @cellLeafTy a = @cellLeafTy b := by
+  funext s l; delta cellLeafTy; simp only [types_eq h, cellLeafTyFrom_eq h]
+theorem cellRetag?_eq (h : a.tablesFree = b.tablesFree) : @cellRetag? a = @cellRetag? b := by
+  funext s l v; delta cellRetag?; simp only [types_eq h, cellLeafTy_eq h]
+theorem receiverRetag_free (c : ProgramCtx) : @receiverRetag c = @receiverRetag c.tablesFree := rfl
+theorem receiverRetag_eq (h : a.tablesFree = b.tablesFree) : @receiverRetag a = @receiverRetag b := by
+  rw [receiverRetag_free a, receiverRetag_free b, h]
 
 theorem loadLoc_eq_app (h : a.tablesFree = b.tablesFree) (s : Store) (l : Loc) :
     loadLoc a s l = loadLoc b s l := by
@@ -456,6 +468,8 @@ theorem storeLoc_eq (h : a.tablesFree = b.tablesFree) : @storeLoc a = @storeLoc 
 theorem Mem_store_eq (h : a.tablesFree = b.tablesFree) : @Mem.store a = @Mem.store b := by
   delta Mem.store; simp only [storeLoc_eq h]
 
+theorem Mem_storeThrough_eq (h : a.tablesFree = b.tablesFree) : @Mem.storeThrough a = @Mem.storeThrough b := by
+  funext s l v; delta Mem.storeThrough; simp only [Mem_store_eq h, cellRetag?_eq h]
 theorem Mem_storeElems_eq_app (h : a.tablesFree = b.tablesFree) (s : Store) (base : Loc) (start : Nat) (vs : List GoValue) :
     Mem.storeElems a s base start vs = Mem.storeElems b s base start vs := by
   fun_induction Mem.storeElems a s base start vs <;> (try simp only [Mem_store_eq h] at *) <;> simp +zetaDelta only [Mem.storeElems, *]
@@ -724,7 +738,7 @@ theorem unseqReadTarget_eq (h : a.tablesFree = b.tablesFree) : @unseqReadTarget 
   delta unseqReadTarget; simp only [Mem_load_eq h, normalizeValueForTy_eq h, mapLookupValue_eq h, resolveChain_eq h]
 
 theorem unseqLoad_plan_eq (h : a.tablesFree = b.tablesFree) : @unseqLoad.plan a = @unseqLoad.plan b := by
-  delta unseqLoad.plan; simp only [Mem_store_eq h, unseqReadTarget_eq h]
+  delta unseqLoad.plan; simp only [Mem_storeThrough_eq h, unseqReadTarget_eq h]
 
 theorem unseqStorePlan_eq_app (h : a.tablesFree = b.tablesFree) (s : Store) (env : LocalEnv) (targets : List (VarId × TargetRef)) (l : List (VarId × VarId)) :
     unseqStorePlan a s env targets l = unseqStorePlan b s env targets l := by
@@ -763,7 +777,7 @@ theorem stepUnseqValue_eq (h : a.tablesFree = b.tablesFree) : @stepUnseqValue a 
   delta stepUnseqValue; simp only [Mem_store_eq h]
 
 theorem storeTarget_plan_eq (h : a.tablesFree = b.tablesFree) : @storeTarget.plan a = @storeTarget.plan b := by
-  delta storeTarget.plan; simp only [Mem_store_eq h, mapAssignValue_plan_eq h, resolveChain_eq h]
+  delta storeTarget.plan; simp only [Mem_storeThrough_eq h, mapAssignValue_plan_eq h, resolveChain_eq h]
 
 end TableMono
 /-! ## §4 The table readers
@@ -784,7 +798,7 @@ where the whole dispatches (`callee?`, `promotedCallee`, `dynamicDispatch?`, `en
 
 /-- Rewrite every table-free helper (§3) from the slice to the whole, given the `tablesFree`
 equality. -/
-macro "free_rw" hf:term : tactic => `(tactic| simp only [TableMono.types_eq $hf, TableMono.typeDisplays_eq $hf, TableMono.globals_eq $hf, TableMono.structTagCompatible_eq $hf, TableMono.derefRetag_eq $hf, TableMono.loadLoc_eq $hf, TableMono.Mem_load_eq $hf, TableMono.loadRoot_eq $hf, TableMono.Mem_loadBinding_eq $hf, TableMono.Mem_loadBindingFor_eq $hf, TableMono.Mem_loadElems_eq $hf, TableMono.Mem_loadFor_eq $hf, TableMono.Mem_loadRun_eq $hf, TableMono.Mem_loadSlice_eq $hf, TableMono.writeAt_eq $hf, TableMono.storeLoc_eq $hf, TableMono.Mem_store_eq $hf, TableMono.Mem_storeElems_eq $hf, TableMono.Mem_storeRun_eq $hf, TableMono.normalizeValueForTy_eq $hf, TableMono.Store_alloc_eq $hf, TableMono.typeDisplay?_eq $hf, TableMono.displayNameOfId_eq $hf, TableMono.displayNameOf_eq $hf, TableMono.goTypeNameForMessage_eq $hf, TableMono.payloadDynamicTypeNote_eq $hf, TableMono.abortRefusal_eq $hf, TableMono.methodCarrierKey?_eq $hf, TableMono.interfaceDeclaredMethods?_eq $hf, TableMono.defaultValue_eq $hf, TableMono.allocDecls_eq $hf, TableMono.atomicStore_eq $hf, TableMono.applyAtomicOp_eq $hf, TableMono.applyChanOp_eq $hf, TableMono.tyUncomparable_eq $hf, TableMono.valueHashability_eq $hf, TableMono.checkKeyHashable_eq $hf, TableMono.valueEq_eq $hf, TableMono.mapEntryIndex?_eq $hf, TableMono.mapLookupValue_eq $hf, TableMono.commitClause_eq $hf, TableMono.applySelectCore_eq $hf, TableMono.applySelect_eq $hf, TableMono.applySlice_eq $hf, TableMono.buildArrayValue_eq $hf, TableMono.buildDefaultArrayValue_eq $hf, TableMono.mapAssignValue_plan_eq $hf, TableMono.applyStmtOpCore_plan_eq $hf, TableMono.buildAppendBackingValue_eq $hf, TableMono.applyStmtOp_plan_eq $hf, TableMono.buildStructFields_eq $hf, TableMono.buildStructValue_eq $hf, TableMono.convertValueToTy_eq $hf, TableMono.indexTargetLoc_eq $hf, TableMono.dynamicTypeNameForMessage_eq $hf, TableMono.convCapApplyAt_eq $hf, TableMono.convCapApply_eq $hf, TableMono.syncCell_eq $hf, TableMono.applySyncOpCore_eq $hf, TableMono.applyTryLock_eq $hf, TableMono.applySyncOp_eq $hf, TableMono.bindIterVars_eq $hf, TableMono.bindParams_eq $hf, TableMono.structFieldValue_eq $hf, TableMono.promotionHop_eq $hf, TableMono.promotionWalk_eq $hf, TableMono.receiverAt_eq $hf, TableMono.symbolKeyForMessage_eq $hf, TableMono.loadResults_eq $hf, TableMono.mapIterCandidates_eq $hf, TableMono.preprintFatalStop_eq $hf, TableMono.panicUnwindStop_eq $hf, TableMono.projChainTarget_eq $hf, TableMono.resolveChain_eq $hf, TableMono.stepUnseqEnter_eq $hf, TableMono.unseqGuard_eq $hf, TableMono.unseqReadTarget_eq $hf, TableMono.unseqLoad_plan_eq $hf, TableMono.unseqStorePlan_eq $hf, TableMono.unseqAtom_eq $hf, TableMono.unseqAtoms_eq $hf, TableMono.unseqUnfrozenAnchor?_eq $hf, TableMono.unseqUnfrozenPlan?_eq $hf, TableMono.unseqTargetPlan_eq $hf, TableMono.stepUnseqNext_eq $hf, TableMono.stepUnseqValue_eq $hf, TableMono.storeTarget_plan_eq $hf])
+macro "free_rw" hf:term : tactic => `(tactic| simp only [TableMono.types_eq $hf, TableMono.typeDisplays_eq $hf, TableMono.globals_eq $hf, TableMono.structTagCompatible_eq $hf, TableMono.derefRetag_eq $hf, TableMono.receiverRetag_eq $hf, TableMono.loadLoc_eq $hf, TableMono.Mem_load_eq $hf, TableMono.loadRoot_eq $hf, TableMono.Mem_loadBinding_eq $hf, TableMono.Mem_loadBindingFor_eq $hf, TableMono.Mem_loadElems_eq $hf, TableMono.Mem_loadFor_eq $hf, TableMono.Mem_loadRun_eq $hf, TableMono.Mem_loadSlice_eq $hf, TableMono.writeAt_eq $hf, TableMono.storeLoc_eq $hf, TableMono.Mem_store_eq $hf, TableMono.Mem_storeElems_eq $hf, TableMono.Mem_storeRun_eq $hf, TableMono.normalizeValueForTy_eq $hf, TableMono.Store_alloc_eq $hf, TableMono.typeDisplay?_eq $hf, TableMono.displayNameOfId_eq $hf, TableMono.displayNameOf_eq $hf, TableMono.goTypeNameForMessage_eq $hf, TableMono.payloadDynamicTypeNote_eq $hf, TableMono.abortRefusal_eq $hf, TableMono.methodCarrierKey?_eq $hf, TableMono.interfaceDeclaredMethods?_eq $hf, TableMono.defaultValue_eq $hf, TableMono.allocDecls_eq $hf, TableMono.atomicStore_eq $hf, TableMono.applyAtomicOp_eq $hf, TableMono.applyChanOp_eq $hf, TableMono.tyUncomparable_eq $hf, TableMono.valueHashability_eq $hf, TableMono.checkKeyHashable_eq $hf, TableMono.valueEq_eq $hf, TableMono.mapEntryIndex?_eq $hf, TableMono.mapLookupValue_eq $hf, TableMono.commitClause_eq $hf, TableMono.applySelectCore_eq $hf, TableMono.applySelect_eq $hf, TableMono.applySlice_eq $hf, TableMono.buildArrayValue_eq $hf, TableMono.buildDefaultArrayValue_eq $hf, TableMono.mapAssignValue_plan_eq $hf, TableMono.applyStmtOpCore_plan_eq $hf, TableMono.buildAppendBackingValue_eq $hf, TableMono.applyStmtOp_plan_eq $hf, TableMono.buildStructFields_eq $hf, TableMono.buildStructValue_eq $hf, TableMono.convertValueToTy_eq $hf, TableMono.indexTargetLoc_eq $hf, TableMono.dynamicTypeNameForMessage_eq $hf, TableMono.convCapApplyAt_eq $hf, TableMono.convCapApply_eq $hf, TableMono.syncCell_eq $hf, TableMono.applySyncOpCore_eq $hf, TableMono.applyTryLock_eq $hf, TableMono.applySyncOp_eq $hf, TableMono.bindIterVars_eq $hf, TableMono.bindParams_eq $hf, TableMono.structFieldValue_eq $hf, TableMono.promotionHop_eq $hf, TableMono.promotionWalk_eq $hf, TableMono.receiverAt_eq $hf, TableMono.symbolKeyForMessage_eq $hf, TableMono.loadResults_eq $hf, TableMono.mapIterCandidates_eq $hf, TableMono.preprintFatalStop_eq $hf, TableMono.panicUnwindStop_eq $hf, TableMono.projChainTarget_eq $hf, TableMono.resolveChain_eq $hf, TableMono.stepUnseqEnter_eq $hf, TableMono.unseqGuard_eq $hf, TableMono.unseqReadTarget_eq $hf, TableMono.unseqLoad_plan_eq $hf, TableMono.unseqStorePlan_eq $hf, TableMono.unseqAtom_eq $hf, TableMono.unseqAtoms_eq $hf, TableMono.unseqUnfrozenAnchor?_eq $hf, TableMono.unseqUnfrozenPlan?_eq $hf, TableMono.unseqTargetPlan_eq $hf, TableMono.stepUnseqNext_eq $hf, TableMono.stepUnseqValue_eq $hf, TableMono.storeTarget_plan_eq $hf])
 
 namespace TableMono
 theorem foldl_ext' {α β : Type} {l : List α} {f g : β → α → β}
@@ -795,7 +809,7 @@ theorem foldl_ext' {α β : Type} {l : List α} {f g : β → α → β}
     rw [List.foldl_cons, List.foldl_cons, hfg init x (List.mem_cons_self ..)]
     exact ih (fun acc y hy => hfg acc y (List.mem_cons_of_mem _ hy)) _
 end TableMono
-macro "free_rw_at" hf:term:max loc:ident : tactic => `(tactic| simp only [TableMono.types_eq $hf, TableMono.typeDisplays_eq $hf, TableMono.globals_eq $hf, TableMono.structTagCompatible_eq $hf, TableMono.derefRetag_eq $hf, TableMono.loadLoc_eq $hf, TableMono.Mem_load_eq $hf, TableMono.loadRoot_eq $hf, TableMono.Mem_loadBinding_eq $hf, TableMono.Mem_loadBindingFor_eq $hf, TableMono.Mem_loadElems_eq $hf, TableMono.Mem_loadFor_eq $hf, TableMono.Mem_loadRun_eq $hf, TableMono.Mem_loadSlice_eq $hf, TableMono.writeAt_eq $hf, TableMono.storeLoc_eq $hf, TableMono.Mem_store_eq $hf, TableMono.Mem_storeElems_eq $hf, TableMono.Mem_storeRun_eq $hf, TableMono.normalizeValueForTy_eq $hf, TableMono.Store_alloc_eq $hf, TableMono.typeDisplay?_eq $hf, TableMono.displayNameOfId_eq $hf, TableMono.displayNameOf_eq $hf, TableMono.goTypeNameForMessage_eq $hf, TableMono.payloadDynamicTypeNote_eq $hf, TableMono.abortRefusal_eq $hf, TableMono.methodCarrierKey?_eq $hf, TableMono.interfaceDeclaredMethods?_eq $hf, TableMono.defaultValue_eq $hf, TableMono.allocDecls_eq $hf, TableMono.atomicStore_eq $hf, TableMono.applyAtomicOp_eq $hf, TableMono.applyChanOp_eq $hf, TableMono.tyUncomparable_eq $hf, TableMono.valueHashability_eq $hf, TableMono.checkKeyHashable_eq $hf, TableMono.valueEq_eq $hf, TableMono.mapEntryIndex?_eq $hf, TableMono.mapLookupValue_eq $hf, TableMono.commitClause_eq $hf, TableMono.applySelectCore_eq $hf, TableMono.applySelect_eq $hf, TableMono.applySlice_eq $hf, TableMono.buildArrayValue_eq $hf, TableMono.buildDefaultArrayValue_eq $hf, TableMono.mapAssignValue_plan_eq $hf, TableMono.applyStmtOpCore_plan_eq $hf, TableMono.buildAppendBackingValue_eq $hf, TableMono.applyStmtOp_plan_eq $hf, TableMono.buildStructFields_eq $hf, TableMono.buildStructValue_eq $hf, TableMono.convertValueToTy_eq $hf, TableMono.indexTargetLoc_eq $hf, TableMono.dynamicTypeNameForMessage_eq $hf, TableMono.convCapApplyAt_eq $hf, TableMono.convCapApply_eq $hf, TableMono.syncCell_eq $hf, TableMono.applySyncOpCore_eq $hf, TableMono.applyTryLock_eq $hf, TableMono.applySyncOp_eq $hf, TableMono.bindIterVars_eq $hf, TableMono.bindParams_eq $hf, TableMono.structFieldValue_eq $hf, TableMono.promotionHop_eq $hf, TableMono.promotionWalk_eq $hf, TableMono.receiverAt_eq $hf, TableMono.symbolKeyForMessage_eq $hf, TableMono.loadResults_eq $hf, TableMono.mapIterCandidates_eq $hf, TableMono.preprintFatalStop_eq $hf, TableMono.panicUnwindStop_eq $hf, TableMono.projChainTarget_eq $hf, TableMono.resolveChain_eq $hf, TableMono.stepUnseqEnter_eq $hf, TableMono.unseqGuard_eq $hf, TableMono.unseqReadTarget_eq $hf, TableMono.unseqLoad_plan_eq $hf, TableMono.unseqStorePlan_eq $hf, TableMono.unseqAtom_eq $hf, TableMono.unseqAtoms_eq $hf, TableMono.unseqUnfrozenAnchor?_eq $hf, TableMono.unseqUnfrozenPlan?_eq $hf, TableMono.unseqTargetPlan_eq $hf, TableMono.stepUnseqNext_eq $hf, TableMono.stepUnseqValue_eq $hf, TableMono.storeTarget_plan_eq $hf] at $loc:ident)
+macro "free_rw_at" hf:term:max loc:ident : tactic => `(tactic| simp only [TableMono.types_eq $hf, TableMono.typeDisplays_eq $hf, TableMono.globals_eq $hf, TableMono.structTagCompatible_eq $hf, TableMono.derefRetag_eq $hf, TableMono.receiverRetag_eq $hf, TableMono.loadLoc_eq $hf, TableMono.Mem_load_eq $hf, TableMono.loadRoot_eq $hf, TableMono.Mem_loadBinding_eq $hf, TableMono.Mem_loadBindingFor_eq $hf, TableMono.Mem_loadElems_eq $hf, TableMono.Mem_loadFor_eq $hf, TableMono.Mem_loadRun_eq $hf, TableMono.Mem_loadSlice_eq $hf, TableMono.writeAt_eq $hf, TableMono.storeLoc_eq $hf, TableMono.Mem_store_eq $hf, TableMono.Mem_storeElems_eq $hf, TableMono.Mem_storeRun_eq $hf, TableMono.normalizeValueForTy_eq $hf, TableMono.Store_alloc_eq $hf, TableMono.typeDisplay?_eq $hf, TableMono.displayNameOfId_eq $hf, TableMono.displayNameOf_eq $hf, TableMono.goTypeNameForMessage_eq $hf, TableMono.payloadDynamicTypeNote_eq $hf, TableMono.abortRefusal_eq $hf, TableMono.methodCarrierKey?_eq $hf, TableMono.interfaceDeclaredMethods?_eq $hf, TableMono.defaultValue_eq $hf, TableMono.allocDecls_eq $hf, TableMono.atomicStore_eq $hf, TableMono.applyAtomicOp_eq $hf, TableMono.applyChanOp_eq $hf, TableMono.tyUncomparable_eq $hf, TableMono.valueHashability_eq $hf, TableMono.checkKeyHashable_eq $hf, TableMono.valueEq_eq $hf, TableMono.mapEntryIndex?_eq $hf, TableMono.mapLookupValue_eq $hf, TableMono.commitClause_eq $hf, TableMono.applySelectCore_eq $hf, TableMono.applySelect_eq $hf, TableMono.applySlice_eq $hf, TableMono.buildArrayValue_eq $hf, TableMono.buildDefaultArrayValue_eq $hf, TableMono.mapAssignValue_plan_eq $hf, TableMono.applyStmtOpCore_plan_eq $hf, TableMono.buildAppendBackingValue_eq $hf, TableMono.applyStmtOp_plan_eq $hf, TableMono.buildStructFields_eq $hf, TableMono.buildStructValue_eq $hf, TableMono.convertValueToTy_eq $hf, TableMono.indexTargetLoc_eq $hf, TableMono.dynamicTypeNameForMessage_eq $hf, TableMono.convCapApplyAt_eq $hf, TableMono.convCapApply_eq $hf, TableMono.syncCell_eq $hf, TableMono.applySyncOpCore_eq $hf, TableMono.applyTryLock_eq $hf, TableMono.applySyncOp_eq $hf, TableMono.bindIterVars_eq $hf, TableMono.bindParams_eq $hf, TableMono.structFieldValue_eq $hf, TableMono.promotionHop_eq $hf, TableMono.promotionWalk_eq $hf, TableMono.receiverAt_eq $hf, TableMono.symbolKeyForMessage_eq $hf, TableMono.loadResults_eq $hf, TableMono.mapIterCandidates_eq $hf, TableMono.preprintFatalStop_eq $hf, TableMono.panicUnwindStop_eq $hf, TableMono.projChainTarget_eq $hf, TableMono.resolveChain_eq $hf, TableMono.stepUnseqEnter_eq $hf, TableMono.unseqGuard_eq $hf, TableMono.unseqReadTarget_eq $hf, TableMono.unseqLoad_plan_eq $hf, TableMono.unseqStorePlan_eq $hf, TableMono.unseqAtom_eq $hf, TableMono.unseqAtoms_eq $hf, TableMono.unseqUnfrozenAnchor?_eq $hf, TableMono.unseqUnfrozenPlan?_eq $hf, TableMono.unseqTargetPlan_eq $hf, TableMono.stepUnseqNext_eq $hf, TableMono.stepUnseqValue_eq $hf, TableMono.storeTarget_plan_eq $hf] at $loc:ident)
 
 namespace ProgramCtx.SubTables
 variable {a b : ProgramCtx}
@@ -1232,7 +1246,24 @@ theorem preprintDispatch_mono (h : a.SubTables b) {s : Store} {e : PanicEntry}
       cases hr : resolveMethod? a dynTy M with
       | none => rw [hr] at hx; simp [toResult, throw, throwThe, MonadExceptOf.throw] at hx
       | some r =>
-        rw [hr] at hx; rw [h.resolveMethod?_mono hr]; exact hx
+        rw [hr] at hx; rw [h.resolveMethod?_mono hr]
+        dsimp only at hx ⊢
+        -- The target lookup (BUG-134's receiver retag needs the `Func`): found under the
+        -- slice ⇒ found under the whole; absent under the slice ⇒ the resolution refused.
+        cases hu : r.unsupported with
+        | some cause => rw [hu] at hx; exact hx
+        | none =>
+          rw [hu] at hx
+          dsimp only at hx ⊢
+          cases hra : receiverAt b s inner r.path r.adjust with
+          | error e => rw [hra] at hx; simp only [Bind.bind, Except.bind] at hx ⊢; exact hx
+          | ok p =>
+            rw [hra] at hx
+            obtain ⟨recv, tr⟩ := p
+            simp only [Bind.bind, Except.bind] at hx ⊢
+            cases hfn : findFunctionIn? a.functions (preprintTargetFid M r) with
+            | none => rw [hfn] at hx; simp [toResult, throw, throwThe, MonadExceptOf.throw] at hx
+            | some f => rw [hfn] at hx; rw [h.findFunctionIn?_mono hfn]; exact hx
     | _ => rw [hv] at hx; simp [toResult, throw, throwThe, MonadExceptOf.throw] at hx
   | _ => rw [hw] at hx; simp [toResult, throw, throwThe, MonadExceptOf.throw] at hx
 

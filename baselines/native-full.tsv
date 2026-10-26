@@ -4,9 +4,11 @@
 #   [USER] ruling 2026-10-26, Mike, relayed by the [AGENT] coordinator: shake the tree, fix what the reviews found, close the class —
 #   a whole-struct load or store through a converted pointer yields or accepts the value at the pointer's static type when the two
 #   struct types are tag-compatible). WHY: the `.deref` apply (GoLean/GoCore/Machine.lean) returns the loaded value RETAGGED to the
-#   pointee's static struct type when the cell's mint tag is tag-compatible with it (`derefRetag`), and the normalizer's struct arm
-#   (`normalizeValueForTyAt`, Ops.lean) retags a tag-compatible value at the DECLARED type before its shape checks (`retagStruct`), one
-#   predicate `TypeEnv.structTagCompatible` behind both and the field arms — so `*pb` for `pb := (*B)(&a)` on every value route and
+#   pointee's static struct type when the cell's mint tag is tag-compatible with it (`derefRetag`; `receiverRetag` for a value receiver
+#   read through a pointer), and the write through an assignment target (`Mem.storeThrough`: `storeTarget`'s chain, the unseq binder
+#   write) retags a tag-compatible value at the cell's DECLARED type only after the strict store refused — the normalizer stays strict
+#   (amended at the audit fix round, same lane and train: the first version retagged in `normalizeValueForTyAt`'s struct arm, which the
+#   train-20 audit's F1 ruled an absorbing fallback), one predicate `TypeEnv.structTagCompatible` behind the retags and the field arms — so `*pb` for `pb := (*B)(&a)` on every value route and
 #   the store `*pb = B{…}` print gc's answer where they refused `stuck`. NO existing row moved: 4089 + 60 = 4149; PASS 3828 + 60 =
 #   3888; FAIL 261 unchanged. No flip, no removal, no cause change. NEW rows (60, three packages
 #   Corpus/coverage/exec/pointers/struct-through-conversion-{value,store,shapes}/, every row strict, expected = gc), appended at the

@@ -2,8 +2,9 @@
 # BUG-134 (equality review 2026-10-26 F1): the whole-struct STORE through a
 # struct-pointer conversion, one route per row (the review's p33 store probes
 # and this lane's local space). Born RED (`stuck` at the store) at the base
-# 6e05137a except the two leaf-route controls (promoted-set, the first half of
-# nested-store); expected = gc.
+# 6e05137a except two controls born green: swap (both loads A-tagged into A
+# cells, so the tags matched) and promoted-set (a leaf route); nested-store's
+# first half is a leaf route but the row was RED at its whole store. expected = gc.
 store-then-orig	storeThenOrig	-	ok	-	pointers,structs,conversions,assignment,equality
 store-then-deref-eq	storeThenDerefEq	-	ok	-	pointers,structs,conversions,assignment,equality
 store-then-box-type-switch	storeThenBoxTypeSwitch	-	ok	-	pointers,structs,conversions,assignment,interfaces,type_switch

@@ -71,6 +71,7 @@ GoLean/GoCore/Ops.lean	Mem.mapWrite	storeMapPayload	1	EMITTING OPERATION BODY �
 GoLean/GoCore/Ops.lean	Mem.store	storeLoc	1	EMITTING OPERATION BODY — the write emits [(write, data l)]
 GoLean/GoCore/Ops.lean	Store.alloc	allocCell	1	FRESH ALLOCATION — the value-cell allocator's own cell push (normalizes, then allocCell)
 GoLean/GoCore/Ops.lean	loadLoc	Heap.lookup	1	THE PEEK ITSELF — loadLoc's root-cell lookup (module primitive)
+GoLean/GoCore/Ops.lean	cellLeafTy	Heap.lookup	1	METADATA — the root cell's DECLARED TYPE for the cell-boundary retag (BUG-134, `Mem.storeThrough`); the cell's value is not read, and the data access is the emitting `Mem.store` that follows
 GoLean/GoCore/Ops.lean	loadLoc	loadLoc	2	THE PEEK ITSELF — loadLoc's own leaf-first recursion on .field/.index
 GoLean/GoCore/Ops.lean	loadRoot	loadLoc	1	THE ROOT-ONLY PEEK ITSELF — loadRoot reads a .base binding cell via loadLoc and refuses a non-root location by name (stray-panic refusal, 2026-09-27)
 GoLean/GoCore/Ops.lean	mapEntries	mapPayload?	1	THE MAP RMW's ENTRY PEEK — mapAssignValue/mapDelete/clearMap fetch the entries here and then EMIT the one write (Mem.mapWrite); gc instruments one write per mapassign/mapdelete

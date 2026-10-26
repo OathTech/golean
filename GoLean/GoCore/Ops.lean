@@ -2314,7 +2314,15 @@ per arc-final audit F20). Anything else — unknown TypeIds included — answers
 false. The ONE predicate behind every tag-compatible site: the field arms of
 `loadLoc` / `writeAt` / `fieldGet` (an access through a converted pointer meets
 the cell's MINT tag) and the whole-value retags `retagStruct` / `derefRetag`
-(BUG-134). `structTagCompatible` below is this predicate at `ctx.types`. -/
+(BUG-134). `structTagCompatible` below is this predicate at `ctx.types`.
+KNOWN LIMIT (train-20 audit F2, 2026-10-26): the wire's `FieldDef` carries a
+field NAME without its declaring package, while spec#Type_identity makes
+same-spelled UNEXPORTED field names from different packages different — so two
+struct types that differ only there read compatible here. The frontend's
+go/types pass rejects the conversion (`cannot convert`), so no type-checked
+wire reaches this over-approximation; a forged wire could. Recorded in
+BUG-134; closing it needs the package on unexported field names (a wire
+change). -/
 def TypeEnv.structTagCompatible (types : TypeEnv) (actual expected : TypeId) : Bool :=
   match types.lookupName? actual, types.lookupName? expected with
   | some (_, .struct fa), some (_, .struct fb) => fa == fb
@@ -2327,13 +2335,23 @@ every other value is returned unchanged. This is Go's conversion between the
 two types — a value of identical underlying type under the other name — and it
 is what a whole-struct value crossing a converted pointer means: `*pb` for
 `pb := (*B)(&a)` is the cell's `A`-tagged contents AS a `B` (`derefRetag`, the
-read side, at the pointee's static type), and `*pb = B{…}` stores a `B` value
-INTO the `A`-declared cell, which keeps its mint tag (the normalizer's struct
-arm in `normalizeValueForTyAt`, the write side, at the declared type). The retag
-is observationally the explicit conversion Go's type checker requires between
-the two named types (no run-time effect in gc), so a tag a frontend could have
-failed to convert is not absorbed into a different answer; a tag that is NOT
-compatible is untouched and refused downstream exactly as before. -/
+read side, at the pointee's static type; `receiverRetag` for a value receiver
+read through a pointer), and `*pb = B{…}` stores a `B` value INTO the
+`A`-declared cell, which keeps its mint tag (`Mem.storeThrough`: the write
+side, at the cell's DECLARED type, only after the strict store refused). The
+retag is Go's conversion between the two named types (no run-time effect in
+gc). WHAT IT ADMITS (train-20 audit F1, 2026-10-26): a value whose tag is
+compatible with the slot's type but differs from it is retagged at exactly
+these three sites — the pointee reads at a static type and the store through
+an assignment target — and NOWHERE ELSE: `Store.alloc`, a parameter
+(`bindParams`), a map key or value, a channel element, a literal's field or
+element, `append` / `copy` normalize STRICTLY and refuse such a value by name.
+At the store through an assignment target the pointer's static type is not on
+the wire (an `addr` target carries no type, and a declaration's initializer is
+an assignment on the wire), so the retag there is tied to the only route a real
+conversion reaches rather than to the conversion itself — the residual BUG-134
+records with its measured scope. A tag that is NOT compatible is untouched and
+refused downstream exactly as before. -/
 def retagStruct (types : TypeEnv) (name : TypeId) : GoValue → GoValue
   | .struct actual fieldsValue =>
       if actual != name && types.structTagCompatible actual name then
@@ -2351,9 +2369,12 @@ def retagStruct (types : TypeEnv) (name : TypeId) : GoValue → GoValue
 /-- Struct-shape checks for normalization at a defined struct type, with the
 given field normalizer. A mismatched tag is accepted
 only through the empty-struct ASSIGNABILITY escape (retagged copy — Go's
-assignment); anything else stays stuck. (The tag-COMPATIBLE retag — a value
-crossing a converted struct pointer, BUG-134 — happens BEFORE this check, in
-`normalizeValueForTyAt`'s struct arm: `retagStruct`.) -/
+assignment); anything else stays stuck — a tag-COMPATIBLE mint tag included:
+the normalizer is STRICT at every declaration, binding, map, channel and
+literal site (train-20 audit F1, 2026-10-26), and the retag a value crossing a
+converted struct pointer needs (BUG-134) lives at the cell boundary
+(`Mem.storeThrough`) and at the pointee reads (`derefRetag`, `receiverRetag`),
+never here. -/
 def normalizeStructValueWith (f : Ty → GoValue → Except Stop GoValue)
     (name : TypeId) (fields : Array FieldDef) : GoValue → Except Stop GoValue
   | .struct actual fieldsValue => do
@@ -2420,10 +2441,8 @@ def normalizeValueForTyAt (types : TypeEnv) : Nat → TypeIdx → GoValue → Ex
   | bound + 1, i, value =>
       match types[i]? with
       | some (name, .struct fields) =>
-          -- The write side of the whole-value retag (BUG-134): a tag-compatible
-          -- value takes the declared tag before the shape checks.
           normalizeStructValueWith (normalizeValueForTyTy (normalizeValueForTyAt types bound))
-            name fields (retagStruct types name value)
+            name fields value
       | some (_, .defined target) =>
           normalizeValueForTyTy (normalizeValueForTyAt types bound) target value
       | some (_, .opaqueDecl feature) => unsupported s!"normalizing {feature}"
@@ -2578,6 +2597,18 @@ def derefRetag (ty : Ty) (v : GoValue) : GoValue :=
   match ctx.types.resolve ctx.types.size ty with
   | .ok (.struct name _) => retagStruct ctx.types name v
   | _ => v
+
+/-- **The receiver read through a pointer** (BUG-134): a VALUE-receiver method
+dispatched on a pointer (`receiverAt`'s `.deref` adjust — a `*B` box, a
+promoted `(*T).M` expression) copies the pointee whole, so through a converted
+pointer the copy arrives under the cell's mint tag; it is retagged at the
+method's receiver type (`f.args[0]`), exactly as `*pb` is at `.deref`. Every
+other adjust (`asIs`: the value in hand or a value field's cell, whose
+declared type is the receiver's; `addr`: a pointer) is untouched. -/
+def receiverRetag (f : Func) (adjust : PromotionAdjust) (v : GoValue) : GoValue :=
+  match adjust, f.args[0]? with
+  | .deref, some p => derefRetag ctx p.typ v
+  | _, _ => v
 
 -- Total: structural recursion on the `Loc` argument (field/index bases are
 -- strict subterms). loadLoc depends only on itself and total helpers, so it is
@@ -3264,6 +3295,66 @@ theorem loadBindingFor_ok {state : Store} {root leaf : Loc} {r : GoValue × Acce
 def Mem.store (state : Store) (l : Loc) (value : GoValue) : Except Stop (Store × AccessTrace) := do
   let s' ← storeLoc ctx state l value
   return (s', [.access .write (.data l.canon)])
+
+/-- The DECLARED type of the leaf a path names under a root type: the same
+`Ty.stepDown` descent `writeAt` performs on the type beside the value
+(`bound`-threaded like it; `none` where that descent refuses — the store then
+refuses by its own name). Structural on the path. -/
+def cellLeafTyFrom (bound : Nat) (ty : Ty) : List PathStep → Option Ty
+  | [] => some ty
+  | step :: rest =>
+      match Ty.stepDown ctx.types bound ty step with
+      | .ok (ty', bound') => cellLeafTyFrom bound' ty' rest
+      | .error _ => none
+
+/-- The declared type of the cell leaf `l` names (`none` for an unbound root,
+a payload cell, or a path the type descent refuses). -/
+def cellLeafTy (s : Store) (l : Loc) : Option Ty :=
+  let rp := Loc.rootPath l
+  match Heap.lookup s.heap (.base rp.1) with
+  | some (.value ty _) => cellLeafTyFrom ctx ctx.types.size ty rp.2
+  | _ => none
+
+/-- **The write side of the whole-value retag** (BUG-134; placement per the
+train-20 audit F1): `some v'` exactly when `v` is a struct value whose tag is
+NOT the declared struct type of the leaf `l` names but is tag-compatible with
+it — then `v'` is `v` under the declared tag (the cell keeps its mint tag, the
+value takes it: a `B` value stored through `(*B)(&a)` into the `A` cell);
+`none` for every other value and every other leaf type, so the caller keeps
+the strict store's own refusal. -/
+def cellRetag? (s : Store) (l : Loc) (v : GoValue) : Option GoValue :=
+  match v, cellLeafTy ctx s l with
+  | .struct actual fieldsValue, some ty =>
+      match ctx.types.resolve ctx.types.size ty with
+      | .ok (.struct name _) =>
+          if actual != name && ctx.types.structTagCompatible actual name then
+            some (.struct name fieldsValue)
+          else none
+      | _ => none
+  | _, _ => none
+
+/-- **The emitting write THROUGH AN ASSIGNMENT TARGET** — `x = v`, `*p = v`,
+`p.f = v`, `a[i] = v` (`storeTarget`'s chain), and the unseq lane's binder
+write of a frozen-target read (`unseqLoad`) — the one cell boundary where a
+STORE can meet a cell whose mint tag legitimately differs from the stored
+value's static type: a store through a converted struct pointer (BUG-134).
+The STRICT store first (`Mem.store`: the leaf normalized at the cell's
+declared type, every refusal by name); only when it refused and `cellRetag?`
+names the value under the declared tag — a tag-compatible struct, the
+converted-pointer case — the write of that retagged value, else the strict
+store's own refusal, verbatim. One write event either way. Placement per the
+train-20 audit F1 (2026-10-26): `Store.alloc`, parameters, map and channel
+stores, literals and every other `Mem.store` caller stay strict; a
+declaration's INITIALIZER is an assignment on the wire and so comes through
+here — BUG-134's recorded residual. -/
+def Mem.storeThrough (state : Store) (l : Loc) (value : GoValue) :
+    Except Stop (Store × AccessTrace) :=
+  match Mem.store ctx state l value with
+  | .ok r => .ok r
+  | .error e =>
+      match cellRetag? ctx state l value with
+      | some v' => Mem.store ctx state l v'
+      | none => .error e
 
 /-- A map object is ONE location for race purposes (gc/TSan's «concurrent
 map read and map write»): the emitting read of a map payload cell. -/
@@ -5398,6 +5489,8 @@ def dynamicDispatch? (state : Store) (func : Func) (argValues : Array GoValue) :
                           match findFunctionIn? ctx.functions f with
                           | some targetFunc => do
                               let (recvValue, tr) ← receiverAt ctx state inner r.path r.adjust
+                              -- The pointee copy at the receiver's type (BUG-134).
+                              let recvValue := receiverRetag ctx targetFunc r.adjust recvValue
                               return (some (.target targetFunc (argValues.set! 0 recvValue)), tr)
                           | none => stuck s!"GoCore dynamic method target not found: {f.key}"
                       | .iface i =>
@@ -5413,6 +5506,8 @@ def dynamicDispatch? (state : Store) (func : Func) (argValues : Array GoValue) :
                       | .method f =>
                           match findFunctionIn? ctx.functions f with
                           | some targetFunc =>
+                              -- The pointee copy at the receiver's type (BUG-134).
+                              let recvValue := receiverRetag ctx targetFunc r.adjust recvValue
                               return (some (.target targetFunc (argValues.set! 0 recvValue)), tr)
                           | none =>
                               -- The record's target has NO `Func` on the

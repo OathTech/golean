@@ -1009,6 +1009,8 @@ pass, docs/2026-08-10_method-set-record-contract.md §5) — refusing rather tha
           | [] => stuck s!"promoted method expression {fid.key} called without a receiver argument"
           | root :: rest => do
               let (recv, tr) ← receiverAt ctx s root p.path p.adjust
+              -- The pointee copy at the receiver's type (BUG-134).
+              let recv := receiverRetag ctx tf p.adjust recv
               return (.target tf (recv :: rest).toArray, tr)
   | .iface i =>
       let anchorId := methodFuncId i.key p.member
@@ -2329,7 +2331,9 @@ def storeTarget.plan (s : Store) (r : TargetRef) (v : GoValue) :
       -- Chain resolution is address formation (peeks) — the VALIDATE phase;
       -- the ONE access is the write at the resolved path — the COMMIT (S3).
       let loc ← valueAsLoc (← resolveChain ctx s anchor steps idxs)
-      return fun s => Mem.store ctx s loc v
+      -- The write through an assignment target (`Mem.storeThrough`, BUG-134):
+      -- strict, then once retagged at the cell's declared type.
+      return fun s => Mem.storeThrough ctx s loc v
   | .mapElem b k kt vt => mapAssignValue.plan ctx s kt vt b k v
 
 @[inherit_doc storeTarget.plan]
@@ -2445,9 +2449,12 @@ def unseqLoad.plan (s : Store) (env : LocalEnv) (targets : List (VarId × Target
   let r ← unseqLookupTarget targets tgt
   let (v, t₁) ← unseqReadTarget ctx s r
   let loc ← unseqCellLoc env bind
-  -- THE COMMIT (S3): the binder cell's write.
+  -- THE COMMIT (S3): the binder cell's write — through the cell boundary
+  -- (`Mem.storeThrough`, BUG-134): the frozen-target read of `*pb` arrives
+  -- under the cell's mint tag and the binder is declared at the occurrence's
+  -- static type, so this is the deref's retag, placed at the binder write.
   return fun s => do
-    let (s', t₂) ← Mem.store ctx s loc v
+    let (s', t₂) ← Mem.storeThrough ctx s loc v
     return (s', t₁ ++ t₂)
 
 @[inherit_doc unseqLoad.plan]
@@ -5112,7 +5119,14 @@ def preprintDispatch (s : Store) (e : PanicEntry) :
               | some cause => throw (.unsupported cause)
               | none => do
                   let (recv, tr) ← receiverAt ctx s inner r.path r.adjust
-                  return (preprintTargetFid m r, recv, tr)
+                  -- The target must be DECLARED (the entry would refuse an
+                  -- absent one by name later; refusing here keeps the
+                  -- resolution monotone under the table slice, G16) and the
+                  -- pointee copy is retagged at its receiver type (BUG-134).
+                  let fid := preprintTargetFid m r
+                  match findFunctionIn? ctx.functions fid with
+                  | some f => return (fid, receiverRetag ctx f r.adjust recv, tr)
+                  | none => throw (.unsupported s!"preprint: the pending {m.name}() resolves to {fid.key}, which has no declaration on the wire (an imported type's unexported method is not carried by the imported stub pass, docs/2026-08-10_method-set-record-contract.md §5) — refusing rather than calling from no body")
           | none =>
               throw (.internal s!"preprint: the pending {m.name}() does not resolve on the payload's dynamic type{payloadDynamicTypeNote ctx e.value}")
       | other => throw (.internal s!"preprint: a pending rewrite on an unboxed payload {repr other}")

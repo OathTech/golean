@@ -619,6 +619,18 @@ theorem storeLoc_noPanic (s : Store) (l : Loc) (v : GoValue) : NoPanic (storeLoc
 theorem Mem.store_noPanic (s : Store) (l : Loc) (v : GoValue) : NoPanic (Mem.store ctx s l v) :=
   NoPanic.bind (storeLoc_noPanic _ _ _) fun _ => NoPanic.pure _
 
+/-- The write through an assignment target never panics: both stores are `Mem.store`. -/
+theorem Mem.storeThrough_noPanic (s : Store) (l : Loc) (v : GoValue) :
+    NoPanic (Mem.storeThrough ctx s l v) := by
+  unfold Mem.storeThrough
+  split
+  · exact NoPanic.ok _
+  · rename_i e he
+    split
+    · exact Mem.store_noPanic _ _ _
+    · intro msg h
+      exact Mem.store_noPanic s l v msg (he.trans h)
+
 theorem storeMapPayload_noPanic (s : Store) (l : Loc) (es : Array (Nat × GoValue × GoValue))
     (n : Nat) : NoPanic (storeMapPayload s l es n) := by
   unfold storeMapPayload
@@ -728,6 +740,7 @@ macro "commit_no_panic" : tactic =>
     | exact NoPanic.internal _
     | exact Store.alloc_noPanic _ _ _
     | exact Mem.store_noPanic _ _ _
+    | exact Mem.storeThrough_noPanic _ _ _
     | exact Mem.mapWrite_noPanic _ _ _ _
     | exact Mem.storeRun_noPanic _ _ _ _
     | exact Mem.storeElems_noPanic _ _ _ _

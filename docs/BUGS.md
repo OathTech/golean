@@ -9264,25 +9264,61 @@ THE FIX — one predicate, two sites, the cell keeps its mint tag (`GoLean/GoCor
   resolves to a struct type tag-compatible with the loaded tag, the value is retagged to it. Go's `*pb`
   HAS type `B`, so every route downstream (`==`, assignment, boxing — the box carries dynamic type `B` —,
   map keys, `switch`, parameter binding, the type assertion, the readout's type name) sees `B`. The
-  narrowed-read footprint (`projChainTarget`) and the access trace are untouched.
-- THE WRITE SIDE: `normalizeValueForTyAt`'s struct arm applies `retagStruct` at the DECLARED type before
-  its shape checks (the ledger's FR-34 remedy, queue 34), so `*pb = B{9, 9}` stores a `B` value into the
-  `A`-declared cell under the cell's tag — and so does any other whole-value route that normalizes at a
-  declared struct type: a value-receiver method dispatched through the alias (`receiverAt`'s pointee read
-  then `bindParams`), `*ps[i] = …` in a loop, a swap through two aliases.
+  narrowed-read footprint (`projChainTarget`) and the access trace are untouched. The same read for a
+  VALUE-RECEIVER method dispatched through a pointer (`receiverAt`'s `.deref` adjust: a `*B` box, a
+  promoted `(*T).M` expression) is retagged at the method's receiver type (`receiverRetag`, at the
+  three dispatch sites — `dynamicDispatch?`, the promoted method-expression entry, `preprintDispatch`,
+  which now also refuses by name a pending target with no declaration instead of carrying it to the
+  entry); the frontend lowers the STATIC call `pb.Sum()`, the method value `pb.Sum` and the value box
+  `var j Summer = *pb` with an explicit `deref`, so only the pointer-box dispatch needs it.
+- THE WRITE SIDE (placement per the train-20 audit's F1, 2026-10-26 — the first version of this fix put
+  the retag in `normalizeValueForTyAt`'s struct arm, i.e. at EVERY normalization site): the write through
+  an ASSIGNMENT TARGET — `storeTarget`'s chain (`x = v`, `*p = v`, `p.f = v`, `a[i] = v`) and the unseq
+  lane's binder write of a frozen-target read (`unseqLoad`) — is `Mem.storeThrough`: the STRICT store
+  first (`Mem.store`, the leaf normalized at the cell's declared type, every refusal by name), and only
+  when it refused and `cellRetag?` names the value under the cell's DECLARED struct type (a tag-compatible
+  struct — the converted-pointer case) the write of that retagged value; any other refusal is the strict
+  store's own, verbatim (an incompatible tag is never absorbed). `cellLeafTy` is `writeAt`'s own
+  `Ty.stepDown` descent on the type. `Store.alloc` (declarations), `bindParams` (parameters), the map
+  key/value, channel-element and literal normalizations are STRICT: `normalizeValueForTy` refuses a
+  tag-compatible mismatch by name exactly as at the base, so the audit's hand-edited wire `p10` (a
+  `var b B` initialized by an `A`-tagged literal, no conversion) stops at the declaration with «struct
+  value type mismatch: expected main.B, got main.A» — pinned, with the conversion routes beside it, by
+  `Tests/GoCoreEval.lean` `structRetagBoundaryFacts`.
+- THE RESIDUAL (recorded, not hidden): at a store through an assignment target the pointer's static
+  type is not on the wire (an `addr` target carries no type — `targetPlan` gives `*p = v` and `x = v`
+  the same `TargetRef.chain`), so `Mem.storeThrough` is tied to the only route a real conversion can
+  reach rather than to the conversion itself: a forged wire whose RHS at a target store carries a
+  compatible-but-different tag is retagged there (status `ok`) where the base refused it. A type-checked
+  wire cannot produce that (go/types requires the RHS type to be the target's static type, which is the
+  cell's declared type unless a pointer conversion intervened). ITS WIRE-LEVEL SCOPE, measured: a
+  DECLARATION WITH AN INITIALIZER lowers as the zero cell plus an assignment (`var b B = e` and `b := e`
+  are `.assign (.var b) e`, NativeToIR's `var` arm), so the auditor's hand-edited `p10` wire still
+  answers `ok 12` at this tip (base: `stuck`), exactly as it would under the auditor's own sketch (the
+  `writeAt` leaf) — the narrowing removes the absorption at parameters, map keys and values, channel
+  elements, literal fields and elements, `append` / `copy` and at `Store.alloc` itself (the hand-built
+  `p10` shape, pinned), not at the initializer store. Closing the residual needs the target's static type
+  on the wire or a `TargetRef` constructor for address targets (`*p`, `p.f`, `a[i]`) distinct from the
+  variable chain — a frontend + decoder + `TargetRef` change (226 sites), raised for a separate lane.
 
 WHAT IT DID NOT CHANGE: BUG-133's identity semantics (`valueEq`'s pointer arm, `Loc.canon`; the 44
 `identity-*` rows stay green); Go's dynamic-type rule for interface boxes (`any(*pb) == any(*pa)` is
 `false`, `any(*pb) == any(B{1, 2})` is `true` — the box is built from the retagged value, so the rule
 decides on `B` vs `A` exactly as Go: rows `value/boxed-type-differs`, `shapes/iface-dynamic-type`,
 `shapes/defined-over-defined`); the leaf-field routes (L7); `valueEq`'s struct arm (unchanged — it never
-sees a mismatched tag from a deref now); the cell's mint tag (`HeapNormal` holds: the stored value takes
-the declared tag); the kept statements (`scripts/gen-contract --check`: no regeneration — `storeLoc_root`'s
-hypothesis is `normalizeValueForTy`, inside which the retag lives); the race detector's keys; the
-frontend and the wire. Proofs repaired, statements unchanged: `normalizeValueForTyAt_locSup` /
-`_isNormal` and `isNormalForTyAt_sound` (StateWf.lean: `retagStruct_locSup`, the retagged value
-generalized before the shape-check case split; `retagStruct_self` for the self-normal direction),
-`applyStrictOp_wf`'s deref arm (`derefRetag_locSup`), `TableMono.derefRetag_eq` in the G16 rewrite set.
+sees a mismatched tag from a deref now); the normalizer (strict, as at the base); the cell's mint tag
+(`HeapNormal` holds: the stored value takes the declared tag); the kept statements (`scripts/gen-contract
+--check`: no regeneration — `next_storeK_chain` / `next_storeK_var` keep `storeLoc … = .ok s'` as their
+hypothesis, under which the strict store succeeds and `Mem.storeThrough` IS that store); the race
+detector's keys (one write event either way); the frontend and the wire. Proofs repaired, statements
+unchanged: `applyStrictOp_wf`'s deref arm (`derefRetag_locSup`), `storeTarget_pres` / `unseqLoad_pres`
+(`Mem.storeThrough_eq` / `_pres` / `_shape`: one `Mem.store` of a value with the same loc bound),
+`preprintDispatch_locSup` and `dynamicDispatch?_locSup` (`receiverRetag_locSup`), the G16 set
+(`TableMono.derefRetag_eq`, `cellLeafTyFrom_eq`, `cellLeafTy_eq`, `cellRetag?_eq`, `receiverRetag_eq`,
+`Mem_storeThrough_eq`; `preprintDispatch_mono` through `findFunctionIn?_mono`), the error-class leaves
+(`Mem.store_tame`, `Mem.storeThrough_tame`, `Mem.storeThrough_noPanic`); new lemmas `retagStruct_self`,
+`retagStruct_locSup`, `cellRetag?_locSup`. (`isNormalForTyAt_sound` is textually unchanged — the
+first version listed it in error, audit F3.)
 
 THE LOCAL SPACE (probed at the base on both sides before the fix; machine → gc; every row at the tip
 PASSes with gc's value):
@@ -9310,6 +9346,79 @@ and these programs are legal Go the frontend lowered correctly. With the fix no 
 class; the texts «struct value type mismatch» / «struct equality type mismatch» still name a tag that is
 NOT tag-compatible — a frontend fault, which is what `stuck` means. BUG-133's survey sentence
 («ACCESS through either spelling already worked») is amended there to say «for leaf fields».
+
+KNOWN LIMIT OF THE PREDICATE (train-20 audit F2, low): `TypeEnv.structTagCompatible` compares wire
+`FieldDef` lists, and the wire carries a field NAME without its declaring package, while
+spec#Type_identity makes same-spelled UNEXPORTED field names from different packages different — so
+`sub.A{x int; Y int}` and `main.C{x int; Y int}` read compatible here although `(*C)(pa)` is illegal.
+The frontend's go/types pass rejects the conversion («cannot convert pa (variable of type *sub.A) to
+type *C», the auditor's `p11-cross-pkg-negative`), so no type-checked wire reaches the
+over-approximation; it widens the residual above to cross-package pairs on a forged wire. Closing it
+needs the package on unexported field names (a wire change: frontend + decoder), out of this lane; the
+auditor's negative program is not in the negative corpus — adding it is the negative-corpus lane's
+(this lane was told to stay out of that corpus), raised at the stage.
+
+THE LOCAL SPACE OF THE AUDIT'S F1 (the [USER]'s standing instruction, relayed 2026-10-26: the same
+shape elsewhere — «a declared-type or tag mismatch absorbed instead of refused by name» at a write,
+bind or normalization site; swept before the narrowing; file:line at this commit):
+
+(a) every caller of `TypeEnv.structTagCompatible` / `structTagCompatible ctx` — is the leniency tied to
+a real conversion in the source?
+
+| site | what it compares | tied to a conversion? | disposition |
+|---|---|---|---|
+| `loadLoc`'s `.field` arm (Ops.lean) | the path step's STATIC typeId against the cell's mint tag | yes: a `.field` step carries the static spelling of its base, which differs from the cell's tag only when the base was reached through a converted pointer (`(*B)(&a).X`); it compares type ids on a path, never a value's tag | refuses by name on anything not compatible; L7, unchanged |
+| `writeAt`'s `.field` arm (Ops.lean) | the same, on the write descent | the same | unchanged |
+| the `.fieldGet` apply (Machine.lean) and `structFieldValue` (the promotion walk, Ops.lean) | a VALUE's tag against the projection's static typeId | mostly: after `derefRetag` a value reached through a converted pointer already carries the static tag, so the arm's leniency now admits only a value that arrived under a different compatible tag WITHOUT a deref — a forged wire | absorbs — out of scope: the projection of a tag-compatible value is the same field at the same type (identical field lists), so no answer can differ; recorded |
+| `derefRetag` (the `.deref ty` apply) | the pointee's static type against the cell's tag | yes: the static type on the wire IS the conversion's evidence | fixed here (BUG-134) |
+| `receiverRetag` (the three dispatch sites) | the method's receiver type against the pointee copy's tag, under the `.deref` adjust only | yes: the pointee read for a value receiver through a pointer | fixed here |
+| `cellRetag?` / `Mem.storeThrough` (the target store, the unseq binder write) | the cell's declared leaf type against the stored value's tag, after the strict store refused | tied to the only route a store through a converted pointer reaches, NOT to the conversion (no static type on an `addr` target) | fixed here — narrowed from every normalization site; the residual above |
+| `normalizeValueForTyAt`'s struct arm, as train 20 first landed | every normalization at a declared struct type | NO: admitted an unconverted value at a declaration, a parameter, a map, a channel (the audit's `p10`) | fixed here: strict again |
+
+(b) every arm of `normalizeValueForTyTy` / `normalizeValueForTyAt` / `normalizeStructValueWith` /
+`normalizeFieldsWith` that returns its input unchecked or coerces:
+
+| arm | behaviour | disposition |
+|---|---|---|
+| `.interface _, value => return value` (Ops.lean) | identity: an interface-declared slot accepts any value unchecked (a raw struct or array, not a box) | absorbs — out of scope: unreachable from Go (every interface-typed value is boxed by the frontend's `to-interface`; interface contents are not addressable); `Tests/GoCoreContract.lean`'s §A pins (`address_bound_admits_ill_typed`, `iface_cell_path_write_normal`, C1 audit F3) record it as a contract shape; not a tag mismatch |
+| `.defined i, value => atDefined i value` → `normalizeValueForTyAt` | a struct entry → `normalizeStructValueWith` (tag equality or the empty-struct ASSIGNABILITY escape: Go's `struct{}{}` into a named empty struct, not a tag mismatch; field count; fields per `normalizeFieldsWith` with name alignment); `.defined target` → the descent; opaque / interface definitions and an unknown index → `unsupported` by name; bound 0 → `typeIndexExhausted` | refuses by name |
+| `.int kind, .int value _` (adopts the slot's kind, masks the width); `.float` kind-strict; `.chan _ _, .nil` → the canonical nil channel; `.funcType`; `.sync` kind-strict | representation canonicalization, by design (the kind lives in the slot) | not a mismatch |
+| the fall-through `| _, value => return value` (pointer, slice, map, string, bool) and `isNormalForTyTy`'s `| _, _ => true` | identity on those kinds (`illTyped`: an `.int` at a `.bool` slot passes) | out of scope HERE: the sibling lane `core/g21-normal-form-spill-1026` (raft-proofs ask G21, on the train-20 stage) is closing both arms — not touched, to avoid the collision |
+
+(c) the bind and allocation sites — does each normalize at the DECLARED type with a refusal on
+mismatch?
+
+| site | normalization | disposition |
+|---|---|---|
+| `bindParams` (Machine.lean) | `normalizeValueForTy` at the parameter type, then `Store.alloc` | strict; pinned (`structRetagBoundaryFacts`) |
+| `Store.alloc` (Ops.lean) | at the declared type | strict; pinned |
+| zero values (`defaultValue`, Ops.lean) | built AT the declared type (a struct at its declared name) — no incoming value | n/a |
+| seed cells (`Seed.lean`, the struct arm) | a struct seed is built at the DECLARED name from the resolved type; a seed of the wrong shape refuses by name | strict |
+| map keys and values: `mapAssignValue.plan`, `.mapGet`, `.mapLookup`, `delete`, the map-range binders (Machine.lean) | `normalizeValueForTy` at the key / value type | strict; pinned through `normalizeValueForTy` |
+| channel sends: the blocked send and the select send (Multi.lean), the send fast path and the buffered send (Machine.lean) | at the element type | strict |
+| `receiverAt` (Ops.lean) | no normalization of its own; the receiver is bound by `bindParams` (strict) at the receiver type — the `.deref` pointee copy is retagged at that type first (`receiverRetag`) | fixed here |
+| method-value capture (`func-value` with `captured [deref pb B]`) | the captured receiver is an evaluated expression (the deref retags); captured values are bound by `bindParams` at call time | strict |
+| `append`'s element stores (`buildAppendBackingValue`, Ops.lean; `Mem.storeElems` / `storeRun` through `storeLoc`) | every element at the element type | strict |
+| `copy` (`convertValueToTy`'s array arm, Ops.lean; `Mem.storeRun`) | the copy at the target element type | strict |
+| composite literals (`buildStructFields` per field, `buildArrayValue` per element, Ops.lean) | at the declared field / element type | strict |
+| `allocNew` (`Store.alloc` at the pointee type, then `Mem.store` of the pointer) | strict | strict |
+| the unseq binder write of a frozen-target read (`unseqLoad.plan`, Machine.lean) | was `Mem.store` (strict) — the read of `*pb` arrives under the mint tag and the binder is declared at the occurrence's static type | fixed here: `Mem.storeThrough` (the deref's retag at the binder) |
+| the unseq value-head delivery (`StepFn.lean`, the `.eval` occurrence) | `Mem.store` of an evaluated value (a `.deref` operand is already retagged) | strict |
+
+(d) every `| _ => …` default in `Ops.lean` / `Machine.lean` that reads a shape as a benign value (60
+sites by `grep -nE '\| (_|_, _|…) => (false|true|none|0|…)'`), one line each, by class:
+
+| class | sites | judgement |
+|---|---|---|
+| the write / normalize class | `normalizeValueForTyTy`'s fall-through, `isNormalForTyTy`'s catch-all | G21 (table (b)); `isNormalFieldsWith` / `isNormalForTyAt` answer `false` («not normal», fail-closed); `TypeEnv.structTagCompatible` answers `false` (fail-closed); `derefRetag` / `receiverRetag` / `cellRetag?` answer the input / `none` («no retag», the consumer's own check follows); `valueEqList` / `valueEqFields` answer `true` only on exhausted lists after their callers checked lengths and names |
+| plan / dispatch selectors answering `none` for a shape they do not classify | `strictPlan` («unclassified expression»), `stmtPlan`, `chanPlan`, `syncPlan`, `atomicPlan`, `completeTargetRef` («malformed frame»), `convOperand?`, `StrictOp.convKind?`, `unseqUnfrozenAnchor?`, `entryCallSite?`, `methodCarrierKey?`, `resolvePromoted?`, `methodRecvInterfaceName?`, `interfaceDeclaredMethods?`, `nilValueMethodText?`, `renderPanicRewrite`, `recoverAtDeferred`, `Config.abort?`, `abortRefusal`, `chanValueLoc` (a nil channel), `tyUncomparableAt` (three-valued, fail-closed on unknown) | benign: `none` means «not this shape», and every caller read fails closed on it by name |
+| predicates | `Ty.mentionsUnsupported`, `Expr.isStringLit`, `atomicKindOk` (fail closed at the plan), `PanicEntry.isPending` / `isUnsettled`, `Config.isTerminal`, `deferrableCallee` | classifiers; `false` = «not this» |
+| label / readout projections | `recvStores` (`[]` for a receive with no target — the discarding `<-ch`; 1 or 2 targets are the plan's only other shapes), `stmtOpOut` (a `.print` whose render fails contributes no output — the apply runs the same `renderPrint` and refuses first), `Config.applyPos`, `printOut?`, `contHeadLabel`, `Stmt.signal?`, `signalStep` | benign by construction; `recvStores`' arity default is the one a separate lane might tighten to a named refusal (low) |
+| the choice accountants | `appendSpill?`, `tryLockConsult?`, `intnBound?`, `stmtConsult?`, `strictConsult?`, `selectConsult?`, `entryConsult?`, `consumesUnseqPanic` / `Next` / `RepanicCollapse`, `unseqNextBound` | «no pick here» tables checked in lockstep against the machine's consumption by the choice-trace accountant |
+| `applyStrictOp`'s type-assertion `| _, _ => pure none` | no missing method to NAME for a non-interface target or a nil operand; the panic is raised either way | benign |
+
+Nothing in the write / normalize class beyond G21's two arms remains absorbing; the residual is the
+target store's, recorded above.
 ## BUG-135 — a `go.work` in scope for the lowered directory was NEVER READ: the go command applies a workspace's `go`, `toolchain` and `godebug` lines to its modules, so `godebug panicnil=1` in a go.work beside a clean `go 1.26` go.mod flips gc's answer (`recover() == nil` after `panic(nil)` is `true`) while the frontend exported the program unchanged and the machine answered `false`, status `ok` [frontend boundary; wrong answer with a clean export — BUG-128's class through the other file the go command reads; found by the train-19 shake review, F1 (`docs/reviews/2026-10-26_train19-shake-review.md`, branch `review/train19-1026`), 2026-10-26] [FIXED BY REFUSAL 2026-10-26: a go.work in scope for the lowered directory or any case-local package refuses by name, GOWORK honoured from the process environment as the go command honours it, GOWORK=off pinned on every leg of the apparatus; lane `frontend/workspace-and-oracle-1026`]
 
 - Status: fixed

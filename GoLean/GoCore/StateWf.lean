@@ -1306,6 +1306,26 @@ theorem derefRetag_locSup (ty : Ty) (v : GoValue) :
   unfold derefRetag
   split <;> simp [retagStruct_locSup]
 
+/-- The cell-boundary retag keeps the fields, hence the loc bound. -/
+theorem cellRetag?_locSup {s : Store} {l : Loc} {v v' : GoValue}
+    (h : cellRetag? ctx s l v = some v') : GoValue.locSup v' = GoValue.locSup v := by
+  unfold cellRetag? at h
+  split at h
+  · split at h
+    · split at h
+      · simp only [Option.some.injEq] at h
+        subst h
+        rfl
+      · simp at h
+    · simp at h
+  · simp at h
+
+/-- The receiver read's retag keeps the loc bound. -/
+theorem receiverRetag_locSup (f : Func) (adjust : PromotionAdjust) (v : GoValue) :
+    GoValue.locSup (receiverRetag ctx f adjust v) = GoValue.locSup v := by
+  unfold receiverRetag
+  split <;> simp [derefRetag_locSup]
+
 /-- The INDEX layer, by induction on the descent bound. -/
 theorem normalizeValueForTyAt_locSup (types : TypeEnv) :
     ∀ (bound : Nat) {i : TypeIdx} {v r : GoValue},
@@ -1318,9 +1338,8 @@ theorem normalizeValueForTyAt_locSup (types : TypeEnv) :
     intro i v r h
     simp only [normalizeValueForTyAt] at h
     split at h
-    · exact Nat.le_trans (normalizeStructValueWith_locSup
-        (fun _ _ _ hr => normalizeValueForTyTy_locSup (fun _ _ _ hh => ih hh) hr) h)
-        (Nat.le_of_eq (retagStruct_locSup _ _ _))
+    · exact normalizeStructValueWith_locSup
+        (fun _ _ _ hr => normalizeValueForTyTy_locSup (fun _ _ _ hh => ih hh) hr) h
     · exact normalizeValueForTyTy_locSup (fun _ _ _ hh => ih hh) h
     · simp at h
     · simp at h
@@ -2056,11 +2075,8 @@ theorem normalizeValueForTyAt_isNormal (types : TypeEnv) :
       obtain ⟨name, td⟩ := e
       cases td with
       | struct fields =>
-        -- The whole-value retag (BUG-134) precedes the shape checks; the
-        -- output is normal whatever value it produced.
         simp only [normalizeStructValueWith] at h
-        generalize retagStruct types name v = v' at h
-        cases v'
+        cases v
         case struct actual fieldsValue =>
           simp only [isNormalForTyAt, hlook]
           by_cases hact : actual = name
@@ -3551,12 +3567,17 @@ theorem preprintDispatch_locSup {σ : Store} {e : PanicEntry} {fid : FuncId} {re
       split at h
       · split at h
         · simp [throw, throwThe, MonadExceptOf.throw] at h
-        · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-          obtain ⟨⟨recv', tr'⟩, hrecv, rfl, rfl, rfl⟩ := h
-          have := receiverAt_locSup hrecv
-          rw [heq]
-          simp only [GoValue.locSup]
-          exact this
+        · simp only [bind_eq_ok] at h
+          obtain ⟨⟨recv', tr'⟩, hrecv, h⟩ := h
+          (try dsimp only at h)
+          split at h
+          · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+            obtain ⟨rfl, rfl, rfl⟩ := h
+            have := receiverAt_locSup hrecv
+            rw [heq]
+            simp only [GoValue.locSup, receiverRetag_locSup]
+            exact this
+          · simp [throw, throwThe, MonadExceptOf.throw] at h
       · simp [throw, throwThe, MonadExceptOf.throw] at h
     · simp [throw, throwThe, MonadExceptOf.throw] at h
   · simp [throw, throwThe, MonadExceptOf.throw] at h
@@ -3606,6 +3627,7 @@ theorem dynamicDispatch?_locSup {σ : Store} {func : Func}
                       try rw [Array.set!]
                       refine Nat.le_trans goValueListSup_setIfInBounds ?_
                       have := receiverAt_locSup hp
+                      simp only [receiverRetag_locSup]
                       omega
                     · intro tf' a' hd
                       simp only [Dispatched.target.injEq] at hd
@@ -3628,6 +3650,7 @@ theorem dynamicDispatch?_locSup {σ : Store} {func : Func}
                     · simp only [Dispatched.args]
                       try rw [Array.set!]
                       refine Nat.le_trans goValueListSup_setIfInBounds ?_
+                      simp only [receiverRetag_locSup]
                       omega
                     · intro tf' a' hd
                       simp only [Dispatched.target.injEq] at hd
@@ -3679,7 +3702,7 @@ theorem promotedCallee_locSup {σ : Store} {fid : FuncId} {p : Promotion}
               obtain ⟨rfl, rfl⟩ := h
               have hrv := receiverAt_locSup hq
               refine ⟨?_, ?_⟩
-              · simp only [Dispatched.args, List.toList_toArray, goValueListSup]
+              · simp only [Dispatched.args, List.toList_toArray, goValueListSup, receiverRetag_locSup]
                 omega
               · intro tf' a' hd
                 simp only [Dispatched.target.injEq] at hd
@@ -5087,6 +5110,34 @@ theorem Mem.store_shape {σ σ' : Store} {l : Loc} {v : GoValue} {tr : AccessTra
     (h : Mem.store ctx σ l v = .ok (σ', tr)) : σ'.nextAddr = σ.nextAddr :=
   (storeLoc_shape (Mem.store_eq h).1).1
 
+/-- The write through an assignment target is ONE `Mem.store` — of the value, or of the
+value retagged at the cell's declared type (BUG-134), whose loc bound is the same. -/
+theorem Mem.storeThrough_eq {σ σ' : Store} {l : Loc} {v : GoValue} {tr : AccessTrace}
+    (h : Mem.storeThrough ctx σ l v = .ok (σ', tr)) :
+    ∃ w, GoValue.locSup w = GoValue.locSup v ∧ Mem.store ctx σ l w = .ok (σ', tr) := by
+  unfold Mem.storeThrough at h
+  split at h
+  · rename_i r hr
+    simp only [Except.ok.injEq] at h
+    subst h
+    exact ⟨v, rfl, hr⟩
+  · split at h
+    · rename_i w hw
+      exact ⟨w, cellRetag?_locSup hw, h⟩
+    · simp at h
+
+theorem Mem.storeThrough_pres {σ σ' : Store} {l : Loc} {v : GoValue} {tr : AccessTrace}
+    (hw : StateWf ctx σ) (hl : Loc.locSup l ≤ σ.nextAddr)
+    (hv : GoValue.locSup v ≤ σ.nextAddr) (h : Mem.storeThrough ctx σ l v = .ok (σ', tr)) :
+    StmtOpPres ctx σ σ' := by
+  obtain ⟨w, hwv, hst⟩ := Mem.storeThrough_eq h
+  exact Mem.store_pres hw hl (by rw [hwv]; exact hv) hst
+
+theorem Mem.storeThrough_shape {σ σ' : Store} {l : Loc} {v : GoValue} {tr : AccessTrace}
+    (h : Mem.storeThrough ctx σ l v = .ok (σ', tr)) : σ'.nextAddr = σ.nextAddr := by
+  obtain ⟨w, -, hst⟩ := Mem.storeThrough_eq h
+  exact Mem.store_shape hst
+
 /-- A run of element writes preserves the invariant (the structural twin of
 the former `forIn` loops of append/copy/clear). -/
 theorem Mem.storeElems_pres {σ : Store} {base : Loc} :
@@ -5320,7 +5371,7 @@ theorem storeTarget_pres {σ : Store} {r : TargetRef} {v : GoValue}
     have h2 := resolveChain_locSup hres
     have h3 := valueAsLoc_locSup hl
     simp only [TargetRef.locSup, Nat.max_le] at hr
-    exact Mem.store_pres hw (by omega) hv h
+    exact Mem.storeThrough_pres hw (by omega) hv h
   | mapElem b k kt vt =>
     simp only [TargetRef.locSup, Nat.max_le] at hr
     simp only [storeTarget.plan] at hplan
@@ -7470,7 +7521,7 @@ theorem unseqLoad_pres {σ : Store} {env : LocalEnv} {tg : List (VarId × Target
   have h1 := unseqCellLoc_locSup hloc
   have h2 := unseqReadTarget_locSup hv
   have hh := hw.heap_le
-  exact ⟨Mem.store_pres hw (by omega) (by omega) hst, Mem.store_shape hst⟩
+  exact ⟨Mem.storeThrough_pres hw (by omega) (by omega) hst, Mem.storeThrough_shape hst⟩
 
 theorem unseqGuard_pres {σ : Store} {g : UnseqGraph} {env : LocalEnv}
     {st st' : List UnseqStatus} {i : Nat} {test : VarId} {w : Bool} {out : VarId}

@@ -776,6 +776,23 @@ theorem mapAssignValue_plan_commitOk {s : Store} {kt vt : Ty} {b k v : GoValue} 
   okp
   all_goals (try (intro s; (try dsimp only); errp))
 
+theorem Mem.store_tame {s : Store} {l : Loc} {v : GoValue} : ErrP Stop.Tame (Mem.store ctx s l v) := by
+  unfold Mem.store; errp
+macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact Mem.store_tame)
+
+/-- The write through an assignment target: the strict store's error class, or a second
+strict store's (BUG-134). -/
+theorem Mem.storeThrough_tame {s : Store} {l : Loc} {v : GoValue} :
+    ErrP Stop.Tame (Mem.storeThrough ctx s l v) := by
+  unfold Mem.storeThrough
+  split
+  · exact ErrP.ok
+  · rename_i e he
+    split
+    · exact Mem.store_tame
+    · exact ErrP.error (Mem.store_tame e he)
+macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact Mem.storeThrough_tame)
+
 theorem storeTarget_plan_tame {s : Store} {r : TargetRef} {v : GoValue} :
     ErrP Stop.Tame (storeTarget.plan ctx s r v) := by
   unfold storeTarget.plan; errp
