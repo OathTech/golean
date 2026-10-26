@@ -187,7 +187,6 @@ def Expr.eqbF : Nat → Expr → Expr → Bool
     | .unsupported x, .unsupported y => x == y
     | _, _ => false
 
-set_option maxHeartbeats 1600000 in
 theorem Expr.eqbF_sound : ∀ f (a b : Expr), Expr.eqbF f a b = true → a = b := by
   intro f
   induction f with
@@ -718,7 +717,6 @@ def Stmt.eqbF : Nat → Stmt → Stmt → Bool
     | .print n1 a1, .print n2 a2 => n1 == n2 && eqbArrayP (Expr.eqbF f) a1 a2
     | _, _ => false
 
-set_option maxHeartbeats 1600000 in
 theorem Stmt.eqbF_sound : ∀ f (a b : Stmt), Stmt.eqbF f a b = true → a = b := by
   intro f
   induction f with

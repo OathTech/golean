@@ -241,8 +241,6 @@ theorem stepPanicStop_picks_some {σ : Store} {first : PanicEntry} {rest : List 
       exact hps
     · simp [throw, throwThe, MonadExceptOf.throw] at hr
 
-set_option maxHeartbeats 1600000 in
-set_option linter.unusedSimpArgs false in
 /-- **No record without a consultation**: a step whose projection is `none` emits no pick
 record. -/
 theorem stepFn_picks_none {σ : Store} {c : Config} {ch₀ : Choices}
@@ -350,7 +348,7 @@ theorem stepFn_picks_none {σ : Store} {c : Config} {ch₀ : Choices}
         cases hl : valueAsLoc v with
         | error e =>
           have hap : applySyncOp ctx σ ch₀ op [v] env k' = .error e := by
-            simp [applySyncOp, hop, hl, Bind.bind, Except.bind, Except.map]
+            simp [applySyncOp, hop, hl, Bind.bind, Except.bind]
           rw [hap]; cases_stop e <;> okp_norm
         | ok loc =>
           rw [hl] at hsc
@@ -358,7 +356,7 @@ theorem stepFn_picks_none {σ : Store} {c : Config} {ch₀ : Choices}
           cases hcell : syncCell ctx σ loc with
           | error e =>
             have hap : applySyncOp ctx σ ch₀ op [v] env k' = .error e := by
-              simp [applySyncOp, hop, hl, hcell, Bind.bind, Except.bind, Except.map]
+              simp [applySyncOp, hop, hl, hcell, Bind.bind, Except.bind]
             rw [hap]; cases_stop e <;> okp_norm
           | ok pre =>
             rw [hcell] at hsc
@@ -390,8 +388,11 @@ theorem stepFn_picks_none {σ : Store} {c : Config} {ch₀ : Choices}
         rw [Choices.consumeAtE_le_one (by omega)]
         okp
 
-set_option maxHeartbeats 1600000 in
-set_option linter.unusedSimpArgs false in
+-- A `fun_cases stepFn` sweep (every arm of the step function in ONE declaration), so the
+-- per-arm costs sum against one budget: fails at the default 200000, passes at 400000
+-- (measured 2026-10-26, lane core/dc12-warnings-1026); 2x the measured need. The split that
+-- would retire this is a per-phase decomposition of the case tree, not attempted.
+set_option maxHeartbeats 800000 in
 /-- **The record IS the consultation's**: a step whose projection is `some (site, b)` emits
 exactly the records of the tape's pick at that site and bound. -/
 theorem stepFn_picks_some {σ : Store} {c : Config} {ch₀ : Choices} {site : ChoiceSite} {b : Nat}

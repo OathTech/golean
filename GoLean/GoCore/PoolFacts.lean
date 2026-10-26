@@ -39,12 +39,6 @@ PROJECTIONS of `PoolProjection.lean`, relation-free in full, are restored under 
 (they import `Prefix.lean`, which this module sits below).
 -/
 
-set_option maxRecDepth 8192
--- The unused-simp-arg linter misfires on the shared multi-branch simp
--- sets (an argument unused in one branch is load-bearing in another) —
--- the MachineSound sweeps' standing rationale, file-wide here.
-set_option linter.unusedSimpArgs false
-
 namespace GoLean.GoCore.Machine
 
 -- B7 (2026-09-17): the program context is the first explicit parameter of
@@ -300,7 +294,7 @@ theorem stepThread_single {σ : Store} {c : Config} {ch : Choices}
       | error e => exact ⟨⟨0, .privateStep, ⟨[], [], []⟩⟩, rfl⟩
       | ok r =>
           obtain ⟨c', s', ch₁, l⟩ := r
-          exact ⟨⟨0, .privateStep, { l with picks := [] ++ l.picks }⟩, by simp [Functor.map, Except.map]⟩
+          exact ⟨⟨0, .privateStep, { l with picks := [] ++ l.picks }⟩, by simp [Except.map]⟩
   | some p =>
       obtain ⟨v, clauses, default?, done, env, k'⟩ := p
       obtain rfl := selectApplyPlan_shape hselp
@@ -320,7 +314,7 @@ theorem stepThread_single {σ : Store} {c : Config} {ch : Choices}
             | some cl => .selectCommit cl
             | none => .selectPass, ⟨tr, [] ++ ps, []⟩⟩, ?_⟩
           rw [hfn]
-          simp only [Functor.map, Except.map]
+          simp only [Except.map]
           cases cl? <;> rfl
       | error e =>
           have hfn : stepFn ctx σ
@@ -374,7 +368,7 @@ theorem stepMulti_single {σ : Store} {c : Config} {ch : Choices}
     show (stepThread ctx σ #[.running c none] 0 ch).bind _ = _
     rw [hst]
     cases stepFn ctx σ c ch <;>
-      simp [Bind.bind, Except.bind, Functor.map, Except.map]
+      simp [Except.bind, Except.map]
   unfold stepMulti
   have h0 : (#[Thread.running c none] : Array Thread)[0]? = some (.running c none) := rfl
   simp only [h0]

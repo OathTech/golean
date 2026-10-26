@@ -444,9 +444,9 @@ def ChoiceSite.canonicalSlot0 : ChoiceSite → String
   | .convCap =>
       "the FIRST member of `convCapMembers` (Ops.lean; R3 / b6, 2026-10-07): bytes slot 0 = the length n — gc's zero-copy member and the pre-widening singleton, so the empty/default tape reproduces every byte-conversion observation on `main`; runes slot 0 = the size-class member roundupsize(4n)/4 — gc's deterministic point for n > 32 and its escaping point below (the pre-widening singleton cap = len was OUTSIDE gc for almost every non-literal rune conversion: BUG-118); the later slots in list order (the size-class member, then the 32-element conversion buffer); bound = the member count (1 to 3), so the singleton tape `[i]` realizes member i; a one-member list — every literal conversion, and every length whose members coincide — is a bound-1 consult and pops nothing (G-U). A DATA pick, not a scheduling pick"
 
--- (`site` is the census TAG: the rule no longer reads anything from it,
--- and that is the point — the tag is for the trace and the theorems.)
-set_option linter.unusedVariables false in
+-- (`_site` is the census TAG: the rule no longer reads anything from it,
+-- and that is the point — the tag is for the trace and the theorems; the
+-- underscore says so to the unused-variable linter.)
 /-- **THE one consumption combinator** (audit Q1), under **THE one
 consumption rule** (G-U, RULED [USER] 2026-09-04, relayed): a consult
 POPS the stream iff it has a choice — `bound ≥ 2` — and is inert
@@ -464,7 +464,7 @@ shifts by one entry after every former width-1 pop; the bijection on
 streams (delete the entries the width-1 `mapIter` consults drew) is the
 certificate, checked over the whole corpus by the choice-trace dump
 (`docs/evidence/2026-09-04_c-arc-gu/`). -/
-def Choices.consumeAt (site : ChoiceSite) (bound : Nat) (ch : Choices) :
+def Choices.consumeAt (_site : ChoiceSite) (bound : Nat) (ch : Choices) :
     Nat × Choices :=
   if bound ≤ 1 then (0, ch)
   else ch.consume bound

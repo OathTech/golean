@@ -1305,9 +1305,6 @@ theorem stepUnseqNext_consumption_some {σ : Store} {g : UnseqGraph} {thenB : St
           simp [stepUnseqNext, hdep, hall, hpc₂, hi, Choices.consumeAtE_eq]
         · simp [throw, throwThe, MonadExceptOf.throw] at h'
 
--- The unused-simp-arg linter misfires on the shared multi-goal combinator
--- (an argument unused in one goal is load-bearing in another).
-
 /-! ### The sem() correspondence kit (sem-adequacy arc slice 3, 2026-08-03)
 
 Interpreter-level `Terminates`/`ProgressExec` (`Surface.lean`) rest on
@@ -1367,9 +1364,6 @@ theorem execStmtLoop_mono :
       rw [hstep] at h
       simp only [Except.bind] at h ⊢
       exact ih _ _ _ _ _ _ (by omega) h
-
--- The unused-simp-arg linter misfires on the two-location `simp … at h ⊢` in the
--- proof below (an argument unused at one location is load-bearing at the other).
 
 -- `structTagCompatible_congr` («the tag-compatibility check reads only the
 -- types map», triage L7) is RETIRED with B7: the check takes the fixed
@@ -1918,7 +1912,6 @@ theorem stepFn_mapIter_done {σ : Store} {kv vv : Option VarId}
   intro ch
   simp [stepFn, hcands, Bind.bind, Except.bind]
 
-set_option linter.unusedSimpArgs false in
 /-- The nonempty `mapIterK` step at a PICK index, factored through the
 consumed choice: the successor is a function of the pick index alone
 (`bindIterVars` never sees the stream), and the stream moves to the
@@ -1960,7 +1953,7 @@ theorem stepFn_mapIter_pick {σ : Store} {kv vv : Option VarId}
     subst h3
     cases hbind : bindIterVars ctx env.pushScope σ kv vv kt vt
         cands[idx].2.1 cands[idx].2.2 <;>
-      simp [hbind, Except.map, Bind.bind, Except.bind]
+      simp [Except.map]
 
 /-- The nonempty `mapIterK` step at the STOP slot (index = candidate
 count; the slot exists only when no mandatory start key remains): the
@@ -2205,7 +2198,6 @@ theorem stepFn_syncApply_oblivious {σ : Store} {op : SyncOp} {done : List GoVal
     rw [hr ch]
     rfl
 
-set_option maxHeartbeats 1600000 in
 
 /-- Frame exit consumes the stream only at a deferred call's ENTRY, and
 there exactly as every entry does (`entryConsult?`): with the consult
@@ -2318,7 +2310,6 @@ theorem stepFrameExit_consumption_some {σ : Store}
      (try simp only [List.append_assoc] at hpanic' hpk)
      simp [stepFrameExit, enterFramePickV_of_plan_panic hpanic', hpk, Bind.bind, Except.bind])
 
-set_option linter.unusedSimpArgs false in
 /-- **The consumption theorem, `none` half**: a step whose projection is
 `none` is stream-oblivious — it succeeds under EVERY stream with the same
 successor and the stream returned untouched. Sweep over `stepFn`'s case
@@ -2534,7 +2525,7 @@ theorem stepFn_consumption_none {σ : Store} {c : Config} {ch₀ : Choices}
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨⟨env', s₁⟩, hd, rfl, rfl, rfl, rfl⟩ := h
     refine ⟨by simp, fun ch => ?_⟩
-    simp only [stepFn, bind_eq_ok]
+    simp only
     refine ⟨⟨env', s₁⟩, hd, ?_⟩
     simp
   -- Channel receive entry (channels arc slice 1): the plan match needs
@@ -2619,7 +2610,7 @@ theorem stepFn_consumption_none {σ : Store} {c : Config} {ch₀ : Choices}
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨⟨v, trv⟩, hd, rfl, rfl, rfl, rfl⟩ := h
     refine ⟨by simp, fun ch => ?_⟩
-    simp only [stepFn, bind_eq_ok]
+    simp only
     refine ⟨(v, trv), hd, ?_⟩
     simp
   case case81 =>
@@ -2656,7 +2647,7 @@ theorem stepFn_consumption_none {σ : Store} {c : Config} {ch₀ : Choices}
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨b, hb, rfl, rfl, rfl, rfl⟩ := h
     refine ⟨by simp, fun ch => ?_⟩
-    simp only [stepFn, bind_eq_ok]
+    simp only
     refine ⟨b, hb, ?_⟩
     simp
   case case88 =>
@@ -2688,11 +2679,11 @@ theorem stepFn_consumption_none {σ : Store} {c : Config} {ch₀ : Choices}
     · rename_i r hres
       cases r with
       | ok a =>
-        simp only [deliverS_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        simp only [deliverS_ok] at h
         obtain ⟨rfl, rfl, rfl, rfl⟩ := h
-        exact ⟨rfl, fun ch => by simp [stepFn, ite_eq_left hlt, hres, Bind.bind, Except.bind]⟩
+        exact ⟨rfl, fun ch => by simp [stepFn, hres, Bind.bind, Except.bind]⟩
       | panic msg =>
-        simp only [deliverS_panic, Except.ok.injEq, Prod.mk.injEq] at h
+        simp only [deliverS_panic] at h
         obtain ⟨rfl, rfl, rfl, rfl⟩ := h
         exact ⟨rfl, fun ch => by simp [stepFn, ite_eq_left hlt, hres, Bind.bind, Except.bind]⟩
   case case93 =>
@@ -2706,7 +2697,7 @@ theorem stepFn_consumption_none {σ : Store} {c : Config} {ch₀ : Choices}
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨⟨base, start, trm⟩, hd, rfl, rfl, rfl, rfl⟩ := h
     refine ⟨by simp, fun ch => ?_⟩
-    simp only [stepFn, bind_eq_ok]
+    simp only
     refine ⟨(base, start, trm), hd, ?_⟩
     simp
   case case114 =>
@@ -2718,8 +2709,11 @@ theorem stepFn_consumption_none {σ : Store} {c : Config} {ch₀ : Choices}
   case case148 =>
     oblivious_applyV h
 
+-- A `fun_cases stepFn` sweep (every arm of the step function in ONE declaration), so the
+-- per-arm costs sum against one budget: fails at 400000, passes at 800000 (measured
+-- 2026-10-26, lane core/dc12-warnings-1026); 2x the measured need. The split that would
+-- retire this is a per-phase decomposition of the case tree, not attempted.
 set_option maxHeartbeats 1600000 in
-set_option linter.unusedSimpArgs false in
 /-- **The consumption theorem, `some` half**: a step whose projection is
 `some (site, b)` DRAWS the site's pick at bound `b`, its stream is the
 site's pop, and it depends on the stream only through that pick — any

@@ -493,7 +493,11 @@ theorem writeAt_strict {b : Nat} {ty : Ty} {cur : GoValue} {p : List PathStep} {
   ErrP.strict_of_noPanic writeAt_tame' (writeAt_noPanic _ _ _ _ _)
 macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact writeAt_strict)
 
-set_option maxHeartbeats 4000000 in
+-- The `errp` descent over the WHOLE unfolded body of a many-armed apply in one declaration
+-- (every leaf tries the registered `errp_leaf` lemmas by backtracking), so the per-arm costs
+-- sum against one budget: fails at 400000, passes at 800000 (measured 2026-10-26, lane core/dc12-warnings-1026); 2x the
+-- measured need. The split that would retire it is a per-op lemma family, not attempted.
+set_option maxHeartbeats 1600000 in
 theorem applyStrictOp_tame {s : Store} {leafOf : Loc → Loc} {op : StrictOp} {vs : List GoValue} :
     ErrP Stop.Tame (applyStrictOp ctx s leafOf op vs) := by
   unfold applyStrictOp
@@ -665,35 +669,35 @@ theorem Mem.storeElems_tame {base : Loc} :
     unfold Mem.storeElems; errp
 macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact Mem.storeElems_tame)
 
-set_option maxHeartbeats 4000000 in
 theorem applyChanOp_tame {s : Store} {op : ChanStOp} {vs : List GoValue} {env : LocalEnv} {k : Cont} :
     ErrP Stop.Tame (applyChanOp ctx s op vs env k) := by
   unfold applyChanOp
   errp
 macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact applyChanOp_tame)
 
-set_option maxHeartbeats 4000000 in
 theorem applyRhsOp_tame {s : Store} {op : RhsOp} {vs : List GoValue} :
     ErrP Stop.Tame (applyRhsOp ctx s op vs) := by
   unfold applyRhsOp
   errp
 macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact applyRhsOp_tame)
 
-set_option maxHeartbeats 4000000 in
 theorem applyAtomicOp_tame {s : Store} {op : AtomicOp} {vs : List GoValue} {env : LocalEnv} {k : Cont} :
     ErrP Stop.Tame (applyAtomicOp ctx s op vs env k) := by
   unfold applyAtomicOp
   errp
 macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact applyAtomicOp_tame)
 
-set_option maxHeartbeats 4000000 in
 theorem applySelect_tame {s : Store} {clauses : List (SelectClauseHead × Stmt)}
     {default? : Option Stmt} {vs : List GoValue} {env : LocalEnv} {k : Cont} {ch : Choices} :
     ErrP Stop.Tame (applySelect ctx s clauses default? vs env k ch) := by
   unfold applySelect
   errp
 
-set_option maxHeartbeats 4000000 in
+-- The `errp` descent over the WHOLE unfolded body of a many-armed apply in one declaration
+-- (every leaf tries the registered `errp_leaf` lemmas by backtracking), so the per-arm costs
+-- sum against one budget: fails at the default 200000, passes at 400000 (measured 2026-10-26, lane core/dc12-warnings-1026); 2x the
+-- measured need. The split that would retire it is a per-op lemma family, not attempted.
+set_option maxHeartbeats 800000 in
 theorem applySyncOp_tame {s : Store} {ch : Choices} {op : SyncOp} {vs : List GoValue}
     {env : LocalEnv} {k : Cont} :
     ErrP Stop.Tame (applySyncOp ctx s ch op vs env k) := by
@@ -704,20 +708,22 @@ theorem applySyncOp_tame {s : Store} {ch : Choices} {op : SyncOp} {vs : List GoV
 def CommitOk {α : Type} (plan : Except Stop (Commit α)) : Prop :=
   OkP (fun c : Commit α => ∀ s, ErrP Stop.Tame (c s)) plan
 
-set_option maxHeartbeats 4000000 in
 theorem applyStmtOp_plan_tame {s : Store} {ch : Choices} {op : StmtOp} {nt : Nat} {vs : List GoValue} :
     ErrP Stop.Tame (applyStmtOp.plan ctx s ch op nt vs) := by
   unfold applyStmtOp.plan
   errp
 
-set_option maxHeartbeats 4000000 in
+-- The `errp` descent over the WHOLE unfolded body of a many-armed apply in one declaration
+-- (every leaf tries the registered `errp_leaf` lemmas by backtracking), so the per-arm costs
+-- sum against one budget: fails at the default 200000, passes at 400000 (measured 2026-10-26, lane core/dc12-warnings-1026); 2x the
+-- measured need. The split that would retire it is a per-op lemma family, not attempted.
+set_option maxHeartbeats 800000 in
 theorem applyStmtOpCore_plan_commitOk {s : Store} {op : StmtOp} {vs : List GoValue} :
     CommitOk (applyStmtOpCore.plan ctx s op vs) := by
   unfold CommitOk applyStmtOpCore.plan
   okp
   all_goals (try (intro s; (try dsimp only); errp))
 
-set_option maxHeartbeats 4000000 in
 theorem applyStmtOp_plan_commitOk {s : Store} {ch : Choices} {op : StmtOp} {nt : Nat}
     {vs : List GoValue} : CommitOk (applyStmtOp.plan ctx s ch op nt vs) := by
   unfold CommitOk applyStmtOp.plan
@@ -759,26 +765,22 @@ macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact pinResultLo
 theorem CommitOk.run {α : Type} {plan : Except Stop (Commit α)} {c : Commit α}
     (h : CommitOk plan) (hc : plan = .ok c) (s : Store) : ErrP Stop.Tame (c s) := h c hc s
 
-set_option maxHeartbeats 4000000 in
 theorem mapAssignValue_plan_tame {s : Store} {kt vt : Ty} {b k v : GoValue} :
     ErrP Stop.Tame (mapAssignValue.plan ctx s kt vt b k v) := by
   unfold mapAssignValue.plan; errp
 macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact mapAssignValue_plan_tame)
 
-set_option maxHeartbeats 4000000 in
 theorem mapAssignValue_plan_commitOk {s : Store} {kt vt : Ty} {b k v : GoValue} :
     CommitOk (mapAssignValue.plan ctx s kt vt b k v) := by
   unfold CommitOk mapAssignValue.plan
   okp
   all_goals (try (intro s; (try dsimp only); errp))
 
-set_option maxHeartbeats 4000000 in
 theorem storeTarget_plan_tame {s : Store} {r : TargetRef} {v : GoValue} :
     ErrP Stop.Tame (storeTarget.plan ctx s r v) := by
   unfold storeTarget.plan; errp
 macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact storeTarget_plan_tame)
 
-set_option maxHeartbeats 4000000 in
 theorem storeTarget_plan_commitOk {s : Store} {r : TargetRef} {v : GoValue} :
     CommitOk (storeTarget.plan ctx s r v) := by
   unfold storeTarget.plan
@@ -787,13 +789,11 @@ theorem storeTarget_plan_commitOk {s : Store} {r : TargetRef} {v : GoValue} :
     all_goals (try (intro s; (try dsimp only); errp))
   · exact mapAssignValue_plan_commitOk
 
-set_option maxHeartbeats 4000000 in
 theorem unseqLoad_plan_tame {s : Store} {env : LocalEnv} {tg : List (VarId × TargetRef)}
     {b t : VarId} : ErrP Stop.Tame (unseqLoad.plan ctx s env tg b t) := by
   unfold unseqLoad.plan; errp
 macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact unseqLoad_plan_tame)
 
-set_option maxHeartbeats 4000000 in
 theorem unseqLoad_plan_commitOk {s : Store} {env : LocalEnv} {tg : List (VarId × TargetRef)}
     {b t : VarId} : CommitOk (unseqLoad.plan ctx s env tg b t) := by
   unfold CommitOk unseqLoad.plan
@@ -816,13 +816,11 @@ theorem promotionWalk_tame {s : Store} :
     unfold promotionWalk; errp
 macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact promotionWalk_tame)
 
-set_option maxHeartbeats 4000000 in
 theorem enterFrame_plan_tame {s : Store} {fid : FuncId} {args : List GoValue} :
     ErrP Stop.Tame (enterFrame.plan ctx s fid args) := by
   unfold enterFrame.plan; errp
 macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact enterFrame_plan_tame)
 
-set_option maxHeartbeats 4000000 in
 theorem enterFrame_plan_commitOk {s : Store} {fid : FuncId} {args : List GoValue} :
     CommitOk (enterFrame.plan ctx s fid args) := by
   unfold CommitOk enterFrame.plan
@@ -940,7 +938,14 @@ macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact stepNextOth
 macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact stepPanicStop_strict (by assumption))
 macro_rules | `(tactic| errp_leaf) => `(tactic| exact ErrP.throw panicUnwindStop_strict)
 
-set_option maxHeartbeats 8000000 in
+-- A `fun_cases stepFn` sweep (every arm of the step function in ONE declaration) closed by the
+-- `errp` descent, whose failed alternatives re-reduce the arm's goal before the right one fires,
+-- so the per-arm costs sum against one budget: fails at 1600000, passes at 3200000 (measured
+-- 2026-10-26, lane core/dc12-warnings-1026; about ten minutes alone, the slowest declaration
+-- in the build); 2x the measured need. The split that would retire it is a per-phase
+-- decomposition of the case tree, or a cheaper-failing `errp` (reducible-first alternatives),
+-- not attempted.
+set_option maxHeartbeats 6400000 in
 /-- **What `stepFn` raises** away from the abort and the blocked forms: a refusal or `fatal`
 only — never a Go panic (no stray panic), never the deadlock or the race terminal, never
 fuel-out. (Unit 6b: the preprint phase's arms are refusals, the fatal, or `.ok`.) -/

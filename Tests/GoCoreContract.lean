@@ -185,7 +185,6 @@ theorem panicObservation_sound {r : RunResult} {msg : String} {bytes : Array UIn
       | deadlock => cases h
       | raceDetected => cases h
 
-set_option maxRecDepth 4096 in
 /-- Full entry, actual print event, abort, and the retained byte prefix. -/
 theorem print_before_panic :
     runProgramPoolOutM 20 printPanicProgram "main.audit" #[] [] =
@@ -239,10 +238,6 @@ typed invariants, `programState`) stayed with the family. Origins are files at m
 `62fc8073` (landed `f70ea4bf`, chunk L1). -/
 namespace GoLean.GoCore.ContractTests.Interpreter
 open Machine
-
--- The origins' elaboration options (`Tests/RecoveryInvariant.lean`, `Tests/BooleanProgram.lean`).
-set_option maxRecDepth 8192
-set_option maxHeartbeats 800000
 
 /-- Origin `Tests/BooleanProgram.lean` (`terminal_at_zero_fuel`): the pool driver retains an
 existing byte prefix, including NUL and SOH, and the entire choice tape when classifying an
@@ -320,6 +315,12 @@ def scopedFunction : Func := {
 }
 def scopedProgram : Program := { typeDefs := TypeEnv.reserved, funcs := #[scopedFunction] }
 
+-- The `with_unfolding_all rfl` runs the interpreter (60 fuel) inside the elaborator's
+-- definitional unfolding, whose recursion nests deeper than the default `maxRecDepth`
+-- (512): fails at 1024, passes at 2048 (measured 2026-10-26, lane
+-- core/dc12-warnings-1026); 2x the measured need, for this one theorem. The origins'
+-- file-wide `maxRecDepth 8192` / `maxHeartbeats 800000` covered nothing else in §B.
+set_option maxRecDepth 4096 in
 /-- The actual interpreter restores the Boolean outer x after a payload
 shadow, sees the same-scope sequence declaration, and zero-initializes zero. -/
 theorem scope_and_zero_execution (b : Bool) :

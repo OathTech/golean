@@ -2603,7 +2603,6 @@ private def strayPanicRefusalFacts : IO Bool := do
     (isRootRefusal (GoCore.Machine.unseqGuard emptyCtx strayArrStore default [[(vid "b", strayBadLoc)]] [] 0 (vid "b") true (vid "o"))))
   return passed
 
-set_option maxRecDepth 4096 in
 /-- The C1 S2c audit F4 label-shape facts (docstring table above `labelCells`), one
 `expectLabel`/`expectTrue` per emitting arm; `false` iff any fact fails (each failure
 is printed BY NAME by `expectTrue`). -/
@@ -3376,6 +3375,9 @@ private def choiceReportPins : IO Bool := do
       == (okObs.compress, some "site line", 0)))
   return passed
 
+-- `main` is one `do` block of several hundred `expect*` steps, whose elaboration nests
+-- deeper than the default `maxRecDepth` (512) and needs the raised limit (the stripped file
+-- fails here and nowhere else; measured 2026-10-26, lane core/dc12-warnings-1026).
 set_option maxRecDepth 4096 in
 def main : IO UInt32 := do
   let mut passed := true

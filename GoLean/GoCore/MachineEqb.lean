@@ -150,7 +150,6 @@ def StrictOp.eqb : StrictOp → StrictOp → Bool
   | .floatBits o1, .floatBits o2 => o1 == o2
   | _, _ => false
 
-set_option maxHeartbeats 1600000 in
 theorem StrictOp.eqb_sound :
     ∀ (a b : StrictOp), StrictOp.eqb a b = true → a = b := by
   intro a b h
@@ -584,7 +583,6 @@ private theorem exprs_sound (f : Nat) :
     ∀ {as bs : List Expr}, eqbListP (Expr.eqbF f) as bs = true → as = bs :=
   fun hh => eqbListP_sound (Expr.eqbF_sound f) hh
 
-set_option maxHeartbeats 1600000 in
 theorem Cont.eqbF_sound : ∀ f (a b : Cont), Cont.eqbF f a b = true → a = b := by
   intro f
   induction f with
@@ -780,7 +778,6 @@ def Config.eqbF : Nat → Config → Config → Bool
         SyncOp.eqbF f o1 o2 && l1 == l2 && e1 == e2 && Cont.eqbF f k1 k2
     | _, _ => false
 
-set_option maxHeartbeats 1600000 in
 theorem Config.eqbF_sound :
     ∀ f (a b : Config), Config.eqbF f a b = true → a = b := by
   intro f
