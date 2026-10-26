@@ -1,0 +1,19 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s3-type-keys (2026-10-26), shape S3 of the defect-neighbourhood campaign (plan §4; the matrix on the
+# Neighbourhood lines of BUG-124/098/100/097/092/067/010/018). Every row strict, expected = gc go1.26.5, born green at 89ba27c5.
+# K13 defined-over-defined: `type B A` is neither A nor int, its alias C is B, a cross-package `type D ri.T` is neither
+# ri.T nor ri.U, `type E ri.N` beside ri.M — on the assertion, switch, ==, map-key, readout (the outermost name),
+# nested-type and panic-display routes.
+assert	definedAssert	-	ok	-	multipackage,imports,defined_type,identity,type_assertions,comma_ok,aliases
+switch	definedSwitch	-	ok	-	multipackage,imports,defined_type,identity,type_switch,aliases
+equal	definedEqual	-	ok	-	multipackage,imports,defined_type,identity,equality,aliases
+map-keys	definedMapKeys	-	ok	-	multipackage,imports,defined_type,identity,maps,keys,aliases
+readout-b	definedReadoutB	-	ok	-	defined_type,identity,interfaces,ints
+readout-alias-c	definedReadoutC	-	ok	-	defined_type,identity,interfaces,ints,aliases
+readout-cross-package-d	definedReadoutD	-	ok	-	multipackage,imports,defined_type,identity,interfaces,structs
+readout-imported-u	definedReadoutU	-	ok	-	multipackage,imports,defined_type,identity,interfaces,structs
+readout-e	definedReadoutE	-	ok	-	multipackage,imports,defined_type,identity,interfaces,ints
+nested-types	definedWrappers	-	ok	-	multipackage,imports,defined_type,identity,type_assertions,comma_ok,slices,pointers,maps,aliases
+panic-display	definedPanic	-	panic	interface conversion: interface {} is main.B, not main.A	defined_type,identity,type_assertions,panic
+panic-display-cross-package	definedPanicCross	-	panic	interface conversion: interface {} is main.D, not inner.T	multipackage,imports,defined_type,identity,type_assertions,panic
+panic-display-imported	definedPanicImported	-	panic	interface conversion: interface {} is inner.U, not inner.T	multipackage,imports,defined_type,identity,type_assertions,panic

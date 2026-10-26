@@ -1,0 +1,18 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s3-type-keys (2026-10-26), shape S3 of the defect-neighbourhood campaign (plan §4; the matrix on the
+# Neighbourhood lines of BUG-124/098/100/097/092/067/010/018). Every row strict, expected = gc go1.26.5, born green at 89ba27c5.
+# K3 function-local types: two functions' `type L` are two types, one function's L is one type across invocations, two
+# blocks' L are two, a closure's and a package-level func literal's and init's locals are their own — on the assertion,
+# switch, map-key, ==, readout and nested-type routes (the panic routes are scoping/local-type-identity/*).
+assert-cross	localAssertCross	-	ok	-	scoping,identity,type_assertions,comma_ok,closures
+switch	localSwitch	-	ok	-	scoping,identity,type_switch,closures
+map-keys	localMapKeys	-	ok	-	scoping,identity,maps,keys
+same-across-calls	localSameAcrossCalls	-	ok	-	scoping,identity,equality
+two-blocks	localTwoBlocks	-	ok	-	scoping,identity,equality,type_assertions,comma_ok,closures
+in-closure	localInClosure	-	ok	-	scoping,identity,equality,type_assertions,comma_ok,closures
+in-package-func-literal	localInPkgFuncLit	-	ok	-	scoping,identity,equality,closures,globals
+in-init	localInInit	-	ok	-	scoping,identity,equality,type_assertions,comma_ok,init
+readout-a	localReadoutA	-	ok	-	scoping,identity,interfaces,structs
+readout-b	localReadoutB	-	ok	-	scoping,identity,interfaces,structs
+nested-types	localWrappers	-	ok	-	scoping,identity,type_assertions,comma_ok,slices,pointers,closures
+shadow-assert	localShadowAssert	-	ok	-	scoping,identity,shadowing,type_assertions,comma_ok,equality

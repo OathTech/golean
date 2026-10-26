@@ -1,0 +1,19 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s3-type-keys (2026-10-26), shape S3 of the defect-neighbourhood campaign (plan §4; the matrix on the
+# Neighbourhood lines of BUG-124/098/100/097/092/067/010/018). Every row strict, expected = gc go1.26.5, born green at 89ba27c5.
+# K9 aliases are identity-transparent at every runtime route: a basic alias, a named alias, a cross-package alias (both
+# directions), a generic alias, an alias of an instantiation, a local alias — assertion, switch, ==, map-key, readout
+# (the target's name), nested-type and panic-display routes (spec-examples-decl/{type,alias}-identity are the
+# assignability half).
+assert	aliasAssert	-	ok	-	multipackage,imports,aliases,identity,type_assertions,comma_ok,generics
+local-alias	aliasLocal	-	ok	-	aliases,identity,scoping,type_assertions,comma_ok
+switch	aliasSwitch	-	ok	-	multipackage,imports,aliases,identity,type_switch,generics
+equal	aliasEqual	-	ok	-	multipackage,imports,aliases,identity,equality,generics
+map-keys	aliasMapKeys	-	ok	-	multipackage,imports,aliases,identity,maps,keys,generics
+readout-named	aliasReadoutNamed	-	ok	-	aliases,identity,interfaces,structs
+readout-cross-package	aliasReadoutCross	-	ok	-	multipackage,imports,aliases,identity,interfaces,structs
+readout-instantiation	aliasReadoutInst	-	ok	-	aliases,identity,interfaces,structs,generics
+readout-basic	aliasReadoutBasic	-	ok	-	aliases,identity,interfaces,ints
+nested-types	aliasWrappers	-	ok	-	multipackage,imports,aliases,identity,type_assertions,comma_ok,slices,maps,functions,pointers
+panic-display-basic	aliasPanic	-	panic	interface conversion: interface {} is int, not int64	aliases,identity,type_assertions,panic
+panic-display-named	aliasPanicNamed	-	panic	interface conversion: interface {} is main.N, not main.Box[int]	aliases,identity,type_assertions,panic,generics

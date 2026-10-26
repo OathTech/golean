@@ -1,0 +1,13 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s3-type-keys (2026-10-26), shape S3 of the defect-neighbourhood campaign (plan §4; the matrix on the
+# Neighbourhood lines of BUG-124/098/100/097/092/067/010/018). Every row strict, expected = gc go1.26.5, born green at 89ba27c5.
+# K12 array lengths and element types are identity: [2]int ≢ [3]int ≢ [2]int64, [0]int is its own, nested dimensions and
+# a named element count, [2]byte ≡ [2]uint8 — on the assertion, switch, ==, map-key, nested-type and panic-display
+# routes.
+assert	arrayAssert	-	ok	-	arrays,identity,type_assertions,comma_ok,aliases,zero_len
+switch	arraySwitch	-	ok	-	arrays,identity,type_switch,zero_len
+equal	arrayEqual	-	ok	-	arrays,identity,equality,aliases,zero_len
+map-keys	arrayMapKeys	-	ok	-	arrays,identity,maps,keys,aliases,zero_len
+nested-types	arrayWrappers	-	ok	-	arrays,identity,type_assertions,comma_ok,slices,pointers,maps
+panic-display-length	arrayPanic	-	panic	interface conversion: interface {} is [2]int, not [3]int	arrays,identity,type_assertions,panic
+panic-display-nested	arrayPanicNested	-	panic	interface conversion: interface {} is [2][2]uint8, not [2][3]uint8	arrays,identity,type_assertions,panic,aliases,nested

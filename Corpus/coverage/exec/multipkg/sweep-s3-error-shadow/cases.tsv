@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s3-type-keys (2026-10-26), shape S3 of the defect-neighbourhood campaign (plan §4; the matrix on the
+# Neighbourhood lines of BUG-124/098/100/097/092/067/010/018). Every row strict, expected = gc go1.26.5, born green at 89ba27c5.
+# A package-level `error` declared in main shadows the universe name inside main only: main's func(error) is
+# func(main.error), red/inner's is func(error) — two types; the universe int beside.
+-	errorShadow	-	ok	-	multipackage,imports,shadowing,interfaces,identity,type_assertions,comma_ok,functions

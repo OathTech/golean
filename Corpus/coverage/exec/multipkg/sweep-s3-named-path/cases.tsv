@@ -1,0 +1,14 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s3-type-keys (2026-10-26), shape S3 of the defect-neighbourhood campaign (plan §4; the matrix on the
+# Neighbourhood lines of BUG-124/098/100/097/092/067/010/018). Every row strict, expected = gc go1.26.5, born green at 89ba27c5.
+# K2 named types keyed by import PATH: red/inner.T, blue/inner.T and main.T (one name, one shape) on the switch, ==,
+# map-key, readout, dispatch and nested-type routes (the assertion and panic routes are multipkg/same-name-identity and
+# same-name-identity-panic); a function-local T beside the imported T.
+switch	namedPathSwitch	-	ok	-	multipackage,imports,identity,type_switch,structs
+equal	namedPathEqual	-	ok	-	multipackage,imports,identity,equality,structs
+map-keys	namedPathMapKeys	-	ok	-	multipackage,imports,identity,maps,keys,structs
+readout	namedPathReadout	-	ok	-	multipackage,imports,identity,interfaces,structs
+dispatch	namedPathDispatch	-	ok	-	multipackage,imports,identity,interfaces,methods
+nested-types	namedPathWrappers	-	ok	-	multipackage,imports,identity,type_assertions,comma_ok,slices,pointers,maps
+local-vs-imported	localVsImported	-	ok	-	multipackage,imports,identity,scoping,type_assertions,comma_ok
+local-vs-imported-panic	localVsImportedPanic	-	panic	interface conversion: interface {} is main.T, not inner.T	multipackage,imports,identity,scoping,type_assertions,panic

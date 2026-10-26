@@ -1,0 +1,14 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s3-type-keys (2026-10-26), shape S3 of the defect-neighbourhood campaign (plan §4; the matrix on the
+# Neighbourhood lines of BUG-124/098/100/097/092/067/010/018). Every row strict, expected = gc go1.26.5, born green at 89ba27c5.
+# K7 func types: parameter and result names are not identity, a named func type is not the unnamed one, the variadic bit
+# is identity in nested positions too — on the assertion, switch, == (different types false, same type the uncomparable
+# panic), map-key (unhashable panic) and panic-display routes (BUG-067's rows are the top-level variadic assertions).
+param-result-names	funcNames	-	ok	-	functions,identity,type_assertions,comma_ok,named-results
+named-vs-unnamed	funcNamedVsUnnamed	-	ok	-	functions,identity,type_assertions,comma_ok,defined_type
+nested-variadic	funcNestedVariadic	-	ok	-	functions,identity,variadic,type_assertions,comma_ok,slices,maps,pointers
+switch	funcSwitch	-	ok	-	functions,identity,variadic,type_switch,defined_type
+equal-distinct-types	funcEqualDistinct	-	ok	-	functions,identity,variadic,equality,comparability
+equal-same-type-panic	funcEqualSamePanic	-	panic	runtime error: comparing uncomparable type func(...int)	functions,identity,variadic,equality,comparability,panic
+map-key-panic	funcMapKeyPanic	-	panic	runtime error: hash of unhashable type func(...int)	functions,identity,variadic,maps,keys,panic
+named-panic-display	funcNamedPanic	-	panic	interface conversion: interface {} is main.F, not func()	functions,identity,type_assertions,panic,defined_type

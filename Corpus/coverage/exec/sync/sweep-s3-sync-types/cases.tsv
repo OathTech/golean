@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s3-type-keys (2026-10-26), shape S3 of the defect-neighbourhood campaign (plan §4; the matrix on the
+# Neighbourhood lines of BUG-124/098/100/097/092/067/010/018). Every row strict, expected = gc go1.26.5, born green at 89ba27c5.
+# K15 the sync primitive types are nominal: *sync.Mutex ≢ *sync.RWMutex ≢ *sync.WaitGroup ≢ *sync.Once (and Locker
+# satisfaction beside) — on the assertion, switch, == and panic-display routes.
+assert	syncAssert	-	ok	-	sync,mutex,rwmutex,waitgroup,once,identity,type_assertions,comma_ok,interfaces
+switch	syncSwitch	-	ok	-	sync,mutex,rwmutex,waitgroup,once,identity,type_switch
+equal	syncEqual	-	ok	-	sync,mutex,rwmutex,identity,equality
+panic-display	syncPanic	-	panic	interface conversion: interface {} is *sync.Mutex, not *sync.RWMutex	sync,mutex,rwmutex,identity,type_assertions,panic

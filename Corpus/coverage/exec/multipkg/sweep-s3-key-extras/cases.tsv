@@ -1,0 +1,18 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s3-type-keys (2026-10-26), shape S3 of the defect-neighbourhood campaign (plan §4; the matrix on the
+# Neighbourhood lines of BUG-124/098/100/097/092/067/010/018). Every row strict, expected = gc go1.26.5, born green at 89ba27c5.
+# Cells read off the key-minting code: an anonymous literal embedding another package's private named interface flattens
+# to that package's unexported method; local named interfaces are nominal and a literal embedding one flattens;
+# method-expression and method-value types; variadic, result arity and instantiations inside interface method
+# signatures; a package-level type shadowed by a stencil's local; a stencil's local at byte / alias / any argument
+# spellings and at a named argument; a type parameter named like a package-level type.
+embedded-private-interface	extraEmbeddedPrivate	-	ok	-	multipackage,imports,interfaces,identity,type_assertions,comma_ok,functions,embedding
+local-named-interface	extraLocalIface	-	ok	-	interfaces,identity,scoping,type_assertions,comma_ok,functions,closures,embedding
+method-expression-types	extraMethodExprTypes	-	ok	-	multipackage,imports,methods,functions,identity,type_assertions,comma_ok
+interface-method-signatures	extraIfaceSigs	-	ok	-	interfaces,identity,variadic,generics,aliases,type_assertions,comma_ok,functions
+package-type-shadowed-in-stencil	extraShadowInGeneric	-	ok	-	generics,scoping,shadowing,identity,type_assertions,comma_ok,equality
+readout-shadowed-in-stencil	extraReadoutShadow	-	ok	-	generics,scoping,shadowing,identity,interfaces,structs
+stencil-local-fused-spellings	extraStencilFused	-	ok	-	generics,scoping,identity,equality,aliases
+readout-stencil-local-named-arg	extraReadoutStencilNamedArg	-	ok	-	generics,scoping,identity,interfaces,structs
+readout-stencil-local-byte	extraReadoutStencilByte	-	ok	-	generics,scoping,identity,interfaces,structs,aliases
+type-parameter-named-like-type	extraTypeParamShadow	-	ok	-	generics,shadowing,identity,type_assertions,comma_ok,equality

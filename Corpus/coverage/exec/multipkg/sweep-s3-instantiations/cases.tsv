@@ -1,0 +1,22 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s3-type-keys (2026-10-26), shape S3 of the defect-neighbourhood campaign (plan §4; the matrix on the
+# Neighbourhood lines of BUG-124/098/100/097/092/067/010/018). Every row strict, expected = gc go1.26.5, born green at 89ba27c5.
+# K8 generic instantiations: identical arguments by different spellings fuse (Box[byte] ≡ Box[uint8], Box[any] ≡
+# Box[interface{}], an alias argument, Box[T] inside a generic at int, parameter names in a func argument), different
+# arguments stay apart (int64, argument order, pointer, array length, variadic, two same-named packages' T, nesting) —
+# on the assertion, switch, ==, map-key, readout and panic-display routes (generics/instantiated-type-assert/* are the
+# int-vs-string instance).
+fused-spellings	instFused	-	ok	-	generics,identity,type_assertions,comma_ok,aliases
+distinct-arguments	instDistinct	-	ok	-	multipackage,imports,generics,identity,type_assertions,comma_ok,variadic,arrays,pointers
+switch	instSwitch	-	ok	-	multipackage,imports,generics,identity,type_switch,aliases
+equal	instEqual	-	ok	-	multipackage,imports,generics,identity,equality,aliases
+map-keys	instMapKeys	-	ok	-	multipackage,imports,generics,identity,maps,keys,aliases
+readout-byte	instReadoutByte	-	ok	-	generics,identity,interfaces,structs,aliases
+readout-any	instReadoutAny	-	ok	-	generics,identity,interfaces,structs
+readout-empty-struct	instReadoutEmpty	-	ok	-	generics,identity,interfaces,structs,empty
+readout-path	instReadoutPath	-	ok	-	multipackage,imports,generics,identity,interfaces,structs
+readout-nested	instReadoutNested	-	ok	-	generics,identity,interfaces,structs,nested
+panic-display-func-arg	instPanicFunc	-	panic	interface conversion: interface {} is main.Box[func(int)], not main.Box[int]	generics,identity,type_assertions,panic,functions
+panic-display-alias-args	instPanicAlias	-	panic	interface conversion: interface {} is main.Pair[int,[]uint8], not main.Box[int]	generics,identity,type_assertions,panic,aliases,slices
+panic-display-byte	instPanicText	-	panic	interface conversion: interface {} is main.Box[uint8], not main.Box[int]	generics,identity,type_assertions,panic,aliases
+panic-display-path	instPanicPath	-	panic	interface conversion: interface {} is main.Box[red/inner.T], not main.Box[blue/inner.T]	multipackage,imports,generics,identity,type_assertions,panic

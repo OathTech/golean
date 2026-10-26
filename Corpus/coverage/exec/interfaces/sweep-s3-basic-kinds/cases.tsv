@@ -1,0 +1,19 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s3-type-keys (2026-10-26), shape S3 of the defect-neighbourhood campaign (plan §4; the matrix on the
+# Neighbourhood lines of BUG-124/098/100/097/092/067/010/018). Every row strict, expected = gc go1.26.5, born green at 89ba27c5.
+# K1 basic kinds: byte ≡ uint8 and rune ≡ int32 (aliases) fuse; int ≢ int64, uint ≢ uint64, float32 ≢ float64, int8 ≢
+# uint8 stay apart — on the assertion, switch (incl. alias spellings and multi-type cases), ==, map-key, nested-type and
+# panic-text routes.
+byte-is-uint8	byteIsUint8	-	ok	-	interfaces,type_assertions,comma_ok,identity,aliases,ints
+uint8-is-byte	uint8IsByte	-	ok	-	interfaces,type_assertions,comma_ok,identity,aliases,ints
+rune-is-int32	runeIsInt32	-	ok	-	interfaces,type_assertions,comma_ok,identity,aliases,runes
+int-not-int64	intIsNotInt64	-	ok	-	interfaces,type_assertions,comma_ok,identity,ints,widths
+uint-not-uint64	uintIsNotUint64	-	ok	-	interfaces,type_assertions,comma_ok,identity,ints,widths
+float32-not-float64	f32IsNotF64	-	ok	-	interfaces,type_assertions,comma_ok,identity,floats,widths
+int8-not-uint8	int8IsNotUint8	-	ok	-	interfaces,type_assertions,comma_ok,identity,ints,widths
+nested-alias-kinds	byteSliceIsUint8Slice	-	ok	-	interfaces,type_assertions,comma_ok,identity,aliases,slices,maps,pointers,functions
+switch	basicSwitch	-	ok	-	interfaces,type_switch,identity,ints,floats,bools,strings
+switch-alias-cases	basicSwitchAliasCases	-	ok	-	interfaces,type_switch,identity,aliases
+equal	basicEqual	-	ok	-	interfaces,equality,comparisons,identity,aliases,ints,floats
+map-keys	basicMapKeys	-	ok	-	interfaces,maps,keys,identity,aliases,ints,floats
+assert-panic-alias-display	basicAssertPanic	-	panic	interface conversion: interface {} is uint8, not int32	interfaces,type_assertions,panic,identity,aliases

@@ -1,0 +1,20 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s3-type-keys (2026-10-26), shape S3 of the defect-neighbourhood campaign (plan §4; the matrix on the
+# Neighbourhood lines of BUG-124/098/100/097/092/067/010/018). Every row strict, expected = gc go1.26.5, born green at 89ba27c5.
+# K6 anonymous interfaces are structural — method order, embedding, parameter names, exported methods across packages
+# fuse; unexported methods across packages, a named interface with the same set, `error` vs its literal stay apart;
+# `any` ≡ `interface{}` — through the func / slice / pointer type routes (an interface is never a dynamic type), plus
+# the uncomparable-panic and assertion-panic displays. (The satisfaction cell is
+# multipkg/unexported-method-scope/distinct.)
+# Probe-only (duplicates of existing rows, recorded by probe id in the entries): anonUnexportedSatisfaction.
+method-order	anonOrder	-	ok	-	interfaces,identity,type_assertions,comma_ok,functions
+embedded-flattened	anonFlatten	-	ok	-	interfaces,identity,type_assertions,comma_ok,functions,embedding
+param-names	anonParamNames	-	ok	-	interfaces,identity,type_assertions,comma_ok,functions
+exported-cross-package	anonExportedCrossPkg	-	ok	-	multipackage,imports,interfaces,identity,type_assertions,comma_ok,functions,slices
+unexported-cross-package	anonUnexportedCrossPkg	-	ok	-	multipackage,imports,interfaces,identity,type_assertions,comma_ok,functions,slices
+anonymous-vs-named	anonVsNamed	-	ok	-	interfaces,identity,type_assertions,comma_ok,functions,slices,maps
+any-and-error	anonAnyAndError	-	ok	-	interfaces,identity,type_assertions,comma_ok,functions,slices
+pointer-to-interface	anonPointer	-	ok	-	interfaces,identity,type_assertions,comma_ok,pointers
+local-type-inside	anonLocalInside	-	ok	-	interfaces,identity,scoping,type_assertions,comma_ok,functions,closures
+uncomparable-panic-display	anonUncomparablePanic	-	panic	runtime error: comparing uncomparable type func(interface { M() })	interfaces,identity,equality,panic,functions
+assert-panic-display	anonAssertPanic	-	panic	interface conversion: interface {} is func(interface { M() }), not func(main.J)	interfaces,identity,type_assertions,panic,functions

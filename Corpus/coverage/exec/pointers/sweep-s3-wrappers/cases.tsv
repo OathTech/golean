@@ -1,0 +1,14 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s3-type-keys (2026-10-26), shape S3 of the defect-neighbourhood campaign (plan §4; the matrix on the
+# Neighbourhood lines of BUG-124/098/100/097/092/067/010/018). Every row strict, expected = gc go1.26.5, born green at 89ba27c5.
+# K14 structural wrappers over named / local / interface element types: *T ≢ *U, **T ≢ *T, []T ≢ []U, map[string]T ≢
+# map[string]U, map[T]int ≢ map[U]int, typed nil pointers of two types are two boxes, *L and map[L] for two functions'
+# local L, map[string]I at a named vs an anonymous interface — on the assertion, switch, ==, map-key and panic-display
+# routes.
+assert	wrapAssert	-	ok	-	pointers,slices,maps,interfaces,identity,type_assertions,comma_ok
+switch	wrapSwitch	-	ok	-	pointers,slices,maps,identity,type_switch,nil
+equal-typed-nils	wrapEqual	-	ok	-	pointers,identity,equality,nil
+map-keys-typed-nils	wrapMapKeys	-	ok	-	pointers,identity,maps,keys,nil
+local-elements	wrapLocal	-	ok	-	pointers,maps,scoping,identity,type_assertions,comma_ok,closures
+panic-display-pointer	wrapPanic	-	panic	interface conversion: interface {} is *main.T, not *main.U	pointers,identity,type_assertions,panic,nil
+panic-display-map-of-interface	wrapPanicMap	-	panic	interface conversion: interface {} is map[string]main.I, not map[string]interface { M() }	maps,interfaces,identity,type_assertions,panic

@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s3-type-keys (2026-10-26), shape S3 of the defect-neighbourhood campaign (plan §4; the matrix on the
+# Neighbourhood lines of BUG-124/098/100/097/092/067/010/018). Every row strict, expected = gc go1.26.5, born green at 89ba27c5.
+# K16 stdlib same-named types: *html/template.Template ≢ *text/template.Template on the switch, ==, map-key and
+# panic-display routes (BUG-010's row is the assertion); a second pair, *encoding/json.Decoder ≢ *encoding/xml.Decoder,
+# on the assertion.
+switch	stdlibSwitch	-	ok	-	stdlib,imports,identity,type_switch,pointers,nil
+equal	stdlibEqual	-	ok	-	stdlib,imports,identity,equality,pointers,nil
+map-keys	stdlibMapKeys	-	ok	-	stdlib,imports,identity,maps,keys,pointers,nil
+decoder-assert	stdlibDecoderAssert	-	ok	-	stdlib,imports,identity,type_assertions,comma_ok,pointers,nil
+panic-display	stdlibPanic	-	panic	interface conversion: interface {} is *template.Template, not *template.Template (types from different packages)	stdlib,imports,identity,type_assertions,panic,pointers,nil

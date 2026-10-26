@@ -1,0 +1,23 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s3-type-keys (2026-10-26), shape S3 of the defect-neighbourhood campaign (plan §4; the matrix on the
+# Neighbourhood lines of BUG-124/098/100/097/092/067/010/018). Every row strict, expected = gc go1.26.5, born green at 89ba27c5.
+# K4 a type declared inside a generic function: one type per instantiation, one type per instantiation across calls,
+# another type in a second generic with the same local name, per-instantiation even when the local does not mention T,
+# the same in a generic type's method and in a nested closure — on the assertion, switch, ==, map-key, readout,
+# nested-type and cross-instantiation panic routes (BUG-018's rows are the readout at int and the assert-to-int panic).
+# The assertion sits inside the declaring generic (a `probe any` parameter): a closure WITH a parameter inside a stencil
+# is a decoder refusal (B6 c4, BUG-124's entry).
+# Probe-only (duplicates of existing rows, recorded by probe id in the entries): lgReadoutString.
+assert	lgAssert	-	ok	-	generics,scoping,identity,type_assertions,comma_ok
+two-generics-same-name	lgTwoGenerics	-	ok	-	generics,scoping,identity,type_assertions,comma_ok
+switch	lgSwitch	-	ok	-	generics,scoping,identity,type_switch
+equal	lgEqual	-	ok	-	generics,scoping,identity,equality
+map-keys	lgMapKeys	-	ok	-	generics,scoping,identity,maps,keys
+local-not-mentioning-t	lgNoT	-	ok	-	generics,scoping,identity,equality
+readout-not-mentioning-t	lgReadoutNoT	-	ok	-	generics,scoping,identity,interfaces,structs
+generic-type-method-local	lgMethodLocal	-	ok	-	generics,scoping,identity,equality,methods
+readout-generic-type-method-local	lgReadoutMethodLocal	-	ok	-	generics,scoping,identity,interfaces,structs,methods
+closure-local	lgClosureLocal	-	ok	-	generics,scoping,identity,equality,closures
+readout-closure-local	lgReadoutClosureLocal	-	ok	-	generics,scoping,identity,interfaces,structs,closures
+nested-types	lgWrappers	-	ok	-	generics,scoping,identity,type_assertions,comma_ok,slices
+cross-instantiation-panic	lgAssertPanic	-	panic	interface conversion: interface {} is main.box[string], not main.box[int]	generics,scoping,identity,type_assertions,panic

@@ -1,0 +1,12 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s3-type-keys (2026-10-26), shape S3 of the defect-neighbourhood campaign (plan §4; the matrix on the
+# Neighbourhood lines of BUG-124/098/100/097/092/067/010/018). Every row strict, expected = gc go1.26.5, born green at 89ba27c5.
+# K17 type parameters: a T value boxed inside a generic carries the argument's identity (byte ≡ uint8, int ≢ int64, an
+# alias, a local type argument), an assertion / switch to T, []T, map[string]T inside the body keys on the argument — on
+# the assertion, switch, ==, map-key and panic-display routes.
+assert	tparamAssert	-	ok	-	generics,identity,type_assertions,comma_ok,aliases,slices
+local-type-argument	tparamLocalArg	-	ok	-	generics,identity,scoping,type_assertions,comma_ok,slices
+switch	tparamSwitch	-	ok	-	generics,identity,type_switch,aliases,slices,maps
+equal	tparamEqual	-	ok	-	generics,identity,equality,aliases
+map-keys	tparamMapKeys	-	ok	-	generics,identity,maps,keys,aliases,constraints
+panic-display	tparamPanic	-	panic	interface conversion: interface {} is int, not int64	generics,identity,type_assertions,panic
