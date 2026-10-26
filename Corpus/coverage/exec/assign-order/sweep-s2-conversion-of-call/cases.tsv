@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+struct-of-call	structOfCall	-	ok	-	conversions,calls,evaluation_order,structs,defined_type,globals
+slice-of-call	sliceOfCall	-	ok	-	conversions,calls,evaluation_order,slices,defined_type,globals
+func-of-call	funcOfCall	-	ok	-	conversions,calls,evaluation_order,functions,closures,defined_type,globals
+bool-of-call	boolOfCall	-	ok	-	conversions,calls,evaluation_order,bools,defined_type,globals
+string-of-call	stringOfCall	-	ok	-	conversions,calls,evaluation_order,strings,bytes,defined_type,globals
+pointer-of-call	pointerOfCall	-	ok	-	conversions,calls,evaluation_order,pointers,structs,globals
+float-of-call	floatOfCall	-	ok	-	conversions,calls,evaluation_order,floats,globals

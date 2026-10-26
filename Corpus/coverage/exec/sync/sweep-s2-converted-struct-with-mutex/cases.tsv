@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+pointer-conv	syncFieldPointerConv	-	ok	-	conversions,structs,defined_type,pointers,sync,mutex,fields,aliasing
+value-conv	syncFieldValueConv	-	ok	-	conversions,structs,defined_type,sync,mutex,fields,value_copy

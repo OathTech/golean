@@ -1,0 +1,23 @@
+# id	subject	args	expected_status	expected_reason	features
+embedded-fields	embeddedFields	-	ok	-	conversions,structs,defined_type,embedding,fields,value_copy
+defined-field-types	definedFieldTypes	-	ok	-	conversions,structs,defined_type,fields,pointers,aliasing
+ref-holding-fields	refHoldingFields	-	ok	-	conversions,structs,defined_type,fields,pointers,slices,maps,closures,channels,interfaces,arrays,aliasing
+blank-field	blankField	-	ok	-	conversions,structs,defined_type,fields
+generic-instantiation	genericInstantiation	-	ok	-	conversions,structs,defined_type,generics
+defined-over-defined	definedOverDefined	-	ok	-	conversions,structs,defined_type,methods,interfaces,type_switch
+in-literals	inLiterals	-	ok	-	conversions,structs,defined_type,literals,slices,maps,keys
+returned	returned	-	ok	-	conversions,structs,defined_type,returns
+boxed	boxed	-	ok	-	conversions,structs,defined_type,interfaces,equality,type_assertions,type_switch
+map-key-and-switch	mapKeyAndSwitch	-	ok	-	conversions,structs,defined_type,maps,keys,switch
+param-and-channel	paramAndChannel	-	ok	-	conversions,structs,defined_type,calls,channels,goroutines,equality
+method-on-conversion	methodOnConversion	-	ok	-	conversions,structs,defined_type,methods,value_copy
+beside-call	besideCall	-	ok	-	conversions,structs,defined_type,calls,evaluation_order,globals
+defined-pointer-over-converted	definedPointerOverConverted	-	ok	-	conversions,structs,defined_type,pointers,interfaces,type_switch,equality
+conv-of-deref	convOfDeref	-	ok	-	conversions,structs,defined_type,pointers,interfaces,type_switch
+alias-conversion	aliasConversion	-	ok	-	conversions,structs,defined_type,aliases,interfaces,type_switch,methods
+box-in-generic	boxInGeneric	-	ok	-	conversions,structs,defined_type,generics,interfaces,equality,type_assertions
+embedded-pointer-field-value	embeddedPointerFieldValue	-	ok	-	conversions,structs,defined_type,embedding,pointers,aliasing
+struct-arg-instantiation	structArgInstantiation	-	ok	-	conversions,structs,defined_type,generics,interfaces,type_switch
+conv-operand-kinds	convOperandKinds	-	ok	-	conversions,structs,defined_type,maps,slices,pointers,channels,methods
+method-expr-conversion	methodExprConversion	-	ok	-	conversions,structs,defined_type,methods,functions,higher_order
+struct-typeparam-conv	structTypeParamConv	-	ok	-	conversions,structs,defined_type,generics,type_sets

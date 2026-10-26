@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+boxed-dynamic-type	boxedDynamicType	-	ok	-	conversions,bools,defined_type,interfaces,type_switch
+compare-and-key	compareAndKey	-	ok	-	conversions,bools,defined_type,maps,keys,switch,equality
+chained	chained	-	ok	-	conversions,bools,defined_type,interfaces,type_assertions
+returned-defined-bool	returnedDefinedBool	-	ok	-	conversions,bools,defined_type,returns

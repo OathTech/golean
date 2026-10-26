@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+chan-idioms	chanIdioms	-	ok	-	conversions,channels,defined_type,len,cap,close,comma_ok
+named-directional-conversion	namedDirectionalConversion	-	ok	-	conversions,channels,defined_type,interfaces,type_assertions,equality

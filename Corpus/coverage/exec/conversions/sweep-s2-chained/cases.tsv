@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+string-chains	stringChains	-	ok	-	conversions,strings,bytes,runes,defined_type,copy_semantics
+struct-chains	structChains	-	ok	-	conversions,structs,defined_type,interfaces,type_switch,equality

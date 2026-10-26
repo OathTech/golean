@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+string-of-const-int	stringOfConstInt	-	ok	-	conversions,constants,untyped,strings,runes,unicode
+constant-forms	constantForms	-	ok	-	conversions,constants,untyped,defined_type,strings,ints,maps,keys,switch

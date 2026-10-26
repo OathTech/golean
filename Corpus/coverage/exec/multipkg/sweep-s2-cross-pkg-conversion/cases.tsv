@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	crossPkgValueConversion	-	ok	-	conversions,structs,defined_type,multipackage,imports,interfaces,type_switch,slices

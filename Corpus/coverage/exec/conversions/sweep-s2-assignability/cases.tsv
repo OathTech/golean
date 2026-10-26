@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+slice-assignability	sliceAssignability	-	ok	-	conversions,slices,defined_type,assignment,calls,returns,literals,channels,interfaces,type_switch,structs
+map-assignability	mapAssignability	-	ok	-	conversions,maps,defined_type,assignment,literals,interfaces,type_switch,structs
+func-assignability	funcAssignability	-	ok	-	conversions,functions,defined_type,assignment,closures,literals,interfaces,type_switch,structs
+chan-assignability	chanAssignability	-	ok	-	conversions,channels,defined_type,assignment,interfaces,type_switch
+array-assignability	arrayAssignability	-	ok	-	conversions,arrays,defined_type,assignment,maps,keys,literals,interfaces,type_switch,structs
+pointer-assignability	pointerAssignability	-	ok	-	conversions,pointers,defined_type,assignment,interfaces,type_switch

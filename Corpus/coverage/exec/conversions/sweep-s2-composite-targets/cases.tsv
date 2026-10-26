@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+slice-idioms	sliceIdioms	-	ok	-	conversions,slices,defined_type,slicing,len,range,append,aliasing
+map-idioms	mapIdioms	-	ok	-	conversions,maps,defined_type,delete,len,aliasing
+method-value-to-func-type	methodValueToFuncType	-	ok	-	conversions,functions,defined_type,methods,higher_order,value_copy
+func-literal-converted	funcLiteralConverted	-	ok	-	conversions,functions,defined_type,closures,calls
+defined-nils	definedNils	-	ok	-	conversions,nil,defined_type,slices,maps,functions,channels,pointers,append,len
+any-slice-and-struct-maps	anySliceAndStructMaps	-	ok	-	conversions,slices,maps,defined_type,interfaces,type_assertions,structs,aliasing

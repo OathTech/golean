@@ -2174,6 +2174,29 @@ envelope; these three pins cover the escaping regimes.
 - Cases: structs/unnamed-conversion-targets/pointer, structs/unnamed-conversion-targets/pointer-nil, structs/unnamed-conversion-targets/slice, structs/unnamed-conversion-targets/slice-to-defined, structs/unnamed-conversion-targets/map, structs/unnamed-conversion-targets/func, structs/unnamed-conversion-targets/func-from-defined, structs/unnamed-conversion-targets/slice-nil, structs/unnamed-conversion-targets/map-nil
 - Discovered: 2026-08-06 (arc-final audit F10; pre-existing — the
   catch-all predates the general-coverage arc)
+- Neighbourhood: S2 (conversions: a missing kernel arm or a value not retagged) — swept 2026-10-26 by
+  lane `sweep/s2-conversions` (plan §4, [USER]-approved 2026-10-27). THE MATRIX: every target kind of
+  `convertValueToTy` and the emitter's routes (int, float, string, `[]byte`, `[]rune`, struct, array,
+  pointer, slice, map, func, interface, chan, bool, sync, type parameters, defined-over-defined, typed
+  nils) × the routes (explicit, constant, conversion of a call, chained, literal element / field / key,
+  return, assignability without a conversion, box, method receiver, the deref read, nil) × the sites
+  (the kernel's arms, `normalizeValueForTyAt`, `derefRetag` / `receiverRetag`, `structTagCompatible`'s
+  field arms, the emitter's dedicated operators, the bool strip, the interface wrap, the constant
+  fold): 118 cells — 74 PROBED by this lane (28 probe packages, two of them refusal probes; gc
+  go1.26.5 = the machine on every legal one), 35 COVERED by existing rows or the train-20 /
+  equality-review probes (cited per cell in the lane's report), 9 OUT OF SCOPE by a refusal named at
+  the point of failure or by go/types (slice→array succeeding forms FR-10 `slice-to-array-l2b`;
+  float→int out of range, latitude L:R6; anonymous non-empty struct types FR-13 `anon-struct`;
+  `unsafe.Pointer` «frontend-quarantined: basic type unsafe.Pointer»; a defined type over
+  `sync.Mutex`, «sync.noCopy» at export; complex FR-15; the conversion footprint budget BUG-131; the
+  kernel's `.interfaceDecl` / `.opaque` arms, unreachable from a type-checked wire; cross-package
+  unexported fields, illegal Go). ROWS ADDED: 96 in 18 packages `Corpus/coverage/exec/*/sweep-s2-*/`
+  (bools 4, constants 6, strings 12, structs 22, multipkg 1, pointers 11, conversions 15, channels 2,
+  assign-order 7, generics 6, methods 5, interfaces 3, sync 2), strict, expected = gc, all PASS.
+  FINDINGS: none — no wrong value, no wrong panic, no `stuck` on a legal program. CELLS LEFT: the
+  nine out-of-scope refusals above (coverage gaps by name, not defects) and BUG-134's two recorded
+  residuals (an address target carries no static type, release-readiness row 57; unexported field
+  names without their package, the train-20 audit's F2 — both reachable from a forged wire only).
 
 `convertValueToTyFuel` has arms for int/float/string/defined/struct/
 interface targets only; a conversion whose target's RESOLVED shape is a
@@ -3427,6 +3450,29 @@ owner named above is historical (TODO.md is marked HISTORICAL) — the residue's
 - Cases: structs/empty-struct-literal-at-named-type/var-init, structs/empty-struct-literal-at-named-type/param, structs/empty-struct-literal-at-named-type/return, structs/empty-struct-literal-at-named-type/map-store, structs/empty-struct-literal-at-named-type/reverse, structs/empty-struct-literal-at-named-type/compare
 - Discovered: 2026-08-04 (sem-adequacy notions sub-branch audit, semantics
   reviewer probing beyond the diff; verifier reproduced independently)
+- Neighbourhood: S2 (conversions: a missing kernel arm or a value not retagged) — swept 2026-10-26 by
+  lane `sweep/s2-conversions` (plan §4, [USER]-approved 2026-10-27). THE MATRIX: every target kind of
+  `convertValueToTy` and the emitter's routes (int, float, string, `[]byte`, `[]rune`, struct, array,
+  pointer, slice, map, func, interface, chan, bool, sync, type parameters, defined-over-defined, typed
+  nils) × the routes (explicit, constant, conversion of a call, chained, literal element / field / key,
+  return, assignability without a conversion, box, method receiver, the deref read, nil) × the sites
+  (the kernel's arms, `normalizeValueForTyAt`, `derefRetag` / `receiverRetag`, `structTagCompatible`'s
+  field arms, the emitter's dedicated operators, the bool strip, the interface wrap, the constant
+  fold): 118 cells — 74 PROBED by this lane (28 probe packages, two of them refusal probes; gc
+  go1.26.5 = the machine on every legal one), 35 COVERED by existing rows or the train-20 /
+  equality-review probes (cited per cell in the lane's report), 9 OUT OF SCOPE by a refusal named at
+  the point of failure or by go/types (slice→array succeeding forms FR-10 `slice-to-array-l2b`;
+  float→int out of range, latitude L:R6; anonymous non-empty struct types FR-13 `anon-struct`;
+  `unsafe.Pointer` «frontend-quarantined: basic type unsafe.Pointer»; a defined type over
+  `sync.Mutex`, «sync.noCopy» at export; complex FR-15; the conversion footprint budget BUG-131; the
+  kernel's `.interfaceDecl` / `.opaque` arms, unreachable from a type-checked wire; cross-package
+  unexported fields, illegal Go). ROWS ADDED: 96 in 18 packages `Corpus/coverage/exec/*/sweep-s2-*/`
+  (bools 4, constants 6, strings 12, structs 22, multipkg 1, pointers 11, conversions 15, channels 2,
+  assign-order 7, generics 6, methods 5, interfaces 3, sync 2), strict, expected = gc, all PASS.
+  FINDINGS: none — no wrong value, no wrong panic, no `stuck` on a legal program. CELLS LEFT: the
+  nine out-of-scope refusals above (coverage gaps by name, not defects) and BUG-134's two recorded
+  residuals (an address target carries no static type, release-readiness row 57; unexported field
+  names without their package, the train-20 audit's F2 — both reachable from a forged wire only).
 
 `normalizeStructValueWith` (Ops.lean, the struct arm of value
 normalization) compares the VALUE's carried `TypeId` against the target
@@ -4593,6 +4639,29 @@ evaluated exactly once
   docs/2026-09-01_gotest-triage.md suspicious-refusal 1 —
   issue19911.go, issue53619.go, typeparam/issue42758.go refused "nil
   literal for non-nilable type …interface…")
+- Neighbourhood: S2 (conversions: a missing kernel arm or a value not retagged) — swept 2026-10-26 by
+  lane `sweep/s2-conversions` (plan §4, [USER]-approved 2026-10-27). THE MATRIX: every target kind of
+  `convertValueToTy` and the emitter's routes (int, float, string, `[]byte`, `[]rune`, struct, array,
+  pointer, slice, map, func, interface, chan, bool, sync, type parameters, defined-over-defined, typed
+  nils) × the routes (explicit, constant, conversion of a call, chained, literal element / field / key,
+  return, assignability without a conversion, box, method receiver, the deref read, nil) × the sites
+  (the kernel's arms, `normalizeValueForTyAt`, `derefRetag` / `receiverRetag`, `structTagCompatible`'s
+  field arms, the emitter's dedicated operators, the bool strip, the interface wrap, the constant
+  fold): 118 cells — 74 PROBED by this lane (28 probe packages, two of them refusal probes; gc
+  go1.26.5 = the machine on every legal one), 35 COVERED by existing rows or the train-20 /
+  equality-review probes (cited per cell in the lane's report), 9 OUT OF SCOPE by a refusal named at
+  the point of failure or by go/types (slice→array succeeding forms FR-10 `slice-to-array-l2b`;
+  float→int out of range, latitude L:R6; anonymous non-empty struct types FR-13 `anon-struct`;
+  `unsafe.Pointer` «frontend-quarantined: basic type unsafe.Pointer»; a defined type over
+  `sync.Mutex`, «sync.noCopy» at export; complex FR-15; the conversion footprint budget BUG-131; the
+  kernel's `.interfaceDecl` / `.opaque` arms, unreachable from a type-checked wire; cross-package
+  unexported fields, illegal Go). ROWS ADDED: 96 in 18 packages `Corpus/coverage/exec/*/sweep-s2-*/`
+  (bools 4, constants 6, strings 12, structs 22, multipkg 1, pointers 11, conversions 15, channels 2,
+  assign-order 7, generics 6, methods 5, interfaces 3, sync 2), strict, expected = gc, all PASS.
+  FINDINGS: none — no wrong value, no wrong panic, no `stuck` on a legal program. CELLS LEFT: the
+  nine out-of-scope refusals above (coverage gaps by name, not defects) and BUG-134's two recorded
+  residuals (an address target carries no static type, release-readiness row 57; unexported field
+  names without their package, the train-20 audit's F2 — both reachable from a forged wire only).
 
 Mechanism: the ASSIGNMENT form's untyped nil reaches the machine as a
 bare nil node (no type), which `.nilLit none` accepts; the CONVERSION
@@ -7083,6 +7152,29 @@ the reason written, as the six above did.
 - Status: fixed ([AGENT], 2026-09-05, `bug103-array-conversion`)
 - Pinned-by: differential
 - Cases: structs/decl-order-reversed/conversion-array-target, structs/decl-order-reversed/conversion-unnamed-target, structs/decl-order-reversed/conversion-nested-copy, structs/decl-order-reversed/conversion-shared-references, structs/decl-order-reversed/conversion-empty-eval-once, structs/decl-order-reversed/conversion-float-elements
+- Neighbourhood: S2 (conversions: a missing kernel arm or a value not retagged) — swept 2026-10-26 by
+  lane `sweep/s2-conversions` (plan §4, [USER]-approved 2026-10-27). THE MATRIX: every target kind of
+  `convertValueToTy` and the emitter's routes (int, float, string, `[]byte`, `[]rune`, struct, array,
+  pointer, slice, map, func, interface, chan, bool, sync, type parameters, defined-over-defined, typed
+  nils) × the routes (explicit, constant, conversion of a call, chained, literal element / field / key,
+  return, assignability without a conversion, box, method receiver, the deref read, nil) × the sites
+  (the kernel's arms, `normalizeValueForTyAt`, `derefRetag` / `receiverRetag`, `structTagCompatible`'s
+  field arms, the emitter's dedicated operators, the bool strip, the interface wrap, the constant
+  fold): 118 cells — 74 PROBED by this lane (28 probe packages, two of them refusal probes; gc
+  go1.26.5 = the machine on every legal one), 35 COVERED by existing rows or the train-20 /
+  equality-review probes (cited per cell in the lane's report), 9 OUT OF SCOPE by a refusal named at
+  the point of failure or by go/types (slice→array succeeding forms FR-10 `slice-to-array-l2b`;
+  float→int out of range, latitude L:R6; anonymous non-empty struct types FR-13 `anon-struct`;
+  `unsafe.Pointer` «frontend-quarantined: basic type unsafe.Pointer»; a defined type over
+  `sync.Mutex`, «sync.noCopy» at export; complex FR-15; the conversion footprint budget BUG-131; the
+  kernel's `.interfaceDecl` / `.opaque` arms, unreachable from a type-checked wire; cross-package
+  unexported fields, illegal Go). ROWS ADDED: 96 in 18 packages `Corpus/coverage/exec/*/sweep-s2-*/`
+  (bools 4, constants 6, strings 12, structs 22, multipkg 1, pointers 11, conversions 15, channels 2,
+  assign-order 7, generics 6, methods 5, interfaces 3, sync 2), strict, expected = gc, all PASS.
+  FINDINGS: none — no wrong value, no wrong panic, no `stuck` on a legal program. CELLS LEFT: the
+  nine out-of-scope refusals above (coverage gaps by name, not defects) and BUG-134's two recorded
+  residuals (an address target carries no static type, release-readiness row 57; unexported field
+  names without their package, the train-20 audit's F2 — both reachable from a forged wire only).
 
 WHAT (spec#Conversions: a non-constant value `x` can be converted to `T` when `x`'s type
 and `T` have identical underlying types — `Codes`, `Raw` and `[3]Code` all have underlying
@@ -9100,6 +9192,29 @@ goroutines, as Go's exit does not; a malformed park there is outside this change
   were never written. Reproduced by this lane at the base `6e05137a` exactly as the review gives it (17
   probes `stuck`, `p33k`'s value-conversion control green), then widened to the local space below: 57 of
   the 60 rows born RED at the base.
+- Neighbourhood: S2 (conversions: a missing kernel arm or a value not retagged) — swept 2026-10-26 by
+  lane `sweep/s2-conversions` (plan §4, [USER]-approved 2026-10-27). THE MATRIX: every target kind of
+  `convertValueToTy` and the emitter's routes (int, float, string, `[]byte`, `[]rune`, struct, array,
+  pointer, slice, map, func, interface, chan, bool, sync, type parameters, defined-over-defined, typed
+  nils) × the routes (explicit, constant, conversion of a call, chained, literal element / field / key,
+  return, assignability without a conversion, box, method receiver, the deref read, nil) × the sites
+  (the kernel's arms, `normalizeValueForTyAt`, `derefRetag` / `receiverRetag`, `structTagCompatible`'s
+  field arms, the emitter's dedicated operators, the bool strip, the interface wrap, the constant
+  fold): 118 cells — 74 PROBED by this lane (28 probe packages, two of them refusal probes; gc
+  go1.26.5 = the machine on every legal one), 35 COVERED by existing rows or the train-20 /
+  equality-review probes (cited per cell in the lane's report), 9 OUT OF SCOPE by a refusal named at
+  the point of failure or by go/types (slice→array succeeding forms FR-10 `slice-to-array-l2b`;
+  float→int out of range, latitude L:R6; anonymous non-empty struct types FR-13 `anon-struct`;
+  `unsafe.Pointer` «frontend-quarantined: basic type unsafe.Pointer»; a defined type over
+  `sync.Mutex`, «sync.noCopy» at export; complex FR-15; the conversion footprint budget BUG-131; the
+  kernel's `.interfaceDecl` / `.opaque` arms, unreachable from a type-checked wire; cross-package
+  unexported fields, illegal Go). ROWS ADDED: 96 in 18 packages `Corpus/coverage/exec/*/sweep-s2-*/`
+  (bools 4, constants 6, strings 12, structs 22, multipkg 1, pointers 11, conversions 15, channels 2,
+  assign-order 7, generics 6, methods 5, interfaces 3, sync 2), strict, expected = gc, all PASS.
+  FINDINGS: none — no wrong value, no wrong panic, no `stuck` on a legal program. CELLS LEFT: the
+  nine out-of-scope refusals above (coverage gaps by name, not defects) and BUG-134's two recorded
+  residuals (an address target carries no static type, release-readiness row 57; unexported field
+  names without their package, the train-20 audit's F2 — both reachable from a forged wire only).
 
 WHAT (the base): a `Loc` carries no static type, so a `.base` load (`loadLoc`, Ops.lean) returns the cell's
 value under its MINT tag, and the `.deref` apply (`applyStrictOp`, Machine.lean) delivered that value as
@@ -9594,7 +9709,29 @@ WHAT: Go 1.21 changed `panic(nil)` to panic with a `*runtime.PanicNilError` unle
 - Pinned-by: differential
 - Cases: structs/tag-pointer-conversion
 - Discovered: the bug-fix arc's triage table, 2026-08-19 (`docs/2026-08-19_triage-table.md` §3.3, L7, category (a)); the row had been FAIL/lean-observation since BUG-020's conversion arms admitted the pointer conversion on 2026-08-06.
-- Neighbourhood: to be swept in step 2, shape S2 (conversions: a missing kernel arm or a value not retagged)
+- Neighbourhood: S2 (conversions: a missing kernel arm or a value not retagged) — swept 2026-10-26 by
+  lane `sweep/s2-conversions` (plan §4, [USER]-approved 2026-10-27). THE MATRIX: every target kind of
+  `convertValueToTy` and the emitter's routes (int, float, string, `[]byte`, `[]rune`, struct, array,
+  pointer, slice, map, func, interface, chan, bool, sync, type parameters, defined-over-defined, typed
+  nils) × the routes (explicit, constant, conversion of a call, chained, literal element / field / key,
+  return, assignability without a conversion, box, method receiver, the deref read, nil) × the sites
+  (the kernel's arms, `normalizeValueForTyAt`, `derefRetag` / `receiverRetag`, `structTagCompatible`'s
+  field arms, the emitter's dedicated operators, the bool strip, the interface wrap, the constant
+  fold): 118 cells — 74 PROBED by this lane (28 probe packages, two of them refusal probes; gc
+  go1.26.5 = the machine on every legal one), 35 COVERED by existing rows or the train-20 /
+  equality-review probes (cited per cell in the lane's report), 9 OUT OF SCOPE by a refusal named at
+  the point of failure or by go/types (slice→array succeeding forms FR-10 `slice-to-array-l2b`;
+  float→int out of range, latitude L:R6; anonymous non-empty struct types FR-13 `anon-struct`;
+  `unsafe.Pointer` «frontend-quarantined: basic type unsafe.Pointer»; a defined type over
+  `sync.Mutex`, «sync.noCopy» at export; complex FR-15; the conversion footprint budget BUG-131; the
+  kernel's `.interfaceDecl` / `.opaque` arms, unreachable from a type-checked wire; cross-package
+  unexported fields, illegal Go). ROWS ADDED: 96 in 18 packages `Corpus/coverage/exec/*/sweep-s2-*/`
+  (bools 4, constants 6, strings 12, structs 22, multipkg 1, pointers 11, conversions 15, channels 2,
+  assign-order 7, generics 6, methods 5, interfaces 3, sync 2), strict, expected = gc, all PASS.
+  FINDINGS: none — no wrong value, no wrong panic, no `stuck` on a legal program. CELLS LEFT: the
+  nine out-of-scope refusals above (coverage gaps by name, not defects) and BUG-134's two recorded
+  residuals (an address target carries no static type, release-readiness row 57; unexported field
+  names without their package, the train-20 audit's F2 — both reachable from a forged wire only).
 
 WHAT: spec#Conversions — a pointer conversion between struct types with identical underlying types (tags ignored) is legal and aliases the cell; the access path's static `TypeId` is then the converted type while the cell's tag is the mint type, and a nominal equality check refused the access. SITE: `GoLean/GoCore/Ops.lean` `structTagCompatible` (identical wire `FieldDef` lists) at the field arms of `fieldGet` / `loadLoc` / `storeLoc`; `GoLean/GoCore/Machine.lean`'s field-store arm. ROUTE: leaf-field reads and writes through a converted struct pointer; the whole-value routes stayed stuck until BUG-134 (2026-10-26) and identity until BUG-133.
 
@@ -9683,7 +9820,29 @@ WHAT: `.panicking _ .stop` is no scheduling boundary (`atBoundary_of_abort`, `Mu
 - Pinned-by: differential
 - Cases: strings/rune-slice-conversion, strings/rune-string-conversion, strings/string-to-rune-copy, strings/rune-slice-to-string-copy, strings/rune-invalid-values, strings/defined-slice-string-conversion, strings/nil-slice-string-conversion, spec-examples-decl/string-from-runes, spec-examples-lexical/string-to-runes
 - Discovered: the bug-fix arc's triage table, 2026-08-19 (`docs/2026-08-19_triage-table.md` §3.3, L1, category (a)); the rows were FAIL/lean-observation since the P3 spec-examples tranche (2026-08-18) and the earlier `strings/*` rows.
-- Neighbourhood: to be swept in step 2, shape S2 (conversions: a missing kernel arm or a value not retagged)
+- Neighbourhood: S2 (conversions: a missing kernel arm or a value not retagged) — swept 2026-10-26 by
+  lane `sweep/s2-conversions` (plan §4, [USER]-approved 2026-10-27). THE MATRIX: every target kind of
+  `convertValueToTy` and the emitter's routes (int, float, string, `[]byte`, `[]rune`, struct, array,
+  pointer, slice, map, func, interface, chan, bool, sync, type parameters, defined-over-defined, typed
+  nils) × the routes (explicit, constant, conversion of a call, chained, literal element / field / key,
+  return, assignability without a conversion, box, method receiver, the deref read, nil) × the sites
+  (the kernel's arms, `normalizeValueForTyAt`, `derefRetag` / `receiverRetag`, `structTagCompatible`'s
+  field arms, the emitter's dedicated operators, the bool strip, the interface wrap, the constant
+  fold): 118 cells — 74 PROBED by this lane (28 probe packages, two of them refusal probes; gc
+  go1.26.5 = the machine on every legal one), 35 COVERED by existing rows or the train-20 /
+  equality-review probes (cited per cell in the lane's report), 9 OUT OF SCOPE by a refusal named at
+  the point of failure or by go/types (slice→array succeeding forms FR-10 `slice-to-array-l2b`;
+  float→int out of range, latitude L:R6; anonymous non-empty struct types FR-13 `anon-struct`;
+  `unsafe.Pointer` «frontend-quarantined: basic type unsafe.Pointer»; a defined type over
+  `sync.Mutex`, «sync.noCopy» at export; complex FR-15; the conversion footprint budget BUG-131; the
+  kernel's `.interfaceDecl` / `.opaque` arms, unreachable from a type-checked wire; cross-package
+  unexported fields, illegal Go). ROWS ADDED: 96 in 18 packages `Corpus/coverage/exec/*/sweep-s2-*/`
+  (bools 4, constants 6, strings 12, structs 22, multipkg 1, pointers 11, conversions 15, channels 2,
+  assign-order 7, generics 6, methods 5, interfaces 3, sync 2), strict, expected = gc, all PASS.
+  FINDINGS: none — no wrong value, no wrong panic, no `stuck` on a legal program. CELLS LEFT: the
+  nine out-of-scope refusals above (coverage gaps by name, not defects) and BUG-134's two recorded
+  residuals (an address target carries no static type, release-readiness row 57; unexported field
+  names without their package, the train-20 audit's F2 — both reachable from a forged wire only).
 
 WHAT: spec#Conversions to and from a string type — `[]rune(s)` yields the string's code points (U+FFFD per invalid byte) and `string(r)` for a rune slice concatenates them; the kernel had neither arm, so the conversion fell to the catch-all BUG-020 and BUG-103 record for other target kinds. SITE: `GoLean/GoCore/Ops.lean` `runesOfString` (the `decodeRuneAt` offset walk) and `stringFromRuneSlice` (`sliceVisibleValues` + `GoString.fromCodePoint`), the strict ops `runesFromString` / `stringFromRuneSlice`; the frontend classifier `isRuneSlice`. ROUTE: both conversion directions over named and unnamed rune-slice types, nil slices, invalid runes. The capacity of the result is BUG-118's axis (R3), measured at this fix and deliberately left unpinned then.
 
@@ -9693,7 +9852,29 @@ WHAT: spec#Conversions to and from a string type — `[]rune(s)` yields the stri
 - Pinned-by: differential
 - Cases: spec-examples-decl/slice-to-array/short-array, spec-examples-decl/slice-to-array/short-array-ptr, spec-examples-decl/slice-to-array/nil-to-longer-ptr
 - Discovered: the triage table, 2026-08-19 (§3.3, L2a, category (a)); the rows born FAIL/lean-observation at the P3 tranche.
-- Neighbourhood: to be swept in step 2, shape S2 (conversions: a missing kernel arm or a value not retagged)
+- Neighbourhood: S2 (conversions: a missing kernel arm or a value not retagged) — swept 2026-10-26 by
+  lane `sweep/s2-conversions` (plan §4, [USER]-approved 2026-10-27). THE MATRIX: every target kind of
+  `convertValueToTy` and the emitter's routes (int, float, string, `[]byte`, `[]rune`, struct, array,
+  pointer, slice, map, func, interface, chan, bool, sync, type parameters, defined-over-defined, typed
+  nils) × the routes (explicit, constant, conversion of a call, chained, literal element / field / key,
+  return, assignability without a conversion, box, method receiver, the deref read, nil) × the sites
+  (the kernel's arms, `normalizeValueForTyAt`, `derefRetag` / `receiverRetag`, `structTagCompatible`'s
+  field arms, the emitter's dedicated operators, the bool strip, the interface wrap, the constant
+  fold): 118 cells — 74 PROBED by this lane (28 probe packages, two of them refusal probes; gc
+  go1.26.5 = the machine on every legal one), 35 COVERED by existing rows or the train-20 /
+  equality-review probes (cited per cell in the lane's report), 9 OUT OF SCOPE by a refusal named at
+  the point of failure or by go/types (slice→array succeeding forms FR-10 `slice-to-array-l2b`;
+  float→int out of range, latitude L:R6; anonymous non-empty struct types FR-13 `anon-struct`;
+  `unsafe.Pointer` «frontend-quarantined: basic type unsafe.Pointer»; a defined type over
+  `sync.Mutex`, «sync.noCopy» at export; complex FR-15; the conversion footprint budget BUG-131; the
+  kernel's `.interfaceDecl` / `.opaque` arms, unreachable from a type-checked wire; cross-package
+  unexported fields, illegal Go). ROWS ADDED: 96 in 18 packages `Corpus/coverage/exec/*/sweep-s2-*/`
+  (bools 4, constants 6, strings 12, structs 22, multipkg 1, pointers 11, conversions 15, channels 2,
+  assign-order 7, generics 6, methods 5, interfaces 3, sync 2), strict, expected = gc, all PASS.
+  FINDINGS: none — no wrong value, no wrong panic, no `stuck` on a legal program. CELLS LEFT: the
+  nine out-of-scope refusals above (coverage gaps by name, not defects) and BUG-134's two recorded
+  residuals (an address target carries no static type, release-readiness row 57; unexported field
+  names without their package, the train-20 audit's F2 — both reachable from a forged wire only).
 
 WHAT: spec#Conversions from slice to array or array pointer — a run-time panic when the slice is shorter; the kernel's array-target arm did not exist, so the refusal fired where Go panics (the message embeds `L` and `N` only). The succeeding form (`len >= N`) is still refused by name — `Loc` has no sub-array view constructor (frontier FR-10, `noodler/conversions/nil-slice-zero-array` its second witness). SITE: `GoLean/GoCore/Ops.lean` `convertValueToTyFuel`, the array and array-pointer target arms over a `.slice` operand (the kernel's first panicking conversion arm). ROUTE: `[N]T(s)`, `(*[N]T)(s)`, a nil slice to a longer array pointer.
 
@@ -9713,7 +9894,29 @@ WHAT: spec#Min_and_max's special-case table for floats; the machine's `minOf`/`m
 - Pinned-by: differential
 - Cases: strings/byte-slice-to-string-copy, strings/string-byte-conversion, strings/string-int-rune
 - Discovered: commit 923e3ec0; the three rows were FAIL/lean-observation at the slice-0 re-pin `4dc23653` and PASS at `2b495d28` (the review's measurement).
-- Neighbourhood: to be swept in step 2, shape S2 (conversions: a missing kernel arm or a value not retagged)
+- Neighbourhood: S2 (conversions: a missing kernel arm or a value not retagged) — swept 2026-10-26 by
+  lane `sweep/s2-conversions` (plan §4, [USER]-approved 2026-10-27). THE MATRIX: every target kind of
+  `convertValueToTy` and the emitter's routes (int, float, string, `[]byte`, `[]rune`, struct, array,
+  pointer, slice, map, func, interface, chan, bool, sync, type parameters, defined-over-defined, typed
+  nils) × the routes (explicit, constant, conversion of a call, chained, literal element / field / key,
+  return, assignability without a conversion, box, method receiver, the deref read, nil) × the sites
+  (the kernel's arms, `normalizeValueForTyAt`, `derefRetag` / `receiverRetag`, `structTagCompatible`'s
+  field arms, the emitter's dedicated operators, the bool strip, the interface wrap, the constant
+  fold): 118 cells — 74 PROBED by this lane (28 probe packages, two of them refusal probes; gc
+  go1.26.5 = the machine on every legal one), 35 COVERED by existing rows or the train-20 /
+  equality-review probes (cited per cell in the lane's report), 9 OUT OF SCOPE by a refusal named at
+  the point of failure or by go/types (slice→array succeeding forms FR-10 `slice-to-array-l2b`;
+  float→int out of range, latitude L:R6; anonymous non-empty struct types FR-13 `anon-struct`;
+  `unsafe.Pointer` «frontend-quarantined: basic type unsafe.Pointer»; a defined type over
+  `sync.Mutex`, «sync.noCopy» at export; complex FR-15; the conversion footprint budget BUG-131; the
+  kernel's `.interfaceDecl` / `.opaque` arms, unreachable from a type-checked wire; cross-package
+  unexported fields, illegal Go). ROWS ADDED: 96 in 18 packages `Corpus/coverage/exec/*/sweep-s2-*/`
+  (bools 4, constants 6, strings 12, structs 22, multipkg 1, pointers 11, conversions 15, channels 2,
+  assign-order 7, generics 6, methods 5, interfaces 3, sync 2), strict, expected = gc, all PASS.
+  FINDINGS: none — no wrong value, no wrong panic, no `stuck` on a legal program. CELLS LEFT: the
+  nine out-of-scope refusals above (coverage gaps by name, not defects) and BUG-134's two recorded
+  residuals (an address target carries no static type, release-readiness row 57; unexported field
+  names without their package, the train-20 audit's F2 — both reachable from a forged wire only).
 
 WHAT: the machine already had the string↔byte-slice and rune→string operators; the frontend's conversion emitter did not route to them, so the generic `convert` reached a kernel with no such arm. The same class as BUG-160 (the rune-slice directions, 2026-08-19) and BUG-020/BUG-103 (the kernel's own missing arms). SITE: `tools/nativefrontend/emit.go`, the conversion emission for string-typed targets and operands. ROUTE: `[]byte(s)`, `string(b)`, `string(r)` for an integer `r`.
 

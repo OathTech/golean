@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+boxed-ints	boxedConvertedInts	-	ok	-	conversions,constants,ints,defined_type,interfaces,type_switch
+boxed-string	boxedConvertedString	-	ok	-	conversions,constants,strings,defined_type,interfaces,type_switch
+boxed-float	boxedConvertedFloat	-	ok	-	conversions,constants,floats,defined_type,interfaces,type_switch
+boxed-bool	boxedConvertedBool	-	ok	-	conversions,constants,bools,defined_type,interfaces,type_switch

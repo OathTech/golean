@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+bytes-of-type-param	bytesOfTypeParam	-	ok	-	conversions,generics,type_sets,strings,bytes,defined_type
+string-of-type-param-bytes	stringOfTypeParamBytes	-	ok	-	conversions,generics,type_sets,strings,bytes,defined_type
+runes-of-type-param	runesOfTypeParam	-	ok	-	conversions,generics,type_sets,strings,runes,defined_type
+type-param-string-target	typeParamStringTarget	-	ok	-	conversions,generics,type_sets,strings,defined_type,interfaces,type_switch
+string-of-type-param-int	stringOfTypeParamInt	-	ok	-	conversions,generics,type_sets,strings,runes,defined_type,unicode
+identity-type-param-conv	identityTypeParamConv	-	ok	-	conversions,generics,interfaces,slices,structs,methods,type_assertions

@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+bytes-of-defined-elem	bytesOfDefinedElem	-	ok	-	conversions,strings,bytes,defined_type,slices
+defined-bytes-of-literal	definedBytesOfLiteral	-	ok	-	conversions,strings,bytes,defined_type,slices,literals,copy_semantics
+runes-of-defined-elem	runesOfDefinedElem	-	ok	-	conversions,strings,runes,defined_type,slices,invalid_utf8
+bytes-idioms	bytesIdioms	-	ok	-	conversions,strings,bytes,len,indexing,range,append
+runes-idioms	runesIdioms	-	ok	-	conversions,strings,runes,len,indexing,range,invalid_utf8
+string-compare-idiom	stringCompareIdiom	-	ok	-	conversions,strings,bytes,comparisons,equality
+map-index-string-of-bytes	mapIndexStringOfBytes	-	ok	-	conversions,strings,bytes,maps,keys
+switch-on-string-of-bytes	switchOnStringOfBytes	-	ok	-	conversions,strings,bytes,switch

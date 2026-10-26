@@ -1,0 +1,12 @@
+# id	subject	args	expected_status	expected_reason	features
+deref-float-pointee	derefFloatPointee	-	ok	-	conversions,pointers,defined_type,floats,interfaces,type_switch,aliasing
+deref-string-pointee	derefStringPointee	-	ok	-	conversions,pointers,defined_type,strings,interfaces,type_switch,aliasing
+deref-bool-pointee	derefBoolPointee	-	ok	-	conversions,pointers,defined_type,bools,interfaces,type_switch,aliasing
+deref-slice-pointee	derefSlicePointee	-	ok	-	conversions,pointers,defined_type,slices,append,interfaces,type_switch,aliasing
+deref-map-pointee	derefMapPointee	-	ok	-	conversions,pointers,defined_type,maps,interfaces,type_switch,aliasing
+deref-func-pointee	derefFuncPointee	-	ok	-	conversions,pointers,defined_type,functions,closures,interfaces,type_switch,aliasing
+deref-chan-pointee	derefChanPointee	-	ok	-	conversions,pointers,defined_type,channels,interfaces,type_switch,aliasing
+deref-array-pointee	derefArrayPointee	-	ok	-	conversions,pointers,defined_type,arrays,interfaces,type_switch,aliasing
+deref-iface-pointee	derefIfacePointee	-	ok	-	conversions,pointers,defined_type,interfaces,methods,aliasing
+defined-pointer-type	definedPointerType	-	ok	-	conversions,pointers,defined_type,structs,interfaces,type_switch,aliasing
+pointer-to-pointer	pointerToPointer	-	ok	-	conversions,pointers,defined_type,structs,aliasing

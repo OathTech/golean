@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+int-method-on-conversion	intMethodOnConversion	-	ok	-	conversions,methods,defined_type,ints
+float-method-on-conversion	floatMethodOnConversion	-	ok	-	conversions,methods,defined_type,floats,comparisons
+string-method-on-conversion	stringMethodOnConversion	-	ok	-	conversions,methods,defined_type,strings,len
+bool-method-on-conversion	boolMethodOnConversion	-	ok	-	conversions,methods,defined_type,bools,strings,concat
+composite-methods-on-conversion	compositeMethodsOnConversion	-	ok	-	conversions,methods,defined_type,bytes,slices,maps,functions,channels

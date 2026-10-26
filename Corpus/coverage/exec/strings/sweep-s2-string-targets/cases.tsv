@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+string-of-defined-int	stringOfDefinedInt	-	ok	-	conversions,strings,runes,defined_type,unicode
+string-of-int-var	stringOfIntVar	-	ok	-	conversions,strings,runes,ints,unicode,invalid_utf8
+string-of-defined-byte-elems	stringOfDefinedByteElems	-	ok	-	conversions,strings,bytes,defined_type,slices
+string-of-defined-rune-elems	stringOfDefinedRuneElems	-	ok	-	conversions,strings,runes,defined_type,slices,unicode

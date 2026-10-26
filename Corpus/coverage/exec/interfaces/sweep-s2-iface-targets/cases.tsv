@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+iface-to-iface	ifaceToIface	-	ok	-	conversions,interfaces,methods,type_assertions,embedding
+defined-iface-target	definedIfaceTarget	-	ok	-	conversions,interfaces,defined_type,methods,type_switch
+nil-iface-to-iface	nilIfaceToIface	-	ok	-	conversions,interfaces,nil,equality
