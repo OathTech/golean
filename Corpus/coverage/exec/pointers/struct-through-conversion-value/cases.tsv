@@ -1,0 +1,25 @@
+# id	subject	args	expected_status	expected_reason	features
+# BUG-134 (equality review 2026-10-26 F1): the whole-struct VALUE through a
+# struct-pointer conversion, one value route per row (the review's p33 probes
+# and this lane's local space). Every row born RED (`stuck`) at the base
+# 6e05137a; expected = gc.
+eq-literal	eqLiteral	-	ok	-	pointers,structs,conversions,comparisons,equality
+eq-right	eqRight	-	ok	-	pointers,structs,conversions,comparisons,equality
+assign-then-eq	assignThenEq	-	ok	-	pointers,structs,conversions,assignment,equality,value_copy
+boxed-same-type	boxedSameType	-	ok	-	pointers,structs,conversions,interfaces,equality
+boxed-type-differs	boxedTypeDiffers	-	ok	-	pointers,structs,conversions,interfaces,equality
+map-key	mapKey	-	ok	-	pointers,structs,conversions,maps,keys
+switch	switchValue	-	ok	-	pointers,structs,conversions,switch,equality
+nested-field	nestedField	-	ok	-	pointers,structs,conversions,nested,equality
+param	param	-	ok	-	pointers,structs,conversions,calls,functions
+neq-and-ptr-eq	neqAndPtrEq	-	ok	-	pointers,structs,conversions,comparisons,equality,identity
+slice-elem	sliceElem	-	ok	-	pointers,structs,conversions,slices,equality
+box-assert	boxAssert	-	ok	-	pointers,structs,conversions,interfaces,type_assertions
+type-switch	typeSwitch	-	ok	-	pointers,structs,conversions,interfaces,type_switch
+returned	returned	-	ok	-	pointers,structs,conversions,returns
+generic-eq	genericEq	-	ok	-	pointers,structs,conversions,generics,equality
+closure	closure	-	ok	-	pointers,structs,conversions,closures,equality
+goroutine-arg	goroutineArg	-	ok	-	pointers,structs,conversions,goroutines,channels,equality
+composites	composites	-	ok	-	pointers,structs,conversions,literals,arrays,slices,maps,append
+multi-and-variadic	multiAndVariadic	-	ok	-	pointers,structs,conversions,multi_result,variadic
+box-then-copy	boxThenCopy	-	ok	-	pointers,structs,conversions,interfaces,type_assertions,value_copy

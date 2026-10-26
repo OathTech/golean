@@ -496,13 +496,16 @@ def applyStrictOp (s : Store) (leafOf : Loc → Loc) :
       return (.string { bytes := bytes }, s, tr)
   | .stringFromRune, [v] => do
       return (.string (GoString.fromCodePoint (← valueAsInt v)), s, [])
-  | .deref _, [v] => do
+  | .deref ty, [v] => do
       -- THE POINTEE READ, narrowed by the caller's `leafOf` (the
       -- continuation's immediate projection chain — `projChainTarget`;
-      -- O1's value-path whole-cell read otherwise).
+      -- O1's value-path whole-cell read otherwise). The value is the
+      -- cell's contents AT THE POINTEE'S STATIC TYPE: through a converted
+      -- struct pointer the mint tag is retagged to `ty`'s (`derefRetag`,
+      -- BUG-134); every other read is unchanged.
       let l ← valueAsLoc v
       let (x, tr) ← Mem.loadFor ctx s l (leafOf l)
-      return (x, s, tr)
+      return (derefRetag ctx ty x, s, tr)
   -- `&*p` (BUG-056): the nil check consumes the pointer VALUE already
   -- in hand — `.addr` passes through, `.nil` panics via `valueAsLoc`'s
   -- runtime-error arm, anything else is stuck. It reads and writes NO

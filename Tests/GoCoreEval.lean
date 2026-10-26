@@ -3134,6 +3134,18 @@ private def malformedParkedStateFacts : IO Bool := do
     (match pool absent emptyStore with
       | .error (Stop.stuck msg) => (msg.splitOn "unbound").length == 2
       | _ => false))
+  -- The CLI's enumeration mirror (`enumPoolRun`, the membership lane; train-19 shake
+  -- review F3) classifies through the same `deadlockStop`.
+  let enumPool (c : GoCore.Machine.Config) (s : GoCore.Store) :=
+    CLI.enumPoolRun ctx [] #[] none 10 0 ⟨#[.running c none], s, 0⟩ {} [] GoString.empty
+  passed := passed && (← expectTrue "DC11 / F3: the enumeration driver's mirror REFUSES the malformed parked state by name — never Go's deadlock"
+    (match enumPool absent emptyStore with
+      | .error (Stop.stuck msg, _) => (msg.splitOn "unbound").length == 2
+      | _ => false))
+  passed := passed && (← expectTrue "DC11 / F3 control: the enumeration driver's mirror names a validly parked program Go's deadlock"
+    (match enumPool (.blockedSend none (.int 3 .int) .stop) emptyStore with
+      | .error (.deadlock, _) => true
+      | _ => false))
   -- Valid control 1: a nil-channel send is never ready (spec) — Go's deadlock.
   passed := passed && (← expectTrue "DC11 control: a parked nil-channel send is Go's deadlock"
     (match pool (.blockedSend none (.int 3 .int) .stop) emptyStore with

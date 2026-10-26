@@ -1294,6 +1294,18 @@ theorem normalizeValueForTyTy_locSup {f : TypeIdx → GoValue → Except Stop Go
       subst h
       exact Nat.le_refl _
 
+/-- The whole-value retag (BUG-134) keeps the fields, hence the loc bound. -/
+theorem retagStruct_locSup (types : TypeEnv) (name : TypeId) (v : GoValue) :
+    GoValue.locSup (retagStruct types name v) = GoValue.locSup v := by
+  cases v <;> (try rfl)
+  simp only [retagStruct]
+  split <;> simp [GoValue.locSup]
+
+theorem derefRetag_locSup (ty : Ty) (v : GoValue) :
+    GoValue.locSup (derefRetag ctx ty v) = GoValue.locSup v := by
+  unfold derefRetag
+  split <;> simp [retagStruct_locSup]
+
 /-- The INDEX layer, by induction on the descent bound. -/
 theorem normalizeValueForTyAt_locSup (types : TypeEnv) :
     ∀ (bound : Nat) {i : TypeIdx} {v r : GoValue},
@@ -1306,8 +1318,9 @@ theorem normalizeValueForTyAt_locSup (types : TypeEnv) :
     intro i v r h
     simp only [normalizeValueForTyAt] at h
     split at h
-    · exact normalizeStructValueWith_locSup
-        (fun _ _ _ hr => normalizeValueForTyTy_locSup (fun _ _ _ hh => ih hh) hr) h
+    · exact Nat.le_trans (normalizeStructValueWith_locSup
+        (fun _ _ _ hr => normalizeValueForTyTy_locSup (fun _ _ _ hh => ih hh) hr) h)
+        (Nat.le_of_eq (retagStruct_locSup _ _ _))
     · exact normalizeValueForTyTy_locSup (fun _ _ _ hh => ih hh) h
     · simp at h
     · simp at h
@@ -2043,8 +2056,11 @@ theorem normalizeValueForTyAt_isNormal (types : TypeEnv) :
       obtain ⟨name, td⟩ := e
       cases td with
       | struct fields =>
+        -- The whole-value retag (BUG-134) precedes the shape checks; the
+        -- output is normal whatever value it produced.
         simp only [normalizeStructValueWith] at h
-        cases v
+        generalize retagStruct types name v = v' at h
+        cases v'
         case struct actual fieldsValue =>
           simp only [isNormalForTyAt, hlook]
           by_cases hact : actual = name
@@ -4463,7 +4479,7 @@ theorem applyStrictOp_wf {σ : Store} {leafOf : Loc → Loc} {op : StrictOp} {vs
     simp only at h
     obtain ⟨rfl, rfl, rfl, rfl⟩ := h
     have := loadLoc_locSup (Mem.loadFor_eq hlv).1
-    exact strictWfSame hw (by omega)
+    exact strictWfSame hw (by rw [derefRetag_locSup]; omega)
   · -- addrOfDeref (BUG-056): nil-assert on the pointer VALUE, no load
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨l, hl, rfl, rfl, rfl⟩ := h

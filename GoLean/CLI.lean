@@ -1882,7 +1882,11 @@ def enumPoolRun (pctx : GoCore.ProgramCtx) (resultLocs : List Loc) (resultTys : 
                               else enumPoolRun pctx resultLocs resultTys itersCap fuel iters' m' r' choices' acc')
             | none =>
                 if (GoCore.Machine.runnableIdxs pctx m.shared m.threads).isEmpty then
-                  throw (.deadlock, acc)
+                  -- DC11 (BUG-133's paragraph; shake review F3): the pool's own
+                  -- classification — `deadlockStop`, the one definition behind
+                  -- every driver: Go's deadlock only when every parked goroutine
+                  -- is validly parked, else the malformed park's named refusal.
+                  throw (GoCore.Machine.deadlockStop pctx m.shared m.threads, acc)
                 else
                   match fuel with
                   | 0 => throw (stepFuelStop itersCap, acc)

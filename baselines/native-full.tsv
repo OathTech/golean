@@ -1,5 +1,85 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 4089 (3828 PASS / 261 FAIL)
+# cases: 4149 (3888 PASS / 261 FAIL)
+# re-pinned: 2026-10-26 [AGENT], lane core/struct-through-conversion-1026 — BUG-134 (the equality/identity review's F1 on train 19;
+#   [USER] ruling 2026-10-26, Mike, relayed by the [AGENT] coordinator: shake the tree, fix what the reviews found, close the class —
+#   a whole-struct load or store through a converted pointer yields or accepts the value at the pointer's static type when the two
+#   struct types are tag-compatible). WHY: the `.deref` apply (GoLean/GoCore/Machine.lean) returns the loaded value RETAGGED to the
+#   pointee's static struct type when the cell's mint tag is tag-compatible with it (`derefRetag`), and the normalizer's struct arm
+#   (`normalizeValueForTyAt`, Ops.lean) retags a tag-compatible value at the DECLARED type before its shape checks (`retagStruct`), one
+#   predicate `TypeEnv.structTagCompatible` behind both and the field arms — so `*pb` for `pb := (*B)(&a)` on every value route and
+#   the store `*pb = B{…}` print gc's answer where they refused `stuck`. NO existing row moved: 4089 + 60 = 4149; PASS 3828 + 60 =
+#   3888; FAIL 261 unchanged. No flip, no removal, no cause change. NEW rows (60, three packages
+#   Corpus/coverage/exec/pointers/struct-through-conversion-{value,store,shapes}/, every row strict, expected = gc), appended at the
+#   end of the file: 57 born RED (`stuck`) at the base 6e05137a — the review's p33 routes (value/{eq-literal,eq-right,assign-then-eq,
+#   boxed-same-type,map-key,switch,nested-field,param,neq-and-ptr-eq,slice-elem,box-assert,type-switch}, store/store-then-*,
+#   store/store-only) and the lane's local space (the returned value's readout type name, generics, closures, goroutine arguments,
+#   composites, multi-result/variadic, the asserted copy; nested outer, array/slice elements, stored pointers, embedded and inner
+#   fields, chained conversions, structs holding pointers, defined-over-defined, value-receiver and promoted methods, range, the
+#   interface dynamic-type rules, tag-only types, embedded pointer fields, double pointers, new/literal addresses) — and 3 controls
+#   born green (value/boxed-type-differs: the dynamic-type rule; store/swap: both loads A-tagged into A cells; store/promoted-set: a
+#   leaf route). Measured by CAPPED_MEM_MAX=64G capped scripts/ci --diff at the lane tree before the re-pin (its only drift: these 60
+#   NEW ids; kernel replay, lake check and lake comparator ok), the rows taken from that run's artifacts/coverage/latest.tsv; the
+#   --diff at the tip judges.
+#     pointers/struct-through-conversion-value/eq-literal                PASS/- — expected = gc
+#     pointers/struct-through-conversion-value/eq-right                  PASS/- — expected = gc
+#     pointers/struct-through-conversion-value/assign-then-eq            PASS/- — expected = gc
+#     pointers/struct-through-conversion-value/boxed-same-type           PASS/- — expected = gc
+#     pointers/struct-through-conversion-value/boxed-type-differs        PASS/- — expected = gc
+#     pointers/struct-through-conversion-value/map-key                   PASS/- — expected = gc
+#     pointers/struct-through-conversion-value/switch                    PASS/- — expected = gc
+#     pointers/struct-through-conversion-value/nested-field              PASS/- — expected = gc
+#     pointers/struct-through-conversion-value/param                     PASS/- — expected = gc
+#     pointers/struct-through-conversion-value/neq-and-ptr-eq            PASS/- — expected = gc
+#     pointers/struct-through-conversion-value/slice-elem                PASS/- — expected = gc
+#     pointers/struct-through-conversion-value/box-assert                PASS/- — expected = gc
+#     pointers/struct-through-conversion-value/type-switch               PASS/- — expected = gc
+#     pointers/struct-through-conversion-value/returned                  PASS/- — expected = gc
+#     pointers/struct-through-conversion-value/generic-eq                PASS/- — expected = gc
+#     pointers/struct-through-conversion-value/closure                   PASS/- — expected = gc
+#     pointers/struct-through-conversion-value/goroutine-arg             PASS/- — expected = gc
+#     pointers/struct-through-conversion-value/composites                PASS/- — expected = gc
+#     pointers/struct-through-conversion-value/multi-and-variadic        PASS/- — expected = gc
+#     pointers/struct-through-conversion-value/box-then-copy             PASS/- — expected = gc
+#     pointers/struct-through-conversion-store/store-then-orig           PASS/- — expected = gc
+#     pointers/struct-through-conversion-store/store-then-deref-eq       PASS/- — expected = gc
+#     pointers/struct-through-conversion-store/store-then-box-type-switch PASS/- — expected = gc
+#     pointers/struct-through-conversion-store/store-then-box-eq         PASS/- — expected = gc
+#     pointers/struct-through-conversion-store/store-then-field-eq       PASS/- — expected = gc
+#     pointers/struct-through-conversion-store/store-then-copy-orig      PASS/- — expected = gc
+#     pointers/struct-through-conversion-store/store-only                PASS/- — expected = gc
+#     pointers/struct-through-conversion-store/swap                      PASS/- — expected = gc
+#     pointers/struct-through-conversion-store/copy-between-aliases      PASS/- — expected = gc
+#     pointers/struct-through-conversion-store/through-stored-pointer    PASS/- — expected = gc
+#     pointers/struct-through-conversion-store/embedded-field            PASS/- — expected = gc
+#     pointers/struct-through-conversion-store/array-elem                PASS/- — expected = gc
+#     pointers/struct-through-conversion-store/slice-elem                PASS/- — expected = gc
+#     pointers/struct-through-conversion-store/chained                   PASS/- — expected = gc
+#     pointers/struct-through-conversion-store/double-pointer            PASS/- — expected = gc
+#     pointers/struct-through-conversion-store/new-and-literal           PASS/- — expected = gc
+#     pointers/struct-through-conversion-store/inner-field               PASS/- — expected = gc
+#     pointers/struct-through-conversion-store/struct-holding-pointers   PASS/- — expected = gc
+#     pointers/struct-through-conversion-store/tag-only                  PASS/- — expected = gc
+#     pointers/struct-through-conversion-store/range-store               PASS/- — expected = gc
+#     pointers/struct-through-conversion-store/promoted-set              PASS/- — expected = gc
+#     pointers/struct-through-conversion-store/nested-store              PASS/- — expected = gc
+#     pointers/struct-through-conversion-shapes/nested-outer             PASS/- — expected = gc
+#     pointers/struct-through-conversion-shapes/array-elem               PASS/- — expected = gc
+#     pointers/struct-through-conversion-shapes/stored-pointer-later     PASS/- — expected = gc
+#     pointers/struct-through-conversion-shapes/embedded-field           PASS/- — expected = gc
+#     pointers/struct-through-conversion-shapes/chained                  PASS/- — expected = gc
+#     pointers/struct-through-conversion-shapes/struct-holding-pointers  PASS/- — expected = gc
+#     pointers/struct-through-conversion-shapes/defined-over-defined     PASS/- — expected = gc
+#     pointers/struct-through-conversion-shapes/value-receiver           PASS/- — expected = gc
+#     pointers/struct-through-conversion-shapes/receiver-via-boxes       PASS/- — expected = gc
+#     pointers/struct-through-conversion-shapes/method-value             PASS/- — expected = gc
+#     pointers/struct-through-conversion-shapes/promoted-through-outer   PASS/- — expected = gc
+#     pointers/struct-through-conversion-shapes/range-load               PASS/- — expected = gc
+#     pointers/struct-through-conversion-shapes/iface-dynamic-type       PASS/- — expected = gc
+#     pointers/struct-through-conversion-shapes/box-assertions           PASS/- — expected = gc
+#     pointers/struct-through-conversion-shapes/tag-only                 PASS/- — expected = gc
+#     pointers/struct-through-conversion-shapes/embedded-pointer-field   PASS/- — expected = gc
+#     pointers/struct-through-conversion-shapes/double-pointer           PASS/- — expected = gc
+#     pointers/struct-through-conversion-shapes/inner-field              PASS/- — expected = gc
 # re-pinned: 2026-10-26 [AGENT], lane core/dc01-pointer-identity-1026 — BUG-133 (the deep-clean review's DC01, semantics S1; [USER]
 #   ruling 2026-10-26, Mike, relayed by the [AGENT] coordinator: pointer identity as the canonical PHYSICAL location at every comparison
 #   and hashing site, Go's dynamic-type rule for interface values kept, the local space surveyed). WHY: `valueEq`'s pointer arm
@@ -6491,3 +6571,63 @@ PASS	pointers/identity-tag-alias/map-delete-via-alias	-	-
 PASS	pointers/identity-tag-alias/neq	-	-
 PASS	pointers/identity-tag-alias/same-spelling	-	-
 PASS	pointers/identity-tag-alias/write-through	-	-
+PASS	pointers/struct-through-conversion-value/eq-literal	-	-
+PASS	pointers/struct-through-conversion-value/eq-right	-	-
+PASS	pointers/struct-through-conversion-value/assign-then-eq	-	-
+PASS	pointers/struct-through-conversion-value/boxed-same-type	-	-
+PASS	pointers/struct-through-conversion-value/boxed-type-differs	-	-
+PASS	pointers/struct-through-conversion-value/map-key	-	-
+PASS	pointers/struct-through-conversion-value/switch	-	-
+PASS	pointers/struct-through-conversion-value/nested-field	-	-
+PASS	pointers/struct-through-conversion-value/param	-	-
+PASS	pointers/struct-through-conversion-value/neq-and-ptr-eq	-	-
+PASS	pointers/struct-through-conversion-value/slice-elem	-	-
+PASS	pointers/struct-through-conversion-value/box-assert	-	-
+PASS	pointers/struct-through-conversion-value/type-switch	-	-
+PASS	pointers/struct-through-conversion-value/returned	-	-
+PASS	pointers/struct-through-conversion-value/generic-eq	-	-
+PASS	pointers/struct-through-conversion-value/closure	-	-
+PASS	pointers/struct-through-conversion-value/goroutine-arg	-	-
+PASS	pointers/struct-through-conversion-value/composites	-	-
+PASS	pointers/struct-through-conversion-value/multi-and-variadic	-	-
+PASS	pointers/struct-through-conversion-value/box-then-copy	-	-
+PASS	pointers/struct-through-conversion-store/store-then-orig	-	-
+PASS	pointers/struct-through-conversion-store/store-then-deref-eq	-	-
+PASS	pointers/struct-through-conversion-store/store-then-box-type-switch	-	-
+PASS	pointers/struct-through-conversion-store/store-then-box-eq	-	-
+PASS	pointers/struct-through-conversion-store/store-then-field-eq	-	-
+PASS	pointers/struct-through-conversion-store/store-then-copy-orig	-	-
+PASS	pointers/struct-through-conversion-store/store-only	-	-
+PASS	pointers/struct-through-conversion-store/swap	-	-
+PASS	pointers/struct-through-conversion-store/copy-between-aliases	-	-
+PASS	pointers/struct-through-conversion-store/through-stored-pointer	-	-
+PASS	pointers/struct-through-conversion-store/embedded-field	-	-
+PASS	pointers/struct-through-conversion-store/array-elem	-	-
+PASS	pointers/struct-through-conversion-store/slice-elem	-	-
+PASS	pointers/struct-through-conversion-store/chained	-	-
+PASS	pointers/struct-through-conversion-store/double-pointer	-	-
+PASS	pointers/struct-through-conversion-store/new-and-literal	-	-
+PASS	pointers/struct-through-conversion-store/inner-field	-	-
+PASS	pointers/struct-through-conversion-store/struct-holding-pointers	-	-
+PASS	pointers/struct-through-conversion-store/tag-only	-	-
+PASS	pointers/struct-through-conversion-store/range-store	-	-
+PASS	pointers/struct-through-conversion-store/promoted-set	-	-
+PASS	pointers/struct-through-conversion-store/nested-store	-	-
+PASS	pointers/struct-through-conversion-shapes/nested-outer	-	-
+PASS	pointers/struct-through-conversion-shapes/array-elem	-	-
+PASS	pointers/struct-through-conversion-shapes/stored-pointer-later	-	-
+PASS	pointers/struct-through-conversion-shapes/embedded-field	-	-
+PASS	pointers/struct-through-conversion-shapes/chained	-	-
+PASS	pointers/struct-through-conversion-shapes/struct-holding-pointers	-	-
+PASS	pointers/struct-through-conversion-shapes/defined-over-defined	-	-
+PASS	pointers/struct-through-conversion-shapes/value-receiver	-	-
+PASS	pointers/struct-through-conversion-shapes/receiver-via-boxes	-	-
+PASS	pointers/struct-through-conversion-shapes/method-value	-	-
+PASS	pointers/struct-through-conversion-shapes/promoted-through-outer	-	-
+PASS	pointers/struct-through-conversion-shapes/range-load	-	-
+PASS	pointers/struct-through-conversion-shapes/iface-dynamic-type	-	-
+PASS	pointers/struct-through-conversion-shapes/box-assertions	-	-
+PASS	pointers/struct-through-conversion-shapes/tag-only	-	-
+PASS	pointers/struct-through-conversion-shapes/embedded-pointer-field	-	-
+PASS	pointers/struct-through-conversion-shapes/double-pointer	-	-
+PASS	pointers/struct-through-conversion-shapes/inner-field	-	-

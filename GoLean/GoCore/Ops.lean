@@ -2306,10 +2306,54 @@ def emptyStructAssignable (actual name : TypeId)
   (actual.key == "struct{}" || name.key == "struct{}") &&
     fields.isEmpty && fieldsValue.isEmpty
 
+/-- **Struct-tag compatibility at the type table** (triage L7, 2026-08-19 —
+spec#Conversions' struct-tag clause): two struct types are convertible exactly
+when their underlying types are identical ignoring tags; the wire strips tags,
+so the test is wire `FieldDef`-list equality (embeddedness compared — spec-exact
+per arc-final audit F20). Anything else — unknown TypeIds included — answers
+false. The ONE predicate behind every tag-compatible site: the field arms of
+`loadLoc` / `writeAt` / `fieldGet` (an access through a converted pointer meets
+the cell's MINT tag) and the whole-value retags `retagStruct` / `derefRetag`
+(BUG-134). `structTagCompatible` below is this predicate at `ctx.types`. -/
+def TypeEnv.structTagCompatible (types : TypeEnv) (actual expected : TypeId) : Bool :=
+  match types.lookupName? actual, types.lookupName? expected with
+  | some (_, .struct fa), some (_, .struct fb) => fa == fb
+  | _, _ => false
+
+/-- **The whole-value retag** (BUG-134; equality review 2026-10-26 F1): a struct
+value whose mint tag differs from `name` but is tag-compatible with it
+(`TypeEnv.structTagCompatible`) takes the tag `name`, its fields untouched;
+every other value is returned unchanged. This is Go's conversion between the
+two types — a value of identical underlying type under the other name — and it
+is what a whole-struct value crossing a converted pointer means: `*pb` for
+`pb := (*B)(&a)` is the cell's `A`-tagged contents AS a `B` (`derefRetag`, the
+read side, at the pointee's static type), and `*pb = B{…}` stores a `B` value
+INTO the `A`-declared cell, which keeps its mint tag (the normalizer's struct
+arm in `normalizeValueForTyAt`, the write side, at the declared type). The retag
+is observationally the explicit conversion Go's type checker requires between
+the two named types (no run-time effect in gc), so a tag a frontend could have
+failed to convert is not absorbed into a different answer; a tag that is NOT
+compatible is untouched and refused downstream exactly as before. -/
+def retagStruct (types : TypeEnv) (name : TypeId) : GoValue → GoValue
+  | .struct actual fieldsValue =>
+      if actual != name && types.structTagCompatible actual name then
+        .struct name fieldsValue
+      else
+        .struct actual fieldsValue
+  | v => v
+
+/-- A value already tagged `name` is unchanged (the normal case at every site). -/
+@[simp] theorem retagStruct_self (types : TypeEnv) (name : TypeId)
+    (fieldsValue : Array (String × GoValue)) :
+    retagStruct types name (.struct name fieldsValue) = .struct name fieldsValue := by
+  simp [retagStruct]
+
 /-- Struct-shape checks for normalization at a defined struct type, with the
 given field normalizer. A mismatched tag is accepted
 only through the empty-struct ASSIGNABILITY escape (retagged copy — Go's
-assignment); anything else stays stuck. -/
+assignment); anything else stays stuck. (The tag-COMPATIBLE retag — a value
+crossing a converted struct pointer, BUG-134 — happens BEFORE this check, in
+`normalizeValueForTyAt`'s struct arm: `retagStruct`.) -/
 def normalizeStructValueWith (f : Ty → GoValue → Except Stop GoValue)
     (name : TypeId) (fields : Array FieldDef) : GoValue → Except Stop GoValue
   | .struct actual fieldsValue => do
@@ -2376,8 +2420,10 @@ def normalizeValueForTyAt (types : TypeEnv) : Nat → TypeIdx → GoValue → Ex
   | bound + 1, i, value =>
       match types[i]? with
       | some (name, .struct fields) =>
+          -- The write side of the whole-value retag (BUG-134): a tag-compatible
+          -- value takes the declared tag before the shape checks.
           normalizeStructValueWith (normalizeValueForTyTy (normalizeValueForTyAt types bound))
-            name fields value
+            name fields (retagStruct types name value)
       | some (_, .defined target) =>
           normalizeValueForTyTy (normalizeValueForTyAt types bound) target value
       | some (_, .opaqueDecl feature) => unsupported s!"normalizing {feature}"
@@ -2510,11 +2556,28 @@ the tag-convertible case — identical underlying struct types; the wire
 strips tags, so identity is wire `FieldDef`-list equality (the same
 rule the struct VALUE-conversion arm uses; embeddedness compared,
 spec-exact per arc-final audit F20). Anything else — unknown TypeIds
-included — answers false and the access stays stuck. -/
+included — answers false and the access stays stuck. The predicate is
+`TypeEnv.structTagCompatible` at `ctx.types` — the same one the
+whole-value retags use (BUG-134). -/
 def structTagCompatible (actual expected : TypeId) : Bool :=
-  match ctx.types.lookupName? actual, ctx.types.lookupName? expected with
-  | some (_, .struct fa), some (_, .struct fb) => fa == fb
-  | _, _ => false
+  ctx.types.structTagCompatible actual expected
+
+/-- **The read side of the whole-value retag** (BUG-134): the value a `.deref`
+produces at the pointee's STATIC type `ty`. A `.base` load returns the cell's
+contents under the cell's MINT tag (`loadLoc`), so through a converted pointer
+`*pb` arrives `A`-tagged at static type `B`; when `ty` resolves to a struct
+type tag-compatible with that tag the value is retagged to it
+(`retagStruct`) — Go's `*pb` HAS type `B`, so every value route downstream
+(`==`, assignment, boxing at dynamic type `B`, map keys, `switch`, parameter
+binding, the observation readout's type name) sees `B`. Any other static
+type, or a tag that is not compatible, leaves the value untouched. Field
+accesses need no retag (the field arms accept either tag, L7), and the box
+arm's dynamic-type rule is untouched: `any(*pb) == any(*pa)` is `false` as in
+Go because the two boxes carry `B` and `A`. -/
+def derefRetag (ty : Ty) (v : GoValue) : GoValue :=
+  match ctx.types.resolve ctx.types.size ty with
+  | .ok (.struct name _) => retagStruct ctx.types name v
+  | _ => v
 
 -- Total: structural recursion on the `Loc` argument (field/index bases are
 -- strict subterms). loadLoc depends only on itself and total helpers, so it is

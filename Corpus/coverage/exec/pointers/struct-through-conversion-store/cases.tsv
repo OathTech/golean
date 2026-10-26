@@ -1,0 +1,28 @@
+# id	subject	args	expected_status	expected_reason	features
+# BUG-134 (equality review 2026-10-26 F1): the whole-struct STORE through a
+# struct-pointer conversion, one route per row (the review's p33 store probes
+# and this lane's local space). Born RED (`stuck` at the store) at the base
+# 6e05137a except the two leaf-route controls (promoted-set, the first half of
+# nested-store); expected = gc.
+store-then-orig	storeThenOrig	-	ok	-	pointers,structs,conversions,assignment,equality
+store-then-deref-eq	storeThenDerefEq	-	ok	-	pointers,structs,conversions,assignment,equality
+store-then-box-type-switch	storeThenBoxTypeSwitch	-	ok	-	pointers,structs,conversions,assignment,interfaces,type_switch
+store-then-box-eq	storeThenBoxEq	-	ok	-	pointers,structs,conversions,assignment,interfaces,equality
+store-then-field-eq	storeThenFieldEq	-	ok	-	pointers,structs,conversions,assignment,fields,identity,maps
+store-then-copy-orig	storeThenCopyOrig	-	ok	-	pointers,structs,conversions,assignment,value_copy
+store-only	storeOnly	-	ok	-	pointers,structs,conversions,assignment,print
+swap	swap	-	ok	-	pointers,structs,conversions,assignment,multi_assign
+copy-between-aliases	copyBetweenAliases	-	ok	-	pointers,structs,conversions,assignment,value_copy
+through-stored-pointer	throughStoredPointer	-	ok	-	pointers,structs,conversions,assignment,fields,slices
+embedded-field	embeddedField	-	ok	-	pointers,structs,conversions,assignment,embedding
+array-elem	arrayElem	-	ok	-	pointers,structs,conversions,assignment,arrays
+slice-elem	sliceElem	-	ok	-	pointers,structs,conversions,assignment,slices
+chained	chained	-	ok	-	pointers,structs,conversions,assignment
+double-pointer	doublePointer	-	ok	-	pointers,structs,conversions,assignment
+new-and-literal	newAndLiteral	-	ok	-	pointers,structs,conversions,assignment,new,literals
+inner-field	innerField	-	ok	-	pointers,structs,conversions,assignment,nested
+struct-holding-pointers	structHoldingPointers	-	ok	-	pointers,structs,conversions,assignment,nil
+tag-only	tagOnly	-	ok	-	pointers,structs,conversions,assignment,tags
+range-store	rangeStore	-	ok	-	pointers,structs,conversions,assignment,range,slices
+promoted-set	promotedSet	-	ok	-	pointers,structs,conversions,methods,embedding
+nested-store	nestedStore	-	ok	-	pointers,structs,conversions,assignment,nested

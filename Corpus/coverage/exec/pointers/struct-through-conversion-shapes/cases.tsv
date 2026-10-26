@@ -1,0 +1,23 @@
+# id	subject	args	expected_status	expected_reason	features
+# BUG-134 (equality review 2026-10-26 F1): the local space of the whole-struct
+# value through a struct-pointer conversion — the shapes this lane probed
+# beside the review's routes. Every row born RED (`stuck`) at the base
+# 6e05137a; expected = gc.
+nested-outer	nestedOuter	-	ok	-	pointers,structs,conversions,nested,equality
+array-elem	arrayElem	-	ok	-	pointers,structs,conversions,arrays,equality
+stored-pointer-later	storedPointerLater	-	ok	-	pointers,structs,conversions,fields,maps,slices,equality
+embedded-field	embeddedField	-	ok	-	pointers,structs,conversions,embedding,equality
+chained	chained	-	ok	-	pointers,structs,conversions,equality,identity
+struct-holding-pointers	structHoldingPointers	-	ok	-	pointers,structs,conversions,equality,aliasing
+defined-over-defined	definedOverDefined	-	ok	-	pointers,structs,conversions,defined_type,interfaces,equality
+value-receiver	valueReceiver	-	ok	-	pointers,structs,conversions,methods
+receiver-via-boxes	receiverViaBoxes	-	ok	-	pointers,structs,conversions,methods,interfaces,value_copy
+method-value	methodValue	-	ok	-	pointers,structs,conversions,methods,higher_order
+promoted-through-outer	promotedThroughOuter	-	ok	-	pointers,structs,conversions,methods,embedding,equality
+range-load	rangeLoad	-	ok	-	pointers,structs,conversions,range,slices,equality
+iface-dynamic-type	ifaceDynamicType	-	ok	-	pointers,structs,conversions,interfaces,maps,type_switch,equality
+box-assertions	boxAssertions	-	ok	-	pointers,structs,conversions,interfaces,type_assertions
+tag-only	tagOnly	-	ok	-	pointers,structs,conversions,tags,equality
+embedded-pointer-field	embeddedPointerField	-	ok	-	pointers,structs,conversions,embedding,aliasing,equality
+double-pointer	doublePointer	-	ok	-	pointers,structs,conversions,new,literals,equality
+inner-field	innerField	-	ok	-	pointers,structs,conversions,nested,equality

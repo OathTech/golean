@@ -9121,7 +9121,9 @@ A pointer conversion between struct types with identical underlying types is leg
 (spec#Conversions; tags are ignored) and aliases the cell, whose MINT tag stays: `loadLoc` /
 `storeLoc` / `fieldGet` accept a path step whose typeId is the cell's tag or tag-compatible with it
 (`structTagCompatible`: identical `FieldDef` lists — triage L7, 2026-08-19), so ACCESS through either
-spelling already worked (the review's write-through control: `b.X = 9; a.X` is 9). IDENTITY did not:
+spelling already worked (the review's write-through control: `b.X = 9; a.X` is 9) — for LEAF fields;
+the WHOLE-STRUCT value through the alias (`*pb`, `*pb = B{…}`) refused until BUG-134 (2026-10-26,
+the equality review's F1). IDENTITY did not:
 the arm compared the two paths structurally (`l == r`, the derived `BEq Loc`), so `.field (.base a)
 A "X"` and `.field (.base a) B "X"` — one word — were unequal. The same `Loc.canon` the race
 detector has keyed its shadow by since BUG-111's fix (2026-09-18: the typeId of every `.field` step
@@ -9196,10 +9198,112 @@ load's own text, or `.internal` on the op/cell shape mismatch, the text `resumeT
 `wakeReady` its Bool projection for the scheduler's menu (an error reads «not runnable»: the schedule
 is unchanged), and `deadlockOrRefusal` — the one definition behind `stepMulti`'s empty menu and both
 drivers' empty runnable set (`execProgLoop`, `execProgLoopOut`; `choice-trace` mirrors it) — re-checks
-every parked goroutine (`parkedWellFormed`) before naming «no runnable goroutine» Go's deadlock. A
+every parked goroutine (`parkedWellFormed`) before naming «no runnable goroutine» Go's deadlock. The
+CLI's own mirror of `execProgLoop` for the membership lane, `enumPoolRun` (`GoLean/CLI.lean`), still
+threw `.deadlock` unconditionally at train 19 (shake review F3, `docs/reviews/2026-10-26_train19-shake-review.md`);
+since 2026-10-26 (lane `core/struct-through-conversion-1026`) it and the choice-trace mirror
+(`GoLean/ChoiceTrace.lean`) throw / report `deadlockStop` itself — ONE definition behind every driver
+and both mirrors — and `malformedParkedStateFacts` pins the enumeration mirror beside the original
+(the malformed park refuses by name through it; the valid control is `deadlock`). The remaining
+`.deadlock` sites in the CLI (`enumInitRun`) mirror the SEQUENTIAL init driver's blocked-configuration
+arm (`runInitConfig`), not the pool's classification, and are untouched. A
 validly parked program (a nil-channel block, a partnerless send on a real channel — the corpus's
 deadlock rows) is still `deadlock`; the review's hand-built state is now the `stuck` refusal naming
 the unbound address. Pinned by `Tests/GoCoreEval.lean` `malformedParkedStateFacts` (the malformed
 park refuses by name; two valid controls are `deadlock`). The main-exit window (`mainOutcome?` with
 nothing runnable) is NOT touched: there the pool returns main's outcome without inspecting parked
 goroutines, as Go's exit does not; a malformed park there is outside this change's claim.
+
+## BUG-134 — the WHOLE-STRUCT VALUE through a struct-pointer conversion — `*pb` for `pb := (*B)(&a)` on every value route (`==` / `!=`, assignment, boxing, map key, `switch`, parameter binding, assertion of the box, the returned value) and the whole-struct STORE `*pb = B{…}` — REFUSED where gc prints the answer, and refused as `stuck` (defined as a frontend bug) for legal Go the frontend lowered correctly: a coverage gap on a supported construct carrying the wrong status word [coverage; the `.deref` read (Machine.lean) and the normalizer's struct arm (Ops.lean); equality/identity review 2026-10-26 F1; the C1 memory-module audit's F9 = ledger frontier FR-34 / queue 34, unrowed since 2026-09-18]
+
+- Status: fixed (2026-10-26, lane `core/struct-through-conversion-1026` [AGENT]; the [USER] ruling of
+  2026-10-26, relayed by the [AGENT] coordinator — shake the tree, fix what the reviews found, close the
+  class not the instance: a whole-struct load or store through a converted pointer yields or accepts
+  the value at the pointer's static type when the two struct types are tag-compatible, BUG-133's
+  identity semantics and Go's dynamic-type rule for interface boxes kept, the local space surveyed; the
+  fallback of keeping the refusal under an honest `unsupported` was not needed)
+- Pinned-by: differential
+- Cases: pointers/struct-through-conversion-value/eq-literal, pointers/struct-through-conversion-value/eq-right, pointers/struct-through-conversion-value/assign-then-eq, pointers/struct-through-conversion-value/boxed-same-type, pointers/struct-through-conversion-value/boxed-type-differs, pointers/struct-through-conversion-value/map-key, pointers/struct-through-conversion-value/switch, pointers/struct-through-conversion-value/nested-field, pointers/struct-through-conversion-value/param, pointers/struct-through-conversion-value/neq-and-ptr-eq, pointers/struct-through-conversion-value/slice-elem, pointers/struct-through-conversion-value/box-assert, pointers/struct-through-conversion-value/type-switch, pointers/struct-through-conversion-value/returned, pointers/struct-through-conversion-value/generic-eq, pointers/struct-through-conversion-value/closure, pointers/struct-through-conversion-value/goroutine-arg, pointers/struct-through-conversion-value/composites, pointers/struct-through-conversion-value/multi-and-variadic, pointers/struct-through-conversion-value/box-then-copy, pointers/struct-through-conversion-store/store-then-orig, pointers/struct-through-conversion-store/store-then-deref-eq, pointers/struct-through-conversion-store/store-then-box-type-switch, pointers/struct-through-conversion-store/store-then-box-eq, pointers/struct-through-conversion-store/store-then-field-eq, pointers/struct-through-conversion-store/store-then-copy-orig, pointers/struct-through-conversion-store/store-only, pointers/struct-through-conversion-store/swap, pointers/struct-through-conversion-store/copy-between-aliases, pointers/struct-through-conversion-store/through-stored-pointer, pointers/struct-through-conversion-store/embedded-field, pointers/struct-through-conversion-store/array-elem, pointers/struct-through-conversion-store/slice-elem, pointers/struct-through-conversion-store/chained, pointers/struct-through-conversion-store/double-pointer, pointers/struct-through-conversion-store/new-and-literal, pointers/struct-through-conversion-store/inner-field, pointers/struct-through-conversion-store/struct-holding-pointers, pointers/struct-through-conversion-store/tag-only, pointers/struct-through-conversion-store/range-store, pointers/struct-through-conversion-store/promoted-set, pointers/struct-through-conversion-store/nested-store, pointers/struct-through-conversion-shapes/nested-outer, pointers/struct-through-conversion-shapes/array-elem, pointers/struct-through-conversion-shapes/stored-pointer-later, pointers/struct-through-conversion-shapes/embedded-field, pointers/struct-through-conversion-shapes/chained, pointers/struct-through-conversion-shapes/struct-holding-pointers, pointers/struct-through-conversion-shapes/defined-over-defined, pointers/struct-through-conversion-shapes/value-receiver, pointers/struct-through-conversion-shapes/receiver-via-boxes, pointers/struct-through-conversion-shapes/method-value, pointers/struct-through-conversion-shapes/promoted-through-outer, pointers/struct-through-conversion-shapes/range-load, pointers/struct-through-conversion-shapes/iface-dynamic-type, pointers/struct-through-conversion-shapes/box-assertions, pointers/struct-through-conversion-shapes/tag-only, pointers/struct-through-conversion-shapes/embedded-pointer-field, pointers/struct-through-conversion-shapes/double-pointer, pointers/struct-through-conversion-shapes/inner-field
+- Discovered: the equality/identity review of train 19 (`docs/reviews/2026-10-26_equality-identity-review.md`
+  F1, branch `review/equality-1026`; probes `p31`, `p33a`–`p33s` beside it): with `type A struct{ X, Y int };
+  type B struct{ X, Y int }; a := A{1, 2}; pb := (*B)(&a)`, every WHOLE-VALUE route through `*pb` refused
+  `stuck` — `*pb == B{1, 2}` («left struct equality type mismatch: expected main.B, got main.A»), `x := *pb`,
+  `any(*pb)`, `m[*pb]`, `switch *pb`, `eqB(*pb)`, `i.(B)`, and the store `*pb = B{9, 9}` («struct value type
+  mismatch: expected main.A, got main.B») — where gc prints the answer; only the leaf-field routes worked
+  (BUG-133's rows, triage L7). The same class was found once before and ROWED but never fixed: the C1
+  memory-module audit's F9 (2026-09-18) is ledger frontier FR-34 / queue 34, whose proposed red-first rows
+  were never written. Reproduced by this lane at the base `6e05137a` exactly as the review gives it (17
+  probes `stuck`, `p33k`'s value-conversion control green), then widened to the local space below: 57 of
+  the 60 rows born RED at the base.
+
+WHAT (the base): a `Loc` carries no static type, so a `.base` load (`loadLoc`, Ops.lean) returns the cell's
+value under its MINT tag, and the `.deref` apply (`applyStrictOp`, Machine.lean) delivered that value as
+is: `*pb` evaluated to `.struct main.A …` at static type `B`. Every value-level consumer then compared the
+tag against the static type and refused — `valueEq`'s struct arm (`leftType != name`), and
+`normalizeStructValueWith` (reached from `Store.alloc`, `bindParams`, the map-key and boxing
+normalizations and `storeLoc`'s leaf write `writeAt` at the cell's DECLARED type, so a `B`-tagged value
+refused into an `A` cell — the store never happened, hence no retagged cell and no wrong answer). Triage L7
+(2026-08-19) had relaxed exactly the three FIELD checks (`fieldGet` and the field arms of
+`loadLoc`/`writeAt`) under `structTagCompatible` and said so; the whole value was never in scope.
+
+THE FIX — one predicate, two sites, the cell keeps its mint tag (`GoLean/GoCore/Ops.lean`,
+`GoLean/GoCore/Machine.lean`):
+
+- `TypeEnv.structTagCompatible` (identical wire `FieldDef` lists — spec#Conversions' struct-tag clause,
+  the L7 rule) is now the ONE predicate behind every tag-compatible site; `structTagCompatible ctx` is it
+  at `ctx.types`, and the field arms are unchanged.
+- `retagStruct types name v`: a struct value whose tag differs from `name` but is tag-compatible with it
+  takes the tag `name`, fields untouched; anything else is returned unchanged. This is Go's conversion
+  between the two named types — a value of identical underlying type under the other name, no run-time
+  effect in gc — so it is observationally the explicit conversion the type checker requires, and a tag
+  that is NOT compatible is untouched and refused downstream exactly as before.
+- THE READ SIDE: the `.deref ty` apply returns `derefRetag ctx ty x` — when the pointee's static type `ty`
+  resolves to a struct type tag-compatible with the loaded tag, the value is retagged to it. Go's `*pb`
+  HAS type `B`, so every route downstream (`==`, assignment, boxing — the box carries dynamic type `B` —,
+  map keys, `switch`, parameter binding, the type assertion, the readout's type name) sees `B`. The
+  narrowed-read footprint (`projChainTarget`) and the access trace are untouched.
+- THE WRITE SIDE: `normalizeValueForTyAt`'s struct arm applies `retagStruct` at the DECLARED type before
+  its shape checks (the ledger's FR-34 remedy, queue 34), so `*pb = B{9, 9}` stores a `B` value into the
+  `A`-declared cell under the cell's tag — and so does any other whole-value route that normalizes at a
+  declared struct type: a value-receiver method dispatched through the alias (`receiverAt`'s pointee read
+  then `bindParams`), `*ps[i] = …` in a loop, a swap through two aliases.
+
+WHAT IT DID NOT CHANGE: BUG-133's identity semantics (`valueEq`'s pointer arm, `Loc.canon`; the 44
+`identity-*` rows stay green); Go's dynamic-type rule for interface boxes (`any(*pb) == any(*pa)` is
+`false`, `any(*pb) == any(B{1, 2})` is `true` — the box is built from the retagged value, so the rule
+decides on `B` vs `A` exactly as Go: rows `value/boxed-type-differs`, `shapes/iface-dynamic-type`,
+`shapes/defined-over-defined`); the leaf-field routes (L7); `valueEq`'s struct arm (unchanged — it never
+sees a mismatched tag from a deref now); the cell's mint tag (`HeapNormal` holds: the stored value takes
+the declared tag); the kept statements (`scripts/gen-contract --check`: no regeneration — `storeLoc_root`'s
+hypothesis is `normalizeValueForTy`, inside which the retag lives); the race detector's keys; the
+frontend and the wire. Proofs repaired, statements unchanged: `normalizeValueForTyAt_locSup` /
+`_isNormal` and `isNormalForTyAt_sound` (StateWf.lean: `retagStruct_locSup`, the retagged value
+generalized before the shape-check case split; `retagStruct_self` for the self-normal direction),
+`applyStrictOp_wf`'s deref arm (`derefRetag_locSup`), `TableMono.derefRetag_eq` in the G16 rewrite set.
+
+THE LOCAL SPACE (probed at the base on both sides before the fix; machine → gc; every row at the tip
+PASSes with gc's value):
+
+| shape | route | base | tip |
+|---|---|---|---|
+| the review's p33 routes (`==`, `!=`, assignment, boxing, map key, `switch`, nested field, parameter, slice element, assertion / type switch of the box; the store then every observer) | `value/*`, `store/store-then-*`, `store/store-only` | `stuck` | gc's value |
+| the value RETURNED to the observer (`func ret() B { return *pb }`) | `value/returned` | `stuck` | `{"tag":"struct","typeName":"B",…}` on both sides — the readout renders the tag, so the retag is what makes the type name right |
+| a nested struct through the converted OUTER pointer (`OA`/`OB` over `In`; the inner field keeps its own type) | `shapes/nested-outer`, `value/nested-field`, `store/nested-store` | `stuck` | gc |
+| arrays / slices of structs (`(*B)(&arr[1])`, `(*B)(&as[0])`), `range` over converted pointers | `shapes/array-elem`, `value/slice-elem`, `store/array-elem`, `store/slice-elem`, `shapes/range-load`, `store/range-store` | `stuck` | gc |
+| a converted pointer stored in a struct field / map / slice and loaded later | `shapes/stored-pointer-later`, `store/through-stored-pointer` | `stuck` | gc |
+| a converted pointer to an EMBEDDED field (`(*B)(&o.A)`) and to an INNER field of another compatible type (`(*IB)(&o.I)`) | `shapes/embedded-field`, `store/embedded-field`, `shapes/inner-field`, `store/inner-field` | `stuck` | gc |
+| chained conversions `(*C)((*B)(&a))` and back | `shapes/chained`, `store/chained` | `stuck` | gc |
+| a struct holding pointers (`PA`/`PB` over `*int`, `*A`): the copy shares the pointees | `shapes/struct-holding-pointers`, `store/struct-holding-pointers` | `stuck` | gc |
+| a defined type over a defined struct (`type C B`, `type D A`): `*pc`, `*pd` and their boxes (different dynamic types) | `shapes/defined-over-defined` | `stuck` | gc |
+| value-receiver methods through the alias (`pb.Sum()`, through a pointer box and a value box, a method value `pb.Sum`, the method expression `B.Sum(*pb)`), promoted methods through the converted outer | `shapes/value-receiver`, `shapes/receiver-via-boxes`, `shapes/method-value`, `shapes/promoted-through-outer`, `store/promoted-set` | `stuck` (promoted-set green: a leaf route) | gc |
+| types differing only in field tags (BUG-133's shape), an embedded POINTER field, a pointer to the converted pointer, converted `new(A)` and `&A{…}`, composite literals / `append` at `B`, generics at `B`, closures, goroutine arguments over `chan B`, multi-result and variadic binding, the asserted copy's independence | `shapes/tag-only`, `store/tag-only`, `shapes/embedded-pointer-field`, `shapes/double-pointer`, `store/double-pointer`, `store/new-and-literal`, `value/composites`, `value/generic-eq`, `value/closure`, `value/goroutine-arg`, `value/multi-and-variadic`, `value/box-then-copy` | `stuck` | gc |
+| `*pb, *pc = *pc, *pb` through two aliases of `A` cells | `store/swap` | green (both loads were `A`-tagged and stored into `A` cells, the tags matched by accident of the route) — a must-stay-green control | gc |
+| the unnamed struct type: `(*struct{ X, Y int })(&a)` and the reverse `(*A)(&u)` for an unnamed `u` | not rowed | `unsupported` — the frontend's FR-13 refusal by name («anonymous non-empty struct type»), the rowed cause `anon-struct` (`tools/lowerdiag/causes.tsv`), exactly as BUG-133 recorded it | unchanged: a frontend frontier, not this bug |
+| the method expression `(*B).Sum` over a value-receiver method | not rowed | `unsupported` — the frontend's existing refusal by name («deref adapter not modeled») | unchanged: outside this bug |
+
+STATUS WORD (the review's point (i)): the refusal was honest about its cause and wrong about its class —
+`stuck` is defined as «outside the lowering contract (a frontend bug)» (`docs/semantics-overview.md` §8),
+and these programs are legal Go the frontend lowered correctly. With the fix no refusal remains on the
+class; the texts «struct value type mismatch» / «struct equality type mismatch» still name a tag that is
+NOT tag-compatible — a frontend fault, which is what `stuck` means. BUG-133's survey sentence
+(«ACCESS through either spelling already worked») is amended there to say «for leaf fields».
