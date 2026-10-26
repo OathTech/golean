@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 4422 (4127 PASS / 295 FAIL)
+# cases: 4518 (4223 PASS / 295 FAIL)
 # re-pinned: 2026-10-26 [AGENT], lane sweep/s4-identity — the defect-neighbourhood campaign's S4 sweep (identity, equality and
 #   nil-ness; docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved; members BUG-133/129/121/111/170/139).
 #   NO existing row moved: 4166 + 94 = 4260; PASS 3901 + 64 = 3965; FAIL 265 + 30 = 295. No flip, no removal, no cause
@@ -106,6 +106,111 @@
 #     variadic/sweep-s4-nil-pack-routes/tuple-fixed-only                 PASS/- -
 #     variadic/sweep-s4-nil-pack-routes/elem-kinds                       PASS/- -
 #     variadic/sweep-s4-nil-pack-routes/len-cap-append                   PASS/- -
+# re-pinned: 2026-10-26 [AGENT], lane sweep/s2-conversions — the defect-neighbourhood campaign's step 2, shape S2 (conversions:
+#   a missing kernel arm or a value not retagged; plan docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved
+#   2026-10-27): the shape's 118-cell matrix probed on both sides — 74 cells by this lane, 35 covered by existing rows, 9 out of
+#   scope by a named refusal — and every agreement on a distinct route pinned as a strict row (expected = gc). NO existing row
+#   moved: 4166 + 96 = 4262; PASS 3901 + 96 = 3997; FAIL 265 + 0 = 265. No flip, no removal, no cause change (no
+#   runtime code changed: corpus and records only). NEW rows (96, 18 packages Corpus/coverage/exec/*/sweep-s2-*/, every row
+#   strict, born green), appended at the end of the file, measured by CAPPED_MEM_MAX=64G capped scripts/ci --diff at the lane
+#   tree before this re-pin (its only drift: these 96 NEW ids), the rows taken from that run's artifacts/coverage/latest.tsv;
+#   the --diff at the tip judges. FINDINGS: none (no BUG entry, no red-first row). The rows:
+#     assign-order/sweep-s2-conversion-of-call/struct-of-call                 PASS/-
+#     assign-order/sweep-s2-conversion-of-call/slice-of-call                  PASS/-
+#     assign-order/sweep-s2-conversion-of-call/func-of-call                   PASS/-
+#     assign-order/sweep-s2-conversion-of-call/bool-of-call                   PASS/-
+#     assign-order/sweep-s2-conversion-of-call/string-of-call                 PASS/-
+#     assign-order/sweep-s2-conversion-of-call/pointer-of-call                PASS/-
+#     assign-order/sweep-s2-conversion-of-call/float-of-call                  PASS/-
+#     bools/sweep-s2-bool-targets/boxed-dynamic-type                          PASS/-
+#     bools/sweep-s2-bool-targets/compare-and-key                             PASS/-
+#     bools/sweep-s2-bool-targets/chained                                     PASS/-
+#     bools/sweep-s2-bool-targets/returned-defined-bool                       PASS/-
+#     channels/sweep-s2-chan-targets/chan-idioms                              PASS/-
+#     channels/sweep-s2-chan-targets/named-directional-conversion             PASS/-
+#     constants/sweep-s2-boxed-constants/boxed-ints                           PASS/-
+#     constants/sweep-s2-boxed-constants/boxed-string                         PASS/-
+#     constants/sweep-s2-boxed-constants/boxed-float                          PASS/-
+#     constants/sweep-s2-boxed-constants/boxed-bool                           PASS/-
+#     constants/sweep-s2-constant-forms/string-of-const-int                   PASS/-
+#     constants/sweep-s2-constant-forms/constant-forms                        PASS/-
+#     conversions/sweep-s2-assignability/slice-assignability                  PASS/-
+#     conversions/sweep-s2-assignability/map-assignability                    PASS/-
+#     conversions/sweep-s2-assignability/func-assignability                   PASS/-
+#     conversions/sweep-s2-assignability/chan-assignability                   PASS/-
+#     conversions/sweep-s2-assignability/array-assignability                  PASS/-
+#     conversions/sweep-s2-assignability/pointer-assignability                PASS/-
+#     conversions/sweep-s2-chained/string-chains                              PASS/-
+#     conversions/sweep-s2-chained/struct-chains                              PASS/-
+#     conversions/sweep-s2-composite-targets/slice-idioms                     PASS/-
+#     conversions/sweep-s2-composite-targets/map-idioms                       PASS/-
+#     conversions/sweep-s2-composite-targets/method-value-to-func-type        PASS/-
+#     conversions/sweep-s2-composite-targets/func-literal-converted           PASS/-
+#     conversions/sweep-s2-composite-targets/defined-nils                     PASS/-
+#     conversions/sweep-s2-composite-targets/any-slice-and-struct-maps        PASS/-
+#     conversions/sweep-s2-paren-spellings                                    PASS/-
+#     generics/sweep-s2-typeparam-conversions/bytes-of-type-param             PASS/-
+#     generics/sweep-s2-typeparam-conversions/string-of-type-param-bytes      PASS/-
+#     generics/sweep-s2-typeparam-conversions/runes-of-type-param             PASS/-
+#     generics/sweep-s2-typeparam-conversions/type-param-string-target        PASS/-
+#     generics/sweep-s2-typeparam-conversions/string-of-type-param-int        PASS/-
+#     generics/sweep-s2-typeparam-conversions/identity-type-param-conv        PASS/-
+#     interfaces/sweep-s2-iface-targets/iface-to-iface                        PASS/-
+#     interfaces/sweep-s2-iface-targets/defined-iface-target                  PASS/-
+#     interfaces/sweep-s2-iface-targets/nil-iface-to-iface                    PASS/-
+#     methods/sweep-s2-methods-on-conversions/int-method-on-conversion        PASS/-
+#     methods/sweep-s2-methods-on-conversions/float-method-on-conversion      PASS/-
+#     methods/sweep-s2-methods-on-conversions/string-method-on-conversion     PASS/-
+#     methods/sweep-s2-methods-on-conversions/bool-method-on-conversion       PASS/-
+#     methods/sweep-s2-methods-on-conversions/composite-methods-on-conversion PASS/-
+#     multipkg/sweep-s2-cross-pkg-conversion                                  PASS/-
+#     pointers/sweep-s2-nonstruct-pointees/deref-float-pointee                PASS/-
+#     pointers/sweep-s2-nonstruct-pointees/deref-string-pointee               PASS/-
+#     pointers/sweep-s2-nonstruct-pointees/deref-bool-pointee                 PASS/-
+#     pointers/sweep-s2-nonstruct-pointees/deref-slice-pointee                PASS/-
+#     pointers/sweep-s2-nonstruct-pointees/deref-map-pointee                  PASS/-
+#     pointers/sweep-s2-nonstruct-pointees/deref-func-pointee                 PASS/-
+#     pointers/sweep-s2-nonstruct-pointees/deref-chan-pointee                 PASS/-
+#     pointers/sweep-s2-nonstruct-pointees/deref-array-pointee                PASS/-
+#     pointers/sweep-s2-nonstruct-pointees/deref-iface-pointee                PASS/-
+#     pointers/sweep-s2-nonstruct-pointees/defined-pointer-type               PASS/-
+#     pointers/sweep-s2-nonstruct-pointees/pointer-to-pointer                 PASS/-
+#     strings/sweep-s2-byte-rune-idioms/bytes-of-defined-elem                 PASS/-
+#     strings/sweep-s2-byte-rune-idioms/defined-bytes-of-literal              PASS/-
+#     strings/sweep-s2-byte-rune-idioms/runes-of-defined-elem                 PASS/-
+#     strings/sweep-s2-byte-rune-idioms/bytes-idioms                          PASS/-
+#     strings/sweep-s2-byte-rune-idioms/runes-idioms                          PASS/-
+#     strings/sweep-s2-byte-rune-idioms/string-compare-idiom                  PASS/-
+#     strings/sweep-s2-byte-rune-idioms/map-index-string-of-bytes             PASS/-
+#     strings/sweep-s2-byte-rune-idioms/switch-on-string-of-bytes             PASS/-
+#     strings/sweep-s2-string-targets/string-of-defined-int                   PASS/-
+#     strings/sweep-s2-string-targets/string-of-int-var                       PASS/-
+#     strings/sweep-s2-string-targets/string-of-defined-byte-elems            PASS/-
+#     strings/sweep-s2-string-targets/string-of-defined-rune-elems            PASS/-
+#     structs/sweep-s2-struct-value/embedded-fields                           PASS/-
+#     structs/sweep-s2-struct-value/defined-field-types                       PASS/-
+#     structs/sweep-s2-struct-value/ref-holding-fields                        PASS/-
+#     structs/sweep-s2-struct-value/blank-field                               PASS/-
+#     structs/sweep-s2-struct-value/generic-instantiation                     PASS/-
+#     structs/sweep-s2-struct-value/defined-over-defined                      PASS/-
+#     structs/sweep-s2-struct-value/in-literals                               PASS/-
+#     structs/sweep-s2-struct-value/returned                                  PASS/-
+#     structs/sweep-s2-struct-value/boxed                                     PASS/-
+#     structs/sweep-s2-struct-value/map-key-and-switch                        PASS/-
+#     structs/sweep-s2-struct-value/param-and-channel                         PASS/-
+#     structs/sweep-s2-struct-value/method-on-conversion                      PASS/-
+#     structs/sweep-s2-struct-value/beside-call                               PASS/-
+#     structs/sweep-s2-struct-value/defined-pointer-over-converted            PASS/-
+#     structs/sweep-s2-struct-value/conv-of-deref                             PASS/-
+#     structs/sweep-s2-struct-value/alias-conversion                          PASS/-
+#     structs/sweep-s2-struct-value/box-in-generic                            PASS/-
+#     structs/sweep-s2-struct-value/embedded-pointer-field-value              PASS/-
+#     structs/sweep-s2-struct-value/struct-arg-instantiation                  PASS/-
+#     structs/sweep-s2-struct-value/conv-operand-kinds                        PASS/-
+#     structs/sweep-s2-struct-value/method-expr-conversion                    PASS/-
+#     structs/sweep-s2-struct-value/struct-typeparam-conv                     PASS/-
+#     sync/sweep-s2-converted-struct-with-mutex/pointer-conv                  PASS/-
+#     sync/sweep-s2-converted-struct-with-mutex/value-conv                    PASS/-
 # re-pinned: 2026-10-26 [AGENT], lane sweep/s3-type-keys — the defect-neighbourhood campaign's S3 sweep (type identity keys:
 #   fusion or spurious distinction; docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved 2026-10-27; the matrix
 #   and every cell's disposition on the `- Neighbourhood:` lines of BUG-124/098/100/097/092/067/010/018). NO existing row moved:
@@ -7246,3 +7351,99 @@ PASS	sync/sweep-s3-sync-types/assert	-	-
 PASS	sync/sweep-s3-sync-types/equal	-	-
 PASS	sync/sweep-s3-sync-types/panic-display	-	-
 PASS	sync/sweep-s3-sync-types/switch	-	-
+PASS	assign-order/sweep-s2-conversion-of-call/struct-of-call	-	-
+PASS	assign-order/sweep-s2-conversion-of-call/slice-of-call	-	-
+PASS	assign-order/sweep-s2-conversion-of-call/func-of-call	-	-
+PASS	assign-order/sweep-s2-conversion-of-call/bool-of-call	-	-
+PASS	assign-order/sweep-s2-conversion-of-call/string-of-call	-	-
+PASS	assign-order/sweep-s2-conversion-of-call/pointer-of-call	-	-
+PASS	assign-order/sweep-s2-conversion-of-call/float-of-call	-	-
+PASS	bools/sweep-s2-bool-targets/boxed-dynamic-type	-	-
+PASS	bools/sweep-s2-bool-targets/compare-and-key	-	-
+PASS	bools/sweep-s2-bool-targets/chained	-	-
+PASS	bools/sweep-s2-bool-targets/returned-defined-bool	-	-
+PASS	channels/sweep-s2-chan-targets/chan-idioms	-	-
+PASS	channels/sweep-s2-chan-targets/named-directional-conversion	-	-
+PASS	constants/sweep-s2-boxed-constants/boxed-ints	-	-
+PASS	constants/sweep-s2-boxed-constants/boxed-string	-	-
+PASS	constants/sweep-s2-boxed-constants/boxed-float	-	-
+PASS	constants/sweep-s2-boxed-constants/boxed-bool	-	-
+PASS	constants/sweep-s2-constant-forms/string-of-const-int	-	-
+PASS	constants/sweep-s2-constant-forms/constant-forms	-	-
+PASS	conversions/sweep-s2-assignability/slice-assignability	-	-
+PASS	conversions/sweep-s2-assignability/map-assignability	-	-
+PASS	conversions/sweep-s2-assignability/func-assignability	-	-
+PASS	conversions/sweep-s2-assignability/chan-assignability	-	-
+PASS	conversions/sweep-s2-assignability/array-assignability	-	-
+PASS	conversions/sweep-s2-assignability/pointer-assignability	-	-
+PASS	conversions/sweep-s2-chained/string-chains	-	-
+PASS	conversions/sweep-s2-chained/struct-chains	-	-
+PASS	conversions/sweep-s2-composite-targets/slice-idioms	-	-
+PASS	conversions/sweep-s2-composite-targets/map-idioms	-	-
+PASS	conversions/sweep-s2-composite-targets/method-value-to-func-type	-	-
+PASS	conversions/sweep-s2-composite-targets/func-literal-converted	-	-
+PASS	conversions/sweep-s2-composite-targets/defined-nils	-	-
+PASS	conversions/sweep-s2-composite-targets/any-slice-and-struct-maps	-	-
+PASS	conversions/sweep-s2-paren-spellings	-	-
+PASS	generics/sweep-s2-typeparam-conversions/bytes-of-type-param	-	-
+PASS	generics/sweep-s2-typeparam-conversions/string-of-type-param-bytes	-	-
+PASS	generics/sweep-s2-typeparam-conversions/runes-of-type-param	-	-
+PASS	generics/sweep-s2-typeparam-conversions/type-param-string-target	-	-
+PASS	generics/sweep-s2-typeparam-conversions/string-of-type-param-int	-	-
+PASS	generics/sweep-s2-typeparam-conversions/identity-type-param-conv	-	-
+PASS	interfaces/sweep-s2-iface-targets/iface-to-iface	-	-
+PASS	interfaces/sweep-s2-iface-targets/defined-iface-target	-	-
+PASS	interfaces/sweep-s2-iface-targets/nil-iface-to-iface	-	-
+PASS	methods/sweep-s2-methods-on-conversions/int-method-on-conversion	-	-
+PASS	methods/sweep-s2-methods-on-conversions/float-method-on-conversion	-	-
+PASS	methods/sweep-s2-methods-on-conversions/string-method-on-conversion	-	-
+PASS	methods/sweep-s2-methods-on-conversions/bool-method-on-conversion	-	-
+PASS	methods/sweep-s2-methods-on-conversions/composite-methods-on-conversion	-	-
+PASS	multipkg/sweep-s2-cross-pkg-conversion	-	-
+PASS	pointers/sweep-s2-nonstruct-pointees/deref-float-pointee	-	-
+PASS	pointers/sweep-s2-nonstruct-pointees/deref-string-pointee	-	-
+PASS	pointers/sweep-s2-nonstruct-pointees/deref-bool-pointee	-	-
+PASS	pointers/sweep-s2-nonstruct-pointees/deref-slice-pointee	-	-
+PASS	pointers/sweep-s2-nonstruct-pointees/deref-map-pointee	-	-
+PASS	pointers/sweep-s2-nonstruct-pointees/deref-func-pointee	-	-
+PASS	pointers/sweep-s2-nonstruct-pointees/deref-chan-pointee	-	-
+PASS	pointers/sweep-s2-nonstruct-pointees/deref-array-pointee	-	-
+PASS	pointers/sweep-s2-nonstruct-pointees/deref-iface-pointee	-	-
+PASS	pointers/sweep-s2-nonstruct-pointees/defined-pointer-type	-	-
+PASS	pointers/sweep-s2-nonstruct-pointees/pointer-to-pointer	-	-
+PASS	strings/sweep-s2-byte-rune-idioms/bytes-of-defined-elem	-	-
+PASS	strings/sweep-s2-byte-rune-idioms/defined-bytes-of-literal	-	-
+PASS	strings/sweep-s2-byte-rune-idioms/runes-of-defined-elem	-	-
+PASS	strings/sweep-s2-byte-rune-idioms/bytes-idioms	-	-
+PASS	strings/sweep-s2-byte-rune-idioms/runes-idioms	-	-
+PASS	strings/sweep-s2-byte-rune-idioms/string-compare-idiom	-	-
+PASS	strings/sweep-s2-byte-rune-idioms/map-index-string-of-bytes	-	-
+PASS	strings/sweep-s2-byte-rune-idioms/switch-on-string-of-bytes	-	-
+PASS	strings/sweep-s2-string-targets/string-of-defined-int	-	-
+PASS	strings/sweep-s2-string-targets/string-of-int-var	-	-
+PASS	strings/sweep-s2-string-targets/string-of-defined-byte-elems	-	-
+PASS	strings/sweep-s2-string-targets/string-of-defined-rune-elems	-	-
+PASS	structs/sweep-s2-struct-value/embedded-fields	-	-
+PASS	structs/sweep-s2-struct-value/defined-field-types	-	-
+PASS	structs/sweep-s2-struct-value/ref-holding-fields	-	-
+PASS	structs/sweep-s2-struct-value/blank-field	-	-
+PASS	structs/sweep-s2-struct-value/generic-instantiation	-	-
+PASS	structs/sweep-s2-struct-value/defined-over-defined	-	-
+PASS	structs/sweep-s2-struct-value/in-literals	-	-
+PASS	structs/sweep-s2-struct-value/returned	-	-
+PASS	structs/sweep-s2-struct-value/boxed	-	-
+PASS	structs/sweep-s2-struct-value/map-key-and-switch	-	-
+PASS	structs/sweep-s2-struct-value/param-and-channel	-	-
+PASS	structs/sweep-s2-struct-value/method-on-conversion	-	-
+PASS	structs/sweep-s2-struct-value/beside-call	-	-
+PASS	structs/sweep-s2-struct-value/defined-pointer-over-converted	-	-
+PASS	structs/sweep-s2-struct-value/conv-of-deref	-	-
+PASS	structs/sweep-s2-struct-value/alias-conversion	-	-
+PASS	structs/sweep-s2-struct-value/box-in-generic	-	-
+PASS	structs/sweep-s2-struct-value/embedded-pointer-field-value	-	-
+PASS	structs/sweep-s2-struct-value/struct-arg-instantiation	-	-
+PASS	structs/sweep-s2-struct-value/conv-operand-kinds	-	-
+PASS	structs/sweep-s2-struct-value/method-expr-conversion	-	-
+PASS	structs/sweep-s2-struct-value/struct-typeparam-conv	-	-
+PASS	sync/sweep-s2-converted-struct-with-mutex/pointer-conv	-	-
+PASS	sync/sweep-s2-converted-struct-with-mutex/value-conv	-	-
