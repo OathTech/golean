@@ -60,8 +60,8 @@ GoLean/GoCore/Multi.lean	resumeThread	storeLoc	4	SYNCHRONIZATION — the resumed
 GoLean/GoCore/Multi.lean	resumeThread	syncCell	1	SYNCHRONIZATION — the resumed sync op reads the state word; the wake EMITS its acquire action (no word access at a wake — BUG-080, C1 S2c)
 GoLean/GoCore/Multi.lean	runProgramPoolOutM	loadMany	1	DRIVER READOUT — result cells after termination (the program is over)
 GoLean/GoCore/Multi.lean	selectArrivalCases	chanCell	2	SYNCHRONIZATION — select arrival reads the channel objects
-GoLean/GoCore/Multi.lean	wakeReady	chanPayload?	2	SYNCHRONIZATION — channel-park readiness reads the channel payload (buffer/closed state)
-GoLean/GoCore/Multi.lean	wakeReady	loadLoc	1	SYNCHRONIZATION — sync-park readiness reads the primitive's .syncData state word (.blockedSync)
+GoLean/GoCore/Multi.lean	wakeReady?	chanPayload?	2	SYNCHRONIZATION — channel-park readiness reads the channel payload (buffer/closed state); the FALLIBLE readiness since DC11 (2026-10-26): a load failure is the named refusal at the deadlock classification, not «not ready»
+GoLean/GoCore/Multi.lean	wakeReady?	syncCell	1	SYNCHRONIZATION — sync-park readiness reads the primitive's .syncData state word (.blockedSync) through `syncCell` (was a bare `loadLoc` + shape match; DC11, 2026-10-26: a non-sync cell is the named refusal at the deadlock classification)
 GoLean/GoCore/Ops.lean	Mem.load	loadLoc	1	EMITTING OPERATION BODY — the whole-cell read emits [(read, data l)]
 GoLean/GoCore/Ops.lean	Mem.loadFor	loadLoc	1	EMITTING OPERATION BODY — the root is loaded, the access recorded at the narrowed leaf
 GoLean/GoCore/Ops.lean	Mem.loadBinding	loadRoot	1	EMITTING OPERATION BODY — the binding-cell read (root-only) emits [(read, data l)]

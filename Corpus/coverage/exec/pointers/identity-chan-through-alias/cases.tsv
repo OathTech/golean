@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+chan	chanThroughAlias	-	ok	-	pointers,structs,conversions,channels,comparisons,equality,identity
+chan-distinct	chanDistinctMakes	-	ok	-	channels,structs,comparisons,equality,identity
+chan-boxed	chanBoxedThroughAlias	-	ok	-	pointers,structs,conversions,channels,interfaces,comparisons,equality,identity
+map-nil	mapNilThroughAlias	-	ok	-	pointers,structs,conversions,maps,comparisons,equality,identity

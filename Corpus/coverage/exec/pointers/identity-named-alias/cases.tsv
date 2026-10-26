@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+alias	namedAlias	-	ok	-	pointers,structs,conversions,comparisons,equality,identity
+map	namedMap	-	ok	-	pointers,structs,conversions,maps,identity
+iface	namedIface	-	ok	-	pointers,structs,conversions,interfaces,comparisons,equality,identity

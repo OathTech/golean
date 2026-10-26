@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+leaf	nestedLeaf	-	ok	-	pointers,structs,conversions,comparisons,equality,identity
+struct	nestedStruct	-	ok	-	pointers,structs,conversions,comparisons,equality,identity
+map	nestedMap	-	ok	-	pointers,structs,conversions,maps,identity

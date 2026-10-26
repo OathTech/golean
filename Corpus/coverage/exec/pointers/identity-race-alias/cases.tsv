@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# RACY lane (the race/negative precedent): expected_status race = every
+# enumerated path refuses (raceDetected); the Go oracle is `go run -race`.
+# Two goroutines: width 4 caps the scheduler's site bounds, sites 8.
+pointer-alias	racePointerAlias	-	race	-	goroutines,channels,structs,pointers,conversions,race	racy	-	width=4,sites=8

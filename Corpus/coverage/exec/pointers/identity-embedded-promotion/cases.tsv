@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+promoted-vs-explicit	promotedVsExplicit	-	ok	-	pointers,structs,embedding,comparisons,equality,identity
+promoted-through-alias	promotedThroughAlias	-	ok	-	pointers,structs,embedding,conversions,comparisons,equality,identity
+embedded-struct-through-alias	embeddedStructThroughAlias	-	ok	-	pointers,structs,embedding,conversions,comparisons,equality,identity
+promoted-vs-sibling	promotedVsSibling	-	ok	-	pointers,structs,embedding,interfaces,comparisons,equality,identity

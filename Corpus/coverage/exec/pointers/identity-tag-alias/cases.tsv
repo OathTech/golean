@@ -1,0 +1,14 @@
+# id	subject	args	expected_status	expected_reason	features
+# DC01 / BUG-133: pointer identity across a struct-tag pointer conversion
+# (deep-clean review S1). The first three rows are the review's exact
+# reproduction, born RED at the base; the rest pin the neighbourhood.
+alias	pointerAlias	-	ok	-	pointers,structs,conversions,comparisons,equality,identity
+map	pointerMap	-	ok	-	pointers,structs,conversions,maps,identity
+iface	pointerIface	-	ok	-	pointers,structs,conversions,interfaces,comparisons,equality,identity
+neq	pointerNeq	-	ok	-	pointers,structs,conversions,comparisons,equality,identity
+iface-type-differs	ifaceTypeDiffers	-	ok	-	pointers,structs,conversions,interfaces,comparisons,equality,identity
+convert-back	convertBack	-	ok	-	pointers,structs,conversions,comparisons,equality,identity
+write-through	writeThrough	-	ok	-	pointers,structs,conversions,assignment,identity
+map-delete-via-alias	mapDeleteViaAlias	-	ok	-	pointers,structs,conversions,maps,delete,identity
+same-spelling	sameSpelling	-	ok	-	pointers,structs,comparisons,equality,identity
+distinct-vars	distinctVars	-	ok	-	pointers,structs,comparisons,equality,identity

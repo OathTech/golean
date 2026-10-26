@@ -3743,7 +3743,21 @@ def valueEq : Ty → GoValue → GoValue → Except Stop Bool
     | .ok (.plain (.funcType _ _ _)), .nil, .funcVal _ _ => return false
     | .ok (.plain (.funcType _ _ _)), l, r =>
         stuck s!"func values are not comparable: {repr l} and {repr r}"
-    | .ok (.plain (.pointer _)), .addr l, .addr r => return l == r
+    -- Pointer identity is PHYSICAL (BUG-133, deep-clean review DC01): the
+    -- same cell is the same pointer whatever static spelling reached it. A
+    -- `.field` step carries the STATIC struct `TypeId` the frontend recorded
+    -- for the base expression — a spelling, not an address component — and
+    -- after a pointer conversion between struct-tag-compatible types
+    -- (`structTagCompatible`; `loadLoc`/`storeLoc` accept either tag on the
+    -- path) `&a.X` and `&(*B)(&a).X` name ONE word under two typeIds. So the
+    -- arm compares the CANONICAL paths (`Loc.canon`: typeId erased, field
+    -- name and indices kept — on every path the machine accepts the name
+    -- determines the slot), exactly as the race detector keys its shadow
+    -- since BUG-111. Map search (`mapEntryIndex?`), interface equality at a
+    -- pointer dynamic type and struct-key fields all reach this arm, so one
+    -- site fixes every route; the dynamic-type rule for interface boxes
+    -- (`*A` vs `*B` unequal) is decided BEFORE this arm by the box arm.
+    | .ok (.plain (.pointer _)), .addr l, .addr r => return l.canon == r.canon
     | .ok (.plain (.pointer _)), .nil, .nil => return true
     | .ok (.plain (.pointer _)), .addr _, .nil => return false
     | .ok (.plain (.pointer _)), .nil, .addr _ => return false

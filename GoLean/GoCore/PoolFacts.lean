@@ -941,8 +941,11 @@ def front (m : MultiConfig) (ch : Choices) :
       | _ :: _ =>
         let (pick, ch') := Choices.consumeAt .l5ExitWindow 2 ch
         if pick == 0 then .ok (.inl (s, ch')) else .ok (.inr ch')
+    -- DC11: the deadlock classification is `deadlockStop` — Go's deadlock
+    -- when every parked goroutine is validly parked, else the first
+    -- malformed park's named refusal (the driver's `deadlockOrRefusal`).
     | none => if (runnableIdxs ctx m.shared m.threads).isEmpty
-      then .error .deadlock else .ok (.inr ch)
+      then .error (deadlockStop ctx m.shared m.threads) else .ok (.inr ch)
 
 variable {ctx}
 theorem unfold_driver (fuel : Nat) (m : MultiConfig) (r : RaceState)

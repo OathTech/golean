@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+structs	distinctStructs	-	ok	-	pointers,structs,comparisons,equality,identity
+new	distinctNew	-	ok	-	pointers,new,comparisons,equality,identity
+map-keys	distinctMapKeys	-	ok	-	pointers,structs,maps,identity
+values-equal-pointers-not	valuesEqualPointersNot	-	ok	-	pointers,structs,comparisons,equality,identity

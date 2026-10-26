@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+struct-vs-first-field	structVsFirstField	-	ok	-	pointers,structs,interfaces,comparisons,equality,identity
+struct-vs-itself	structVsItself	-	ok	-	pointers,structs,interfaces,comparisons,equality,identity
+array-vs-first-elem	arrayVsFirstElem	-	ok	-	pointers,arrays,interfaces,comparisons,equality,identity

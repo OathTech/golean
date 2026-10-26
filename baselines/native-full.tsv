@@ -1,5 +1,67 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 4034 (3774 PASS / 260 FAIL)
+# cases: 4089 (3828 PASS / 261 FAIL)
+# re-pinned: 2026-10-26 [AGENT], lane core/dc01-pointer-identity-1026 — BUG-133 (the deep-clean review's DC01, semantics S1; [USER]
+#   ruling 2026-10-26, Mike, relayed by the [AGENT] coordinator: pointer identity as the canonical PHYSICAL location at every comparison
+#   and hashing site, Go's dynamic-type rule for interface values kept, the local space surveyed). WHY: `valueEq`'s pointer arm
+#   (GoLean/GoCore/Ops.lean) compares `l.canon == r.canon` where it compared the `Loc` representation (the static struct TypeId on every
+#   `.field` step), so `&a.X == &(*B)(&a).X` through a struct-tag-compatible pointer conversion — and the same pointer as a map key
+#   and inside `*int` boxes — is now `true` as gc answers; map search, interface payloads and struct/array keys all reach that one arm.
+#   NO existing row moved: 4045 + 44 = 4089; PASS 3784 + 44 = 3828; FAIL 261 unchanged. No flip, no removal, no cause change. (The
+#   previous header line read 4034 (3774/260) against 4045 (3784/261) data rows — stale since an earlier re-pin; corrected here from
+#   the data rows.) NEW rows (44, eleven packages Corpus/coverage/exec/pointers/identity-*/, every strict row expected = gc, the racy
+#   row `identity-race-alias/pointer-alias` certified «every enumerated path refuses» with gc -race red), appended at the end of the
+#   file: 18 born RED at the base bee5740f (tag-alias {alias,map,iface,neq,map-delete-via-alias}, named-alias {alias,map,iface},
+#   nested-field {leaf,struct,map}, array-field {elem,whole,elem-map}, embedded-promotion {promoted-through-alias,
+#   embedded-struct-through-alias}, map-key-routes {any-keys,struct-keys}) and 26 controls born green (the dynamic-type rule,
+#   convert-back, write-through, same spelling, distinct allocations, distinct elements, slice views, promotion vs the explicit path,
+#   struct-vs-first-field, channel/map references, the detector on pointer-taken spellings). Measured by CAPPED_MEM_MAX=64G capped
+#   scripts/ci --diff at the lane tree before the re-pin (its only drift: these 44 NEW ids; kernel replay, lake check and lake
+#   comparator ok), the rows taken from that run's artifacts/coverage/latest.tsv (scripts/coverage-cause --apply accepted the
+#   result); the --diff at the tip judges.
+#     pointers/identity-array-field/distinct-elems                       PASS/- — expected = gc
+#     pointers/identity-array-field/elem                                 PASS/- — expected = gc
+#     pointers/identity-array-field/elem-map                             PASS/- — expected = gc
+#     pointers/identity-array-field/whole                                PASS/- — expected = gc
+#     pointers/identity-chan-through-alias/chan                          PASS/- — expected = gc
+#     pointers/identity-chan-through-alias/chan-boxed                    PASS/- — expected = gc
+#     pointers/identity-chan-through-alias/chan-distinct                 PASS/- — expected = gc
+#     pointers/identity-chan-through-alias/map-nil                       PASS/- — expected = gc
+#     pointers/identity-distinct-allocs/map-keys                         PASS/- — expected = gc
+#     pointers/identity-distinct-allocs/new                              PASS/- — expected = gc
+#     pointers/identity-distinct-allocs/structs                          PASS/- — expected = gc
+#     pointers/identity-distinct-allocs/values-equal-pointers-not        PASS/- — expected = gc
+#     pointers/identity-embedded-promotion/embedded-struct-through-alias PASS/- — expected = gc
+#     pointers/identity-embedded-promotion/promoted-through-alias        PASS/- — expected = gc
+#     pointers/identity-embedded-promotion/promoted-vs-explicit          PASS/- — expected = gc
+#     pointers/identity-embedded-promotion/promoted-vs-sibling           PASS/- — expected = gc
+#     pointers/identity-map-key-routes/any-keys                          PASS/- — expected = gc
+#     pointers/identity-map-key-routes/converted-back-keys               PASS/- — expected = gc
+#     pointers/identity-map-key-routes/different-pointer-types           PASS/- — expected = gc
+#     pointers/identity-map-key-routes/struct-keys                       PASS/- — expected = gc
+#     pointers/identity-named-alias/alias                                PASS/- — expected = gc
+#     pointers/identity-named-alias/iface                                PASS/- — expected = gc
+#     pointers/identity-named-alias/map                                  PASS/- — expected = gc
+#     pointers/identity-nested-field/leaf                                PASS/- — expected = gc
+#     pointers/identity-nested-field/map                                 PASS/- — expected = gc
+#     pointers/identity-nested-field/struct                              PASS/- — expected = gc
+#     pointers/identity-race-alias/pointer-alias                         PASS/racy — expected = gc
+#     pointers/identity-slice-backing/distinct                           PASS/- — expected = gc
+#     pointers/identity-slice-backing/elem-map                           PASS/- — expected = gc
+#     pointers/identity-slice-backing/of-array                           PASS/- — expected = gc
+#     pointers/identity-slice-backing/reslice                            PASS/- — expected = gc
+#     pointers/identity-struct-vs-field/array-vs-first-elem              PASS/- — expected = gc
+#     pointers/identity-struct-vs-field/struct-vs-first-field            PASS/- — expected = gc
+#     pointers/identity-struct-vs-field/struct-vs-itself                 PASS/- — expected = gc
+#     pointers/identity-tag-alias/alias                                  PASS/- — expected = gc
+#     pointers/identity-tag-alias/convert-back                           PASS/- — expected = gc
+#     pointers/identity-tag-alias/distinct-vars                          PASS/- — expected = gc
+#     pointers/identity-tag-alias/iface                                  PASS/- — expected = gc
+#     pointers/identity-tag-alias/iface-type-differs                     PASS/- — expected = gc
+#     pointers/identity-tag-alias/map                                    PASS/- — expected = gc
+#     pointers/identity-tag-alias/map-delete-via-alias                   PASS/- — expected = gc
+#     pointers/identity-tag-alias/neq                                    PASS/- — expected = gc
+#     pointers/identity-tag-alias/same-spelling                          PASS/- — expected = gc
+#     pointers/identity-tag-alias/write-through                          PASS/- — expected = gc
 # re-pinned: 2026-10-25 [AGENT], lane core/row31-fillers-1025 — release-readiness rows 30/31(d) ([USER] ruling 2026-10-25, Mike, relayed
 #   by the [AGENT] coordinator: the variable-length `make` core guard, a refusal by name on the sliceCapBudget template, gc's own panic
 #   first). WHY: the makeSlice arm now charges `cap × tyLeafCount(elem)` to `arrayFootprintBudget` (1<<24 leaves; the constant moved to
@@ -6385,3 +6447,47 @@ PASS	strings/conv-cap/runes-var-esc-100	-	-
 PASS	strings/conv-cap/bytes-inline-helper	membership	-
 PASS	strings/conv-cap/bytes-alias-append-mut-5	membership	-
 PASS	strings/conv-cap/bytes-alias-append-esc-8	membership	-
+PASS	pointers/identity-array-field/distinct-elems	-	-
+PASS	pointers/identity-array-field/elem	-	-
+PASS	pointers/identity-array-field/elem-map	-	-
+PASS	pointers/identity-array-field/whole	-	-
+PASS	pointers/identity-chan-through-alias/chan	-	-
+PASS	pointers/identity-chan-through-alias/chan-boxed	-	-
+PASS	pointers/identity-chan-through-alias/chan-distinct	-	-
+PASS	pointers/identity-chan-through-alias/map-nil	-	-
+PASS	pointers/identity-distinct-allocs/map-keys	-	-
+PASS	pointers/identity-distinct-allocs/new	-	-
+PASS	pointers/identity-distinct-allocs/structs	-	-
+PASS	pointers/identity-distinct-allocs/values-equal-pointers-not	-	-
+PASS	pointers/identity-embedded-promotion/embedded-struct-through-alias	-	-
+PASS	pointers/identity-embedded-promotion/promoted-through-alias	-	-
+PASS	pointers/identity-embedded-promotion/promoted-vs-explicit	-	-
+PASS	pointers/identity-embedded-promotion/promoted-vs-sibling	-	-
+PASS	pointers/identity-map-key-routes/any-keys	-	-
+PASS	pointers/identity-map-key-routes/converted-back-keys	-	-
+PASS	pointers/identity-map-key-routes/different-pointer-types	-	-
+PASS	pointers/identity-map-key-routes/struct-keys	-	-
+PASS	pointers/identity-named-alias/alias	-	-
+PASS	pointers/identity-named-alias/iface	-	-
+PASS	pointers/identity-named-alias/map	-	-
+PASS	pointers/identity-nested-field/leaf	-	-
+PASS	pointers/identity-nested-field/map	-	-
+PASS	pointers/identity-nested-field/struct	-	-
+PASS	pointers/identity-race-alias/pointer-alias	racy	-
+PASS	pointers/identity-slice-backing/distinct	-	-
+PASS	pointers/identity-slice-backing/elem-map	-	-
+PASS	pointers/identity-slice-backing/of-array	-	-
+PASS	pointers/identity-slice-backing/reslice	-	-
+PASS	pointers/identity-struct-vs-field/array-vs-first-elem	-	-
+PASS	pointers/identity-struct-vs-field/struct-vs-first-field	-	-
+PASS	pointers/identity-struct-vs-field/struct-vs-itself	-	-
+PASS	pointers/identity-tag-alias/alias	-	-
+PASS	pointers/identity-tag-alias/convert-back	-	-
+PASS	pointers/identity-tag-alias/distinct-vars	-	-
+PASS	pointers/identity-tag-alias/iface	-	-
+PASS	pointers/identity-tag-alias/iface-type-differs	-	-
+PASS	pointers/identity-tag-alias/map	-	-
+PASS	pointers/identity-tag-alias/map-delete-via-alias	-	-
+PASS	pointers/identity-tag-alias/neq	-	-
+PASS	pointers/identity-tag-alias/same-spelling	-	-
+PASS	pointers/identity-tag-alias/write-through	-	-

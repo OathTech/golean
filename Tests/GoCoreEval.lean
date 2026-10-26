@@ -3105,6 +3105,48 @@ private def observationShapeFacts : IO Bool := do
        (enc.splitOn "\"tag\":\"func\"").length == 1 && (CLI.decodeObservation "left" enc).isOk))
   pure passed
 
+/-- DC11 (deep-clean review 2026-10-26, semantics S3; lane `core/dc01-pointer-identity-1026`):
+the pool's deadlock classification REFUSES BY NAME on a malformed parked state instead of
+naming it Go's `deadlock`. The review's probe: a `.blockedSend` parked on heap address 0 of an
+EMPTY store — `wakeReady?` is the named error (`chanPayload?`'s text), the Bool projection
+`wakeReady` reads «not runnable» (the schedule is unchanged), and `execProgLoop` over the
+single malformed thread is that refusal, never `.terminal .deadlock` (before the fix the
+readiness check absorbed the load failure into `false` and the pool answered `deadlock`
+while `resumeThread` on the same configuration answered `stuck`). Beside it the VALID
+controls: a nil-channel send (`ch = none`, never ready — spec) and a parked send on a real
+unbuffered channel with no partner are Go's deadlock, as the corpus's deadlock rows are. No
+path from admitted Go source to the malformed state was shown; the pin is the boundary. -/
+private def malformedParkedStateFacts : IO Bool := do
+  let mut passed := true
+  let ctx := GoCore.ProgramCtx.ofTables (types := #[])
+  let absent : GoCore.Machine.Config :=
+    .blockedSend (some (.base ⟨0⟩)) (.int 3 .int) .stop
+  let emptyStore : GoCore.Store := {}
+  let pool (c : GoCore.Machine.Config) (s : GoCore.Store) : Except Stop (GoCore.Store × GoCore.Choices) :=
+    GoCore.Machine.execProgLoop ctx 10 ⟨#[.running c none], s, 0⟩ {} []
+  passed := passed && (← expectTrue "DC11: wakeReady? on a parked send at an unbound address is the NAMED error, not «not ready»"
+    (match GoCore.Machine.wakeReady? ctx emptyStore absent with
+      | .error (Stop.stuck msg) => (msg.splitOn "unbound").length == 2
+      | _ => false))
+  passed := passed && (← expectTrue "DC11: the Bool projection reads «not runnable» for the malformed park (the schedule is unchanged)"
+    (!GoCore.Machine.wakeReady ctx emptyStore absent))
+  passed := passed && (← expectTrue "DC11: the pool REFUSES the malformed parked state by name — never Go's deadlock"
+    (match pool absent emptyStore with
+      | .error (Stop.stuck msg) => (msg.splitOn "unbound").length == 2
+      | _ => false))
+  -- Valid control 1: a nil-channel send is never ready (spec) — Go's deadlock.
+  passed := passed && (← expectTrue "DC11 control: a parked nil-channel send is Go's deadlock"
+    (match pool (.blockedSend none (.int 3 .int) .stop) emptyStore with
+      | .error .deadlock => true
+      | _ => false))
+  -- Valid control 2: a send parked on a REAL unbuffered channel with no partner.
+  let (chLoc, s₁) := emptyStore.allocCell (.chanPayload #[] 0 false)
+  passed := passed && (← expectTrue "DC11 control: a parked send on a real unbuffered channel with no partner is Go's deadlock"
+    (match pool (.blockedSend (some chLoc) (.int 3 .int) .stop) s₁ with
+      | .error .deadlock => true
+      | _ => false))
+  pure passed
+
 /-- `stepLabelControls`, `seedFacts`, then `observationShapeFacts` (all always run). -/
 private def stepLabelAndSeedControls : IO Bool := do
   let a ← stepLabelControls
@@ -4637,6 +4679,8 @@ def main : IO UInt32 := do
   -- The step-label controls and (2026-10-12) the seeded-heap slice B pins: one call, so
   -- `main`'s do-block does not grow (it is at the elaborator's recursion-depth limit).
   passed := passed && (← stepLabelAndSeedControls)
+  -- DC11 (2026-10-26): the malformed-parked-state refusal and its valid deadlock controls.
+  passed := passed && (← malformedParkedStateFacts)
   if passed then
     return 0
   else

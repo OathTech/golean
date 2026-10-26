@@ -9097,3 +9097,109 @@ without it. The obvious fix is this guard's own template at those two sites — 
 arrayFootprintBudget` after the spill arm's `growslice` panic, and the conversion's length against the same
 budget — refusing by name on the `make-footprint-budget-runtime` vocabulary; it is a FOLLOW-UP for the
 owner's word (the 2026-10-25 ruling covered the `make` site), not part of this entry's fix.
+
+## BUG-133 — pointer `==` compares the `Loc` REPRESENTATION, static struct `TypeId` included, so two pointers to ONE `int` field reached through a legal struct-pointer conversion (`&a.X` vs `&(*B)(&a).X` — identical underlying types, tags differing or not) compare UNEQUAL, are TWO map keys and TWO unequal `any` boxes: a WRONG ANSWER with status `ok` [fidelity; wrong-answer; `valueEq`'s pointer arm, Ops.lean; deep-clean review 2026-10-26 DC01 / semantics S1]
+
+- Status: fixed (2026-10-26, lane `core/dc01-pointer-identity-1026` [AGENT]; the [USER] ruling of
+  2026-10-26, relayed by the [AGENT] coordinator — `docs/2026-10-26_deep-clean-release-pass.md` DC01:
+  fix pointer identity as the canonical PHYSICAL location at every comparison and hashing site, keep
+  Go's dynamic-type distinction for interface values, and survey the local space so the fix is not a
+  point repair; the fallback of refusing struct-pointer conversions by name was not needed)
+- Pinned-by: differential
+- Cases: pointers/identity-tag-alias/alias, pointers/identity-tag-alias/map, pointers/identity-tag-alias/iface, pointers/identity-tag-alias/neq, pointers/identity-tag-alias/iface-type-differs, pointers/identity-tag-alias/convert-back, pointers/identity-tag-alias/write-through, pointers/identity-tag-alias/map-delete-via-alias, pointers/identity-tag-alias/same-spelling, pointers/identity-tag-alias/distinct-vars, pointers/identity-named-alias/alias, pointers/identity-named-alias/map, pointers/identity-named-alias/iface, pointers/identity-nested-field/leaf, pointers/identity-nested-field/struct, pointers/identity-nested-field/map, pointers/identity-array-field/elem, pointers/identity-array-field/whole, pointers/identity-array-field/distinct-elems, pointers/identity-array-field/elem-map, pointers/identity-embedded-promotion/promoted-vs-explicit, pointers/identity-embedded-promotion/promoted-through-alias, pointers/identity-embedded-promotion/embedded-struct-through-alias, pointers/identity-embedded-promotion/promoted-vs-sibling, pointers/identity-slice-backing/reslice, pointers/identity-slice-backing/distinct, pointers/identity-slice-backing/of-array, pointers/identity-slice-backing/elem-map, pointers/identity-struct-vs-field/struct-vs-first-field, pointers/identity-struct-vs-field/struct-vs-itself, pointers/identity-struct-vs-field/array-vs-first-elem, pointers/identity-distinct-allocs/structs, pointers/identity-distinct-allocs/new, pointers/identity-distinct-allocs/map-keys, pointers/identity-distinct-allocs/values-equal-pointers-not, pointers/identity-map-key-routes/any-keys, pointers/identity-map-key-routes/struct-keys, pointers/identity-map-key-routes/converted-back-keys, pointers/identity-map-key-routes/different-pointer-types, pointers/identity-chan-through-alias/chan, pointers/identity-chan-through-alias/chan-distinct, pointers/identity-chan-through-alias/chan-boxed, pointers/identity-chan-through-alias/map-nil, pointers/identity-race-alias/pointer-alias
+- Discovered: the deep-clean review's reproduction (`docs/reviews/2026-10-26-deepclean/01-semantics.md`
+  S1): `a := A{X: 7}; b := (*B)(&a)` with `A`/`B` differing only in field tags; gc `true 12 true` for
+  `&a.X == &b.X`, `10*len(map[*int]int{&a.X: 1, then m[&b.X] = 2}) + m[&a.X]`, and
+  `any(&a.X) == any(&b.X)`; the machine `false 21 false`, status `ok`, no refusal or choice warning.
+  Reproduced by this lane at the base (`bee5740f`) exactly as the report gives it; the reviewer's
+  variant with no tags at all (two named structs with identical fields) reproduces the same way.
+
+WHAT (`GoLean/GoCore/Ops.lean`, `valueEq`'s pointer arm): a `Loc` is a PATH — `.base addr`, then
+`.field base typeId name` / `.index base i` steps — and a `.field` step carries the STATIC struct
+`TypeId` the frontend recorded for the base expression (`fieldAddr typeId fieldName`, Machine.lean).
+A pointer conversion between struct types with identical underlying types is legal
+(spec#Conversions; tags are ignored) and aliases the cell, whose MINT tag stays: `loadLoc` /
+`storeLoc` / `fieldGet` accept a path step whose typeId is the cell's tag or tag-compatible with it
+(`structTagCompatible`: identical `FieldDef` lists — triage L7, 2026-08-19), so ACCESS through either
+spelling already worked (the review's write-through control: `b.X = 9; a.X` is 9). IDENTITY did not:
+the arm compared the two paths structurally (`l == r`, the derived `BEq Loc`), so `.field (.base a)
+A "X"` and `.field (.base a) B "X"` — one word — were unequal. The same `Loc.canon` the race
+detector has keyed its shadow by since BUG-111's fix (2026-09-18: the typeId of every `.field` step
+erased to `TypeId.canon`, the field NAME kept as the position — on every path the machine accepts
+the name determines the slot, since tag-compatible structs have identical field lists — indices
+kept) is exactly physical identity, and the arm now compares `l.canon == r.canon`.
+
+THE NEIGHBOURHOOD (the [USER]'s standing instruction for this round: every place where the identity
+of a location, a pointer or a reference is compared or hashed, and every route by which two
+spellings name one cell — surveyed BEFORE the fix; site → what it compares → disposition):
+
+| site | compares | disposition |
+|---|---|---|
+| `valueEq` pointer arm (Ops.lean) — Go `==` / `!=` on pointers, `switch` on pointer values | the `Loc` REPRESENTATION (`l == r`) | FIXED: `l.canon == r.canon` |
+| `valueEq` interface arm — boxes compared at the dynamic type | the dynamic `Ty` first (`*A` ≠ `*B` → `false` with no payload comparison: Go's rule), THEN the payload at the dynamic type, i.e. the pointer arm | FIXED through the pointer arm; the dynamic-type rule untouched (`identity-tag-alias/iface-type-differs`, `identity-struct-vs-field/*` pin it) |
+| `mapEntryIndex?` (Ops.lean) — map insert / lookup / delete over `map[*T]`, `map[any]` with pointer dynamic values, struct and array keys holding pointers | `valueEq` over the entry list (there is NO hash: `valueHashability` is the type-level panic check, the search is a linear `valueEq` scan) | FIXED through the pointer arm (`identity-map-key-routes/*`, the `*-map` rows) |
+| `valueEqFields` / `valueEqList` — struct and array `==`, struct and array map keys | `valueEq` per field / element | FIXED through the pointer arm (`identity-map-key-routes/struct-keys`) |
+| channel `==` (`ChanValue`'s derived `BEq`), the select / chan-op waiter matching (`recvSideWaiters` / `sendSideWaiters`: `loc' == loc`, Multi.lean), the detector's `RaceState.chanOf` keys | the payload cell's `Option Loc` — `make` allocates a ROOT cell (`Store.allocCell` → `.base`), so a reference is never a `.field` / `.index` path and `canon` is the identity on it | UNCHANGED, canonical by construction (`identity-chan-through-alias/*`: true / false / true / true on both sides at the base) |
+| map references (`MapValue.base`), func values | a root cell likewise; Go compares maps and funcs only against `nil` | UNCHANGED |
+| the race detector's keys — `.data` paths (`Mem.load` / `Mem.store`, Ops.lean), `.syncWord` (`syncWord`, Machine.lean), `.chanObj` (`chanSendEntry` / `chanCloseWrite` / `selectPoll`), the `HbAction` locations that key the clock tables (`atomicEvents`, every `.hb` emitter), `RaceState.syncOf` / `atomicOf` / `chanOf` | CANONICAL at every emitter since BUG-111's fix | UNCHANGED; the detector already answers `race` for two goroutines writing through pointers taken under the two spellings — `identity-race-alias/pointer-alias` (gc `-race` red; the machine `race` on the default tape at the base and on every enumerated path at the tip) is the pin that a FALSE «no race» of the opposite kind is not there |
+| the unseq scheduler's footprint conflicts (`Access = AccessKind × ShadowKey`, `ShadowKey.overlap` / `locPrefix`) | the same canonical keys | UNCHANGED |
+| sync-primitive parks (`.blockedSync op loc`): wake-readiness and resume | the parked goroutine's OWN `loc`, read through `loadLoc` (either tag accepted); no cross-goroutine location matching exists for sync — the cell's state decides | UNCHANGED |
+| `GoValue.eqb` / `StateEqb` (the dedup engine's structural state equality; `Obs.eqb`) | the REPRESENTATION, by design: structural identity of machine STATES, never Go `==` (the review's S1 scope caveat) — two spellings in flight are two states, an over-approximation of distinctness that cannot produce a wrong Go answer | UNCHANGED, deliberately |
+| the derived `Ord Loc` (the shadow's canonical key order for the dedup engine) | the representation of keys that are already canonical | UNCHANGED |
+| the observation readout — `locJson`'s `fieldAddr` carries the static `typeName` (CLI.lean) | machine-side only: the Go observer refuses a pointer result outside seed mode (`unsupported Go observation kind ptr`), and the seeded readout (`seedLocJson` / `seedRelative?`) renders a location as a root-first path of field NAMES and indices — `docs/cli.md` §seeded observations — canonical by construction, so no readout format changes | UNCHANGED |
+| `uintptr` / `unsafe` | a returned `uintptr` is refused by name on both sides (BUG-124's O1); `unsafe.Pointer` is outside the modeled surface (the atomics policy; a library `unsafe` import is the frontend's own refusal) — no pointer→integer route exists to observe an address | UNCHANGED |
+| `LocationOrder` (the retired relational layer's `Loc` comparator) | — | not in the build (tag `relational/last-main-2026-10-20`, `docs/ARCHIVE.md`) |
+| zero-size variable identity (latitude inventory R15) | a fresh cell per variable: the never-same member of the spec's two-member envelope | UNCHANGED (a latitude, not an identity defect; `pointers/zero-size-address/*` stay as pinned) |
+
+ROUTES by which two spellings name one cell, probed on both sides at the base (machine vs gc; every
+disagreement a finding, every agreement a control that must stay): the struct-tag alias (S1; `true 12
+true` vs `false 21 false`, plus `!=` `false` vs `true`, delete-through-the-alias `0` vs `1`); two
+distinct NAMED structs with no tags (`true 12 true` vs `false 21 false`); the alias at a NESTED field
+path (`&a.In.X` / `&b.In.X`, `&a.In` / `&b.In`: `true true 112` vs `false false 221`); the alias under
+an ARRAY field (`&a.Arr[2]` / `&b.Arr[2]`, `&a.Arr` / `&b.Arr`: `true true` vs `false false`; the
+element-keyed map `22` vs `31`; distinct elements `false` on both); EMBEDDING: the promoted spelling
+`&a.X` vs the explicit `&a.emb.X` is ONE location already (the frontend lowers a promoted selector to
+the explicit path, `fieldPathAddr` — `true` on both sides), but the promoted spelling through the
+alias (`&a.X` / `&(*hostB)(&a).X`) and the embedded struct through the alias (`&a.emb` / `&b.emb`)
+were `false` vs `true`; SLICE VIEWS (`&s[1]` / `&t[0]` after `t := s[1:]`, `&arr[2]` / `&s[2]` for
+`s := arr[:]`) are one location already (`sliceIndexLoc` builds the absolute index on the backing
+array; `true false true 22` on both sides); a struct's address vs its first field's, an array's vs its
+first element's (different pointer types: `any(&a) == any(&a.X)` is `false` on both sides — the
+dynamic-type rule, kept); distinct allocations with equal contents (`false false 21 1` on both sides —
+the must-stay-unequal controls); the map-key routes (`map[any]` with pointer dynamic values and a
+struct key holding a pointer: `12` vs `21`; the converted-back `*keyA` key `12` on both; boxes of
+DIFFERENT pointer types `21` on both — two entries, the dynamic-type rule); channel / map references
+through the alias (agree); a conversion to a pointer to an UNNAMED struct type (`(*struct{ X int })(&a)`,
+gc `true`): the machine refuses by name, `frontend-quarantined: anonymous non-empty struct type struct{X
+int}` — the rowed frontend cause FR-13 (`anon-struct`, `tools/lowerdiag/causes.tsv`), not an identity
+defect and not rowed again here; the race on pointer-taken spellings (gc `-race` red, machine `race`).
+In sum 18 rows born RED at the base and 26 controls born green; at the tip every strict row PASSes
+with gc's value and the racy row refuses on every enumerated path.
+
+THE FIX (one site, by the table above): `valueEq`'s pointer arm compares `l.canon == r.canon`. Every
+other Go-level identity route reaches that arm — map search, interface payloads, struct / array keys
+— so no second site changed; the `Loc` representation, the seed readout, the detector's keys and every
+kept statement of the comparator contract (`Contract/Challenge.lean`) and of `Tests/GoCoreContract.lean`
+are untouched (none mentions `valueEq`; `valueEq_tame_all`'s arm-generic proof is unchanged). WHAT IT
+DID NOT CHANGE: Go's dynamic-type rule for interface boxes (decided before the arm); channel / map
+reference identity (root cells); the race detector; the dedup engine's structural state equality; the
+zero-size latitude (R15); the frontend's FR-13 refusal of unnamed struct types.
+
+DC11, same lane (deep-clean review S3; `docs/2026-10-26_deep-clean-release-pass.md` DC11 — a core API
+boundary, NOT a fidelity bug: no path from admitted Go source to the state was shown by the review or
+by this lane): the pool's readiness check `wakeReady` (Multi.lean) absorbed a channel-cell load failure
+(`chanPayload?` on an unbound address, a non-channel cell) and a sync cell's load failure / shape
+mismatch into `false`, so a MALFORMED parked goroutine read «not ready», the pool saw no runnable
+goroutine and classified the state as Go's `deadlock` terminal, while `resumeThread` on the same
+configuration reported `stuck`. Now `wakeReady?` is the FALLIBLE readiness (the named error — the
+load's own text, or `.internal` on the op/cell shape mismatch, the text `resumeThread` raises),
+`wakeReady` its Bool projection for the scheduler's menu (an error reads «not runnable»: the schedule
+is unchanged), and `deadlockOrRefusal` — the one definition behind `stepMulti`'s empty menu and both
+drivers' empty runnable set (`execProgLoop`, `execProgLoopOut`; `choice-trace` mirrors it) — re-checks
+every parked goroutine (`parkedWellFormed`) before naming «no runnable goroutine» Go's deadlock. A
+validly parked program (a nil-channel block, a partnerless send on a real channel — the corpus's
+deadlock rows) is still `deadlock`; the review's hand-built state is now the `stuck` refusal naming
+the unbound address. Pinned by `Tests/GoCoreEval.lean` `malformedParkedStateFacts` (the malformed
+park refuses by name; two valid controls are `deadlock`). The main-exit window (`mainOutcome?` with
+nothing runnable) is NOT touched: there the pool returns main's outcome without inspecting parked
+goroutines, as Go's exit does not; a malformed park there is outside this change's claim.

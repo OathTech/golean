@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+any-keys	anyKeys	-	ok	-	pointers,structs,conversions,maps,interfaces,identity
+struct-keys	structKeys	-	ok	-	pointers,structs,conversions,maps,identity
+converted-back-keys	convertedBackKeys	-	ok	-	pointers,structs,conversions,maps,identity
+different-pointer-types	differentPointerTypes	-	ok	-	pointers,structs,conversions,maps,interfaces,identity

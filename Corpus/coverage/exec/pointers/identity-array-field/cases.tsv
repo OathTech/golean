@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+elem	arrayElem	-	ok	-	pointers,structs,arrays,conversions,comparisons,equality,identity
+whole	arrayWhole	-	ok	-	pointers,structs,arrays,conversions,comparisons,equality,identity
+distinct-elems	arrayDistinctElems	-	ok	-	pointers,structs,arrays,conversions,comparisons,equality,identity
+elem-map	arrayElemMap	-	ok	-	pointers,structs,arrays,conversions,maps,identity

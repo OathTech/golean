@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+reslice	sliceReslice	-	ok	-	pointers,slices,slicing,comparisons,equality,identity
+distinct	sliceDistinct	-	ok	-	pointers,slices,slicing,comparisons,equality,identity
+of-array	sliceOfArray	-	ok	-	pointers,slices,arrays,slicing,comparisons,equality,identity
+elem-map	sliceElemMap	-	ok	-	pointers,slices,slicing,maps,identity

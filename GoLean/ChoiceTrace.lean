@@ -777,7 +777,11 @@ partial def poolLoop (fuel : Nat) (m : MultiConfig) (r : RaceState) (a : Acc) :
               | fuel' + 1 => poolStep fuel' m r { a with phase := "pool" }
     | none =>
       if (runnableIdxs ctx m.shared m.threads).isEmpty then
-        return { status := "deadlock", acc := a }
+        -- DC11: the machine's own classification — a malformed parked
+        -- goroutine is its named refusal, never «deadlock».
+        match parkedWellFormed ctx m.shared m.threads.toList with
+        | .error e => return { status := e.status, acc := a }
+        | .ok () => return { status := "deadlock", acc := a }
       else
         match fuel with
         | 0 => return { status := "fuel-out", acc := a }

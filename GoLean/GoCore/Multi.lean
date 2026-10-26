@@ -295,77 +295,106 @@ variable (ctx)
 -- `chanValueLoc` MOVED to Machine.lean (C1 S2c): the select's poll emission
 -- (`selectPoll`) needs it beside `applySelectCore`.
 
-/-- Cell-based wake-readiness of a parked goroutine: can its blocked
-operation now proceed against the CHANNEL CELL alone? Parked partners
-are deliberately not consulted — pairing happens at ARRIVAL (the
-intercept), so matched parked-parked pairs never coexist and cell
-readiness is the complete wake condition. Nil-channel blocks
-(`ch = none`) are never ready (spec: "A nil channel is never ready for
-communication"). A malformed cell yields `false` (the resume step, if
-it were ever reached, fails closed with an explicit error; a parked
-goroutine's cell cannot change shape — only channel ops touch
-`chanPayload` cells). -/
-def wakeReady (s : Store) : Config → Bool
-  | .blockedSend (some loc) _ _ =>
-      match chanPayload? s loc with
-      | .ok (buf, capacity, closed) => closed || buf.size < capacity
-      | .error _ => false
-  | .blockedRecv (some loc) _ _ _ _ =>
-      match chanPayload? s loc with
-      | .ok (buf, _, closed) => buf.size != 0 || closed
-      | .error _ => false
-  | .blockedSelect evs _ _ =>
-      evs.any fun cl =>
-        match clauseReady s cl with
-        | .ok b => b
-        | .error _ => false
-  -- Sync parks (spec-parity slice 2, design note §6): CELL-based wake
-  -- readiness — can the parked op now acquire against the primitive's
-  -- state alone? WHICH ready contender proceeds is the L1 pick's
-  -- latitude (the envelope statement at `applySyncOp`); no L4-analogue
-  -- site exists for sync. A parked `rlock` stays unready while a
-  -- writer is PENDING (`pendingW` — the documented exclusion of new
-  -- readers); a parked `wgWait` stays unready on a NEGATIVE counter
-  -- (probe p13: Wait unblocks only at exactly 0).
-  | .blockedSync op loc _ _ =>
-      match loadLoc ctx s loc with
-      | .ok (.syncData p) =>
-          -- Op axis exhaustive (a new `SyncOp` head is a compile error);
-          -- on the cell axis each parking head names its own primitive
-          -- and the three OTHER primitives explicitly — an op/cell shape
-          -- mismatch is "never ready" here (the resume path throws
-          -- `.internal` on the same mismatch, `resumeThread`).
-          match op with
-          | .lock =>
-              match p with
-              | .mutex locked => !locked
-              | .rwmutex .. | .waitGroup .. | .once .. => false
-          | .wlock =>
-              match p with
-              | .rwmutex writer readers _ => !writer && readers == 0
-              | .mutex .. | .waitGroup .. | .once .. => false
-          | .rlock =>
-              match p with
-              | .rwmutex writer _ pendingW => !writer && pendingW == 0
-              | .mutex .. | .waitGroup .. | .once .. => false
-          | .wgWait =>
-              match p with
-              | .waitGroup counter _ => counter == 0
-              | .mutex .. | .rwmutex .. | .once .. => false
-          | .onceBegin _ =>
-              match p with
-              | .once _ done => done
-              | .mutex .. | .rwmutex .. | .waitGroup .. => false
-          -- The releasing heads are never parked (`applySyncOpCore`
-          -- constructs `.blockedSync` only for the five above), nor are
-          -- the TRY heads (`applyTryLock` fails instead of parking).
-          | .unlock | .runlock | .wunlock | .wgAdd | .onceComplete => false
-          | .tryLock _ | .tryRLock _ | .tryWLock _ => false
-      -- ABSORBING DEFAULT, named: a load failure or a non-`syncData` cell
-      -- at a parked sync op's `loc` reads "not ready" — the goroutine
-      -- stays parked and the pool ends `.deadlock` if nothing else runs.
-      | _ => false
-  | _ => false
+/-- `wakeReady?`'s select arm: is ANY clause ready against its channel cell
+— structural over the clause list, the first clause whose cell load FAILS
+propagates that failure (DC11, below). -/
+def clausesReady? (s : Store) : List EvClause → Except Stop Bool
+  | [] => return false
+  | cl :: rest => do
+      if ← clauseReady s cl then return true else clausesReady? s rest
+
+/-- Cell-based wake-readiness of a parked goroutine, FALLIBLE: can its
+blocked operation now proceed against the CHANNEL CELL (or the sync
+primitive's state) alone? Parked partners are deliberately not consulted —
+pairing happens at ARRIVAL (the intercept), so matched parked-parked pairs
+never coexist and cell readiness is the complete wake condition. Nil-channel
+blocks (`ch = none`) are never ready (spec: "A nil channel is never ready for
+communication") — a VALID «not ready», `.ok false`.
+
+A MALFORMED parked state is the NAMED error, never «not ready» (deep-clean
+review 2026-10-26, semantics S3 / DC11 — [USER] ruling, relayed, 2026-10-26:
+propagate the error so the readiness check refuses by name): a missing or
+non-channel cell at a parked channel op's `loc` (`chanPayload?`'s own text), a
+load failure or a non-`syncData` cell at a parked sync op's `loc` (`loadLoc`'s
+/ `syncCell`'s), and a parked sync op whose head does not match the cell's
+primitive or is a head that is never parked (`applySyncOpCore` constructs
+`.blockedSync` only for the five acquiring heads; the releasing and TRY heads
+never park) — the `.internal` text `resumeThread` raises on the same shape.
+Before this change (the review's probe: a `.blockedSend` on an unbound heap
+address) the readiness check absorbed every such failure into `false`, the
+pool saw no runnable goroutine and classified the state as Go's `deadlock`
+terminal, while resuming the same configuration directly reported `stuck`.
+No path from admitted Go source to such a state was shown (the review's
+probe hand-builds an empty-heap state); the change is the fail-closed
+boundary on the exported pool API. `wakeReady` below projects the Bool the
+scheduler's menu needs (an error reads «not runnable», so the SCHEDULE is
+unchanged), and the deadlock classification (`deadlockOrRefusal`, used by
+`stepMulti` and the drivers) re-runs this check over every parked goroutine
+before it names «no runnable goroutine» Go's deadlock.
+
+Sync parks (spec-parity slice 2, design note §6): CELL-based wake readiness —
+can the parked op now acquire against the primitive's state alone? WHICH
+ready contender proceeds is the L1 pick's latitude (the envelope statement at
+`applySyncOp`); no L4-analogue site exists for sync. A parked `rlock` stays
+unready while a writer is PENDING (`pendingW` — the documented exclusion of
+new readers); a parked `wgWait` stays unready on a NEGATIVE counter (probe
+p13: Wait unblocks only at exactly 0). -/
+def wakeReady? (s : Store) : Config → Except Stop Bool
+  | .blockedSend (some loc) _ _ => do
+      let (buf, capacity, closed) ← chanPayload? s loc
+      return closed || buf.size < capacity
+  | .blockedRecv (some loc) _ _ _ _ => do
+      let (buf, _, closed) ← chanPayload? s loc
+      return buf.size != 0 || closed
+  | .blockedSelect evs _ _ => clausesReady? s evs
+  | .blockedSync op loc _ _ => do
+      let p ← syncCell ctx s loc
+      match op, p with
+      | .lock, .mutex locked => return !locked
+      | .wlock, .rwmutex writer readers _ => return !writer && readers == 0
+      | .rlock, .rwmutex writer _ pendingW => return !writer && pendingW == 0
+      | .wgWait, .waitGroup counter _ => return counter == 0
+      | .onceBegin _, .once _ done => return done
+      | _, _ => throw (.internal "blocked sync op / cell shape mismatch")
+  | _ => return false
+
+/-- The scheduler's Bool view of `wakeReady?`: a malformed parked state reads
+«not runnable» here — the menu (`runnableIdxs`, `schedSlots`) is a plain list
+— and is REFUSED BY NAME where the pool would otherwise classify the resulting
+«nothing runnable» as Go's deadlock (`deadlockOrRefusal`). -/
+def wakeReady (s : Store) (c : Config) : Bool :=
+  match wakeReady? ctx s c with
+  | .ok b => b
+  | .error _ => false
+
+/-- DC11: every PARKED goroutine's readiness must be a VALID answer — the
+first malformed one is the named refusal (`wakeReady?`). Structural over the
+thread list; threads that are done, aborted, pending a boundary clear, or not
+blocked are skipped. -/
+def parkedWellFormed (s : Store) : List Thread → Except Stop Unit
+  | [] => return ()
+  | .running c none :: rest => do
+      if isBlockedConfig c then
+        let _ ← wakeReady? ctx s c
+      parkedWellFormed s rest
+  | _ :: rest => parkedWellFormed s rest
+
+/-- **The pool's deadlock classification** (DC11): «no runnable goroutine» is
+Go's `deadlock` terminal only when every parked goroutine is validly parked
+(`parkedWellFormed`); a malformed parked state is its own named refusal (the
+first one in thread order). The ONE definition behind `stepMulti`'s empty
+menu, the drivers' empty runnable set and the proofs' driver model
+(`PoolFacts.front`). -/
+def deadlockStop (s : Store) (threads : Array Thread) : Stop :=
+  match parkedWellFormed ctx s threads.toList with
+  | .ok () => .deadlock
+  | .error e => e
+
+/-- `deadlockStop` as the pool's result at any result type — DEFINITIONALLY
+`.error (deadlockStop …)`, so the drivers' agreement proofs (`unfold_driver`,
+`execProgLoopOut_snd`) see one `Stop` whatever the arm's type. -/
+def deadlockOrRefusal {α : Type} (s : Store) (threads : Array Thread) : Except Stop α :=
+  .error (deadlockStop ctx s threads)
 
 /-- Runnable = not done, and (if parked) wake-ready; a goroutine with a
 boundary clear pending is runnable (the clear is its step). -/
@@ -1711,7 +1740,8 @@ statement; `Thread` the postOp one) — and the picked goroutine
 takes its step in the same call (so fuel counts exactly one
 goroutine-step per pool step). No runnable goroutine at a boundary is
 the DEADLOCK terminal (all goroutines are asleep; unreachable at a
-postOp boundary, whose issuer is runnable). Between boundaries the
+postOp boundary, whose issuer is runnable) — after `deadlockOrRefusal`'s
+check that every parked goroutine is VALIDLY parked (DC11). Between boundaries the
 running goroutine steps privately. -/
 def stepMulti (m : MultiConfig) (ch : Choices) :
     Except Stop (MultiConfig × Choices × StepEvent) := do
@@ -1720,7 +1750,7 @@ def stepMulti (m : MultiConfig) (ch : Choices) :
   | some t =>
     if t.atBoundary then
       match schedSlots ctx m.shared m.threads m.cur t.boundarySite with
-      | [] => throw .deadlock
+      | [] => deadlockOrRefusal ctx m.shared m.threads
       | rs => do
           -- The site consultation (`l1Sched`/`postOp`): the
           -- sole-runnable non-consumption that used to be a
@@ -1963,7 +1993,7 @@ def execProgLoop : Nat → MultiConfig → RaceState → Choices →
                           execProgLoop fuel m' r' choices')
             | none =>
                 if (runnableIdxs ctx m.shared m.threads).isEmpty then
-                  throw .deadlock
+                  deadlockOrRefusal ctx m.shared m.threads
                 else
                   match fuel with
                   | 0 => throw .fuelOut
@@ -2017,7 +2047,7 @@ def execProgLoopOut : Nat → MultiConfig → RaceState → Choices → GoString
                                     (ev.out.foldl GoString.append acc))
             | none =>
                 if (runnableIdxs ctx m.shared m.threads).isEmpty then
-                  (acc, throw .deadlock)
+                  (acc, deadlockOrRefusal ctx m.shared m.threads)
                 else
                   match fuel with
                   | 0 => (acc, throw .fuelOut)
