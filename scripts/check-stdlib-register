@@ -15,6 +15,9 @@
 #
 # Fail closed: missing register, missing markers, dump failure -> exit 1.
 set -uo pipefail
+# One collation and byte-wise character classes for every comparison, sort and pattern here
+# (deep-clean review DC19, 2026-10-26): the gate's verdict must not depend on the caller's locale.
+export LC_ALL=C
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
 REG="docs/stdlib-admission-register.md"

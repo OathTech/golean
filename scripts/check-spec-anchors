@@ -35,6 +35,9 @@
 #     rev drift by hand, never silently)
 #   - any unresolved citation         -> FAIL, listing file:line:token
 set -euo pipefail
+# One collation and byte-wise character classes for every comparison, sort and pattern here
+# (deep-clean review DC19, 2026-10-26): the gate's verdict must not depend on the caller's locale.
+export LC_ALL=C
 cd "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 
 SPEC=deps/go/doc/go_spec.html

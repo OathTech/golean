@@ -57,6 +57,9 @@
 # sets 4 ([AGENT] 2026-10-13: both faster and five times lighter than the
 # default) and always prints the value it ran with. A caller's value is honoured.
 set -uo pipefail
+# One collation and byte-wise character classes for every comparison, sort and pattern here
+# (deep-clean review DC19, 2026-10-26): the gate's verdict must not depend on the caller's locale.
+export LC_ALL=C
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 . "$ROOT/scripts/cap.sh"
 cd "$ROOT" || { echo "check-kernel-replay: cannot cd to $ROOT" >&2; exit 1; }

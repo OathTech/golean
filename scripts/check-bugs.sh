@@ -33,6 +33,9 @@
 #   scripts/check-bugs.sh --list   print that untriaged surface (id + stage),
 #                                  the concrete backlog to triage into BUGS.md.
 set -uo pipefail
+# One collation and byte-wise character classes for every comparison, sort and pattern here
+# (deep-clean review DC19, 2026-10-26): the gate's verdict must not depend on the caller's locale.
+export LC_ALL=C
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 LIST=0; [ "${1:-}" = "--list" ] && LIST=1
 

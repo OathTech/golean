@@ -34,6 +34,9 @@
 # name; the GATE is the owner's `lake comparator` outside the sandbox at claim points, beside
 # `lake check` (CLAUDE.md «The gates»; docs/release.md §3; docs/operational-lessons.md «Lean 4.35»).
 set -uo pipefail
+# One collation and byte-wise character classes for every comparison, sort and pattern here
+# (deep-clean review DC19, 2026-10-26): the gate's verdict must not depend on the caller's locale.
+export LC_ALL=C
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 . "$ROOT/scripts/cap.sh"
 cd "$ROOT" || { echo "check-comparator: cannot cd to $ROOT" >&2; exit 1; }
@@ -46,7 +49,12 @@ errlog="$log.stderr"
 # 1. The generated half is current, and the challenge is complete and non-circular.
 if ! gen_out="$(bash scripts/gen-contract --check 2>&1)"; then
   printf '%s\n' "$gen_out" | tail -15 >&2
-  echo "check-comparator: FAIL — scripts/gen-contract --check refused (above): the tracked contract is stale or the challenge is incomplete" >&2
+  gen_fail="$(printf '%s\n' "$gen_out" | grep -m1 '^gen-contract: FAIL' || true)"
+  # The cause is gen-contract's own FAIL line, quoted — a validator error, a kept name outside its
+  # character set, a stale generated file or an incomplete challenge are DIFFERENT failures, and the
+  # old text named only the last two (deep-clean DC19, 2026-10-26: a locale-broken validator was read
+  # as a stale contract).
+  echo "check-comparator: FAIL — scripts/gen-contract --check refused: ${gen_fail:-no 'gen-contract: FAIL' line printed (exit without a named cause — see its output above)}; the comparator did NOT run" >&2
   exit 1
 fi
 echo "$gen_out"

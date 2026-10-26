@@ -30,6 +30,9 @@
 # GOLEAN_ALLOW_NO_DIFF=1 says this environment never records one); a partial
 # run is reported as partial and never as a full certification.
 set -uo pipefail
+# One collation and byte-wise character classes for every comparison, sort and pattern here
+# (deep-clean review DC19, 2026-10-26): the gate's verdict must not depend on the caller's locale.
+export LC_ALL=C
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT" || { echo "scripts/ci: cannot cd to $ROOT" >&2; exit 1; }

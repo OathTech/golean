@@ -34,6 +34,9 @@
 #   while its fixture is still present (ids printed); 2 = unreadable input or
 #   an unverifiable fixture lookup.
 set -euo pipefail
+# One collation and byte-wise character classes for every comparison, sort and pattern here
+# (deep-clean review DC19, 2026-10-26): the gate's verdict must not depend on the caller's locale.
+export LC_ALL=C
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
 [ $# -eq 3 ] || { echo "usage: $0 <old> <new> <exec|negative>   (<old>/<new>: file path or git:<rev>:<path>)" >&2; exit 2; }

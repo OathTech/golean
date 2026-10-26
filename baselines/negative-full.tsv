@@ -1,6 +1,18 @@
 # GoLean negative-corpus (compile-rejection) baseline
 # recorded: 2026-08-18  commit: f68a4d86+ (spec-truth P3 slice 2)  oracle: go build (rejection)  [header corrected 2026-08-31: the old "+ frontend fail-closed" conjunct claimed a check that does not exist — scripts/coverage-negative invokes no GoLean tool (p2-fact claim 5)]
-# manifest_cases: 415  pass: 415  fail: 0
+# manifest_cases: 425  pass: 425  fail: 0
+# re-pinned: 2026-10-26 [AGENT], lane apparatus/dc-false-greens-1026 — deep-clean review DC06 (frontend FE-03/FE-04;
+#   [USER] ruling 2026-10-26, relayed: validate the complete go.mod version against the pin and refuse what the module
+#   scanner does not fully validate, with negative rows for each). TEN BORN ROWS under modules/, each a go.mod beside a
+#   valid program that gc (go1.26.5, MODULE MODE from the row's directory — GOPROXY=off, GOTOOLCHAIN=local; GOPATH mode never
+#   reads go.mod) rejects with the case's substring and the frontend refuses at the new class frontend=module
+#   (`module directive: …`, tools/nativefrontend/modfile.go; the class is [AGENT]-added under the ruling, the owner's ruling on
+#   it pending): module-missing-path, module-repeated, module-missing, require-block-unterminated, require-malformed,
+#   go-patch-next (1.26.6), go-patch-above-pin (1.26.99), toolchain-repeated, replace-without-version,
+#   retract-range-malformed. Each was frontend-accepts on main's frontend (a wire written for a go.mod gc refuses; measured
+#   by the review and re-measured here). No other row moves; no flip. Counts: 415 + 10 = 425; PASS 415 + 10 = 425; FAIL 0.
+#   The same run carries DC02: the oracle leg's exit status is classified before its text (stage go-crash for a
+#   non-verdict), which moved no row. Measured by CAPPED_MEM_MAX=64G capped scripts/ci --diff at the lane tip.
 # re-pinned: 2026-10-13 [AGENT], lane frontend/blank-fields-1013 — release-readiness row 37 (BUG-127; RULED [USER] Mike
 #   2026-10-13 (item 2: fix), relayed by the [AGENT] coordinator): ONE BORN ROW, PASS at frontend=type-check:
 #   structs/blank-field-keyed — a keyed struct literal naming a blank field (`S{_: 1, X: 2}`), rejected by gc and refused by
@@ -333,6 +345,16 @@ PASS	methods/pointer-alias-receiver	-
 PASS	methods/pointer-receiver-map-element	-
 PASS	methods/pointer-to-pointer-receiver	-
 PASS	methods/value-pointer-interface	-
+PASS	modules/go-patch-above-pin	-
+PASS	modules/go-patch-next	-
+PASS	modules/module-missing	-
+PASS	modules/module-missing-path	-
+PASS	modules/module-repeated	-
+PASS	modules/replace-without-version	-
+PASS	modules/require-block-unterminated	-
+PASS	modules/require-malformed	-
+PASS	modules/retract-range-malformed	-
+PASS	modules/toolchain-repeated	-
 PASS	multi-assign/assign-arity-too-many	-
 PASS	multi-assign/multi-result-mixed-rhs	-
 PASS	multi-assign/non-addressable-target	-

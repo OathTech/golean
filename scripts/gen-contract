@@ -46,6 +46,16 @@
 #     every entry, one per theorem, none file-wide) — the charter's one allowed warning suppression.
 # Fail closed on every step: the name script's error, an empty list, a line it cannot parse.
 set -uo pipefail
+# One collation and byte-wise character classes for every comparison, sort and pattern below
+# (deep-clean review DC19, 2026-10-26; [USER] ruling of 2026-10-26, relayed): the contract check's
+# verdict must not depend on the caller's locale. Under the inherited C.UTF-8 of the review's full
+# gate, Bash compiled the kept-name regex's `₀-₉` as a collation range the locale does not define
+# («Invalid collation character»), rejected the ASCII name `prefix_comp` as a VALIDATOR ERROR, and
+# scripts/check-comparator read that as a stale contract: the comparator never ran. Every pattern
+# here now spells its characters out (no range over non-ASCII characters anywhere), the
+# name validator is a function that strips the admitted characters one by one, and LC_ALL=C
+# makes `sort`, `comm`, `uniq`, `grep` and `[[ =~ ]]` byte-wise whatever the caller set.
+export LC_ALL=C
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 . "$ROOT/scripts/cap.sh"
 . "$ROOT/scripts/lean-scan.sh"
@@ -62,6 +72,20 @@ mkdir -p "$TMPDIR"
 scratch="$(mktemp -d "$TMPDIR/gen-contract.XXXXXX")"
 trap 'rm -rf "$scratch"' EXIT
 fail() { echo "gen-contract: FAIL — $*" >&2; exit 1; }
+
+# kept_name_ok <name>: every character of a kept theorem's name is an ASCII letter or digit, `_`,
+# `.`, `?`, `!`, or one of Lean's subscript digits ₀…₉ (`h₁`). Checked by STRIPPING each admitted
+# character — an explicit list, never a range: a range over non-ASCII characters is what the
+# locale compiled differently (the DC19 defect above). Returns 0 (admitted) or 1 (a character
+# outside the set); any other status is the validator's own failure, which the caller names as
+# such rather than as a bad name or a stale contract. Byte-wise under LC_ALL=C: a subscript digit
+# is its three-byte UTF-8 sequence, removed as a literal; a stray byte survives and refuses.
+kept_name_ok() {
+  local rest="$1" d
+  rest="${rest//[ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_.?!]/}"
+  for d in ₀ ₁ ₂ ₃ ₄ ₅ ₆ ₇ ₈ ₉; do rest="${rest//"$d"/}"; done
+  [ -z "$rest" ]
+}
 
 CHALLENGE=Contract/Challenge.lean
 SOLUTION=GoLean/Contract/Solution.lean
@@ -81,7 +105,11 @@ grep -v $'^COUNT\t' "$list" > "$list.kept" && mv "$list.kept" "$list"
 n_kept="$(wc -l < "$list" | tr -d ' ')"
 while IFS=$'\t' read -r _ family name module; do
   [[ "$name" == GoLean.* ]] || fail "kept name '$name' ($family) is outside the GoLean namespace"
-  [[ "$name" =~ ^[A-Za-z0-9_.?!₀-₉]+$ ]] || fail "kept name '$name' ($family) has a character this script does not expect"
+  if kept_name_ok "$name"; then :; else
+    name_rc=$?
+    [ "$name_rc" -eq 1 ] || fail "VALIDATOR ERROR — kept_name_ok exited $name_rc on '$name' ($family): the check itself failed; this is neither a bad name nor a stale contract"
+    fail "kept name '$name' ($family) has a character this script does not expect (admitted: ASCII letters and digits, _ . ? ! and the subscript digits ₀…₉)"
+  fi
   [ -n "$module" ] || fail "kept name '$name' ($family) has no module"
 done < "$list"
 
@@ -148,7 +176,7 @@ fi
 # ── 5. Text checks on the challenge.
 [ -f "$CHALLENGE" ] || fail "$CHALLENGE is missing"
 chal_code="$(strip_lean_comments < "$CHALLENGE")"
-declared="$(printf '%s\n' "$chal_code" | grep -oE '^theorem GoLean\.Contract\.[A-Za-z0-9_.?!₀-₉]+' | sed 's/^theorem //' | LC_ALL=C sort)"
+declared="$(printf '%s\n' "$chal_code" | grep -oE '^theorem GoLean\.Contract\.[A-Za-z0-9_.?!₀₁₂₃₄₅₆₇₈₉]+' | sed 's/^theorem //' | LC_ALL=C sort)"
 expected="$(cut -f3 "$list" | sed 's/^GoLean\./GoLean.Contract./' | LC_ALL=C sort)"
 dups="$(printf '%s\n' "$declared" | uniq -d)"
 [ -z "$dups" ] || { printf '%s\n' "$dups" | head -5 >&2; fail "$CHALLENGE declares an alias more than once (above)"; }
@@ -184,7 +212,7 @@ n_opts="$(printf '%s\n' "$chal_code" | grep -c '^set_option warn\.sorry false in
 
 # ── 6. Tests/GoCoreContract.lean §D: every pinned theorem is a kept name.
 pins="$(awk '/^namespace GoLean\.GoCore\.ContractTests\.Pin/{p=1} /^end GoLean\.GoCore\.ContractTests\.Pin/{p=0} p' Tests/GoCoreContract.lean \
-  | grep -oE '^[[:space:]]+GoCore\.[A-Za-z0-9_.?!₀-₉]+[[:space:]]*$' | sed 's/[[:space:]]//g; s/^/GoLean./' | LC_ALL=C sort -u)"
+  | grep -oE '^[[:space:]]+GoCore\.[A-Za-z0-9_.?!₀₁₂₃₄₅₆₇₈₉]+[[:space:]]*$' | sed 's/[[:space:]]//g; s/^/GoLean./' | LC_ALL=C sort -u)"
 [ -n "$pins" ] || fail "no §D pin found in Tests/GoCoreContract.lean (the awk/grep shape moved?)"
 unpinned="$(LC_ALL=C comm -23 <(printf '%s\n' "$pins") <(cut -f3 "$list" | LC_ALL=C sort))"
 [ -z "$unpinned" ] || { printf '%s\n' "$unpinned" >&2; fail "Tests/GoCoreContract.lean §D pins theorem(s) that are not in the contract (above)"; }

@@ -26,6 +26,9 @@
 # adversarial-grade controls on a checker, 43 s warm and 3912 s cold; the load-bearing check is the
 # client's own Lean-level proof-term check, which (b) runs.) Every step fails closed.
 set -Eeuo pipefail
+# One collation and byte-wise character classes for every comparison, sort and pattern here
+# (deep-clean review DC19, 2026-10-26): the gate's verdict must not depend on the caller's locale.
+export LC_ALL=C
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 . "$ROOT/scripts/cap.sh"
 cd "$ROOT"

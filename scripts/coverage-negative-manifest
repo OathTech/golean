@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
+# One collation and byte-wise character classes for every comparison, sort and pattern here
+# (deep-clean review DC19, 2026-10-26): the gate's verdict must not depend on the caller's locale.
+export LC_ALL=C
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
@@ -281,7 +284,13 @@ while IFS= read -r case_file; do
       printf '%s\t%s\t%s\t%s\n' "$full_id" "$go_dir" "$expected_substring" "$features"
     fi
   done < "$case_file"
-done < <(find "$NEGATIVE_ROOT" -name case.tsv -print | sort)
+done < <(find "$NEGATIVE_ROOT" -name case.tsv -print | LC_ALL=C sort)
+# `LC_ALL=C sort` (deep-clean DC19, records-lane finding, 2026-10-26): the manifest's ROW ORDER is part
+# of its sha256 (the recorded run's meta carries it; scripts/ci refuses a recorded run whose sha is not
+# the current manifest's), and `sort` under en_US.UTF-8 orders `arrays/arrays-are-values` before
+# `arrays/arrays` while C orders them the other way — so the gate's verdict depended on the shell's
+# locale. Byte order here (and the export at the top for every other comparison); the recorded runs'
+# sha changed ONCE with this, re-recorded by the lane's `scripts/ci --diff`.
 
 if [[ "$bad" -ne 0 ]]; then
   exit 2
