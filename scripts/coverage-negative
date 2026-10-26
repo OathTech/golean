@@ -261,9 +261,9 @@ report_negative_pass() {
 #                   version; the fourth class, [AGENT] 2026-10-26 under the
 #                   deep-clean ruling on DC06, which asked for go.mod rows
 #                   in this corpus and for this leg's classes to be checked;
-#                   the owner's ruling on the class itself is pending —
-#                   the three classes above are the [USER]-approved set of
-#                   2026-10-12, docs/2026-10-12_refusal-cause-pinning-design.md §3)
+#                   the class [USER]-approved 2026-10-26 at the train-19
+#                   merge, joining the three classes approved 2026-10-12,
+#                   docs/2026-10-12_refusal-cause-pinning-design.md §3)
 # Anything else FAILS under its own stage: frontend-accepts (exit 0 — it
 # lowered a program gc rejects), frontend-crash (a timeout, a signal, a Go
 # panic's exit 2 or any other code), frontend-reason (exit 1 for another

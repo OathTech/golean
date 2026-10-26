@@ -188,7 +188,8 @@ Everything else is untrusted tooling.
   guard. `scripts/ci --diff` before any merge to `main`: the same plus a
   FRESH run of the differential corpus and of the negative corpus (gc
   rejects each program AND the native frontend refuses it as a rejection:
-  type-check, parse or file selection) against the tracked baselines
+  type-check, parse, file selection or, since 2026-10-26, module file)
+  against the tracked baselines
   (`baselines/`; the differential baseline pins each FAIL row's refusal
   cause, and a re-pin that moves a cause into a crash/non-verdict key or
   removes a row needs a `BUGS.md` Cases: line or a `# removed:` header
