@@ -93,10 +93,11 @@ push rule). Pushing the tag is a separate sign-off.
      «fatal runtime error: stack overflow, aborting», SIGABRT, exit 134 — after about 249 s at 43.5 GB, twice on the
      export alone; `RUST_MIN_STACK=4G` is ignored (nanoda sizes its worker stacks itself; its help has no stack
      option); the other four kernels and Lean's own accept the same export. That is the report to file upstream.
-   - (c) `lake comparator` — the surface kept on main for the raft-proofs customer (366 theorems: every theorem of
-     `Equations.lean` (300; 234 of them `@[stepFn_eqns]` simp-set members), the G11 family, the `Prefix`/`Finish`
-     laws, the output-fold bridge, `enterFrame_declared`, the `Choices.consumeAt*` laws, the thirteen G16
-     table-monotonicity statements) judged against its FROZEN
+   - (c) `lake comparator` — the surface kept on main for the raft-proofs customer (every theorem of
+     `Equations.lean`, the G11 family, the `Prefix`/`Finish` laws, the output-fold bridge, `enterFrame_declared`,
+     the `Choices.consumeAt*` laws, the G16 table-monotonicity statements; the count by family is
+     `scripts/gen-contract --check`'s summary line — 383 on 2026-10-26, 317 of them equations — and this page does
+     not copy it) judged against its FROZEN
      challenge `Contract/Challenge.lean` per `comparator.json`
      at the root (release-readiness row 43, [USER] 2026-10-23): `CAPPED_MEM_MAX=64G capped lake comparator` (the box
      default cap suffices). Expected: «Lean default kernel accepts the solution», «Your solution is okay!», exit 0,
@@ -157,11 +158,15 @@ push rule). Pushing the tag is a separate sign-off.
   (BUG-125, `tools/nativefrontend/entrymode.go`, the same ruling). The differential corpus exports its subjects with
   `--subject`, which skips only that rule; a consumer exporting a main-less package passes it too, or adds a `main`.
   No whole-program mode for such packages — later support left open.
-- **A variable-length `make` past the budget is a memory kill, not a refusal** (punch-list row 30's open half, row
-  31(d)): a constant-length `make` whose count × element footprint exceeds the budget refuses by name at decode, but
-  when the length is computed at run time the backing is built, and a count × footprint past the cap ends the run
-  under `capped` with exit 137 — loud, never a wrong answer, but an apparatus kill rather than a named refusal. The
-  core guard at the `make` site (the `sliceCapBudget` template) is a lane awaiting the [USER]'s word.
+- **A `make` past the footprint budget refuses by name; `append` and `[]byte(s)` past it are still memory kills**
+  (punch-list rows 30 and 31(d); BUG-131, fixed by refusal 2026-10-25 on the [USER]'s ruling of that day): a
+  constant-length `make` whose count × element footprint exceeds the budget refuses by name at decode, and since
+  train 18 a run-time-length `make` refuses by name at the `make` site before any backing is built
+  (`unsupported`, cause `make-footprint-budget-runtime`; two red-by-design rows,
+  `arrays/materialization-budget-runtime/*`). The same backing built through `append`'s spill or a `[]byte(s)`
+  conversion past the budget is NOT guarded: under `capped` the run ends with exit 137 — loud, never a wrong answer,
+  but an apparatus kill rather than a named refusal (BUG-131's scope sentence, BUG-078's residual (2b); a follow-up
+  awaiting the [USER]'s word).
 - **Compiler directives are refused by name** (the Codex zero-context pass F2, punch-list row 38; BUG-127;
   `tools/nativefrontend/directives.go`): in every user unit, any `//go:` directive outside the allowlist —
   `//go:build`, `//go:noinline`, `//go:generate`, the three with no effect on the compiled program — and any

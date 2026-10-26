@@ -65,22 +65,19 @@ checkout: the docs ARE the doc comments in `deps/go/src` at `go1.26.5`.
 | name | rev | role |
 |---|---|---|
 | `go` | `c19862e5f8415b4f24b189d065ed739517c548ba` (= `go1.26.5`) | THE upper-bound text: `doc/go_spec.html`, `doc/go_mem.html`, `test/` (issue-tagged semantic tests), `src/go/types/testdata`, `src/internal/types/testdata`; release notes in git HISTORY only (23 `doc/go1.*.html` files, all removed from `doc/` before the pin — delta-review nit). Full clone on purpose — P4 mines `git log --follow doc/go_spec.html` and `git log --all` for the release notes. PROMOTED to setup-deps' default tier when `scripts/check-spec-anchors` landed (P2): gate dependencies bootstrap by default, per the goose/verbatim-gate precedent; use `--from` to keep worktree bootstraps local. |
-| `covmap` | `2978393a4aed26b9562f5cd040e74507b2a53812` | Candidate 4.1 mechanism (campaign doc §8). Internal repo, no public URL — `--from` only. |
+| `covmap` | `2978393a4aed26b9562f5cd040e74507b2a53812` | Candidate 4.1 mechanism (campaign doc §8). OathTech/covmap, public since 2026-10-11 (`scripts/setup-deps` carries the URL; `--from` a sibling checkout still works offline). |
 | `go101` | `c13b00435002a00f574430b61eb65ec5a268acfe` | Community corner-case catalog; divergence-ledger *seed only*, every claim independently verified. Shallow reading copy (depth 50). |
 | `spectec` | `acc6e834ff403c82554d081237f327346190ad96` | Wasm SpecTec reading copy (P1). Shallow. |
 | `esmeta` | `7d237fd1680f473e674320cc97932702d950fa98` | ESMeta/JISET-line reading copy (P1). Shallow. |
 | `gofrontend`, `tinygo` | floating (`-`) | Cross-implementation lane, only if P5 green-lights it (§4.5); pin at first real use. |
 | `proposal` | `0be13090fdb0cbae0d71641bb676d924bc1c94de` | golang/proposal — design docs behind language changes; committee-intent reconstruction for P4's archaeology (pinned 2026-08-17, closing a P0 gap before the first landing). |
 
-Replicate: `scripts/setup-deps --only go,covmap,go101,spectec,esmeta,proposal`
-(covmap needs `--from <checkout-with-deps/covmap>`). NOTE the shallow
+Replicate: `scripts/setup-deps --only go,covmap,go101,spectec,esmeta,proposal`. NOTE the shallow
 caveat: go101/spectec/esmeta here are depth-50 clones; setup-deps
 `--from` a shallow copy fails closed (by design) — reclone from the
-public URL instead. (This command did not work as written between
-2026-08-21's Lake-packages change and its audit fix round the same day:
-the new section ran regardless of `--only` and failed on Lake packages
-nobody had asked for. `--only` now scopes it — add the pseudo-name
-`lake`, or `lake:<pkg>`, when you DO want the Lake checkouts.)
+public URL instead. (The Lake-packages section of `setup-deps` and its
+`lake` / `lake:<pkg>` pseudo-names left with the proofs package at the repo
+split, 2026-08-31; `--only` refuses a name that matches no pins-table row.)
 
 ## Papers (`deps/papers/`, fetched 2026-08-17)
 

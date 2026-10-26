@@ -30,10 +30,12 @@ repo. `apply_patch` is for tracked workspace edits and can trigger approval or
 hang on paths outside the checkout. For throwaway probes, create a scratch
 directory with `mktemp` and put generated files there with the relevant tool.
 
-Do not run `rm`, `rm -r`, or `rm -rf` on scratch paths without explicit
-approval. Those commands are destructive even when the target is under
-`/private/tmp`. Prefer unique scratch directories and leave them for OS temp
-cleanup, or ask for approval before deleting them.
+Scratch belongs under the worktree's gitignored `.tmp/`; never `rm -rf` a path you
+did not create, and do not delete another session's scratch without approval. Your
+own scratch and worktrees are yours to remove when the work is done — the box's
+standing rule: disk is shared, so remove them and name the paths in your report
+(this replaces the earlier advice to leave scratch for the OS's temp cleanup,
+which fits a per-session macOS `$TMPDIR`, not a shared Linux box).
 
 For direct Go probes, use the current worktree's artifact cache, matching
 `scripts/diff-coverage`, instead of the user-level cache. Run these commands
@@ -68,9 +70,11 @@ outside the sandbox and add a narrow `--allow <path>` grant to the next
 from inside the sandbox. Approval inside Codex cannot enlarge nono's outer
 OS sandbox.
 
-If a command fails because the sandbox blocked network access, rerun that exact
-needed command with an explicit escalation request and a narrow justification.
-Do not preemptively request broad network or filesystem access.
+If a command fails because the sandbox blocked network access (`git fetch`/`pull`/
+`push`, package and Go module downloads, `lake exe cache get`, `curl`), there is no
+escalation path from inside nono: say what the command is and why it is needed, and
+ask the user to run that exact command outside the sandbox. Do not request broad
+network or filesystem access.
 
 ## Kernel-evaluation experiments: contain OOM (2026-08-03)
 
@@ -82,15 +86,14 @@ whole zellij → sandbox → agent stack down with it (sem-adequacy arc,
 stack-killers). Standing convention for ANY reduction-heavy `lake env lean`
 invocation:
 
-- run it under `ulimit -v` in a subshell — 16 GiB (`ulimit -v 16777216`)
-  is the default cap; below ~8 GiB Lean fails at startup ("failed to
-  create thread"). (User ruling 2026-08-08: the convention stays as-is;
-  where the thread-VA reservation makes the `-v` cap misfire even at
-  16 GiB — observed intermittently on multi-decide pin modules at
-  ~1 GiB actual RSS — an RSS-based fallback measurement
-  (`/usr/bin/time -v`, judge against the 16 GiB intent) may be used and
-  the substitution documented at the site; keep jobs short per the
-  user's avoid-long-jobs preference.)
+- run it through the box's memory cap, `capped` (`capped lake env lean <file>`;
+  `CAPPED_MEM_MAX` sizes the cgroup, default 32G; never `CAPPED_MEM_MAX=none`
+  without the user's approval). Exit 137 with the KILLED banner is the cap: a
+  failure, never a pass. This replaced the `ulimit -v` convention of 2026-08 (a
+  16 GiB virtual-memory cap, which the thread-VA reservation made misfire) when
+  the box tool arrived; `scripts/cap.sh` is the project's detect-at-run-time form
+  for scripts that must also work off the box (`docs/operational-lessons.md`,
+  «Box-independence»). Keep jobs short.
 - add a `timeout`, and run it as a BACKGROUND task so a blowup kills the
   capped process, never the session;
 - one experiment per invocation (a stuck reduction reports per-file, and

@@ -18,6 +18,8 @@ reading everything else.
   limits, the three predicates), who tags, the procedure, and the stated limits ruled so far.
 - `cli.md`: the `golean` subcommands, the wire format `golean-native-v3`, the observation
   format `golean-observation-v1`, and three deliberate escape hatches.
+- `../THIRD_PARTY_NOTICES.md`: the third-party material carried in the tree, each piece with
+  its license and where its notice lives.
 
 **Rules and charter**
 
@@ -67,17 +69,21 @@ A few dated files are still the **plan of record or a live design**:
 
 - `2026-10-12_release-readiness.md`: the release-readiness backlog, the current plan. Each item
   carries its status.
-- `2026-10-09_seeded-heap-design.md`: the seeded-heap entry for function-level runs, a design
-  gate pending [USER].
-- `2026-10-12_uintptr-repair-design.md`: the `uintptr` runtime-identity repair (release-readiness
-  item 26, the REPAIR half of D6), a design gate pending [USER].
 - `2026-10-12_gate-cull-plan.md`: the gate's current shape and its follow-ups.
 - `2026-10-03_offer-to-logic-team.md`: the last re-pin offer to the logic repository, whose §4
   lists the stated limits.
 
+Two designs that sat in that list shipped and are records now: the seeded-heap design
+(`2026-10-09_seeded-heap-design.md`; the `--seed` mode of `native-json-run` and `choice-trace`,
+`cli.md` §2.1.1) and the `uintptr` repair design (`2026-10-12_uintptr-repair-design.md`;
+`IntKind.uintptr`, BUG-124 fixed, release-readiness item 26).
+
 The release passes so far, each a record: `2026-10-12_release-trust-review.md` (the first
-fresh-context trust review) and `2026-10-13_fresh-eyes-fail-closed-pass.md` (the fail-closed pass);
-the brief for the next one is `codex-briefs/2026-10-13_zero-context-release-pass.md`.
+fresh-context trust review), `2026-10-13_fresh-eyes-fail-closed-pass.md` (the fail-closed pass),
+`2026-10-13_codex-zero-context-pass.md` (the zero-context pass; its brief is
+`codex-briefs/2026-10-13_zero-context-release-pass.md`) and `2026-10-26_deep-clean-release-pass.md`
+(the deep-clean pass, with its punch list `2026-10-26_deep-clean-release-punch-list.md` and the
+five reports under `reviews/2026-10-26-deepclean/`).
 
 The pinned-statement design notes (`2026-09-24_execution-statement.md`,
 `2026-09-28_step-label.md`, `2026-10-04_pool-relation-spec.md`) are records too. What they

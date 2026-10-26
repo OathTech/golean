@@ -288,7 +288,7 @@ place; elements beyond `len` and every other cell are untouched by construction 
 The sort laws they rest on (`insertLe_perm`, `sortLe_perm`, `insertLe_pairwise`,
 `sortLe_pairwise`, the integer instance `sortLe_int_perm` / `sortLe_int_pairwise`) and the
 operand check's read-back (`intElems_map_int`, `intElems_ok_eq`) are theorems of the same module.
-One observation class the op adds (BUG-131, a red pin pending the owner's ruling; review fix round F1,
+One observation class the op adds (BUG-132, a red pin pending the owner's ruling; review fix round F1,
 2026-10-25): the op records every element of the window as read AND written — a conservative access set —
 so the race detector refuses `race` on a read concurrent with the sort of an already-ordered window where
 gc's pdqsort writes nothing and `go run -race` is green; the verdict is a differential observation (row
@@ -297,8 +297,10 @@ may write an element it leaves in place and a dropped write would be a false `ok
 temporaries, unaffected.
 
 Since 2026-10-23 (release-readiness row 43, [USER]-ruled) that kept surface is a COMPARATOR
-CONTRACT: `Contract/Challenge.lean` restates all 366 of its theorems — every theorem of
-`Equations.lean` (313; 236 of them `@[stepFn_eqns]` simp-set members — the `signalStep_*` rows,
+CONTRACT: `Contract/Challenge.lean` restates every one of its theorems (the count by family is
+`scripts/gen-contract --check`'s summary line: 383 on 2026-10-26, 317 of them theorems of
+`Equations.lean`, 236 of those `@[stepFn_eqns]` simp-set members) — every theorem of
+`Equations.lean` (the `signalStep_*` rows,
 `runProgramSetup_noInit`, the `allocDecls_*`/`bindParams_*`/`setup_*` facts and the rest are plain
 theorems of the module), the 27 public theorems of `InitDriverFacts.lean` (G11), the five
 `Prefix`/`Finish` laws above, the six output-fold statements, `enterFrame_declared`, the fourteen
@@ -330,7 +332,11 @@ the relational imports. The last offer is `docs/2026-10-03_offer-to-logic-team.m
   equations were retired with the relational layer.
 - **Printing during package initialization is refused** (`initPrintRefusal?`, `Machine.lean`).
 - **`NoRefusal` and the sequential classification apply to the sequential driver only.** A `go`
-  statement leaves that domain; no pool-level statement is in the build (§5).
+  statement leaves that domain. No relation-level pool statement is in the build; the pool
+  statements that are (§5: the single-goroutine bridge and projections, the driver's run and
+  observation vocabulary — `PoolFacts.lean`, `PoolProjection.lean`) are stated over the executable
+  pool driver alone, and `NoRefusal` and the sequential classification do not extend to a run with
+  a `go` statement.
 - **Concurrency granularity.** The machine steps at its own granularity. Some wide operations
   are single steps (latitude inventory U-5). Reducing this to Go's access granularity is an
   explicit open obligation, not a theorem (the `NPDRF.lean` statement of the registry-point
