@@ -1,4 +1,5 @@
 import GoLean.Contract.StmtOf
+import GoLean.GoCore.EnumDedupSound
 import GoLean.GoCore.Equations
 import GoLean.GoCore.InitDriverFacts
 import GoLean.GoCore.Machine
@@ -22,6 +23,16 @@ scripts/contract-names.lean (the families and their rule are documented there);
 `scripts/gen-contract --check` fails on any difference between this file and a fresh
 generation. Lane gate/comparator-1023, 2026-10-23 (release-readiness row 43, [USER]-ruled).
 -/
+
+/-! ## dedup (2) -/
+
+theorem GoLean.Contract.GoCore.Machine.checkCert_slowObs :
+    stmt_of% GoLean.GoCore.Machine.checkCert_slowObs :=
+  GoLean.GoCore.Machine.checkCert_slowObs
+
+theorem GoLean.Contract.GoCore.Machine.checkCertM_slowObs :
+    stmt_of% GoLean.GoCore.Machine.checkCertM_slowObs :=
+  GoLean.GoCore.Machine.checkCertM_slowObs
 
 /-! ## prefix (5) -/
 

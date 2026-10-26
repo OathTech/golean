@@ -43,6 +43,7 @@ namespace Tests.GoCoreAudit
 def allowedRoots : List Name := [`Init, `Std, `Lean, `GoLean, `Tests]
 
 def requiredModules : List Name := [
+    `GoLean.GoCore.EnumDedupSound, `GoLean.GoCore.EnumDedupStreams,
     `GoLean.GoCore, `GoLean.GoCore.Machine, `GoLean.GoCore.StepFn, `GoLean.GoCore.StateWf,
     `GoLean.GoCore.Multi, `GoLean.GoCore.Consumes, `GoLean.GoCore.StepFnFacts,
     `GoLean.GoCore.Trace, `GoLean.GoCore.PanicText, `GoLean.GoCore.AdmissionIndices,
@@ -57,6 +58,10 @@ def requiredModules : List Name := [
 /-- Required core theorems (the `semantic interface` audit's CORE exports, plus the
 re-homed regressions). Each must exist as a theorem. -/
 def exports : List Name := [
+    -- Dedup certificate set equality and the generic/concrete statement pins.
+    ``GoLean.GoCore.Machine.checkCert_slowObs, ``GoLean.GoCore.Machine.checkCertM_slowObs,
+    ``GoLean.GoCore.ContractTests.Pin.checkCert_slowObs,
+    ``GoLean.GoCore.ContractTests.Pin.checkCertM_slowObs,
     -- RESTORED 2026-10-21 (fix round F1): the relation-free single-goroutine pool bridge, the
     -- projections and the observation vocabulary (`PoolFacts.lean`, `PoolProjection.lean`,
     -- `single_embedding`), the names that left the list at the retirement and exist again.

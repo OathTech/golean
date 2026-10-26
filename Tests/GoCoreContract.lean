@@ -1,3 +1,4 @@
+import GoLean.GoCore.EnumDedupSound
 import GoLean.GoCore.Trace
 import GoLean.GoCore.Multi
 import GoLean.GoCore.InitDriverFacts
@@ -367,6 +368,24 @@ contract since 2026-10-25 (lane `gate/contract-pins-1025`), after the relation w
 
 namespace GoLean.GoCore.ContractTests.Pin
 open GoCore GoCore.Machine GoCore.ExecutionStatement
+
+/-- The generic certificate theorem, with only sound node equality assumed. -/
+theorem checkCert_slowObs
+    {ctx : ProgramCtx} {nodeEqb : DedupNode → DedupNode → Bool}
+    (hEqb : ∀ a b, nodeEqb a b = true → a = b)
+    {resultLocs : List Loc} {m₀ : MultiConfig} {r₀ : RaceState}
+    {cert : DedupCert}
+    (hc : checkCert ctx nodeEqb resultLocs m₀ r₀ cert = true) :
+    ∀ o : Obs, o ∈ cert.obsSet ↔ SlowObs ctx resultLocs m₀ r₀ o :=
+  GoCore.Machine.checkCert_slowObs hEqb hc
+
+/-- The concrete node equality used by the CLI discharges that premise. -/
+theorem checkCertM_slowObs
+    {ctx : ProgramCtx} {resultLocs : List Loc} {m₀ : MultiConfig}
+    {r₀ : RaceState} {cert : DedupCert}
+    (hc : checkCert ctx dedupNodeEqb resultLocs m₀ r₀ cert = true) :
+    ∀ o : Obs, o ∈ cert.obsSet ↔ SlowObs ctx resultLocs m₀ r₀ o :=
+  GoCore.Machine.checkCertM_slowObs hc
 
 theorem runInitConfig_cases :
     ∀ (ctx : ProgramCtx) (fuel : Nat) (s : Store) (c : Config) (ch : Choices),

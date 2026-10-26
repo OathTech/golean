@@ -2,6 +2,8 @@
   "challenge_module": "Contract.Challenge",
   "solution_module": "GoLean.Contract.Solution",
   "theorem_names": [
+    "GoLean.Contract.GoCore.Machine.checkCert_slowObs",
+    "GoLean.Contract.GoCore.Machine.checkCertM_slowObs",
     "GoLean.Contract.GoCore.ExecutionStatement.prefix_comp",
     "GoLean.Contract.GoCore.ExecutionStatement.prefix_split",
     "GoLean.Contract.GoCore.ExecutionStatement.run_ok_iff",

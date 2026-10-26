@@ -286,7 +286,12 @@ and the runner refuse `width=`/`sites=`/`cap=`/`backedge=` on an `engine=dedup` 
 non-terminating rather than as a member. `--backedge` sets the enumeration mode at loop
 preemption points; if it is undeclared, a back-edge consult of bound ≥ 2 fails. With
 `--engine dedup`, the state-graph engine runs and the result is checked by the verified
-certificate checker (`Machine.checkCert`). It refuses, by name, programs with a `$pkginit`
+certificate checker (`Machine.checkCert`). The theorem `Machine.checkCertM_slowObs`
+(`GoLean/GoCore/EnumDedupSound.lean`, in the default build) proves that an accepted
+certificate's observation set equals `SlowObs`, over every fuel and choice stream.
+The `certified=checkCert` marker reports this check with the concrete `dedupNodeEqb`;
+as with other CLI results, executing the checker relies on the compiled runtime.
+It refuses, by name, programs with a `$pkginit`
 phase, and it refuses `--allow-nonterm-iters`. `--seed`, `--arg-ref` and `--arg-nil` are refused
 by name (exit 2): the enumerator does not seed in v1 (seeded corpus rows are strict-lane only).
 `choice-trace` does seed (§2.4). The old flag `--allow-nonterm` is retired and

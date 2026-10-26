@@ -14,6 +14,7 @@ from the ENVIRONMENT, not from text, so a lemma that gains or loses the `stepFn_
 or a theorem added to or removed from `InitDriverFacts.lean`, changes the list (and
 `scripts/gen-contract --check` then names the drift). The families, as ruled:
 
+  dedup       checkCert_slowObs and checkCertM_slowObs: accepted certificates equal SlowObs.
   prefix      `Prefix`/`Finish`'s laws kept for the customer: prefix_comp, prefix_split,
               run_ok_iff, run_panic_iff, replay_coverage (`Prefix.lean`; `replays` is a
               DEFINITION, reached by replay_coverage's statement, not a theorem — see the note in
@@ -121,6 +122,7 @@ open ContractNames in
       throwError "contract-names: the stepFn_eqns member {n} is not a public theorem of GoLean.GoCore.Equations"
   IO.println s!"COUNT\tstepFn_eqns simp-set members (all of them theorems of GoLean.GoCore.Equations)\t{eqns.size}"
   let families : Array (String × Array Lean.Name) := #[
+    ("dedup", #[`GoLean.GoCore.Machine.checkCert_slowObs, `GoLean.GoCore.Machine.checkCertM_slowObs]),
     ("prefix", #[`GoLean.GoCore.ExecutionStatement.prefix_comp, `GoLean.GoCore.ExecutionStatement.prefix_split,
       `GoLean.GoCore.ExecutionStatement.run_ok_iff, `GoLean.GoCore.ExecutionStatement.run_panic_iff,
       `GoLean.GoCore.ExecutionStatement.replay_coverage]),

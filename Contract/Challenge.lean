@@ -1,3 +1,5 @@
+import GoLean.GoCore.EnumDedupCheck
+import GoLean.GoCore.MachineEqb
 import GoLean.GoCore.State
 import GoLean.GoCore.Machine
 import GoLean.GoCore.Multi
@@ -4323,3 +4325,19 @@ theorem GoLean.Contract.GoCore.Equations.sortedPairs_unique :
         List.Pairwise (fun (a b : Int × IntKind) => a.fst ≤ b.fst) l₁ →
           List.Pairwise (fun (a b : Int × IntKind) => a.fst ≤ b.fst) l₂ → l₁.Perm l₂ → l₁ = l₂
     := sorry
+
+set_option warn.sorry false in
+theorem GoLean.Contract.GoCore.Machine.checkCert_slowObs
+    {ctx : ProgramCtx} {nodeEqb : DedupNode → DedupNode → Bool}
+    (hEqb : ∀ a b, nodeEqb a b = true → a = b)
+    {resultLocs : List Loc} {m₀ : MultiConfig} {r₀ : RaceState}
+    {cert : DedupCert}
+    (hc : checkCert ctx nodeEqb resultLocs m₀ r₀ cert = true) :
+    ∀ o : Obs, o ∈ cert.obsSet ↔ SlowObs ctx resultLocs m₀ r₀ o := sorry
+
+set_option warn.sorry false in
+theorem GoLean.Contract.GoCore.Machine.checkCertM_slowObs
+    {ctx : ProgramCtx} {resultLocs : List Loc} {m₀ : MultiConfig}
+    {r₀ : RaceState} {cert : DedupCert}
+    (hc : checkCert ctx dedupNodeEqb resultLocs m₀ r₀ cert = true) :
+    ∀ o : Obs, o ∈ cert.obsSet ↔ SlowObs ctx resultLocs m₀ r₀ o := sorry

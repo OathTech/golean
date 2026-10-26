@@ -8,6 +8,8 @@ import GoLean.GoCore
 -- statement with its proofs, the counted trace, and the kept part of `MachineSound.lean`
 -- (`StepFnFacts`, reached through them). Enrolled here = default-build membership and the
 -- core audit's two-way closure.
+-- Dedup certificates describe exactly the executable machine observation set.
+import GoLean.GoCore.EnumDedupSound
 import GoLean.GoCore.Trace
 import GoLean.GoCore.EquationsAttr
 import GoLean.GoCore.Equations
