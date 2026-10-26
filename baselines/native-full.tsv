@@ -2316,7 +2316,7 @@
 #   kind above 2^63), uintptr, int8-negatives, duplicates, in-init (the op inside init())}. 4029 + 9 = 4038; 3771 + 9 = 3780;
 #   258 FAIL unchanged. No PASS -> non-PASS flip.
 # re-pinned: 2026-10-25 [AGENT], frontend/g19-sort-intercept-1025, REVIEW FIX ROUND F1 — the `sortSlice` op's write set
-#   against the race detector (BUG-131; the lane's adversarial review, relayed): the op records EVERY window element as read
+#   against the race detector (BUG-132; the lane's adversarial review, relayed): the op records EVERY window element as read
 #   then WRITTEN, where gc's pdqsort on an already-ordered window performs no write, so a read concurrent with the sort is
 #   refused `race` where `go run -race` is green and the answer is determined — an OVER-REFUSAL (the machine refuses ⊇ gc), the
 #   verdict a status-level differential observation. 2 rows BORN, no existing row moved. BORN FAIL BY DESIGN (1):
