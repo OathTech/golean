@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# S4 sweep (lane sweep/s4-identity, 2026-10-26): BUG-111's shape at the whole-struct routes BUG-134
+# opened and at the channel object under two spellings. RACY lane (the race/negative precedent):
+# expected_status race = every enumerated path refuses; the oracle is go run -race. The confluent
+# control joins before the readout.
+whole-store-vs-field-read	raceWholeStoreVsFieldRead	-	race	-	goroutines,channels,structs,pointers,conversions,assignment,race	racy	-	width=4,sites=8
+whole-read-vs-field-write	raceWholeReadVsFieldWrite	-	race	-	goroutines,channels,structs,pointers,conversions,race	racy	-	width=4,sites=8
+chan-via-alias	raceChanViaAlias	-	race	-	goroutines,channels,structs,pointers,conversions,close,panic,recover,race	racy	-	width=4,sites=8
+whole-store-joined	freeWholeStoreJoined	-	ok	-	goroutines,channels,structs,pointers,conversions,assignment,race	confluent	join-ordered readout; the whole-struct store through the converted pointer is ordered before the read by the channel receive, so every schedule yields the one member	width=4,sites=8

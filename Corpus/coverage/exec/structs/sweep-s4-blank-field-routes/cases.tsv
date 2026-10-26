@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+# S4 sweep (lane sweep/s4-identity, 2026-10-26): BUG-129's shape at the routes beside the
+# blank-field-* rows; every row agrees with gc at birth (strict, expected = gc).
+embedded	bfEmbedded	-	ok	-	structs,fields,embedding,literals,comparability,maps,interfaces,equality
+array-typed	bfArrayTyped	-	ok	-	structs,fields,arrays,literals,comparability,maps,equality
+reference-typed	bfReferenceTyped	-	ok	-	structs,fields,pointers,channels,literals,comparability,maps,equality
+arrays	bfArrays	-	ok	-	structs,fields,arrays,literals,comparability,maps,equality
+readout	bfReadout	-	ok	-	structs,fields,literals

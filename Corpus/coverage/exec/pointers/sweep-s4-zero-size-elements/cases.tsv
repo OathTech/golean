@@ -1,0 +1,20 @@
+# id	subject	args	expected_status	expected_reason	features
+# S4 sweep (lane sweep/s4-identity, 2026-10-26): BUG-176 — zero-size ELEMENT and FIELD addresses.
+# gc answers "same address" deterministically (stack or heap); the machine's distinct paths answer
+# "distinct". The red rows are on BUG-176's Cases line; the two controls agree at birth.
+array-elems	zsArrayElems	-	ok	-	pointers,arrays,empty,comparisons,equality,identity
+array-elems-boxed	zsArrayElemsBoxed	-	ok	-	pointers,arrays,empty,interfaces,equality,identity
+array-elems-escaped	zsArrayElemsEscaped	-	ok	-	pointers,arrays,empty,escapes,globals,equality,identity
+array-via-pointer	zsArrayViaPointer	-	ok	-	pointers,arrays,empty,equality,identity
+slice-elems	zsSliceElems	-	ok	-	pointers,slices,empty,comparisons,equality,identity
+slice-elems-escaped	zsSliceElemsEscaped	-	ok	-	pointers,slices,empty,escapes,globals,equality,identity
+slice-array0-elems	zsSliceArray0Elems	-	ok	-	pointers,slices,arrays,empty,equality,identity
+slice-lit-elems	zsSliceLitElems	-	ok	-	pointers,slices,empty,literals,equality,identity
+slice-elem-map	zsSliceElemMap	-	ok	-	pointers,slices,empty,maps,keys,identity
+fields-adjacent	zsFieldsAdjacent	-	ok	-	pointers,structs,fields,empty,comparisons,equality,identity
+fields-adjacent-boxed	zsFieldsAdjacentBoxed	-	ok	-	pointers,structs,fields,empty,interfaces,equality,identity
+fields-adjacent-escaped	zsFieldsAdjacentEscaped	-	ok	-	pointers,structs,fields,empty,escapes,globals,equality,identity
+fields-adjacent-map	zsFieldsAdjacentMap	-	ok	-	pointers,structs,fields,empty,maps,keys,identity
+fields-final-pair	zsFieldsFinalPair	-	ok	-	pointers,structs,fields,empty,escapes,globals,equality,identity
+fields-separated	zsFieldsSeparated	-	ok	-	pointers,structs,fields,empty,equality,identity
+final-single-distinct-vars	zsFinalSingleDistinctVars	-	ok	-	pointers,structs,fields,empty,equality,identity

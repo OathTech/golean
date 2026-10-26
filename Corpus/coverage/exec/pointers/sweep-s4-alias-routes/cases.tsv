@@ -1,0 +1,18 @@
+# id	subject	args	expected_status	expected_reason	features
+# S4 sweep (lane sweep/s4-identity, 2026-10-26): BUG-133's shape at the routes the identity-* rows
+# do not hold. Every row agrees with gc at birth (strict, expected = gc).
+switch	aliasSwitch	-	ok	-	pointers,structs,conversions,switch,equality,identity
+param	aliasParam	-	ok	-	pointers,structs,conversions,calls,equality,identity
+chan-traffic	aliasChanTraffic	-	ok	-	pointers,structs,conversions,channels,equality,identity
+method-returned	aliasMethodReturned	-	ok	-	pointers,structs,conversions,methods,equality,identity
+closure	aliasClosure	-	ok	-	pointers,structs,conversions,closures,equality,identity
+slice-elem	aliasSliceElem	-	ok	-	pointers,structs,conversions,slices,arrays,maps,equality,identity
+defined-over-defined	aliasDefinedOverDefined	-	ok	-	pointers,structs,conversions,defined_type,maps,interfaces,equality,identity
+chained	aliasChained	-	ok	-	pointers,structs,conversions,equality,identity
+embedded-pointer	aliasEmbeddedPointer	-	ok	-	pointers,structs,conversions,embedding,equality,identity
+after-whole-store	aliasAfterWholeStore	-	ok	-	pointers,structs,conversions,assignment,maps,equality,identity
+holder-array-eq	aliasHolderArrayEq	-	ok	-	pointers,structs,conversions,arrays,equality,identity
+holder-struct-eq	aliasHolderStructEq	-	ok	-	pointers,structs,conversions,equality,identity
+holder-array-key	aliasHolderArrayKey	-	ok	-	pointers,structs,conversions,arrays,maps,keys,identity
+holder-struct-key	aliasHolderStructKey	-	ok	-	pointers,structs,conversions,maps,keys,identity
+holder-boxes	aliasHolderBoxes	-	ok	-	pointers,structs,conversions,arrays,interfaces,equality,identity

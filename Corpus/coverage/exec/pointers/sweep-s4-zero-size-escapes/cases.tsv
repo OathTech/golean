@@ -1,0 +1,18 @@
+# id	subject	args	expected_status	expected_reason	features
+# S4 sweep (lane sweep/s4-identity, 2026-10-26): BUG-170's mechanism (R15) at the other escape
+# routes; the red rows are on BUG-170's Cases line beside zero-size-address/escaped-same; the four
+# controls agree at birth.
+new-escaped	zsNewEscaped	-	ok	-	pointers,new,empty,escapes,globals,equality,identity
+new-escaped-array0	zsNewEscapedArray0	-	ok	-	pointers,new,arrays,empty,escapes,globals,equality,identity
+new-escaped-switch	zsNewEscapedSwitch	-	ok	-	pointers,new,empty,escapes,globals,switch,identity
+closure-escaped	zsClosureEscaped	-	ok	-	pointers,empty,escapes,closures,equality,identity
+array0-escaped	zsArray0Escaped	-	ok	-	pointers,arrays,empty,escapes,globals,equality,identity
+array0-struct-escaped	zsArray0StructEscaped	-	ok	-	pointers,arrays,empty,escapes,globals,equality,identity
+iface-box	zsIfaceBox	-	ok	-	pointers,new,empty,escapes,interfaces,equality,identity
+map-key	zsMapKey	-	ok	-	pointers,new,empty,escapes,maps,keys,identity
+struct-key	zsStructKey	-	ok	-	pointers,new,empty,escapes,maps,keys,structs,identity
+array-key	zsArrayKey	-	ok	-	pointers,new,empty,escapes,maps,keys,arrays,identity
+new-local	zsNewLocal	-	ok	-	pointers,new,empty,equality,identity
+returned-local	zsReturnedLocal	-	ok	-	pointers,empty,calls,equality,identity
+array0-stack	zsArray0Stack	-	ok	-	pointers,arrays,empty,equality,identity
+iface-box-direct	zsIfaceBoxDirect	-	ok	-	pointers,new,empty,interfaces,equality,identity

@@ -1,0 +1,14 @@
+# id	subject	args	expected_status	expected_reason	features
+# S4 sweep (lane sweep/s4-identity, 2026-10-26): BUG-121's mechanism (R19) at the other operand and
+# binding routes; the six red rows are on BUG-121's Cases line beside conv-identity/ident-*; the four
+# controls agree at birth. gc's answer is deterministic on each (default build): strict lane.
+bytes-const	convBytesConst	-	ok	-	strings,bytes,conversions,constants,aliasing,identity,pointers
+bytes-global-var	convBytesGlobalVar	-	ok	-	strings,bytes,conversions,globals,aliasing,identity,pointers
+bytes-params	convBytesParams	-	ok	-	strings,bytes,conversions,calls,aliasing,identity,pointers
+bytes-params-lit	convBytesParamsLit	-	ok	-	strings,bytes,conversions,calls,literals,aliasing,identity,pointers
+bytes-substring	convBytesSubstring	-	ok	-	strings,bytes,conversions,slicing,aliasing,identity,pointers
+bytes-copied-var	convBytesCopiedVar	-	ok	-	strings,bytes,conversions,aliasing,identity,pointers
+runes-twice	convRunesTwice	-	ok	-	strings,runes,conversions,aliasing,identity,pointers
+bytes-escaped	convBytesEscaped	-	ok	-	strings,bytes,conversions,escapes,globals,aliasing,identity,pointers
+bytes-roundtrip	convBytesRoundtrip	-	ok	-	strings,bytes,conversions,aliasing,identity,pointers
+bytes-call-operand	convBytesCallOperand	-	ok	-	strings,bytes,conversions,calls,aliasing,identity,pointers

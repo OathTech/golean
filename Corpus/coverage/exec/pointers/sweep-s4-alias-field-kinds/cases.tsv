@@ -1,0 +1,15 @@
+# id	subject	args	expected_status	expected_reason	features
+# S4 sweep (lane sweep/s4-identity, 2026-10-26): BUG-133's shape at every pointee kind, `==` and
+# the `any` box per row, plus two map-key routes. Every row agrees with gc at birth (strict).
+string	kindString	-	ok	-	pointers,structs,conversions,strings,equality,identity
+bool	kindBool	-	ok	-	pointers,structs,conversions,bools,equality,identity
+float	kindFloat	-	ok	-	pointers,structs,conversions,floats,equality,identity
+defined-int	kindDefinedInt	-	ok	-	pointers,structs,conversions,defined_type,equality,identity
+pointer	kindPointer	-	ok	-	pointers,structs,conversions,equality,identity
+slice	kindSlice	-	ok	-	pointers,structs,conversions,slices,equality,identity
+map	kindMap	-	ok	-	pointers,structs,conversions,maps,equality,identity
+func	kindFunc	-	ok	-	pointers,structs,conversions,functions,equality,identity
+iface	kindIface	-	ok	-	pointers,structs,conversions,interfaces,equality,identity
+zero-size	kindZeroSize	-	ok	-	pointers,structs,conversions,empty,equality,identity
+string-key	kindStringKey	-	ok	-	pointers,structs,conversions,strings,maps,keys,identity
+func-any-key	kindFuncAnyKey	-	ok	-	pointers,structs,conversions,functions,maps,keys,delete,identity

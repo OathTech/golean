@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# S4 sweep (lane sweep/s4-identity, 2026-10-26): the seeded readout of a pointer taken through the
+# converted spelling into a seed cell: the same seed-relative path as the direct spelling.
+via-alias	viaAlias	ref:0	ok	-	seeded,pointers,structs,conversions,identity	strict	-	seed=seed-cell.json
+direct	direct	ref:0	ok	-	seeded,pointers,structs,identity	strict	-	seed=seed-cell.json
+whole-back	wholeBack	ref:0	ok	-	seeded,pointers,structs,conversions,identity	strict	-	seed=seed-cell.json

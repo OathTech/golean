@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+# S4 sweep (lane sweep/s4-identity, 2026-10-26): nil-ness through a box and back; agrees with gc at birth.
+nil-through-box	nilThroughBox	-	ok	-	interfaces,type_assertions,slices,maps,functions,channels,pointers,nil,comma_ok
+empty-through-box	emptyThroughBox	-	ok	-	interfaces,type_assertions,slices,nil,empty,len

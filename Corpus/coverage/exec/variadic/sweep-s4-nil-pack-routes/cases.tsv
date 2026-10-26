@@ -1,0 +1,16 @@
+# id	subject	args	expected_status	expected_reason	features
+# S4 sweep (lane sweep/s4-identity, 2026-10-26): BUG-139's shape at every call route; every row
+# agrees with gc at birth (strict, expected = gc).
+value-receiver	vaValueReceiver	-	ok	-	variadic,methods,slices,nil,calls
+pointer-receiver	vaPointerReceiver	-	ok	-	variadic,methods,pointers,slices,nil,calls
+iface-dispatch	vaIfaceDispatch	-	ok	-	variadic,interfaces,methods,slices,nil,calls
+func-values	vaFuncValues	-	ok	-	variadic,functions,closures,slices,nil,calls
+method-values	vaMethodValues	-	ok	-	variadic,methods,functions,slices,nil,calls
+method-exprs	vaMethodExprs	-	ok	-	variadic,methods,functions,slices,nil,calls
+go-stmt	vaGoStmt	-	ok	-	variadic,goroutines,channels,slices,nil,calls
+defer-stmt	vaDeferStmt	-	ok	-	variadic,defer,closures,slices,nil,calls
+generic	vaGeneric	-	ok	-	variadic,generics,slices,nil,calls
+fixed-plus-zero	vaFixedPlusZero	-	ok	-	variadic,slices,nil,calls
+tuple-fixed-only	vaTupleFixedOnly	-	ok	-	variadic,multi_result,slices,nil,calls
+elem-kinds	vaElemKinds	-	ok	-	variadic,interfaces,strings,pointers,slices,nil,calls
+len-cap-append	vaLenCapAppend	-	ok	-	variadic,slices,nil,len,cap,append,range
