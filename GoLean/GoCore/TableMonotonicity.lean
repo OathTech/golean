@@ -623,8 +623,12 @@ theorem buildAppendBackingValue_free (c : ProgramCtx) : @buildAppendBackingValue
 theorem buildAppendBackingValue_eq (h : a.tablesFree = b.tablesFree) : @buildAppendBackingValue a = @buildAppendBackingValue b := by
   rw [buildAppendBackingValue_free a, buildAppendBackingValue_free b, h]
 
+theorem appendSpillFootprintCheck_free (c : ProgramCtx) : @appendSpillFootprintCheck c = @appendSpillFootprintCheck c.tablesFree := rfl
+theorem appendSpillFootprintCheck_eq (h : a.tablesFree = b.tablesFree) : @appendSpillFootprintCheck a = @appendSpillFootprintCheck b := by
+  rw [appendSpillFootprintCheck_free a, appendSpillFootprintCheck_free b, h]
+
 theorem applyStmtOp_plan_eq (h : a.tablesFree = b.tablesFree) : @applyStmtOp.plan a = @applyStmtOp.plan b := by
-  delta applyStmtOp.plan; simp only [types_eq h, Mem_loadSlice_eq h, Mem_store_eq h, Mem_storeRun_eq h, Store_alloc_eq h, applyStmtOpCore_plan_eq h, buildAppendBackingValue_eq h]
+  delta applyStmtOp.plan; simp only [types_eq h, Mem_loadSlice_eq h, Mem_store_eq h, Mem_storeRun_eq h, Store_alloc_eq h, applyStmtOpCore_plan_eq h, buildAppendBackingValue_eq h, appendSpillFootprintCheck_eq h]
 
 theorem buildStructFields_eq_app (h : a.tablesFree = b.tablesFree) (fs : List FieldDef) (vs : List GoValue) :
     buildStructFields a fs vs = buildStructFields b fs vs := by

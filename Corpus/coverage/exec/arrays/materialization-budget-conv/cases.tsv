@@ -1,0 +1,14 @@
+# id	subject	args	expected_status	expected_reason	features
+# raft-proofs' ask G21 (2), the local space (2026-10-26, relayed by the [USER]
+# the same day; lane core/g21-normal-form-spill-1026): the []byte(s) and
+# []rune(s) conversions are guarded by the footprint budget on their REALIZED
+# capacity (BUG-131's scope sentence (2), closed; the shapes and numbers are in
+# main.go). bytes-over-budget and runes-over-budget are RED BY DESIGN —
+# FAIL/lean-observation, cause unsupported:conv-footprint-budget; the expected
+# column records the oracle's truth (gc allocates and answers); before the
+# guard the same programs were memory KILLS under capped (exit 137), never a
+# verdict. bytes-in-budget and runes-in-budget are the admitted controls.
+bytes-over-budget	bytesOverBudget	-	ok	-	strings,slices,conversions
+runes-over-budget	runesOverBudget	-	ok	-	strings,slices,conversions,runes
+bytes-in-budget	bytesInBudget	-	ok	-	strings,slices,conversions
+runes-in-budget	runesInBudget	-	ok	-	strings,slices,conversions,runes

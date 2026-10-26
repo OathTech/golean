@@ -158,15 +158,23 @@ push rule). Pushing the tag is a separate sign-off.
   (BUG-125, `tools/nativefrontend/entrymode.go`, the same ruling). The differential corpus exports its subjects with
   `--subject`, which skips only that rule; a consumer exporting a main-less package passes it too, or adds a `main`.
   No whole-program mode for such packages — later support left open.
-- **A `make` past the footprint budget refuses by name; `append` and `[]byte(s)` past it are still memory kills**
-  (punch-list rows 30 and 31(d); BUG-131, fixed by refusal 2026-10-25 on the [USER]'s ruling of that day): a
-  constant-length `make` whose count × element footprint exceeds the budget refuses by name at decode, and since
-  train 18 a run-time-length `make` refuses by name at the `make` site before any backing is built
-  (`unsupported`, cause `make-footprint-budget-runtime`; two red-by-design rows,
-  `arrays/materialization-budget-runtime/*`). The same backing built through `append`'s spill or a `[]byte(s)`
-  conversion past the budget is NOT guarded: under `capped` the run ends with exit 137 — loud, never a wrong answer,
-  but an apparatus kill rather than a named refusal (BUG-131's scope sentence, BUG-078's residual (2b); a follow-up
-  awaiting the [USER]'s word).
+- **A backing past the footprint budget refuses by name at every door: `make`, `append`'s spill, `[]byte(s)` /
+  `[]rune(s)`** (punch-list rows 30 and 31(d); BUG-131, fixed by refusal 2026-10-25 on the [USER]'s ruling of that
+  day; the two remaining doors closed 2026-10-27 on raft-proofs' ask G21, relayed by the [USER] 2026-10-26): a
+  constant-length `make` whose count × element footprint exceeds the budget (`arrayFootprintBudget`, 1<<24 scalar
+  leaves) refuses by name at decode; a run-time-length `make` at the `make` site (`unsupported`, cause
+  `make-footprint-budget-runtime`); an `append` whose spill would build a backing past it, on the REALIZED
+  capacity after gc's `growslice` panic and after the capacity consult (cause `append-footprint-budget` — so a
+  pick in the envelope can refuse where the default pick answers); a string conversion whose fresh backing would
+  be past it, after the `convCap` consult (cause `conv-footprint-budget`). Every refusal precedes the backing's
+  construction. Six red-by-design rows (`arrays/materialization-budget-{runtime,append,conv}/*`); gc allocates and
+  answers at each. `copy` builds no backing; a slice literal and `strings.Repeat` reach the `make` site. No memory
+  kill of this class is known; a run that is killed under `capped` (exit 137, `killed:137`) is a finding, not a
+  stated limit.
+- **The heap normal form is shape-checked at every type** (G21 (1), 2026-10-27): a `bool`, `string`, slice, map
+  or pointer cell holds only the constructor its type's producers emit (`isNormalForTyTy`, `Ops.lean`), and the
+  normalizer refuses any other value by name at the cell's birth or first store. No typed Go program changes its
+  answer (the full corpus); a consumer's `HeapNormal`/`StateWf` premise now excludes the heaps no typed run builds.
 - **Compiler directives are refused by name** (the Codex zero-context pass F2, punch-list row 38; BUG-127;
   `tools/nativefrontend/directives.go`): in every user unit, any `//go:` directive outside the allowlist —
   `//go:build`, `//go:noinline`, `//go:generate`, the three with no effect on the compiled program — and any

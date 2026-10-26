@@ -2431,7 +2431,31 @@ def normalizeValueForTyTy (atDefined : TypeIdx → GoValue → Except Stop GoVal
   | .sync kind, value => stuck s!"expected sync.{kind.name} state, got {repr value}"
   | .defined i, value => atDefined i value
   | .unsupported feature, _ => unsupported s!"normalizing {feature}"
-  | _, value => return value
+  -- The five former catch-all types (raft-proofs' G21, 2026-10-27; the
+  -- [USER]'s relay of 2026-10-26): each arm accepts EXACTLY the
+  -- constructors its producers emit — `defaultValueTy`, the typed nil
+  -- literal (`.nilLit`), the conversion arms, the seed loader, the wire
+  -- decoder — and fails closed otherwise, in LOCKSTEP with
+  -- `isNormalForTyTy`. A raw `.nil` at a slice or map type becomes the
+  -- machine's own nil slice / nil map, the same value the typed nil
+  -- literal and `defaultValue` produce (the conversion-arm precedent,
+  -- delta-review D3, and the chan arm above); at a pointer type raw
+  -- `.nil` IS the representation. Before this the arms were one
+  -- `| _, value => return value`, so a `.bool` cell holding an int or a
+  -- `*T` cell holding a struct was «normal» — a heap no typed run builds.
+  | .bool, .bool b => return .bool b
+  | .bool, value => stuck s!"expected bool value, got {repr value}"
+  | .string, .string str => return .string str
+  | .string, value => stuck s!"expected string value, got {repr value}"
+  | .slice _, .slice sv => return .slice sv
+  | .slice _, .nil => return .slice { base := none, offset := 0, len := 0, cap := 0 }
+  | .slice _, value => stuck s!"expected slice value, got {repr value}"
+  | .map _ _, .map mv => return .map mv
+  | .map _ _, .nil => return .map { base := none }
+  | .map _ _, value => stuck s!"expected map value, got {repr value}"
+  | .pointer _, .addr loc => return .addr loc
+  | .pointer _, .nil => return .nil
+  | .pointer _, value => stuck s!"expected pointer value, got {repr value}"
 
 /-- The INDEX layer of normalization: normalize a value at the type
 declared at index `i`, descending only to smaller indices (`bound`-
@@ -2542,7 +2566,21 @@ def isNormalForTyTy (atDefined : TypeIdx → GoValue → Bool) : Ty → GoValue 
   | .sync _, _ => false
   | .defined i, value => atDefined i value
   | .unsupported _, _ => false
-  | _, _ => true
+  -- LOCKSTEP with the normalizer's five closed arms (G21, 2026-10-27):
+  -- only the constructor the arm returns unchanged is self-normalized —
+  -- a raw `.nil` at a slice/map type normalizes to the canonical nil
+  -- value, so it is NOT normal there; at a pointer type it is.
+  | .bool, .bool _ => true
+  | .bool, _ => false
+  | .string, .string _ => true
+  | .string, _ => false
+  | .slice _, .slice _ => true
+  | .slice _, _ => false
+  | .map _ _, .map _ => true
+  | .map _ _, _ => false
+  | .pointer _, .addr _ => true
+  | .pointer _, .nil => true
+  | .pointer _, _ => false
 
 /-- The INDEX layer of the self-normalization check, in lockstep with
 `normalizeValueForTyAt` (`bound`-structural; the `0` arm fails closed). -/
@@ -2660,14 +2698,17 @@ whole root» on every normal cell — and every array along the path is
 updated IN PLACE (`Array.modifyM`: the element is swapped out while
 rebuilt, so a uniquely owned root costs O(depth), never O(root size); the
 S0 spike `spikes/c1-frame/Frame.lean` proved the disjoint-path frame law
-for this shape). A declared type at which the normalizer is the IDENTITY
-(`.interface`, and the catch-all `.bool`/`.string`/`.slice`/`.map`/
-`.pointer` — `normalizeValueForTyTy`'s two `return value` arms, in
-lockstep with `isNormalForTyTy`'s `true` arms) descends to ITSELF, so a
-path write under such a root normalizes the leaf at that same identity —
+for this shape). A declared type with no component in the type (`.interface`,
+`.bool`, `.string`, `.slice`, `.map`, `.pointer`) descends to ITSELF, so a
+path write under such a root normalizes the leaf at that same type —
 exactly what the whole-root normalization did (audit fix round F3,
 2026-09-18: the first cut REFUSED there on a cell `HeapNormal` admits; the
-pin `Tests/GoCoreContract.lean` `iface_cell_path_write_*`). Refusal texts
+pin `Tests/GoCoreContract.lean` `iface_cell_path_write_*`). At `.interface`
+the normalizer is the identity, so the write lands; at the other five the
+normalizer is SHAPE-CHECKED since G21 (2026-10-27: a `.slice`-declared cell
+holds only a `.slice` value, so a path INTO it is impossible under
+`HeapNormal`), and the leaf normalization refuses by name — the pin
+`slice_cell_path_write_refuses`. Refusal texts
 are byte-preserved: a prefix step refuses with `loadLoc`'s texts (the
 former recursion loaded the prefix), the last step with the store texts;
 the one NEW refusal is the leaf-type descent's (`Ty.stepDown`), reachable
@@ -2709,9 +2750,11 @@ def FieldDef.find? (f : String) : List FieldDef → Option FieldDef
 /-- The DECLARED type one path step down, with the residual bound: `.array`
 → its element type (no hop); `.defined i` → through the table, ONE bound
 per hop exactly as `normalizeValueForTyAt` descends, to the struct's field
-type; a type at which the normalizer is the identity (`.interface`,
-`.bool`, `.string`, `.slice`, `.map`, `.pointer` — module docstring) →
-ITSELF at the same bound, on either step (audit fix round F3, 2026-09-18).
+type; a type with no component (`.interface`, `.bool`, `.string`, `.slice`,
+`.map`, `.pointer` — module docstring) → ITSELF at the same bound, on
+either step (audit fix round F3, 2026-09-18; since G21 the leaf
+normalization at the five shape-checked types refuses the write by name,
+a path into such a cell being impossible under `HeapNormal`).
 `bound`-structural (the index descent, seeded at `types.size`). -/
 def Ty.stepDown (types : TypeEnv) : Nat → Ty → PathStep → Except Stop (Ty × Nat)
   | b, .array _ elem, .index _ => pure (elem, b)
@@ -5004,9 +5047,22 @@ def convElems : ConvKind → GoString → Array GoValue
   | .bytes, value => value.bytes.map (fun b => GoValue.int (Int.ofNat b.toNat) .uint8)
   | .runes, value => (runesOfString value).map (fun r => GoValue.int r .int32)
 
-/-- The site's consult WIDTH at a conversion of `value`: the member count. -/
+/-- The converted element COUNT without materializing the elements (G21, 2026-10-27):
+the string's byte count, or its code-point count. The consult width and the footprint
+refusal read this, so a string past the budget builds no element before it is refused
+(`convElems_size`: the count is the materialized array's size). -/
+def convCount : ConvKind → GoString → Nat
+  | .bytes, value => value.bytes.size
+  | .runes, value => (runesOfString value).size
+
+theorem convElems_size (kind : ConvKind) (value : GoString) :
+    (convElems kind value).size = convCount kind value := by
+  cases kind <;> simp [convElems, convCount]
+
+/-- The site's consult WIDTH at a conversion of `value`: the member count (at the element
+COUNT, `convCount` — nothing materialized ahead of the footprint refusal). -/
 def convCapWidth (kind : ConvKind) (literal : Bool) (value : GoString) : Nat :=
-  (convCapMembers kind literal (convElems kind value).size).length
+  (convCapMembers kind literal (convCount kind value)).length
 
 theorem convCapMembers_literal (kind : ConvKind) (n : Nat) :
     convCapMembers kind true n = [n] := by

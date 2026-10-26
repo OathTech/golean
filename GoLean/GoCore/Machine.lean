@@ -770,6 +770,112 @@ def applyStrictOp (s : Store) (leafOf : Loc → Loc) :
   | .floatBits op, [v] => do return ((← floatBitsApply op v), s, [])
   | op, vs => stuck s!"malformed strict-operator application: {repr op} on {vs.length} operand(s)"
 
+/-! ### The two materialization budgets (BUG-090, BUG-078/BUG-131)
+
+Defined HERE, ahead of the conversion funnel, because the funnel's
+`convCapApplyAt` charges `arrayFootprintBudget` too (G21, 2026-10-27); the
+`make` and `append` arms of `applyStmtOpCore.plan` / `applyStmtOp.plan`
+below read the same two constants. -/
+
+/-- The slice-backing MATERIALIZATION budget, in elements (`make`'s CAP
+request; release-readiness punch list item 9, 2026-10-12 — BUG-090's row
+`strings/trimspace-repeat/repeat-bound-refused` was dying as a native
+stack overflow, exit 134, not a refusal). The value-level twin of the
+decoder's `arrayLenBudget` (BUG-078): past it the machine REFUSES BY
+NAME at the request (`.unsupported`, the text below), before any backing
+is built. A modeled-resource bound, not Go behaviour: gc allocates such a
+slice fine, so a program over the budget is a standing machine-refuses /
+gc-succeeds red, never a wrong answer and never an abort.
+
+MEASURED PATH (the devbox, main's binary at d92b95fd, single runs under
+`capped`, the probe programs inline): the whole-backing ELEMENT-WISE READ —
+`Mem.loadElems` (Ops.lean), structural on the count and non-tail
+recursive, one native stack frame per element, reached by `string(b)`,
+the append SPILL (the overlay's `Builder.grow` spells `MakeNoZero(n)` as
+`append([]byte(nil), make([]byte, n)...)`), `copy`'s source run and every
+other multi-element read:
+* `len(string(make([]byte, 1<<22)))`: 3.0 s, ok; at `1<<23`: 6.5 s, ok;
+  at `1<<24`: «Stack overflow detected. Aborting.», exit 134 at 6.2 s;
+* `strings.Builder.Grow(1<<24)` + one `WriteString`: exit 134 at 8.8 s —
+  the row's own path (Repeat requests its whole output up front); at
+  `1<<23`: 10.9 s, ok; the bare spill `append([]byte(nil), make([]byte,
+  1<<23)...)`: 9.6 s, ok (`make([]byte, 1<<23)` alone: 3.2 s);
+* at `1<<24` the single-element operations over the same backing all pass
+  (`make` alone 3.7 s, a reslice, one element store, a 16-byte append,
+  a 16-byte `copy`): the abort is the recursion depth, not the size.
+So `1<<23` (8 388 608) keeps the deepest measured read inside the native
+stack with a 2× margin and the whole-backing paths at ≈6.5–11 s, under the
+gate's 30 s row wall (`LEAN_TIMEOUT_SECONDS`); it exceeds every `make` the
+corpus and the raft subject request (the largest is this row's). What it
+does NOT bound, recorded as BUG-090's residual: a backing that GROWS past
+it by appends (two in-budget slices appended into one) still reaches the
+same recursion on its next whole read — an honest abort, never a wrong
+answer; the lift is a tail-recursive `loadElems`/`storeElems` (a proof-
+bearing pair: `loadElems_locSup`, `storeElems_pres`, `_tame`, `_noPanic`),
+not a larger number. -/
+def sliceCapBudget : Nat := 1 <<< 23
+
+/-- The MATERIALIZATION FOOTPRINT budget, in scalar leaves (BUG-078 residual (3)'s
+`arrayFootprintBudget`, 1<<24 — the number's derivation is the decoder's docstring
+in `NativeToIR.lean`, whose `arrayFootprintBudget` now READS this constant: one
+source, transcribed by `tools/nativefrontend/budgets.tsv` and pinned there by
+`Tests/GoCoreEval.lean`'s `budgetsTableTests`). The decoder charges it to array
+TYPES through their nesting and to a `make` whose count is CONSTANT
+(`checkMakeFootprint`); the `makeSlice` arm below charges it to a RUN-TIME count
+(release-readiness rows 30 and 31(d), [USER] ruling 2026-10-25, relayed): `cap ×
+tyLeafCount(elem) > arrayFootprintBudget` refuses by name — the count, the leaves
+per element, the product and the budget in the text — AFTER gc's own `makeslice`
+panic (a request gc rejects keeps gc's panic) and AFTER `sliceCapBudget` (the
+count bound keeps its refusal), BEFORE any backing is built: the same order as
+`checkMakeFootprint`. Before the guard such a make BUILT its backing and died
+under the box's memory cap — exit 137, which the apparatus records as
+`killed:137`, a loud kill but not a named refusal, and on a machine without the
+cap a memory runaway: `make([][1024]byte, n)` with `n = 1<<19` (2^29 leaves; gc
+allocates the 512 MiB and answers) was killed at 4G in 0.4 s and at 8G in 6.3 s
+(the lane's reproduction on main 541d8340's binary; the same shape with a
+CONSTANT count has refused at decode since 2026-10-12). A modeled-resource bound,
+not Go behaviour: a program over it is a standing machine-refuses / gc-succeeds
+red (`unsupported:make-footprint-budget-runtime`, `scripts/machine-causes.tsv`),
+never a wrong answer. -/
+def arrayFootprintBudget : Nat := 1 <<< 24
+
+/-- The append spill's FOOTPRINT refusal (raft-proofs' G21, 2026-10-27; the
+[USER]'s relay of 2026-10-26): the grown backing's REALIZED capacity `newCap`
+times the element's scalar leaves against `arrayFootprintBudget` — the `make`
+site's guard at the spill door, which BUG-131's scope sentence named.
+Consulted by `applyStmtOp.plan`'s spill arm AFTER gc's `growslice` panic (a
+request gc rejects keeps gc's panic) and AFTER the capacity consult —
+`newCap` is what is BUILT, so the refusal is a function of the pick exactly
+as the allocation is (a pick in the envelope whose realized backing is over
+the budget refuses by name where the default pick may answer), and the
+pre-consult mirror `appendSpill?` is untouched — and BEFORE the backing is
+built. `tyLeafCount` refuses only where `tySizeBytes` (read ahead of the
+consult) already did. Before this guard the same backing `make` refuses was
+built here by growth and the run died under the memory cap (exit 137, the
+apparatus's `killed:137`; on a machine without the cap a memory runaway):
+`s := make([][1024]byte, 1<<14); s = append(s, s...)` — 2^25 leaves, exactly
+`make-over-budget`'s footprint — ran through `append`, and three doublings
+were killed at 4G and at 8G (BUG-131's review F1). A modeled-resource bound,
+never a wrong answer: gc allocates the grown backing and answers, so a
+program over it is a standing machine-refuses / gc-succeeds red
+(`unsupported:append-footprint-budget`, `scripts/machine-causes.tsv`). -/
+def appendSpillFootprintCheck (elem : Ty) (newLen newCap : Nat) : Except Stop Unit := do
+  let elemLeaves ← tyLeafCount ctx.types elem
+  if newCap * elemLeaves > arrayFootprintBudget then
+    unsupported s!"append([]T, …): a grown slice backing of {newCap} elements (len {newLen}) of {elemLeaves} scalar elements each materializes {newCap * elemLeaves} scalar elements, past the interpreter's footprint budget for an append spill ({arrayFootprintBudget} elements, arrayFootprintBudget — the realized capacity after gc's growslice panic, the bound the make site refuses at; BUG-131 cost boundary, refused by name)"
+
+/-- The string conversion's FOOTPRINT refusal (G21, the same door at `[]byte(s)` /
+`[]rune(s)`, BUG-131's scope sentence (2)): the fresh backing's REALIZED capacity
+against `arrayFootprintBudget` — the element is one scalar leaf (`uint8` / `int32`),
+so the backing's leaves are its capacity. Consulted by `convCapApplyAt` AFTER the
+`convCap` consult and BEFORE the backing is built. Before this a `[]byte(s)` of a
+2^26-byte string built 2^26 cells and died under the cap. A modeled-resource bound,
+never a wrong answer (`unsupported:conv-footprint-budget`). -/
+def convFootprintCheck (kind : ConvKind) (n cap : Nat) : Except Stop Unit :=
+  if cap > arrayFootprintBudget then
+    unsupported s!"{kind.spell}(s): a conversion backing of {cap} elements (len {n}) of 1 scalar element each materializes {cap} scalar elements, past the interpreter's footprint budget for a string conversion ({arrayFootprintBudget} elements, arrayFootprintBudget — the realized capacity of the fresh backing, the bound the make site refuses at; BUG-131 cost boundary, refused by name)"
+  else pure ()
+
 /-! ### The conversion apply — the strict table's ONE stream-holding funnel (R3 / b6, 2026-10-07)
 
 `[]byte(s)` / `[]rune(s)` are strict expression heads whose length is known only at the
@@ -790,11 +896,17 @@ of the pick alone, never a panic (an allocation refuses or succeeds), and of one
 class at every slot (`convCapApplyAt_congr`, MachineSound). -/
 def convCapApplyAt (s : Store) (kind : ConvKind) (literal : Bool) (value : GoString)
     (pick : Nat) : Except Stop (GoValue × Store × AccessTrace) := do
+  -- The element COUNT first (`convCount`, nothing materialized), the realized
+  -- capacity at the pick, then the FOOTPRINT budget on that capacity (G21,
+  -- 2026-10-27; the check's docstring) — after the consult, before any
+  -- element or backing cell is built.
+  let n := convCount kind value
+  let cap := convCapAt kind literal n pick
+  convFootprintCheck kind n cap
   let elems := convElems kind value
-  let cap := convCapAt kind literal elems.size pick
   let backing ← buildAppendBackingValue ctx kind.elemTy #[] elems cap
   let (base, s') ← Store.alloc ctx s backing (.array cap kind.elemTy)
-  return (.slice { base := some base, offset := 0, len := elems.size, cap := cap }, s', [])
+  return (.slice { base := some base, offset := 0, len := n, cap := cap }, s', [])
 
 /-- The conversion's operand: the string, exactly when the operand list is one string
 value (the shape `strictPlan` produces for a well-typed program). -/
@@ -1564,68 +1676,6 @@ def intElems : List GoValue → Except Stop (List (Int × IntKind))
   | .int v kind :: rest => do return (v, kind) :: (← intElems rest)
   | other :: _ => stuck s!"sortSlice expected int element, got {repr other}"
 
-/-- The slice-backing MATERIALIZATION budget, in elements (`make`'s CAP
-request; release-readiness punch list item 9, 2026-10-12 — BUG-090's row
-`strings/trimspace-repeat/repeat-bound-refused` was dying as a native
-stack overflow, exit 134, not a refusal). The value-level twin of the
-decoder's `arrayLenBudget` (BUG-078): past it the machine REFUSES BY
-NAME at the request (`.unsupported`, the text below), before any backing
-is built. A modeled-resource bound, not Go behaviour: gc allocates such a
-slice fine, so a program over the budget is a standing machine-refuses /
-gc-succeeds red, never a wrong answer and never an abort.
-
-MEASURED PATH (the devbox, main's binary at d92b95fd, single runs under
-`capped`, the probe programs inline): the whole-backing ELEMENT-WISE READ —
-`Mem.loadElems` (Ops.lean), structural on the count and non-tail
-recursive, one native stack frame per element, reached by `string(b)`,
-the append SPILL (the overlay's `Builder.grow` spells `MakeNoZero(n)` as
-`append([]byte(nil), make([]byte, n)...)`), `copy`'s source run and every
-other multi-element read:
-* `len(string(make([]byte, 1<<22)))`: 3.0 s, ok; at `1<<23`: 6.5 s, ok;
-  at `1<<24`: «Stack overflow detected. Aborting.», exit 134 at 6.2 s;
-* `strings.Builder.Grow(1<<24)` + one `WriteString`: exit 134 at 8.8 s —
-  the row's own path (Repeat requests its whole output up front); at
-  `1<<23`: 10.9 s, ok; the bare spill `append([]byte(nil), make([]byte,
-  1<<23)...)`: 9.6 s, ok (`make([]byte, 1<<23)` alone: 3.2 s);
-* at `1<<24` the single-element operations over the same backing all pass
-  (`make` alone 3.7 s, a reslice, one element store, a 16-byte append,
-  a 16-byte `copy`): the abort is the recursion depth, not the size.
-So `1<<23` (8 388 608) keeps the deepest measured read inside the native
-stack with a 2× margin and the whole-backing paths at ≈6.5–11 s, under the
-gate's 30 s row wall (`LEAN_TIMEOUT_SECONDS`); it exceeds every `make` the
-corpus and the raft subject request (the largest is this row's). What it
-does NOT bound, recorded as BUG-090's residual: a backing that GROWS past
-it by appends (two in-budget slices appended into one) still reaches the
-same recursion on its next whole read — an honest abort, never a wrong
-answer; the lift is a tail-recursive `loadElems`/`storeElems` (a proof-
-bearing pair: `loadElems_locSup`, `storeElems_pres`, `_tame`, `_noPanic`),
-not a larger number. -/
-def sliceCapBudget : Nat := 1 <<< 23
-
-/-- The MATERIALIZATION FOOTPRINT budget, in scalar leaves (BUG-078 residual (3)'s
-`arrayFootprintBudget`, 1<<24 — the number's derivation is the decoder's docstring
-in `NativeToIR.lean`, whose `arrayFootprintBudget` now READS this constant: one
-source, transcribed by `tools/nativefrontend/budgets.tsv` and pinned there by
-`Tests/GoCoreEval.lean`'s `budgetsTableTests`). The decoder charges it to array
-TYPES through their nesting and to a `make` whose count is CONSTANT
-(`checkMakeFootprint`); the `makeSlice` arm below charges it to a RUN-TIME count
-(release-readiness rows 30 and 31(d), [USER] ruling 2026-10-25, relayed): `cap ×
-tyLeafCount(elem) > arrayFootprintBudget` refuses by name — the count, the leaves
-per element, the product and the budget in the text — AFTER gc's own `makeslice`
-panic (a request gc rejects keeps gc's panic) and AFTER `sliceCapBudget` (the
-count bound keeps its refusal), BEFORE any backing is built: the same order as
-`checkMakeFootprint`. Before the guard such a make BUILT its backing and died
-under the box's memory cap — exit 137, which the apparatus records as
-`killed:137`, a loud kill but not a named refusal, and on a machine without the
-cap a memory runaway: `make([][1024]byte, n)` with `n = 1<<19` (2^29 leaves; gc
-allocates the 512 MiB and answers) was killed at 4G in 0.4 s and at 8G in 6.3 s
-(the lane's reproduction on main 541d8340's binary; the same shape with a
-CONSTANT count has refused at decode since 2026-10-12). A modeled-resource bound,
-not Go behaviour: a program over it is a standing machine-refuses / gc-succeeds
-red (`unsupported:make-footprint-budget-runtime`, `scripts/machine-causes.tsv`),
-never a wrong answer. -/
-def arrayFootprintBudget : Nat := 1 <<< 24
-
 /-- The choices-FREE core of `applyStmtOp`: every wide-op arm except
 `appendSlice` (whose spill path consumes a capacity choice; its arm HERE
 is an unreachable fail-closed `.internal` — real dispatch happens in the
@@ -2005,10 +2055,11 @@ def applyStmtOp.plan (s : Store) (choices : Choices) (op : StmtOp) (_nt : Nat)
             -- `int`, or the grown backing's byte size exceeding
             -- `maxAllocBytes`, is the recoverable panic `growslice: len
             -- out of range`. Decided on the NEW LENGTH's byte size, NOT
-            -- on the chosen capacity: `applyStmtOp_appendSlice_congr`
-            -- (MachineSound) states that the outcome CLASS of a spill is
-            -- stream-independent, and a cap-based check would make it
-            -- false. Consequence, recorded on R16: gc panics on a
+            -- on the chosen capacity (the retired MachineSound lemma
+            -- `applyStmtOp_appendSlice_congr` stated the PANIC class of a
+            -- spill stream-independent; the footprint REFUSAL after the
+            -- consult below is on the realized capacity by design, G21).
+            -- Consequence, recorded on R16: gc panics on a
             -- SUPERSET — gc panics iff capmem > maxAlloc with capmem =
             -- roundupsize(nextslicecap(newLen, oldCap)·esize) ≥
             -- newLen·esize, this arm iff newLen ≥ 2^63 ∨ newLen·esize >
@@ -2045,6 +2096,12 @@ def applyStmtOp.plan (s : Store) (choices : Choices) (op : StmtOp) (_nt : Nat)
             let width := appendSpillWidth slice.cap newLen
             let (extra, choices, ps) := Choices.consumeAtE .appendSpill width choices
             let newCap := appendSpillCapAt elemSize pointerful slice.cap newLen extra
+            -- The FOOTPRINT budget on the REALIZED capacity (raft-proofs' G21,
+            -- 2026-10-27; the check's docstring): AFTER gc's `growslice` panic
+            -- and AFTER the consult — `newCap` is what is BUILT — and BEFORE
+            -- the backing is built; the pre-consult mirror `appendSpill?` is
+            -- untouched.
+            appendSpillFootprintCheck ctx elem newLen newCap
             let backing ← buildAppendBackingValue ctx elem oldValues elemValues newCap
             return Commit.withStream choices ps fun s => do
               let (base, current) ← Store.alloc ctx s backing (.array newCap elem)

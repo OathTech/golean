@@ -1,0 +1,17 @@
+# id	subject	args	expected_status	expected_reason	features
+# raft-proofs' ask G21 (2) (2026-10-26, relayed by the [USER] the same day; lane
+# core/g21-normal-form-spill-1026): the append SPILL is guarded by the
+# footprint budget on its REALIZED capacity (BUG-131's scope sentence (1),
+# closed; the shapes and numbers are in main.go). append-over-budget and
+# append-grow-over-budget are RED BY DESIGN — FAIL/lean-observation, cause
+# unsupported:append-footprint-budget; the expected column records the
+# oracle's truth (gc grows the backing and answers); before the guard the
+# same programs were memory KILLS under capped (exit 137), never a verdict.
+# append-at-budget-spill (a spill whose realized capacity stays inside the
+# budget) and append-small-elem are the admitted controls; append-in-place
+# (no spill: capacity reserved by make) never consults the guard.
+append-over-budget	appendOverBudget	-	ok	-	arrays,slices,append
+append-grow-over-budget	appendGrowOverBudget	-	ok	-	arrays,slices,append,cap
+append-at-budget-spill	appendAtBudgetSpill	-	ok	-	arrays,slices,append,cap
+append-small-elem	appendSmallElem	-	ok	-	slices,append
+append-in-place	appendInPlace	-	ok	-	arrays,slices,append,make,cap

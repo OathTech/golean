@@ -9027,11 +9027,12 @@ item 9 carries the deferred support; `docs/release.md` §4 states the limit.
 
 - Status: fixed
 - Expect: FAIL
-- Pinned-by: none (the two Cases below are RED-BY-DESIGN refusal pins at `lean-observation`, cause
-  `unsupported:make-footprint-budget-runtime` (`scripts/machine-causes.tsv`), red forever at the oracle's `ok`
-  — gc allocates the backing and answers; the three admitted/panic controls of the same package PASS and sit
+- Pinned-by: none (the six Cases below are RED-BY-DESIGN refusal pins at `lean-observation`, causes
+  `unsupported:make-footprint-budget-runtime`, `unsupported:append-footprint-budget` and
+  `unsupported:conv-footprint-budget` (`scripts/machine-causes.tsv`), red forever at the oracle's `ok`
+  — gc allocates the backing and answers; the admitted/panic controls of the three packages PASS and sit
   on no Cases line)
-- Cases: arrays/materialization-budget-runtime/make-over-budget, arrays/materialization-budget-runtime/make-cap-over-budget
+- Cases: arrays/materialization-budget-runtime/make-over-budget, arrays/materialization-budget-runtime/make-cap-over-budget, arrays/materialization-budget-append/append-over-budget, arrays/materialization-budget-append/append-grow-over-budget, arrays/materialization-budget-conv/bytes-over-budget, arrays/materialization-budget-conv/runes-over-budget
 - Discovered: BUG-078's fix round (2026-10-12, review MEDIUM-1) closed the CONSTANT-count form at the decoder
   (`checkMakeFootprint`) and named the run-time form as the owed core half (release-readiness row 30, then
   31(d)); the lane reproduced it RED on main 541d8340's binary before the fix — `make([][1024]byte, n)` with
@@ -9098,8 +9099,40 @@ CONVERSION of a long string — `len([]byte(s))` on a 2^26-char string, exit 137
 kills under the cap (never a wrong answer; `killed:137` is a non-verdict the runner names) and memory runaways
 without it. The obvious fix is this guard's own template at those two sites — `newCap × tyLeafCount(elem) >
 arrayFootprintBudget` after the spill arm's `growslice` panic, and the conversion's length against the same
-budget — refusing by name on the `make-footprint-budget-runtime` vocabulary; it is a FOLLOW-UP for the
+budget — refusing by name on the `make-footprint-budget-runtime` vocabulary; it was a FOLLOW-UP for the
 owner's word (the 2026-10-25 ruling covered the `make` site), not part of this entry's fix.
+
+THE TWO DOORS CLOSED (2026-10-27, lane `core/g21-normal-form-spill-1026` [AGENT], on raft-proofs' ask G21 (2) of
+2026-10-26 relayed by the [USER] the same day — `docs/2026-10-27_reply-to-raft-proofs-g21.md`). (1) The SPILL:
+`appendSpillFootprintCheck` (`Machine.lean`, beside the budgets) refuses `newCap × tyLeafCount(elem) >
+arrayFootprintBudget` by name — the grown backing's count, the length, the leaves per element, the product, the
+budget, the constant, BUG-131 — ordered AFTER gc's `growslice` panic (a request gc rejects keeps gc's panic) and
+AFTER the capacity consult, on the REALIZED capacity `newCap` (what is built: so the refusal is a function of
+the pick exactly as the allocation is — the envelope pick that realizes cap 32 for a one-row-plus-one append of
+`[1<<20]uint8` rows refuses where the default pick's cap 2 answers, pinned in `Tests/GoCoreEval.lean`
+`g21SpillBudgetTests` — and the pre-consult mirror `appendSpill?` is untouched), BEFORE the backing is built;
+cause `unsupported:append-footprint-budget`. Reproduced at the base `6a65dd6f` before the fix: `appendOverBudget`
+(`make([][1024]byte, 1<<14)`, then `s = append(s, s...)`: 2^25 leaves) KILLED under `CAPPED_MEM_MAX=2G` in
+3.3 s where the same in-budget make alone (`make-at-budget`) answers under 2G in 1.3 s; at the tip the named
+refusal. (2) The CONVERSIONS: `convFootprintCheck` refuses `cap > arrayFootprintBudget` (one leaf per byte or
+rune) by name, inside `convCapApplyAt` after the `convCap` consult and before the backing; the element COUNT
+is now read without materializing (`convCount`, `convElems_size`; `convCapWidth` reads it) — before this the
+consult width itself built every element — cause `unsupported:conv-footprint-budget`. Reproduced at the base:
+`[]byte(s)` of a 2^26-byte string KILLED under 4G in 4.0 s where the string alone answers in 0.3 s; the rows
+(one byte past the budget) ran at the base under 2G — the budget is a stated bound, the kill class starts
+higher. THE REST OF THE LOCAL SPACE, measured: `copy` builds NO backing (it writes into an existing one:
+`Mem.loadRun`/`storeRun` on slices both already bounded) — nothing to guard; a slice LITERAL lowers to
+`Stmt.makeSlice` with its length as an `intLit` (`NativeToIR.lean`, the `slice-lit` arm, and the unseq
+lowering), so a huge literal — and an `append` of one — meets the `make` site's count bound
+(`sliceCapBudget`, 1<<23) and footprint guard at the literal's construction; `strings.Repeat` is
+source-through (`docs/stdlib-admission-register.md`): its `Builder.Grow` is the overlay's `MakeNoZero(n)` =
+`append([]byte(nil), make([]byte, n)...)`, so a request past the budget is refused at that `make` (the count
+bound first); `make(map…)`/`make(chan…)` allocate nothing (above). Rows:
+`Corpus/coverage/exec/arrays/materialization-budget-append/` (append-over-budget, append-grow-over-budget RED BY
+DESIGN — the second at the default tape: the new LENGTH is exactly the budget, gc's realized capacity 16736
+rows is over it; append-at-budget-spill, append-small-elem, append-in-place PASS) and
+`…/materialization-budget-conv/` (bytes-over-budget, runes-over-budget RED BY DESIGN; bytes-in-budget,
+runes-in-budget PASS). RESIDUAL: none of this class is known; the stated limit on the release page is updated.
 
 ## BUG-133 — pointer `==` compares the `Loc` REPRESENTATION, static struct `TypeId` included, so two pointers to ONE `int` field reached through a legal struct-pointer conversion (`&a.X` vs `&(*B)(&a).X` — identical underlying types, tags differing or not) compare UNEQUAL, are TWO map keys and TWO unequal `any` boxes: a WRONG ANSWER with status `ok` [fidelity; wrong-answer; `valueEq`'s pointer arm, Ops.lean; deep-clean review 2026-10-26 DC01 / semantics S1]
 

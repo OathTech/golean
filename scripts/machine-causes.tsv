@@ -28,3 +28,5 @@ nil-slice-base	stuck	expected array or slice value for slice expression, got GoL
 race	race	data race detected
 array-footprint-budget	error	nested materialization budget
 make-footprint-budget	error	footprint budget for a constant-length make
+append-footprint-budget	unsupported	footprint budget for an append spill
+conv-footprint-budget	unsupported	footprint budget for a string conversion

@@ -218,6 +218,68 @@ theorem normalizeValueForTy_noPanic (ty : Ty) (v : GoValue) :
   unfold normalizeValueForTy
   exact normalizeValueForTyTy_noPanic (fun i v => normalizeValueForTyAt_noPanic _ _ i v) ty v
 
+/-! The materialization-footprint count (`tyLeafCount`, Ops.lean) never panics: a
+refusal (`unsupported`) or a number. The three layers mirror the normalizer's. -/
+
+theorem tyLeafCountTy_noPanic {f : TypeIdx → Except Stop Nat} (hf : ∀ i, NoPanic (f i)) :
+    ∀ (ty : Ty), NoPanic (tyLeafCountTy f ty) := by
+  intro ty
+  induction ty using Ty.arrayInduction with
+  | array length elem ih =>
+    simp only [tyLeafCountTy]
+    exact NoPanic.bind ih fun _ => NoPanic.pure _
+  | leaf ty hne =>
+    unfold tyLeafCountTy
+    split
+    all_goals first
+      | exact NoPanic.pure _
+      | exact NoPanic.unsupported _
+      | exact hf _
+      | exact absurd rfl (hne _ _)
+
+theorem fieldsLeafCount_noPanic {g : Ty → Except Stop Nat} (hg : ∀ t, NoPanic (g t)) :
+    ∀ fs, NoPanic (fieldsLeafCount g fs)
+  | [] => NoPanic.pure _
+  | _ :: rest => NoPanic.bind (hg _) fun _ =>
+      NoPanic.bind (fieldsLeafCount_noPanic hg rest) fun _ => NoPanic.pure _
+
+theorem tyLeafCountAt_noPanic (types : TypeEnv) :
+    ∀ (bound : Nat) (i : TypeIdx), NoPanic (tyLeafCountAt types bound i) := by
+  intro bound
+  induction bound with
+  | zero =>
+    intro i
+    simp only [tyLeafCountAt, typeIndexExhausted]
+    exact NoPanic.unsupported _
+  | succ n ih =>
+    intro i
+    unfold tyLeafCountAt
+    split
+    · exact NoPanic.bind (fieldsLeafCount_noPanic (tyLeafCountTy_noPanic ih) _) fun _ =>
+        NoPanic.pure _
+    · exact tyLeafCountTy_noPanic ih _
+    · exact NoPanic.pure _
+    · exact NoPanic.unsupported _
+    · exact NoPanic.unsupported _
+
+theorem tyLeafCount_noPanic (types : TypeEnv) (ty : Ty) : NoPanic (tyLeafCount types ty) := by
+  unfold tyLeafCount
+  exact tyLeafCountTy_noPanic (tyLeafCountAt_noPanic _ _) ty
+
+/-- The append spill's footprint refusal (G21) never panics: the leaf count, then a
+refusal or nothing. -/
+theorem appendSpillFootprintCheck_noPanic (elem : Ty) (newLen newCap : Nat) :
+    NoPanic (appendSpillFootprintCheck ctx elem newLen newCap) := by
+  unfold appendSpillFootprintCheck
+  exact NoPanic.bind (tyLeafCount_noPanic _ _) fun _ =>
+    NoPanic.ite (NoPanic.unsupported _) (NoPanic.pure _)
+
+/-- The conversion's footprint refusal (G21) never panics. -/
+theorem convFootprintCheck_noPanic (kind : ConvKind) (n cap : Nat) :
+    NoPanic (convFootprintCheck kind n cap) := by
+  unfold convFootprintCheck
+  exact NoPanic.ite (NoPanic.unsupported _) (NoPanic.pure _)
+
 theorem defaultFieldsWith_noPanic {f : Ty → Except Stop GoValue}
     (hf : ∀ t, NoPanic (f t)) : ∀ fs, NoPanic (defaultFieldsWith f fs)
   | [] => by unfold defaultFieldsWith; exact NoPanic.pure _
@@ -1619,6 +1681,9 @@ theorem applyStmtOp_plan_appendSlice_spill {σ : Store} {elem : Ty} {nt : Nat}
     refine ⟨fun extra => ?_, fun ch => ?_, fun pick => ?_⟩
     · exact do
         let newCap := appendSpillCapAt elemSize pointerful slice.cap (slice.len + elemValues.size) extra
+        -- The footprint refusal on the realized capacity (G21): part of the
+        -- post-consult tail, a function of the pick.
+        appendSpillFootprintCheck ctx elem (slice.len + elemValues.size) newCap
         let backing ← buildAppendBackingValue ctx elem oldValues elemValues newCap
         pure fun s => do
           let (base, current) ← Store.alloc ctx s backing (.array newCap elem)
@@ -1630,8 +1695,12 @@ theorem applyStmtOp_plan_appendSlice_spill {σ : Store} {elem : Ty} {nt : Nat}
       rcases hc : Choices.consumeAt .appendSpill (appendSpillWidth slice.cap (slice.len + elemValues.size)) ch
         with ⟨extra, rest⟩
       try dsimp only
-      cases buildAppendBackingValue ctx elem oldValues elemValues _ <;> rfl
-    · exact NoPanic.bind (buildAppendBackingValue_noPanic _ _ _ _) fun _ => NoPanic.pure _
+      cases appendSpillFootprintCheck ctx elem (slice.len + elemValues.size) _
+      · rfl
+      · try dsimp only
+        cases buildAppendBackingValue ctx elem oldValues elemValues _ <;> rfl
+    · exact NoPanic.bind (appendSpillFootprintCheck_noPanic _ _ _) fun _ =>
+        NoPanic.bind (buildAppendBackingValue_noPanic _ _ _ _) fun _ => NoPanic.pure _
 
 /-! ### The `[0, n)` draw's stream lemmas (`Stmt.randIntn`, window unit 5b, 2026-09-30) -/
 
@@ -1757,8 +1826,9 @@ theorem convCapApplyAt_noPanic (s : Store) (kind : ConvKind) (literal : Bool) (v
     (pick : Nat) : NoPanic (convCapApplyAt ctx s kind literal value pick) := by
   unfold convCapApplyAt
   dsimp only
-  exact NoPanic.bind (buildAppendBackingValue_noPanic _ _ _ _) fun _ =>
-    NoPanic.bind (Store.alloc_noPanic _ _ _) fun _ => NoPanic.pure _
+  exact NoPanic.bind (convFootprintCheck_noPanic _ _ _) fun _ =>
+    NoPanic.bind (buildAppendBackingValue_noPanic _ _ _ _) fun _ =>
+      NoPanic.bind (Store.alloc_noPanic _ _ _) fun _ => NoPanic.pure _
 
 /-- Unpacking the strict consult's `some`: the site is `convCap`, the head a conversion
 head on a string operand, the bound its member count — a genuine pop (`≥ 2`). -/

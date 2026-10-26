@@ -1289,10 +1289,15 @@ theorem normalizeValueForTyTy_locSup {f : TypeIdx → GoValue → Except Stop Go
           exact Nat.le_refl _
         · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
       all_goals simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+    -- The five shape-checked types (G21): the admitted constructor passes
+    -- through unchanged; a raw `.nil` at slice/map becomes the loc-free
+    -- canonical nil; everything else is stuck.
     all_goals
-      simp only [normalizeValueForTyTy, pure_eq_ok, Except.ok.injEq] at h
-      subst h
-      exact Nat.le_refl _
+      cases v <;> simp only [normalizeValueForTyTy] at h <;>
+        first
+          | (simp only [pure_eq_ok, Except.ok.injEq] at h; subst h;
+             simp [GoValue.locSup, optLocSup])
+          | simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
 
 /-- The whole-value retag (BUG-134) keeps the fields, hence the loc bound. -/
 theorem retagStruct_locSup (types : TypeEnv) (name : TypeId) (v : GoValue) :
@@ -1635,10 +1640,24 @@ theorem isNormalForTyTy_sound {f : TypeIdx → GoValue → Bool}
       all_goals exact absurd h (by simp [isNormalForTyTy])
     | defined i => exact hfg _ _ h
     | unsupported _ => simp [isNormalForTyTy] at h
-    | bool => simp [normalizeValueForTyTy, pure, Except.pure]
-    | string => simp [normalizeValueForTyTy, pure, Except.pure]
-    | slice _ => simp [normalizeValueForTyTy, pure, Except.pure]
-    | map _ _ => simp [normalizeValueForTyTy, pure, Except.pure]
+    -- The five shape-checked types (G21): the one constructor the check
+    -- admits is the one the normalizer returns unchanged.
+    | bool =>
+      cases v
+      case bool b => simp [normalizeValueForTyTy, pure, Except.pure]
+      all_goals exact absurd h (by simp [isNormalForTyTy])
+    | string =>
+      cases v
+      case string str => simp [normalizeValueForTyTy, pure, Except.pure]
+      all_goals exact absurd h (by simp [isNormalForTyTy])
+    | slice _ =>
+      cases v
+      case slice sv => simp [normalizeValueForTyTy, pure, Except.pure]
+      all_goals exact absurd h (by simp [isNormalForTyTy])
+    | map _ _ =>
+      cases v
+      case map mv => simp [normalizeValueForTyTy, pure, Except.pure]
+      all_goals exact absurd h (by simp [isNormalForTyTy])
     | chan _ _ =>
       cases v
       case chan cv => simp [normalizeValueForTyTy, pure, Except.pure]
@@ -1649,7 +1668,11 @@ theorem isNormalForTyTy_sound {f : TypeIdx → GoValue → Bool}
         simp only [isNormalForTyTy] at h
         simp [normalizeValueForTyTy, h, pure, Except.pure]
       all_goals exact absurd h (by simp [isNormalForTyTy])
-    | pointer _ => simp [normalizeValueForTyTy, pure, Except.pure]
+    | pointer _ =>
+      cases v
+      case addr loc => simp [normalizeValueForTyTy, pure, Except.pure]
+      case nil => simp [normalizeValueForTyTy, pure, Except.pure]
+      all_goals exact absurd h (by simp [isNormalForTyTy])
 
 /-- The INDEX layer, in lockstep: both descents at the same bound. -/
 theorem isNormalForTyAt_sound (types : TypeEnv) :
@@ -2013,18 +2036,42 @@ theorem normalizeValueForTyTy_isNormal {f : TypeIdx → GoValue → Except Stop 
     | unsupported _ =>
       exact absurd h (by simp [normalizeValueForTyTy, unsupported, throw, throwThe,
         MonadExceptOf.throw])
+    -- The five shape-checked types (G21): the normalizer returns the admitted
+    -- constructor, or canonicalizes a raw `.nil` into it (slice, map).
     | bool =>
-      simp only [normalizeValueForTyTy, pure, Except.pure, Except.ok.injEq] at h
-      simp [isNormalForTyTy]
+      cases v
+      case bool b =>
+        simp only [normalizeValueForTyTy, pure, Except.pure, Except.ok.injEq] at h
+        subst h; simp [isNormalForTyTy]
+      all_goals exact absurd h (by simp [normalizeValueForTyTy, stuck, throw, throwThe,
+        MonadExceptOf.throw])
     | string =>
-      simp only [normalizeValueForTyTy, pure, Except.pure, Except.ok.injEq] at h
-      simp [isNormalForTyTy]
+      cases v
+      case string str =>
+        simp only [normalizeValueForTyTy, pure, Except.pure, Except.ok.injEq] at h
+        subst h; simp [isNormalForTyTy]
+      all_goals exact absurd h (by simp [normalizeValueForTyTy, stuck, throw, throwThe,
+        MonadExceptOf.throw])
     | slice _ =>
-      simp only [normalizeValueForTyTy, pure, Except.pure, Except.ok.injEq] at h
-      simp [isNormalForTyTy]
+      cases v
+      case slice sv =>
+        simp only [normalizeValueForTyTy, pure, Except.pure, Except.ok.injEq] at h
+        subst h; simp [isNormalForTyTy]
+      case nil =>
+        simp only [normalizeValueForTyTy, pure, Except.pure, Except.ok.injEq] at h
+        subst h; simp [isNormalForTyTy]
+      all_goals exact absurd h (by simp [normalizeValueForTyTy, stuck, throw, throwThe,
+        MonadExceptOf.throw])
     | map _ _ =>
-      simp only [normalizeValueForTyTy, pure, Except.pure, Except.ok.injEq] at h
-      simp [isNormalForTyTy]
+      cases v
+      case map mv =>
+        simp only [normalizeValueForTyTy, pure, Except.pure, Except.ok.injEq] at h
+        subst h; simp [isNormalForTyTy]
+      case nil =>
+        simp only [normalizeValueForTyTy, pure, Except.pure, Except.ok.injEq] at h
+        subst h; simp [isNormalForTyTy]
+      all_goals exact absurd h (by simp [normalizeValueForTyTy, stuck, throw, throwThe,
+        MonadExceptOf.throw])
     | chan _ _ =>
       cases v
       case chan cv =>
@@ -2048,8 +2095,15 @@ theorem normalizeValueForTyTy_isNormal {f : TypeIdx → GoValue → Except Stop 
       all_goals exact absurd h (by simp [normalizeValueForTyTy, stuck, throw, throwThe,
         MonadExceptOf.throw])
     | pointer _ =>
-      simp only [normalizeValueForTyTy, pure, Except.pure, Except.ok.injEq] at h
-      simp [isNormalForTyTy]
+      cases v
+      case addr loc =>
+        simp only [normalizeValueForTyTy, pure, Except.pure, Except.ok.injEq] at h
+        subst h; simp [isNormalForTyTy]
+      case nil =>
+        simp only [normalizeValueForTyTy, pure, Except.pure, Except.ok.injEq] at h
+        subst h; simp [isNormalForTyTy]
+      all_goals exact absurd h (by simp [normalizeValueForTyTy, stuck, throw, throwThe,
+        MonadExceptOf.throw])
 
 /-- THE INDEX LAYER, in lockstep: the output of the index descent at
 `bound` is normal at the same `bound`. -/
@@ -2853,7 +2907,9 @@ theorem writeAt_isNormal_array {rest : List PathStep} {v : GoValue} :
       · exact ih (hlist _ (by rw [← Array.getElem_toList hklt]; exact List.getElem_mem _)) hold'
     -- The identity-normalized types (audit fix round F3): the descent returns
     -- the type itself and every value is normal there — the catch-all arm.
-    | interface _ | bool | string | slice _ | map _ _ | pointer _ => simp [isNormalForTyTy]
+    | interface _ => simp [isNormalForTyTy]
+    -- The five shape-checked types (G21): no `.array`/`.struct` value is normal there.
+    | bool | string | slice _ | map _ _ | pointer _ => simp [isNormalForTyTy] at hn
     | _ =>
       simp [Ty.stepDown, typeIndexExhausted, unsupported, throw, throwThe,
         MonadExceptOf.throw, stuck] at hstep
@@ -2887,7 +2943,9 @@ theorem writeAt_isNormal_array {rest : List PathStep} {v : GoValue} :
           exact ihb (ty := target) hklt hn hstep hold' ih
         | opaqueDecl _ => simp [unsupported, throw, throwThe, MonadExceptOf.throw] at hstep
         | interfaceDef _ => simp [unsupported, throw, throwThe, MonadExceptOf.throw] at hstep
-    | interface _ | bool | string | slice _ | map _ _ | pointer _ => simp [isNormalForTyTy]
+    | interface _ => simp [isNormalForTyTy]
+    -- The five shape-checked types (G21): no `.array`/`.struct` value is normal there.
+    | bool | string | slice _ | map _ _ | pointer _ => simp [isNormalForTyTy] at hn
     | _ =>
       simp [Ty.stepDown, stuck, throw, throwThe, MonadExceptOf.throw] at hstep
 /-- The struct component, at the index layer where the struct arm lives. -/
@@ -2910,7 +2968,9 @@ theorem writeAt_isNormal_struct {rest : List PathStep} {v : GoValue} :
   | zero =>
     intro ty actual fields tid f fty b' k old' hn hstep hklt hold' hname hbefore ih
     cases ty with
-    | interface _ | bool | string | slice _ | map _ _ | pointer _ => simp [isNormalForTyTy]
+    | interface _ => simp [isNormalForTyTy]
+    -- The five shape-checked types (G21): no `.array`/`.struct` value is normal there.
+    | bool | string | slice _ | map _ _ | pointer _ => simp [isNormalForTyTy] at hn
     | _ =>
       simp [Ty.stepDown, typeIndexExhausted, unsupported, throw, throwThe,
         MonadExceptOf.throw, stuck] at hstep
@@ -2961,7 +3021,9 @@ theorem writeAt_isNormal_struct {rest : List PathStep} {v : GoValue} :
           exact ihb (ty := target) hn hstep hklt hold' hname hbefore ih
         | opaqueDecl _ => simp [unsupported, throw, throwThe, MonadExceptOf.throw] at hstep
         | interfaceDef _ => simp [unsupported, throw, throwThe, MonadExceptOf.throw] at hstep
-    | interface _ | bool | string | slice _ | map _ _ | pointer _ => simp [isNormalForTyTy]
+    | interface _ => simp [isNormalForTyTy]
+    -- The five shape-checked types (G21): no `.array`/`.struct` value is normal there.
+    | bool | string | slice _ | map _ _ | pointer _ => simp [isNormalForTyTy] at hn
     | _ =>
       simp [Ty.stepDown, stuck, throw, throwThe, MonadExceptOf.throw] at hstep
 
@@ -4966,7 +5028,8 @@ theorem convCapApplyAt_wf {σ : Store} {kind : ConvKind} {literal : Bool} {value
   unfold convCapApplyAt at h
   try dsimp only at h
   simp only [bind_eq_ok] at h
-  obtain ⟨backing, hbacking, h⟩ := h
+  -- The footprint refusal (G21) binds first: an error branch is never `.ok`.
+  obtain ⟨_, _, backing, hbacking, h⟩ := h
   obtain ⟨⟨base, σa⟩, halloc, h⟩ := h
   try dsimp only at h
   simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
@@ -5778,7 +5841,9 @@ theorem applyStmtOp_wf {σ : Store} {ch : Choices} {op : StmtOp} {nt : Nat}
         · simp [Bind.bind, Except.bind] at hplan
         simp only [bind_eq_ok,
           Except.ok.injEq] at hplan
-        obtain ⟨pointerful, hhp, ⟨oldValues, trO⟩, holdValues, backing, hbacking, hplan⟩ := hplan
+        -- The footprint refusal on the realized capacity (G21) binds after
+        -- the consult: an error branch is never `.ok`.
+        obtain ⟨pointerful, hhp, ⟨oldValues, trO⟩, holdValues, _, _, backing, hbacking, hplan⟩ := hplan
         try dsimp only at hbacking hplan
         subst hplan
         try dsimp only at h

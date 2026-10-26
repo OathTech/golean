@@ -530,7 +530,9 @@ def exports : List Name := [
     ``GoLean.GoCore.ContractTests.Pin.resolveMethod?_mono, ``GoLean.GoCore.ContractTests.Pin.callee?_mono,
     ``GoLean.GoCore.ContractTests.Pin.enterFramePickV_mono,
     -- the contract regressions (`Tests/GoCoreContract.lean` §A/§B/§C)
-    ``GoLean.GoCore.ContractTests.address_bound_admits_ill_typed,
+    ``GoLean.GoCore.ContractTests.ill_typed_cell_refused,
+    ``GoLean.GoCore.ContractTests.slice_cell_not_normal,
+    ``GoLean.GoCore.ContractTests.slice_cell_path_write_refuses,
     ``GoLean.GoCore.ContractTests.print_before_panic,
     ``GoLean.GoCore.ContractTests.Interpreter.terminal_at_zero_fuel,
     ``GoLean.GoCore.ContractTests.Interpreter.actual_scope_restoration,

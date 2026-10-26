@@ -3359,6 +3359,199 @@ private def makeFootprintRuntimeTests : IO Bool := do
     (run types (.defined sIdx) false 4).isOk)
   pure passed
 
+/-- raft-proofs' G21 (1) (2026-10-27; the [USER]'s relay of 2026-10-26): the five former
+catch-all arms of the normal form (`isNormalForTyTy` at `.bool`, `.string`, `.slice`, `.map`,
+`.pointer`) are SHAPE-CHECKED, in lockstep with the normalizer. Per type: the admitted
+constructors are normal and pass the normalizer unchanged; a raw `.nil` at a slice/map type is
+canonicalized (not normal; normalizes to the machine's nil value, which is); every other
+constructor is NOT normal and the normalizer refuses it by name. The ill-typed store the old
+pin `address_bound_admits_ill_typed` asserted `StateWf` is refused by `HeapNormal` now, and
+`Store.alloc` refuses the value at the cell's birth. -/
+private def g21NormalFormTests : IO Bool := do
+  let mut passed := true
+  let norm (ty : GoCore.Ty) (v : GoValue) : Except Stop GoValue :=
+    GoCore.normalizeValueForTy emptyCtx ty v
+  let isN (ty : GoCore.Ty) (v : GoValue) : Bool := GoCore.isNormalForTy #[] ty v
+  let unchanged (ty : GoCore.Ty) (v : GoValue) : Bool :=
+    isN ty v && (match norm ty v with | .ok w => w == v | _ => false)
+  let refusedAs (ty : GoCore.Ty) (v : GoValue) (needle : String) : Bool :=
+    !isN ty v && (match norm ty v with
+      | .error (.stuck msg) => (msg.splitOn needle).length > 1
+      | _ => false)
+  let canonical (ty : GoCore.Ty) (v w : GoValue) : Bool :=
+    !isN ty v && (match norm ty v with | .ok w' => w' == w | _ => false) && isN ty w
+  let nilSlice : GoValue := .slice { base := none, offset := 0, len := 0, cap := 0 }
+  let someSlice : GoValue := .slice { base := some (.base ⟨3⟩), offset := 1, len := 2, cap := 4 }
+  let nilMap : GoValue := .map { base := none }
+  let someMap : GoValue := .map { base := some (.base ⟨5⟩) }
+  let addr : GoValue := .addr (.base ⟨0⟩)
+  let str : GoValue := .string GoString.empty
+  -- The constructors no cell of the five types ever holds.
+  let foreign : List GoValue :=
+    [.int 7 .int, .float 0 .float64, .unit, .array #[.int 0 .int],
+     .struct ⟨"main.A"⟩ #[("f", .int 0 .int)], .funcVal ⟨"F"⟩ [], .chan { base := none },
+     .interface .bool (.bool true), .syncData (GoCore.SyncKind.zero .mutex)]
+  -- bool
+  passed := passed && (← expectTrue "G21 (1) bool: `.bool` is normal and passes unchanged"
+    (unchanged .bool (.bool true) && unchanged .bool (.bool false)))
+  passed := passed && (← expectTrue "G21 (1) bool: every other constructor (nil, string, addr, slice, map included) is NOT normal and the normalizer refuses `expected bool value`"
+    ((foreign ++ [.nil, str, addr, nilSlice, someSlice, nilMap, someMap]).all fun v =>
+      refusedAs .bool v "expected bool value, got"))
+  -- string
+  passed := passed && (← expectTrue "G21 (1) string: `.string` is normal and passes unchanged"
+    (unchanged .string str && unchanged .string (.string (GoString.fromLeanString "héllo"))))
+  passed := passed && (← expectTrue "G21 (1) string: every other constructor is NOT normal and the normalizer refuses `expected string value`"
+    ((foreign ++ [.nil, .bool true, addr, nilSlice, someSlice, nilMap, someMap]).all fun v =>
+      refusedAs .string v "expected string value, got"))
+  -- slice
+  passed := passed && (← expectTrue "G21 (1) slice: a `.slice` value (nil-based or backed) is normal and passes unchanged"
+    (unchanged (.slice .int) nilSlice && unchanged (.slice (.array 3 .bool)) someSlice))
+  passed := passed && (← expectTrue "G21 (1) slice: a raw `.nil` is NOT normal and normalizes to the canonical nil slice (the typed nil literal's value)"
+    (canonical (.slice .int) .nil nilSlice))
+  passed := passed && (← expectTrue "G21 (1) slice: every other constructor is NOT normal and the normalizer refuses `expected slice value`"
+    ((foreign ++ [.bool true, str, addr, nilMap, someMap]).all fun v =>
+      refusedAs (.slice .int) v "expected slice value, got"))
+  -- map
+  passed := passed && (← expectTrue "G21 (1) map: a `.map` value (nil-based or backed) is normal and passes unchanged"
+    (unchanged (.map .int .int) nilMap && unchanged (.map .string .bool) someMap))
+  passed := passed && (← expectTrue "G21 (1) map: a raw `.nil` is NOT normal and normalizes to the canonical nil map"
+    (canonical (.map .int .int) .nil nilMap))
+  passed := passed && (← expectTrue "G21 (1) map: every other constructor is NOT normal and the normalizer refuses `expected map value`"
+    ((foreign ++ [.bool true, str, addr, nilSlice, someSlice]).all fun v =>
+      refusedAs (.map .int .int) v "expected map value, got"))
+  -- pointer
+  passed := passed && (← expectTrue "G21 (1) pointer: `.addr` and `.nil` are normal and pass unchanged"
+    (unchanged (.pointer .int) addr && unchanged (.pointer (.defined 0)) .nil))
+  passed := passed && (← expectTrue "G21 (1) pointer: every other constructor is NOT normal and the normalizer refuses `expected pointer value`"
+    ((foreign ++ [.bool true, str, nilSlice, someSlice, nilMap, someMap]).all fun v =>
+      refusedAs (.pointer .int) v "expected pointer value, got"))
+  -- The heap invariant, closed: the old pin's store is out; the zero values are in.
+  let illTypedStore : GoCore.Store := { heap := #[.value .bool (.int 7)] }
+  let nestedStore : GoCore.Store :=
+    { heap := #[.value (.pointer (.int .uint8)) (.struct ⟨"main.A"⟩ #[("f", .addr (.base ⟨0⟩))]),
+                .value (.slice .int) (.array #[.int 0 .int, .int 1 .int])] }
+  let zeroStore : GoCore.Store :=
+    { heap := #[.value .bool (.bool false), .value .string str, .value (.slice .int) nilSlice,
+                .value (.map .int .int) nilMap, .value (.pointer .int) .nil,
+                .value (.pointer .int) (.addr (.base ⟨0⟩))] }
+  passed := passed && (← expectTrue "G21 (1): a `.bool` cell holding an int is NOT HeapNormal (so not StateWf); a `*uint8` cell holding a struct and a `[]int` cell holding an array are not either"
+    (!(decide (GoCore.HeapNormal emptyCtx illTypedStore))
+      && !(decide (GoCore.Machine.StateWf emptyCtx illTypedStore))
+      && !(decide (GoCore.HeapNormal emptyCtx nestedStore))))
+  passed := passed && (← expectTrue "G21 (1): a heap of the five types' zero values (and a backed pointer) is HeapNormal and StateWf"
+    (decide (GoCore.HeapNormal emptyCtx zeroStore) && decide (GoCore.Machine.StateWf emptyCtx zeroStore)))
+  passed := passed && (← expectTrue "G21 (1): Store.alloc at `.bool` refuses an int by name — the cell is never born"
+    (match GoCore.Store.alloc emptyCtx ({} : GoCore.Store) (.int 7) .bool with
+     | .error (.stuck msg) => (msg.splitOn "expected bool value, got").length > 1
+     | _ => false))
+  passed := passed && (← expectTrue "G21 (1): a path write INTO a `[]int`-declared cell (impossible under HeapNormal) refuses by name at the leaf"
+    (match GoCore.storeLoc emptyCtx
+        ({ heap := #[.value (.slice .int) (.array #[.int 0 .int, .int 1 .int])] } : GoCore.Store)
+        (.index (.base ⟨0⟩) 0) (.int 5 .int) with
+     | .error (.stuck msg) => (msg.splitOn "expected slice value, got").length > 1
+     | _ => false))
+  pure passed
+
+/-- raft-proofs' G21 (2) (2026-10-27): the append SPILL and the string conversions are
+guarded by `arrayFootprintBudget` on their REALIZED capacity — the make site's guard at the
+two doors BUG-131's scope sentence named. The append pins use `[1<<20]uint8` rows (2^20
+leaves each) so that a cap of 17 rows or more is over the 2^24-leaf budget. -/
+private def g21SpillBudgetTests : IO Bool := do
+  let mut passed := true
+  let budget := GoCore.Machine.arrayFootprintBudget
+  let refusesWith (r : Except Stop GoCore.Readout) (needles : List String) (absent : List String) : Bool :=
+    match r with
+    | .error (.unsupported msg) =>
+        needles.all (fun s => (msg.splitOn s).length > 1) && absent.all (fun s => (msg.splitOn s).length == 1)
+    | _ => false
+  let answers (r : Except Stop GoCore.Readout) (v : Int) : Bool :=
+    match r with
+    | .ok ro => ro.values == #[.int v]
+    | _ => false
+  -- `F() int { s := make([]elem, oldCap, oldCap); e := make([]elem, extra); s = append(s, e...); return cap(s) }`
+  let appendProg (elem : GoCore.Ty) (oldCap extra : Int) : GoCore.Program := {
+    funcs := #[{
+      id := ⟨"F"⟩,
+      args := #[],
+      results := #[coreParam "z"],
+      body := .block
+        #[{ id := vid "s", typ := .slice elem }, { id := vid "e", typ := .slice elem }]
+        #[
+          .makeSlice (.var (vid "s")) elem (.intLit oldCap) (some (.intLit oldCap)),
+          .makeSlice (.var (vid "e")) elem (.intLit extra) none,
+          .appendSlice (.var (vid "s")) elem (.var (vid "s")) (.var (vid "e")),
+          .assign (.var (vid "z")) (.capacity (.var (vid "s")))
+        ] }],
+    typeDefs := GoCore.TypeEnv.reserved }
+  let run (elem : GoCore.Ty) (oldCap extra : Int) (tape : List Nat := []) : Except Stop GoCore.Readout :=
+    GoCore.Machine.runProgramIntsM 100000 (appendProg elem oldCap extra) "F" #[] tape
+  let row : GoCore.Ty := .array (1 <<< 20) (.int .uint8)
+  -- The default tape: gc's realized capacity. 8 rows + 8 rows = 16 rows: cap 16 (doubling),
+  -- 16 × 2^20 = 2^24 = the budget exactly — admitted (strict `>`). 8 + 9 = 17 rows: cap 17,
+  -- over the budget — REFUSED by name after the consult, before the backing is built.
+  passed := passed && (← expectTrue "G21 (2) append: a spill whose realized capacity is exactly the budget (16 rows × 2^20 leaves) is admitted; cap 16"
+    (answers (run row 8 8) 16))
+  passed := passed && (← expectTrue "G21 (2) append: a spill whose realized capacity is one row past the budget (17 × 2^20 leaves) REFUSES by name — the cap, the length, the leaves per element, the product, the budget, the constant, BUG-131"
+    (refusesWith (run row 8 9)
+      ["append([]T", "a grown slice backing of 17 elements (len 17)", s!"of {1 <<< 20} scalar elements each",
+       s!"materializes {17 * (1 <<< 20)} scalar elements", "footprint budget for an append spill",
+       s!"({budget} elements, arrayFootprintBudget", "BUG-131"]
+      ["run-time-length make", "sliceCapBudget"]))
+  -- The REALIZED capacity is what is charged, not the length: at cap 1 + 1 the default pick
+  -- realizes cap 2 (2^21 leaves, admitted); the envelope is [2, 32], and the pick that realizes
+  -- cap 32 (2^25 leaves) refuses — the same append, the same length, a different pick.
+  passed := passed && (← expectTrue "G21 (2) append: the same append answers at the default pick (cap 2) …"
+    (answers (run row 1 1) 2))
+  passed := passed && (← expectTrue "G21 (2) append: … and refuses at the envelope pick that realizes cap 32 — the realized capacity is what is built and charged"
+    (refusesWith (run row 1 1 [30])
+      ["a grown slice backing of 32 elements (len 2)", s!"materializes {32 * (1 <<< 20)} scalar elements",
+       "footprint budget for an append spill"] []))
+  -- The element footprint: a scalar element at the refused row count is far inside the budget.
+  passed := passed && (← expectTrue "G21 (2) append: `[]uint8` at 8 + 9 answers (gc's size class rounds the 17-byte request to cap 24): the element footprint is what the count misses"
+    (answers (run (.int .uint8) 8 9) 24))
+  -- PRECEDENCE: gc's own `growslice: len out of range` panic comes first — a crafted header
+  -- whose new length's byte size is past `maxAllocBytes` (the operands handed to the plan
+  -- directly: no gc-buildable program has such a slice, R16's note).
+  let store : GoCore.Store :=
+    { heap := #[.value (.slice row) (.slice { base := none, offset := 0, len := 0, cap := 0 }),
+                .value (.array 1 row) (.array #[.array #[]])] }
+  let huge : GoValue := .slice { base := some (.base ⟨1⟩), offset := 0, len := 1 <<< 38, cap := 1 <<< 38 }
+  let one : GoValue := .slice { base := some (.base ⟨1⟩), offset := 0, len := 1, cap := 1 }
+  passed := passed && (← expectTrue "G21 (2) precedence: a spill whose new length's byte size is past maxAllocBytes is gc's own `growslice: len out of range` panic, never the footprint refusal"
+    (match GoCore.Machine.applyStmtOp.plan emptyCtx store [] (.appendSlice row) 1 [.addr (.base ⟨0⟩), huge, one] with
+     | .error (.panic msg) => msg == "runtime error: growslice: len out of range"
+     | _ => false))
+  -- The conversions: the count is read before anything is built; the realized capacity is
+  -- charged. One past the budget refuses; at the budget the backing is built.
+  let convProg (kind : GoCore.ConvKind) (n : Nat) : GoCore.Program :=
+    let s : GoString := { bytes := Array.replicate n 97 }
+    { funcs := #[{
+        id := ⟨"F"⟩,
+        args := #[],
+        results := #[coreParam "z"],
+        body := .block
+          #[{ id := vid "b", typ := .slice kind.elemTy }]
+          #[
+            .assign (.var (vid "b"))
+              (match kind with
+               | .bytes => .bytesFromString (.stringLit s)
+               | .runes => .runesFromString (.stringLit s)),
+            .assign (.var (vid "z")) (.capacity (.var (vid "b")))
+          ] }],
+      typeDefs := GoCore.TypeEnv.reserved }
+  let runConv (kind : GoCore.ConvKind) (n : Nat) : Except Stop GoCore.Readout :=
+    GoCore.Machine.runProgramIntsM 100000 (convProg kind n) "F" #[]
+  passed := passed && (← expectTrue "G21 (2) conversion: `[]byte(s)` of a string one byte past the budget REFUSES by name — the cap, the length, the budget, the constant, BUG-131"
+    (refusesWith (runConv .bytes (budget + 1))
+      ["[]byte(s)", s!"a conversion backing of {budget + 1} elements (len {budget + 1})",
+       "footprint budget for a string conversion", s!"({budget} elements, arrayFootprintBudget", "BUG-131"]
+      ["append spill", "run-time-length make"]))
+  passed := passed && (← expectTrue "G21 (2) conversion: `[]rune(s)` of the same string REFUSES by name"
+    (refusesWith (runConv .runes (budget + 1)) ["[]rune(s)", "footprint budget for a string conversion"] []))
+  passed := passed && (← expectTrue "G21 (2) conversion: `[]byte(s)` of a 1<<16-byte string answers its realized capacity (page-rounded: 65536)"
+    (answers (runConv .bytes (1 <<< 16)) (1 <<< 16)))
+  pure passed
+
 /-- BUG-078 residuals (3) and (2b), the decoder's budgets (2026-10-12; its own definition so
 `main`'s LCNF compile stays inside the heartbeat budget — the file's existing split pattern). -/
 private def bug078BudgetTests : IO Bool := do
@@ -4435,6 +4628,8 @@ def main : IO UInt32 := do
   passed := passed && (← bug078BudgetTests)
   passed := passed && (← budgetsTableTests)
   passed := passed && (← makeFootprintRuntimeTests)
+  passed := passed && (← g21NormalFormTests)
+  passed := passed && (← g21SpillBudgetTests)
   -- The class pin proper: main.T has a TypeDef on the wire (the OLD
   -- guard's presence key) but NO method-set record — satisfaction must
   -- refuse `unsupported`, proving the guard keys on the RECORD.

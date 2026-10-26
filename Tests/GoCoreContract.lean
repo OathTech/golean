@@ -66,11 +66,14 @@ theorem recover_stepFn (s : Store) (env : LocalEnv) (k : Cont) (ch : Choices) :
       .ok (.retV (recoverResult k).1 (recoverResult k).2, s, ch, ⟨[], [], []⟩) := rfl
 
 def illTyped : Store := { heap := #[.value .bool (.int 7)] }
-/-- Still admitted under `HeapNormal` (C1 S1): the normalizer does not coerce at a
-`.bool` slot (`isNormalForTyTy`'s catch-all), so the address bound remains the only
-thing `StateWf` says about this cell. -/
-theorem address_bound_admits_ill_typed :
-    StateWf (ProgramCtx.ofTables (types := #[])) illTyped := by decide
+/-- REFUSED by `HeapNormal` since G21 (raft-proofs' ask of 2026-10-26, landed 2026-10-27):
+`isNormalForTyTy` at `.bool` admits only a `.bool` value — the arm was the catch-all
+`| _, _ => true`, and the pin that stood here (`address_bound_admits_ill_typed`, C1 S1)
+asserted the WEAKNESS: this store was `StateWf` because the address bound was the only
+thing the invariant said about a `.bool` cell. Inverted, same store: a cell holding a
+value no typed run stores is not well-formed. -/
+theorem ill_typed_cell_refused :
+    ¬ StateWf (ProgramCtx.ofTables (types := #[])) illTyped := by decide
 
 /-! A path write THROUGH an identity-normalized root (C1 audit fix round F3,
 2026-09-18). `isNormalForTyTy (.interface _) _ = true`, so an `.interface`-declared
@@ -94,8 +97,16 @@ def leafF : Loc := .field (.base ⟨0⟩) ⟨"main.A"⟩ "f"
 
 theorem iface_cell_path_write_normal :
     HeapNormal (ProgramCtx.ofTables (types := #[])) ifaceArrayStore ∧
-    HeapNormal (ProgramCtx.ofTables (types := #[])) ifaceStructStore ∧
-    HeapNormal (ProgramCtx.ofTables (types := #[])) sliceArrayStore := by decide
+    HeapNormal (ProgramCtx.ofTables (types := #[])) ifaceStructStore := by decide
+
+/-- G21 (2026-10-27): a `[]int`-declared cell holding an ARRAY is no longer `HeapNormal`
+(`isNormalForTyTy` at `.slice` admits only a `.slice` value), so a path write INTO such a
+cell — the shape `slice_cell_path_write_array` pinned as accepted — is impossible under the
+invariant, and on the non-normal store the leaf normalization at the descended type
+(`.slice .int`, `Ty.stepDown`'s identity arm) refuses by name (`stuck`, «expected slice
+value»). The interface pins above are unchanged: `.interface` keeps its identity arm. -/
+theorem slice_cell_not_normal :
+    ¬ HeapNormal (ProgramCtx.ofTables (types := #[])) sliceArrayStore := by decide
 
 theorem iface_cell_path_write_array :
     (storeLoc (ProgramCtx.ofTables (types := #[])) ifaceArrayStore leaf0 (.int 5 .int)).map
@@ -107,10 +118,10 @@ theorem iface_cell_path_write_struct :
         (fun s => loadLoc (ProgramCtx.ofTables (types := #[])) s leafF)
       = .ok (.ok (.int 5 .int)) := rfl
 
-theorem slice_cell_path_write_array :
-    (storeLoc (ProgramCtx.ofTables (types := #[])) sliceArrayStore leaf0 (.int 5 .int)).map
-        (fun s => loadLoc (ProgramCtx.ofTables (types := #[])) s leaf0)
-      = .ok (.ok (.int 5 .int)) := rfl
+theorem slice_cell_path_write_refuses :
+    (match storeLoc (ProgramCtx.ofTables (types := #[])) sliceArrayStore leaf0 (.int 5 .int) with
+      | .error (.stuck _) => true
+      | _ => false) = true := by decide
 
 /-- The written store is still `HeapNormal` (the identity arm of the check). -/
 theorem iface_cell_path_write_preserves_normal :
