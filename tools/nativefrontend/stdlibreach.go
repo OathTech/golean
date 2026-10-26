@@ -517,7 +517,8 @@ func computeLibraryReach(units []*sourcePkg) error {
 //     constraint interface, so the stencil lowers the generic), and a
 //     dot-imported `Sort(s)` (a bare identifier is never a qualified
 //     selector; the real function lowers). The raft-proofs customer's ask:
-//     ~/projects/raft-proofs/docs/2026-10-23_golean-ask-slices-sort.md.
+//     the raft-proofs repository's docs/2026-10-23_golean-ask-slices-sort.md
+//     (a sibling checkout; no path into this tree).
 //
 // The former second entry, cmp.Compare's kind-dispatch desugar, stays
 // RETIRED (2026-09-04, lane fr24, per the [USER] ruling of 2026-09-04,

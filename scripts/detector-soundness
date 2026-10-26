@@ -258,8 +258,13 @@ run_row() {
           run_with_timeout "$GO_RUN_TIMEOUT" env GOMAXPROCS="$p" GODEBUG=panicnil=0 GORACE="exitcode=66" \
             bash -c 'cd "$1" && exec ./golean-race-bin' go-race-run "$d/go" > "$d/run.p$p.$i.txt" 2>&1
           rc=$?
+          # TSan's report is the race verdict whatever ended the process; after it, the
+          # wall clock and a SIGNAL DEATH (137/143/any 128+n: a cgroup/OOM or external kill)
+          # are classified BEFORE the output is read — a run killed after printing a panic
+          # line used to count as a COMPLETED run (deep-clean DC02 local space, 2026-10-26).
           if grep -q "WARNING: DATA RACE" "$d/run.p$p.$i.txt"; then nr=$((nr+1)); any_race=1
           elif [[ "$rc" -eq 124 ]]; then nt=$((nt+1))
+          elif signal_cause "$rc" "race run" >/dev/null; then na=$((na+1))
           elif [[ "$rc" -eq 0 ]]; then nc=$((nc+1)); completed=$((completed+1))
           elif grep -q '"schema":"golean-observation-v1"\|^panic: \|^fatal error: ' "$d/run.p$p.$i.txt"; then nx=$((nx+1)); completed=$((completed+1))
           else na=$((na+1)); fi
@@ -299,6 +304,7 @@ run_row() {
     s_out="$(run_with_timeout "$SINGLE_TIMEOUT" "$GOLEAN_BIN" native-json-run --no-choice-report --input "$wire" --function "$fn" ${args[@]+"${args[@]}"} 2>&1)"
     rc=$?
     if [[ "$rc" -eq 124 ]]; then m_single="timeout-${SINGLE_TIMEOUT}s"
+    elif signal_cause "$rc" "machine run" >/dev/null; then m_single="killed(rc=$rc)"   # a status line printed before the kill is not the run's status (DC02 local space)
     else
       m_single="$(echo "$s_out" | grep -o '"status":"[a-z-]*"' | head -1 | cut -d'"' -f4)"
       [[ -z "$m_single" ]] && m_single="no-status(rc=$rc)"
@@ -396,7 +402,7 @@ run_row() {
     "$m_members" "$m_race" "$m_verdict" "$m_single" "$cell" "${detail:--}" > "$d/row.tsv"
   echo "[$cell] $id gc=$gc_verdict machine=$m_verdict single=$m_single"
 }
-export -f run_row run_with_timeout
+export -f run_row run_with_timeout signal_cause
 export OUT RUNS PROCS GOLEAN_BIN GO_BUILD_CACHE STRICT_ENUM GO_RUN_TIMEOUT GO_BUILD_TIMEOUT ENUM_TIMEOUT SINGLE_TIMEOUT
 
 # ---- drive (parallel, atomic per-row files; the pool's own status is kept) ----

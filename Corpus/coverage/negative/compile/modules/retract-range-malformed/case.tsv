@@ -1,0 +1,2 @@
+# expected_substring	features
+expected ',' after version	functions,print,modules,compile_error

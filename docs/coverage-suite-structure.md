@@ -654,10 +654,24 @@ The NEGATIVE lane has a GoLean leg on the same date (D3): a row passes only
 if gc rejects it with the expected substring AND the native frontend,
 built from the tree, exits 1 as a rejection — `type-check:` (but not an
 importer failure, `could not import`, which is `frontend-reason`), a
-go/parser error on one of the row's files, or the file-selection boundary
-(BUG-108); otherwise it fails at `frontend-accepts` (exit 0: GoLean lowered
+go/parser error on one of the row's files, the file-selection boundary
+(BUG-108), or — since 2026-10-26, deep-clean DC06 — the module-directive
+boundary (`module directive: …`, modfile.go: gc's go.mod rejections; the
+rows under `negative/compile/modules/` carry a `go.mod`, and the oracle
+builds such a row in MODULE MODE from its directory, GOPROXY=off,
+GOTOOLCHAIN=local, since GOPATH mode never reads go.mod; the class is
+[AGENT]-added under the ruling, the owner's ruling on it pending);
+otherwise it fails at `frontend-accepts` (exit 0: GoLean lowered
 a program gc rejects), `frontend-crash` or `frontend-reason`. The class is
-the PASS row's detail (`frontend=type-check|parse|file-selection`). The
+the PASS row's detail (`frontend=type-check|parse|file-selection|module`).
+On the ORACLE side, since 2026-10-26 (deep-clean DC02), gc's exit status is
+classified before its text is read: only exit 1 — gc's deliberate rejection
+exit — may proceed to the substring and the frontend leg; 0 is `go-compile`
+(«program unexpectedly compiled»), and 124 (the wall clock), 128+N (a
+signal) or any other status is `go-crash`, named by the positive runner's
+own `undecided_cause` (scripts/run-with-timeout.sh): a build killed or timed
+out after emitting the expected diagnostic used to read as a rejection and
+the row went on to PASS. The
 leg runs the frontend WITHOUT `--subject`: it judges a whole program, so
 `functions/main-undeclared` (a `package main` with no `func main`) is a
 `type-check` rejection there (BUG-125, fixed by refusal 2026-10-13), while

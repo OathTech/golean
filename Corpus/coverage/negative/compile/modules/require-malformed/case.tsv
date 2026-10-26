@@ -1,0 +1,2 @@
+# expected_substring	features
+usage: require module/path v1.2.3	functions,print,modules,compile_error

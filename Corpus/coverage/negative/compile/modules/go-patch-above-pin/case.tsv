@@ -1,0 +1,2 @@
+# expected_substring	features
+go.mod requires go >= 1.26.99	functions,print,modules,compile_error

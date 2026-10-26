@@ -587,6 +587,10 @@ def metamorphic(case_dir):
     finally:
         try: os.remove(exe)
         except OSError: pass
+    if r.returncode < 0:
+        # Signal death (a cap/OOM or external kill): a document flushed before it is not a
+        # completed reference run (deep-clean DC02 local space, 2026-10-26).
+        return "run-failed", "reference died on signal %d: %s" % (-r.returncode, (r.stdout + r.stderr)[:300])
     try:
         return "ran", json.loads(r.stdout)
     except ValueError:

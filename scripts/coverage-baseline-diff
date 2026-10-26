@@ -63,6 +63,9 @@
 # (stage, cause) must be one of the pairs; a `|` cause on a plain row, an
 # unpaired count, or a cause set on a PASS row is REFUSED.
 set -euo pipefail
+# One collation and byte-wise character classes for every comparison, sort and pattern here
+# (deep-clean review DC19, 2026-10-26): the gate's verdict must not depend on the caller's locale.
+export LC_ALL=C
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
@@ -89,9 +92,10 @@ RESULTS="${1:-artifacts/coverage/latest.tsv}"
 # exactly and need no vocabulary. `-` (the PASS stage) is deliberately
 # absent: an alternation is non-PASS by rule.
 # The negative lane's words (scripts/coverage-negative) are here too: its
-# frontend leg (D3) emits frontend-accepts / frontend-crash /
-# frontend-reason beside go-compile.
-STAGE_VOCAB="manifest go-source go-harness go-run go-observation frontend-export lean-observation lean-run differential confluent membership racy nondet litmus-contract go-compile frontend-accepts frontend-crash frontend-reason"
+# oracle leg emits go-compile and (since 2026-10-26, DC02) go-crash — the
+# oracle's non-verdict exit; its frontend leg (D3) emits frontend-accepts /
+# frontend-crash / frontend-reason.
+STAGE_VOCAB="manifest go-source go-harness go-run go-observation frontend-export lean-observation lean-run differential confluent membership racy nondet litmus-contract go-compile go-crash frontend-accepts frontend-crash frontend-reason"
 
 # The run's cause keys, derived ONCE (scripts/coverage-cause; exit 2 =
 # could not derive — a refusal to judge, never a no-drift result).

@@ -27,14 +27,42 @@ func TestModuleGoDirectiveRefusal(t *testing.T) {
 		{"no go.mod: the pinned 1.26 (the corpus's mode)", "", ""},
 		{"go 1.26", "module example.org/m\n\ngo 1.26\n", ""},
 		{"go 1.26.0 (a toolchain-shaped version; Lang = go1.26)", "module example.org/m\n\ngo 1.26.0\n", ""},
-		{"go 1.26rc1 (Lang = go1.26)", "module example.org/m\n\ngo 1.26rc1\n", ""},
+		// DC06 (deep-clean review 2026-10-26, FE-04): the COMPLETE version is
+		// judged against the pinned toolchain. gc at go1.26.5 ACCEPTS
+		// `go 1.26rc1` (measured: it builds); the scanner refuses the
+		// prerelease spelling by name — the fail-closed direction, since no
+		// prerelease is measured.
+		{"go 1.26rc1 (a prerelease: refused by name since 2026-10-26)", "module example.org/m\n\ngo 1.26rc1\n", "declares go 1.26rc1, a prerelease version"},
+		{"go 1.26.5 (the pin itself: accepted)", "module example.org/m\n\ngo 1.26.5\n", ""},
+		{"go 1.26.6 (a patch floor above the pin: gc «requires go >= 1.26.6»)", "module example.org/m\n\ngo 1.26.6\n", "requires go >= 1.26.6; the oracle is pinned to go1.26.5"},
+		{"go 1.26.99 (the review's probe: exported before 2026-10-26)", "module example.org/m\n\ngo 1.26.99\n", "requires go >= 1.26.99; the oracle is pinned to go1.26.5"},
+		// DC06 (FE-03): the grammar is VALIDATED, not skipped. Each shape below
+		// was measured against gc (go1.26.5, module mode, GOPROXY=off): the
+		// first six are gc rejections (the corpus rows under
+		// Corpus/coverage/negative/compile/modules/ pin them on the oracle
+		// side); the quoted and `module (` forms gc accepts — refused here as
+		// not validated (over-refusal, the fail-closed direction).
+		{"module without a path (gc «usage: module module/path»)", "module\ngo 1.26\n", "is not `module module/path`"},
+		{"repeated module (gc «repeated module statement»)", "module first\nmodule second\ngo 1.26\n", "repeats the module directive (first and \"module second\")"},
+		{"no module directive (gc «missing module declaration»)", "go 1.26\n", "has no module directive"},
+		{"unterminated require block (gc «syntax error (unterminated block …)»)", "module test\ngo 1.26\nrequire (\n", "the require block opened at line 3 is not closed before the end of the file"},
+		{"malformed require line (gc «usage: require module/path v1.2.3»)", "module test\ngo 1.26\nrequire nonsense\n", "is not `require module/path v1.2.3`"},
+		{"malformed require block body (gc «usage: require module/path v1.2.3»)", "module test\ngo 1.26\nrequire (\n\tjunk\n)\n", "is not `require module/path v1.2.3`"},
+		{"repeated toolchain (gc «repeated toolchain statement»)", "module test\ngo 1.26\ntoolchain go1.26.5\ntoolchain go1.26.5\n", "repeats the toolchain directive"},
+		{"version-less replacement that is not a directory (gc refuses)", "module test\ngo 1.26\nreplace a.b/c => d.e/f\n", "replacement module without version must be directory path"},
+		{"retract range without the comma (gc «expected ',' after version»)", "module test\ngo 1.26\nretract [v1.0.0 v1.0.1]\n", "is not `retract v1.2.3 | retract [v1.2.3, v1.2.5]`"},
+		{"require with a non-canonical version (refused: not validated)", "module test\ngo 1.26\nrequire a.b/c v1.2\n", "is not `require module/path v1.2.3`"},
+		{"quoted module path (gc accepts; refused as not validated)", "module \"test\"\ngo 1.26\n", "carries a quoted token"},
+		{"module block (gc accepts; refused as not validated)", "module (\n\ttest\n)\ngo 1.26\n", "a `module (` block is not validated"},
+		{"a parenthesis inside a block body", "module test\ngo 1.26\nrequire (\n\ta.b/c v1.0.0 (\n)\n", "has a parenthesis where a require argument belongs"},
+		{"replace with a versioned directory target, exclude, pseudo-version: accepted", "module test\ngo 1.26\nreplace a.b/c v1.0.0 => d.e/f v1.0.0\nexclude a.b/c v0.0.0-20240101000000-abcdef123456\nrequire x.y/z v2.0.0+incompatible\n", ""},
 		{"go 1.21 — the review's probe (gc 9, GoLean 3)", "module example.org/audit\n\ngo 1.21\n", "go.mod declares go 1.21; GoLean implements the Go 1.26 language only"},
 		{"go 1.25", "module example.org/m\n\ngo 1.25\n", "declares go 1.25; GoLean implements the Go 1.26 language only"},
 		{"go 1.27 (newer than the pin is foreign too)", "module example.org/m\n\ngo 1.27\n", "declares go 1.27; GoLean implements the Go 1.26 language only"},
 		{"no go directive (the go command assumes go 1.16)", "module example.org/m\n", "has no go directive"},
 		{"repeated go directive", "module example.org/m\n\ngo 1.26\ngo 1.21\n", "repeats the go directive"},
 		{"malformed go directive", "module example.org/m\n\ngo\n", "malformed go directive"},
-		{"unparseable version", "module example.org/m\n\ngo banana\n", "cannot parse"},
+		{"unparseable version (refused at the grammar: x/mod's GoVersionRE)", "module example.org/m\n\ngo banana\n", "malformed go directive"},
 		{"go directive after a require block (blocks are skipped, the directive still found)", "module example.org/m\n\nrequire (\n\tgo.example/go v1.0.0\n)\n\ngo 1.21\n", "declares go 1.21"},
 		{"comment-only go token is not a directive", "module example.org/m\n// go 1.21\ngo 1.26\n", ""},
 		// BUG-128 (release-readiness row 39; RULED [USER] 2026-10-13, item 3
@@ -90,6 +118,11 @@ func TestModuleGoDirectiveRefusal(t *testing.T) {
 			}
 			if !strings.Contains(err.Error(), filepath.Join(dir, "go.mod")) {
 				t.Fatalf("refusal %q does not name the go.mod path", err.Error())
+			}
+			// The class prefix the negative corpus's frontend leg reads
+			// (scripts/coverage-negative, `frontend=module`).
+			if !strings.HasPrefix(err.Error(), "native frontend unsupported: module directive: ") {
+				t.Fatalf("refusal %q lacks the `module directive: ` prefix", err.Error())
 			}
 		})
 	}

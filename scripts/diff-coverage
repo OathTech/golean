@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 set -uo pipefail
+# One collation and byte-wise character classes for every comparison, sort and pattern here
+# (deep-clean review DC19, 2026-10-26): the gate's verdict must not depend on the caller's locale.
+export LC_ALL=C
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 . "$ROOT/scripts/cap.sh"
@@ -154,49 +157,11 @@ timed() {
   return "$rc"
 }
 
-# A NON-VERDICT exit code names itself (cause-naming slice 2, 2026-09-03,
-# discharging the residual owed at the first slice's audit F1 —
-# docs/operational-lessons.md "A killed command has decided nothing").
-# Prints a cause phrase and returns 0 for every code that decided
-# NOTHING: 124 (the wall clock — the wrapper's own code), 137/143 (a
-# SIGKILL/SIGTERM through the wrapper's 128+signal: a cgroup/OOM kill or
-# an external kill), any other 128+signal death, and any other code the
-# caller does not own. Prints nothing and returns 1 for the VERDICT codes
-# 0 and 1, which the CALLER interprets (equal / not equal; ok / error
-# observation; go run green / red). $1 = rc, $2 = what ran, $3 = its
-# budget in seconds, $4 = the budget's knob. Callers test this BEFORE
-# reading the capture and report at the stage of the check that could
-# not complete — never a pass, never a skip, never a mis-attribution.
-undecided_cause() {
-  local rc="$1" what="$2" seconds="$3" knob="$4"
-  case "$rc" in
-    0|1) return 1 ;;
-    124) printf '%s TIMED OUT after %ss (%s)' "$what" "$seconds" "$knob" ;;
-    *)   signal_cause "$rc" "$what" || printf '%s failed with exit %s (did not decide)' "$what" "$rc" ;;
-  esac
-}
-# The signal-death subset alone, for the `go run ./tools/…` invocations
-# and the enumerator, whose non-signal codes are their own business: `go
-# run` collapses every child exit (a panic, the harness's os.Exit(2), any
-# os.Exit(n)) to 1 and reports the child's code as a trailing "exit
-# status N" line — only a `go` tool usage error yields 2 — so codes 2..128
-# from those sites are a tool refusal with its message, not a kill; the
-# enumerator names its exit code itself. 137 and 143 spelled out because
-# they are the ones a cgroup/OOM kill or the box tool `capped`'s kill produce;
-# any other 128+n (n in 1..64, the real signal range) is a crash that
-# decided nothing either. Prints nothing and returns 1 otherwise.
-signal_cause() {
-  local rc="$1" what="$2"
-  case "$rc" in
-    137) printf '%s KILLED (exit 137 — SIGKILL: cgroup/OOM or an external kill; did not decide)' "$what" ;;
-    143) printf '%s KILLED (exit 143 — SIGTERM: an external kill; did not decide)' "$what" ;;
-    *)   if (( rc > 128 && rc <= 192 )); then
-           printf '%s KILLED (exit %s — died on signal %s; did not decide)' "$what" "$rc" "$((rc - 128))"
-         else
-           return 1
-         fi ;;
-  esac
-}
+# `undecided_cause` and `signal_cause` — the readers of the wrapper's exit-code
+# contract — are defined in scripts/run-with-timeout.sh (sourced above) since
+# 2026-10-26 (deep-clean DC02): the negative runner reads the same two
+# definitions, so the oracle legs of both lanes classify a non-verdict exit
+# identically. Their docstrings are there.
 
 # Observation equality under the Lean budget. Exit codes: 0 = equal;
 # 1 = not equal (runObservationEq's contract, GoLean/CLI.lean — the

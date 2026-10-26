@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 set -uo pipefail
+# One collation and byte-wise character classes for every comparison, sort and pattern here
+# (deep-clean review DC19, 2026-10-26): the gate's verdict must not depend on the caller's locale.
+export LC_ALL=C
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
@@ -252,6 +255,15 @@ report_negative_pass() {
 #                   via fileselect.go — gc's syntax errors)
 #   file-selection  `nativefrontend: native frontend unsupported: file
 #                   selection …` (the BUG-108 boundary, fileselect.go)
+#   module          `nativefrontend: native frontend unsupported: module
+#                   directive: …` (modfile.go: gc's go.mod rejections —
+#                   grammar, a `go` floor above the pin, a foreign language
+#                   version; the fourth class, [AGENT] 2026-10-26 under the
+#                   deep-clean ruling on DC06, which asked for go.mod rows
+#                   in this corpus and for this leg's classes to be checked;
+#                   the owner's ruling on the class itself is pending —
+#                   the three classes above are the [USER]-approved set of
+#                   2026-10-12, docs/2026-10-12_refusal-cause-pinning-design.md §3)
 # Anything else FAILS under its own stage: frontend-accepts (exit 0 — it
 # lowered a program gc rejects), frontend-crash (a timeout, a signal, a Go
 # panic's exit 2 or any other code), frontend-reason (exit 1 for another
@@ -281,10 +293,12 @@ frontend_leg() {
     fe_detail="frontend=type-check"
   elif [[ "$first" == "nativefrontend: native frontend unsupported: file selection "* ]]; then
     fe_detail="frontend=file-selection"
+  elif [[ "$first" == "nativefrontend: native frontend unsupported: module directive: "* ]]; then
+    fe_detail="frontend=module"
   elif [[ "$first" =~ $FE_PARSE_RE ]] && [[ "${BASH_REMATCH[1]}" == "$go_dir"/* ]]; then
     fe_detail="frontend=parse"
   else
-    fe_stage="frontend-reason"; fe_detail="the native frontend refused (exit 1) but not as a rejection (type-check / parse / file selection): $out"
+    fe_stage="frontend-reason"; fe_detail="the native frontend refused (exit 1) but not as a rejection (type-check / parse / file selection / module): $out"
   fi
 }
 
@@ -308,8 +322,38 @@ while IFS=$'\t' read -r id go_dir expected_substring features extra || [[ -n "${
   fi
 
   binary="$BUILD_OUT/${id//\//__}"
-  if output="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" ${oracle_toolchain_env[@]+"${oracle_toolchain_env[@]}"} go build -o "$binary" "./$go_dir" 2>&1)"; then
+  # THE ORACLE LEG: gc's `go build` of the row. Its EXIT STATUS is kept and
+  # classified BEFORE its text is read (deep-clean review 2026-10-26, DC02 /
+  # validation V1: the old `if output="$(…)"` dropped the status, so a build
+  # that TIMED OUT (124) or was KILLED (137) after emitting the expected
+  # diagnostic was read as a rejection and the row went on to PASS). gc's one
+  # deliberate rejection exit is 1 (cmd/go base.ExitStatus(1) for a compile
+  # or go.mod error); 0 is "compiled"; everything else — 124 (the wall
+  # clock), 128+N (a signal: cgroup/OOM or an external kill), 127 (cannot
+  # exec), 2 (a go tool usage/internal error) — decided NOTHING and FAILS by
+  # name at stage go-crash (the oracle twin of the frontend leg's
+  # frontend-crash), through the positive runner's own classifier
+  # (`undecided_cause`, scripts/run-with-timeout.sh — one definition).
+  # A row whose directory carries a go.mod is built in MODULE MODE from that
+  # directory (GO111MODULE=on, GOPROXY=off/GOSUMDB=off: no network, a
+  # require would fail by name; GOTOOLCHAIN=local: a `go` floor above the
+  # pin is gc's own refusal, never a toolchain download; GOFLAGS scrubbed) —
+  # the mode in which gc reads go.mod at all (GOPATH mode ignores it, so a
+  # go.mod row built the old way tested nothing on this leg); every other
+  # row is built as before, GOPATH mode, from the root.
+  go_rc=0
+  if [[ -f "$go_dir/go.mod" ]]; then
+    output="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=on GOFLAGS= GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local GOCACHE="$GO_BUILD_CACHE" ${oracle_toolchain_env[@]+"${oracle_toolchain_env[@]}"} \
+      bash -c 'cd "$1" && exec go build -o "$2" .' go-build-oracle "$go_dir" "$binary" 2>&1)" || go_rc=$?
+  else
+    output="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" ${oracle_toolchain_env[@]+"${oracle_toolchain_env[@]}"} go build -o "$binary" "./$go_dir" 2>&1)" || go_rc=$?
+  fi
+  if [[ "$go_rc" -eq 0 ]]; then
     report_negative_fail "$id" "$features" "go-compile" "program unexpectedly compiled"
+    continue
+  fi
+  if go_cause="$(undecided_cause "$go_rc" "gc rejection oracle (go build)" "$GO_TIMEOUT_SECONDS" GO_TIMEOUT_SECONDS)"; then
+    report_negative_fail "$id" "$features" "go-crash" "$go_cause — no rejection verdict (gc's deliberate rejection exit is 1; this status is not one); captured output: $output"
     continue
   fi
 
