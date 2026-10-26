@@ -1,0 +1,2 @@
+go 1.26
+godebug panicnil=1

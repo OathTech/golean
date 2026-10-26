@@ -1,0 +1,33 @@
+## baselines/native-full.tsv vs main
+  rows (incl. the column header): old 4090  new 4158
+  old rows missing or altered in new: 0
+  rows new to new: 68
+  duplicate ids: 0
+  verdicts: FAIL 261  PASS 3896  
+  header count line(s): 2:# cases: 4157 (3896 PASS / 261 FAIL) 2245:# cases: 3528 (3283 PASS / 245 FAIL) 
+  header lines of main changed in new (count line expected): < # cases: 4089 (3828 PASS / 261 FAIL)
+  appended ids not named in a header block: 0
+## baselines/negative-full.tsv vs main
+  rows (incl. the column header): old 426  new 427
+  old rows missing or altered in new: 0
+  rows new to new: 1
+  duplicate ids: 0
+  verdicts: PASS 426  
+  header count line(s): 3:# manifest_cases: 426  pass: 426  fail: 0 
+  header lines of main changed in new (count line expected): < # manifest_cases: 425  pass: 425  fail: 0
+## the lanes' blocks inside the union (0 = byte-identical)
+  core lane 584adb0f vs stage 8c87b3ce, baselines/: 0 diff lines
+  frontend lane fcb2de87 vs stage tip, baselines/ minus the core block and the count line: 0 other lines
+## re-pin guards vs main (rc 0 = pass)
+  check-row-removals native-full: rc=0
+  check-row-removals negative-full: rc=0
+  check-cause-regressions native-full: rc=0
+  check-cause-regressions negative-full: rc=0
+  check-alternation-survival native-full: rc=0
+  check-alternation-survival negative-full: rc=0
+## the recorded runs vs the baselines
+no regression: 4157 case(s) run in latest.tsv match baselines/native-full.tsv
+no regression: 426 case(s) run in negative-latest.tsv match baselines/negative-full.tsv
+every FAIL row's cause is classified (261 FAIL row(s), latest.tsv)
+  manifest sha: meta cbb06a9514c5 current cbb06a9514c5; recorded at 6a65dd6f dirty=false
+check-bugs: ok (136 bug(s); pinned cases behave as claimed)

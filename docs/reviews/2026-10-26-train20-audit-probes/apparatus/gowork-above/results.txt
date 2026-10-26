@@ -1,0 +1,31 @@
+# Measured 2026-10-26 at 6a65dd6f from the view (setup.sh, run.sh). GOWORK and GOFLAGS unset in the process environment.
+
+## counterfactuals at the invocation level (from the view, a module row, no pins)
+gc module mode, GOWORK unset:  go env GOWORK -> <worktree>/.tmp/ws/go.work ; go build -> "go: no modules were found in the current workspace; see 'go help work'"
+gc module mode, GOWORK=off:    go build -> "go: updates to go.mod needed" (the row's own expected rejection)
+frontend, GOWORK unset:        exit 1 "module directive: Corpus/coverage/exec/comparisons/nil-left-operand is inside the workspace <worktree>/.tmp/ws/go.work ..."
+frontend, GOWORK=off:          exit 0
+
+## the runners (their own pins in force)
+pwd(logical)=/home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/ws/repo
+go.work above: -rw-rw-r-- 1 mike mike 27 Oct 26 16:58 ../go.work
+== negative corpus (full) ==
+negative rc=0 (30s)
+    426 PASS
+      1 result
+== positive subset ==
+positive rc=2 (4s)
+
+== negative corpus skipped (already run) ==
+== positive subset ==
+positive rc=1 (17s)
+result	id	features	stage
+PASS	comparisons/nil-left-operand/pointer	comparisons,equality,nil,untyped,pointers	-
+PASS	comparisons/nil-left-operand/switch-case	comparisons,equality,nil,untyped,pointers,switch	-
+FAIL	directives/debug-panicnil	panic,recover,defer,returns	frontend-export
+PASS	noodler/defers/panic-nil-recovered	panic,recover,nil	-
+PASS	panic-recover/repanic-collapse/nil-passthrough	panic,recover,defer,nil,nondet	membership
+PASS	pointers/struct-through-conversion-value/eq-literal	pointers,structs,conversions,comparisons,equality	-
+manifest_cases	6
+filters	--id comparisons/nil-left-operand/pointer --id comparisons/nil-left-operand/switch-case --id pointers/struct-through-conversion-value/eq-literal --id directives/debug-panicnil --id noodler/defers/panic-nil-recovered --id panic-recover/repanic-collapse/nil-passthrough
+git_commit	6a65dd6f158c618d7420602fb0762043f1b5a0cc

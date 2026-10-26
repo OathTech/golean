@@ -1,0 +1,48 @@
+# scripts/ci (fast tier) under GOFLAGS=-toolexec=/nonexistent/toolexec GOWORK=/nonexistent/go.work, at 6a65dd6f, warm .lake; the summary block and the two refusal lines.
+
+18:  check-imported-goose: FAIL — cannot build tools/lsimports (the import vet): go: error obtaining buildID for go tool compile: fork/exec /nonexistent/toolexec: no such file or directory
+91:coverage-cause: lowerdiag classify exited 1: go: error obtaining buildID for go tool compile: fork/exec /nonexistent/toolexec: no such file or directory
+92:REFUSED: could not derive the cause keys of latest.tsv (scripts/coverage-cause exit 2 — see above) — cannot judge it against baselines/native-full.tsv (this is NOT a no-drift result)
+93:  coverage-cause: lowerdiag classify exited 1: go: error obtaining buildID for go tool compile: fork/exec /nonexistent/toolexec: no such file or directory
+
+══ scripts/ci summary (fast tier) ══
+  note memory cap: capped on PATH (/usr/local/bin/capped); CAPPED_MEM_MAX=32G; CAPPED_STATE=verified
+  note build parallelism: cap 32G -> LEAN_NUM_THREADS=4 (cap/8G, floor 2); 32 cores
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch scan (clean)
+  ok   lake build (every declared target by name: 14 — GoLean golean TestsData gocore-eval-tests EvalTests AdmissionTests DeclarationTests MethodIdentityTests MethodIdentityFixtureTests UnseqSchedulerTests UnseqWireTests GoCoreAuditTests ContractChallenge EquationTests; warning-free)
+  ok   Tests/ library ownership (every module named by a lakefile glob)
+  ok   lakefile targets (defaults = the main-free libraries: GoLean TestsData AdmissionTests GoCoreAuditTests MethodIdentityTests EquationTests; executables, main-bearing libraries and the comparator challenge (Contract.Challenge) built by name)
+  ok   kernel replay (55 GoLean modules replayed through the kernel — leanchecker)
+  note lake check, lake comparator: not in this tier (the --diff tier runs scripts/check-lake-check and scripts/check-comparator as speedbumps; the owner's runs outside the sandbox are the claim-point gate)
+  ok   core totality audit (every GoLean/ module; required core theorems)
+  ok   frontend + lowering-table unit tests (go test ./tools/nativefrontend ./tools/lowerdiag)
+  ok   coverage-harness unit tests (go test -count=1 ./tools/coverageharness)
+  ok   eval tests (431 ok)
+  ok   unseq wire (wires from bytes vs reference sets; decoder mutants refused by name)
+  ok   wire boundary (byte-level controls through the real CLI)
+  ok   package-correct method identity (fresh wire, strict decoder)
+  ok   frontend pins (init-order deviation observation + raft twin wire, byte-exact)
+  ok   declaration boundary (Go identity, strict JSON, Unicode table = oracle, fixture pin)
+  ok   semantic equations (client PASS, exhaustive enrollment, no-unfold guard, import whitelist)
+  ok   negative baseline diff FULL (426/426, no regression)
+  FAIL differential baseline diff (REFUSED / could not judge, exit 2 — NOT a drift verdict)
+  ok   re-pin guard (baselines/native-full.tsv: 0 PASS→non-PASS flip(s) of surviving rows, all on BUGS.md Cases lines; removed rows are the row-removal check's)
+  ok   re-pin guard (baselines/negative-full.tsv: 0 PASS→non-PASS flip(s) of surviving rows, all on BUGS.md Cases lines; removed rows are the row-removal check's)
+
+── speedbumps (report-only) ──
+  ok   bugs index = baseline (scripts/check-bugs.sh)
+  ok   feature tags, no dead tag (scripts/check-coverage)
+  ok   spec anchors resolve at the pin (scripts/check-spec-anchors)
+  ok   stdlib admission register = frontend tables (scripts/check-stdlib-register)
+  ok   AGENTS.md is the alias of CLAUDE.md (scripts/check-agents-alias)
+  RED  imported-goose verbatim at the pin (scripts/check-imported-goose) (exit 2 — see above)
+  ok   memory-module raw call sites = inventory (scripts/check-mem-callsites)
+  ok   third-party notices present; no upstream copyright header outside the inventoried subtrees (scripts/check-notices)
+  RED  every FAIL row's refusal cause classified (scripts/coverage-cause --unclassified) (exit 2 — see above)
+
+SPEEDBUMPS: 2 RED — not a gate failure; read at the merge ask, fix or waive by name
+
+RESULT: FAIL
+CI total wall seconds: 67
+rc=1 seconds=67

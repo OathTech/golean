@@ -1,0 +1,68 @@
+case	gc_rc	gc_first_line	fe_rc	fe_first_line
+w01 control: go.mod only	0	false	0	(wire written)
+w02 go.work beside (go 1.26, use .)	0	false	1	module directive: /home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/probes/cases/w02-gowork-beside is inside the workspace /home/mike
+w03 go.work beside + godebug panicnil=1	0	true	1	module directive: /home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/probes/cases/w03-gowork-godebug is inside the workspace /home/mik
+w04 GOWORK=auto, no go.work	0	false	1	module directive: /home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/probes/cases/w04-auto-none is lowered with GOWORK=auto, which sel
+w05 GOWORK=auto, go.work beside	0	true	1	module directive: /home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/probes/cases/w05-auto-beside is lowered with GOWORK=auto, which s
+w06 go.work beside with syntax errors	1	go: errors parsing go.work:	1	module directive: /home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/probes/cases/w06-syntax is inside the workspace /home/mike/projec
+w07 go.work beside, use ./nonexistent only	1	go: cannot load module nonexistent listed in go.work file: open nonexistent/go.mod: no such file or directory	1	module directive: /home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/probes/cases/w07-use-missing is inside the workspace /home/mike/p
+w08 parent go.work use ./m, module in m/	0	false	1	module directive: /home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/probes/cases/w08/m is inside the workspace /home/mike/projects/go
+w09 parent go.work uses ./other, not this module	1	current directory is contained in a module that is not one of the workspace modules listed in go.work. You can add the module to the workspace using:	1	module directive: /home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/probes/cases/w09/m is inside the workspace /home/mike/projects/go
+w10 symlink INTO a workspace (logical path has no go.work; physical does)	0	false	0	(wire written)
+w11 symlink FROM a workspace dir (logical path has go.work; physical does not)	0	true	1	module directive: /home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/probes/cases/w11/ws2/mlink is inside the workspace /home/mike/pro
+w12 go.work beside; GOENV file says GOWORK=off; process GOWORK unset	0	false	1	module directive: /home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/probes/cases/w12-goenv-off is inside the workspace /home/mike/pro
+w13 NO go.work in the walk; GOENV file names a go.work elsewhere (godebug panicnil=1)	0	true	0	(wire written)
+w14 GOWORK=OFF (uppercase), go.work beside	1	go: invalid GOWORK: not an absolute path	1	module directive: /home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/probes/cases/w14-OFF is lowered with GOWORK=OFF, which selects a 
+w15 GO111MODULE=off (GOPATH mode), go.work beside (gc prints true for its OWN reason: GOPATH mode's go1.16 godebug defaults, panicnil=1 — not the go.work; see machine.sh)	0	true	1	module directive: /home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/probes/cases/w15-gopath is inside the workspace /home/mike/projec
+w16 go.work is a symlink to a regular file	0	true	1	module directive: /home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/probes/cases/w16-symlink-file is inside the workspace /home/mike/
+w17 go.work is a dangling symlink	0	false	0	(wire written)
+w18 go.work beside with go 1.26.6	1	go: go.work requires go >= 1.26.6 (running go 1.26.5; GOTOOLCHAIN=local)	1	module directive: /home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/probes/cases/w18-floor is inside the workspace /home/mike/project
+w19 GOWORK=<a directory>	1	go: reading go.work: read gw.d: is a directory	1	module directive: /home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/probes/cases/w19-dir is lowered with GOWORK=/home/mike/projects/g
+w20 the lowered directory is itself named go.work	0	false	0	(wire written)
+w21 GOWORK=off, go.work beside with godebug	0	false	0	(wire written)
+w22 GOWORK=go.work (relative)	1	go: invalid GOWORK: not an absolute path	1	module directive: /home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/probes/cases/w22-rel is lowered with GOWORK=go.work, which select
+w23 go.work beside, NO go.mod	1	go: cannot load module . listed in go.work file: open go.mod: no such file or directory	1	module directive: /home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/probes/cases/w23-nomod-work is inside the workspace /home/mike/pr
+w24 parent go.work (no use), m/ WITHOUT go.mod	1	go: no modules were found in the current workspace; see 'go help work'	1	module directive: /home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/probes/cases/w24/m is inside the workspace /home/mike/projects/go
+w25 GOWORK=<abs path>/ (trailing slash)	1	go: reading go.work: open /home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/probes/cases/w25-trailing/go.work/: not a directory	1	module directive: /home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/probes/cases/w25-trailing is lowered with GOWORK=/home/mike/proje
+w27 GOFLAGS=-modfile=alt.mod (alt.mod carries godebug panicnil=1; go.mod clean)	0	true	0	(wire written)
+w28 GOENV file says GOFLAGS=-modfile=alt.mod; process GOFLAGS unset	0	true	0	(wire written)
+t01 go 1.26.5 + toolchain go1.26.5 (textually equal)	1	go: updates to go.mod needed; to update it:	1	module directive: /home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/probes/cases/t01/go.mod names toolchain go1.26.5, the go line's o
+t02 go 1.26 + toolchain go1.26.5	0	false	0	(wire written)
+t03 go 1.26.0 + toolchain go1.26.5	0	false	0	(wire written)
+t04 go 1.27 + toolchain go1.26.5	1	go: go.mod requires go >= 1.27 (running go 1.26.5; GOTOOLCHAIN=local)	1	module directive: /home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/probes/cases/t04/go.mod declares go 1.27; GoLean implements the G
+t05 go 1.26 + toolchain default	1	go: updates to go.mod needed; to update it:	1	module directive: /home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/probes/cases/t05/go.mod names toolchain default, which gc drops a
+t06 toolchain line BEFORE the go line	0	false	0	(wire written)
+t07 two toolchain lines	1	go: errors parsing go.mod:	1	module directive: /home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/probes/cases/t07/go.mod repeats the toolchain directive (go1.26.5
+t08 extra spaces + trailing comment	0	false	0	(wire written)
+t09 tab between toolchain and name	0	false	0	(wire written)
+t10 CRLF line endings	0	false	0	(wire written)
+t11 NBSP (U+00A0) between module and path	1	go: errors parsing go.mod:	0	(wire written)
+t12 NBSP between go and version	1	go: errors parsing go.mod:	0	(wire written)
+t13 toolchain go1.26.5 extra	1	go: errors parsing go.mod:	1	module directive: /home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/probes/cases/t13/go.mod has a malformed toolchain directive "tool
+t14 toolchain go1.26.5-custom (a named toolchain)	0	false	1	module directive: /home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/probes/cases/t14/go.mod names toolchain go1.26.5-custom; the orac
+t15 toolchain go1.26.5.1	1	go: updates to go.mod needed; to update it:	1	module directive: /home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/probes/cases/t15/go.mod names toolchain go1.26.5.1; the oracle is
+t16 toolchain go1	1	go: updates to go.mod needed; to update it:	1	module directive: /home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/probes/cases/t16/go.mod names toolchain go1, below go1.21 (the fi
+t17 require a.b/c v2.0.0 (major mismatch)	1	go: errors parsing go.mod:	0	(wire written)
+t18 require a.b/c/v2 v1.0.0 (major mismatch)	1	go: errors parsing go.mod:	0	(wire written)
+t19 duplicate go line	1	go: errors parsing go.mod:	1	module directive: /home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/probes/cases/t19/go.mod repeats the go directive (1.26 and 1.26) 
+t20 toolchain line, NO go line (gc: the go 1.16 language, panicnil=1 — prints true)	0	true	1	module directive: /home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/probes/cases/t20/go.mod has no go directive; the go command assum
+t21 comments on both lines	0	false	0	(wire written)
+t22 require () one-line empty block	0	false	0	(wire written)
+t23 require ( newline )	0	false	0	(wire written)
+t24 require ( // c newline )	0	false	0	(wire written)
+t25 UTF-8 BOM before module	1	go: errors parsing go.mod:	1	module directive: /home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/probes/cases/t25/go.mod has a directive this scanner does not kno
+t26 tool foo{bar (brace in a tool path)	1	go: errors parsing go.mod:	0	(wire written)
+t27 replace target ./x{y	1	go: errors parsing go.mod:	0	(wire written)
+t28 vertical tab between module test and go 1.26 (one line)	1	go: errors parsing go.mod:	1	module directive: /home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/probes/cases/t28/go.mod:1: "module test\vgo 1.26" is not `module 
+t29 form feed between module and path	1	go: errors parsing go.mod:	0	(wire written)
+t30 godebug () with the pin	0	false	1	module directive: /home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/probes/cases/t30/go.mod sets godebug (godebug ()) — GODEBUG setti
+t31 require with // indirect	0	false	0	(wire written)
+t32 +incompatible on a v1	0	false	0	(wire written)
+t33 +incompatible on a /v2 path	0	false	0	(wire written)
+t34 uppercase in a module path	0	false	0	(wire written)
+t35 prerelease require version	0	false	0	(wire written)
+t36 build metadata on a require version	1	go: errors parsing go.mod:	0	(wire written)
+t37 U+2028 line separator inside an ignore path	1	go: errors parsing go.mod:	1	module directive: /home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/probes/cases/t37/go.mod:3: "ignore ./a\u2028b" is not `ignore pat
+t38 trailing space after the toolchain name	0	false	0	(wire written)
+t39 toolchain GO1.26.5 (uppercase)	1	go: errors parsing go.mod:	1	module directive: /home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/probes/cases/t39/go.mod names toolchain GO1.26.5 — gc refuses the
+t40 toolchain go1.26.5rc1	1	go: updates to go.mod needed; to update it:	1	module directive: /home/mike/projects/golean/.claude/worktrees/audit20-app-1026/.tmp/probes/cases/t40/go.mod names toolchain go1.26.5rc1; the oracle i

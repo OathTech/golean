@@ -1,0 +1,5 @@
+w01-control	status: ok values: [{'tag': 'bool', 'value': False}]
+w13-goenv-path	status: ok values: [{'tag': 'bool', 'value': False}]
+w27-modfile-flag	status: ok values: [{'tag': 'bool', 'value': False}]
+w28-goenv-modfile	status: ok values: [{'tag': 'bool', 'value': False}]
+w15-gopath	no wire (the frontend refused)
