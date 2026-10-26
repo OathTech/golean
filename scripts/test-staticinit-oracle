@@ -17,6 +17,11 @@
 # [AGENT] 2026-10-12, lane fix/bug061-refuse-1012 fix round (the review's
 # HIGH: the classifier's expectations must be gc's own, recorded).
 set -uo pipefail
+# GOFLAGS scrubbed, GOWORK=off for every `go` this script runs (train-19 shake review F7,
+# 2026-10-26): an ambient -tags/-mod/-toolexec and a workspace file above the checkout
+# must reach neither the tools built here nor the frontend, which refuses a go.work in
+# scope by name (BUG-135); the go command ignores go.work in GOPATH mode anyway.
+export GOFLAGS= GOWORK=off
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 SHAPES=tools/nativefrontend/testdata/staticinit-shapes.go
 OTHER=tools/nativefrontend/testdata/staticinit-other.go

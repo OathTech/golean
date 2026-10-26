@@ -58,6 +58,11 @@ set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
+# GOFLAGS scrubbed, GOWORK=off for every `go` this script runs (train-19 shake review F7,
+# 2026-10-26): an ambient -tags/-mod/-toolexec and a workspace file above the checkout
+# must reach neither the tools built here nor the frontend, which refuses a go.work in
+# scope by name (BUG-135); the go command ignores go.work in GOPATH mode anyway.
+export GOFLAGS= GOWORK=off
 
 GOTEST_DIR="${GOTEST_TRIAGE_DIR:-deps/go/test}"
 OUT="${GOTEST_TRIAGE_ARTIFACTS:-artifacts/gotest}"

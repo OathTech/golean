@@ -64,6 +64,10 @@ if len(sys.argv) >= 3 and sys.argv[1] == "-o":
 
 ENV = dict(os.environ)
 ENV["GO111MODULE"] = "off"
+# GOFLAGS scrubbed, GOWORK=off (train-19 shake review F7, 2026-10-26): an ambient -tags or a
+# workspace file above the checkout must not reach `go list`/`go build` here.
+ENV["GOFLAGS"] = ""
+ENV["GOWORK"] = "off"
 ENV.setdefault("GOCACHE", os.path.join(ROOT, "artifacts", "go-build-cache"))
 os.makedirs(ENV["GOCACHE"], exist_ok=True)
 

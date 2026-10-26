@@ -8690,6 +8690,19 @@ func (e *emitter) emitBinary(b *ast.BinaryExpr) (any, error) {
 		ty := e.applySubst(e.goTypeOf(b.Y))
 		xIsIface := tx != nil && types.IsInterface(tx)
 		yIsIface := ty != nil && types.IsInterface(ty)
+		// Untyped nil as the LEFT operand — `nil == p`, `nil != err` (the
+		// equality review 2026-10-26 F2; BUG-136): go/types records the
+		// bare nil's type as untyped nil, which emitType refuses by name,
+		// so every operand kind refused here while `p == nil` lowered. The
+		// comparison's operand type is the TYPED side's, exactly as it is
+		// for `p == nil`. Both sides untyped nil is a type error go/types
+		// already refused («operator == not defined on untyped nil»); an
+		// untyped CONSTANT on the left (`1 == x`, `"a" == s`, `1 == iface`)
+		// is recorded with its converted type and needs nothing (measured:
+		// both sides agree on each).
+		if isUntypedNilType(tx) && !isUntypedNilType(ty) {
+			operandTypeExpr = b.Y
+		}
 		if xIsIface && !yIsIface {
 			if y, err = e.wrapInterfaceConversion(tx, e.goTypeOf(b.Y), y); err != nil {
 				return nil, err
@@ -8711,6 +8724,12 @@ func (e *emitter) emitBinary(b *ast.BinaryExpr) (any, error) {
 		node["operandType"] = oty
 	}
 	return node, nil
+}
+
+// isUntypedNilType: the type go/types records for a bare `nil`.
+func isUntypedNilType(t types.Type) bool {
+	b, ok := t.(*types.Basic)
+	return ok && b.Kind() == types.UntypedNil
 }
 
 func (e *emitter) emitUnary(u *ast.UnaryExpr) (any, error) {

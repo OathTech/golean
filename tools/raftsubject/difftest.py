@@ -829,6 +829,7 @@ def main():
     env = dict(os.environ)
     env["GOCACHE"] = os.path.join(REPO, "artifacts", "go-build-cache")
     env["GOFLAGS"] = "-mod=mod"
+    env["GOWORK"] = "off"  # no workspace above the checkout reaches the module build (2026-10-26)
     print("difftest: running go run in %s" % out)
     if args.emit_reference:
         env["DIFFTEST_EMIT_REFERENCE"] = "1"

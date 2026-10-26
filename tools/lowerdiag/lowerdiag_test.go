@@ -1061,7 +1061,7 @@ func TestCalibrationAgainstWire(t *testing.T) {
 	}
 	cmd := exec.Command("go", "run", "./tools/nativefrontend", "--dir", fixture, "--out", probe)
 	cmd.Dir = repo
-	cmd.Env = append(os.Environ(), "GO111MODULE=off", "GOCACHE="+cache)
+	cmd.Env = append(os.Environ(), "GO111MODULE=off", "GOFLAGS=", "GOWORK=off", "GOCACHE="+cache)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("the frontend must lower the calibration fixture's export (fail closed — the test cannot run without deps/go at the pin): %v\n%s", err, out)
 	}

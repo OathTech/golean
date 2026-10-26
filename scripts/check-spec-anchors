@@ -38,6 +38,11 @@ set -euo pipefail
 # One collation and byte-wise character classes for every comparison, sort and pattern here
 # (deep-clean review DC19, 2026-10-26): the gate's verdict must not depend on the caller's locale.
 export LC_ALL=C
+# GOFLAGS scrubbed, GOWORK=off for every `go` this script runs (train-19 shake review F7,
+# 2026-10-26): an ambient -tags/-mod/-toolexec and a workspace file above the checkout
+# must reach neither the tools built here nor the frontend, which refuses a go.work in
+# scope by name (BUG-135); the go command ignores go.work in GOPATH mode anyway.
+export GOFLAGS= GOWORK=off
 cd "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 
 SPEC=deps/go/doc/go_spec.html

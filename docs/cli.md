@@ -72,10 +72,17 @@ only `panicnil`; this coincides with the model because, at the pin, `panicnil` i
 with a version-dependent default that an admitted stdlib member reaches (measured against
 `internal/godebugs/table.go`: `randseednop` needs `rand.Seed`, `asynctimerchan` needs a timer,
 neither admitted) — every future admission carries that obligation
-(`docs/stdlib-admission-register.md`, «GODEBUG obligation»); (b) a `go.work` `godebug` line is a
-third override the frontend never reads (measured: it flips a `go 1.26` module's `panic(nil)` to
-the legacy answer while the export succeeds) — a consumer must not build inside a workspace that
-sets one; (c) `//go:debug panicnil=0`, the one source-level way to match the pin in GOPATH mode, is
+(`docs/stdlib-admission-register.md`, «GODEBUG obligation»); (b) a `go.work` is the third override —
+the go command applies a workspace's `godebug` (and `go`, `toolchain`) lines to its modules, and a
+measured `godebug panicnil=1` there flips a `go 1.26` module's `panic(nil)` to the legacy answer while
+the module's own go.mod is clean — and since 2026-10-26 a go.work IN SCOPE for the lowered directory
+(found walking up from it, as the go command finds one) REFUSES the export by name (BUG-135; before,
+the export succeeded unchanged: a wrong answer with status `ok`). `GOWORK=off` in the process
+environment disables workspace mode for the frontend exactly as for the go command (any other GOWORK
+value is refused by name; the go command's env file, `go env -w`, is not read — a workspace disabled
+only there is still refused, and the message names the remedy); the differential apparatus pins
+`GOWORK=off` on every oracle and frontend leg, and a consumer must run gc and the frontend under the
+same GOWORK; (c) `//go:debug panicnil=0`, the one source-level way to match the pin in GOPATH mode, is
 refused like every other `//go:debug` line: the pin is the oracle's environment, never the source.
 
 Exit codes:

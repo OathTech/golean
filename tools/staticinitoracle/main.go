@@ -226,7 +226,7 @@ func verdict(tmp, importPath string, preamble []string, bases, extra []shape) (s
 	}
 	archive := filepath.Join(tmp, importPath+".a")
 	build := exec.Command("go", "build", "-o", archive, importPath)
-	build.Env = append(os.Environ(), "GO111MODULE=off", "GOPATH="+tmp, "GOFLAGS=")
+	build.Env = append(os.Environ(), "GO111MODULE=off", "GOPATH="+tmp, "GOFLAGS=", "GOWORK=off")
 	if outb, err := build.CombinedOutput(); err != nil {
 		return "", fmt.Errorf("go build failed (fail closed):\n%s\n--- source:\n%s", outb, b.String())
 	}

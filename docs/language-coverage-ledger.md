@@ -608,10 +608,13 @@ requires a written profound reason. The complete list:
    limits: the GOPATH-mode oracle is at the go 1.16-era default for
    every other setting, sound at the pin because no admitted member
    reaches one (an obligation on each admission, stated in the stdlib
-   register), `go.work` `godebug` lines are unread, `//go:debug
-   panicnil=0` is refused too. The go.mod scanner is strict (every
-   verb of the pin's grammar accepted, judged or refused by name;
-   `godebug(` included; `toolchain` only at the pin). Reach: a
+   register), a `go.work` in scope refuses by name (BUG-135,
+   2026-10-26; GOWORK=off honoured and pinned by the apparatus),
+   `//go:debug panicnil=0` is refused too. The go.mod scanner is
+   strict (every verb of the pin's grammar accepted, judged or
+   refused by name; `godebug(` included; `toolchain` only at the pin
+   and above the go line — gc's own redundancy rule, BUG-135's lane;
+   an empty one-line block accepted). Reach: a
    user `//go:linkname` refuses before item 5's body-less rule, whose
    linkname exemption is gone; stdlib source-through units are library
    units and keep theirs. Not queued: modelling embed (a data/provenance

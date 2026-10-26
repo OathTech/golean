@@ -54,7 +54,7 @@ func TestModuleGoDirectiveRefusal(t *testing.T) {
 		{"require with a non-canonical version (refused: not validated)", "module test\ngo 1.26\nrequire a.b/c v1.2\n", "is not `require module/path v1.2.3`"},
 		{"quoted module path (gc accepts; refused as not validated)", "module \"test\"\ngo 1.26\n", "carries a quoted token"},
 		{"module block (gc accepts; refused as not validated)", "module (\n\ttest\n)\ngo 1.26\n", "a `module (` block is not validated"},
-		{"a parenthesis inside a block body", "module test\ngo 1.26\nrequire (\n\ta.b/c v1.0.0 (\n)\n", "has a parenthesis where a require argument belongs"},
+		{"a parenthesis inside a block body", "module test\ngo 1.26\nrequire (\n\ta.b/c v1.0.0 (\n)\n", "has a parenthesis among its require arguments"},
 		{"replace with a versioned directory target, exclude, pseudo-version: accepted", "module test\ngo 1.26\nreplace a.b/c v1.0.0 => d.e/f v1.0.0\nexclude a.b/c v0.0.0-20240101000000-abcdef123456\nrequire x.y/z v2.0.0+incompatible\n", ""},
 		{"go 1.21 — the review's probe (gc 9, GoLean 3)", "module example.org/audit\n\ngo 1.21\n", "go.mod declares go 1.21; GoLean implements the Go 1.26 language only"},
 		{"go 1.25", "module example.org/m\n\ngo 1.25\n", "declares go 1.25; GoLean implements the Go 1.26 language only"},
@@ -88,9 +88,38 @@ func TestModuleGoDirectiveRefusal(t *testing.T) {
 		{"unknown directive (the go command: «unknown directive: frobnicate»)", "module example.org/m\n\ngo 1.26\n\nfrobnicate on\n", "does not know (\"frobnicate on\")"},
 		{"toolchain naming the pin: accepted", "module example.org/m\n\ngo 1.26\n\ntoolchain go1.26.5\n", ""},
 		{"toolchain naming another toolchain: refused by name", "module example.org/m\n\ngo 1.26\n\ntoolchain go1.27.0\n", "names toolchain go1.27.0; the oracle is pinned to go1.26.5"},
-		{"toolchain default: refused by name (not the pin's name)", "module example.org/m\n\ngo 1.26\n\ntoolchain default\n", "names toolchain default"},
+		{"toolchain default: gc drops it and refuses the build («updates to go.mod needed»)", "module example.org/m\n\ngo 1.26\n\ntoolchain default\n", "names toolchain default, which gc drops as redundant"},
 		{"malformed toolchain directive", "module example.org/m\n\ngo 1.26\n\ntoolchain\n", "malformed toolchain directive"},
 		{"go token inside a require block is not the go directive (block skipped), go 1.26 outside it", "module example.org/m\n\nrequire (\n\tgo v0.0.0\n)\n\ngo 1.26\n", ""},
+		// Train-19 shake review F2 (2026-10-26; [USER] ruling relayed: gc's
+		// condition plus the pin policy; lane frontend/workspace-and-oracle-1026).
+		// gc DROPS a toolchain line that is `default`, the go line's own
+		// version or below go1.21 (modload WriteGoMod) and under -mod=readonly
+		// refuses to build («updates to go.mod needed; to update it: go mod
+		// tidy»); a name outside `go1…`/`default` is a parse error. Each shape
+		// below was measured on gc go1.26.5 (module mode, GOPROXY=off,
+		// GOTOOLCHAIN=local). The review's probe EXPORTED before this.
+		{"go 1.26.5 + toolchain go1.26.5 (the review's probe: gc «updates to go.mod needed»)", "module test\ngo 1.26.5\ntoolchain go1.26.5\n", "names toolchain go1.26.5, the go line's own version (go 1.26.5)"},
+		{"go 1.26 + toolchain go1.26 (equal without a patch: gc refuses the same way)", "module test\ngo 1.26\ntoolchain go1.26\n", "names toolchain go1.26, the go line's own version (go 1.26)"},
+		{"toolchain go1.20.0 (below go1.21: gc drops it and refuses)", "module test\ngo 1.26\ntoolchain go1.20.0\n", "names toolchain go1.20.0, below go1.21"},
+		{"toolchain local (gc «invalid toolchain version 'local': must match format go1.23.0 or default»)", "module test\ngo 1.26\ntoolchain local\n", "invalid toolchain version 'local'"},
+		{"toolchain go1.26.4 (gc keeps it and builds; refused by the pin policy)", "module test\ngo 1.26\ntoolchain go1.26.4\n", "names toolchain go1.26.4; the oracle is pinned to go1.26.5"},
+		{"toolchain go1.26.6 above the pin (inert under GOTOOLCHAIN=local, gc builds; refused by the pin policy)", "module test\ngo 1.26.5\ntoolchain go1.26.6\n", "names toolchain go1.26.6; the oracle is pinned to go1.26.5"},
+		{"go 1.26.4 + toolchain go1.26.5: accepted (gc keeps it: the pin above the go line)", "module test\ngo 1.26.4\ntoolchain go1.26.5\n", ""},
+		{"go 1.26.0 + toolchain go1.26.5: accepted", "module test\ngo 1.26.0\ntoolchain go1.26.5\n", ""},
+		{"toolchain before the go line: judged after the scan, accepted", "module test\ntoolchain go1.26.5\ngo 1.26\n", ""},
+		{"go 1.26.6 + toolchain go1.26.5: the floor refusal, gc's «requires go >= 1.26.6»", "module test\ngo 1.26.6\ntoolchain go1.26.5\n", "requires go >= 1.26.6; the oracle is pinned to go1.26.5"},
+		{"toolchain () (gc «unknown block type: toolchain»)", "module test\ngo 1.26\ntoolchain ()\n", "unknown block type: toolchain"},
+		{"go () (gc «unknown block type: go»)", "module test\ngo ()\n", "unknown block type: go"},
+		// Review F5: an EMPTY block on one line is gc's grammar (measured: every
+		// accepted verb builds in this form); it was refused as «has a
+		// parenthesis where a require argument belongs».
+		{"require () — an empty block on one line: accepted", "module test\ngo 1.26\nrequire ()\n", ""},
+		{"require ( ) with a blank and a trailing comment: accepted", "module test\ngo 1.26\nrequire ( ) // nothing\n", ""},
+		{"exclude (), replace (), retract (), tool (), ignore (): accepted", "module test\ngo 1.26\nexclude ()\nreplace ()\nretract ()\ntool ()\nignore ()\n", ""},
+		{"a one-line block WITH a body (gc «usage: require module/path v1.2.3»)", "module test\ngo 1.26\nrequire (a.b/c v1.0.0)\n", "has a parenthesis among its require arguments"},
+		{"module () (gc «missing module declaration»)", "module ()\ngo 1.26\n", "a `module (` block is not validated"},
+		{"godebug () (an empty block sets nothing; still refused by name, BUG-128)", "module test\ngo 1.26\ngodebug ()\n", "sets godebug (godebug ())"},
 	}
 	for _, c := range cases {
 		t.Run(c.label, func(t *testing.T) {
@@ -174,4 +203,122 @@ func TestModuleGoDirectiveOnImportedLocalPackage(t *testing.T) {
 	if !strings.Contains(err.Error(), filepath.Join("lib", "go.mod")) {
 		t.Fatalf("refusal does not name lib/go.mod: %v", err)
 	}
+}
+
+// requireNoWorkspaceAbove fails the test, by name, when the test's own
+// directory is already inside a workspace: the acceptance cases below would
+// then refuse for a reason that is the machine's, not the code's. A
+// precondition failure, never a skip.
+func requireNoWorkspaceAbove(t *testing.T, dir string) {
+	t.Helper()
+	above, err := findGoWork(filepath.Dir(dir))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if above != "" {
+		t.Fatalf("the test directory %s is inside the workspace %s — run the tests with TMPDIR outside it", dir, above)
+	}
+}
+
+func wantWorkspaceRefusal(t *testing.T, err error, names ...string) {
+	t.Helper()
+	if err == nil {
+		t.Fatalf("expected a workspace refusal naming %q", names)
+	}
+	if !strings.HasPrefix(err.Error(), "native frontend unsupported: module directive: ") {
+		t.Fatalf("refusal %q lacks the `module directive: ` prefix", err.Error())
+	}
+	for _, n := range names {
+		if !strings.Contains(err.Error(), n) {
+			t.Fatalf("refusal %q does not name %q", err.Error(), n)
+		}
+	}
+}
+
+// TestWorkspaceRefusal pins BUG-135 (train-19 shake review F1, 2026-10-26;
+// [USER] ruling relayed: refuse by name in the fail-closed direction, keep
+// the admitted surface small): a go.work in scope for the lowered
+// directory refuses by name, and GOWORK is honoured as the go command
+// honours it from the process environment.
+func TestWorkspaceRefusal(t *testing.T) {
+	// The reviewer's reproduction (docs/reviews/2026-10-26-train19-probes/
+	// dc06-modfile/gowork-godebug on branch review/train19-1026), its three
+	// files verbatim: with the workspace in scope gc prints true; before
+	// this change the frontend exited 0 and the machine answered false,
+	// status ok.
+	const goMod = "module test\ngo 1.26\n"
+	const goWork = "go 1.26\nuse .\ngodebug panicnil=1\n"
+	const probeSrc = "package main\n\nfunc probe() (r bool) {\n\tdefer func() { r = recover() == nil }()\n\tpanic(nil)\n}\n\nfunc main() { println(probe()) }\n"
+
+	t.Run("the review's probe: go.work beside go.mod", func(t *testing.T) {
+		t.Setenv("GOWORK", "")
+		dir := writeDir(t, map[string]string{"main.go": probeSrc, "go.mod": goMod, "go.work": goWork})
+		requireNoWorkspaceAbove(t, dir)
+		wantWorkspaceRefusal(t, refuseForeignModuleVersion(dir), "is inside the workspace "+filepath.Join(dir, "go.work"), "GOWORK=off")
+	})
+	t.Run("go.work in a parent directory governs a module below it", func(t *testing.T) {
+		t.Setenv("GOWORK", "")
+		root := writeDir(t, map[string]string{"go.work": "go 1.26\nuse ./m\n", "m/main.go": probeSrc, "m/go.mod": goMod})
+		requireNoWorkspaceAbove(t, root)
+		wantWorkspaceRefusal(t, refuseForeignModuleVersion(filepath.Join(root, "m")), "is inside the workspace "+filepath.Join(root, "go.work"))
+	})
+	t.Run("go.work above a directory WITHOUT a go.mod (gc: «no modules were found in the current workspace»)", func(t *testing.T) {
+		t.Setenv("GOWORK", "")
+		root := writeDir(t, map[string]string{"go.work": "go 1.26\n", "m/main.go": probeSrc})
+		requireNoWorkspaceAbove(t, root)
+		wantWorkspaceRefusal(t, refuseForeignModuleVersion(filepath.Join(root, "m")), "is inside the workspace "+filepath.Join(root, "go.work"))
+	})
+	t.Run("GOWORK=off disables workspace mode, as for the go command (measured: the godebug line no longer applies)", func(t *testing.T) {
+		t.Setenv("GOWORK", "off")
+		dir := writeDir(t, map[string]string{"main.go": probeSrc, "go.mod": goMod, "go.work": goWork})
+		if err := refuseForeignModuleVersion(dir); err != nil {
+			t.Fatalf("GOWORK=off: expected acceptance (the go.mod is a go 1.26 module), got %v", err)
+		}
+	})
+	t.Run("GOWORK naming the workspace file: refused by name without reading it", func(t *testing.T) {
+		dir := writeDir(t, map[string]string{"main.go": probeSrc, "go.mod": goMod, "go.work": goWork})
+		t.Setenv("GOWORK", filepath.Join(dir, "go.work"))
+		wantWorkspaceRefusal(t, refuseForeignModuleVersion(dir), "GOWORK="+filepath.Join(dir, "go.work"))
+	})
+	t.Run("GOWORK naming a missing file (gc: «reading go.work: open …: no such file or directory»): refused", func(t *testing.T) {
+		dir := writeDir(t, map[string]string{"main.go": probeSrc, "go.mod": goMod})
+		t.Setenv("GOWORK", filepath.Join(dir, "absent", "go.work"))
+		wantWorkspaceRefusal(t, refuseForeignModuleVersion(dir), "GOWORK=")
+	})
+	t.Run("GOWORK relative (gc: «invalid GOWORK: not an absolute path»): refused", func(t *testing.T) {
+		dir := writeDir(t, map[string]string{"main.go": probeSrc, "go.mod": goMod})
+		t.Setenv("GOWORK", "go.work")
+		wantWorkspaceRefusal(t, refuseForeignModuleVersion(dir), "GOWORK=go.work")
+	})
+	t.Run("a DIRECTORY named go.work is not a workspace file (the go command's rule)", func(t *testing.T) {
+		t.Setenv("GOWORK", "")
+		dir := writeDir(t, map[string]string{"main.go": probeSrc, "go.mod": goMod, "go.work/.keep": ""})
+		requireNoWorkspaceAbove(t, dir)
+		if err := refuseForeignModuleVersion(dir); err != nil {
+			t.Fatalf("a directory named go.work is not a workspace: expected acceptance, got %v", err)
+		}
+	})
+	t.Run("no go.work in scope: the control", func(t *testing.T) {
+		t.Setenv("GOWORK", "")
+		dir := writeDir(t, map[string]string{"main.go": probeSrc, "go.mod": goMod})
+		requireNoWorkspaceAbove(t, dir)
+		if err := refuseForeignModuleVersion(dir); err != nil {
+			t.Fatalf("expected acceptance, got %v", err)
+		}
+	})
+	t.Run("the whole pipeline: a case-local package inside a workspace refuses the export naming its go.work", func(t *testing.T) {
+		// Per directory, as the go.mod judgement is (load.go parseLocal): the
+		// go command, run from main's directory, would not see lib/go.work —
+		// the refusal over-approximates by name, the fail-closed direction.
+		t.Setenv("GOWORK", "")
+		dir := writeDir(t, map[string]string{
+			"main.go":     "package main\n\nimport \"lib\"\n\nfunc probe() int { return lib.V() }\n\nfunc main() { println(probe()) }\n",
+			"lib/lib.go":  "package lib\n\nfunc V() int { return 1 }\n",
+			"lib/go.mod":  "module example.org/lib\n\ngo 1.26\n",
+			"lib/go.work": "go 1.26\nuse .\n",
+		})
+		requireNoWorkspaceAbove(t, dir)
+		_, err := lowerDir(t, dir)
+		wantWorkspaceRefusal(t, err, filepath.Join("lib", "go.work"))
+	})
 }

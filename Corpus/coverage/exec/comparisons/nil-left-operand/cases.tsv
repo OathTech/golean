@@ -1,0 +1,13 @@
+# id	subject	args	expected_status	expected_reason	features
+# BUG-136 (equality review 2026-10-26 F2): untyped nil as the LEFT operand of == / !=, one row per operand kind,
+# every strict row expected = gc. pointer, map, slice, func, chan and switch-case were born RED at the base (the
+# subject quarantined «basic type untyped nil»: lean-observation `unsupported`); interface and error are the
+# green controls (an interface right side already decided the operand type).
+pointer	nilLeftPointer	-	ok	-	comparisons,equality,nil,untyped,pointers
+map	nilLeftMap	-	ok	-	comparisons,equality,nil,untyped,maps
+slice	nilLeftSlice	-	ok	-	comparisons,equality,nil,untyped,slices
+func	nilLeftFunc	-	ok	-	comparisons,equality,nil,untyped,functions,closures
+interface	nilLeftInterface	-	ok	-	comparisons,equality,nil,untyped,interfaces
+error	nilLeftError	-	ok	-	comparisons,equality,nil,untyped,interfaces,methods
+chan	nilLeftChan	-	ok	-	comparisons,equality,nil,untyped,channels
+switch-case	nilLeftSwitchCase	-	ok	-	comparisons,equality,nil,untyped,pointers,switch

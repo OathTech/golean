@@ -185,10 +185,12 @@ push rule). Pushing the tag is a separate sign-off.
   `go 1.21`+ module with no godebug override). Stated limits of the same contract: in GOPATH mode every GODEBUG
   setting is at its go 1.16-era default and only `panicnil` is pinned — sound at the pin because no other
   version-dependent setting is reached by an admitted stdlib member (measured against `internal/godebugs/table.go`;
-  an obligation on every future admission, `docs/stdlib-admission-register.md`); a `go.work` `godebug` line is an
-  override the frontend never reads (measured: it flips a module's answer while the export succeeds) — do not build
-  inside a workspace that sets one; `//go:debug panicnil=0`, the one source-level match for the pin, is refused
-  like every `//go:debug`. The contract is stated in `docs/cli.md` §1.
+  an obligation on every future admission, `docs/stdlib-admission-register.md`); a `go.work` in scope for the
+  lowered directory is REFUSED by name since 2026-10-26 (BUG-135: the go command applies a workspace's `godebug`,
+  `go` and `toolchain` lines to its modules — measured, a `godebug panicnil=1` there flips a module's answer —
+  and before this the export succeeded unchanged), with `GOWORK=off` honoured from the process environment as the
+  go command honours it and pinned by the apparatus on every leg; `//go:debug panicnil=0`, the one source-level
+  match for the pin, is refused like every `//go:debug`. The contract is stated in `docs/cli.md` §1.
 - **A blank struct field's operand is not evaluated** (row 37; BUG-129/BUG-130): the field takes the zero
   value — spec#Comparison_operators compares «non-blank field values» only — and the operand may be a constant,
   `nil` or a plain variable read (an identifier naming a variable, a package-qualified variable, a struct VALUE's

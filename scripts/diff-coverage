@@ -253,7 +253,7 @@ if [[ -n "$ORACLE_GOTOOLCHAIN" ]]; then
     echo "diff-coverage: GOLEAN_ORACLE_GOTOOLCHAIN: the frontend side's toolchain '${_fe_tc:-<go version failed>}' is not the pin '${_pin:-<baselines/go-oracle-pin unreadable>}'; refusing (the frontend must stay on the oracle of record)" >&2
     exit 2
   fi
-  if ! ORACLE_GOROOT="$(env -u GOROOT GO111MODULE=on GOFLAGS= GOTOOLCHAIN="$ORACLE_GOTOOLCHAIN" go env GOROOT 2>&1)" \
+  if ! ORACLE_GOROOT="$(env -u GOROOT GO111MODULE=on GOFLAGS= GOWORK=off GOTOOLCHAIN="$ORACLE_GOTOOLCHAIN" go env GOROOT 2>&1)" \
       || [[ ! -x "$ORACLE_GOROOT/bin/go" ]]; then
     echo "diff-coverage: GOLEAN_ORACLE_GOTOOLCHAIN=$ORACLE_GOTOOLCHAIN does not resolve to a runnable toolchain here ($(printf '%s' "$ORACLE_GOROOT" | head -c 300)); refusing — a toolchain not in the module cache cannot download inside the sandbox" >&2
     exit 2
@@ -263,7 +263,7 @@ if [[ -n "$ORACLE_GOTOOLCHAIN" ]]; then
   mkdir -p "$GO_BUILD_CACHE"
   _canary="$(mktemp -d "${TMPDIR:-/tmp}/golean-oracle-canary.XXXXXX")"
   printf 'package main\n\nimport (\n\t"fmt"\n\t"runtime"\n)\n\nfunc main() { fmt.Print(runtime.Version()) }\n' > "$_canary/main.go"
-  _said="$(cd "$_canary" && env GO111MODULE=off GOFLAGS= GOCACHE="$GO_BUILD_CACHE" \
+  _said="$(cd "$_canary" && env GO111MODULE=off GOFLAGS= GOWORK=off GOCACHE="$GO_BUILD_CACHE" \
       PATH="$ORACLE_GOROOT/bin:$PATH" GOROOT="$ORACLE_GOROOT" GOTOOLCHAIN=local go run . 2>&1)"
   rm -rf "$_canary"
   if [[ "$_said" != "$ORACLE_GOTOOLCHAIN" ]]; then
@@ -281,7 +281,7 @@ fi
 # a fail-closed exit, never a silent fallback to a stale binary.
 HARNESS_BIN="$OUT/bin/coverageharness"
 mkdir -p "$OUT/bin"
-if ! GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go build -o "$HARNESS_BIN" ./tools/coverageharness; then
+if ! GO111MODULE=off GOFLAGS= GOWORK=off GOCACHE="$GO_BUILD_CACHE" go build -o "$HARNESS_BIN" ./tools/coverageharness; then
   echo "diff-coverage: could not build tools/coverageharness (fail closed)" >&2
   exit 2
 fi
@@ -292,7 +292,7 @@ fi
 # reads a prebuilt one); the frontend shells out to nothing at run time. A
 # build failure is a fail-closed exit, never a fallback to `go run`.
 FRONTEND_BIN="$OUT/bin/nativefrontend"
-if ! GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go build -o "$FRONTEND_BIN" ./tools/nativefrontend; then
+if ! GO111MODULE=off GOFLAGS= GOWORK=off GOCACHE="$GO_BUILD_CACHE" go build -o "$FRONTEND_BIN" ./tools/nativefrontend; then
   echo "diff-coverage: could not build tools/nativefrontend (fail closed)" >&2
   exit 2
 fi
@@ -978,7 +978,7 @@ run_case_rows() {
     fe_flags+=(--allow-hidden-dep-init-order)
   fi
   local native_rc=0 native_cause
-  native_export="$(timed frontend "$id" run_with_timeout "$GO_TIMEOUT_SECONDS" "$FRONTEND_BIN" ${fe_flags[@]+"${fe_flags[@]}"} --dir "$go_dir" --out "$wire_json" 2>&1)" || native_rc=$?
+  native_export="$(timed frontend "$id" run_with_timeout "$GO_TIMEOUT_SECONDS" env GOWORK=off "$FRONTEND_BIN" ${fe_flags[@]+"${fe_flags[@]}"} --dir "$go_dir" --out "$wire_json" 2>&1)" || native_rc=$?
   if [[ "$native_rc" -eq 124 ]]; then
     report_fail "$id" "$features" "frontend-export" "native frontend TIMED OUT after ${GO_TIMEOUT_SECONDS}s (GO_TIMEOUT_SECONDS) — no wire produced; captured output: $native_export"
     return 0
@@ -1435,7 +1435,19 @@ go_run_oracle() {
   # GOFLAGS is SCRUBBED (audit fix round C3, 2026-09-05): an inherited
   # `GOFLAGS=-x`/`-v` writes build chatter to the child's stderr, which
   # is now a COMPARED channel (the `output` field), like GODEBUG already
-  # was pinned for panicnil.
+  # was pinned for panicnil. GOWORK=off (train-19 shake review F1/F7,
+  # 2026-10-26): GOPATH mode ignores go.work (measured), so this is belt
+  # and braces here — the pin is on EVERY go invocation of the apparatus so
+  # a workspace file above a checkout can move no verdict on any box; the
+  # frontend legs below carry it too, since the frontend refuses a go.work
+  # in scope by name (BUG-135) and must stay as blind as the oracle.
+  # `go run`'s masking of a signal-killed child (review F6) has no window on
+  # this leg: an `ok` row needs exit 0, and every other status is read
+  # through the harness's trailer rule (tools/coverageharness split.go,
+  # crashview.go: go run's own `exit status N` line is required — `signal:
+  # killed` is not one and is refused by name).
+  # The terminal discriminator consumes runtime frames from THIS execution.
+  # system adds diagnostics without the crash bit or a recover wrapper.
   # The terminal discriminator consumes runtime frames from THIS execution.
   # system adds diagnostics without the crash bit or a recover wrapper.
   # The oracle-only toolchain switch (GOLEAN_ORACLE_GOTOOLCHAIN, item 32;
@@ -1445,7 +1457,7 @@ go_run_oracle() {
   if [[ -n "${ORACLE_GOTOOLCHAIN:-}" ]]; then
     toolchain_env=(PATH="$ORACLE_GOROOT/bin:$PATH" GOROOT="$ORACLE_GOROOT" GOTOOLCHAIN=local)
   fi
-  timed oracle "$id" run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOFLAGS= GODEBUG=panicnil=0 GOTRACEBACK=system GOCACHE="$GO_BUILD_CACHE" \
+  timed oracle "$id" run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOFLAGS= GOWORK=off GODEBUG=panicnil=0 GOTRACEBACK=system GOCACHE="$GO_BUILD_CACHE" \
     ${gopath_env[@]+"${gopath_env[@]}"} ${toolchain_env[@]+"${toolchain_env[@]}"} \
     bash -c 'cd "$1" && shift && exec go run "$@" .' go-run-oracle "$go_run_dir" ${race_flag[@]+"${race_flag[@]}"} \
     > "$go_run_dir/oracle.stdout" 2> "$go_run_dir/oracle.stderr" || rc=$?
@@ -1875,7 +1887,7 @@ run_membership_case_rows() {
     mem_fe_flags+=(--allow-hidden-dep-init-order)
   fi
   local mem_native_rc=0 mem_native_cause
-  native_export="$(timed frontend "$id" run_with_timeout "$GO_TIMEOUT_SECONDS" "$FRONTEND_BIN" ${mem_fe_flags[@]+"${mem_fe_flags[@]}"} --dir "$go_dir" --out "$wire_json" 2>&1)" || mem_native_rc=$?
+  native_export="$(timed frontend "$id" run_with_timeout "$GO_TIMEOUT_SECONDS" env GOWORK=off "$FRONTEND_BIN" ${mem_fe_flags[@]+"${mem_fe_flags[@]}"} --dir "$go_dir" --out "$wire_json" 2>&1)" || mem_native_rc=$?
   if [[ "$mem_native_rc" -eq 124 ]]; then
     report_fail "$id" "$features" "frontend-export" "native frontend TIMED OUT after ${GO_TIMEOUT_SECONDS}s (GO_TIMEOUT_SECONDS) — no wire produced; captured output: $native_export"
     return 0

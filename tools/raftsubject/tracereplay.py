@@ -328,6 +328,8 @@ def run_one(name, blocks, prefix, args, report, rec=None, resumed=None):
     env = dict(os.environ)
     env["GOCACHE"] = os.path.join(REPO, "artifacts", "go-build-cache")
     env["GO111MODULE"] = "off"
+    env["GOFLAGS"] = ""  # scrubbed, and GOWORK=off: no ambient flag or workspace reaches the oracle (2026-10-26)
+    env["GOWORK"] = "off"
     env["GOPATH"] = gopath
     if "go-side" in resumed:
         go_trace = resumed["go-side"]["go_trace"]
