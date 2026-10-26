@@ -35,6 +35,10 @@ reading everything else.
 **Fidelity and coverage**
 
 - `BUGS.md`: the single index of known fidelity bugs, open and fixed.
+- `defect-shapes.md`: the record of `BUGS.md` classified by shape for the defect-neighbourhood
+  campaign — the shape vocabulary, one row per entry (site, route, shape, whether its
+  neighbourhood is swept), and the step-2 sweep order with each shape's matrix axes. A living
+  document until the release.
 - `2026-08-11_latitude-inventory.md`: every point where Go permits several behaviours, and how
   the machine resolves it. §11 states the two contracts.
 - `language-coverage-ledger.md`: the whole-language bar, the refused-construct frontier
