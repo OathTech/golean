@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 4260 (3965 PASS / 295 FAIL)
+# cases: 4422 (4127 PASS / 295 FAIL)
 # re-pinned: 2026-10-26 [AGENT], lane sweep/s4-identity — the defect-neighbourhood campaign's S4 sweep (identity, equality and
 #   nil-ness; docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved; members BUG-133/129/121/111/170/139).
 #   NO existing row moved: 4166 + 94 = 4260; PASS 3901 + 64 = 3965; FAIL 265 + 30 = 295. No flip, no removal, no cause
@@ -106,6 +106,199 @@
 #     variadic/sweep-s4-nil-pack-routes/tuple-fixed-only                 PASS/- -
 #     variadic/sweep-s4-nil-pack-routes/elem-kinds                       PASS/- -
 #     variadic/sweep-s4-nil-pack-routes/len-cap-append                   PASS/- -
+# re-pinned: 2026-10-26 [AGENT], lane sweep/s3-type-keys — the defect-neighbourhood campaign's S3 sweep (type identity keys:
+#   fusion or spurious distinction; docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved 2026-10-27; the matrix
+#   and every cell's disposition on the `- Neighbourhood:` lines of BUG-124/098/100/097/092/067/010/018). NO existing row moved:
+#   4166 + 162 = 4328; PASS 3901 + 162 = 4063; FAIL 265 unchanged. No flip, no removal, no cause change —
+#   corpus and records only, no change to GoLean/, tools/ or scripts/. NEW rows (162, nineteen packages
+#   Corpus/coverage/exec/*/sweep-s3-*/, every row strict, expected = gc go1.26.5), appended at the end of the file, ALL BORN GREEN:
+#   each is one cell (type kind × runtime route) at which the machine agreed with gc — the agreements the campaign pins so the
+#   corpus holds each known shape at its neighbours, not only at the instance that was found. 0 findings (BUG-196–205 unused).
+#   Measured by CAPPED_MEM_MAX=64G capped scripts/ci --diff at the lane tree 0dfded01 before the re-pin (743 s wall; differential coverage summary: cases=4328 pass=4063 fail=265 export_status=0;
+#   its only drift: these 162 NEW ids, so the differential baseline diff was its one FAIL and the RESULT line FAIL; ok kernel replay (55 GoLean modules replayed through the kernel — leanchecker);
+#   ok lake check (scripts/check-lake-check); ok lake comparator (scripts/check-comparator); negative baseline diff FULL 437/437, no regression; every other section ok), the rows taken from that
+#   run's artifacts/coverage/latest.tsv; the --diff at the tip judges.
+#   arrays/sweep-s3-array-len/ (7 rows): K12 array lengths and element types are identity: [2]int ≢ [3]int ≢ [2]int64, [0]int is its own, nested dimensions and a named element count, [2]byte ≡ [2]uint8 — on the assertion, switch, ==, map-key, nested-type and panic-display routes..
+#     arrays/sweep-s3-array-len/assert  PASS/-
+#     arrays/sweep-s3-array-len/equal  PASS/-
+#     arrays/sweep-s3-array-len/map-keys  PASS/-
+#     arrays/sweep-s3-array-len/nested-types  PASS/-
+#     arrays/sweep-s3-array-len/panic-display-length  PASS/-
+#     arrays/sweep-s3-array-len/panic-display-nested  PASS/-
+#     arrays/sweep-s3-array-len/switch  PASS/-
+#   channels/sweep-s3-chan-dir/ (8 rows): K11 channel directions are identity: chan int ≢ <-chan int ≢ chan<- int, a named chan type is its own, the element type and nested directions count — on the assertion, switch, == (a directional view of one channel boxed is another type), map-key, nested-type and panic-display routes..
+#     channels/sweep-s3-chan-dir/assert  PASS/-
+#     channels/sweep-s3-chan-dir/equal  PASS/-
+#     channels/sweep-s3-chan-dir/map-keys  PASS/-
+#     channels/sweep-s3-chan-dir/nested-directions  PASS/-
+#     channels/sweep-s3-chan-dir/nested-types  PASS/-
+#     channels/sweep-s3-chan-dir/panic-display-direction  PASS/-
+#     channels/sweep-s3-chan-dir/panic-display-send-only  PASS/-
+#     channels/sweep-s3-chan-dir/switch  PASS/-
+#   functions/sweep-s3-func-types/ (8 rows): K7 func types: parameter and result names are not identity, a named func type is not the unnamed one, the variadic bit is identity in nested positions too — on the assertion, switch, == (different types false, same type the uncomparable panic), map-key (unhashable panic) and panic-display routes (BUG-067's rows are the top-level variadic assertions)..
+#     functions/sweep-s3-func-types/equal-distinct-types  PASS/-
+#     functions/sweep-s3-func-types/equal-same-type-panic  PASS/-
+#     functions/sweep-s3-func-types/map-key-panic  PASS/-
+#     functions/sweep-s3-func-types/named-panic-display  PASS/-
+#     functions/sweep-s3-func-types/named-vs-unnamed  PASS/-
+#     functions/sweep-s3-func-types/nested-variadic  PASS/-
+#     functions/sweep-s3-func-types/param-result-names  PASS/-
+#     functions/sweep-s3-func-types/switch  PASS/-
+#   generics/sweep-s3-local-in-generic/ (13 rows): K4 a type declared inside a generic function: one type per instantiation, one type per instantiation across calls, another type in a second generic with the same local name, per-instantiation even when the local does not mention T, the same in a generic type's method and in a nested closure — on the assertion, switch, ==, map-key, readout, nested-type and cross-instantiation panic routes (BUG-018's rows are the readout at int and the assert-to-int panic).
+#     generics/sweep-s3-local-in-generic/assert  PASS/-
+#     generics/sweep-s3-local-in-generic/closure-local  PASS/-
+#     generics/sweep-s3-local-in-generic/cross-instantiation-panic  PASS/-
+#     generics/sweep-s3-local-in-generic/equal  PASS/-
+#     generics/sweep-s3-local-in-generic/generic-type-method-local  PASS/-
+#     generics/sweep-s3-local-in-generic/local-not-mentioning-t  PASS/-
+#     generics/sweep-s3-local-in-generic/map-keys  PASS/-
+#     generics/sweep-s3-local-in-generic/nested-types  PASS/-
+#     generics/sweep-s3-local-in-generic/readout-closure-local  PASS/-
+#     generics/sweep-s3-local-in-generic/readout-generic-type-method-local  PASS/-
+#     generics/sweep-s3-local-in-generic/readout-not-mentioning-t  PASS/-
+#     generics/sweep-s3-local-in-generic/switch  PASS/-
+#     generics/sweep-s3-local-in-generic/two-generics-same-name  PASS/-
+#   generics/sweep-s3-type-params/ (6 rows): K17 type parameters: a T value boxed inside a generic carries the argument's identity (byte ≡ uint8, int ≢ int64, an alias, a local type argument), an assertion / switch to T, []T, map[string]T inside the body keys on the argument — on the assertion, switch, ==, map-key and panic-display routes..
+#     generics/sweep-s3-type-params/assert  PASS/-
+#     generics/sweep-s3-type-params/equal  PASS/-
+#     generics/sweep-s3-type-params/local-type-argument  PASS/-
+#     generics/sweep-s3-type-params/map-keys  PASS/-
+#     generics/sweep-s3-type-params/panic-display  PASS/-
+#     generics/sweep-s3-type-params/switch  PASS/-
+#   interfaces/sweep-s3-basic-kinds/ (13 rows): K1 basic kinds: byte ≡ uint8 and rune ≡ int32 (aliases) fuse; int ≢ int64, uint ≢ uint64, float32 ≢ float64, int8 ≢ uint8 stay apart — on the assertion, switch (incl.
+#     interfaces/sweep-s3-basic-kinds/assert-panic-alias-display  PASS/-
+#     interfaces/sweep-s3-basic-kinds/byte-is-uint8  PASS/-
+#     interfaces/sweep-s3-basic-kinds/equal  PASS/-
+#     interfaces/sweep-s3-basic-kinds/float32-not-float64  PASS/-
+#     interfaces/sweep-s3-basic-kinds/int-not-int64  PASS/-
+#     interfaces/sweep-s3-basic-kinds/int8-not-uint8  PASS/-
+#     interfaces/sweep-s3-basic-kinds/map-keys  PASS/-
+#     interfaces/sweep-s3-basic-kinds/nested-alias-kinds  PASS/-
+#     interfaces/sweep-s3-basic-kinds/rune-is-int32  PASS/-
+#     interfaces/sweep-s3-basic-kinds/switch  PASS/-
+#     interfaces/sweep-s3-basic-kinds/switch-alias-cases  PASS/-
+#     interfaces/sweep-s3-basic-kinds/uint-not-uint64  PASS/-
+#     interfaces/sweep-s3-basic-kinds/uint8-is-byte  PASS/-
+#   interfaces/sweep-s3-stdlib-same-name/ (5 rows): K16 stdlib same-named types: *html/template.Template ≢ *text/template.Template on the switch, ==, map-key and panic-display routes (BUG-010's row is the assertion); a second pair, *encoding/json.Decoder ≢ *encoding/xml.Decoder, on the assertion..
+#     interfaces/sweep-s3-stdlib-same-name/decoder-assert  PASS/-
+#     interfaces/sweep-s3-stdlib-same-name/equal  PASS/-
+#     interfaces/sweep-s3-stdlib-same-name/map-keys  PASS/-
+#     interfaces/sweep-s3-stdlib-same-name/panic-display  PASS/-
+#     interfaces/sweep-s3-stdlib-same-name/switch  PASS/-
+#   multipkg/sweep-s3-aliases/ (12 rows): K9 aliases are identity-transparent at every runtime route: a basic alias, a named alias, a cross-package alias (both directions), a generic alias, an alias of an instantiation, a local alias — assertion, switch, ==, map-key, readout (the target's name), nested-type and panic-display routes (spec-examples-decl/{type,alias}-identity are the assignability half)..
+#     multipkg/sweep-s3-aliases/assert  PASS/-
+#     multipkg/sweep-s3-aliases/equal  PASS/-
+#     multipkg/sweep-s3-aliases/local-alias  PASS/-
+#     multipkg/sweep-s3-aliases/map-keys  PASS/-
+#     multipkg/sweep-s3-aliases/nested-types  PASS/-
+#     multipkg/sweep-s3-aliases/panic-display-basic  PASS/-
+#     multipkg/sweep-s3-aliases/panic-display-named  PASS/-
+#     multipkg/sweep-s3-aliases/readout-basic  PASS/-
+#     multipkg/sweep-s3-aliases/readout-cross-package  PASS/-
+#     multipkg/sweep-s3-aliases/readout-instantiation  PASS/-
+#     multipkg/sweep-s3-aliases/readout-named  PASS/-
+#     multipkg/sweep-s3-aliases/switch  PASS/-
+#   multipkg/sweep-s3-anon-iface/ (11 rows): K6 anonymous interfaces are structural — method order, embedding, parameter names, exported methods across packages fuse; unexported methods across packages, a named interface with the same set, `error` vs its literal stay apart; `any` ≡ `interface{}` — through the func / slice / pointer type routes (an interface is never a dynamic type), plus the uncomparable-panic and assertion-panic displays.
+#     multipkg/sweep-s3-anon-iface/anonymous-vs-named  PASS/-
+#     multipkg/sweep-s3-anon-iface/any-and-error  PASS/-
+#     multipkg/sweep-s3-anon-iface/assert-panic-display  PASS/-
+#     multipkg/sweep-s3-anon-iface/embedded-flattened  PASS/-
+#     multipkg/sweep-s3-anon-iface/exported-cross-package  PASS/-
+#     multipkg/sweep-s3-anon-iface/local-type-inside  PASS/-
+#     multipkg/sweep-s3-anon-iface/method-order  PASS/-
+#     multipkg/sweep-s3-anon-iface/param-names  PASS/-
+#     multipkg/sweep-s3-anon-iface/pointer-to-interface  PASS/-
+#     multipkg/sweep-s3-anon-iface/uncomparable-panic-display  PASS/-
+#     multipkg/sweep-s3-anon-iface/unexported-cross-package  PASS/-
+#   multipkg/sweep-s3-defined-over-defined/ (13 rows): K13 defined-over-defined: `type B A` is neither A nor int, its alias C is B, a cross-package `type D ri.T` is neither ri.T nor ri.U, `type E ri.N` beside ri.M — on the assertion, switch, ==, map-key, readout (the outermost name), nested-type and panic-display routes..
+#     multipkg/sweep-s3-defined-over-defined/assert  PASS/-
+#     multipkg/sweep-s3-defined-over-defined/equal  PASS/-
+#     multipkg/sweep-s3-defined-over-defined/map-keys  PASS/-
+#     multipkg/sweep-s3-defined-over-defined/nested-types  PASS/-
+#     multipkg/sweep-s3-defined-over-defined/panic-display  PASS/-
+#     multipkg/sweep-s3-defined-over-defined/panic-display-cross-package  PASS/-
+#     multipkg/sweep-s3-defined-over-defined/panic-display-imported  PASS/-
+#     multipkg/sweep-s3-defined-over-defined/readout-alias-c  PASS/-
+#     multipkg/sweep-s3-defined-over-defined/readout-b  PASS/-
+#     multipkg/sweep-s3-defined-over-defined/readout-cross-package-d  PASS/-
+#     multipkg/sweep-s3-defined-over-defined/readout-e  PASS/-
+#     multipkg/sweep-s3-defined-over-defined/readout-imported-u  PASS/-
+#     multipkg/sweep-s3-defined-over-defined/switch  PASS/-
+#   multipkg/sweep-s3-error-shadow/ (1 rows): A package-level `error` declared in main shadows the universe name inside main only: main's func(error) is func(main.error), red/inner's is func(error) — two types; the universe int beside..
+#     multipkg/sweep-s3-error-shadow  PASS/-
+#   multipkg/sweep-s3-instantiations/ (14 rows): K8 generic instantiations: identical arguments by different spellings fuse (Box[byte] ≡ Box[uint8], Box[any] ≡ Box[interface{}], an alias argument, Box[T] inside a generic at int, parameter names in a func argument), different arguments stay apart (int64, argument order, pointer, array length, variadic, two same-named packages' T, nesting) — on the assertion, switch, ==, map-key, readout and panic-display routes (generics/instantiated-type-assert/* are the int-vs-string instance)..
+#     multipkg/sweep-s3-instantiations/distinct-arguments  PASS/-
+#     multipkg/sweep-s3-instantiations/equal  PASS/-
+#     multipkg/sweep-s3-instantiations/fused-spellings  PASS/-
+#     multipkg/sweep-s3-instantiations/map-keys  PASS/-
+#     multipkg/sweep-s3-instantiations/panic-display-alias-args  PASS/-
+#     multipkg/sweep-s3-instantiations/panic-display-byte  PASS/-
+#     multipkg/sweep-s3-instantiations/panic-display-func-arg  PASS/-
+#     multipkg/sweep-s3-instantiations/panic-display-path  PASS/-
+#     multipkg/sweep-s3-instantiations/readout-any  PASS/-
+#     multipkg/sweep-s3-instantiations/readout-byte  PASS/-
+#     multipkg/sweep-s3-instantiations/readout-empty-struct  PASS/-
+#     multipkg/sweep-s3-instantiations/readout-nested  PASS/-
+#     multipkg/sweep-s3-instantiations/readout-path  PASS/-
+#     multipkg/sweep-s3-instantiations/switch  PASS/-
+#   multipkg/sweep-s3-key-extras/ (10 rows): Cells read off the key-minting code: an anonymous literal embedding another package's private named interface flattens to that package's unexported method; local named interfaces are nominal and a literal embedding one flattens; method-expression and method-value types; variadic, result arity and instantiations inside interface method signatures; a package-level type shadowed by a stencil's local; a stencil's local at byte / alias / any argument spellings and at a named argument; a type parameter named like a package-level type..
+#     multipkg/sweep-s3-key-extras/embedded-private-interface  PASS/-
+#     multipkg/sweep-s3-key-extras/interface-method-signatures  PASS/-
+#     multipkg/sweep-s3-key-extras/local-named-interface  PASS/-
+#     multipkg/sweep-s3-key-extras/method-expression-types  PASS/-
+#     multipkg/sweep-s3-key-extras/package-type-shadowed-in-stencil  PASS/-
+#     multipkg/sweep-s3-key-extras/readout-shadowed-in-stencil  PASS/-
+#     multipkg/sweep-s3-key-extras/readout-stencil-local-byte  PASS/-
+#     multipkg/sweep-s3-key-extras/readout-stencil-local-named-arg  PASS/-
+#     multipkg/sweep-s3-key-extras/stencil-local-fused-spellings  PASS/-
+#     multipkg/sweep-s3-key-extras/type-parameter-named-like-type  PASS/-
+#   multipkg/sweep-s3-multifile/ (4 rows): Spurious-distinction cells across FILES and IMPORT ALIASES: one package under two aliases in two files is one package, a generic type instantiated inside its own package and in main is one type, two files' and two packages' same-named local types are distinct; the readout of a local declared in the second file..
+#     multipkg/sweep-s3-multifile/import-aliases  PASS/-
+#     multipkg/sweep-s3-multifile/instantiation-across-packages  PASS/-
+#     multipkg/sweep-s3-multifile/locals-across-files-and-packages  PASS/-
+#     multipkg/sweep-s3-multifile/readout-second-file  PASS/-
+#   multipkg/sweep-s3-named-path/ (8 rows): K2 named types keyed by import PATH: red/inner.T, blue/inner.T and main.T (one name, one shape) on the switch, ==, map-key, readout, dispatch and nested-type routes (the assertion and panic routes are multipkg/same-name-identity and same-name-identity-panic); a function-local T beside the imported T..
+#     multipkg/sweep-s3-named-path/dispatch  PASS/-
+#     multipkg/sweep-s3-named-path/equal  PASS/-
+#     multipkg/sweep-s3-named-path/local-vs-imported  PASS/-
+#     multipkg/sweep-s3-named-path/local-vs-imported-panic  PASS/-
+#     multipkg/sweep-s3-named-path/map-keys  PASS/-
+#     multipkg/sweep-s3-named-path/nested-types  PASS/-
+#     multipkg/sweep-s3-named-path/readout  PASS/-
+#     multipkg/sweep-s3-named-path/switch  PASS/-
+#   pointers/sweep-s3-wrappers/ (7 rows): K14 structural wrappers over named / local / interface element types: *T ≢ *U, **T ≢ *T, []T ≢ []U, map[string]T ≢ map[string]U, map[T]int ≢ map[U]int, typed nil pointers of two types are two boxes, *L and map[L] for two functions' local L, map[string]I at a named vs an anonymous interface — on the assertion, switch, ==, map-key and panic-display routes..
+#     pointers/sweep-s3-wrappers/assert  PASS/-
+#     pointers/sweep-s3-wrappers/equal-typed-nils  PASS/-
+#     pointers/sweep-s3-wrappers/local-elements  PASS/-
+#     pointers/sweep-s3-wrappers/map-keys-typed-nils  PASS/-
+#     pointers/sweep-s3-wrappers/panic-display-map-of-interface  PASS/-
+#     pointers/sweep-s3-wrappers/panic-display-pointer  PASS/-
+#     pointers/sweep-s3-wrappers/switch  PASS/-
+#   scoping/sweep-s3-local-types/ (12 rows): K3 function-local types: two functions' `type L` are two types, one function's L is one type across invocations, two blocks' L are two, a closure's and a package-level func literal's and init's locals are their own — on the assertion, switch, map-key, ==, readout and nested-type routes (the panic routes are scoping/local-type-identity/*)..
+#     scoping/sweep-s3-local-types/assert-cross  PASS/-
+#     scoping/sweep-s3-local-types/in-closure  PASS/-
+#     scoping/sweep-s3-local-types/in-init  PASS/-
+#     scoping/sweep-s3-local-types/in-package-func-literal  PASS/-
+#     scoping/sweep-s3-local-types/map-keys  PASS/-
+#     scoping/sweep-s3-local-types/nested-types  PASS/-
+#     scoping/sweep-s3-local-types/readout-a  PASS/-
+#     scoping/sweep-s3-local-types/readout-b  PASS/-
+#     scoping/sweep-s3-local-types/same-across-calls  PASS/-
+#     scoping/sweep-s3-local-types/shadow-assert  PASS/-
+#     scoping/sweep-s3-local-types/switch  PASS/-
+#     scoping/sweep-s3-local-types/two-blocks  PASS/-
+#   structs/sweep-s3-empty-struct/ (6 rows): K5 the canonical `struct{}` is one unnamed type, distinct from a named empty struct — on the assertion, switch, ==, map-key, nested-type and panic routes (anonymous NON-empty structs are a named frontend refusal)..
+#     structs/sweep-s3-empty-struct/assert  PASS/-
+#     structs/sweep-s3-empty-struct/assert-panic  PASS/-
+#     structs/sweep-s3-empty-struct/equal  PASS/-
+#     structs/sweep-s3-empty-struct/map-keys  PASS/-
+#     structs/sweep-s3-empty-struct/nested-types  PASS/-
+#     structs/sweep-s3-empty-struct/switch  PASS/-
+#   sync/sweep-s3-sync-types/ (4 rows): K15 the sync primitive types are nominal: *sync.Mutex ≢ *sync.RWMutex ≢ *sync.WaitGroup ≢ *sync.Once (and Locker satisfaction beside) — on the assertion, switch, == and panic-display routes..
+#     sync/sweep-s3-sync-types/assert  PASS/-
+#     sync/sweep-s3-sync-types/equal  PASS/-
+#     sync/sweep-s3-sync-types/panic-display  PASS/-
+#     sync/sweep-s3-sync-types/switch  PASS/-
 # re-pinned: 2026-10-27 [AGENT], lane core/g21-normal-form-spill-1026 — raft-proofs' ask G21 (2026-10-26, relayed by the [USER]
 #   the same day): (1) the heap normal form is SHAPE-CHECKED at bool/string/slice/map/pointer (isNormalForTyTy's catch-all closed in
 #   lockstep with the normalizer, Ops.lean) and (2) the footprint budget (arrayFootprintBudget, 1<<24 leaves) guards the append
@@ -6891,3 +7084,165 @@ PASS	variadic/sweep-s4-nil-pack-routes/fixed-plus-zero	-	-
 PASS	variadic/sweep-s4-nil-pack-routes/tuple-fixed-only	-	-
 PASS	variadic/sweep-s4-nil-pack-routes/elem-kinds	-	-
 PASS	variadic/sweep-s4-nil-pack-routes/len-cap-append	-	-
+PASS	arrays/sweep-s3-array-len/assert	-	-
+PASS	arrays/sweep-s3-array-len/equal	-	-
+PASS	arrays/sweep-s3-array-len/map-keys	-	-
+PASS	arrays/sweep-s3-array-len/nested-types	-	-
+PASS	arrays/sweep-s3-array-len/panic-display-length	-	-
+PASS	arrays/sweep-s3-array-len/panic-display-nested	-	-
+PASS	arrays/sweep-s3-array-len/switch	-	-
+PASS	channels/sweep-s3-chan-dir/assert	-	-
+PASS	channels/sweep-s3-chan-dir/equal	-	-
+PASS	channels/sweep-s3-chan-dir/map-keys	-	-
+PASS	channels/sweep-s3-chan-dir/nested-directions	-	-
+PASS	channels/sweep-s3-chan-dir/nested-types	-	-
+PASS	channels/sweep-s3-chan-dir/panic-display-direction	-	-
+PASS	channels/sweep-s3-chan-dir/panic-display-send-only	-	-
+PASS	channels/sweep-s3-chan-dir/switch	-	-
+PASS	functions/sweep-s3-func-types/equal-distinct-types	-	-
+PASS	functions/sweep-s3-func-types/equal-same-type-panic	-	-
+PASS	functions/sweep-s3-func-types/map-key-panic	-	-
+PASS	functions/sweep-s3-func-types/named-panic-display	-	-
+PASS	functions/sweep-s3-func-types/named-vs-unnamed	-	-
+PASS	functions/sweep-s3-func-types/nested-variadic	-	-
+PASS	functions/sweep-s3-func-types/param-result-names	-	-
+PASS	functions/sweep-s3-func-types/switch	-	-
+PASS	generics/sweep-s3-local-in-generic/assert	-	-
+PASS	generics/sweep-s3-local-in-generic/closure-local	-	-
+PASS	generics/sweep-s3-local-in-generic/cross-instantiation-panic	-	-
+PASS	generics/sweep-s3-local-in-generic/equal	-	-
+PASS	generics/sweep-s3-local-in-generic/generic-type-method-local	-	-
+PASS	generics/sweep-s3-local-in-generic/local-not-mentioning-t	-	-
+PASS	generics/sweep-s3-local-in-generic/map-keys	-	-
+PASS	generics/sweep-s3-local-in-generic/nested-types	-	-
+PASS	generics/sweep-s3-local-in-generic/readout-closure-local	-	-
+PASS	generics/sweep-s3-local-in-generic/readout-generic-type-method-local	-	-
+PASS	generics/sweep-s3-local-in-generic/readout-not-mentioning-t	-	-
+PASS	generics/sweep-s3-local-in-generic/switch	-	-
+PASS	generics/sweep-s3-local-in-generic/two-generics-same-name	-	-
+PASS	generics/sweep-s3-type-params/assert	-	-
+PASS	generics/sweep-s3-type-params/equal	-	-
+PASS	generics/sweep-s3-type-params/local-type-argument	-	-
+PASS	generics/sweep-s3-type-params/map-keys	-	-
+PASS	generics/sweep-s3-type-params/panic-display	-	-
+PASS	generics/sweep-s3-type-params/switch	-	-
+PASS	interfaces/sweep-s3-basic-kinds/assert-panic-alias-display	-	-
+PASS	interfaces/sweep-s3-basic-kinds/byte-is-uint8	-	-
+PASS	interfaces/sweep-s3-basic-kinds/equal	-	-
+PASS	interfaces/sweep-s3-basic-kinds/float32-not-float64	-	-
+PASS	interfaces/sweep-s3-basic-kinds/int-not-int64	-	-
+PASS	interfaces/sweep-s3-basic-kinds/int8-not-uint8	-	-
+PASS	interfaces/sweep-s3-basic-kinds/map-keys	-	-
+PASS	interfaces/sweep-s3-basic-kinds/nested-alias-kinds	-	-
+PASS	interfaces/sweep-s3-basic-kinds/rune-is-int32	-	-
+PASS	interfaces/sweep-s3-basic-kinds/switch	-	-
+PASS	interfaces/sweep-s3-basic-kinds/switch-alias-cases	-	-
+PASS	interfaces/sweep-s3-basic-kinds/uint-not-uint64	-	-
+PASS	interfaces/sweep-s3-basic-kinds/uint8-is-byte	-	-
+PASS	interfaces/sweep-s3-stdlib-same-name/decoder-assert	-	-
+PASS	interfaces/sweep-s3-stdlib-same-name/equal	-	-
+PASS	interfaces/sweep-s3-stdlib-same-name/map-keys	-	-
+PASS	interfaces/sweep-s3-stdlib-same-name/panic-display	-	-
+PASS	interfaces/sweep-s3-stdlib-same-name/switch	-	-
+PASS	multipkg/sweep-s3-aliases/assert	-	-
+PASS	multipkg/sweep-s3-aliases/equal	-	-
+PASS	multipkg/sweep-s3-aliases/local-alias	-	-
+PASS	multipkg/sweep-s3-aliases/map-keys	-	-
+PASS	multipkg/sweep-s3-aliases/nested-types	-	-
+PASS	multipkg/sweep-s3-aliases/panic-display-basic	-	-
+PASS	multipkg/sweep-s3-aliases/panic-display-named	-	-
+PASS	multipkg/sweep-s3-aliases/readout-basic	-	-
+PASS	multipkg/sweep-s3-aliases/readout-cross-package	-	-
+PASS	multipkg/sweep-s3-aliases/readout-instantiation	-	-
+PASS	multipkg/sweep-s3-aliases/readout-named	-	-
+PASS	multipkg/sweep-s3-aliases/switch	-	-
+PASS	multipkg/sweep-s3-anon-iface/anonymous-vs-named	-	-
+PASS	multipkg/sweep-s3-anon-iface/any-and-error	-	-
+PASS	multipkg/sweep-s3-anon-iface/assert-panic-display	-	-
+PASS	multipkg/sweep-s3-anon-iface/embedded-flattened	-	-
+PASS	multipkg/sweep-s3-anon-iface/exported-cross-package	-	-
+PASS	multipkg/sweep-s3-anon-iface/local-type-inside	-	-
+PASS	multipkg/sweep-s3-anon-iface/method-order	-	-
+PASS	multipkg/sweep-s3-anon-iface/param-names	-	-
+PASS	multipkg/sweep-s3-anon-iface/pointer-to-interface	-	-
+PASS	multipkg/sweep-s3-anon-iface/uncomparable-panic-display	-	-
+PASS	multipkg/sweep-s3-anon-iface/unexported-cross-package	-	-
+PASS	multipkg/sweep-s3-defined-over-defined/assert	-	-
+PASS	multipkg/sweep-s3-defined-over-defined/equal	-	-
+PASS	multipkg/sweep-s3-defined-over-defined/map-keys	-	-
+PASS	multipkg/sweep-s3-defined-over-defined/nested-types	-	-
+PASS	multipkg/sweep-s3-defined-over-defined/panic-display	-	-
+PASS	multipkg/sweep-s3-defined-over-defined/panic-display-cross-package	-	-
+PASS	multipkg/sweep-s3-defined-over-defined/panic-display-imported	-	-
+PASS	multipkg/sweep-s3-defined-over-defined/readout-alias-c	-	-
+PASS	multipkg/sweep-s3-defined-over-defined/readout-b	-	-
+PASS	multipkg/sweep-s3-defined-over-defined/readout-cross-package-d	-	-
+PASS	multipkg/sweep-s3-defined-over-defined/readout-e	-	-
+PASS	multipkg/sweep-s3-defined-over-defined/readout-imported-u	-	-
+PASS	multipkg/sweep-s3-defined-over-defined/switch	-	-
+PASS	multipkg/sweep-s3-error-shadow	-	-
+PASS	multipkg/sweep-s3-instantiations/distinct-arguments	-	-
+PASS	multipkg/sweep-s3-instantiations/equal	-	-
+PASS	multipkg/sweep-s3-instantiations/fused-spellings	-	-
+PASS	multipkg/sweep-s3-instantiations/map-keys	-	-
+PASS	multipkg/sweep-s3-instantiations/panic-display-alias-args	-	-
+PASS	multipkg/sweep-s3-instantiations/panic-display-byte	-	-
+PASS	multipkg/sweep-s3-instantiations/panic-display-func-arg	-	-
+PASS	multipkg/sweep-s3-instantiations/panic-display-path	-	-
+PASS	multipkg/sweep-s3-instantiations/readout-any	-	-
+PASS	multipkg/sweep-s3-instantiations/readout-byte	-	-
+PASS	multipkg/sweep-s3-instantiations/readout-empty-struct	-	-
+PASS	multipkg/sweep-s3-instantiations/readout-nested	-	-
+PASS	multipkg/sweep-s3-instantiations/readout-path	-	-
+PASS	multipkg/sweep-s3-instantiations/switch	-	-
+PASS	multipkg/sweep-s3-key-extras/embedded-private-interface	-	-
+PASS	multipkg/sweep-s3-key-extras/interface-method-signatures	-	-
+PASS	multipkg/sweep-s3-key-extras/local-named-interface	-	-
+PASS	multipkg/sweep-s3-key-extras/method-expression-types	-	-
+PASS	multipkg/sweep-s3-key-extras/package-type-shadowed-in-stencil	-	-
+PASS	multipkg/sweep-s3-key-extras/readout-shadowed-in-stencil	-	-
+PASS	multipkg/sweep-s3-key-extras/readout-stencil-local-byte	-	-
+PASS	multipkg/sweep-s3-key-extras/readout-stencil-local-named-arg	-	-
+PASS	multipkg/sweep-s3-key-extras/stencil-local-fused-spellings	-	-
+PASS	multipkg/sweep-s3-key-extras/type-parameter-named-like-type	-	-
+PASS	multipkg/sweep-s3-multifile/import-aliases	-	-
+PASS	multipkg/sweep-s3-multifile/instantiation-across-packages	-	-
+PASS	multipkg/sweep-s3-multifile/locals-across-files-and-packages	-	-
+PASS	multipkg/sweep-s3-multifile/readout-second-file	-	-
+PASS	multipkg/sweep-s3-named-path/dispatch	-	-
+PASS	multipkg/sweep-s3-named-path/equal	-	-
+PASS	multipkg/sweep-s3-named-path/local-vs-imported	-	-
+PASS	multipkg/sweep-s3-named-path/local-vs-imported-panic	-	-
+PASS	multipkg/sweep-s3-named-path/map-keys	-	-
+PASS	multipkg/sweep-s3-named-path/nested-types	-	-
+PASS	multipkg/sweep-s3-named-path/readout	-	-
+PASS	multipkg/sweep-s3-named-path/switch	-	-
+PASS	pointers/sweep-s3-wrappers/assert	-	-
+PASS	pointers/sweep-s3-wrappers/equal-typed-nils	-	-
+PASS	pointers/sweep-s3-wrappers/local-elements	-	-
+PASS	pointers/sweep-s3-wrappers/map-keys-typed-nils	-	-
+PASS	pointers/sweep-s3-wrappers/panic-display-map-of-interface	-	-
+PASS	pointers/sweep-s3-wrappers/panic-display-pointer	-	-
+PASS	pointers/sweep-s3-wrappers/switch	-	-
+PASS	scoping/sweep-s3-local-types/assert-cross	-	-
+PASS	scoping/sweep-s3-local-types/in-closure	-	-
+PASS	scoping/sweep-s3-local-types/in-init	-	-
+PASS	scoping/sweep-s3-local-types/in-package-func-literal	-	-
+PASS	scoping/sweep-s3-local-types/map-keys	-	-
+PASS	scoping/sweep-s3-local-types/nested-types	-	-
+PASS	scoping/sweep-s3-local-types/readout-a	-	-
+PASS	scoping/sweep-s3-local-types/readout-b	-	-
+PASS	scoping/sweep-s3-local-types/same-across-calls	-	-
+PASS	scoping/sweep-s3-local-types/shadow-assert	-	-
+PASS	scoping/sweep-s3-local-types/switch	-	-
+PASS	scoping/sweep-s3-local-types/two-blocks	-	-
+PASS	structs/sweep-s3-empty-struct/assert	-	-
+PASS	structs/sweep-s3-empty-struct/assert-panic	-	-
+PASS	structs/sweep-s3-empty-struct/equal	-	-
+PASS	structs/sweep-s3-empty-struct/map-keys	-	-
+PASS	structs/sweep-s3-empty-struct/nested-types	-	-
+PASS	structs/sweep-s3-empty-struct/switch	-	-
+PASS	sync/sweep-s3-sync-types/assert	-	-
+PASS	sync/sweep-s3-sync-types/equal	-	-
+PASS	sync/sweep-s3-sync-types/panic-display	-	-
+PASS	sync/sweep-s3-sync-types/switch	-	-
