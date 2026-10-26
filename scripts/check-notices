@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# check-notices — a speedbump of scripts/ci (report-only): the third-party notices the tree owes
+# are present, and no tracked file outside the inventoried subtrees carries an upstream copyright
+# header. One grep; the inventory it guards is THIRD_PARTY_NOTICES.md. The class it catches: a
+# file copied from another project (its header «Copyright <year> The … Authors», «Copyright
+# (c) <year> …») landing somewhere the inventory does not cover — the way the goose examples and
+# the raft subject arrived. Added 2026-10-26 ([AGENT], lane records/dc-packaging-1026; the
+# deep-clean review's D1/DC05). Not a gate: licensing is not a trust surface of the semantics.
+set -uo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT" || { echo "check-notices: cannot cd to $ROOT" >&2; exit 1; }
+fail=0
+for f in THIRD_PARTY_NOTICES.md Corpus/coverage/exec/imported-goose/LICENSE; do
+  if [[ ! -s "$f" ]]; then echo "check-notices: FAIL — $f is missing or empty" >&2; fail=1; fi
+done
+# The inventoried subtrees are excluded; so are the notices file, the root LICENSE (the Apache
+# appendix's template line) and the dated records under docs/ (quotations, not copied code).
+hits="$(git grep -n -E '^(//|#|/\*| \*|--|;;)[[:space:]]*Copyright([[:space:]]+\(c\))?[[:space:]]+[0-9]{4}' -- . \
+  ':!raftsubject' ':!Corpus/coverage/exec/imported-goose' ':!THIRD_PARTY_NOTICES.md' ':!LICENSE' ':!docs' 2>/dev/null)"
+if [[ -n "$hits" ]]; then
+  echo "check-notices: FAIL — upstream copyright header(s) outside the inventoried subtrees (add a row to THIRD_PARTY_NOTICES.md, or the notice the license asks for):" >&2
+  printf '  %s\n' "$hits" >&2
+  fail=1
+fi
+if [[ "$fail" -ne 0 ]]; then exit 1; fi
+echo "check-notices: ok — THIRD_PARTY_NOTICES.md and the goose LICENSE present; no upstream copyright header outside raftsubject/ and imported-goose/"

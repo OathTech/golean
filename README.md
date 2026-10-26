@@ -32,7 +32,10 @@ see [`docs/semantics-overview.md`](docs/semantics-overview.md).
   program logic on this semantics and consumes it at a pinned commit (currently
   the tag `logic-offer/2026-10-03`).
 - **Anyone who wants a Go semantics** to execute programs against, or to state
-  and prove facts about, without having to trust a hand-written model.
+  and prove facts about. The model is hand-written and explicit: the interpreter
+  and the lowering are the trusted surface (below), inspectable in the source and
+  validated against `go run` on the corpus — not a model you are spared from
+  trusting.
 
 ## The trust story
 
@@ -42,7 +45,12 @@ against `go run`: the coverage runners, the tracked `baselines/`, and the go1.26
 oracle pin. Everything else in the repository is untrusted tooling. The lowering
 Go → GoCore has **no correctness theorem**; it is trusted only because the corpus
 validates it. A consumer of a GoCore program inherits that assumption. (The full
-list is in `CLAUDE.md`, «The trusted surface».)
+list is in `CLAUDE.md`, «The trusted surface».) What a green gate establishes is
+agreement with `go run` on the corpus's rows within the stated limits (below): the
+semantics is not proved against Go, and the kept theorems (`Prefix`/`Finish`, the
+equations, the executable pool facts) are about the interpreter, not about Go.
+Known wrong answers are listed in `docs/BUGS.md`; a release reports them
+(`docs/release.md` §1.6), it does not close them.
 
 ## Getting started on a fresh clone
 
@@ -77,8 +85,8 @@ is the complete list of what the machine needs:
   `/usr/bin/time`, for peak-RSS figures in the gate's output.
 
 ```
-scripts/setup-deps                       # goose, go, raft reference checkouts at the pinned revs (gitignored deps/; needs the network)
-lake build                               # the cold build of the default targets (the libraries `lake check` verifies); on an Oath box: CAPPED_MEM_MAX=64G capped lake build (64 G is the measured cold need); the gate builds every target by name, the `golean` binary among them
+scripts/setup-deps                       # goose, go, raft reference checkouts at the pinned revs (raft at the revision raftsubject/ is derived from; gitignored deps/; needs the network)
+lake build                               # the cold build of the default targets (the libraries `lake check` verifies); on an Oath box: CAPPED_MEM_MAX=64G capped lake build (the cap the cold build is measured under — it also sizes the thread pool; the latest cold build peaked near 3 GiB aggregate, the earlier 64G+ need is the «Concurrency OOM» record, both in docs/operational-lessons.md); the gate builds every target by name, the `golean` binary among them
 CAPPED_MEM_MAX=64G scripts/ci --diff     # the gate plus the differential corpus; records the baselines it then checks
 ```
 
@@ -139,8 +147,9 @@ tests, the wire and frontend checks, plus report-only speedbumps. `scripts/ci
 --diff` is the merge tier, which adds a fresh differential run of every corpus
 row against the tracked baselines and two toolchain speedbumps: `lake check`
 (the export and kernel replay of the default targets, about four minutes) and
-`lake comparator` (the 349 theorems kept on main for the raft-proofs customer,
-frozen as statements in `Contract/Challenge.lean`, judged against GoLean's own
+`lake comparator` (every theorem kept on main for the raft-proofs customer —
+`scripts/gen-contract --check` prints the count by family — frozen as statements
+in `Contract/Challenge.lean`, judged against GoLean's own
 theorems per `comparator.json` — Lake's judge compares the exported statements
 syntactically and replays the solution through the kernel, so an edit to a kept
 theorem's statement is a mismatch naming it; a drift through a definition's
@@ -169,7 +178,11 @@ the frontend refuses are listed in
 
 ## License
 
-Apache License 2.0 (`LICENSE`), copyright Oath Technologies, 2026.
+Apache License 2.0 (`LICENSE`), copyright Oath Technologies, 2026, for GoLean's own
+files. Third-party material carried in the tree — the imported goose examples (MIT),
+the derived etcd-io/raft subject (Apache-2.0) and the generated codec written after
+protobuf-go (BSD-3-Clause) — keeps its own license and notice; the inventory is
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
 ## Where the documentation is
 

@@ -189,6 +189,7 @@ run_bump "stdlib admission register = frontend tables (scripts/check-stdlib-regi
 run_bump "AGENTS.md is the alias of CLAUDE.md (scripts/check-agents-alias)" ./scripts/check-agents-alias
 run_bump "imported-goose verbatim at the pin (scripts/check-imported-goose)" ./scripts/check-imported-goose
 run_bump "memory-module raw call sites = inventory (scripts/check-mem-callsites)" bash scripts/check-mem-callsites
+run_bump "third-party notices present; no upstream copyright header outside the inventoried subtrees (scripts/check-notices)" bash scripts/check-notices
 
 # ── GATE: the build of every target, EACH NAMED on the command line. The
 # default targets are the main-free libraries only ([USER] 2026-10-21,
