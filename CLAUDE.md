@@ -208,7 +208,7 @@ Everything else is untrusted tooling.
   default since 2026-10-25, their `main`s turned into build-time checks,
   [USER] 2026-10-25, row 42's follow-up; sandboxed where `bwrap` can start,
   `--inadvisably-no-sandbox` where it cannot, saying which) and `lake
-  comparator` (`scripts/check-comparator`, about 20 s: the 366 statements
+  comparator` (`scripts/check-comparator`, about 20 s: the 383 statements
   of the surface kept on main for the raft-proofs customer — every theorem
   of `Equations.lean`, the G11 family, the `Prefix`/`Finish` laws, the
   output-fold bridge, `enterFrame_declared`, the `Choices.consumeAt*` laws,
@@ -248,7 +248,7 @@ Everything else is untrusted tooling.
   `Tests.UnseqHarness`; `Tests.UnseqWire`; `Tests.MethodIdentityFixture`,
   the fresh-wire half of the method-identity check, which needs a Go
   subprocess and a path argument) — none carrying a theorem. The two
-  theorem-bearing test modules (`Tests/EquationClient.lean`: 300 equation
+  theorem-bearing test modules (`Tests/EquationClient.lean`: 317 equation
   pins + 12 facts; `Tests/MethodIdentity.lean`: 12) are default targets
   since 2026-10-25, their `main`s build-time `#eval` checks whose lines the
   gate scripts read from the build output, so `lake check` exports and

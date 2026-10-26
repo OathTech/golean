@@ -4600,8 +4600,7 @@ the issue53619 family was wrong.
   entries and struct fields) and BUG-090's `sliceCapBudget`; the
   paragraph «FAIL-CLOSED (2026-10-12)» at the end of this entry has the
   measurements, the one residual that is NOT closed — the large-element
-  `make`, (2b); its RUN-TIME-count half CLOSED BY REFUSAL 2026-10-25,
-  BUG-131 — and the finding that (1)'s quadratic term was already
+  `make`, (2b); its RUN-TIME-count half is refused by name at the `make` site since 2026-10-25 (BUG-131), which closes the `make` DOOR only — the same backing is still built through `append`'s spill and the `[]byte(s)` conversion (BUG-131 «SCOPE», a follow-up for the owner's word) — and the finding that (1)'s quadratic term was already
   gone)
 - Expect: FAIL
 - Pinned-by: none (the refusal surfaces at `frontend-export` since
