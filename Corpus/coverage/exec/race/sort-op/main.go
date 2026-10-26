@@ -1,7 +1,7 @@
 package main
 
 // The `sortSlice` MACHINE OP's write set against the race detector
-// (BUG-131; review of lane frontend/g19-sort-intercept-1025, F1,
+// (BUG-132; review of lane frontend/g19-sort-intercept-1025, F1,
 // 2026-10-25). The op records EVERY window element as read then WRITTEN
 // (Machine.lean, the `.sortSlice` apply arm), where gc's pdqsort on an
 // already-ordered window performs NO write (`insertionSortOrdered` swaps
@@ -18,7 +18,7 @@ package main
 
 import "slices"
 
-// RED PIN (BUG-131): the direct call `slices.Sort(s)` inside the spawned
+// RED PIN (BUG-132): the direct call `slices.Sort(s)` inside the spawned
 // closure is the op (expression-statement position); the sibling reads
 // s[0]; both join main through the channel before the readout, so gc's
 // answer is the one value 1123 and gc -race reports nothing (no write).

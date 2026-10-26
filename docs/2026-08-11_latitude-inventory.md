@@ -635,7 +635,7 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
   machine RACE-ALL. Fail-closed; consistent with the racy lane's oracle
   («one red sample proves the race»; pre-existing BUG-046 class). The
   `selectPoll` docstring says so since this round. (iii) **the
-  `sortSlice` op's write set** (BUG-131; lane
+  `sortSlice` op's write set** (BUG-132; lane
   `frontend/g19-sort-intercept-1025`, review F1, 2026-10-25): the
   intercepted integer `slices.Sort(s)` is one apply step that records
   EVERY window element as read then WRITTEN (`Mem.storeRun` of the whole

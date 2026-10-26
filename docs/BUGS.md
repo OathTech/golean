@@ -8901,7 +8901,7 @@ blank operand together with its run-time panic, (F2) gc never evaluates a packag
 The disposition is the [USER]'s ruling of 2026-10-14 and the record is BUG-130's: the operand is NOT evaluated; a
 constant, nil or a plain variable read gives the zero value, anything else refuses the literal by name.
 
-## BUG-131 — the `sortSlice` machine op records EVERY window element as WRITTEN, so a concurrent READ of a slice being sorted is refused `race` where gc's pdqsort on an already-ordered window (or suffix) performs no write and `go run -race` is green [semantic core, race-detector footprint; over-refusal (the machine refuses ⊇ gc), a status-level differential observation; found by the pre-merge adversarial review of lane `frontend/g19-sort-intercept-1025` (F1, relayed by the [AGENT] coordinator), 2026-10-25; recorded as a red pin pending the owner's ruling]
+## BUG-132 — the `sortSlice` machine op records EVERY window element as WRITTEN, so a concurrent READ of a slice being sorted is refused `race` where gc's pdqsort on an already-ordered window (or suffix) performs no write and `go run -race` is green [semantic core, race-detector footprint; over-refusal (the machine refuses ⊇ gc), a status-level differential observation; found by the pre-merge adversarial review of lane `frontend/g19-sort-intercept-1025` (F1, relayed by the [AGENT] coordinator), 2026-10-25; recorded as a red pin pending the owner's ruling]
 
 - Status: open
 - Expect: FAIL

@@ -2322,7 +2322,7 @@
 #   verdict a status-level differential observation. 2 rows BORN, no existing row moved. BORN FAIL BY DESIGN (1):
 #   race/sort-op/sorted-window-concurrent-read FAIL/lean-observation race:race (expected ok 1123; the machine's message is the
 #   bare «data race detected», so the cause key is the generic race key — no substring distinguishes this class, the
-#   classification is BUG-131's Cases line). BORN PASS (1): race/sort-op/sorted-window-concurrent-read-generic — the same
+#   classification is BUG-132's Cases line). BORN PASS (1): race/sort-op/sorted-window-concurrent-read-generic — the same
 #   program with `go slices.Sort(s)`: the spawned function value is the generic (statement-position intercept only), whose
 #   insertion sort of the ordered window never writes, race-free in both. The write set is NOT narrowed (pdqsort may write
 #   an element it leaves in place; a dropped write would be a false ok); the class is posed for the owner's ruling. Measured
