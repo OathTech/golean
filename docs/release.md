@@ -96,8 +96,8 @@ push rule). Pushing the tag is a separate sign-off.
    - (c) `lake comparator` — the surface kept on main for the raft-proofs customer (every theorem of
      `Equations.lean`, the G11 family, the `Prefix`/`Finish` laws, the output-fold bridge, `enterFrame_declared`,
      the `Choices.consumeAt*` laws, the G16 table-monotonicity statements; the count by family is
-     `scripts/gen-contract --check`'s summary line — 383 on 2026-10-26, 317 of them equations — and this page does
-     not copy it) judged against its FROZEN
+     `scripts/gen-contract --check`'s summary line, and this page does not copy it — the shake review of
+     2026-10-26 caught a copied figure stale within the train that introduced it) judged against its FROZEN
      challenge `Contract/Challenge.lean` per `comparator.json`
      at the root (release-readiness row 43, [USER] 2026-10-23): `CAPPED_MEM_MAX=64G capped lake comparator` (the box
      default cap suffices). Expected: «Lean default kernel accepts the solution», «Your solution is okay!», exit 0,

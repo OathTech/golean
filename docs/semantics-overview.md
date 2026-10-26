@@ -298,8 +298,8 @@ temporaries, unaffected.
 
 Since 2026-10-23 (release-readiness row 43, [USER]-ruled) that kept surface is a COMPARATOR
 CONTRACT: `Contract/Challenge.lean` restates every one of its theorems (the count by family is
-`scripts/gen-contract --check`'s summary line: 383 on 2026-10-26, 317 of them theorems of
-`Equations.lean`, 236 of those `@[stepFn_eqns]` simp-set members) — every theorem of
+`scripts/gen-contract --check`'s summary line, which this page does not copy: the shake review
+of 2026-10-26 caught the copied figure stale within the train that introduced it) — every theorem of
 `Equations.lean` (the `signalStep_*` rows,
 `runProgramSetup_noInit`, the `allocDecls_*`/`bindParams_*`/`setup_*` facts and the rest are plain
 theorems of the module), the 27 public theorems of `InitDriverFacts.lean` (G11), the five
