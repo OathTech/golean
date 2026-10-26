@@ -31,6 +31,13 @@ A `Pinned-by: none` entry whose Cases are RED-BY-DESIGN pins may add
 `- Expect: FAIL` (before its Cases line): check-bugs then requires every
 listed id to be FAIL, so a designed refusal that stops firing trips the gate
 (q-u4-gomem audit fix F4, 2026-09-02; the only accepted value is FAIL).
+Every entry fixed on or after 2026-10-27 also carries a `- Neighbourhood:`
+line (the defect-neighbourhood campaign, `docs/2026-10-27_defect-neighbourhood-campaign.md`
+§4–§5; the classification is `docs/defect-shapes.md`): once swept it reads
+`- Neighbourhood: <shape> — <the matrix's extent (cells probed)>; <rows added>;
+<cells left and why>`, and until then `- Neighbourhood: to be swept in step 2,
+shape <S-id> (<shape name>)`. check-bugs reports (never fails) an entry whose
+Status date is on or after 2026-10-27 that lacks the line.
 
 ---
 
@@ -9619,3 +9626,229 @@ converted type and already lowered (measured on both sides: `true true true true
 true`); `nil == e` for an `error` and `nil == i` for `any` were already right (the two control rows). At the
 tip every row PASSes with gc's values (`110 10110 10110 10110 10110 11001 10110 10010`: the nil-left
 spellings score exactly as their nil-right twins).
+## BUG-137 — slice-expression and slice-element bounds panics carried PLAIN texts (`slice bounds out of range`, `slice index out of bounds`) where gc prints the detail and checks in gc's ORDER (`[:h] with length L` / `with capacity C`, `[l:h]`, the 3-index forms; `index out of range [i] with length n`), and a 3-index slice of an ARRAY said `with capacity N` where gc says `with length N` [semantic core; wrong panic text, status panic on both sides; FIXED 2026-07-25 (commit 1ca39648, wrong-answers slice 0a) and 2026-07-26 (commit f64bfc89, that slice's pre-merge audit, finding 6); late entry 2026-10-27]
+
+- Status: fixed (2026-10-27, late entry — the fixes landed 2026-07-25 and 2026-07-26 with no entry; found by the defect-neighbourhood campaign's policy check over the commit history, [AGENT] lane `records/defect-shapes-1027`, under the owner's approval of the campaign plan, `docs/2026-10-27_defect-neighbourhood-campaign.md` §2)
+- Pinned-by: differential
+- Cases: strings/string-slice-bounds, strings/string-slice-low-high-panic, pointers/pointer-array-slice-bounds
+- Discovered: commit 1ca39648 (three of the eight recorded differential-stage wrong answers of the time were bounds MESSAGES lacking gc's detail; the element-store text was a latent divergence the unwinding arc's probes surfaced); the array 3-index form by the slice's pre-merge audit, commit f64bfc89 finding 6 (no row pins that form).
+- Neighbourhood: to be swept in step 2, shape S12 (panic and recover: payload, abort text, the recover walk)
+
+WHAT: `s[l:h]`, `s[l:h:m]` over strings, slices and arrays panicked with the plain string `slice bounds out of range`, and a slice element store out of range with `slice index out of bounds`; gc's texts carry the offending index, the limit and its name (`with length` / `with capacity`), and gc checks high before low and max before both in the 3-index form, so a program that recovers and inspects the message — or whose abort line is compared — got a wrong answer. SITE: `GoLean/GoCore/Ops.lean` — `checkSliceBounds` / `checkSliceBounds3` / `checkSliceMax` (the latter with a `limitName`) in `stringSlice`, `sliceFromSlice`, `sliceFromArray`; `sliceIndexLoc` routed through `indexOutOfRangePanic` (already gc-exact for arrays). ROUTE: slice expressions and slice element stores whose panic text is observed (recovered or at the abort line).
+
+## BUG-138 — string LITERALS with byte escapes arrived CORRUPTED: the wire carried string values as JSON strings and `encoding/json` replaced invalid UTF-8 (`"\xff"`) with U+FFFD, so an escape-heavy literal's bytes were wrong with status ok [native frontend + wire decoder; wrong value; FIXED 2026-07-25 (commit cc3ed039, wrong-answers slice 0b): the `string` wire node carries a byte ARRAY and the decoder rebuilds the string from it, failing closed on an out-of-range entry; late entry 2026-10-27]
+
+- Status: fixed (2026-10-27, late entry — the fix landed 2026-07-25 with no entry; found by the campaign's policy check, [AGENT] lane `records/defect-shapes-1027`, under the owner's approval of 2026-10-27)
+- Pinned-by: differential
+- Cases: strings/string-escape-bytes, strings/literal-edge/interpreted-octal-hex-escapes
+- Discovered: commit cc3ed039 — two recorded wrong answers were literal-byte corruption (the two rows above, FAIL/differential before the fix).
+- Neighbourhood: to be swept in step 2, shape S17 (lowering coverage holes: statement forms, spellings, synthetic symbols)
+
+WHAT: an interpreted string literal is a byte sequence (spec#String_literals); the wire's JSON string representation could not carry an invalid-UTF-8 byte, and the JSON encoder substituted U+FFFD silently, so `len`, indexing and comparisons over such a literal answered on the wrong bytes. SITE: `tools/nativefrontend/emit.go` `emitConstValue` (the string arm: escapes decoded by `go/constant`, the value emitted as bytes); `GoLean/NativeToIR.lean` `decodeExpr`'s `"string"` arm. ROUTE: string literals with octal/hex/`\x` escapes that are not valid UTF-8.
+
+## BUG-139 — a variadic call with NO variadic arguments packed an ALLOCATED EMPTY slice where Go passes `nil`: `xs == nil` in the callee answered false (gc true), status ok [native frontend lowering; wrong value; FIXED 2026-07-26 (commit 75e03555, wrong-answers slice 0c): both packing sites pass nil; the explicit empty spread `f(empty...)` stays non-nil, pinned as the control; late entry 2026-10-27]
+
+- Status: fixed (2026-10-27, late entry — the fix landed 2026-07-26 with no entry; found by the campaign's policy check, [AGENT] lane `records/defect-shapes-1027`, under the owner's approval of 2026-10-27)
+- Pinned-by: differential
+- Cases: variadic/forwarding, variadic/no-args-vs-empty-spread
+- Discovered: commit 75e03555 — two recorded wrong answers (the rows above, FAIL/differential before the fix).
+- Neighbourhood: to be swept in step 2, shape S4 (identity, equality and nil-ness)
+
+WHAT: spec#Passing_arguments_to_..._parameters — with no actual arguments for `...T` the parameter's value is `nil`; the lowering built a zero-length non-nil slice, observable through `xs == nil` and through the length/capacity of what the callee appends to. SITE: `tools/nativefrontend/emit.go` `emitCallArgs`, both packing sites (the plain argument list and the tuple-forwarding path). ROUTE: a variadic call with zero variadic operands, the callee observing nil-ness.
+
+## BUG-140 — a read-modify-write lvalue containing a CALL was evaluated TWICE: `get().x += 4`, `s[f()] += v`, `s[f()]++` emitted the target address and the read independently, so the call ran twice (wrong value, status ok); masked on main by BUG-001's stuck until the write path was fixed [native frontend lowering; evaluation count; FIXED 2026-07-25 (commit c908921e, W4 slice 1, item 2 — `emitReadWriteTarget` binds an effectful lvalue's address once and both sides go through it); recorded only as a sentence inside BUG-001; late entry 2026-10-27]
+
+- Status: fixed (2026-10-27, late entry — the fix landed 2026-07-25 inside BUG-001's closing commit and was recorded only in that entry's fix paragraph; the campaign's policy check gives it its own entry because its shape (evaluation count) and site differ from BUG-001's (an address base lowered as a value); [AGENT] lane `records/defect-shapes-1027`, under the owner's approval of 2026-10-27)
+- Pinned-by: differential
+- Cases: structs/selector-eval-once
+- Discovered: commit c908921e («fixing the writes made a wrong answer reachable within minutes»); BUG-001's entry names the row. Reachability on main before the fix: the struct-field form was masked by BUG-001's stuck; the slice-index and dereference forms took the same separate target/read emission (`emit.go` at 9e43afc9, the compound-assign and IncDec arms) and slice `index-addr` already lowered, so those forms were wrong on main — argued from the code, not re-run.
+- Neighbourhood: to be swept in step 2, shape S9 (evaluation count: twice, never, or re-read)
+
+WHAT: spec#Assignment_statements — `x op= y` evaluates `x` once. SITE: `tools/nativefrontend/emit.go` `emitReadWriteTarget`, used by `emitAssign`'s compound arm and `emitIncDec`; a pure lvalue keeps the direct form (its double evaluation is unobservable). ROUTE: compound assignment and `++`/`--` on an lvalue whose address computation contains a call.
+
+## BUG-141 — compound assignment and `++`/`--` on a MAP ELEMENT (`m[k] op= v`, `m[k]++`) lowered to `index-addr` on a map value, which the machine refused as STUCK («expected array or slice base for index address») where gc runs the statement [native frontend lowering; wrongly stuck on a supported construct; FIXED 2026-07-25 (commit c908921e, W4 slice 1, item 3 — `emitMapCompound`: hoisted base and key temps, a `map-get` read and a `map-assign` store) and extended to `m[k]++` at the arc's pre-merge audit (commit e2df3535); late entry 2026-10-27]
+
+- Status: fixed (2026-10-27, late entry — the fixes landed 2026-07-25 with no entry; found by the campaign's policy check, [AGENT] lane `records/defect-shapes-1027`, under the owner's approval of 2026-10-27)
+- Pinned-by: differential
+- Cases: maps/compound-assign-eval-once, maps/map-incdec
+- Discovered: commit c908921e (item 3) and commit e2df3535 (the audit's `m[k]++` finding); the rows above were FAIL before the fixes.
+- Neighbourhood: to be swept in step 2, shape S17 (lowering coverage holes: statement forms, spellings, synthetic symbols)
+
+WHAT: a map element is not addressable (spec#Address_operators), so the generic lvalue path — take the address, then load and store through it — has no map arm; the right lowering is a read-modify-write through the map's own get/assign nodes with the base and key evaluated once. SITE: `tools/nativefrontend/emit.go` `emitMapCompound`, reached from `emitAssign`'s map-compound arm and `emitIncDec`. ROUTE: `m[k] op= v` and `m[k]++`/`m[k]--` (the later parenthesised spellings `(m[k])++` were a second hole of the same class, closed with BUG-115 on 2026-10-08 and recorded there).
+
+## BUG-142 — a SELF-SHADOWING define or declaration (`x := x + 1`, `var x = x + 1` in an inner scope or an if/switch init) read the FRESH zero cell instead of the OUTER `x` (wrong value, status ok): the initialize-then-assign lowering declared the new cell before evaluating the initializer [native frontend lowering; scoping; FIXED 2026-07-24 (commit 1ac3261a, W2 slice 1 — capture-detected defines pre-bind every RHS to hoisted temps in source order) and 2026-07-25 for the `var` form (commit e2df3535); late entry 2026-10-27]
+
+- Status: fixed (2026-10-27, late entry — the fixes landed 2026-07-24/25 with no entry; found by the campaign's policy check, [AGENT] lane `records/defect-shapes-1027`, under the owner's approval of 2026-10-27)
+- Pinned-by: differential
+- Cases: scoping/switch-init-shadow, scoping/var-shadow-init
+- Discovered: commit 1ac3261a — the switch desugar's guardrail row exposed what the commit calls a latent general define bug; the `var` form at the pre-merge audit, commit e2df3535.
+- Neighbourhood: to be swept in step 2, shape S13 (variable binding: scoping, shadowing, per-iteration cells)
+
+WHAT: spec#Declarations_and_scope — the scope of a declared identifier begins AFTER its declaration's initializer, so the initializer's `x` is the outer one. SITE: `tools/nativefrontend/emit.go` `emitAssign`'s define path (`containsVarUse` capture detection, pre-binding to temps; only non-field VARIABLE uses count, resolved through go/types — the first cut false-positived on struct-literal field keys) and `emitDeclStmt`. ROUTE: a short variable declaration or `var` declaration whose initializer mentions the name it declares, in a nested block or an if/switch init.
+
+## BUG-143 — a POINTER-receiver method called or bound on a base that is ALREADY a pointer had its address taken AGAIN, building a double pointer, and the run went STUCK (a field access on an `addr`) where gc calls the method [native frontend lowering; wrongly stuck; FIXED 2026-07-25 (commit 1e080a83, W3 method values — one shared receiver helper for the method-value and the method-CALL path, which carried the same latent flaw unexercised); late entry 2026-10-27]
+
+- Status: fixed (2026-10-27, late entry — the fix landed 2026-07-25 with no entry; found by the campaign's policy check, [AGENT] lane `records/defect-shapes-1027`, under the owner's approval of 2026-10-27)
+- Pinned-by: differential
+- Cases: methods/nil-receiver, methods/pointer-method-value-read
+- Discovered: commit 1e080a83 — the method-value guardrails surfaced it; the fix also repaired `methods/nil-receiver`, which had been failing on main.
+- Neighbourhood: to be swept in step 2, shape S5 (method sets: records, promotion, receiver adaptation, dispatch)
+
+WHAT: spec#Calls — for a pointer receiver, an already-pointer base is used as is and an addressable value base has its address taken; for a value receiver the value is copied. SITE: `tools/nativefrontend/emit.go` the shared receiver helper (`methodReceiverArg`), used by `emitMethodCall` and the method-value emission. ROUTE: `p.M()` and `p.M` with `p : *T` and `M` a pointer-receiver method (BUG-048, 2026-08-08, is the value-receiver mirror; BUG-063 the nil `(*q).M()` panic).
+
+## BUG-144 — `else if` CONDITIONS were evaluated EAGERLY: the hoisted call temps escaped outside the chain, so every later condition ran even after an earlier branch matched (gc stops at the first); the same class on `for` POST statements, whose hoists ran at the wrong moment [native frontend lowering; evaluation order, wrong value with status ok; FIXED 2026-07-25 (commit 7ce738bc, W5 slice 1b — the hoists are scoped into the chain / the loop); late entry 2026-10-27]
+
+- Status: fixed (2026-10-27, late entry — the fix landed 2026-07-25 with no entry; found by the campaign's policy check, [AGENT] lane `records/defect-shapes-1027`, under the owner's approval of 2026-10-27)
+- Pinned-by: differential
+- Cases: if/else-if-first-match, control-flow/for-post-side-effects
+- Discovered: commit 7ce738bc — closures as side-effect markers made the shape observable for the first time; the commit records both as pre-existing and previously unreachable by the corpus (an effectful NAMED function in an `else if` condition was emittable on main).
+- Neighbourhood: to be swept in step 2, shape S7 (ordered events reordered by the hoist)
+
+WHAT: spec#If_statements — the else-branch is evaluated only when the condition is false; a call hoisted out of a later condition's expression to the statement's front runs unconditionally. SITE: `tools/nativefrontend/emit.go` `emitIf` (the else-if chain's hoist accumulator) and `emitFor` (the post statement's hoists). ROUTE: `else if f()` chains and `for` post statements with effectful calls (BUG-058, 2026-08-19, is the if-INIT scope sibling of the same accumulator mechanism).
+
+## BUG-145 — KEYED struct and array literals evaluated their element expressions in DECLARATION order, not SOURCE order (wrong value with status ok when the elements have effects) [native frontend lowering; evaluation order; FIXED 2026-07-25 (commit 7ce738bc, W5 slice 1b — effectful values pre-bind to temps in source order; pure ones need no temp); late entry 2026-10-27]
+
+- Status: fixed (2026-10-27, late entry — the fix landed 2026-07-25 with no entry; found by the campaign's policy check, [AGENT] lane `records/defect-shapes-1027`, under the owner's approval of 2026-10-27)
+- Pinned-by: differential
+- Cases: structs/keyed-literal-eval-order, arrays/keyed-literal-eval-order
+- Discovered: commit 7ce738bc (the second of its two pre-existing fidelity bugs).
+- Neighbourhood: to be swept in step 2, shape S7 (ordered events reordered by the hoist)
+
+WHAT: spec#Order_of_evaluation orders the function calls of a composite literal lexically; the lowering walked the struct's declared fields (and the array's index order) instead. SITE: `tools/nativefrontend/emit.go` `emitStructLit`, `emitCompositeLit` / `emitArrayLit`. ROUTE: keyed struct/array literals with effectful element expressions out of declaration order.
+
+## BUG-146 — a SINGLE-value call assigned to an addressed target (`a[i] = f()`, `*p = f()`) read the target's OPERANDS BEFORE the call where gc runs the call first and reads a plain index/pointer operand at store time: a callee changing `i` or `p` gave a wrong value with status ok [native frontend lowering; spec-unordered call-vs-operand axis, pinned to gc's realization; FIXED 2026-07-25 (commit e2df3535, the seq-coverage-scoping pre-merge audit's operand-order finding — single-value addressed targets take the A-normal-form hoist, multi-value keeps the call statement); BUG-052 (2026-08-09) is the multi-target `.call` path of the same axis; late entry 2026-10-27]
+
+- Status: fixed (2026-10-27, late entry — the fix landed 2026-07-25 with no entry; found by the campaign's policy check, [AGENT] lane `records/defect-shapes-1027`, under the owner's approval of 2026-10-27)
+- Pinned-by: differential
+- Cases: multi-assign/index-target-rhs-call-order, pointers/deref-target-rhs-call-order
+- Discovered: commit e2df3535 — the audit's remedy was corrected by the oracle twice before the lowering matched gc on both rows (both are membership rows since Stage E5, 2026-09-22, with gc's call-first member inside the set).
+- Neighbourhood: to be swept in step 2, shape S8 (spec-unsequenced order realized as one member)
+
+WHAT: spec#Order_of_evaluation leaves the order of a target's index/indirection operands against the right-hand call unspecified; gc realizes call-first, and the lowering's call-statement path read the operands first. SITE: `tools/nativefrontend/emit.go` `emitAssign`'s single-RHS-call path (`allIdentTargets` / `isMultiValue`). ROUTE: `target = f()` where the callee mutates what the target's operands read.
+
+## BUG-147 — METHOD calls took the plain argument path with NO variadic packing and no tuple forwarding, so `r.M(1, 2, 3)` for a variadic method went STUCK where gc runs it [native frontend lowering; wrongly stuck; FIXED 2026-07-25 (commit e2df3535 — method calls use `emitCallArgs`, gaining packing and forwarding); late entry 2026-10-27]
+
+- Status: fixed (2026-10-27, late entry — the fix landed 2026-07-25 with no entry; found by the campaign's policy check, [AGENT] lane `records/defect-shapes-1027`, under the owner's approval of 2026-10-27)
+- Pinned-by: differential
+- Cases: variadic/method-variadic, variadic/variadic-method, returns/method-multi-result-arg
+- Discovered: commit e2df3535 (`variadic/variadic-method` was FAIL/lean-observation on main at 9e43afc9 and flipped PASS as a by-product; the other two rows were born with the fix).
+- Neighbourhood: to be swept in step 2, shape S17 (lowering coverage holes: statement forms, spellings, synthetic symbols)
+
+WHAT: the function-call and method-call emitters diverged — only the former packed variadic operands and forwarded a multi-value call's results. SITE: `tools/nativefrontend/emit.go` `emitMethodCall` → `emitCallArgs`. ROUTE: variadic methods and `r.M(g())` tuple forwarding.
+
+## BUG-148 — the for-clause PER-ITERATION trigger (BUG-003's fix) fired only on func-literal CAPTURES in the BODY: a loop variable whose cell identity escaped by ADDRESS (`&i`, a pointer-receiver call `s.self()`, an array slice `a[:]`) and a closure created in the POST statement took the shared-cell lowering — wrong values with status ok (machine 333, gc 12; machine 1 2 3 vs the post shape's gc 123) [native frontend lowering; per-iteration cells; FIXED 2026-08-04 (commits 633a3307 — the scan covers body, cond and post — and 70f9c94a — `findAddrEscape`, the trigger fires on capture OR address escape), the control-flow slice's audit responses; the capture-only predicate and the body-only scan pre-dated that branch; late entry 2026-10-27]
+
+- Status: fixed (2026-10-27, late entry — the fixes landed 2026-08-04 with no entry (BUG-003's entry describes the lowering, not these holes); found by the campaign's policy check, [AGENT] lane `records/defect-shapes-1027`, under the owner's approval of 2026-10-27)
+- Pinned-by: differential
+- Cases: control-flow/for-loopvar-addr-escape, control-flow/for-loopvar-ptr-recv, control-flow/for-loopvar-array-slice, control-flow/for-loopvar-post-capture
+- Discovered: the control-flow slice's delta review round 2 (commit 70f9c94a, CRITICAL) and audit response F2 (commit 633a3307, MAJOR), 2026-08-04 — each red-first against the oracle. The CONDITION-capture row of F2 (`control-flow/for-loopvar-cond-capture`) is not listed: calls in for-conditions were admitted by the same branch, so that hole never existed on main.
+- Neighbourhood: to be swept in step 2, shape S13 (variable binding: scoping, shadowing, per-iteration cells)
+
+WHAT: Go ≥ 1.22 gives each iteration its own variable; every way a cell's identity can escape an iteration — not only a closure capture — must take the per-iteration (carrier-pointer) desugar. SITE: `tools/nativefrontend/emit.go` `emitFor` (the trigger over body/cond/post, `findAddrEscape` shared with the goto envelope's address-escape tracing) → `emitForPerIteration`. ROUTE: three-clause `for` loops whose variable's address escapes (explicitly, through a pointer receiver, through slicing an array variable) or is captured in the post statement.
+
+## BUG-149 — a PANIC AT FRAME ENTRY of a dispatched method — dynamic dispatch on a NIL interface, the auto-deref of a nil pointer box — was a RAW thrown error on every call path: the status was right when unrecovered, but under `recover` the machine answered `panic` where gc completes `ok` [semantic core; panic/recover control, wrong status under recover; FIXED 2026-08-05 (commit 00c2bd56 — five entry-panic `Step` twins and `enterFrameStep`, the error becomes a machine panic the deferred frames can recover); late entry 2026-10-27]
+
+- Status: fixed (2026-10-27, late entry — the fix landed 2026-08-05 with no entry (recorded only in the embedding/interfaces design note's build log as a pre-existing machine gap); found by the campaign's policy check, [AGENT] lane `records/defect-shapes-1027`, under the owner's approval of 2026-10-27)
+- Pinned-by: differential
+- Cases: interfaces/recover-nil-dispatch/nil-interface, interfaces/recover-nil-dispatch/nil-pointer-box
+- Discovered: commit 00c2bd56 (the general-coverage arc's interface riders exposed it; the two rows landed red first). Pre-existing: at e8e7ef20 `dynamicDispatch?` (Ops.lean) threw the nil-dereference text directly from `enterFrame`.
+- Neighbourhood: to be swept in step 2, shape S12 (panic and recover: payload, abort text, the recover walk)
+
+WHAT: spec#Handling_panics — a run-time panic raised while entering a call is an ordinary panic, recoverable by a deferred function of the calling frame; a thrown error that bypasses the panic chain cannot be. SITE: `GoLean/GoCore/Machine.lean` (`callImmediatePanic`, `callTargetsDoneEnterPanic`, `callArgsDoneEnterPanic`, `callValCalleeEnterPanic`, `callValArgsEnterPanic`) and `GoLean/GoCore/StepFn.lean` `enterFrameStep`; the deferred-call frame entry deliberately kept the thrown behaviour (a panic during unwinding, a recorded narrowing at the time). ROUTE: `i.M()` on a nil interface and a value-receiver method through a nil pointer box, under a deferred `recover`.
+
+## BUG-150 — `panic(nil)` was modeled with the PRE-1.21 semantics (`recover()` returns nil; the legacy abort line) where the Go 1.26 language the model implements raises `*runtime.PanicNilError` («panic called with nil argument»); the differential agreed only because the oracle ran in GOPATH mode, whose default keeps the legacy behaviour — an agreement by configuration coincidence [semantic core; wrong value and wrong panic identity against the language the model claims (stated since as the runtime-defaults contract, BUG-128); FIXED 2026-08-05 (commit a4ce5c5e, arc-final audit F21 — `panicPayload` maps nil to the PanicNilError runtime error; every oracle `go run` pins `GODEBUG=panicnil=0`); late entry 2026-10-27]
+
+- Status: fixed (2026-10-27, late entry — the fix landed 2026-08-05 with no entry; found by the campaign's policy check, [AGENT] lane `records/defect-shapes-1027`, under the owner's approval of 2026-10-27. Judgement stated: the pre-fix behaviour matched the oracle's configuration of the time and is a defect only against the modern default the project targets (the north star's `go 1.26` module and the runtime-defaults contract of `docs/cli.md` §1); the owner may strike this entry on that ground)
+- Pinned-by: differential
+- Cases: panic-recover/panic-nil-recover, panic-recover/panic-nil-abort
+- Discovered: the arc-final audit's F21, 2026-08-06 (`docs/2026-08-06_arc-final-audit-response.md`); both rows were re-pinned to the modern answers with the fix (model and oracle moved together, so the full run showed no drift).
+- Neighbourhood: to be swept in step 2, shape S12 (panic and recover: payload, abort text, the recover walk)
+
+WHAT: Go 1.21 changed `panic(nil)` to panic with a `*runtime.PanicNilError` unless `GODEBUG=panicnil=1`; the oracle's GOPATH-mode invocation inherits the go 1.16-era defaults, so an unpinned oracle could never show the model's legacy answer as wrong. SITE: `GoLean/GoCore/Machine.lean` `panicPayload`; `scripts/diff-coverage` `go_run_oracle` (the pin). ROUTE: `panic(nil)` recovered or aborting; the typed-nil payload (`panic((*T)(nil))`) was unaffected and is the control.
+
+## BUG-151 — FIELD ACCESS through a STRUCT-POINTER CONVERSION between tag-compatible types (`(*B)(a).x`, `p.f = v` through the alias) went STUCK on a nominal mint-tag check («expected struct main.B, got struct main.A») where gc reads and writes the field [semantic core; wrongly stuck on a supported construct; FIXED 2026-08-19 (commit 86d30a23, the 19-red GoCore slice's family 5, triage L7 — `structTagCompatible` relaxes the FIELD arms of `fieldGet`, `loadLoc`, `storeLoc`; the cell keeps its mint tag); the ancestor of BUG-133 (identity) and BUG-134 (the whole value) on the same route; late entry 2026-10-27]
+
+- Status: fixed (2026-10-27, late entry — the fix landed 2026-08-19 with no entry (BUG-020 still carried the stale sentence that the row was «now stuck at field access»; BUG-111 and BUG-133 cite «triage L7» as background); found by the campaign's policy check, [AGENT] lane `records/defect-shapes-1027`, under the owner's approval of 2026-10-27)
+- Pinned-by: differential
+- Cases: structs/tag-pointer-conversion
+- Discovered: the bug-fix arc's triage table, 2026-08-19 (`docs/2026-08-19_triage-table.md` §3.3, L7, category (a)); the row had been FAIL/lean-observation since BUG-020's conversion arms admitted the pointer conversion on 2026-08-06.
+- Neighbourhood: to be swept in step 2, shape S2 (conversions: a missing kernel arm or a value not retagged)
+
+WHAT: spec#Conversions — a pointer conversion between struct types with identical underlying types (tags ignored) is legal and aliases the cell; the access path's static `TypeId` is then the converted type while the cell's tag is the mint type, and a nominal equality check refused the access. SITE: `GoLean/GoCore/Ops.lean` `structTagCompatible` (identical wire `FieldDef` lists) at the field arms of `fieldGet` / `loadLoc` / `storeLoc`; `GoLean/GoCore/Machine.lean`'s field-store arm. ROUTE: leaf-field reads and writes through a converted struct pointer; the whole-value routes stayed stuck until BUG-134 (2026-10-26) and identity until BUG-133.
+
+## BUG-152 — NO POST-OP and NO BACK-EDGE scheduling point: a goroutine that completed a channel operation and then SPUN in a loop could never be preempted, so `goroutines/send-then-spin` was fuel-out on EVERY stream (511/511) where gc exits 0 printing 42 (60/60), and on `goroutines/wake-then-abort` gc's dominant member — the woken partner prints 42, then the abort — was outside the modeled set (observed ∉ modeled on both) [semantic core; scheduling boundaries; FIXED 2026-08-21 (commits b99d016b — the `.opDone` post-op boundaries, `ChoiceSite.postOp` — and fe730d81 — the loop re-entry boundaries, `ChoiceSite.backEdge`; W3.2 slice 1 stages C and D under the G1 ruling); the latitude inventory's C2/C3 and U-1, discharged there; BUG-065 records only the enumeration cost of this widening; late entry 2026-10-27]
+
+- Status: fixed (2026-10-27, late entry — the fixes landed 2026-08-21 with no entry of their own; found by the campaign's policy check over the latitude inventory and the W3.2 records, [AGENT] lane `records/defect-shapes-1027`, under the owner's approval of 2026-10-27)
+- Pinned-by: differential
+- Cases: goroutines/send-then-spin, goroutines/wake-then-abort
+- Discovered: the W3.2 re-envelope charter, 2026-08-20 (`docs/2026-08-20_w32-re-envelope-charter.md`; `docs/w32-log.md`): the wedge was the doctrine's register #1 and inventory rows C2/C3, called definitionally a bug there; U-1 probed the same day (`docs/2026-08-11_latitude-inventory.md`, U-1).
+- Neighbourhood: to be swept in step 2, shape S15 (scheduling boundaries and the menu)
+
+WHAT: between two registry operations a goroutine's steps were private to it; a goroutine that never reaches another registry op after a send keeps running, so a partner's exit is unreachable and the spin wedges every stream — a scheduling relation narrower than gc on a race-free program (BUG-040 and BUG-044 are the spawn and main-exit corners of the same class; BUG-123 the `len(ch)`/print corner). SITE: `GoLean/GoCore/Multi.lean` `Config.atBoundary` — the `.opDone` completion marker after every proceeding registry op (chan/sync applies, select commits, the pairing issuer, wakes, spawn) and the loop re-entry shapes (`.next`/`.continuing (.loop)`, `.next (.mapIterK)`), both consulting the L1 menu through `Config.boundarySite`/`schedSlots`; the enumerator's `--backedge` modes (`scripts/coverage-observations`). ROUTE: a goroutine looping after a channel op beside a partner that must run; a partner woken by main's last op and then main's abort.
+
+## BUG-153 — the STATIC fmt desugar never consulted `fmt.Formatter`: a type implementing `Format` was rendered through the error/Stringer/kind path (machine `STR|STR`, `4|5`, `{STR}`; gc calls `Format` for EVERY verb, ahead of everything), a wrong output with status ok [native frontend, the fmt desugar; wrong output → FIXED BY REFUSAL 2026-08-22 (commit 3ee028ec, raft W4.3 audit R1-F2 — `refuseFormatter` through the type-checked fmt import, wired at `fmtVerbArg`, `Fprint` and the composite depth, tainted leaves exempt as gc); BUG-071 (2026-08-31) is the DYNAMIC shim's half of the same hole; late entry 2026-10-27]
+
+- Status: fixed (2026-10-27, late entry — the fix landed 2026-08-22 with no entry (BUG-071 mentions the static refusals in passing); found by the campaign's policy check, [AGENT] lane `records/defect-shapes-1027`, under the owner's approval of 2026-10-27)
+- Expect: FAIL
+- Pinned-by: none (the three rows below are RED-BY-DESIGN refusal pins at `frontend-export`, cause `FR-14/fmt-verb-matrix`: a static fmt operand whose type implements `fmt.Formatter` refuses by name, since `fmt.State` is unmodeled and no shim can call `Format`; check-bugs verifies existence and the FAIL direction)
+- Cases: fmt/formatter-precedence/at-depth, fmt/formatter-precedence/over-kind-matrix, fmt/formatter-precedence/over-stringer
+- Discovered: the raft W4.3 pre-merge audit's R1-F2, 2026-08-22 (`docs/raft-w43-log.md`), witnessed red first against gc; pre-existing on main for the `%v`/`%s`/`%d` verbs the W4.1 desugar already handled (the `at-depth` shape was the branch's own composite renderer).
+- Neighbourhood: to be swept in step 2, shape S21 (stdlib shims and source-through)
+
+WHAT: gc's `handleMethods` tries `Formatter` first for every verb; a desugar that routes a value by its kind or through `Error`/`String` prints something gc never prints. SITE: `tools/nativefrontend/fmtdesugar.go` `refuseFormatter` (static sites); the dynamic-site boxing walk is BUG-071's `checkFormatterDynHole`. ROUTE: `fmt.Sprint*`/`Print*` operands whose static type (or a composite's leaf type) implements `fmt.Formatter`.
+
+## BUG-154 — a stdlib SHIM's own refusal was an ORDINARY, RECOVERABLE panic, so a user `recover()` SWALLOWED it into a silent wrong answer (`v=0 ok=false` where gc gives `v=42 ok=true`; `n=0` vs 3; `%!v(PANIC=…)` vs a normal render) [native frontend, the shim injection; fail-open: a refusal the program could absorb; FIXED 2026-08-22 (commit 91c6333f, raft W4.3 audit R4-C-3 — `goleanShimUnsupported`, injected beside every shim bundle and force-quarantined by `emitFuncDecl`, so a shim refusal throws the uncatchable `GoError.unsupported`; all 15 golean-bound panic sites route through it, upstream-faithful panics stay panics); late entry 2026-10-27]
+
+- Status: fixed (2026-10-27, late entry — the fix landed 2026-08-22 with no entry (BUG-073 names «the unrecoverable R4-C-3 stop» in passing); found by the campaign's policy check, [AGENT] lane `records/defect-shapes-1027`, under the owner's approval of 2026-10-27)
+- Pinned-by: differential
+- Cases: panic-recover/shim-refusal-unrecoverable/parse-recover, panic-recover/shim-refusal-unrecoverable/render-recover, panic-recover/shim-refusal-unrecoverable/split-recover
+- Discovered: the raft W4.3 pre-merge audit's R4-C-3, 2026-08-22, red first on the three shapes. Pre-existing on main: W4.1's fmt shim already refused through recoverable panics (`stdlibshim.go` at 521f5b57); the witness rows used the branch's new strconv/strings shims. Since the stdlib source-through slices (2026-09-03) the `parse-recover` and `split-recover` subjects run the REAL library bodies and pass for that reason; the mechanism still guards the fmt shims that remain.
+- Neighbourhood: to be swept in step 2, shape S21 (stdlib shims and source-through)
+
+WHAT: the charter's refusal is a machine stop, never a value the program can observe; a refusal raised as a Go panic is a value under `recover`, so the program continued on a shim's absence as if the library had returned its zero values. SITE: `tools/nativefrontend/stdlibshim.go` (`goleanShimUnsupported` and the refusal sites), `emit.go` `emitFuncDecl` (the force-quarantine). ROUTE: a deferred `recover` around a call into a shimmed library function on a refused path.
+
+## BUG-155 — BUILD CONSTRAINTS (`//go:build`, `// +build`) were NEVER EVALUATED and `types.Config.GoVersion` was UNSET: a file gc EXCLUDES (`//go:build ignore`; `!goexperiment.*` and microarchitecture tags, which are the toolchain's own tags) was LOWERED and its declarations ran, with a clean export — the lowered program was not the program gc builds; with no GoVersion, go/types applied no language-version floor [native frontend boundary; wrong program with status ok; FIXED BY REFUSAL 2026-08-31 (commit ae44faee, the fidelity assessment's item 9 — constrained files refuse by name except the inert all-custom-tags shape; GoVersion derived from the pinned toolchain) and 2026-09-01 (commit 211f8b0f, audit T3-1 — the toolchain's ToolTags are reserved); BUG-108 (2026-09-12) is the FILENAME-selection sibling; late entry 2026-10-27]
+
+- Status: fixed (2026-10-27, late entry — the fixes landed 2026-08-31/09-01 with no entry (BUG-108 refers to the policy as standing); found by the campaign's policy check, [AGENT] lane `records/defect-shapes-1027`, under the owner's approval of 2026-10-27)
+- Pinned-by: none (no corpus row: the positive corpus carries no constrained file and the oracle harness copies `*.go` files only; the pins are the unit tests `tools/nativefrontend/langversion_test.go` — the `ignore`, reserved-tag, goexperiment and microarch shapes refuse, the all-custom-tags shape (`raftsubject/raft/state_trace_nop.go`'s `//go:build !with_tla`) is included on both sides)
+- Discovered: the fidelity assessment's phase-2 probes p5/p7 (`docs/assessment/`, p2 claim 3, 2026-08-31) — a `//go:build ignore` file exported with a wire while `go run` errors; the ToolTags escape by the T1 audit's T3-1 (2026-09-01).
+- Neighbourhood: to be swept in step 2, shape S20 (admission boundary: the program lowered differs from the program gc builds)
+
+WHAT: the go command selects a package's files by build constraints and filename conventions before compiling; a lowering that reads every `.go` file lowers declarations gc never sees, and an unset `GoVersion` disables go/types' version checks entirely. SITE: `tools/nativefrontend/langversion.go` (`judgeBuildConstraintLine`, shared since BUG-108 with `fileselect.go`), `load.go` and `importedmodel.go` (the two `types.Config` sites). ROUTE: constrained files in the lowered directory or a case-local package.
+
+## BUG-156 — an allocating CONVERSION (`[]byte(s)`, `[]rune(s)`) left INLINE read its operand AFTER a lexically LATER call had mutated it: `int([]byte(s)[0]) + func() int { s = "zz"; return 1 }()` — gc 98, the machine 123, status ok [native frontend lowering; the E12 value axis, a silent wrong value under the call-first pin; FIXED 2026-09-05 (commit 42893297, the e13-b re-audit fix round, R1'-3: the two allocating conversions hoist to a temp when an ordered event follows them); BUG-101 is the type-assertion/slice-expression member of the same axis; late entry 2026-10-27]
+
+- Status: fixed (2026-10-27, late entry — the fix landed 2026-09-05 with no entry (recorded in the e13-b design note §6 and the latitude inventory's E12 exception R''-8 only); found by the campaign's policy check, [AGENT] lane `records/defect-shapes-1027`, under the owner's approval of 2026-10-27)
+- Pinned-by: differential
+- Cases: builtins/e13-sibling-panic-order/bytes-conv-value-vs-mutating-call
+- Discovered: the e13-b final verification fix round, R''-8, 2026-09-05 (`docs/2026-09-05_e13-b-design.md` §6): main at b77f3298 answered 123 where gc prints 98.
+- Neighbourhood: to be swept in step 2, shape S8 (spec-unsequenced order realized as one member)
+
+WHAT: gc's `order.go` evaluates `[]byte(s)`/`[]rune(s)` as a call-class node (OSTR2BYTES/OSTR2RUNES) in lexical order, so the conversion reads `s` before the later call; the inline residual read it after. SITE: `tools/nativefrontend/emit.go` `allocatingConversion` (the hoist when `sweepOrderedEventAfter`). ROUTE: a string→slice conversion whose operand a later sibling call mutates (BUG-121 records the aliasing axis of the same conversions; BUG-118 the capacity axis).
+
+## BUG-157 — a program gc REJECTS for a TYPE-SIZE limit — `chan [9000]int` («channel element type too large (>64kB)»), an array larger than the address space, a struct too large — was EXPORTED and ANSWERED (`c == nil` → true, status ok) [frontend boundary; over-acceptance of a rejected program (the BUG-125 class: not a wrong value on a supported construct, a value where gc gives no program); FIXED BY REJECTION 2026-10-13 (commit 71bb9cd4, release-readiness row 34, lane `frontend/chan-elem-limit-1013` — `gclimits.go` mirrors gc's three size rules after type-check); recorded only inside BUG-078's text; late entry 2026-10-27]
+
+- Status: fixed (2026-10-27, late entry — the fix landed 2026-10-13 with no entry of its own (BUG-078's per-declaration paragraph carries the «TAKEN 2026-10-13» note); found by the campaign's policy check, [AGENT] lane `records/defect-shapes-1027`, under the owner's approval of 2026-10-27. Entered for consistency with BUG-125/BUG-126, the same class; the owner may strike the over-acceptance entries as a class)
+- Pinned-by: none (the witnesses are NEGATIVE-corpus rows `channels/chan-elem-too-large`, `channels/chan-elem-too-large-padding`, `channels/chan-elem-too-large-unused-type`, `generics/chan-elem-too-large-instantiated`, `generics/chan-elem-too-large-method` and siblings, PASS at `frontend=type-check` in `baselines/negative-full.tsv` (`frontend-accepts` before the fix, measured); the exec controls `channels/element-size-limit/*` PASS; `scripts/check-bugs.sh` reads only the differential baseline)
+- Discovered: the pre-merge review of lane `frontend/decl-budgets-1013` (F2's review), 2026-10-13, recorded as release-readiness row 34.
+- Neighbourhood: to be swept in step 2, shape S20 (admission boundary: the program lowered differs from the program gc builds)
+
+WHAT: gc sizes every type reachable from the non-generic declarations and the instantiation closure and rejects the compilation unit past its limits (`cmd/compile/internal/types/size.go`: TCHANARGS ≥ 1<<16, `CalcArraySize`, `calcStructOffset`); go/types does not, so the frontend exported what gc refuses. SITE: `tools/nativefrontend/gclimits.go`, called from `loadProgram` after type-check. ROUTE: channel element, array and struct types at gc's size limits (gc's >1 GB stack-frame limit is not mirrored, recorded on row 34).
+
+## BUG-158 — a `go.mod` gc REFUSES — `module` missing or repeated, a malformed `require`, an unterminated block, a `go` version past the pin (`go 1.26.99`) — was accepted by the frontend's strict scanner and the program EXPORTED [frontend boundary; over-acceptance of a rejected program (the BUG-125 class); FIXED BY REFUSAL 2026-10-26 (commit 348a7a78, deep-clean review DC06, lane `apparatus/dc-false-greens-1026` — the module scanner refuses what it does not fully validate, with gc's verdict pinned by negative rows); late entry 2026-10-27]
+
+- Status: fixed (2026-10-27, late entry — the fix landed 2026-10-26 with no entry (DC06 is cited only inside the stage's BUG-135); found by the campaign's policy check, [AGENT] lane `records/defect-shapes-1027`, under the owner's approval of 2026-10-27. Entered for consistency with BUG-125/BUG-126/BUG-109, the same class; the owner may strike the over-acceptance entries as a class)
+- Pinned-by: none (the witnesses are NEGATIVE-corpus rows under `modules/` — `module-missing`, `module-missing-path`, `module-repeated`, `require-malformed`, `require-block-unterminated`, `replace-without-version`, `retract-range-malformed`, `go-patch-above-pin`, `go-patch-next` — PASS at the module class in `baselines/negative-full.tsv`; no positive row can carry a go.mod, BUG-109's reason; `scripts/check-bugs.sh` reads only the differential baseline)
+- Discovered: the deep-clean release pass, DC06 (`docs/2026-10-26_deep-clean-release-pass.md`, frontend FE-03/FE-04), 2026-10-26; the ruling of that day, relayed, asked the scanner to refuse what it does not fully validate.
+- Neighbourhood: to be swept in step 2, shape S20 (admission boundary: the program lowered differs from the program gc builds)
+
+WHAT: the module judgement (BUG-109, BUG-128) scanned a go.mod for its `go`/`godebug`/`toolchain` lines and skipped the rest; a file gc rejects outright therefore governed nothing and the program lowered where gc builds nothing. SITE: `tools/nativefrontend/modfile.go` (`goDirective`, the verb table `goModVerbs` and the block grammar). ROUTE: a go.mod at or above the lowered directory with a shape gc rejects (the workspace file is BUG-135's).
+
+## BUG-159 — the ABORT WINDOW: a goroutine's progress between main's last observable step and its abort is EXCLUDED — `go func(){ print("B"); done <- 1 }(); print("A"); panic("x")` enumerates exactly `{A, BA}`+panic where pinned gc at GOMAXPROCS=2 prints `AB` in 994 of 1000 runs (`A` 6, `BA` 0): the DOMINANT gc behaviour is outside the modeled set, race-free, no refusal [semantic core; scheduling boundaries; observed ∉ modeled; found by the sched-boundary lane's pre-merge review (MEDIUM-2) and measured by the coordinator 2026-10-12; RULED a STATED LIMIT (`docs/release.md` §4) rather than widened, release-readiness row 29; the index entry that row proposed was never written; late entry 2026-10-27]
+
+- Status: open (late entry 2026-10-27 — a known observed-∉-modeled with no entry; entered by the campaign's policy check so the index is the single record of known fidelity bugs, [AGENT] lane `records/defect-shapes-1027`, under the owner's approval of 2026-10-27; the 2026-10-12 ruling that it is a stated limit stands — this entry records, it does not schedule a fix)
+- Pinned-by: none (no corpus row: the shape is excluded by name in `docs/2026-10-12_sched-boundary-design.md` §6 and would be an honest membership red; the measurement is the readiness row's, reproducible with `coverage-observations` on the program above against `go run` at GOMAXPROCS=2)
+- Discovered: 2026-10-12, the pre-merge review of lane `core/sched-boundary-1012` (BUG-123's lane), MEDIUM-2; release-readiness row 29.
+- Neighbourhood: to be swept in step 2, shape S15 (scheduling boundaries and the menu)
+
+WHAT: `.panicking _ .stop` is no scheduling boundary (`atBoundary_of_abort`, `MultiSound.lean`), no completion flag opens on an unwinding successor (`Config.completedFlag`), and the driver classifies the abort before stepping anyone else, while gc keeps the other P running through main's unwinding — FR-30's kind of silently admitted class (BUG-123 closed the `len(ch)`/print corners; BUG-152 the post-op and back-edge ones). SITE: `GoLean/GoCore/Multi.lean` `Config.atBoundary` and the drivers' terminal-priority classification (`execProgLoop`, `execProgLoopOut`). ROUTE: a goroutine's observable step racing main's abort. A widening touches `atBoundary_of_abort` and may move a pinned pool statement (a customer-visible re-pin), which is why the ruling named it a limit.
