@@ -289,6 +289,9 @@ preemption points; if it is undeclared, a back-edge consult of bound ≥ 2 fails
 certificate checker (`Machine.checkCert`). The theorem `Machine.checkCertM_slowObs`
 (`GoLean/GoCore/EnumDedupSound.lean`, in the default build) proves that an accepted
 certificate's observation set equals `SlowObs`, over every fuel and choice stream.
+The theorem covers each member's values and terminal status; the printed `output` key
+is empty because the engine refuses programs with output events, a check the theorem
+does not cover (release-readiness backlog row 53).
 The `certified=checkCert` marker reports this check with the concrete `dedupNodeEqb`;
 as with other CLI results, executing the checker relies on the compiled runtime.
 It refuses, by name, programs with a `$pkginit`

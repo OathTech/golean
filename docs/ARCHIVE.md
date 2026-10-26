@@ -218,6 +218,7 @@ events and histories), U1 (restricted unseq sequentialization), I1 and I2
   `docs/specs/pool-relation/` (`FROZEN.sha256`, `MILESTONES`, `LANDED` = M5,
   `REPAIRS.md`) and is checked by `scripts/check-pool-spec` (a `scripts/ci`
   speedbump). Downstream of these also sit `EnumDedupCheck`, `EnumDedupSound`
+  (restored to the build on the live definitions 2026-10-26, deep-clean DC04)
   and `MachineEqb` (the enumeration dedup check). The kept surface depends on
   these modules at the tag: `Equations.lean` imports `EquationsAttr` and
   `MachineSound`; `Prefix.lean` imports `ExecutionStatement`, `PrefixFacts` and

@@ -9,12 +9,18 @@ The optimized enumerator (design note
 `docs/2026-08-21_w32-por-design.md` §3): a worklist search over the
 pool's `(MultiConfig, RaceState)` state graph, deduplicating states so
 schedule-path multiplicity collapses to the grid. UNTRUSTED and
-DELETABLE — nothing in `GoLean/GoCore/**` or `proofs/**` imports this
-file (the deletion test; only the CLI does), no theorem mentions it,
-and its output is only ever consumed through the VERIFIED checker
-(`checkCert`, `EnumDedupCheck.lean`): a bug here can at worst make the
-checker refuse (or waste work), never certify a wrong set —
-`checkCert_slowObs` is about the checker alone.
+DELETABLE — nothing in `GoLean/GoCore/**` imports this file (the
+deletion test; only the CLI does), no theorem mentions it, and its
+output is only ever consumed through the VERIFIED checker (`checkCert`,
+`EnumDedupCheck.lean`): a bug here can at worst make the checker refuse
+(or waste work), never certify a wrong set of member VALUES and
+TERMINAL STATUSES — `checkCert_slowObs` (`EnumDedupSound.lean`) is
+about the checker alone, over the `Obs` vocabulary. ONE THING the
+theorem does not cover: the `output` key the CLI prints for every
+member is `Readout`'s default (empty), honest only because THIS ENGINE
+refuses every output event (`buildCert`'s refusal below); a checker-side
+refusal that would bring it under the theorem is the owner's call
+(release-readiness backlog row 53, 2026-10-26).
 
 Internals, all performance-only: the visited map keys a hand-rolled
 cheap hash (collisions resolved by the COMPILED derived `BEq` — the

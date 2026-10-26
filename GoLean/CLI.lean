@@ -2537,10 +2537,13 @@ def dedupSeed (ep : EnumProgram) :
 build the state-graph certificate (untrusted engine), run THE VERIFIED
 CHECKER, and only then print the set — the printed lines are backed by
 `checkCert_slowObs` (member set = `SlowObs`, the ∃-fuel ∃-stream image
-of the unmodified `execProgLoop`). The DFS lane's accountant/sentinel/
-alias-ladder heuristics do not apply here; the trust boundary is the
-checker plus the compiled-code trust every differential artifact
-already carries. -/
+of the unmodified `execProgLoop`). The theorem covers each member's
+values and terminal status; the `output` key printed for every member
+is `Readout`'s default, empty, honest because the ENGINE refuses output
+events — outside the theorem (backlog row 53). The DFS lane's
+accountant/sentinel/alias-ladder heuristics do not apply here; the
+trust boundary is the checker plus the compiled-code trust every
+differential artifact already carries. -/
 private def dedupInertFlags : List String :=
   ["--fuel", "--max-width", "--max-sites", "--cap", "--backedge"]
 

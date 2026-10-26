@@ -136,8 +136,14 @@ paragraph replaced the 2026-09-04 consumer-interface pointer with
    its tables `tools/lowerdiag/causes.tsv` and `scripts/machine-causes.tsv`),
    the oracle pin (go1.26.5 exactly), and the re-pin guards (incl.
    `scripts/check-alternation-survival`, `scripts/check-cause-regressions`,
-   `scripts/check-row-removals`). The oracle toolchain is never floated; pin
-   moves are deliberate, with a full run and a written reason.
+   `scripts/check-row-removals`), and, behind the membership rows, the
+   enumeration engines of `coverage-observations` — the DFS and the dedup
+   engine, whose certificate checker `checkCert` carries the soundness
+   theorem `checkCert_slowObs` (in the build, pinned in the contract; its
+   scope is the member values and terminal status — the printed `output`
+   key is engine-enforced empty, backlog row 53). The oracle toolchain is
+   never floated; pin moves are deliberate, with a full run and a written
+   reason.
 
 Everything else is untrusted tooling.
 
@@ -197,7 +203,8 @@ Everything else is untrusted tooling.
   must be on a `BUGS.md` Cases: line.
 - **Speedbumps report.** The same run prints the consistency checks (bugs
   index, feature tags, spec anchors, stdlib register, the
-  `AGENTS.md` alias, imported-goose verbatim, memory call sites; under
+  `AGENTS.md` alias, imported-goose verbatim, memory call sites, the
+  third-party notices (`scripts/check-notices`); under
   `--diff` also the derived-artifact regeneration and `lake check`
   (`scripts/check-lake-check`, about four minutes: the toolchain's build +
   export + kernel replay + non-standard-axiom refusal over the default
@@ -208,11 +215,13 @@ Everything else is untrusted tooling.
   default since 2026-10-25, their `main`s turned into build-time checks,
   [USER] 2026-10-25, row 42's follow-up; sandboxed where `bwrap` can start,
   `--inadvisably-no-sandbox` where it cannot, saying which) and `lake
-  comparator` (`scripts/check-comparator`, about 20 s: the 383 statements
+  comparator` (`scripts/check-comparator`, about 25 s: the 385 statements
   of the surface kept on main for the raft-proofs customer — every theorem
   of `Equations.lean`, the G11 family, the `Prefix`/`Finish` laws, the
   output-fold bridge, `enterFrame_declared`, the `Choices.consumeAt*` laws,
-  the thirteen G16 table-monotonicity statements — FROZEN as text in
+  the thirteen G16 table-monotonicity statements, the two dedup
+  certificate theorems `checkCert_slowObs`/`checkCertM_slowObs` (2026-10-26) —
+  FROZEN as text in
   `Contract/Challenge.lean`, judged against GoLean's
   own theorems through the generated aliases of
   `GoLean/Contract/Solution.lean` per `comparator.json`: Lake's judge

@@ -15,6 +15,7 @@ import GoLean.GoCore.Admission
 import GoLean.GoCore.Declaration
 import GoLean.GoCore.PanicText
 -- The executable core only. The relational layer (`MachineSound`, `UnseqSound`, `NPDRF`,
--- `MultiSound`, `MultiWfSound`, `MultiStreams`, `EnumDedupSound`) was retired from the build
--- 2026-10-20 (tag relational/last-main-2026-10-20); the proof-support modules kept for the
+-- `MultiSound`, `MultiWfSound`, `MultiStreams`) was retired from the build 2026-10-20 (tag
+-- relational/last-main-2026-10-20); `EnumDedupSound` left with it and was RESTORED on the live
+-- definitions 2026-10-26 (deep-clean review DC04). It and the proof-support modules kept for the
 -- `stepFn_eqns` library and `Prefix`/`Finish` are enrolled by the root `GoLean.lean`.
