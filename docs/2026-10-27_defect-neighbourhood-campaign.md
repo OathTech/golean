@@ -1,10 +1,14 @@
 # The defect-neighbourhood campaign — plan
 
-STATUS: **PROPOSED** ([AGENT] coordinator, 2026-10-27, on the owner's direction of
-2026-10-26, paraphrased: go through the history, log every semantic defect, then
-search locally around each — or make sure a test case would catch it — as a
-pre-release activity). Nothing below runs until the owner approves; the decision
-points are in §6.
+STATUS: **APPROVED** ([USER] 2026-10-27: the four decisions of §6 ruled as
+recommended — agreements on distinct routes pinned as rows; retired-construct
+entries listed and marked, not swept; the sweep after train 21 and before the
+release lane; the one-grep speedbump added. Plan written 2026-10-27 by the [AGENT]
+coordinator on the owner's direction of 2026-10-26, paraphrased: go through the
+history, log every semantic defect, then search locally around each — or make
+sure a test case would catch it — as a pre-release activity.) Step 1 (the record
+and its classification) starts at once, since it touches no code or corpus; step 2
+waits for train 21.
 
 ## 1. Why
 
