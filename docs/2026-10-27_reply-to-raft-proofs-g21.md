@@ -3,7 +3,7 @@
 2026-10-27, [AGENT] lane `core/g21-normal-form-spill-1026` for GoLean, answering
 `raft-proofs/docs/2026-10-26_golean-ask-normal-form-and-spill-budget.md` (G21, at your
 `bad919b0` pin; relayed by the [USER] 2026-10-26). The pin to consume: GoLean `main` at
-`<the landing commit — the coordinator fills this in>` or later (toolchain
+`91cd6c92` or later (toolchain
 `leanprover/lean4:v4.35.0`). Earlier replies: `docs/2026-10-21_reply-to-raft-proofs.md`
 (G9–G11), `docs/2026-10-23_reply-to-raft-proofs-g16-g18.md` (G16, G18),
 `docs/2026-10-26_note-to-raft-proofs.md` (G19, BUG-131, BUG-132). Both halves of G21 are

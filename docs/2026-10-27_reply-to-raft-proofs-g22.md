@@ -3,7 +3,7 @@
 2026-10-27, [AGENT] lane `core/g22-map-stamps-1026` for GoLean, answering
 `raft-proofs/docs/2026-10-26_golean-ask-map-stamps.md` (G22, at your `bad919b0` pin; relayed
 by the [USER] 2026-10-26). The pin to consume: GoLean `main` at
-`<the landing commit — the coordinator fills this in>` or later (toolchain
+`91cd6c92` or later (toolchain
 `leanprover/lean4:v4.35.0`); this lane is stacked on G21's
 (`docs/2026-10-27_reply-to-raft-proofs-g21.md`), so one pin takes both. Earlier replies:
 `docs/2026-10-21_reply-to-raft-proofs.md` (G9–G11),
