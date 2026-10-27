@@ -1,0 +1,27 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s13-binding (2026-10-27), shape S13 (plan §4; the matrix on BUG-068/069/148/003/142). Strict, expected = gc go1.26.5.
+# Named results shadowed at every declaration form (the rename set of resultshadow.go and the forms beside it); the return seam observes.
+closure-writes-result-under-shadow	closureWritesResultUnderShadow	-	ok	-	scoping,shadowing,named-results,closures
+var-self-shadow	varSelfShadow	-	ok	-	scoping,shadowing,named-results,assignment
+define-self-shadow	defineSelfShadow	-	ok	-	scoping,shadowing,named-results,short_decl,maps
+multi-call-shadow	multiCallShadow	-	ok	-	scoping,shadowing,named-results,multi_result,short_decl
+select-case-shadow	selectCaseShadow	-	ok	-	scoping,shadowing,named-results,select,channels
+select-case-two-shadow	selectCaseTwoShadow	-	ok	-	scoping,shadowing,named-results,select,channels,comma_ok
+if-init-shadow	ifInitShadow	-	ok	-	scoping,shadowing,named-results,if
+switch-init-shadow	switchInitShadow	-	ok	-	scoping,shadowing,named-results,switch
+for-init-shadow-plain	forInitShadowPlain	-	ok	-	scoping,shadowing,named-results,loops
+for-init-shadow-addr	forInitShadowAddr	-	ok	-	scoping,shadowing,named-results,loops,pointers,escapes
+range-assign-writes-result	rangeAssignWritesResult	-	ok	-	scoping,named-results,range,assignment
+lit-param-same-name	litParamSameName	-	ok	-	scoping,shadowing,named-results,closures
+lit-own-result-same-name	litOwnResultSameName	-	ok	-	scoping,shadowing,named-results,closures
+lit-own-result-shadowed	litOwnResultShadowed	-	ok	-	scoping,shadowing,named-results,closures
+shadow-captured-outlives-block	shadowCapturedOutlivesBlock	-	ok	-	scoping,shadowing,named-results,closures
+defer-captures-shadow	deferCapturesShadow	-	ok	-	scoping,shadowing,named-results,closures,defer
+const-shadow	constShadow	-	ok	-	scoping,shadowing,named-results,constants
+type-shadow	typeShadow	-	ok	-	scoping,shadowing,named-results,defined_type
+two-results-one-define	twoResultsOneDefine	-	ok	-	scoping,shadowing,named-results,short_decl,strings
+recv-one-target-shadow	recvOneTargetShadow	-	ok	-	scoping,shadowing,named-results,channels
+assert-one-value-shadow	assertOneValueShadow	-	ok	-	scoping,shadowing,named-results,type_assertions
+label-same-name	labelSameName	-	ok	-	scoping,named-results,labels,goto
+for-assign-result	forAssignResult	-	ok	-	scoping,named-results,loops,assignment
+mixed-redecl-result	mixedRedeclResult	-	ok	-	scoping,named-results,short_decl

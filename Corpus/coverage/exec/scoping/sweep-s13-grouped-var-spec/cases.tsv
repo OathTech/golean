@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s13-binding (2026-10-27), shape S13 (plan §4; BUG-142's line). Strict, expected = gc go1.26.5. BORN RED: BUG-300's Cases.
+# A grouped var declaration whose later spec reads an earlier spec's new name; the hoisted temp reads the wrong cell, refused by the decoder's B6 c4 check.
+grouped-var-reads-new-name	groupedVarReadsNewName	-	ok	-	scoping,shadowing,assignment
+grouped-var-reads-new-name-result	groupedVarReadsNewNameResult	-	ok	-	scoping,shadowing,assignment,named-results
+grouped-var-no-outer	groupedVarNoOuter	-	ok	-	scoping,assignment
+grouped-var-zero-then-read	groupedVarZeroThenRead	-	ok	-	scoping,shadowing,assignment

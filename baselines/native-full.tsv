@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 5592 (5288 PASS / 304 FAIL)
+# cases: 5789 (5476 PASS / 313 FAIL)
 # re-pinned: 2026-10-27 [AGENT], lane frontend/fix-hoist-1027 — BUG-276, 277, 278, 279 (the S7 sweep) and BUG-286, 287 (the S9
 #   sweep) FIXED in tools/nativefrontend (the campaign plan's rule that a finding is fixed through the normal train, [USER]
 #   approved 2026-10-27, relayed): (1) emit.go emitBinary binds a `&&`/`||` whose right operand hoists nothing to a temp at
@@ -51,6 +51,37 @@
 #     builtins/sweep-s9-paren-builtin/paren-builtin                                  FAIL/lean-observation cause=error:decoder-scope-undeclared-local → PASS
 #     builtins/sweep-s9-paren-builtin/paren-builtin-cap                              FAIL/lean-observation cause=error:decoder-scope-undeclared-local → PASS
 # cause keyed 2026-10-27 [AGENT coordinator], train-25 stage: BUG-287's two rows `error:?` → `error:decoder-scope-undeclared-local` (the decoder's scope refusal, the row added at the train-24 stage) and BUG-286's single-buffer row `deadlock:?` → `deadlock:machine-deadlock` (a new scripts/machine-causes.tsv row: the machine deadlocked where gc ran); no row moved.
+# re-pinned: 2026-10-27 [AGENT], lane sweep/s13-binding — the defect-neighbourhood campaign's S13 sweep (variable binding: scoping,
+#   shadowing, per-iteration cells; docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved 2026-10-27; the matrix and
+#   every cell's disposition on the `- Neighbourhood:` lines of BUG-069/068/148/003/142). NO existing row moved: 4166 + 197 = 4363;
+#   PASS 3901 + 188 = 4089; FAIL 265 + 9 = 274. No flip, no removal, no cause change — corpus and records only, no change to
+#   GoLean/, tools/ or scripts/. NEW rows (197, twenty-one packages Corpus/coverage/exec/{scoping,control-flow,range,functions,generics}/
+#   sweep-s13-*/, expected = gc go1.26.5; 188 strict born green, 9 strict BORN RED on three open entries' Cases lines — each a
+#   whole-wire decoder refusal (status error) of a legal program, cause key error:? because no scripts/machine-causes.tsv row names
+#   the decoder's B6 c3/c4 scope refusals or its duplicate-function-id refusal and the sweep lane does not edit scripts/:
+#   BUG-300 scoping/sweep-s13-grouped-var-spec/* (4: a grouped var whose later spec reads an earlier spec's new name is hoisted
+#   before the group), BUG-301 scoping/sweep-s13-local-iface-dispatch/* (3: a function-local interface's dispatch entry minted
+#   twice), BUG-302 generics/sweep-s13-lit-param-typeparam/* (2: a type-parameter-typed literal parameter declared twice in the
+#   B6 table)), appended at the end of the file. Measured by CAPPED_MEM_MAX=64G capped scripts/ci --diff at the lane tree 51a5b41abd0b56d159b3644e301e362c7f1e48dd (git write-tree over 89ba27c5, this commit's tree less the two re-pinned baselines) before
+#   the re-pin (805 s wall; differential coverage summary: cases=4363 pass=4089 fail=274; negative 453 run, 16 NEW, all PASS; its only drift these 197 NEW ids, so the differential baseline diff
+#   was its one FAIL and the RESULT line FAIL; every other section ok), the rows taken from that run's artifacts/coverage/latest.tsv;
+#   the --diff at the tip judges.
+#   scoping/sweep-s13-named-result-forms/ (24): named results shadowed at every declaration form of the rename set and beside it.
+#   scoping/sweep-s13-predeclared-shadow-forms/ (36), scoping/sweep-s13-pkg-shadow-cap-iota/ (2): the predeclared identifiers beyond
+#     true/false/nil shadowed as variables, parameters, types, constants, fields, methods, labels; cap and iota at package level.
+#   scoping/sweep-s13-global-shadow/ (16): package-level names shadowed by locals, parameters, results, receivers, local types/consts,
+#     loop, guard and case variables, in init().
+#   scoping/sweep-s13-short-redecl/ (5), scoping/sweep-s13-init-scopes/ (5), scoping/sweep-s13-self-shadow-defines/ (18): short
+#     redeclaration; the if-init scope; BUG-142's self-shadowing declaration at every define path.
+#   scoping/sweep-s13-type-switch-guards/ (10), scoping/sweep-s13-select-case-binding/ (2), scoping/sweep-s13-blank-binding/ (11),
+#     scoping/sweep-s13-local-types-binding/ (2), scoping/sweep-s13-local-iface-controls/ (2): the guard's per-clause binding; select
+#     case bindings; the blank identifier at every binder; local types as binders; the local interface forms that lower.
+#   control-flow/sweep-s13-loopvar-escapes/ (10), control-flow/sweep-s13-loopvar-control/ (13), control-flow/sweep-s13-goto-scopes/ (6),
+#     range/sweep-s13-range-var-cells/ (10): the per-iteration cell's escapes beyond BUG-148's three, the control forms around it, the
+#     goto envelope, the range forms' per-iteration variables.
+#   functions/sweep-s13-closure-captures/ (9), generics/sweep-s13-contexts/ (7): capture by reference; the shape inside a generic function.
+#   scoping/sweep-s13-grouped-var-spec/ (4 RED, BUG-300), scoping/sweep-s13-local-iface-dispatch/ (3 RED, BUG-301),
+#     generics/sweep-s13-lit-param-typeparam/ (2 RED, BUG-302).
 # 2026-10-27 lane frontend/fix-admission-1027 [AGENT]: re-pinned from the lane's full `scripts/ci --diff` at the tip, after the rebase onto Run: CAPPED_MEM_MAX=64G capped scripts/ci --diff at 63bbba7a with the row edits and records applied in the tree (1117 s).
 #   the main carrying the S20 and S10 sweep entries. FIVE BUG-216/BUG-226 rows move non-PASS -> PASS with the fixes (the header rule
 #   ported from go/build; the value form at a zero-length pointer-to-array range): source-selection/sweep-s20-plusbuild-under-gobuild,
@@ -9759,3 +9790,200 @@ PASS	evalorder/sweep-s7-select-defer-go-send/select-send-value-recv	-	-
 PASS	evalorder/sweep-s7-select-defer-go-send/send-call-plus-recv	-	-
 PASS	evalorder/sweep-s7-select-defer-go-send/send-chan-call-then-logical	-	-
 PASS	evalorder/sweep-s7-select-defer-go-send/send-chan-call-then-value-call	-	-
+PASS	control-flow/sweep-s13-goto-scopes/goto-backward-var-rezero	-	-
+PASS	control-flow/sweep-s13-goto-scopes/goto-out-of-periter-loop	-	-
+PASS	control-flow/sweep-s13-goto-scopes/goto-over-const	-	-
+PASS	control-flow/sweep-s13-goto-scopes/goto-past-inner-block-decl	-	-
+PASS	control-flow/sweep-s13-goto-scopes/goto-rerun-periter-loop	-	-
+PASS	control-flow/sweep-s13-goto-scopes/result-shadow-in-goto-body	-	-
+PASS	control-flow/sweep-s13-loopvar-control/body-mutation-post-copy	-	-
+PASS	control-flow/sweep-s13-loopvar-control/body-redeclare	-	-
+PASS	control-flow/sweep-s13-loopvar-control/break-capture	-	-
+PASS	control-flow/sweep-s13-loopvar-control/continue-capture	-	-
+PASS	control-flow/sweep-s13-loopvar-control/defer-arg-plain	-	-
+PASS	control-flow/sweep-s13-loopvar-control/defer-closure-capture	-	-
+PASS	control-flow/sweep-s13-loopvar-control/labeled-continue-outer	-	-
+PASS	control-flow/sweep-s13-loopvar-control/lit-param-shadows-loopvar	-	-
+PASS	control-flow/sweep-s13-loopvar-control/multi-call-init	-	-
+PASS	control-flow/sweep-s13-loopvar-control/nested-both-captured	-	-
+PASS	control-flow/sweep-s13-loopvar-control/no-post-body-incr	-	-
+PASS	control-flow/sweep-s13-loopvar-control/periter-in-closure	-	-
+PASS	control-flow/sweep-s13-loopvar-control/two-vars-captured	-	-
+PASS	control-flow/sweep-s13-loopvar-escapes/cell-identity	-	-
+PASS	control-flow/sweep-s13-loopvar-escapes/elem-addr	-	-
+PASS	control-flow/sweep-s13-loopvar-escapes/field-addr	-	-
+PASS	control-flow/sweep-s13-loopvar-escapes/field-array-slice	-	-
+PASS	control-flow/sweep-s13-loopvar-escapes/method-value-ptr-recv	-	-
+PASS	control-flow/sweep-s13-loopvar-escapes/nested-closure-capture	-	-
+PASS	control-flow/sweep-s13-loopvar-escapes/nested-field-ptr-recv	-	-
+PASS	control-flow/sweep-s13-loopvar-escapes/old-cell-mutated-later	-	-
+PASS	control-flow/sweep-s13-loopvar-escapes/pointer-loopvar-control	-	-
+PASS	control-flow/sweep-s13-loopvar-escapes/struct-captured-then-mutated	-	-
+PASS	functions/sweep-s13-closure-captures/addr-identity-through-capture	-	-
+PASS	functions/sweep-s13-closure-captures/array-elem-write	-	-
+PASS	functions/sweep-s13-closure-captures/capture-before-assign	-	-
+PASS	functions/sweep-s13-closure-captures/defer-sees-final	-	-
+PASS	functions/sweep-s13-closure-captures/field-write	-	-
+PASS	functions/sweep-s13-closure-captures/lit-result-shadows-capture	-	-
+PASS	functions/sweep-s13-closure-captures/returned-closure-mutated-between	-	-
+PASS	functions/sweep-s13-closure-captures/stored-in-global	-	-
+PASS	functions/sweep-s13-closure-captures/three-levels-middle-shadow	-	-
+PASS	generics/sweep-s13-contexts/global-shadow	-	-
+PASS	generics/sweep-s13-contexts/lit-param-concrete	-	-
+PASS	generics/sweep-s13-contexts/loopvar-capture	-	-
+PASS	generics/sweep-s13-contexts/result-shadow	-	-
+PASS	generics/sweep-s13-contexts/self-shadow	-	-
+PASS	generics/sweep-s13-contexts/ts-guard	-	-
+PASS	generics/sweep-s13-contexts/typeparam-named-int	-	-
+FAIL	generics/sweep-s13-lit-param-typeparam/lit-param-capturing	lean-observation	error:?
+FAIL	generics/sweep-s13-lit-param-typeparam/lit-param-no-capture	lean-observation	error:?
+PASS	range/sweep-s13-range-var-cells/array-value-addr	-	-
+PASS	range/sweep-s13-range-var-cells/chan-addr	-	-
+PASS	range/sweep-s13-range-var-cells/int-addr	-	-
+PASS	range/sweep-s13-range-var-cells/int-body-write	-	-
+PASS	range/sweep-s13-range-var-cells/int-capture	-	-
+PASS	range/sweep-s13-range-var-cells/map-addrs	-	-
+PASS	range/sweep-s13-range-var-cells/slice-body-write	-	-
+PASS	range/sweep-s13-range-var-cells/slice-index-addr	-	-
+PASS	range/sweep-s13-range-var-cells/slice-value-addr	-	-
+PASS	range/sweep-s13-range-var-cells/string-addrs	-	-
+PASS	scoping/sweep-s13-blank-binding/blank-params	-	-
+PASS	scoping/sweep-s13-blank-binding/blank-receiver	-	-
+PASS	scoping/sweep-s13-blank-binding/blank-result-bare	-	-
+PASS	scoping/sweep-s13-blank-binding/blank-result-explicit	-	-
+PASS	scoping/sweep-s13-blank-binding/for-init-incr-only	-	-
+PASS	scoping/sweep-s13-blank-binding/incdec-is-use	-	-
+PASS	scoping/sweep-s13-blank-binding/range-all-blank	-	-
+PASS	scoping/sweep-s13-blank-binding/recv-blanks	-	-
+PASS	scoping/sweep-s13-blank-binding/select-blank-recv	-	-
+PASS	scoping/sweep-s13-blank-binding/used-only-in-closure	-	-
+PASS	scoping/sweep-s13-blank-binding/var-blank-evaluates	-	-
+PASS	scoping/sweep-s13-global-shadow/closure-global-vs-local	-	-
+PASS	scoping/sweep-s13-global-shadow/for-init-addr-shadow	-	-
+PASS	scoping/sweep-s13-global-shadow/global-written-under-shadow	-	-
+PASS	scoping/sweep-s13-global-shadow/init-from-func-with-shadow	-	-
+PASS	scoping/sweep-s13-global-shadow/local-const-shadows-global	-	-
+PASS	scoping/sweep-s13-global-shadow/local-type-shadows-global-var	-	-
+PASS	scoping/sweep-s13-global-shadow/local-var-shadows-func	-	-
+PASS	scoping/sweep-s13-global-shadow/local-var-shadows-type	-	-
+PASS	scoping/sweep-s13-global-shadow/param-shadow	-	-
+PASS	scoping/sweep-s13-global-shadow/range-var-shadow	-	-
+PASS	scoping/sweep-s13-global-shadow/receiver-shadow	-	-
+PASS	scoping/sweep-s13-global-shadow/result-shadow	-	-
+PASS	scoping/sweep-s13-global-shadow/select-case-shadow	-	-
+PASS	scoping/sweep-s13-global-shadow/self-shadow-reads-global	-	-
+PASS	scoping/sweep-s13-global-shadow/shadow-in-init	-	-
+PASS	scoping/sweep-s13-global-shadow/ts-guard-shadow	-	-
+FAIL	scoping/sweep-s13-grouped-var-spec/grouped-var-no-outer	lean-observation	error:?
+FAIL	scoping/sweep-s13-grouped-var-spec/grouped-var-reads-new-name	lean-observation	error:?
+FAIL	scoping/sweep-s13-grouped-var-spec/grouped-var-reads-new-name-result	lean-observation	error:?
+FAIL	scoping/sweep-s13-grouped-var-spec/grouped-var-zero-then-read	lean-observation	error:?
+PASS	scoping/sweep-s13-init-scopes/else-if-chain	-	-
+PASS	scoping/sweep-s13-init-scopes/if-init-body-self-shadow	-	-
+PASS	scoping/sweep-s13-init-scopes/if-init-captured-in-else	-	-
+PASS	scoping/sweep-s13-init-scopes/if-init-commaok-else	-	-
+PASS	scoping/sweep-s13-init-scopes/if-init-else	-	-
+PASS	scoping/sweep-s13-local-iface-controls/decl-only-nil	-	-
+PASS	scoping/sweep-s13-local-iface-controls/empty-assert	-	-
+FAIL	scoping/sweep-s13-local-iface-dispatch/error-local-iface	lean-observation	error:?
+FAIL	scoping/sweep-s13-local-iface-dispatch/local-iface-satisfied	lean-observation	error:?
+FAIL	scoping/sweep-s13-local-iface-dispatch/local-iface-two-funcs	lean-observation	error:?
+PASS	scoping/sweep-s13-local-types-binding/embedded-promotion	-	-
+PASS	scoping/sweep-s13-local-types-binding/nested-same-name	-	-
+PASS	scoping/sweep-s13-named-result-forms/assert-one-value-shadow	-	-
+PASS	scoping/sweep-s13-named-result-forms/closure-writes-result-under-shadow	-	-
+PASS	scoping/sweep-s13-named-result-forms/const-shadow	-	-
+PASS	scoping/sweep-s13-named-result-forms/defer-captures-shadow	-	-
+PASS	scoping/sweep-s13-named-result-forms/define-self-shadow	-	-
+PASS	scoping/sweep-s13-named-result-forms/for-assign-result	-	-
+PASS	scoping/sweep-s13-named-result-forms/for-init-shadow-addr	-	-
+PASS	scoping/sweep-s13-named-result-forms/for-init-shadow-plain	-	-
+PASS	scoping/sweep-s13-named-result-forms/if-init-shadow	-	-
+PASS	scoping/sweep-s13-named-result-forms/label-same-name	-	-
+PASS	scoping/sweep-s13-named-result-forms/lit-own-result-same-name	-	-
+PASS	scoping/sweep-s13-named-result-forms/lit-own-result-shadowed	-	-
+PASS	scoping/sweep-s13-named-result-forms/lit-param-same-name	-	-
+PASS	scoping/sweep-s13-named-result-forms/mixed-redecl-result	-	-
+PASS	scoping/sweep-s13-named-result-forms/multi-call-shadow	-	-
+PASS	scoping/sweep-s13-named-result-forms/range-assign-writes-result	-	-
+PASS	scoping/sweep-s13-named-result-forms/recv-one-target-shadow	-	-
+PASS	scoping/sweep-s13-named-result-forms/select-case-shadow	-	-
+PASS	scoping/sweep-s13-named-result-forms/select-case-two-shadow	-	-
+PASS	scoping/sweep-s13-named-result-forms/shadow-captured-outlives-block	-	-
+PASS	scoping/sweep-s13-named-result-forms/switch-init-shadow	-	-
+PASS	scoping/sweep-s13-named-result-forms/two-results-one-define	-	-
+PASS	scoping/sweep-s13-named-result-forms/type-shadow	-	-
+PASS	scoping/sweep-s13-named-result-forms/var-self-shadow	-	-
+PASS	scoping/sweep-s13-pkg-shadow-cap-iota/cap-pkg-func	-	-
+PASS	scoping/sweep-s13-pkg-shadow-cap-iota/iota-pkg-const	-	-
+PASS	scoping/sweep-s13-predeclared-shadow-forms/any-local-type	-	-
+PASS	scoping/sweep-s13-predeclared-shadow-forms/any-var	-	-
+PASS	scoping/sweep-s13-predeclared-shadow-forms/append-var	-	-
+PASS	scoping/sweep-s13-predeclared-shadow-forms/bool-var	-	-
+PASS	scoping/sweep-s13-predeclared-shadow-forms/byte-var	-	-
+PASS	scoping/sweep-s13-predeclared-shadow-forms/clear-var	-	-
+PASS	scoping/sweep-s13-predeclared-shadow-forms/close-var	-	-
+PASS	scoping/sweep-s13-predeclared-shadow-forms/copy-var	-	-
+PASS	scoping/sweep-s13-predeclared-shadow-forms/delete-var	-	-
+PASS	scoping/sweep-s13-predeclared-shadow-forms/error-local-struct-type	-	-
+PASS	scoping/sweep-s13-predeclared-shadow-forms/error-var	-	-
+PASS	scoping/sweep-s13-predeclared-shadow-forms/fields-named-predeclared	-	-
+PASS	scoping/sweep-s13-predeclared-shadow-forms/float64-var	-	-
+PASS	scoping/sweep-s13-predeclared-shadow-forms/func-name-shadowed-by-var	-	-
+PASS	scoping/sweep-s13-predeclared-shadow-forms/import-name-shadowed	-	-
+PASS	scoping/sweep-s13-predeclared-shadow-forms/int-local-type	-	-
+PASS	scoping/sweep-s13-predeclared-shadow-forms/int-var	-	-
+PASS	scoping/sweep-s13-predeclared-shadow-forms/iota-var	-	-
+PASS	scoping/sweep-s13-predeclared-shadow-forms/labels-named-predeclared	-	-
+PASS	scoping/sweep-s13-predeclared-shadow-forms/len-captured	-	-
+PASS	scoping/sweep-s13-predeclared-shadow-forms/len-param	-	-
+PASS	scoping/sweep-s13-predeclared-shadow-forms/len-var	-	-
+PASS	scoping/sweep-s13-predeclared-shadow-forms/make-var	-	-
+PASS	scoping/sweep-s13-predeclared-shadow-forms/method-named-len	-	-
+PASS	scoping/sweep-s13-predeclared-shadow-forms/minmax-var	-	-
+PASS	scoping/sweep-s13-predeclared-shadow-forms/new-var	-	-
+PASS	scoping/sweep-s13-predeclared-shadow-forms/nil-param	-	-
+PASS	scoping/sweep-s13-predeclared-shadow-forms/nil-pointer-var	-	-
+PASS	scoping/sweep-s13-predeclared-shadow-forms/own-name-shadowed	-	-
+PASS	scoping/sweep-s13-predeclared-shadow-forms/panic-var	-	-
+PASS	scoping/sweep-s13-predeclared-shadow-forms/print-var	-	-
+PASS	scoping/sweep-s13-predeclared-shadow-forms/recover-var	-	-
+PASS	scoping/sweep-s13-predeclared-shadow-forms/rune-local-type	-	-
+PASS	scoping/sweep-s13-predeclared-shadow-forms/rune-var	-	-
+PASS	scoping/sweep-s13-predeclared-shadow-forms/string-var	-	-
+PASS	scoping/sweep-s13-predeclared-shadow-forms/true-local-const	-	-
+PASS	scoping/sweep-s13-select-case-binding/case-var-captured	-	-
+PASS	scoping/sweep-s13-select-case-binding/two-var-shadow	-	-
+PASS	scoping/sweep-s13-self-shadow-defines/assert-one-self	-	-
+PASS	scoping/sweep-s13-self-shadow-defines/assert-two-self	-	-
+PASS	scoping/sweep-s13-self-shadow-defines/builtin-self	-	-
+PASS	scoping/sweep-s13-self-shadow-defines/conversion-self	-	-
+PASS	scoping/sweep-s13-self-shadow-defines/define-two-names-rhs-outer	-	-
+PASS	scoping/sweep-s13-self-shadow-defines/deref-self	-	-
+PASS	scoping/sweep-s13-self-shadow-defines/field-self	-	-
+PASS	scoping/sweep-s13-self-shadow-defines/for-init-self	-	-
+PASS	scoping/sweep-s13-self-shadow-defines/if-init-self	-	-
+PASS	scoping/sweep-s13-self-shadow-defines/index-self	-	-
+PASS	scoping/sweep-s13-self-shadow-defines/keyed-literal-self	-	-
+PASS	scoping/sweep-s13-self-shadow-defines/lit-captures-outer	-	-
+PASS	scoping/sweep-s13-self-shadow-defines/recv-self	-	-
+PASS	scoping/sweep-s13-self-shadow-defines/recv-two-self	-	-
+PASS	scoping/sweep-s13-self-shadow-defines/select-case-self	-	-
+PASS	scoping/sweep-s13-self-shadow-defines/var-lit-captures-outer	-	-
+PASS	scoping/sweep-s13-self-shadow-defines/var-two-names-rhs-outer	-	-
+PASS	scoping/sweep-s13-self-shadow-defines/var-typed-self	-	-
+PASS	scoping/sweep-s13-short-redecl/blank-and-outer	-	-
+PASS	scoping/sweep-s13-short-redecl/captured-redeclared	-	-
+PASS	scoping/sweep-s13-short-redecl/err-reused-through-closure	-	-
+PASS	scoping/sweep-s13-short-redecl/nested-scope-all-new	-	-
+PASS	scoping/sweep-s13-short-redecl/rhs-reads-old	-	-
+PASS	scoping/sweep-s13-type-switch-guards/clause-addr	-	-
+PASS	scoping/sweep-s13-type-switch-guards/clause-capture	-	-
+PASS	scoping/sweep-s13-type-switch-guards/clause-shadow	-	-
+PASS	scoping/sweep-s13-type-switch-guards/clause-types	-	-
+PASS	scoping/sweep-s13-type-switch-guards/default-iface	-	-
+PASS	scoping/sweep-s13-type-switch-guards/nested-same-name	-	-
+PASS	scoping/sweep-s13-type-switch-guards/nil-clause	-	-
+PASS	scoping/sweep-s13-type-switch-guards/per-iteration-capture	-	-
+PASS	scoping/sweep-s13-type-switch-guards/shadows-param	-	-
+PASS	scoping/sweep-s13-type-switch-guards/with-init	-	-

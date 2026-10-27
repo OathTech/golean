@@ -1,11 +1,19 @@
 # GoLean negative-corpus (compile-rejection) baseline
 # recorded: 2026-08-18  commit: f68a4d86+ (spec-truth P3 slice 2)  oracle: go build (rejection)  [header corrected 2026-08-31: the old "+ frontend fail-closed" conjunct claimed a check that does not exist — scripts/coverage-negative invokes no GoLean tool (p2-fact claim 5)]
-# manifest_cases: 509  pass: 507  fail: 2
+# manifest_cases: 525  pass: 523  fail: 2
 # re-pinned: 2026-10-27 [AGENT], lane frontend/fix-admission-1027 — BUG-217 and BUG-219 fixed (the main module's path judged
 #   against the pinned GOROOT and gc's reserved names; cmd/go's import rules mirrored at discovery): NINE rows FAIL
 #   frontend-accepts -> PASS from the full run at 63bbba7a with the row edits and records applied in the tree (1117 s) — imports/{vendor-path-import, nested-vendor-path-import,
 #   goroot-vendor-name, bare-internal-path, module-mode-bare-local-import, package-main-import} at frontend=type-check (BUG-219),
 #   modules/{module-path-std-fmt, module-path-std-nested, module-path-cmd} at frontend=module (BUG-217). No other row moves.
+# re-pinned: 2026-10-27 [AGENT], lane sweep/s13-binding — the S13 sweep (variable binding; plan §4, [USER]-approved 2026-10-27).
+#   ADDITIVE ONLY: 16 new ids Corpus/coverage/negative/compile/scoping/sweep-s13-* from the full run of scripts/ci --diff at 51a5b41abd0b56d159b3644e301e362c7f1e48dd (git write-tree over 89ba27c5, this commit's tree less the two re-pinned baselines)
+#   (805 s); no existing row moved: 437 + 16 = 453, pass 437 + 16 = 453, fail 0. Every row born PASS (gc rejects AND the frontend
+#   refuses as a type-check or parse rejection): a top-level `:=` of a named result and `_ := 1` and `_, b :=` beside a same-block b
+#   (no new variables), a parameter and a result of one name, a `:=` in a for post statement, a type-switch guard unused in every
+#   clause and a `:=` of the guard's name directly in a clause, a local type used before its declaration, a method declared inside
+#   a function (parse), a blank type-switch guard, and the unused-variable rejections (assigned only, in a nested block, a range /
+#   for-init / select-case / if-init variable, assigned only inside a closure).
 # re-pinned: 2026-10-27 [AGENT], lane sweep/s7-hoist-order — the defect-neighbourhood campaign's step 2, shape S7 (ordered
 #   events reordered by the hoist; plan docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved 2026-10-27): the
 #   gc-REJECTED cells of the shape's matrix — a map literal with duplicate constant keys, an array literal with a duplicate
@@ -703,3 +711,19 @@ PASS	methods/sweep-s5-same-depth-field-and-method	-
 PASS	evalorder/sweep-s7-dup-array-index	-
 PASS	evalorder/sweep-s7-dup-map-key	-
 PASS	evalorder/sweep-s7-dup-struct-field	-
+PASS	scoping/sweep-s13-blank-define	-
+PASS	scoping/sweep-s13-local-type-use-before-decl	-
+PASS	scoping/sweep-s13-method-in-func	-
+PASS	scoping/sweep-s13-param-result-duplicate	-
+PASS	scoping/sweep-s13-post-short-decl	-
+PASS	scoping/sweep-s13-redecl-no-new-blank	-
+PASS	scoping/sweep-s13-result-redefine-top	-
+PASS	scoping/sweep-s13-ts-blank-guard	-
+PASS	scoping/sweep-s13-ts-guard-clause-redefine	-
+PASS	scoping/sweep-s13-ts-guard-unused	-
+PASS	scoping/sweep-s13-unused-assigned	-
+PASS	scoping/sweep-s13-unused-assigned-in-closure	-
+PASS	scoping/sweep-s13-unused-if-init	-
+PASS	scoping/sweep-s13-unused-nested-block	-
+PASS	scoping/sweep-s13-unused-range-var	-
+PASS	scoping/sweep-s13-unused-select-var	-

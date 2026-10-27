@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s13-binding (2026-10-27), shape S13 (plan §4; the matrix on BUG-069's line). Strict, expected = gc go1.26.5.
+# Function-local types as binders: promotion through a local embedding, nested same-name types, a local interface.
+embedded-promotion	embeddedPromotion	-	ok	-	scoping,defined_type,embedding,methods,interfaces
+nested-same-name	nestedSameName	-	ok	-	scoping,defined_type,shadowing

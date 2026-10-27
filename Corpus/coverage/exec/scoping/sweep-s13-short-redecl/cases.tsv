@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s13-binding (2026-10-27), shape S13 (plan §4; the matrix on BUG-142's line). Strict, expected = gc go1.26.5.
+# Short variable redeclaration: nested-block newness, a reused cell through a closure, the RHS reading the old value, a blank beside an outer name.
+nested-scope-all-new	nestedScopeAllNew	-	ok	-	scoping,short_decl,shadowing
+err-reused-through-closure	errReusedThroughClosure	-	ok	-	scoping,short_decl,closures,multi_result
+captured-redeclared	capturedRedeclared	-	ok	-	scoping,short_decl,closures
+rhs-reads-old	rhsReadsOld	-	ok	-	scoping,short_decl,assignment
+blank-and-outer	blankAndOuter	-	ok	-	scoping,short_decl,shadowing,multi_result

@@ -1,0 +1,2 @@
+# expected_substring	features
+no new variable on left side of :=	scoping,type_switch,compile_error

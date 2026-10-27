@@ -1,0 +1,2 @@
+# expected_substring	features
+no new variables on left side of :=	scoping,named-results,short_decl,compile_error

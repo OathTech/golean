@@ -1,0 +1,2 @@
+# expected_substring	features
+declared and not used: v	scoping,unused,select,compile_error

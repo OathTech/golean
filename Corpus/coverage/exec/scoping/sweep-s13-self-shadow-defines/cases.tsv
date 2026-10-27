@@ -1,0 +1,21 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s13-binding (2026-10-27), shape S13 (plan §4; the matrix on BUG-142's line). Strict, expected = gc go1.26.5.
+# A declaration whose initializer mentions the declared name, at every define path of the emitter.
+var-two-names-rhs-outer	varTwoNamesRhsOuter	-	ok	-	scoping,shadowing,assignment
+define-two-names-rhs-outer	defineTwoNamesRhsOuter	-	ok	-	scoping,shadowing,short_decl
+var-typed-self	varTypedSelf	-	ok	-	scoping,shadowing,assignment,typed
+if-init-self	ifInitSelf	-	ok	-	scoping,shadowing,if,short_decl
+for-init-self	forInitSelf	-	ok	-	scoping,shadowing,loops,short_decl
+select-case-self	selectCaseSelf	-	ok	-	scoping,shadowing,select,channels
+recv-self	recvSelf	-	ok	-	scoping,shadowing,channels,short_decl
+recv-two-self	recvTwoSelf	-	ok	-	scoping,shadowing,channels,comma_ok,short_decl
+assert-two-self	assertTwoSelf	-	ok	-	scoping,shadowing,type_assertions,comma_ok,short_decl
+builtin-self	builtinSelf	-	ok	-	scoping,shadowing,builtins,len,short_decl
+conversion-self	conversionSelf	-	ok	-	scoping,shadowing,conversions,short_decl,widths
+assert-one-self	assertOneSelf	-	ok	-	scoping,shadowing,type_assertions,short_decl
+field-self	fieldSelf	-	ok	-	scoping,shadowing,structs,short_decl
+deref-self	derefSelf	-	ok	-	scoping,shadowing,pointers,short_decl
+index-self	indexSelf	-	ok	-	scoping,shadowing,slices,indexing,short_decl
+keyed-literal-self	keyedLiteralSelf	-	ok	-	scoping,shadowing,structs,short_decl
+lit-captures-outer	litCapturesOuter	-	ok	-	scoping,shadowing,closures,short_decl
+var-lit-captures-outer	varLitCapturesOuter	-	ok	-	scoping,shadowing,closures,assignment

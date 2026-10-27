@@ -1,0 +1,13 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s13-binding (2026-10-27), shape S13 (plan §4; the matrix on BUG-148/003's lines). Strict, expected = gc go1.26.5.
+# Escape shapes of a for-clause variable's cell beyond BUG-148's three; the cell identity; the no-escape control.
+method-value-ptr-recv	methodValuePtrRecv	-	ok	-	control_flow,loops,methods,pointers,escapes,scoping
+field-addr	fieldAddr	-	ok	-	control_flow,loops,structs,pointers,escapes,scoping
+elem-addr	elemAddr	-	ok	-	control_flow,loops,arrays,pointers,escapes,scoping
+nested-field-ptr-recv	nestedFieldPtrRecv	-	ok	-	control_flow,loops,structs,methods,pointers,escapes,scoping
+field-array-slice	fieldArraySlice	-	ok	-	control_flow,loops,structs,arrays,slices,escapes,scoping
+pointer-loopvar-control	pointerLoopvarControl	-	ok	-	control_flow,loops,pointers,scoping
+nested-closure-capture	nestedClosureCapture	-	ok	-	control_flow,loops,closures,escapes,scoping
+cell-identity	cellIdentity	-	ok	-	control_flow,loops,pointers,escapes,identity,equality,scoping
+old-cell-mutated-later	oldCellMutatedLater	-	ok	-	control_flow,loops,pointers,escapes,scoping
+struct-captured-then-mutated	structCapturedThenMutated	-	ok	-	control_flow,loops,structs,closures,escapes,scoping

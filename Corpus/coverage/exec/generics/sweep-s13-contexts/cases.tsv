@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s13-binding (2026-10-27), shape S13 (plan §4; the matrix on BUG-003/068/142/069's lines). Strict, expected = gc go1.26.5.
+# The shape's cells inside a generic function; a type parameter named int.
+loopvar-capture	loopvarCapture	-	ok	-	generics,loops,closures,scoping
+result-shadow	resultShadow	-	ok	-	generics,named-results,shadowing,scoping
+self-shadow	selfShadow	-	ok	-	generics,shadowing,short_decl,scoping
+typeparam-named-int	typeparamNamedInt	-	ok	-	generics,shadowing,scoping,strings
+global-shadow	globalShadow	-	ok	-	generics,globals,shadowing,scoping
+ts-guard	tsGuard	-	ok	-	generics,type_switch,scoping
+lit-param-concrete	closureCaptureConcrete	-	ok	-	generics,closures,scoping

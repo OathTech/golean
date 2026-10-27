@@ -1,0 +1,13 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s13-binding (2026-10-27), shape S13 (plan §4; the matrix on BUG-003's line). Strict, expected = gc go1.26.5.
+# The range forms' per-iteration variables: a capture, the address at each collection kind, the body's writes.
+int-capture	intCapture	-	ok	-	range,loops,closures,scoping
+int-addr	intAddr	-	ok	-	range,loops,pointers,escapes,scoping
+slice-value-addr	sliceValueAddr	-	ok	-	range,loops,slices,pointers,escapes,scoping
+slice-index-addr	sliceIndexAddr	-	ok	-	range,loops,slices,pointers,escapes,scoping
+map-addrs	mapAddrs	-	ok	-	range,loops,maps,pointers,escapes,scoping
+string-addrs	stringAddrs	-	ok	-	range,loops,strings,pointers,escapes,scoping
+chan-addr	chanAddr	-	ok	-	range,loops,channels,pointers,escapes,scoping
+array-value-addr	arrayValueAddr	-	ok	-	range,loops,arrays,pointers,escapes,scoping
+int-body-write	intBodyWrite	-	ok	-	range,loops,assignment,scoping
+slice-body-write	sliceBodyWrite	-	ok	-	range,loops,slices,assignment,scoping

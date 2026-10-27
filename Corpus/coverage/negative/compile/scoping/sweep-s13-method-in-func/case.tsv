@@ -1,0 +1,2 @@
+# expected_substring	features
+syntax error: unexpected name int at end of statement	scoping,methods,compile_error

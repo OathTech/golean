@@ -1,0 +1,16 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s13-binding (2026-10-27), shape S13 (plan §4; the matrix on BUG-003/148's lines). Strict, expected = gc go1.26.5.
+# The per-iteration for-clause variable against defer, continue, break, labeled continue, body writes before the post, nesting, redeclaration.
+defer-closure-capture	deferClosureCapture	-	ok	-	control_flow,loops,closures,defer,named-results,scoping
+defer-arg-plain	deferArgPlain	-	ok	-	control_flow,loops,closures,defer,named-results,scoping
+continue-capture	continueCapture	-	ok	-	control_flow,loops,closures,scoping
+break-capture	breakCapture	-	ok	-	control_flow,loops,closures,scoping
+body-mutation-post-copy	bodyMutationPostCopy	-	ok	-	control_flow,loops,closures,scoping
+nested-both-captured	nestedBothCaptured	-	ok	-	control_flow,loops,closures,scoping
+two-vars-captured	twoVarsCaptured	-	ok	-	control_flow,loops,closures,scoping,multi_assign
+body-redeclare	bodyRedeclare	-	ok	-	control_flow,loops,closures,scoping,short_decl,shadowing
+no-post-body-incr	noPostBodyIncr	-	ok	-	control_flow,loops,closures,scoping
+multi-call-init	multiCallInit	-	ok	-	control_flow,loops,closures,scoping,multi_result,globals
+labeled-continue-outer	labeledContinueOuter	-	ok	-	control_flow,loops,closures,scoping,labels
+lit-param-shadows-loopvar	litParamShadowsLoopvar	-	ok	-	control_flow,loops,closures,scoping,shadowing
+periter-in-closure	periterInClosure	-	ok	-	control_flow,loops,closures,scoping

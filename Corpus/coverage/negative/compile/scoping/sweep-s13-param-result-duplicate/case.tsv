@@ -1,0 +1,2 @@
+# expected_substring	features
+r redeclared in this block	scoping,named-results,compile_error

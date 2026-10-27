@@ -1,0 +1,14 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s13-binding (2026-10-27), shape S13 (plan §4; the matrix on BUG-069's line). Strict, expected = gc go1.26.5.
+# The blank identifier at every binder position; a use only inside a never-called closure.
+var-blank-evaluates	varBlankEvaluates	-	ok	-	scoping,assignment,calls,globals
+blank-params	blankParams	-	ok	-	scoping,calls
+blank-result-bare	blankResultBare	-	ok	-	scoping,named-results,multi_result
+blank-result-explicit	blankResultExplicit	-	ok	-	scoping,named-results,multi_result
+range-all-blank	rangeAllBlank	-	ok	-	scoping,range,loops
+recv-blanks	recvBlanks	-	ok	-	scoping,channels,comma_ok
+select-blank-recv	selectBlankRecv	-	ok	-	scoping,select,channels
+blank-receiver	blankReceiver	-	ok	-	scoping,methods
+used-only-in-closure	usedOnlyInClosure	-	ok	-	scoping,closures
+incdec-is-use	incdecIsUse	-	ok	-	scoping,unused
+for-init-incr-only	forInitIncrOnly	-	ok	-	scoping,unused,loops

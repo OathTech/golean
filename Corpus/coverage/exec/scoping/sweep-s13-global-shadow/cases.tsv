@@ -1,0 +1,19 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s13-binding (2026-10-27), shape S13 (plan §4; the matrix on BUG-142/069's lines). Strict, expected = gc go1.26.5.
+# Package-level names shadowed by locals, parameters, results, receivers, local types and consts, loop/guard/case variables; in init().
+self-shadow-reads-global	selfShadowReadsGlobal	-	ok	-	scoping,shadowing,globals,short_decl
+param-shadow	paramShadowCell	-	ok	-	scoping,shadowing,globals,calls
+result-shadow	resultShadowCell	-	ok	-	scoping,shadowing,globals,named-results
+receiver-shadow	receiverShadowCell	-	ok	-	scoping,shadowing,globals,methods
+closure-global-vs-local	closureGlobalVsLocal	-	ok	-	scoping,shadowing,globals,closures
+global-written-under-shadow	globalWrittenUnderShadow	-	ok	-	scoping,shadowing,globals,calls
+local-type-shadows-global-var	localTypeShadowsGlobalVar	-	ok	-	scoping,shadowing,globals,defined_type
+local-const-shadows-global	localConstShadowsGlobal	-	ok	-	scoping,shadowing,globals,constants
+local-var-shadows-func	localVarShadowsFunc	-	ok	-	scoping,shadowing,globals,closures,calls
+local-var-shadows-type	localVarShadowsType	-	ok	-	scoping,shadowing,globals,structs
+for-init-addr-shadow	forInitAddrShadow	-	ok	-	scoping,shadowing,globals,loops,pointers,escapes
+init-from-func-with-shadow	initFromFuncWithShadow	-	ok	-	scoping,shadowing,globals,init
+shadow-in-init	shadowInInit	-	ok	-	scoping,shadowing,globals,init
+ts-guard-shadow	tsGuardShadow	-	ok	-	scoping,shadowing,globals,type_switch
+range-var-shadow	rangeVarShadow	-	ok	-	scoping,shadowing,globals,range
+select-case-shadow	selectCaseShadow	-	ok	-	scoping,shadowing,globals,select,channels

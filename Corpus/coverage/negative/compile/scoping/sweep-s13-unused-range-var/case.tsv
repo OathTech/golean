@@ -1,0 +1,2 @@
+# expected_substring	features
+declared and not used: i	scoping,unused,range,compile_error

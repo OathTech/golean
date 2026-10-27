@@ -1,0 +1,2 @@
+# expected_substring	features
+v declared and not used	scoping,type_switch,unused,compile_error

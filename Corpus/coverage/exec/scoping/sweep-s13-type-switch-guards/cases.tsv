@@ -1,0 +1,13 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s13-binding (2026-10-27), shape S13 (plan §4; the matrix on BUG-068's line). Strict, expected = gc go1.26.5.
+# The type-switch guard's per-clause binding at every clause kind, shadowed, captured, addressed, with init, nested, per iteration.
+clause-types	clauseTypes	-	ok	-	scoping,type_switch,interfaces
+default-iface	defaultIface	-	ok	-	scoping,type_switch,interfaces,comma_ok
+nil-clause	nilClause	-	ok	-	scoping,type_switch,interfaces,nil
+clause-shadow	clauseShadow	-	ok	-	scoping,type_switch,shadowing,short_decl
+clause-capture	clauseCapture	-	ok	-	scoping,type_switch,closures
+with-init	withInit	-	ok	-	scoping,type_switch,strings
+nested-same-name	nestedSameName	-	ok	-	scoping,type_switch,shadowing
+per-iteration-capture	perIterationCapture	-	ok	-	scoping,type_switch,closures,range,loops
+shadows-param	shadowsParam	-	ok	-	scoping,type_switch,shadowing,calls
+clause-addr	clauseAddr	-	ok	-	scoping,type_switch,pointers

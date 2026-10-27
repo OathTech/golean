@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot declare in post statement of for loop	scoping,loops,short_decl,compile_error

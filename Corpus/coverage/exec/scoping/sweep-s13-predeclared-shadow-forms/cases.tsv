@@ -1,0 +1,39 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s13-binding (2026-10-27), shape S13 (plan §4; the matrix on BUG-069's Neighbourhood line). Strict, expected = gc go1.26.5.
+# The predeclared identifiers beyond true/false/nil, shadowed locally as variables, parameters, types, constants, fields, methods, labels; non-universe names shadowed after use.
+len-var	lenVar	-	ok	-	scoping,shadowing,builtins
+len-param	lenParam	-	ok	-	scoping,shadowing,builtins,calls
+append-var	appendVar	-	ok	-	scoping,shadowing,builtins,closures,slices
+make-var	makeVar	-	ok	-	scoping,shadowing,builtins
+new-var	newVar	-	ok	-	scoping,shadowing,builtins,closures,pointers
+copy-var	copyVar	-	ok	-	scoping,shadowing,builtins,strings
+delete-var	deleteVar	-	ok	-	scoping,shadowing,builtins,maps
+panic-var	panicVar	-	ok	-	scoping,shadowing,builtins
+recover-var	recoverVar	-	ok	-	scoping,shadowing,builtins,closures
+print-var	printVar	-	ok	-	scoping,shadowing,builtins
+minmax-var	minMaxVar	-	ok	-	scoping,shadowing,builtins
+close-var	closeVar	-	ok	-	scoping,shadowing,builtins,bools
+clear-var	clearVar	-	ok	-	scoping,shadowing,builtins,slices
+int-var	intVar	-	ok	-	scoping,shadowing,typed
+string-var	stringVar	-	ok	-	scoping,shadowing,typed,strings
+bool-var	boolVar	-	ok	-	scoping,shadowing,typed
+byte-var	byteVar	-	ok	-	scoping,shadowing,typed
+rune-var	runeVar	-	ok	-	scoping,shadowing,typed
+error-var	errorVar	-	ok	-	scoping,shadowing,typed
+any-var	anyVar	-	ok	-	scoping,shadowing,typed
+float64-var	float64Var	-	ok	-	scoping,shadowing,typed
+int-local-type	intLocalType	-	ok	-	scoping,shadowing,defined_type,conversions,strings
+error-local-struct-type	errorLocalStructType	-	ok	-	scoping,shadowing,defined_type,structs
+true-local-const	trueLocalConst	-	ok	-	scoping,shadowing,constants,bools
+iota-var	iotaVar	-	ok	-	scoping,shadowing,iota
+len-captured	lenCaptured	-	ok	-	scoping,shadowing,builtins,closures
+nil-pointer-var	nilPointerVar	-	ok	-	scoping,shadowing,nil,pointers
+nil-param	nilParam	-	ok	-	scoping,shadowing,nil,calls,slices
+fields-named-predeclared	fieldsNamedPredeclared	-	ok	-	scoping,structs,builtins,nil
+method-named-len	methodNamedLen	-	ok	-	scoping,methods,builtins
+labels-named-predeclared	labelsNamedPredeclared	-	ok	-	scoping,labels,goto,builtins,nil
+rune-local-type	runeLocalType	-	ok	-	scoping,shadowing,defined_type,conversions,strings
+any-local-type	anyLocalType	-	ok	-	scoping,shadowing,defined_type
+func-name-shadowed-by-var	funcNameShadowedByVar	-	ok	-	scoping,shadowing,calls
+import-name-shadowed	importNameShadowed	-	ok	-	scoping,shadowing,strings
+own-name-shadowed	ownNameShadowed	-	ok	-	scoping,shadowing

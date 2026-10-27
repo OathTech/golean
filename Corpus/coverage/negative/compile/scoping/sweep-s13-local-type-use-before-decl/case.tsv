@@ -1,0 +1,2 @@
+# expected_substring	features
+undefined: T	scoping,defined_type,compile_error

@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s13-binding (2026-10-27), shape S13 (plan §4; the matrix on BUG-148/068's lines). Strict, expected = gc go1.26.5.
+# Binding under the goto envelope: jumps past inner-block and const declarations, a re-zeroed var, a nested result shadow, per-iteration loops left or re-run by goto.
+goto-past-inner-block-decl	gotoPastInnerBlockDecl	-	ok	-	control_flow,goto,labels,scoping
+goto-over-const	gotoOverConst	-	ok	-	control_flow,goto,labels,scoping,constants
+goto-backward-var-rezero	gotoBackwardVarRezero	-	ok	-	control_flow,goto,labels,scoping,assignment
+result-shadow-in-goto-body	resultShadowInGotoBody	-	ok	-	control_flow,goto,labels,scoping,named-results,shadowing
+goto-out-of-periter-loop	gotoOutOfPeriterLoop	-	ok	-	control_flow,goto,labels,loops,closures,scoping
+goto-rerun-periter-loop	gotoRerunPeriterLoop	-	ok	-	control_flow,goto,labels,loops,closures,scoping

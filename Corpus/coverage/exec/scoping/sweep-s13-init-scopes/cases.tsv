@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s13-binding (2026-10-27), shape S13 (plan §4; the matrix on BUG-142's line). Strict, expected = gc go1.26.5.
+# The if-init variable in else / else-if chains, shadowed in the body, captured in else, declared by a comma-ok read.
+if-init-else	ifInitElse	-	ok	-	scoping,if
+else-if-chain	elseIfChain	-	ok	-	scoping,if
+if-init-body-self-shadow	ifInitBodySelfShadow	-	ok	-	scoping,if,shadowing,short_decl
+if-init-captured-in-else	ifInitCapturedInElse	-	ok	-	scoping,if,closures
+if-init-commaok-else	ifInitCommaokElse	-	ok	-	scoping,if,maps,comma_ok

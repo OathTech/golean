@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s13-binding (2026-10-27), shape S13 (plan §4; BUG-069's line). Strict, expected = gc go1.26.5. BORN RED: BUG-301's Cases.
+# A function-local named interface type with a dispatched method: its dispatch entry is minted twice, the whole wire refused.
+error-local-iface	errorLocalIface	-	ok	-	scoping,shadowing,defined_type,interfaces,methods
+local-iface-satisfied	localIfaceSatisfied	-	ok	-	scoping,defined_type,interfaces,type_assertions,comma_ok
+local-iface-two-funcs	localIfaceTwoFuncs	-	ok	-	scoping,defined_type,interfaces,methods
