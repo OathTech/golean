@@ -113,6 +113,26 @@ type emitter struct {
 	// node identity; never reset (nodes are unique; stencils re-emit the
 	// same nodes with the same structural answer).
 	probedNodes map[ast.Expr]bool
+	// boundNodes records every AST node the EARLY-BINDING rule bound to a
+	// temp at its lexical position (`bindEarly`, lane
+	// frontend/fix-unseq-seam-1027, 2026-10-27: a type assertion to a
+	// non-pointer-shaped type, a slice expression, an allocating string
+	// conversion, a boxed method value — the operand kinds gc's order pass
+	// copies at their position). Its residual is a temp and its own panic
+	// fires at the bound position, before every later event, so the
+	// narrowed A6 guard treats it like a probed node (covered) and
+	// `residualPanicFreeOperand` answers true for it. Keyed by node
+	// identity like probedNodes; never reset.
+	boundNodes map[ast.Expr]bool
+	// lateStmts marks, by statement identity (`stmtID`), the accumulator
+	// entries that bind AFTER every ordered event of their sweep — the
+	// structural allocations gc builds in walk, in the residual: a slice
+	// literal, a `&T{…}` composite, an interface method value's box
+	// (`pushLateHoist`, lane frontend/fix-unseq-seam-1027, 2026-10-27).
+	// They always form the SUFFIX of `hoisted`; `pushHoist` and
+	// `appendProbe` insert before it, so the main part's indices
+	// (`nodeStarts`, the hooks' `start`) stay valid.
+	lateStmts map[uintptr]bool
 	// unseqAddr (evaluation-order model v2.1 Stage C, unseq.go): the
 	// per-function-body cache of the ADDRESS-TAKEN local set the whole-sweep
 	// decision procedure `unseqClassify` reads (a private local is

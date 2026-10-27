@@ -1200,6 +1200,11 @@ gc's early store a deviation, L-016, 2026-09-02).
 
 ### E6. `len`/`cap` hoist discriminating shapes — (a) ENVELOPED via E13's `unseqPanic` where the left material is PROBED; REFUSED (narrowed A6 guard) where it is not — after the e13-b re-audit fix round (2026-09-05) that residue is a compound target that CONTAINS A CALL, a method-call receiver operand on the `receiverAddr` path, a forced select/range target, an inline allocating conversion's operand; zero sites of its own
 
+- FIX LANE `frontend/fix-unseq-seam-1027` (2026-10-27, [AGENT]): the residue list in this heading loses the inline
+  allocating conversion's operand — the conversion binds at its position when an event follows (E13's bullet of the
+  same date), its operand evaluated by the bound statement; a node the early-binding rule bound is COVERED for the
+  narrowed guard's census (`boundNodes` beside `probedNodes`: its panic fired at its position, before the later
+  hoist) and its residual is a temp (`residualPanicFreeOperand`).
 - WHERE (history): BUG-032's fix, narrowed by mini-slice A6 (2026-08-31)
   to the composition (panicky residual operand) x (panicky inline
   material to its left) x (ordered event after it in the same sweep) —
@@ -1829,6 +1834,23 @@ of the four-way treatment below, RULED [USER] Mike 2026-09-05, as relayed by the
 `docs/2026-09-05_e13-b-design.md` (the decision procedure §1, the
 machine construct §3, the frontend §4, the residuals §6).
 
+- FIX LANE `frontend/fix-unseq-seam-1027` (2026-10-27, [AGENT]; BUG-310/313 and BUG-311 fixed, BUG-312 open — the
+  campaign's normal-train rule, [USER] approved 2026-10-27, relayed): on the LEGACY path the operand kinds gc's order pass
+  copies at their lexical position — a type assertion to a non-pointer-shaped type, a slice expression, the `[]byte(s)` /
+  `[]rune(s)` conversions — now BIND to a temp there whenever an ordered event follows them in the sweep (`emitExpr`'s
+  early-binding hook; one rule with the short-circuit and A6 hoists), carrying NO `unseq-probe`: their panic fires at the
+  bound position, gc's RAISE member, so the legacy path realizes gc's order on the value and the panic axis alike, ONE
+  member; this entry's (a) envelope for those kinds lives on the `unseq` lane where the grammar admits the sweep (the
+  admitted assertion rows keep their two members). Seven legacy-path membership rows whose pair came from an assertion's
+  probe moved to the strict lane with gc's member (`builtins/e13-sibling-panic-order/{assert-return-list,
+  addr-assert-left-call, recover-assert-vs-call-w}`, `builtins/len-vs-call-order/{make-hint-struct-any-key,
+  make-hint-array-any-key, make-hint-generic-any-key, len-struct-any-key-left-assert}` — E6a's interface-containing-key
+  residue, the assertion left of a hoisted `make` / `len`); the index / dereference / division / shift /
+  interface-comparison kinds keep their probe
+  and both members. The keep-inline rule for an allocating conversion with a probed operand (R7 / R1'-3 below) is
+  retired with it — BUG-313's value axis. The structural allocations gc builds in walk (a slice literal, `&T{…}`, an
+  interface method value's box) bind AFTER the sweep's events when one follows (the accumulator's late suffix): E4's
+  legacy-path payload-read realization moves onto gc's member; the R2 structural-allocation guard stands.
 - STAGE E6a (2026-09-24, [AGENT], lane `core/unseq-stage-e6a-0924`; design
   `docs/2026-09-24_unseq-stage-e6-design.md` §E6a — the trigger refinement RATIFIED [USER] 2026-09-22, the
   Stage E5 landing record item 1, relayed): the observability trigger admits a FAILING occurrence unordered

@@ -12,6 +12,7 @@ import (
 	"go/token"
 	"go/types"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strings"
 )
@@ -3290,12 +3291,16 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 		if err != nil {
 			return nil, err
 		}
-		valW, err := e.emitExpr(st.Value)
+		start := e.mainLen()
+		rawV, err := e.emitExpr(st.Value)
 		if err != nil {
 			return nil, err
 		}
-		valW, err = e.wrapInterfaceConversion(ch.Elem(), e.goTypeOf(st.Value), valW)
+		valW, err := e.wrapInterfaceConversion(ch.Elem(), e.goTypeOf(st.Value), rawV)
 		if err != nil {
+			return nil, err
+		}
+		if valW, err = e.boxEarly(st.Value, rawV, valW, start, ch.Elem()); err != nil {
 			return nil, err
 		}
 		elemTy, err := e.emitType(ch.Elem())
@@ -3476,13 +3481,19 @@ func (e *emitter) emitReturn(st *ast.ReturnStmt) (any, error) {
 	}
 	results := []any{}
 	for i, r := range st.Results {
-		w, err := e.emitExpr(r)
+		start := e.mainLen()
+		raw, err := e.emitExpr(r)
 		if err != nil {
 			return nil, err
 		}
-		w, err = wrapResult(i, e.goTypeOf(r), w)
+		w, err := wrapResult(i, e.goTypeOf(r), raw)
 		if err != nil {
 			return nil, err
+		}
+		if e.curResults != nil && i < e.curResults.Len() {
+			if w, err = e.boxEarly(r, raw, w, start, e.curResults.At(i).Type()); err != nil {
+				return nil, err
+			}
 		}
 		results = append(results, w)
 	}
@@ -3875,6 +3886,7 @@ func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
 	}
 	rhs := []any{}
 	for i, r := range st.Rhs {
+		start := e.mainLen()
 		w, err := e.emitExpr(r)
 		if err != nil {
 			return nil, err
@@ -3892,10 +3904,16 @@ func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
 		// value. Wrapping AFTER the hoist keeps the temp at the value's
 		// static type; the boxed view is built where it is consumed.
 		if len(st.Rhs) == len(st.Lhs) {
-			w, err = e.wrapInterfaceConversion(
-				e.assignTargetType(st.Lhs[i], define), e.goTypeOf(r), w)
+			raw := w
+			tgt := e.assignTargetType(st.Lhs[i], define)
+			w, err = e.wrapInterfaceConversion(tgt, e.goTypeOf(r), raw)
 			if err != nil {
 				return nil, err
+			}
+			if tgt != nil {
+				if w, err = e.boxEarly(r, raw, w, start, tgt); err != nil {
+					return nil, err
+				}
 			}
 		}
 		rhs = append(rhs, w)
@@ -5517,7 +5535,7 @@ func (e *emitter) emitSwitch(st *ast.SwitchStmt) (any, error) {
 }
 
 func (e *emitter) emitExpr(x ast.Expr) (any, error) {
-	start := len(e.hoisted)
+	start := e.mainLen()
 	e.nodeStarts = append(e.nodeStarts, start)
 	node, err := e.emitExprBare(x)
 	e.nodeStarts = e.nodeStarts[:len(e.nodeStarts)-1]
@@ -5589,10 +5607,190 @@ func (e *emitter) emitExpr(x ast.Expr) (any, error) {
 	// `runes-from-string` (no event after, or a forbidden hoist) still
 	// excludes its operand from probing. The decoder's refusal of a probe
 	// carrying either head, or `.recoverCall`, is the fail-closed backstop.
+	//
+	// THE EARLY-BINDING RULE comes first (BUG-310 / BUG-313, lane
+	// frontend/fix-unseq-seam-1027, 2026-10-27): an operand kind gc's order
+	// pass copies to a temp at its lexical position (`gcEarlyOperand`) that
+	// an ordered event FOLLOWS in the same sweep binds to a temp there, so
+	// the residual reads the temp and the later event's temp lands after it
+	// — the legacy ANF hoist's one rule (an ordered event that an ordered
+	// event follows binds at its position; `emitBinary`'s short-circuit,
+	// the A6 builtins, BUG-156's allocating conversion were its instances),
+	// now covering gc's early-copy kinds as well. Its probe is not
+	// appended (the residual is a temp; the operand's own panic fires at
+	// the bound position, gc's RAISE member — the legacy path realizes gc's
+	// order on both axes, the unseq lane enumerates the pair where the
+	// grammar admits the sweep). Not for a forced-after target
+	// (probeSuppress), nor where no event follows (the inline form is gc's
+	// point and the wire stays byte-identical).
+	if e.probeSuppress == 0 && !isHoistedTemp(node) && e.gcEarlyOperand(x) &&
+		(e.hoistForbidden == "" || e.scHoistOK) && e.sweepOrderedEventAfter(x.End()) {
+		return e.bindEarly(x, node, start, e.goTypeOf(x))
+	}
 	if e.probeSuppress == 0 && !isHoistedTemp(node) && e.probeKind(x) && !wireMentionsExpr(node, "recover", "bytes-from-string", "runes-from-string") {
 		e.appendProbe(x, node, start)
 	}
 	return node, nil
+}
+
+// boxEarly is the early-binding rule's fourth kind, decided at a BOXING
+// site (an interface-typed slot: a slice / array / struct literal element,
+// a call argument, a return value, a tuple right-hand side, a sent value)
+// where the target type is known: a METHOD VALUE boxed into an interface
+// binds to a temp at its lexical position when an ordered event follows it
+// in the sweep. gc's order pass copies the operand of an interface
+// conversion it must pass by address (`OCONVIFACE`: `dataWordFuncName`
+// needsaddr — a func value among them — and the operand not addressable:
+// `addrTemp` copies), and a method value is never addressable, so both gc
+// builds read its receiver at the method value (measured: `[]any{v.M,
+// set()}` 110, `sinkAny(v.M, set())` 110, `return v.M, set()` 110, `a, k =
+// v.M, set()` 110, `W{f: v.M, k: set()}` 110, `[2]any{v.M, set()}` 110; the
+// map literal's dynamic entries are the measured exception, the default
+// build 510 and `-N -l` 110 — pinned at the default, the map-literal site
+// does not call this). A boxed VARIABLE of such a type is the
+// optimizer-dependent cell (an address-taken local is passed by address,
+// read late; an SSA-able one is copied early: `sinkAny(p, set())` 110
+// default, 510 `-N -l`, the machine 510) and stays late here — the unseq
+// grammar's boxing admission is its remedy, not a strict-lane pin. An
+// interface method value's late box (`$mv`, `pushLateHoist`) is promoted
+// into the main part by the boxed temp's own hoist, which reads it
+// (`insertMain`). BUG-311, lane frontend/fix-unseq-seam-1027, 2026-10-27.
+func (e *emitter) boxEarly(x ast.Expr, operand, boxed any, start int, target types.Type) (any, error) {
+	bm, ok := boxed.(map[string]any)
+	if !ok || bm["expr"] != "to-interface" || !e.methodValueExpr(x) {
+		return boxed, nil
+	}
+	if e.probeSuppress != 0 || (e.hoistForbidden != "" && !e.scHoistOK) || !e.sweepOrderedEventAfter(x.End()) {
+		return boxed, nil
+	}
+	// An interface method value's late box (`$mv`) is promoted by the
+	// hoist itself: the boxed temp's statement reads it (`insertMain`).
+	return e.bindEarly(x, boxed, start, e.applySubst(target))
+}
+
+// earlyBoundValue reports whether the early-binding rule binds value x,
+// flowing into a slot of type target, at its lexical position: one of
+// `gcEarlyOperand`'s kinds, or a method value boxed into an interface slot
+// (`boxEarly`), with an ordered event after it in the sweep and hoisting
+// allowed. The keyed struct literal's pre-bind consults it so that such a
+// value is emitted in SOURCE order, before a later event's pre-bound temp.
+func (e *emitter) earlyBoundValue(x ast.Expr, target types.Type) bool {
+	if e.probeSuppress != 0 || (e.hoistForbidden != "" && !e.scHoistOK) {
+		return false
+	}
+	boxedMV := target != nil && types.IsInterface(e.applySubst(target)) && e.methodValueExpr(x) &&
+		!types.IsInterface(e.goTypeOf(x))
+	if !e.gcEarlyOperand(x) && !boxedMV {
+		return false
+	}
+	return e.sweepOrderedEventAfter(x.End())
+}
+
+// methodValueExpr reports whether x is a method value `v.M` / `p.PM` /
+// `i.M` (go/types' MethodVal selection; a method expression `T.M` is not).
+func (e *emitter) methodValueExpr(x ast.Expr) bool {
+	sel, ok := ast.Unparen(x).(*ast.SelectorExpr)
+	if !ok {
+		return false
+	}
+	seln, ok := e.info.Selections[sel]
+	return ok && seln.Kind() == types.MethodVal
+}
+
+// gcEarlyOperand reports whether x is an operand kind gc's order pass
+// (cmd/compile/internal/walk/order.go, go1.26.5, `expr1`) copies to a temp
+// at its LEXICAL position even though spec#Order_of_evaluation orders it
+// against nothing: a type assertion to a non-pointer-shaped type
+// (`ODOTTYPE`: copied unless `types.IsDirectIface` of the asserted type —
+// `directIface`; an assertion to a type parameter is `ODYNAMICDOTTYPE`, not
+// copied, so a mentioned type parameter answers false), a slice expression
+// (`OSLICE*`: copied), an allocating string conversion (`OSTR2BYTES` /
+// `OSTR2RUNES`: the call class, copied — BUG-156's finding). Such an operand
+// beside a lexically later sibling call reads its operands BEFORE the call
+// in gc; the residual would read them after. A constant-folded node has no
+// run-time evaluation. The boxed method value is the fourth kind, decided at
+// the boxing sites (`boxEarly`), where the target type is known.
+func (e *emitter) gcEarlyOperand(x ast.Expr) bool {
+	if tv, ok := e.typesEntry(x); ok && tv.Value != nil {
+		return false
+	}
+	switch v := ast.Unparen(x).(type) {
+	case *ast.TypeAssertExpr:
+		if v.Type == nil {
+			return false
+		}
+		if _, isTup := e.goTypeOf(v).(*types.Tuple); isTup {
+			return false
+		}
+		asserted := e.info.TypeOf(v.Type) // the SOURCE type: a type parameter stays dynamic in every stencil
+		if asserted == nil || mentionsTypeParam(asserted, nil) {
+			return false
+		}
+		return !directIface(e.applySubst(asserted))
+	case *ast.SliceExpr:
+		return true
+	case *ast.CallExpr:
+		return e.allocatingStringConversion(v)
+	}
+	return false
+}
+
+// directIface ports cmd/compile/internal/types.IsDirectIface to go/types:
+// a pointer-shaped type is stored directly in the interface data word —
+// a pointer, channel, map, func or unsafe.Pointer, and a one-element array
+// or one-field struct of such a type — and gc's order pass does NOT copy
+// a type assertion to it (the assertion stays in the residual, late).
+func directIface(t types.Type) bool {
+	switch u := types.Unalias(t).Underlying().(type) {
+	case *types.Pointer, *types.Chan, *types.Map, *types.Signature:
+		return true
+	case *types.Basic:
+		return u.Kind() == types.UnsafePointer
+	case *types.Array:
+		return u.Len() == 1 && directIface(u.Elem())
+	case *types.Struct:
+		return u.NumFields() == 1 && directIface(u.Field(0).Type())
+	}
+	return false
+}
+
+// allocatingStringConversion reports whether c is `[]byte(s)` / `[]rune(s)`
+// (by underlying types, go/types' conversion rule): the two conversions
+// with a machine operator that allocate — `bytes-from-string` /
+// `runes-from-string` — and that gc's order pass copies at their position.
+func (e *emitter) allocatingStringConversion(c *ast.CallExpr) bool {
+	tv, ok := e.info.Types[c.Fun]
+	if !ok || !tv.IsType() || len(c.Args) != 1 {
+		return false
+	}
+	tt := e.goTypeOf(c).Underlying()
+	ot := e.goTypeOf(c.Args[0]).Underlying()
+	return (isByteSlice(tt) || isRuneSlice(tt)) && isStringType(ot)
+}
+
+// bindEarly binds the emitted node of operand x to a temp at x's lexical
+// position (the early-binding rule, `emitExpr`'s hook) and records x in
+// `boundNodes`. start is the accumulator index where x's own hoists begin:
+// the probes of x's children appended since then are dropped (the operand
+// is evaluated by the bound statement itself — the forced position, as a
+// call's arguments), the probes of EARLIER siblings survive. BUG-313's
+// case: the operand of `[]byte(*ps)` carries the dereference's probe, and
+// the old `allocatingConversion` kept the conversion inline for it — the
+// conversion then read the string in the residual, after the later call,
+// where gc reads it at the conversion.
+func (e *emitter) bindEarly(x ast.Expr, node any, start int, ty types.Type) (any, error) {
+	e.nodeStarts = append(e.nodeStarts, start)
+	ref, err := e.hoist(node, ty)
+	e.nodeStarts = e.nodeStarts[:len(e.nodeStarts)-1]
+	if err != nil {
+		return nil, err
+	}
+	if e.boundNodes == nil {
+		e.boundNodes = map[ast.Expr]bool{}
+	}
+	e.boundNodes[x] = true
+	e.boundNodes[ast.Unparen(x)] = true
+	return ref, nil
 }
 
 // appendProbe appends the `unseq-probe` for node (the wire of operand x)
@@ -5601,7 +5799,25 @@ func (e *emitter) emitExpr(x ast.Expr) (any, error) {
 // `probedNodes` (the census's exclusion set).
 func (e *emitter) appendProbe(x ast.Expr, node any, start int) {
 	e.dropTrailingProbes(start)
-	e.hoisted = append(e.hoisted, map[string]any{"stmt": "unseq-probe", "expr": node})
+	probe := map[string]any{"stmt": "unseq-probe", "expr": node}
+	// An operand that reads THROUGH a late allocation (`(&P{v.n}).n`,
+	// `(&PS{s}).s[i]` beside a later call) gets no probe: the allocation
+	// binds after the sweep's events (`pushLateHoist`), so the operand's
+	// evaluation — and its panic — sits in the residual, after them, as in
+	// gc (the literal is built in walk; an index through it cannot precede
+	// the later call). A probe here would promote the allocation to its
+	// lexical position (`insertMain`) and read the payload early — the
+	// member gc never realizes. The node is recorded as bound (covered:
+	// its position is pinned, the A6 census does not refuse against it).
+	if e.lastLateReferenced([]any{probe}, e.mainLen()) >= 0 {
+		if e.boundNodes == nil {
+			e.boundNodes = map[ast.Expr]bool{}
+		}
+		e.boundNodes[x] = true
+		e.boundNodes[ast.Unparen(x)] = true
+		return
+	}
+	e.insertMain(probe)
 	if e.probedNodes == nil {
 		e.probedNodes = map[ast.Expr]bool{}
 	}
@@ -5656,11 +5872,158 @@ func isHoistedTemp(node any) bool {
 }
 
 // dropTrailingProbes removes the `unseq-probe` entries at the END of the
-// accumulator whose index is ≥ start (contiguous from the end).
+// accumulator's main part whose index is ≥ start (contiguous from the end;
+// the late suffix, never a probe, is skipped).
 func (e *emitter) dropTrailingProbes(start int) {
-	for len(e.hoisted) > start && isProbeStmt(e.hoisted[len(e.hoisted)-1]) {
-		e.hoisted = e.hoisted[:len(e.hoisted)-1]
+	for n := e.mainLen(); n > start && isProbeStmt(e.hoisted[n-1]); n = e.mainLen() {
+		e.hoisted = append(e.hoisted[:n-1], e.hoisted[n:]...)
 	}
+}
+
+// stmtID is the identity of an accumulator entry (a `map[string]any`
+// statement node — the one map object that reaches the wire), the key of
+// `lateStmts`. A non-map entry has no identity (0): never late.
+func stmtID(st any) uintptr {
+	if m, ok := st.(map[string]any); ok && m != nil {
+		return reflect.ValueOf(m).Pointer()
+	}
+	return 0
+}
+
+// lateCount is the length of the accumulator's late suffix (`lateStmts`):
+// the entries that bind after every ordered event of the sweep.
+func (e *emitter) lateCount() int {
+	n := 0
+	for i := len(e.hoisted) - 1; i >= 0 && e.lateStmts[stmtID(e.hoisted[i])]; i-- {
+		n++
+	}
+	return n
+}
+
+// mainLen is the length of the accumulator's main part — every entry
+// before the late suffix; the index space of `nodeStarts` and the hooks'
+// `start`.
+func (e *emitter) mainLen() int {
+	return len(e.hoisted) - e.lateCount()
+}
+
+// insertMain appends stmts to the accumulator's MAIN part — before the
+// late suffix, after every entry pushed so far at its lexical position.
+// A late entry that stmts READ (its temp is referenced: the hoisted call
+// that consumes the method value, `$c := sinkF(func-value{$mv}, …)`; the
+// boxed method value's own temp, `$c := to-interface(func-value{$mv})`;
+// a probe over a late allocation) is PROMOTED first, with every late entry
+// before it (their order carries their dependencies): "after the sweep's
+// events" ends where a consumer of the allocation is bound — gc builds the
+// closure or the literal at the statement that consumes it, after the
+// temps its order pass copied before that statement.
+func (e *emitter) insertMain(stmts ...any) {
+	n := e.mainLen()
+	if last := e.lastLateReferenced(stmts, n); last >= 0 {
+		for i := n; i <= last; i++ {
+			delete(e.lateStmts, stmtID(e.hoisted[i]))
+		}
+		n = last + 1
+	}
+	tail := append([]any{}, e.hoisted[n:]...)
+	e.hoisted = append(append(e.hoisted[:n], stmts...), tail...)
+}
+
+// lastLateReferenced returns the index of the LAST late entry (at or after
+// from, the late suffix's start) whose declared temp an ident in stmts
+// reads, or -1.
+func (e *emitter) lastLateReferenced(stmts []any, from int) int {
+	last := -1
+	for i := from; i < len(e.hoisted); i++ {
+		name := declaredTemp(e.hoisted[i])
+		if name == "" {
+			continue
+		}
+		for _, st := range stmts {
+			if wireMentionsIdent(st, name) {
+				last = i
+				break
+			}
+		}
+	}
+	return last
+}
+
+// declaredTemp is the temp a hoisted statement declares (`$c…` / `$mv…`):
+// an assign's single declare target, a slice-lit / new / map-lit target.
+func declaredTemp(st any) string {
+	m, ok := st.(map[string]any)
+	if !ok {
+		return ""
+	}
+	if lhs, ok := m["lhs"].([]any); ok && len(lhs) == 1 {
+		if t, ok := lhs[0].(map[string]any); ok {
+			name, _ := t["id"].(string)
+			return name
+		}
+	}
+	if t, ok := m["target"].(map[string]any); ok {
+		name, _ := t["id"].(string)
+		return name
+	}
+	return ""
+}
+
+// wireMentionsIdent reports whether the emitted wire node o reads the
+// identifier name (`{"expr": "ident", "name": name}`).
+func wireMentionsIdent(o any, name string) bool {
+	switch v := o.(type) {
+	case map[string]any:
+		if v["expr"] == "ident" && v["name"] == name {
+			return true
+		}
+		for _, c := range v {
+			if wireMentionsIdent(c, name) {
+				return true
+			}
+		}
+	case []any:
+		for _, c := range v {
+			if wireMentionsIdent(c, name) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// pushLateHoist appends an allocation's statement(s) to the accumulator's
+// LATE suffix — THE one way a structural allocation binds after the sweep's
+// events (lane frontend/fix-unseq-seam-1027, 2026-10-27; BUG-311's four
+// late forms): gc builds a slice literal, a `&T{…}` composite and a method
+// value's closure in walk, in the RESIDUAL, after every temp its order pass
+// copied, so their payload reads (a slice element, a field value, the
+// receiver) see the later calls' writes — measured both builds, lifted
+// bodies: `sinkS([]int{v.n}, set())` 510, `sinkP(&P{v.n}, set())` 510,
+// `[]func() int{v.M, nil}[set()]` 5, `sinkF(i.M, set())` 510. The machine's
+// hoist at the lexical position read them before (110 / 110 / 1 / 110).
+// The caller takes this path only when an ordered event follows the
+// allocation in its sweep (`sweepOrderedEventAfter`); otherwise the
+// position push is gc's point and the wire stays byte-identical. The
+// suffix ends where a main entry READS the allocation (`insertMain`
+// promotes it: the hoisted call that consumes it, the boxed temp); the
+// rest reaches the residual, emitted after every main entry. The
+// structural-allocation guard still refuses a PANICKING payload beside a
+// later event (`structuralAllocGuard`), so a late entry carries no probe
+// question; a map literal keeps its position push (gc assigns its dynamic
+// entries at the literal's position, `OMAPLIT`).
+func (e *emitter) pushLateHoist(stmts ...any) {
+	if e.lateStmts == nil {
+		e.lateStmts = map[uintptr]bool{}
+	}
+	for _, st := range stmts {
+		id := stmtID(st)
+		if id == 0 {
+			panic("pushLateHoist: a late statement must be a map node")
+		}
+		e.lateStmts[id] = true
+	}
+	e.hoisted = append(e.hoisted, stmts...)
 }
 
 // pushHoist appends an event's hoisted statement(s) to the accumulator —
@@ -5685,14 +6048,20 @@ func (e *emitter) dropTrailingProbes(start int) {
 // ordered event lexically after the literal) is therefore REFUSED by name
 // at the structural hoists (`structuralAllocGuard`, e13-b audit fix round
 // R2 disposition (b)); with no event after, the probe is trailing and is
-// pruned at the capture.
+// pruned at the capture. (Since lane frontend/fix-unseq-seam-1027 a
+// structural allocation that an event follows binds LATE instead —
+// `pushLateHoist` — which reaches gc's member for a payload the guard
+// admits; the guard itself stands.)
+//
+// The statement joins the MAIN part, before the late suffix
+// (`insertMain`), promoting any late entry it reads.
 func (e *emitter) pushHoist(stmts ...any) {
 	start := 0
 	if n := len(e.nodeStarts); n > 0 {
 		start = e.nodeStarts[n-1]
 	}
 	e.dropTrailingProbes(start)
-	e.hoisted = append(e.hoisted, stmts...)
+	e.insertMain(stmts...)
 }
 
 // pruneTrailingProbes drops the `unseq-probe` entries at the end of a
@@ -7357,15 +7726,28 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 				mvName := "$mv" + itoa(e.tmpSeq)
 				e.tmpSeq++
 				mvIdent := map[string]any{"expr": "ident", "name": mvName, "type": gty}
-				e.pushHoist(
-					map[string]any{"stmt": "assign", "define": true,
-						"lhs": []any{map[string]any{"target": "declare", "id": mvName, "type": gty}},
-						"rhs": []any{recvArg}},
-					map[string]any{"stmt": "if",
-						"cond": map[string]any{"expr": "binary", "op": "==",
-							"x": mvIdent, "y": map[string]any{"expr": "nil"}, "operandType": gty},
-						"then": map[string]any{"stmt": "panic", "runtimeError": true,
-							"value": stringLitNode("runtime error: invalid memory address or nil pointer dereference")}})
+				bind := map[string]any{"stmt": "assign", "define": true,
+					"lhs": []any{map[string]any{"target": "declare", "id": mvName, "type": gty}},
+					"rhs": []any{recvArg}}
+				check := map[string]any{"stmt": "if",
+					"cond": map[string]any{"expr": "binary", "op": "==",
+						"x": mvIdent, "y": map[string]any{"expr": "nil"}, "operandType": gty},
+					"then": map[string]any{"stmt": "panic", "runtimeError": true,
+						"value": stringLitNode("runtime error: invalid memory address or nil pointer dereference")}}
+				// The box is captured — and nil-checked — where gc builds
+				// the method value's closure: in walk, AFTER every temp the
+				// order pass copied (BUG-311: `sinkF(i.M, set())`, `return
+				// i.M, set()`, `f, k := i.M, set()` — gc 510, the position
+				// hoist 110). With an ordered event after the method value
+				// the binding joins the late suffix (`pushLateHoist`); a
+				// boxing site that binds the boxed value early promotes it
+				// (its hoist reads the temp — `insertMain`). With no event after, the
+				// position push is gc's point and the wire stays as it was.
+				if e.sweepOrderedEventAfter(sel.End()) {
+					e.pushLateHoist(bind, check)
+				} else {
+					e.pushHoist(bind, check)
+				}
 				return map[string]any{"expr": "func-value",
 					"func": methodFuncKey(ifaceName, member), "captured": []any{mvIdent}}, nil
 			}
@@ -7636,7 +8018,7 @@ func (e *emitter) emitAddressOf(x ast.Expr) (any, error) {
 			// own address computation): it does not pass through
 			// `emitExpr`'s hook, so the probe is appended here (re-audit
 			// fix round R1'-1 — otherwise the census flags it unprobed).
-			start := len(e.hoisted)
+			start := e.mainLen()
 			base, err = e.emitAddressOf(ex.X)
 			if err == nil && e.probeSuppress == 0 {
 				if inner, isIdx := ast.Unparen(ex.X).(*ast.IndexExpr); isIdx && e.probeKind(inner) {
@@ -7800,12 +8182,20 @@ func (e *emitter) hoistNewFromValue(val any, elem types.Type, lit ast.Expr) (any
 	ptrTy := map[string]any{"kind": "pointer", "elem": elemTy}
 	name := "$c" + itoa(e.tmpSeq)
 	e.tmpSeq++
-	e.pushHoist(map[string]any{
+	st := map[string]any{
 		"stmt":     "new",
 		"target":   map[string]any{"target": "declare", "id": name, "type": ptrTy},
 		"value":    val,
 		"elemType": elemTy,
-	})
+	}
+	// gc builds `&T{…}` in walk, after the later calls' temps
+	// (`pushLateHoist`; measured `sinkP(&P{v.n}, set())` 510 both builds
+	// on a lifted body, the position hoist read 1).
+	if lit != nil && e.sweepOrderedEventAfter(lit.End()) {
+		e.pushLateHoist(st)
+	} else {
+		e.pushHoist(st)
+	}
 	return map[string]any{"expr": "ident", "name": name, "type": ptrTy}, nil
 }
 
@@ -7934,19 +8324,38 @@ func (e *emitter) emitStructLit(cl *ast.CompositeLit, t types.Type, st *types.St
 	// pre-bind the event-bearing ones to temps in source order and use the
 	// temps below. Event-free values need no temp — their evaluation moment
 	// is unobservable.
+	// The early-binding rule's kinds join the pre-bind in the same source
+	// order (lane frontend/fix-unseq-seam-1027, 2026-10-27): a keyed value
+	// gc copies at its position — an assertion, a slice expression, an
+	// allocating conversion (`gcEarlyOperand`), a method value boxed into
+	// an interface field (`W{f: v.M, k: set()}`, gc 110) — that an ordered
+	// event follows must bind BEFORE the later event's pre-bound temp; the
+	// declaration-order loop below would emit it after every pre-bound
+	// event. `emitExpr`'s hook binds the first three itself (the temp is
+	// kept); the method value is hoisted here at its static type and boxed
+	// below, so its receiver is read at the method value.
+	fieldTypes := map[string]types.Type{}
+	for i := 0; i < st.NumFields(); i++ {
+		fieldTypes[st.Field(i).Name()] = st.Field(i).Type()
+	}
 	preBound := map[string]any{}
 	for _, elt := range cl.Elts {
 		kv, ok := elt.(*ast.KeyValueExpr)
-		if !ok || !e.containsOrderedEvent(kv.Value) {
+		if !ok {
+			continue
+		}
+		if !e.containsOrderedEvent(kv.Value) && !e.earlyBoundValue(kv.Value, fieldTypes[kv.Key.(*ast.Ident).Name]) {
 			continue
 		}
 		w, err := e.emitExpr(kv.Value)
 		if err != nil {
 			return nil, err
 		}
-		ref, err := e.hoist(w, e.goTypeOf(kv.Value))
-		if err != nil {
-			return nil, err
+		ref := w
+		if !isHoistedTemp(w) {
+			if ref, err = e.hoist(w, e.goTypeOf(kv.Value)); err != nil {
+				return nil, err
+			}
 		}
 		preBound[kv.Key.(*ast.Ident).Name] = ref
 	}
@@ -7970,12 +8379,16 @@ func (e *emitter) emitStructLit(cl *ast.CompositeLit, t types.Type, st *types.St
 				args = append(args, w)
 				continue
 			}
-			w, err := e.emitExpr(positional[i])
+			start := e.mainLen()
+			raw, err := e.emitExpr(positional[i])
 			if err != nil {
 				return nil, err
 			}
-			w, err = e.wrapInterfaceConversion(fld.Type(), e.goTypeOf(positional[i]), w)
+			w, err := e.wrapInterfaceConversion(fld.Type(), e.goTypeOf(positional[i]), raw)
 			if err != nil {
+				return nil, err
+			}
+			if w, err = e.boxEarly(positional[i], raw, w, start, fld.Type()); err != nil {
 				return nil, err
 			}
 			args = append(args, w)
@@ -7990,12 +8403,16 @@ func (e *emitter) emitStructLit(cl *ast.CompositeLit, t types.Type, st *types.St
 			}
 			args = append(args, ref)
 		} else if v, ok := keyed[fld.Name()]; ok {
-			w, err := e.emitExpr(v)
+			start := e.mainLen()
+			raw, err := e.emitExpr(v)
 			if err != nil {
 				return nil, err
 			}
-			w, err = e.wrapInterfaceConversion(fld.Type(), e.goTypeOf(v), w)
+			w, err := e.wrapInterfaceConversion(fld.Type(), e.goTypeOf(v), raw)
 			if err != nil {
+				return nil, err
+			}
+			if w, err = e.boxEarly(v, raw, w, start, fld.Type()); err != nil {
 				return nil, err
 			}
 			args = append(args, w)
@@ -8177,13 +8594,22 @@ func (e *emitter) hoistSliceLit(elems []any, elemTy any, length int64, lit ast.E
 	sliceTy := map[string]any{"kind": "slice", "elem": elemTy}
 	name := "$c" + itoa(e.tmpSeq)
 	e.tmpSeq++
-	e.pushHoist(map[string]any{
+	st := map[string]any{
 		"stmt":   "slice-lit",
 		"target": map[string]any{"target": "declare", "id": name, "type": sliceTy},
 		"elem":   elemTy,
 		"length": length,
 		"elems":  elems,
-	})
+	}
+	// A SOURCE literal that an ordered event follows binds after the
+	// sweep's events, where gc builds it (`pushLateHoist`; BUG-311's
+	// `[]func() int{v.M, nil}[set()]`): its payload reads see the later
+	// calls' writes. A pack is part of its call; no event follows it there.
+	if lit != nil && e.sweepOrderedEventAfter(lit.End()) {
+		e.pushLateHoist(st)
+	} else {
+		e.pushHoist(st)
+	}
 	return map[string]any{"expr": "ident", "name": name, "type": sliceTy}, nil
 }
 
@@ -8205,12 +8631,16 @@ func (e *emitter) emitSliceLit(cl *ast.CompositeLit, s *types.Slice) (any, error
 			idx, _ = constant.Int64Val(tv.Value)
 			val = kv.Value
 		}
-		v, err := e.emitExpr(val)
+		start := e.mainLen()
+		raw, err := e.emitExpr(val)
 		if err != nil {
 			return nil, err
 		}
-		v, err = e.wrapInterfaceConversion(s.Elem(), e.goTypeOf(val), v)
+		v, err := e.wrapInterfaceConversion(s.Elem(), e.goTypeOf(val), raw)
 		if err != nil {
+			return nil, err
+		}
+		if v, err = e.boxEarly(val, raw, v, start, s.Elem()); err != nil {
 			return nil, err
 		}
 		elems = append(elems, map[string]any{"index": idx, "value": v})
@@ -8304,12 +8734,16 @@ func (e *emitter) emitArrayLit(cl *ast.CompositeLit, arr *types.Array) (any, err
 			idx = k
 			val = kv.Value
 		}
-		w, err := e.emitExpr(val)
+		start := e.mainLen()
+		raw, err := e.emitExpr(val)
 		if err != nil {
 			return nil, err
 		}
-		w, err = e.wrapInterfaceConversion(arr.Elem(), e.goTypeOf(val), w)
+		w, err := e.wrapInterfaceConversion(arr.Elem(), e.goTypeOf(val), raw)
 		if err != nil {
+			return nil, err
+		}
+		if w, err = e.boxEarly(val, raw, w, start, arr.Elem()); err != nil {
 			return nil, err
 		}
 		elems = append(elems, map[string]any{"index": idx, "value": w})
@@ -8938,50 +9372,24 @@ func (e *emitter) emitUnaryExpr(u *ast.UnaryExpr) (any, error) {
 	return e.emitUnary(u)
 }
 
-// allocatingConversion places a `[]byte(s)`/`[]rune(s)` conversion (the
-// two inline operands whose evaluation ALLOCATES — `applyStrictOp`'s
-// `.bytesFromString`/`.runesFromString` call `s.alloc`; e13-b audit fix
-// round R7 / re-audit fix round R1'-3, 2026-09-05). Inline, an operand
-// containing it is never probed (a probe would allocate twice), so
-// `int([]byte(s)[1:7][0]) + wit(5)` realized the events-first order only
-// where gc raises the slice panic first. When an ordered event follows
-// the conversion in its sweep, the conversion HOISTS to a temp at its
-// lexical position — the allocation is unobservable (addresses are not
-// observables), the conversion itself cannot panic, and the enclosing
-// operand's residual (`$b[1:7][0]`) is pure and probeable, so both orders
-// are realized. A conversion whose OWN operand can panic (`[]byte(s[i:j])`)
-// stays INLINE instead: hoisting it would drop the operand's probe
-// (`pushHoist`) and realize the payload's panic before the later event
-// only, while inline the operand `s[i:j]` keeps its own probe (appended
-// as it was emitted — the conversion is not a hoist) and both orders of
-// the PAYLOAD's panic are realized (RAISE = gc's early slice panic, DEFER
-// = after the event); the enclosing operand is then unprobed (it carries
-// the allocating head) and the narrowed A6 guard's census still sees it
-// beside a later len/cap/make hoist. Measured (re-audit fix round, probe
-// `P9_bytesconv_slice_payload`): d75049c0 lowered this shape as exactly
-// that two-member set — a refusal here would have been an over-refusal.
-// With no event after, or where hoisting is forbidden (a short-circuit
-// right operand outside the temp path), the conversion stays inline too.
-func (e *emitter) allocatingConversion(c *ast.CallExpr, kind string, node any) (any, bool, error) {
-	if (e.hoistForbidden != "" && !e.scHoistOK) || !e.sweepOrderedEventAfter(c.End()) {
-		return node, false, nil
-	}
-	start := 0
-	if n := len(e.nodeStarts); n > 0 {
-		start = e.nodeStarts[n-1]
-	}
-	if e.anyProbeSince(start) {
-		return node, false, nil // a panicky operand: inline, its probe survives
-	}
-	if found, _ := e.unprobedPanickyWithin(c.Args[0]); found {
-		return node, false, nil // unprobed panicky operand: inline, the census keeps it
-	}
-	hoisted, err := e.hoist(node, e.goTypeOf(c))
-	if err != nil {
-		return nil, false, err
-	}
-	return hoisted, false, nil
-}
+// The `[]byte(s)`/`[]rune(s)` conversions (the two inline operands whose
+// evaluation ALLOCATES — `applyStrictOp`'s `.bytesFromString`/`.runesFromString`
+// call `s.alloc`; e13-b audit fix round R7 / re-audit fix round R1'-3,
+// 2026-09-05) are returned INLINE here and bound by `emitExpr`'s early-binding
+// rule (`gcEarlyOperand`, `bindEarly`) when an ordered event follows them in
+// the sweep: gc's order pass copies them at their position (the call class,
+// BUG-156's finding), so their string READ precedes the later call. Their
+// former own hoist, `allocatingConversion`, kept a conversion whose operand
+// carried a probe or unprobed panicky material inline — designed for the
+// PANIC axis (`int([]byte(s[i:j])[0]) + wit(5)` realized RAISE and DEFER
+// through the operand's probe) — and so read the STRING after the later
+// call on the value axis (BUG-313: `int([]byte(*ps)[0]) + arr[0] + set()`
+// 123 where gc reads 98). Now the conversion binds at its position whatever
+// its operand carries: the operand's own panic fires there, gc's early
+// member on both axes (the probed pair survives on the unseq lane where the
+// grammar admits the sweep); lane frontend/fix-unseq-seam-1027, 2026-10-27.
+// Inline, an operand containing the conversion is never probed (a probe
+// would allocate twice; the decoder refuses such a probe fail-closed).
 
 // emitCall in expression position: conversions are pure and returned inline;
 // calls are effectful and hoisted (A-normal form) to a temp.
@@ -9015,7 +9423,7 @@ func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
 		tt := e.goTypeOf(c).Underlying()
 		ot := e.goTypeOf(c.Args[0]).Underlying()
 		if isByteSlice(tt) && isStringType(ot) {
-			return e.allocatingConversion(c, "[]byte(string)", map[string]any{"expr": "bytes-from-string", "x": arg})
+			return map[string]any{"expr": "bytes-from-string", "x": arg}, false, nil
 		}
 		if isStringType(tt) && isByteSlice(ot) {
 			return map[string]any{"expr": "string-from-bytes", "x": arg}, false, nil
@@ -9025,7 +9433,7 @@ func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
 		// the byte forms above (defined slice/element/string types
 		// route by underlying, which is go/types' conversion rule).
 		if isRuneSlice(tt) && isStringType(ot) {
-			return e.allocatingConversion(c, "[]rune(string)", map[string]any{"expr": "runes-from-string", "x": arg})
+			return map[string]any{"expr": "runes-from-string", "x": arg}, false, nil
 		}
 		if isStringType(tt) && isRuneSlice(ot) {
 			return map[string]any{"expr": "string-from-runes", "x": arg}, false, nil
@@ -9490,6 +9898,7 @@ func (e *emitter) emitCallArgs(sig *types.Signature, c *ast.CallExpr) ([]any, er
 			params := sig.Params()
 			args := []any{}
 			for i, a := range c.Args {
+				start := e.mainLen()
 				w, err := e.emitExpr(a)
 				if err != nil {
 					return nil, err
@@ -9499,9 +9908,13 @@ func (e *emitter) emitCallArgs(sig *types.Signature, c *ast.CallExpr) ([]any, er
 					pi = params.Len() - 1
 				}
 				if pi >= 0 {
+					raw := w
 					w, err = e.wrapInterfaceConversion(
-						params.At(pi).Type(), e.goTypeOf(a), w)
+						params.At(pi).Type(), e.goTypeOf(a), raw)
 					if err != nil {
+						return nil, err
+					}
+					if w, err = e.boxEarly(a, raw, w, start, params.At(pi).Type()); err != nil {
 						return nil, err
 					}
 				}
@@ -9514,13 +9927,17 @@ func (e *emitter) emitCallArgs(sig *types.Signature, c *ast.CallExpr) ([]any, er
 	fixed := sig.Params().Len() - 1
 	args := []any{}
 	for i := 0; i < fixed; i++ {
-		w, err := e.emitExpr(c.Args[i])
+		start := e.mainLen()
+		raw, err := e.emitExpr(c.Args[i])
 		if err != nil {
 			return nil, err
 		}
-		w, err = e.wrapInterfaceConversion(
-			sig.Params().At(i).Type(), e.goTypeOf(c.Args[i]), w)
+		w, err := e.wrapInterfaceConversion(
+			sig.Params().At(i).Type(), e.goTypeOf(c.Args[i]), raw)
 		if err != nil {
+			return nil, err
+		}
+		if w, err = e.boxEarly(c.Args[i], raw, w, start, sig.Params().At(i).Type()); err != nil {
 			return nil, err
 		}
 		args = append(args, w)
@@ -9539,12 +9956,16 @@ func (e *emitter) emitCallArgs(sig *types.Signature, c *ast.CallExpr) ([]any, er
 	}
 	elems := []any{}
 	for i := fixed; i < len(c.Args); i++ {
-		w, err := e.emitExpr(c.Args[i])
+		start := e.mainLen()
+		raw, err := e.emitExpr(c.Args[i])
 		if err != nil {
 			return nil, err
 		}
-		w, err = e.wrapInterfaceConversion(elemType, e.goTypeOf(c.Args[i]), w)
+		w, err := e.wrapInterfaceConversion(elemType, e.goTypeOf(c.Args[i]), raw)
 		if err != nil {
+			return nil, err
+		}
+		if w, err = e.boxEarly(c.Args[i], raw, w, start, elemType); err != nil {
 			return nil, err
 		}
 		elems = append(elems, map[string]any{"index": int64(i - fixed), "value": w})
@@ -11565,6 +11986,9 @@ func (e *emitter) orderedCall(c *ast.CallExpr) bool {
 // outer `len`), so the answer is its operand's. `min`/`max` and every
 // effectful builtin hoist like calls and keep the call answer.
 func (e *emitter) residualPanicFreeOperand(x ast.Expr) bool {
+	if e.boundNodes[ast.Unparen(x)] {
+		return true // bound early (`bindEarly`): its residual is a temp, its panic fired at its position
+	}
 	if v, ok := ast.Unparen(x).(*ast.CallExpr); ok {
 		if tv, ok := e.info.Types[v]; ok && tv.Value != nil {
 			return true // constant-folded: no runtime evaluation at all
@@ -11757,8 +12181,8 @@ func (e *emitter) walkUnprobedPanicky(root ast.Node, before token.Pos) (found bo
 		if tv, ok := e.typesEntry(x); ok && tv.Value != nil {
 			return false // constant-folded subtree: no run-time evaluation
 		}
-		if e.probedNodes[x] {
-			return false // covered by its probe (dropped or not)
+		if e.probedNodes[x] || e.boundNodes[x] {
+			return false // covered by its probe (dropped or not), or bound early at its position
 		}
 		if storeTargets[x] {
 			return true // the store's own check is phase 2; judge its operands
@@ -12155,7 +12579,7 @@ func (e *emitter) emitChanRecvAssign(st *ast.AssignStmt, ux *ast.UnaryExpr, defi
 	// R1'-1; on main the single member was the receive-first one, gc's
 	// member absent). RAISE = the operand's panic before the receive;
 	// DEFER = receive, then the operand's panic at the store phase.
-	start := len(e.hoisted)
+	start := e.mainLen()
 	if err := emitPos(st.Lhs[0], elemGo, elemTy); err != nil {
 		return nil, err
 	}

@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 6232 (5876 PASS / 356 FAIL)
+# cases: 6232 (5917 PASS / 315 FAIL)
 # re-pinned: 2026-10-27 [AGENT], lane frontend/fix-binding-1027 — BUG-300, 301, 302 (the S13 sweep) FIXED in tools/nativefrontend
 #   (the campaign plan's rule that a finding is fixed through the normal train, [USER] approved 2026-10-27, relayed): (1) emit.go
 #   emitDeclStmt lowers a grouped `var ( … )` declaration spec by spec (one `var` node per VarSpec, in source order, into the same
@@ -22,6 +22,71 @@
 #     scoping/sweep-s13-local-iface-dispatch/error-local-iface                       FAIL/lean-observation error:decoder-duplicate-function-id → PASS
 #     scoping/sweep-s13-local-iface-dispatch/local-iface-satisfied                   FAIL/lean-observation error:decoder-duplicate-function-id → PASS
 #     scoping/sweep-s13-local-iface-dispatch/local-iface-two-funcs                   FAIL/lean-observation error:decoder-duplicate-function-id → PASS
+# cause keyed 2026-10-27 [AGENT coordinator], train-27 stage, from the stage's full run (scripts/coverage-cause --apply): the 16 rows that carried `?` — BUG-300/302's six `error:decoder-scope-wrong-declaration`, BUG-301's three `error:decoder-duplicate-function-id`, BUG-310's seven `panic:machine-panic` (the three table rows added at this stage); no row moved.
+# re-pinned: 2026-10-27 [AGENT], lane frontend/fix-unseq-seam-1027 — BUG-310, 311, 313 (the S8 sweep) FIXED in
+#   tools/nativefrontend (the campaign plan's rule that a finding is fixed through the normal train, [USER] approved
+#   2026-10-27, relayed): (1) emit.go emitExpr's EARLY-BINDING hook binds a type assertion to a non-pointer-shaped type, a
+#   slice expression and the []byte(s)/[]rune(s) conversions to a temp at their LEXICAL position whenever an ordered event
+#   follows them in the sweep (gc's order.go copy set; BUG-156's allocatingConversion and its keep-inline rule folded in),
+#   in every sweep the unseq grammar declines; (2) an interface method value's box, a slice literal and a &T{...} composite
+#   bind AFTER the sweep's events when one follows them (the accumulator's late suffix), a method value boxed into an
+#   interface binds early — gc's walk order per form. 41 rows FAIL→PASS, 7 rows PASS/membership → PASS/strict (their
+#   assertion-probe pair collapsed to gc's member on the legacy path, the membership runner refusing the singleton: each
+#   row's lane moved with its history in its cases.tsv — the three e13 rows before the run, the four len-vs-call-order
+#   rows after it, where the run showed them FAIL/membership; scripts/diff-one holds the four PASS strict), and NOTHING
+#   ELSE MOVED: 6179 rows; PASS 5820 + 41 = 5861;
+#   FAIL 359 - 41 = 318. No new row, no removal, no cause change. BUG-312's five rows stay FAIL (open, the envelope
+#   question posed in its entry). Measured by CAPPED_MEM_MAX=64G capped scripts/ci --diff at the lane tree d2bd4740 (the lane tree, uncommitted) before
+#   this re-pin (its only drift: these moves), the rows taken from that run's artifacts/coverage/latest.tsv; the --diff at
+#   the tip judges. The moved rows (each on its entry's Cases line; the pinned stage/cause before → after):
+#     evalorder/sweep-s8-early-kinds-legacy/if-cond-assertion                        FAIL/differential → PASS
+#     evalorder/sweep-s8-early-kinds-legacy/for-cond-assertion                       FAIL/differential → PASS
+#     evalorder/sweep-s8-early-kinds-legacy/switch-case-assertion                    FAIL/differential → PASS
+#     evalorder/sweep-s8-early-kinds-legacy/var-spec-assertion                       FAIL/differential → PASS
+#     evalorder/sweep-s8-early-kinds-legacy/send-value-assertion                     FAIL/differential → PASS
+#     evalorder/sweep-s8-early-kinds-legacy/defer-arg-assertion                      FAIL/differential → PASS
+#     evalorder/sweep-s8-early-kinds-legacy/go-arg-assertion                         FAIL/differential → PASS
+#     evalorder/sweep-s8-early-kinds-legacy/closure-body-assertion                   FAIL/differential → PASS
+#     evalorder/sweep-s8-early-kinds-legacy/invoked-lit-assertion                    FAIL/differential → PASS
+#     evalorder/sweep-s8-early-kinds-legacy/deferred-lit-assertion                   FAIL/differential → PASS
+#     evalorder/sweep-s8-early-kinds-legacy/event-iface-method-call-assertion        FAIL/differential → PASS
+#     evalorder/sweep-s8-early-kinds-legacy/iface-param-assertion                    FAIL/differential → PASS
+#     evalorder/sweep-s8-early-kinds-legacy/iface-to-iface-param-assertion           FAIL/differential → PASS
+#     evalorder/sweep-s8-early-kinds-legacy/defined-int-param-assertion              FAIL/differential → PASS
+#     evalorder/sweep-s8-early-kinds-legacy/func-param-assertion                     FAIL/differential → PASS
+#     evalorder/sweep-s8-early-kinds-legacy/array-operand-assertion                  FAIL/differential → PASS
+#     evalorder/sweep-s8-early-kinds-legacy/assertion-left-array-operand             FAIL/differential → PASS
+#     evalorder/sweep-s8-early-kinds-legacy/array-target-assertion                   FAIL/differential → PASS
+#     evalorder/sweep-s8-early-kinds-legacy/if-cond-slice-expr                       FAIL/lean-observation cause=panic:machine-panic → PASS
+#     evalorder/sweep-s8-early-kinds-legacy/for-cond-slice-expr                      FAIL/lean-observation cause=panic:machine-panic → PASS
+#     evalorder/sweep-s8-early-kinds-legacy/var-spec-slice-expr                      FAIL/lean-observation cause=panic:machine-panic → PASS
+#     evalorder/sweep-s8-early-kinds-legacy/defer-arg-slice-expr                     FAIL/lean-observation cause=panic:machine-panic → PASS
+#     evalorder/sweep-s8-early-kinds-legacy/go-arg-slice-expr                        FAIL/lean-observation cause=panic:machine-panic → PASS
+#     evalorder/sweep-s8-early-kinds-legacy/defined-int-param-slice-expr             FAIL/lean-observation cause=panic:machine-panic → PASS
+#     evalorder/sweep-s8-early-kinds-legacy/generic-body-slice-expr                  FAIL/lean-observation cause=panic:machine-panic → PASS
+#     evalorder/sweep-s8-early-kinds-legacy/if-cond-string-slice                     FAIL/differential → PASS
+#     evalorder/sweep-s8-early-kinds-legacy/var-spec-string-slice                    FAIL/differential → PASS
+#     evalorder/sweep-s8-early-kinds-legacy/defer-arg-string-slice                   FAIL/differential → PASS
+#     evalorder/sweep-s8-early-kinds-legacy/closure-body-string-slice                FAIL/differential → PASS
+#     evalorder/sweep-s8-method-values/func-slice-lit-indexed-by-call                FAIL/differential → PASS
+#     evalorder/sweep-s8-method-values/iface-method-value-call-arg                   FAIL/differential → PASS
+#     evalorder/sweep-s8-method-values/value-method-value-any-slice-lit              FAIL/differential → PASS
+#     evalorder/sweep-s8-method-values/iface-method-value-return-list                FAIL/differential → PASS
+#     evalorder/sweep-s8-method-values/iface-method-value-tuple                      FAIL/differential → PASS
+#     evalorder/sweep-s8-conv-probed-operand/deref-array-non-generic                 FAIL/differential → PASS
+#     evalorder/sweep-s8-conv-probed-operand/slice-elem-array-non-generic            FAIL/differential → PASS
+#     evalorder/sweep-s8-conv-probed-operand/deref-defined-non-generic               FAIL/differential → PASS
+#     evalorder/sweep-s8-conv-probed-operand/bytes-to-type-param                     FAIL/differential → PASS
+#     evalorder/sweep-s8-conv-probed-operand/runes-to-type-param                     FAIL/differential → PASS
+#     evalorder/sweep-s8-conv-probed-operand/bytes-to-defined-in-stencil             FAIL/differential → PASS
+#     evalorder/sweep-s8-conv-probed-operand/bytes-to-int-legacy-in-stencil          FAIL/differential → PASS
+#     builtins/e13-sibling-panic-order/assert-return-list                            PASS/membership → PASS (strict)
+#     builtins/e13-sibling-panic-order/addr-assert-left-call                         PASS/membership → PASS (strict)
+#     builtins/e13-sibling-panic-order/recover-assert-vs-call-w                      PASS/membership → PASS (strict)
+#     builtins/len-vs-call-order/make-hint-struct-any-key                            PASS/membership → PASS (strict, re-laned after the run)
+#     builtins/len-vs-call-order/make-hint-array-any-key                             PASS/membership → PASS (strict, re-laned after the run)
+#     builtins/len-vs-call-order/make-hint-generic-any-key                           PASS/membership → PASS (strict, re-laned after the run)
+#     builtins/len-vs-call-order/len-struct-any-key-left-assert                      PASS/membership → PASS (strict, re-laned after the run)
 # cause keyed 2026-10-27 [AGENT coordinator], train-27 stage, from the stage's full run (scripts/coverage-cause --apply): the 16 rows that carried `?` — BUG-300/302's six `error:decoder-scope-wrong-declaration`, BUG-301's three `error:decoder-duplicate-function-id`, BUG-310's seven `panic:machine-panic` (the three table rows added at this stage); no row moved.
 # re-pinned: 2026-10-27 [AGENT], lane sweep/s19-init-order — the defect-neighbourhood campaign's step 2, shape S19 (package
 #   initialization order; plan docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved 2026-10-27; members BUG-060,
@@ -4775,7 +4840,7 @@ PASS	builtins/copy-edge/nil-destination	-	-
 PASS	builtins/copy-edge/nil-source	-	-
 PASS	builtins/copy-edge/string-prefix	-	-
 PASS	builtins/copy-string-to-bytes	-	-
-PASS	builtins/e13-sibling-panic-order/addr-assert-left-call	membership	-
+PASS	builtins/e13-sibling-panic-order/addr-assert-left-call	-	-
 PASS	builtins/e13-sibling-panic-order/addr-index-left-len-hoist	membership	-
 PASS	builtins/e13-sibling-panic-order/array-base-target-vs-len	membership	-
 PASS	builtins/e13-sibling-panic-order/assert-arg-sibling	membership	-
@@ -4791,7 +4856,7 @@ PASS	builtins/e13-sibling-panic-order/assert-left-new-call	membership	-
 PASS	builtins/e13-sibling-panic-order/assert-left-recv-w	membership	-
 PASS	builtins/e13-sibling-panic-order/assert-middle	membership	-
 PASS	builtins/e13-sibling-panic-order/assert-ok-early-len-hoist	membership	-
-PASS	builtins/e13-sibling-panic-order/assert-return-list	membership	-
+PASS	builtins/e13-sibling-panic-order/assert-return-list	-	-
 PASS	builtins/e13-sibling-panic-order/assert-right-call	membership	-
 PASS	builtins/e13-sibling-panic-order/assert-vs-mutating-call	membership	-
 PASS	builtins/e13-sibling-panic-order/bytes-conv-left-len-hoist	membership	-
@@ -4829,7 +4894,7 @@ PASS	builtins/e13-sibling-panic-order/map-key-assert-vs-len	membership	-
 PASS	builtins/e13-sibling-panic-order/map-lit-payload-vs-call	membership	-
 PASS	builtins/e13-sibling-panic-order/map-tgt-assert-vs-call	membership	-
 PASS	builtins/e13-sibling-panic-order/ptr-field-left-vs-len-operand	membership	-
-PASS	builtins/e13-sibling-panic-order/recover-assert-vs-call-w	membership	-
+PASS	builtins/e13-sibling-panic-order/recover-assert-vs-call-w	-	-
 PASS	builtins/e13-sibling-panic-order/recover-assert-vs-len	-	-
 PASS	builtins/e13-sibling-panic-order/send-chan-index	membership	-
 PASS	builtins/e13-sibling-panic-order/shift-left-call	membership	-
@@ -4870,16 +4935,16 @@ PASS	builtins/len-vs-call-order/len-nil-only-both	-	-
 PASS	builtins/len-vs-call-order/len-nil-only-left	-	-
 PASS	builtins/len-vs-call-order/len-nil-only-none	membership	-
 PASS	builtins/len-vs-call-order/len-nil-only-operand	-	-
-PASS	builtins/len-vs-call-order/len-struct-any-key-left-assert	membership	-
+PASS	builtins/len-vs-call-order/len-struct-any-key-left-assert	-	-
 PASS	builtins/len-vs-call-order/lexer-idiom	-	-
 PASS	builtins/len-vs-call-order/make-chan-cap-panicky-between	membership	-
-PASS	builtins/len-vs-call-order/make-hint-array-any-key	membership	-
+PASS	builtins/len-vs-call-order/make-hint-array-any-key	-	-
 PASS	builtins/len-vs-call-order/make-hint-call	membership	-
-PASS	builtins/len-vs-call-order/make-hint-generic-any-key	membership	-
+PASS	builtins/len-vs-call-order/make-hint-generic-any-key	-	-
 PASS	builtins/len-vs-call-order/make-hint-generic-int-key	-	-
 PASS	builtins/len-vs-call-order/make-hint-map-read	-	-
 PASS	builtins/len-vs-call-order/make-hint-panic-free	-	-
-PASS	builtins/len-vs-call-order/make-hint-struct-any-key	membership	-
+PASS	builtins/len-vs-call-order/make-hint-struct-any-key	-	-
 PASS	builtins/len-vs-call-order/make-index-left	membership	-
 PASS	builtins/len-vs-call-order/make-inner-len	membership	-
 PASS	builtins/len-vs-call-order/make-nil-only-both	-	-
@@ -10414,42 +10479,42 @@ PASS	evalorder/sweep-s8-conv-probed-operand/array-legacy-bytes-non-generic	-	-
 PASS	evalorder/sweep-s8-conv-probed-operand/bytes-to-int-in-stencil	membership	-
 PASS	evalorder/sweep-s8-conv-probed-operand/stringbyte-to-type-param	-	-
 PASS	evalorder/sweep-s8-conv-probed-operand/global-in-stencil	-	-
-FAIL	evalorder/sweep-s8-conv-probed-operand/deref-array-non-generic	differential	-
-FAIL	evalorder/sweep-s8-conv-probed-operand/slice-elem-array-non-generic	differential	-
-FAIL	evalorder/sweep-s8-conv-probed-operand/deref-defined-non-generic	differential	-
-FAIL	evalorder/sweep-s8-conv-probed-operand/bytes-to-type-param	differential	-
-FAIL	evalorder/sweep-s8-conv-probed-operand/runes-to-type-param	differential	-
-FAIL	evalorder/sweep-s8-conv-probed-operand/bytes-to-defined-in-stencil	differential	-
-FAIL	evalorder/sweep-s8-conv-probed-operand/bytes-to-int-legacy-in-stencil	differential	-
-FAIL	evalorder/sweep-s8-early-kinds-legacy/if-cond-assertion	differential	-
-FAIL	evalorder/sweep-s8-early-kinds-legacy/for-cond-assertion	differential	-
-FAIL	evalorder/sweep-s8-early-kinds-legacy/switch-case-assertion	differential	-
-FAIL	evalorder/sweep-s8-early-kinds-legacy/var-spec-assertion	differential	-
-FAIL	evalorder/sweep-s8-early-kinds-legacy/send-value-assertion	differential	-
-FAIL	evalorder/sweep-s8-early-kinds-legacy/defer-arg-assertion	differential	-
-FAIL	evalorder/sweep-s8-early-kinds-legacy/go-arg-assertion	differential	-
-FAIL	evalorder/sweep-s8-early-kinds-legacy/closure-body-assertion	differential	-
-FAIL	evalorder/sweep-s8-early-kinds-legacy/invoked-lit-assertion	differential	-
-FAIL	evalorder/sweep-s8-early-kinds-legacy/deferred-lit-assertion	differential	-
-FAIL	evalorder/sweep-s8-early-kinds-legacy/event-iface-method-call-assertion	differential	-
-FAIL	evalorder/sweep-s8-early-kinds-legacy/iface-param-assertion	differential	-
-FAIL	evalorder/sweep-s8-early-kinds-legacy/iface-to-iface-param-assertion	differential	-
-FAIL	evalorder/sweep-s8-early-kinds-legacy/defined-int-param-assertion	differential	-
-FAIL	evalorder/sweep-s8-early-kinds-legacy/func-param-assertion	differential	-
-FAIL	evalorder/sweep-s8-early-kinds-legacy/array-operand-assertion	differential	-
-FAIL	evalorder/sweep-s8-early-kinds-legacy/assertion-left-array-operand	differential	-
-FAIL	evalorder/sweep-s8-early-kinds-legacy/array-target-assertion	differential	-
-FAIL	evalorder/sweep-s8-early-kinds-legacy/if-cond-slice-expr	lean-observation	panic:machine-panic
-FAIL	evalorder/sweep-s8-early-kinds-legacy/for-cond-slice-expr	lean-observation	panic:machine-panic
-FAIL	evalorder/sweep-s8-early-kinds-legacy/var-spec-slice-expr	lean-observation	panic:machine-panic
-FAIL	evalorder/sweep-s8-early-kinds-legacy/defer-arg-slice-expr	lean-observation	panic:machine-panic
-FAIL	evalorder/sweep-s8-early-kinds-legacy/go-arg-slice-expr	lean-observation	panic:machine-panic
-FAIL	evalorder/sweep-s8-early-kinds-legacy/defined-int-param-slice-expr	lean-observation	panic:machine-panic
-FAIL	evalorder/sweep-s8-early-kinds-legacy/generic-body-slice-expr	lean-observation	panic:machine-panic
-FAIL	evalorder/sweep-s8-early-kinds-legacy/if-cond-string-slice	differential	-
-FAIL	evalorder/sweep-s8-early-kinds-legacy/var-spec-string-slice	differential	-
-FAIL	evalorder/sweep-s8-early-kinds-legacy/defer-arg-string-slice	differential	-
-FAIL	evalorder/sweep-s8-early-kinds-legacy/closure-body-string-slice	differential	-
+PASS	evalorder/sweep-s8-conv-probed-operand/deref-array-non-generic	-	-
+PASS	evalorder/sweep-s8-conv-probed-operand/slice-elem-array-non-generic	-	-
+PASS	evalorder/sweep-s8-conv-probed-operand/deref-defined-non-generic	-	-
+PASS	evalorder/sweep-s8-conv-probed-operand/bytes-to-type-param	-	-
+PASS	evalorder/sweep-s8-conv-probed-operand/runes-to-type-param	-	-
+PASS	evalorder/sweep-s8-conv-probed-operand/bytes-to-defined-in-stencil	-	-
+PASS	evalorder/sweep-s8-conv-probed-operand/bytes-to-int-legacy-in-stencil	-	-
+PASS	evalorder/sweep-s8-early-kinds-legacy/if-cond-assertion	-	-
+PASS	evalorder/sweep-s8-early-kinds-legacy/for-cond-assertion	-	-
+PASS	evalorder/sweep-s8-early-kinds-legacy/switch-case-assertion	-	-
+PASS	evalorder/sweep-s8-early-kinds-legacy/var-spec-assertion	-	-
+PASS	evalorder/sweep-s8-early-kinds-legacy/send-value-assertion	-	-
+PASS	evalorder/sweep-s8-early-kinds-legacy/defer-arg-assertion	-	-
+PASS	evalorder/sweep-s8-early-kinds-legacy/go-arg-assertion	-	-
+PASS	evalorder/sweep-s8-early-kinds-legacy/closure-body-assertion	-	-
+PASS	evalorder/sweep-s8-early-kinds-legacy/invoked-lit-assertion	-	-
+PASS	evalorder/sweep-s8-early-kinds-legacy/deferred-lit-assertion	-	-
+PASS	evalorder/sweep-s8-early-kinds-legacy/event-iface-method-call-assertion	-	-
+PASS	evalorder/sweep-s8-early-kinds-legacy/iface-param-assertion	-	-
+PASS	evalorder/sweep-s8-early-kinds-legacy/iface-to-iface-param-assertion	-	-
+PASS	evalorder/sweep-s8-early-kinds-legacy/defined-int-param-assertion	-	-
+PASS	evalorder/sweep-s8-early-kinds-legacy/func-param-assertion	-	-
+PASS	evalorder/sweep-s8-early-kinds-legacy/array-operand-assertion	-	-
+PASS	evalorder/sweep-s8-early-kinds-legacy/assertion-left-array-operand	-	-
+PASS	evalorder/sweep-s8-early-kinds-legacy/array-target-assertion	-	-
+PASS	evalorder/sweep-s8-early-kinds-legacy/if-cond-slice-expr	-	-
+PASS	evalorder/sweep-s8-early-kinds-legacy/for-cond-slice-expr	-	-
+PASS	evalorder/sweep-s8-early-kinds-legacy/var-spec-slice-expr	-	-
+PASS	evalorder/sweep-s8-early-kinds-legacy/defer-arg-slice-expr	-	-
+PASS	evalorder/sweep-s8-early-kinds-legacy/go-arg-slice-expr	-	-
+PASS	evalorder/sweep-s8-early-kinds-legacy/defined-int-param-slice-expr	-	-
+PASS	evalorder/sweep-s8-early-kinds-legacy/generic-body-slice-expr	-	-
+PASS	evalorder/sweep-s8-early-kinds-legacy/if-cond-string-slice	-	-
+PASS	evalorder/sweep-s8-early-kinds-legacy/var-spec-string-slice	-	-
+PASS	evalorder/sweep-s8-early-kinds-legacy/defer-arg-string-slice	-	-
+PASS	evalorder/sweep-s8-early-kinds-legacy/closure-body-string-slice	-	-
 PASS	evalorder/sweep-s8-early-kinds-legacy/ctl-struct-param-assertion	membership	-
 PASS	evalorder/sweep-s8-early-kinds-legacy/ctl-pointer-param-assertion	membership	-
 PASS	evalorder/sweep-s8-early-kinds-legacy/ctl-string-param-assertion	membership	-
@@ -10472,11 +10537,11 @@ PASS	evalorder/sweep-s8-method-values/value-method-value-tuple	-	-
 PASS	evalorder/sweep-s8-method-values/func-slice-lit-with-call-elem	-	-
 PASS	evalorder/sweep-s8-method-values/iface-method-value-any-slice-lit	-	-
 PASS	evalorder/sweep-s8-method-values/value-method-value-map-lit	-	-
-FAIL	evalorder/sweep-s8-method-values/func-slice-lit-indexed-by-call	differential	-
-FAIL	evalorder/sweep-s8-method-values/iface-method-value-call-arg	differential	-
-FAIL	evalorder/sweep-s8-method-values/value-method-value-any-slice-lit	differential	-
-FAIL	evalorder/sweep-s8-method-values/iface-method-value-return-list	differential	-
-FAIL	evalorder/sweep-s8-method-values/iface-method-value-tuple	differential	-
+PASS	evalorder/sweep-s8-method-values/func-slice-lit-indexed-by-call	-	-
+PASS	evalorder/sweep-s8-method-values/iface-method-value-call-arg	-	-
+PASS	evalorder/sweep-s8-method-values/value-method-value-any-slice-lit	-	-
+PASS	evalorder/sweep-s8-method-values/iface-method-value-return-list	-	-
+PASS	evalorder/sweep-s8-method-values/iface-method-value-tuple	-	-
 PASS	evalorder/sweep-s8-operand-kinds/local-var	membership	-
 PASS	evalorder/sweep-s8-operand-kinds/slice-base-rebound	membership	-
 PASS	evalorder/sweep-s8-operand-kinds/map-key-mutated	membership	-

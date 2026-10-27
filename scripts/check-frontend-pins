@@ -435,7 +435,33 @@ echo "check-frontend-pins: ok [hidden-dep-order] — realized deviation order ma
 # driver (probeTwinChoice, default stream, fuel 8e9) under the machine on the OLD and the NEW wire: observation
 # byte-identical (sha256 76d2bc87… both — the same observation as the S1, G19 and fix-hoist re-pins).
 # be06cf70… -> 39765cc5….
+# [AGENT lane worker, lane frontend/fix-unseq-seam-1027] 2026-10-27 twin re-pin: the legacy ANF hoist's early-binding rule
+# and late suffix (BUG-310/311/313 of the S8 sweep, fixed through the normal train per the defect-neighbourhood campaign
+# plan, [USER] approved 2026-10-27, relayed): (1) a type assertion to a non-pointer-shaped type, a slice expression and the
+# []byte(s)/[]rune(s) conversions bind to a temp at their lexical position when an ordered event follows them in the sweep
+# (emit.go emitExpr's hook, gcEarlyOperand / bindEarly); (2) an interface method value's box, a slice literal and a &T{…}
+# composite bind after the sweep's events when one follows them (pushLateHoist), a method value boxed into an interface
+# binds early (boxEarly); (3) the keyed struct literal's pre-bind keeps a value emitExpr already bound to a temp instead of
+# copying it into a second temp. Key-by-key JSON comparison of the old and the new wire: schema golean-native-v3, package,
+# buildContext, fileOrder 20, types, globals, promotions, methodSets IDENTICAL; funcs 456 and methods 534 unchanged in
+# number; 421 declarations differ — 375 ONLY by the renumbering of the emitter's temporaries (4272 leaves, pure spelling);
+# 46 change structurally, and EVERY structural change is mechanism (3): a `$c2 := $c1` copy of an already-hoisted keyed-
+# literal value removed, the literal reading `$c1` directly — 153 copies across 15 funcs (confchange.toConfChangeSingle
+# 10, newTwin 6, raft.newStorageApplyMsg 5, raft.logSliceFromMsgApp / newStorageAppendRespMsg / newStorageApplyRespMsg 4,
+# raft.confChangeToMsg / newStorageAppendMsg 3, raft.newRaft / pbEntryID / stepFollower 2, raft.newReadOnly / stepLeader
+# and the two lifted bodies 1) and 31 methods (raft.raft.Step 12, handleAppendEntries 9, campaign 8, RawNode.Bootstrap 7,
+# tracker.ProgressTracker.ConfState / raft.raft.maybeSendAppend 5, …), a leaf-statement classification over the
+# temp-normalized bodies in the re-pin commit's message; 0 sites of mechanisms (1) or (2) — no twin statement holds one of
+# the early kinds or a structural allocation beside a later sibling event; 0 other. The twin driver (probeTwinChoice,
+# default stream, fuel 8e9) under the machine on the OLD and the NEW wire: observation byte-identical (sha256 76d2bc87… both
+# — the same observation as the S1, G19 and hoist-fix re-pins). be06cf70… -> ac401783….
 # ---- 2. Twin wire pin ----
+# [AGENT coordinator] 2026-11-05 train-28 stage twin re-pin: the binding fixes (lane frontend/fix-binding-1027, its pin
+# 39765cc5…) and the unsequenced-seam fixes (lane frontend/fix-unseq-seam-1027, its pin ac401783…) each moved the twin from
+# main's be06cf70… on their own trees; restacked together the fresh emit is a THIRD wire, bee8adb6…, pinned here from the combined
+# tree (the twin program assembled exactly as this script does, the frontend of the stage). The twin driver (probeTwinChoice,
+# default stream, fuel 8e9) under the machine on main's pinned wire and on the combined wire: observation byte-identical —
+# the same observation as both lanes report. Each lane's structural account above still describes its own change.
 TWIN_BASE="baselines/pins/twin-chdriver.wire.json"
 [ -f "$TWIN_BASE" ] || { echo "check-frontend-pins: FAIL — no wire pin at $TWIN_BASE" >&2; exit 1; }
 TWIN_PROG="$WORK/twin-prog"
