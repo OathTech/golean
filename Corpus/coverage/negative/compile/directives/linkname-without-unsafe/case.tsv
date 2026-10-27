@@ -1,0 +1,2 @@
+# expected_substring	features
+//go:linkname only allowed in Go files that import "unsafe"	functions,compile_error

@@ -1,0 +1,2 @@
+# expected_substring	features
+go:embed cannot apply to var inside func	functions,compile_error

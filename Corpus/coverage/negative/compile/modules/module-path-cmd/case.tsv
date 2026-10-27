@@ -1,0 +1,2 @@
+# expected_substring	features
+"cmd" is not an importable package	functions,print,modules,compile_error

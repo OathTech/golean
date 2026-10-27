@@ -1,0 +1,2 @@
+# expected_substring	features
+function main is undeclared in the main package	functions,compile_error

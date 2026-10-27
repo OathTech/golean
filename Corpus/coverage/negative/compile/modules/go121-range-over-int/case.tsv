@@ -1,0 +1,2 @@
+# expected_substring	features
+requires go1.22 or later	functions,print,modules,compile_error

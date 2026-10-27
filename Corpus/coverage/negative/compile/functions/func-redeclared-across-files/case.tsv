@@ -1,0 +1,2 @@
+# expected_substring	features
+f redeclared in this block	functions,compile_error

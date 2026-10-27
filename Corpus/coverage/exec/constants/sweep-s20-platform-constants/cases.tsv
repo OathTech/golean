@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+runtime-target	runtimeTarget	-	ok	-	constants,stdlib,strings
+runtime-compiler	runtimeCompiler	-	ok	-	constants,stdlib,strings
+int-size-constants	intSizeConstants	-	ok	-	constants,stdlib,ints
+maxint-value	maxIntValue	-	ok	-	constants,stdlib,ints
+maxuint-value	maxUintValue	-	ok	-	constants,stdlib,ints
+int-size-idioms	intSizeIdioms	-	ok	-	constants,ints,shifts,bitwise
+wrap-at-width	wrapAtWidth	-	ok	-	ints,overflow,widths

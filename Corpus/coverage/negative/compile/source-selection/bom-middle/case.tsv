@@ -1,0 +1,2 @@
+# expected_substring	features
+illegal byte order mark	functions,compile_error

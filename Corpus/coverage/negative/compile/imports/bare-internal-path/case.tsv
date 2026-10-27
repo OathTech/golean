@@ -1,0 +1,2 @@
+# expected_substring	features
+package internal/x is not in std	imports,multipackage,modules,compile_error

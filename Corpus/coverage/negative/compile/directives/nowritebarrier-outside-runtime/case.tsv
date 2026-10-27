@@ -1,0 +1,2 @@
+# expected_substring	features
+//go:nowritebarrier only allowed in runtime	functions,compile_error

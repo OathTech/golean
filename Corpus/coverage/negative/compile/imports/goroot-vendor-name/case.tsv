@@ -1,0 +1,2 @@
+# expected_substring	features
+package vendor is not in std	imports,multipackage,modules,compile_error

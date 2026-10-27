@@ -1,0 +1,2 @@
+# expected_substring	features
+can only use //go:noescape with external func implementations	functions,compile_error

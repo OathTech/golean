@@ -1,0 +1,3 @@
+package x
+
+func F() int { return 1 }

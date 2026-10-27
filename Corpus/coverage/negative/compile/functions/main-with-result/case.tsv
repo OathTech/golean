@@ -1,0 +1,2 @@
+# expected_substring	features
+func main must have no arguments and no return values	functions,compile_error

@@ -1,0 +1,2 @@
+# expected_substring	features
+func main must have no type parameters	functions,compile_error

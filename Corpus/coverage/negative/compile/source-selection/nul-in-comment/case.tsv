@@ -1,0 +1,2 @@
+# expected_substring	features
+unexpected NUL in input	functions,compile_error

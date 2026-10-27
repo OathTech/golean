@@ -1,0 +1,2 @@
+# expected_substring	features
+//go:uintptrkeepalive is only allowed in the standard library	functions,compile_error

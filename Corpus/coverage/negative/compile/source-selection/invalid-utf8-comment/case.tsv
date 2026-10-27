@@ -1,0 +1,2 @@
+# expected_substring	features
+illegal UTF-8 encoding	functions,compile_error

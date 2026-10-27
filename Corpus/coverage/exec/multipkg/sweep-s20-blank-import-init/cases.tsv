@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+blank	blankImportInit	-	ok	-	multipackage,imports,init,globals
+named	namedImportInit	-	ok	-	multipackage,imports,init,globals,calls

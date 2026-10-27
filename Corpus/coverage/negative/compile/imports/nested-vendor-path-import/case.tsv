@@ -1,0 +1,2 @@
+# expected_substring	features
+must be imported as x	imports,multipackage,modules,compile_error

@@ -1,0 +1,2 @@
+# expected_substring	features
+multiple //go:build comments	init,compile_error

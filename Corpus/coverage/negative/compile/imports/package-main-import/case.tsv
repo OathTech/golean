@@ -1,0 +1,2 @@
+# expected_substring	features
+is a program, not an importable package	imports,multipackage,modules,compile_error

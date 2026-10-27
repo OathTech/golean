@@ -1,0 +1,2 @@
+# expected_substring	features
+go:embed requires import "embed"	functions,compile_error

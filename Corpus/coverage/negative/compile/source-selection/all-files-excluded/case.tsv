@@ -1,0 +1,2 @@
+# expected_substring	features
+build constraints exclude all Go files	functions,compile_error

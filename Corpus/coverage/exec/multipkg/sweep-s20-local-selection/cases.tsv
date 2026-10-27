@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+excluded-files	localExcludedFiles	-	ok	-	multipackage,imports,init,globals
+inert-constraint	localInertConstraint	-	ok	-	multipackage,imports,init,globals

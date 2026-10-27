@@ -1,0 +1,2 @@
+# expected_substring	features
+stack frame too large (>1GB)	functions,structs,compile_error

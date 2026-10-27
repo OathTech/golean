@@ -1,0 +1,2 @@
+# expected_substring	features
+invalid char ' '	functions,print,modules,compile_error

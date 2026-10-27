@@ -1,0 +1,2 @@
+# expected_substring	features
+found packages lib (p.go) and other (q.go)	imports,multipackage,modules,compile_error

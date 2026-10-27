@@ -1,0 +1,2 @@
+# expected_substring	features
+misplaced go:embed directive	functions,compile_error

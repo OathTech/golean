@@ -1,0 +1,2 @@
+# expected_substring	features
+parsing //go:build line: unexpected end of expression	init,compile_error

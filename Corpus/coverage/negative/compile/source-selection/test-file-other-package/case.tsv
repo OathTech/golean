@@ -1,0 +1,2 @@
+# expected_substring	features
+found packages other (extra_test.go) and main (main.go)	init,compile_error
