@@ -1,0 +1,17 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# Sweep S8 (lane sweep/s8-unseq, 2026-10-27) — BUG-311: a method value's receiver evaluation vs a sibling call that
+# mutates the receiver. Strict rows, expected = gc's default build (method values are outside the unseq grammar: one
+# order per form on the machine). The five rows after value-method-value-map-lit are BORN RED on BUG-311's Cases line.
+value-method-value-call-arg	valueMethodValueCallArg	-	ok	-	calls,closures,methods,higher_order,evaluation_order	-	-	-
+ptr-method-value-call-arg	ptrMethodValueCallArg	-	ok	-	calls,closures,methods,pointers,higher_order,evaluation_order	-	-	-
+value-method-value-return-list	valueMethodValueReturnList	-	ok	-	calls,closures,methods,higher_order,multi_result,evaluation_order	-	-	-
+value-method-value-struct-lit	valueMethodValueStructLit	-	ok	-	calls,closures,methods,higher_order,structs,literals,evaluation_order	-	-	-
+value-method-value-tuple	valueMethodValueTuple	-	ok	-	calls,closures,methods,higher_order,multi_assign,evaluation_order	-	-	-
+func-slice-lit-with-call-elem	funcSliceLitWithCallElem	-	ok	-	calls,closures,methods,higher_order,slices,literals,evaluation_order	-	-	-
+iface-method-value-any-slice-lit	ifaceMethodValueAnySliceLit	-	ok	-	calls,closures,methods,interfaces,higher_order,slices,literals,type_assertions,evaluation_order	-	-	-
+value-method-value-map-lit	valueMethodValueMapLit	-	ok	-	calls,closures,methods,higher_order,maps,literals,type_assertions,evaluation_order	-	-	-
+func-slice-lit-indexed-by-call	funcSliceLitIndexedByCall	-	ok	-	calls,closures,methods,higher_order,slices,literals,indexing,evaluation_order	-	-	-
+iface-method-value-call-arg	ifaceMethodValueCallArg	-	ok	-	calls,closures,methods,interfaces,higher_order,evaluation_order	-	-	-
+value-method-value-any-slice-lit	valueMethodValueAnySliceLit	-	ok	-	calls,closures,methods,higher_order,slices,literals,type_assertions,evaluation_order	-	-	-
+iface-method-value-return-list	ifaceMethodValueReturnList	-	ok	-	calls,closures,methods,interfaces,higher_order,multi_result,evaluation_order	-	-	-
+iface-method-value-tuple	ifaceMethodValueTuple	-	ok	-	calls,closures,methods,interfaces,higher_order,multi_assign,evaluation_order	-	-	-

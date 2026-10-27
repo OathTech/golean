@@ -1,0 +1,39 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# Sweep S8 (lane sweep/s8-unseq, 2026-10-27) — BUG-310, born RED: the operand kinds gc evaluates EARLY (a type assertion,
+# a slice expression, a string slice) at the sweeps the unseq grammar declines; the legacy ANF path realizes the
+# call-first member alone. Strict rows, expected = gc (gc 20/20, default build and -gcflags=all=-N -l). The slice-
+# expression rows FAIL at lean-observation (the machine panics where gc has a value); the others at differential. The
+# four ctl-* rows are the admitted assertion targets (membership, gc's early member inside).
+if-cond-assertion	ifCondAssertion	-	ok	-	calls,closures,if,control_flow,type_assertions,evaluation_order	-	-	-
+for-cond-assertion	forCondAssertion	-	ok	-	calls,closures,loops,control_flow,type_assertions,evaluation_order	-	-	-
+switch-case-assertion	switchCaseAssertion	-	ok	-	calls,closures,switch,control_flow,type_assertions,evaluation_order	-	-	-
+var-spec-assertion	varSpecAssertion	-	ok	-	calls,closures,type_assertions,evaluation_order	-	-	-
+send-value-assertion	sendValueAssertion	-	ok	-	calls,closures,channels,type_assertions,evaluation_order	-	-	-
+defer-arg-assertion	deferArgAssertion	-	ok	-	calls,closures,defer,type_assertions,evaluation_order	-	-	-
+go-arg-assertion	goArgAssertion	-	ok	-	calls,closures,goroutines,channels,type_assertions,evaluation_order	-	-	-
+closure-body-assertion	closureBodyAssertion	-	ok	-	calls,closures,type_assertions,evaluation_order	-	-	-
+invoked-lit-assertion	invokedLitAssertion	-	ok	-	calls,closures,type_assertions,evaluation_order	-	-	-
+deferred-lit-assertion	deferredLitAssertion	-	ok	-	calls,closures,defer,type_assertions,evaluation_order	-	-	-
+event-iface-method-call-assertion	eventIfaceMethodCallAssertion	-	ok	-	calls,methods,interfaces,type_assertions,evaluation_order	-	-	-
+iface-param-assertion	ifaceParamAssertion	-	ok	-	calls,closures,interfaces,type_assertions,evaluation_order	-	-	-
+iface-to-iface-param-assertion	ifaceToIfaceParamAssertion	-	ok	-	calls,closures,interfaces,type_assertions,evaluation_order	-	-	-
+defined-int-param-assertion	definedIntParamAssertion	-	ok	-	calls,closures,defined_type,type_assertions,evaluation_order	-	-	-
+func-param-assertion	funcParamAssertion	-	ok	-	calls,closures,functions,type_assertions,evaluation_order	-	-	-
+array-operand-assertion	arrayOperandAssertion	-	ok	-	calls,closures,arrays,type_assertions,evaluation_order	-	-	-
+assertion-left-array-operand	assertionLeftArrayOperand	-	ok	-	calls,closures,arrays,type_assertions,evaluation_order	-	-	-
+array-target-assertion	arrayTargetAssertion	-	ok	-	calls,closures,arrays,assignment,type_assertions,evaluation_order	-	-	-
+if-cond-slice-expr	ifCondSliceExpr	-	ok	-	calls,closures,if,control_flow,slicing,slices,evaluation_order	-	-	-
+for-cond-slice-expr	forCondSliceExpr	-	ok	-	calls,closures,loops,control_flow,slicing,slices,evaluation_order	-	-	-
+var-spec-slice-expr	varSpecSliceExpr	-	ok	-	calls,closures,slicing,slices,evaluation_order	-	-	-
+defer-arg-slice-expr	deferArgSliceExpr	-	ok	-	calls,closures,defer,slicing,slices,evaluation_order	-	-	-
+go-arg-slice-expr	goArgSliceExpr	-	ok	-	calls,closures,goroutines,channels,slicing,slices,evaluation_order	-	-	-
+defined-int-param-slice-expr	definedIntParamSliceExpr	-	ok	-	calls,closures,defined_type,slicing,slices,evaluation_order	-	-	-
+generic-body-slice-expr	genericBodySliceExpr	-	ok	-	calls,closures,generics,slicing,slices,evaluation_order	-	-	-
+if-cond-string-slice	ifCondStringSlice	-	ok	-	calls,closures,if,control_flow,strings,slicing,evaluation_order	-	-	-
+var-spec-string-slice	varSpecStringSlice	-	ok	-	calls,closures,strings,slicing,evaluation_order	-	-	-
+defer-arg-string-slice	deferArgStringSlice	-	ok	-	calls,closures,defer,strings,slicing,evaluation_order	-	-	-
+closure-body-string-slice	closureBodyStringSlice	-	ok	-	calls,closures,strings,slicing,evaluation_order	-	-	-
+ctl-struct-param-assertion	ctlStructParamAssertion	-	ok	-	calls,closures,structs,type_assertions,evaluation_order,nondet	membership	`sinkT(iv.(T2), set())`, set re-boxing iv: an assertion to a STRUCT type is admitted by the grammar; one unseq pick (unseqNext). members {110 early, 510}; gc 110	width=4,sites=8,members=2
+ctl-pointer-param-assertion	ctlPointerParamAssertion	-	ok	-	calls,closures,pointers,type_assertions,evaluation_order,nondet	membership	`sinkP(iv.(*T2), set())`: an assertion to a POINTER type (pointer-shaped: gc does NOT copy it early — the late member is gc's); one unseq pick. members {110, 510}; gc 510	width=4,sites=8,members=2
+ctl-string-param-assertion	ctlStringParamAssertion	-	ok	-	calls,closures,strings,type_assertions,evaluation_order,nondet	membership	`sinkS(iv.(string), set())`; one unseq pick. members {9710 early, 12210}; gc 9710	width=4,sites=8,members=2
+ctl-slice-param-assertion	ctlSliceParamAssertion	-	ok	-	calls,closures,slices,type_assertions,evaluation_order,nondet	membership	`sinkSl(iv.([]int), set())`; one unseq pick. members {110 early, 510}; gc 110	width=4,sites=8,members=2

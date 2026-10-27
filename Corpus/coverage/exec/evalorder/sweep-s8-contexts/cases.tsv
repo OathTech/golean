@@ -1,0 +1,21 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# Sweep S8 (lane sweep/s8-unseq, 2026-10-27): contexts × kinds. Membership rows: the ONE consumption site is the unseq
+# scheduler's pick (unseqNext); on loop-body-assertion the pick recurs per iteration (3 members). Strict rows: the
+# lifted body or the generic body (a T result) is declined by the grammar and the legacy call-first order is gc's.
+method-body-field	methodBodyField	-	ok	-	calls,methods,fields,evaluation_order,nondet	membership	`m.x + m.setX()` inside a pointer-receiver method body: the field read vs the mutating method call; one unseq pick. members {11, 15}; gc 15	width=3,sites=8,members=2
+method-body-assertion	methodBodyAssertion	-	ok	-	calls,methods,type_assertions,evaluation_order,nondet	membership	`m.iv.(int) + m.setIv()` in a method body; one unseq pick. members {11 early, 15}; gc 11	width=3,sites=8,members=2
+method-body-bytes-conv	methodBodyBytesConv	-	ok	-	calls,methods,conversions,bytes,evaluation_order,nondet	membership	`int([]byte(m.s)[0]) + m.setS()` in a method body; one unseq pick. members {98 early, 123}; gc 98	width=3,sites=8,members=2
+closure-local-var	closureLocalVar	-	ok	-	calls,closures,evaluation_order	-	-	-
+closure-index	closureIndex	-	ok	-	calls,closures,slices,evaluation_order	-	-	-
+closure-deref	closureDeref	-	ok	-	calls,closures,pointers,evaluation_order	-	-	-
+closure-bytes-conv	closureBytesConv	-	ok	-	calls,closures,conversions,bytes,evaluation_order	-	-	-
+invoked-lit-bytes-conv	invokedLitBytesConv	-	ok	-	calls,closures,conversions,bytes,evaluation_order	-	-	-
+invoked-lit-local-var	invokedLitLocalVar	-	ok	-	calls,closures,evaluation_order	-	-	-
+deferred-lit-bytes-conv	deferredLitBytesConv	-	ok	-	calls,closures,defer,conversions,bytes,evaluation_order	-	-	-
+deferred-lit-local-var	deferredLitLocalVar	-	ok	-	calls,closures,defer,evaluation_order	-	-	-
+generic-param-read	genericParamRead	-	ok	-	calls,closures,generics,evaluation_order	-	-	-
+generic-deref	genericDeref	-	ok	-	calls,closures,generics,pointers,evaluation_order	-	-	-
+generic-index	genericIndex	-	ok	-	calls,closures,generics,slices,evaluation_order	-	-	-
+generic-assert-to-type-param	genericAssertToTypeParam	-	ok	-	calls,closures,generics,type_assertions,evaluation_order	-	-	-
+named-result-assertion	namedResultAssertion	-	ok	-	calls,closures,named-results,type_assertions,evaluation_order,nondet	membership	`r = iv.(int) + set()` into a named result; one unseq pick. members {11 early, 15}; gc 11	width=3,sites=8,members=2
+loop-body-assertion	loopBodyAssertion	-	ok	-	calls,closures,loops,range,type_assertions,evaluation_order,nondet	membership	`t += iv.(int) + set()` in a two-iteration range body: the pick recurs per iteration (early/late each time — 11 or 15 per iteration, the sum 22, 26 or 30). members {22, 26, 30}; gc 22	width=3,sites=8,members=3

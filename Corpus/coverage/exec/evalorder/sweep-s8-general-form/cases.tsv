@@ -1,0 +1,14 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# Sweep S8 (lane sweep/s8-unseq, 2026-10-27): the call-free general form (inventory E3/E4/E12(ii), the E6a trigger's
+# general form POSED). Strict rows, expected = gc. The five rows after assertion-left-of-index are BORN RED on BUG-312's
+# Cases line: gc realizes a member the legacy lexical / targets-then-RHS singleton does not hold.
+two-index-binary	twoIndexBinary	-	panic	index out of range [8] with length 1	indexing,slices,panic,evaluation_order	-	-	-
+two-index-args	twoIndexArgs	-	panic	index out of range [8] with length 1	calls,indexing,slices,panic,evaluation_order	-	-	-
+two-index-literal	twoIndexLiteral	-	panic	index out of range [8] with length 1	literals,indexing,slices,panic,evaluation_order	-	-	-
+index-left-of-zero-divisor	indexLeftOfZeroDivisor	-	panic	index out of range [8] with length 1	indexing,slices,division,panic,evaluation_order	-	-	-
+assertion-left-of-index	assertionLeftOfIndex	-	panic	interface conversion: interface {} is string, not int	type_assertions,interfaces,indexing,slices,panic,evaluation_order	-	-	-
+index-left-of-assertion	indexLeftOfAssertion	-	panic	interface conversion: interface {} is string, not int	type_assertions,interfaces,indexing,slices,panic,evaluation_order	-	-	-
+tuple-target-panic-vs-rhs-panic	tupleTargetPanicVsRhsPanic	-	panic	index out of range [7] with length 1	multi_assign,indexing,slices,panic,evaluation_order	-	-	-
+single-target-panic-vs-rhs-panic	singleTargetPanicVsRhsPanic	-	panic	index out of range [7] with length 1	assignment,indexing,slices,panic,evaluation_order	-	-	-
+three-panicking-targets	threePanickingTargets	-	panic	index out of range [9] with length 3	multi_assign,multi_result,indexing,slices,panic,evaluation_order	-	-	-
+two-panicking-map-keys	twoPanickingMapKeys	-	panic	index out of range [9] with length 2	multi_assign,maps,indexing,slices,panic,evaluation_order	-	-	-

@@ -1,0 +1,21 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# Sweep S8 (lane sweep/s8-unseq, 2026-10-27) — BUG-313: an allocating conversion whose operand carries a panic probe (a
+# deref, a slice element) on the legacy path reads the string after the sibling call that reassigns it; gc at the
+# conversion (98). Expected = gc. Membership rows where the grammar admits the sweep; strict rows where the legacy hoist
+# fires (green) or does not (the seven rows after global-in-stencil: BORN RED on BUG-313's Cases line).
+defined-bytes-non-generic	definedBytesNonGeneric	-	ok	-	calls,closures,conversions,bytes,defined_type,evaluation_order	-	-	-
+defined-runes-non-generic	definedRunesNonGeneric	-	ok	-	calls,closures,conversions,runes,defined_type,evaluation_order	-	-	-
+int64-bytes-non-generic	int64BytesNonGeneric	-	ok	-	calls,closures,conversions,bytes,evaluation_order,nondet	membership	`int64([]byte(s)[0]) + set()`, set reassigning s: the allocating conversion's read of s vs the call; one unseq pick (unseqNext). members {98 early, 123}; gc 98	width=4,sites=8,members=2
+ptr-string-bytes-admitted	ptrStringBytesAdmitted	-	ok	-	calls,closures,conversions,bytes,pointers,evaluation_order,nondet	membership	`int([]byte(*ps)[0]) + set()`, ps pointing at the s the call reassigns, the sweep admitted by the grammar: the deref's read vs the call; one unseq pick. members {98 early, 123}; gc 98	width=4,sites=8,members=2
+slice-elem-bytes-admitted	sliceElemBytesAdmitted	-	ok	-	calls,closures,conversions,bytes,slices,evaluation_order,nondet	membership	`int([]byte(ss[0])[0]) + set()`, set reassigning ss[0], the sweep admitted: the element read vs the call; one unseq pick. members {98 early, 123}; gc 98	width=4,sites=8,members=2
+array-legacy-bytes-non-generic	arrayLegacyBytesNonGeneric	-	ok	-	calls,closures,conversions,bytes,arrays,evaluation_order	-	-	-
+bytes-to-int-in-stencil	bytesToIntInStencil	-	ok	-	calls,closures,conversions,bytes,generics,evaluation_order,nondet	membership	`int([]byte(*ps)[0]) + set()` inside a generic body with an int result (admitted by the grammar); one unseq pick. members {98 early, 123}; gc 98	width=4,sites=8,members=2
+stringbyte-to-type-param	stringByteToTypeParam	-	ok	-	calls,closures,conversions,strings,generics,evaluation_order	-	-	-
+global-in-stencil	globalInStencil	-	ok	-	calls,closures,conversions,bytes,globals,generics,evaluation_order	-	-	-
+deref-array-non-generic	derefArrayNonGeneric	-	ok	-	calls,closures,conversions,bytes,pointers,arrays,evaluation_order	-	-	-
+slice-elem-array-non-generic	sliceElemArrayNonGeneric	-	ok	-	calls,closures,conversions,bytes,slices,arrays,evaluation_order	-	-	-
+deref-defined-non-generic	derefDefinedNonGeneric	-	ok	-	calls,closures,conversions,bytes,pointers,defined_type,evaluation_order	-	-	-
+bytes-to-type-param	bytesToTypeParam	-	ok	-	calls,closures,conversions,bytes,pointers,generics,evaluation_order	-	-	-
+runes-to-type-param	runesToTypeParam	-	ok	-	calls,closures,conversions,runes,pointers,generics,evaluation_order	-	-	-
+bytes-to-defined-in-stencil	bytesToDefinedInStencil	-	ok	-	calls,closures,conversions,bytes,pointers,defined_type,generics,evaluation_order	-	-	-
+bytes-to-int-legacy-in-stencil	bytesToIntLegacyInStencil	-	ok	-	calls,closures,conversions,bytes,pointers,arrays,generics,evaluation_order	-	-	-

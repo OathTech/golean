@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 5789 (5476 PASS / 313 FAIL)
+# cases: 5969 (5610 PASS / 359 FAIL)
 # re-pinned: 2026-10-27 [AGENT], lane frontend/fix-hoist-1027 — BUG-276, 277, 278, 279 (the S7 sweep) and BUG-286, 287 (the S9
 #   sweep) FIXED in tools/nativefrontend (the campaign plan's rule that a finding is fixed through the normal train, [USER]
 #   approved 2026-10-27, relayed): (1) emit.go emitBinary binds a `&&`/`||` whose right operand hoists nothing to a temp at
@@ -51,6 +51,205 @@
 #     builtins/sweep-s9-paren-builtin/paren-builtin                                  FAIL/lean-observation cause=error:decoder-scope-undeclared-local → PASS
 #     builtins/sweep-s9-paren-builtin/paren-builtin-cap                              FAIL/lean-observation cause=error:decoder-scope-undeclared-local → PASS
 # cause keyed 2026-10-27 [AGENT coordinator], train-25 stage: BUG-287's two rows `error:?` → `error:decoder-scope-undeclared-local` (the decoder's scope refusal, the row added at the train-24 stage) and BUG-286's single-buffer row `deadlock:?` → `deadlock:machine-deadlock` (a new scripts/machine-causes.tsv row: the machine deadlocked where gc ran); no row moved.
+# re-pinned: 2026-10-27 [AGENT], lane sweep/s8-unseq — the defect-neighbourhood campaign's step 2, shape S8 (spec-unsequenced
+#   order realized as one member; plan docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved 2026-10-27): the
+#   shape's matrix probed on both sides — 149 matrix cells (127 probed by this lane, 19 covered by existing rows, 2 out of scope,
+#   1 duplicate) plus 71 variant cells around the findings (201 probe subjects); every agreement on a distinct cell pinned as a
+#   row (a membership row where the unseq grammar admits the sweep and the enumerated set holds gc's draw, a strict row where the
+#   legacy singleton is gc's) and every DISAGREEMENT rowed RED on a new entry's Cases line. NO existing row moved:
+#   4166 + 180 = 4346; PASS 3901 + 134 = 4035; FAIL 265 + 46 = 311. No flip, no removal, no cause change (no runtime code
+#   changed: corpus and records only). NEW rows (180, 10 packages Corpus/coverage/exec/evalorder/sweep-s8-*/: 78 membership
+#   rows, 102 strict), appended at the end of the file, measured by CAPPED_MEM_MAX=64G capped scripts/ci --diff at the lane
+#   tree (the commit's content, recorded before this re-pin; its only drift: these 180 NEW ids), the rows and their cause keys
+#   taken from that run's artifacts/coverage/latest.tsv (scripts/coverage-cause); the --diff at the tip judges. FINDINGS (four
+#   entries, status open, red-first): BUG-310 (a type assertion, a slice expression or a string slice beside a later mutating
+#   call read AFTER the call wherever the unseq grammar declines the sweep, gc EARLY — 29 rows: 22 FAIL/differential, 7
+#   FAIL/lean-observation where the machine raises a spurious bounds panic, cause key panic:? — an unclassified key the D5
+#   speedbump names; the key is a scripts/machine-causes.tsv row this lane does not edit), BUG-311 (a method value's receiver
+#   bound at one point per form, gc the other on five forms, 5 rows), BUG-312 (the call-free general form — two failing operands
+#   with no event between them — the legacy lexical / targets-then-RHS order where gc raises the other panic, inventory
+#   E3/E4/E12(ii)'s posed envelope, 5 rows), BUG-313 (an allocating conversion whose operand carries a probe stays inline on the
+#   legacy path and reads after the call, gc at the conversion, 7 rows); BUG-314–319 unused. The rows:
+#     evalorder/sweep-s8-contexts/method-body-field                                  PASS/membership
+#     evalorder/sweep-s8-contexts/method-body-assertion                              PASS/membership
+#     evalorder/sweep-s8-contexts/method-body-bytes-conv                             PASS/membership
+#     evalorder/sweep-s8-contexts/closure-local-var                                  PASS/-
+#     evalorder/sweep-s8-contexts/closure-index                                      PASS/-
+#     evalorder/sweep-s8-contexts/closure-deref                                      PASS/-
+#     evalorder/sweep-s8-contexts/closure-bytes-conv                                 PASS/-
+#     evalorder/sweep-s8-contexts/invoked-lit-bytes-conv                             PASS/-
+#     evalorder/sweep-s8-contexts/invoked-lit-local-var                              PASS/-
+#     evalorder/sweep-s8-contexts/deferred-lit-bytes-conv                            PASS/-
+#     evalorder/sweep-s8-contexts/deferred-lit-local-var                             PASS/-
+#     evalorder/sweep-s8-contexts/generic-param-read                                 PASS/-
+#     evalorder/sweep-s8-contexts/generic-deref                                      PASS/-
+#     evalorder/sweep-s8-contexts/generic-index                                      PASS/-
+#     evalorder/sweep-s8-contexts/generic-assert-to-type-param                       PASS/-
+#     evalorder/sweep-s8-contexts/named-result-assertion                             PASS/membership
+#     evalorder/sweep-s8-contexts/loop-body-assertion                                PASS/membership
+#     evalorder/sweep-s8-conv-probed-operand/defined-bytes-non-generic               PASS/-
+#     evalorder/sweep-s8-conv-probed-operand/defined-runes-non-generic               PASS/-
+#     evalorder/sweep-s8-conv-probed-operand/int64-bytes-non-generic                 PASS/membership
+#     evalorder/sweep-s8-conv-probed-operand/ptr-string-bytes-admitted               PASS/membership
+#     evalorder/sweep-s8-conv-probed-operand/slice-elem-bytes-admitted               PASS/membership
+#     evalorder/sweep-s8-conv-probed-operand/array-legacy-bytes-non-generic          PASS/-
+#     evalorder/sweep-s8-conv-probed-operand/bytes-to-int-in-stencil                 PASS/membership
+#     evalorder/sweep-s8-conv-probed-operand/stringbyte-to-type-param                PASS/-
+#     evalorder/sweep-s8-conv-probed-operand/global-in-stencil                       PASS/-
+#     evalorder/sweep-s8-conv-probed-operand/deref-array-non-generic                 FAIL/differential cause=-
+#     evalorder/sweep-s8-conv-probed-operand/slice-elem-array-non-generic            FAIL/differential cause=-
+#     evalorder/sweep-s8-conv-probed-operand/deref-defined-non-generic               FAIL/differential cause=-
+#     evalorder/sweep-s8-conv-probed-operand/bytes-to-type-param                     FAIL/differential cause=-
+#     evalorder/sweep-s8-conv-probed-operand/runes-to-type-param                     FAIL/differential cause=-
+#     evalorder/sweep-s8-conv-probed-operand/bytes-to-defined-in-stencil             FAIL/differential cause=-
+#     evalorder/sweep-s8-conv-probed-operand/bytes-to-int-legacy-in-stencil          FAIL/differential cause=-
+#     evalorder/sweep-s8-early-kinds-legacy/if-cond-assertion                        FAIL/differential cause=-
+#     evalorder/sweep-s8-early-kinds-legacy/for-cond-assertion                       FAIL/differential cause=-
+#     evalorder/sweep-s8-early-kinds-legacy/switch-case-assertion                    FAIL/differential cause=-
+#     evalorder/sweep-s8-early-kinds-legacy/var-spec-assertion                       FAIL/differential cause=-
+#     evalorder/sweep-s8-early-kinds-legacy/send-value-assertion                     FAIL/differential cause=-
+#     evalorder/sweep-s8-early-kinds-legacy/defer-arg-assertion                      FAIL/differential cause=-
+#     evalorder/sweep-s8-early-kinds-legacy/go-arg-assertion                         FAIL/differential cause=-
+#     evalorder/sweep-s8-early-kinds-legacy/closure-body-assertion                   FAIL/differential cause=-
+#     evalorder/sweep-s8-early-kinds-legacy/invoked-lit-assertion                    FAIL/differential cause=-
+#     evalorder/sweep-s8-early-kinds-legacy/deferred-lit-assertion                   FAIL/differential cause=-
+#     evalorder/sweep-s8-early-kinds-legacy/event-iface-method-call-assertion        FAIL/differential cause=-
+#     evalorder/sweep-s8-early-kinds-legacy/iface-param-assertion                    FAIL/differential cause=-
+#     evalorder/sweep-s8-early-kinds-legacy/iface-to-iface-param-assertion           FAIL/differential cause=-
+#     evalorder/sweep-s8-early-kinds-legacy/defined-int-param-assertion              FAIL/differential cause=-
+#     evalorder/sweep-s8-early-kinds-legacy/func-param-assertion                     FAIL/differential cause=-
+#     evalorder/sweep-s8-early-kinds-legacy/array-operand-assertion                  FAIL/differential cause=-
+#     evalorder/sweep-s8-early-kinds-legacy/assertion-left-array-operand             FAIL/differential cause=-
+#     evalorder/sweep-s8-early-kinds-legacy/array-target-assertion                   FAIL/differential cause=-
+#     evalorder/sweep-s8-early-kinds-legacy/if-cond-slice-expr                       FAIL/lean-observation cause=panic:?
+#     evalorder/sweep-s8-early-kinds-legacy/for-cond-slice-expr                      FAIL/lean-observation cause=panic:?
+#     evalorder/sweep-s8-early-kinds-legacy/var-spec-slice-expr                      FAIL/lean-observation cause=panic:?
+#     evalorder/sweep-s8-early-kinds-legacy/defer-arg-slice-expr                     FAIL/lean-observation cause=panic:?
+#     evalorder/sweep-s8-early-kinds-legacy/go-arg-slice-expr                        FAIL/lean-observation cause=panic:?
+#     evalorder/sweep-s8-early-kinds-legacy/defined-int-param-slice-expr             FAIL/lean-observation cause=panic:?
+#     evalorder/sweep-s8-early-kinds-legacy/generic-body-slice-expr                  FAIL/lean-observation cause=panic:?
+#     evalorder/sweep-s8-early-kinds-legacy/if-cond-string-slice                     FAIL/differential cause=-
+#     evalorder/sweep-s8-early-kinds-legacy/var-spec-string-slice                    FAIL/differential cause=-
+#     evalorder/sweep-s8-early-kinds-legacy/defer-arg-string-slice                   FAIL/differential cause=-
+#     evalorder/sweep-s8-early-kinds-legacy/closure-body-string-slice                FAIL/differential cause=-
+#     evalorder/sweep-s8-early-kinds-legacy/ctl-struct-param-assertion               PASS/membership
+#     evalorder/sweep-s8-early-kinds-legacy/ctl-pointer-param-assertion              PASS/membership
+#     evalorder/sweep-s8-early-kinds-legacy/ctl-string-param-assertion               PASS/membership
+#     evalorder/sweep-s8-early-kinds-legacy/ctl-slice-param-assertion                PASS/membership
+#     evalorder/sweep-s8-general-form/two-index-binary                               PASS/-
+#     evalorder/sweep-s8-general-form/two-index-args                                 PASS/-
+#     evalorder/sweep-s8-general-form/two-index-literal                              PASS/-
+#     evalorder/sweep-s8-general-form/index-left-of-zero-divisor                     PASS/-
+#     evalorder/sweep-s8-general-form/assertion-left-of-index                        PASS/-
+#     evalorder/sweep-s8-general-form/index-left-of-assertion                        FAIL/differential cause=-
+#     evalorder/sweep-s8-general-form/tuple-target-panic-vs-rhs-panic                FAIL/differential cause=-
+#     evalorder/sweep-s8-general-form/single-target-panic-vs-rhs-panic               FAIL/differential cause=-
+#     evalorder/sweep-s8-general-form/three-panicking-targets                        FAIL/differential cause=-
+#     evalorder/sweep-s8-general-form/two-panicking-map-keys                         FAIL/differential cause=-
+#     evalorder/sweep-s8-method-values/value-method-value-call-arg                   PASS/-
+#     evalorder/sweep-s8-method-values/ptr-method-value-call-arg                     PASS/-
+#     evalorder/sweep-s8-method-values/value-method-value-return-list                PASS/-
+#     evalorder/sweep-s8-method-values/value-method-value-struct-lit                 PASS/-
+#     evalorder/sweep-s8-method-values/value-method-value-tuple                      PASS/-
+#     evalorder/sweep-s8-method-values/func-slice-lit-with-call-elem                 PASS/-
+#     evalorder/sweep-s8-method-values/iface-method-value-any-slice-lit              PASS/-
+#     evalorder/sweep-s8-method-values/value-method-value-map-lit                    PASS/-
+#     evalorder/sweep-s8-method-values/func-slice-lit-indexed-by-call                FAIL/differential cause=-
+#     evalorder/sweep-s8-method-values/iface-method-value-call-arg                   FAIL/differential cause=-
+#     evalorder/sweep-s8-method-values/value-method-value-any-slice-lit              FAIL/differential cause=-
+#     evalorder/sweep-s8-method-values/iface-method-value-return-list                FAIL/differential cause=-
+#     evalorder/sweep-s8-method-values/iface-method-value-tuple                      FAIL/differential cause=-
+#     evalorder/sweep-s8-operand-kinds/local-var                                     PASS/membership
+#     evalorder/sweep-s8-operand-kinds/slice-base-rebound                            PASS/membership
+#     evalorder/sweep-s8-operand-kinds/map-key-mutated                               PASS/membership
+#     evalorder/sweep-s8-operand-kinds/map-rebound                                   PASS/membership
+#     evalorder/sweep-s8-operand-kinds/map-entry-deleted                             PASS/membership
+#     evalorder/sweep-s8-operand-kinds/ptr-field-redirected                          PASS/membership
+#     evalorder/sweep-s8-operand-kinds/struct-value-field                            PASS/membership
+#     evalorder/sweep-s8-operand-kinds/int64-conversion                              PASS/membership
+#     evalorder/sweep-s8-operand-kinds/runes-conversion                              PASS/membership
+#     evalorder/sweep-s8-operand-kinds/division                                      PASS/membership
+#     evalorder/sweep-s8-operand-kinds/modulo                                        PASS/membership
+#     evalorder/sweep-s8-operand-kinds/shift                                         PASS/membership
+#     evalorder/sweep-s8-operand-kinds/assertion-reboxed                             PASS/membership
+#     evalorder/sweep-s8-operand-kinds/slice-high-bound                              PASS/membership
+#     evalorder/sweep-s8-operand-kinds/string-reassigned                             PASS/membership
+#     evalorder/sweep-s8-operand-kinds/unary-minus                                   PASS/membership
+#     evalorder/sweep-s8-operand-kinds/callee-var-vs-arg-call                        PASS/membership
+#     evalorder/sweep-s8-operand-kinds/deref-nil-after-call                          PASS/membership
+#     evalorder/sweep-s8-operand-kinds/nested-index                                  PASS/membership
+#     evalorder/sweep-s8-operand-kinds/index-then-field                              PASS/membership
+#     evalorder/sweep-s8-operand-kinds/array-elem                                    PASS/-
+#     evalorder/sweep-s8-operand-kinds/ptr-array-elem                                PASS/-
+#     evalorder/sweep-s8-operand-kinds/defined-conversion                            PASS/-
+#     evalorder/sweep-s8-operand-kinds/float-conversion                              PASS/-
+#     evalorder/sweep-s8-operand-kinds/len-chan-vs-send                              PASS/-
+#     evalorder/sweep-s8-operand-kinds/len-map-vs-insert                             PASS/-
+#     evalorder/sweep-s8-operand-kinds/cap-vs-grow                                   PASS/-
+#     evalorder/sweep-s8-operand-kinds/iface-compare-value                           PASS/-
+#     evalorder/sweep-s8-operand-kinds/box-any-vs-write                              PASS/-
+#     evalorder/sweep-s8-positions/arg-local-var                                     PASS/membership
+#     evalorder/sweep-s8-positions/arg-deref                                         PASS/membership
+#     evalorder/sweep-s8-positions/arg-assertion                                     PASS/membership
+#     evalorder/sweep-s8-positions/arg-bytes-conv                                    PASS/membership
+#     evalorder/sweep-s8-positions/arg-string-slice                                  PASS/membership
+#     evalorder/sweep-s8-positions/slice-lit-deref                                   PASS/membership
+#     evalorder/sweep-s8-positions/slice-lit-assertion                               PASS/membership
+#     evalorder/sweep-s8-positions/slice-lit-bytes-conv                              PASS/membership
+#     evalorder/sweep-s8-positions/struct-lit-index                                  PASS/membership
+#     evalorder/sweep-s8-positions/map-lit-assertion-key                             PASS/membership
+#     evalorder/sweep-s8-positions/array-lit-local-var                               PASS/-
+#     evalorder/sweep-s8-positions/index-base-slice                                  PASS/membership
+#     evalorder/sweep-s8-positions/index-base-map                                    PASS/membership
+#     evalorder/sweep-s8-positions/index-base-ptr-field                              PASS/membership
+#     evalorder/sweep-s8-positions/index-base-nested                                 PASS/membership
+#     evalorder/sweep-s8-positions/send-chan-vs-value-call                           PASS/-
+#     evalorder/sweep-s8-positions/target-map-key                                    PASS/membership
+#     evalorder/sweep-s8-positions/target-ptr-field                                  PASS/membership
+#     evalorder/sweep-s8-positions/target-array-elem                                 PASS/-
+#     evalorder/sweep-s8-positions/target-assertion-index                            PASS/membership
+#     evalorder/sweep-s8-positions/tuple-assertion                                   PASS/membership
+#     evalorder/sweep-s8-positions/tuple-deref                                       PASS/membership
+#     evalorder/sweep-s8-positions/return-assertion                                  PASS/membership
+#     evalorder/sweep-s8-positions/return-deref                                      PASS/membership
+#     evalorder/sweep-s8-positions/return-slice-expr                                 PASS/membership
+#     evalorder/sweep-s8-positions/if-cond-local-var                                 PASS/-
+#     evalorder/sweep-s8-positions/if-cond-index                                     PASS/-
+#     evalorder/sweep-s8-positions/for-cond-local-var                                PASS/-
+#     evalorder/sweep-s8-positions/switch-tag-local-var                              PASS/-
+#     evalorder/sweep-s8-positions/switch-tag-assertion                              PASS/-
+#     evalorder/sweep-s8-positions/switch-case-index                                 PASS/-
+#     evalorder/sweep-s8-positions/right-local-var                                   PASS/membership
+#     evalorder/sweep-s8-positions/right-assertion                                   PASS/membership
+#     evalorder/sweep-s8-positions/right-bytes-conv                                  PASS/membership
+#     evalorder/sweep-s8-positions/defer-arg-bytes-conv                              PASS/-
+#     evalorder/sweep-s8-positions/defer-arg-local-var                               PASS/-
+#     evalorder/sweep-s8-positions/var-spec-local-var                                PASS/-
+#     evalorder/sweep-s8-positions/receiver-var-vs-arg-call                          PASS/membership
+#     evalorder/sweep-s8-positions/compound-local-var                                PASS/membership
+#     evalorder/sweep-s8-positions/compound-array-elem                               PASS/-
+#     evalorder/sweep-s8-positions/compound-string                                   PASS/membership
+#     evalorder/sweep-s8-sibling-events/method-call-local-var                        PASS/membership
+#     evalorder/sweep-s8-sibling-events/method-call-index                            PASS/membership
+#     evalorder/sweep-s8-sibling-events/method-call-deref                            PASS/membership
+#     evalorder/sweep-s8-sibling-events/method-call-assertion                        PASS/membership
+#     evalorder/sweep-s8-sibling-events/method-call-bytes-conv                       PASS/membership
+#     evalorder/sweep-s8-sibling-events/iface-method-call-local-var                  PASS/-
+#     evalorder/sweep-s8-sibling-events/generic-call-local-var                       PASS/-
+#     evalorder/sweep-s8-sibling-events/method-value-call-local-var                  PASS/membership
+#     evalorder/sweep-s8-sibling-events/method-expr-call-local-var                   PASS/-
+#     evalorder/sweep-s8-sibling-events/promoted-call-local-var                      PASS/-
+#     evalorder/sweep-s8-sibling-events/recv-vs-index-panic                          PASS/membership
+#     evalorder/sweep-s8-sibling-events/recv-vs-nil-deref                            PASS/membership
+#     evalorder/sweep-s8-sibling-events/recv-vs-string-slice-panic                   PASS/membership
+#     evalorder/sweep-s8-sibling-events/panicking-call-vs-assertion                  PASS/membership
+#     evalorder/sweep-s8-sibling-events/panicking-call-vs-nil-deref                  PASS/membership
+#     evalorder/sweep-s8-sibling-events/panicking-call-vs-string-slice               PASS/membership
+#     evalorder/sweep-s8-sibling-events/invoked-lit-local-var                        PASS/membership
+#     evalorder/sweep-s8-sibling-events/invoked-lit-index                            PASS/membership
+#     evalorder/sweep-s8-target-side/later-target-operand-vs-earlier-call            PASS/membership
+#     evalorder/sweep-s8-target-side/two-panicking-targets-multi-call                PASS/membership
+#     evalorder/sweep-s8-target-side/target-panic-vs-rhs-panic-with-call             PASS/membership
 # re-pinned: 2026-10-27 [AGENT], lane sweep/s13-binding — the defect-neighbourhood campaign's S13 sweep (variable binding: scoping,
 #   shadowing, per-iteration cells; docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved 2026-10-27; the matrix and
 #   every cell's disposition on the `- Neighbourhood:` lines of BUG-069/068/148/003/142). NO existing row moved: 4166 + 197 = 4363;
@@ -9987,3 +10186,183 @@ PASS	scoping/sweep-s13-type-switch-guards/nil-clause	-	-
 PASS	scoping/sweep-s13-type-switch-guards/per-iteration-capture	-	-
 PASS	scoping/sweep-s13-type-switch-guards/shadows-param	-	-
 PASS	scoping/sweep-s13-type-switch-guards/with-init	-	-
+PASS	evalorder/sweep-s8-contexts/method-body-field	membership	-
+PASS	evalorder/sweep-s8-contexts/method-body-assertion	membership	-
+PASS	evalorder/sweep-s8-contexts/method-body-bytes-conv	membership	-
+PASS	evalorder/sweep-s8-contexts/closure-local-var	-	-
+PASS	evalorder/sweep-s8-contexts/closure-index	-	-
+PASS	evalorder/sweep-s8-contexts/closure-deref	-	-
+PASS	evalorder/sweep-s8-contexts/closure-bytes-conv	-	-
+PASS	evalorder/sweep-s8-contexts/invoked-lit-bytes-conv	-	-
+PASS	evalorder/sweep-s8-contexts/invoked-lit-local-var	-	-
+PASS	evalorder/sweep-s8-contexts/deferred-lit-bytes-conv	-	-
+PASS	evalorder/sweep-s8-contexts/deferred-lit-local-var	-	-
+PASS	evalorder/sweep-s8-contexts/generic-param-read	-	-
+PASS	evalorder/sweep-s8-contexts/generic-deref	-	-
+PASS	evalorder/sweep-s8-contexts/generic-index	-	-
+PASS	evalorder/sweep-s8-contexts/generic-assert-to-type-param	-	-
+PASS	evalorder/sweep-s8-contexts/named-result-assertion	membership	-
+PASS	evalorder/sweep-s8-contexts/loop-body-assertion	membership	-
+PASS	evalorder/sweep-s8-conv-probed-operand/defined-bytes-non-generic	-	-
+PASS	evalorder/sweep-s8-conv-probed-operand/defined-runes-non-generic	-	-
+PASS	evalorder/sweep-s8-conv-probed-operand/int64-bytes-non-generic	membership	-
+PASS	evalorder/sweep-s8-conv-probed-operand/ptr-string-bytes-admitted	membership	-
+PASS	evalorder/sweep-s8-conv-probed-operand/slice-elem-bytes-admitted	membership	-
+PASS	evalorder/sweep-s8-conv-probed-operand/array-legacy-bytes-non-generic	-	-
+PASS	evalorder/sweep-s8-conv-probed-operand/bytes-to-int-in-stencil	membership	-
+PASS	evalorder/sweep-s8-conv-probed-operand/stringbyte-to-type-param	-	-
+PASS	evalorder/sweep-s8-conv-probed-operand/global-in-stencil	-	-
+FAIL	evalorder/sweep-s8-conv-probed-operand/deref-array-non-generic	differential	-
+FAIL	evalorder/sweep-s8-conv-probed-operand/slice-elem-array-non-generic	differential	-
+FAIL	evalorder/sweep-s8-conv-probed-operand/deref-defined-non-generic	differential	-
+FAIL	evalorder/sweep-s8-conv-probed-operand/bytes-to-type-param	differential	-
+FAIL	evalorder/sweep-s8-conv-probed-operand/runes-to-type-param	differential	-
+FAIL	evalorder/sweep-s8-conv-probed-operand/bytes-to-defined-in-stencil	differential	-
+FAIL	evalorder/sweep-s8-conv-probed-operand/bytes-to-int-legacy-in-stencil	differential	-
+FAIL	evalorder/sweep-s8-early-kinds-legacy/if-cond-assertion	differential	-
+FAIL	evalorder/sweep-s8-early-kinds-legacy/for-cond-assertion	differential	-
+FAIL	evalorder/sweep-s8-early-kinds-legacy/switch-case-assertion	differential	-
+FAIL	evalorder/sweep-s8-early-kinds-legacy/var-spec-assertion	differential	-
+FAIL	evalorder/sweep-s8-early-kinds-legacy/send-value-assertion	differential	-
+FAIL	evalorder/sweep-s8-early-kinds-legacy/defer-arg-assertion	differential	-
+FAIL	evalorder/sweep-s8-early-kinds-legacy/go-arg-assertion	differential	-
+FAIL	evalorder/sweep-s8-early-kinds-legacy/closure-body-assertion	differential	-
+FAIL	evalorder/sweep-s8-early-kinds-legacy/invoked-lit-assertion	differential	-
+FAIL	evalorder/sweep-s8-early-kinds-legacy/deferred-lit-assertion	differential	-
+FAIL	evalorder/sweep-s8-early-kinds-legacy/event-iface-method-call-assertion	differential	-
+FAIL	evalorder/sweep-s8-early-kinds-legacy/iface-param-assertion	differential	-
+FAIL	evalorder/sweep-s8-early-kinds-legacy/iface-to-iface-param-assertion	differential	-
+FAIL	evalorder/sweep-s8-early-kinds-legacy/defined-int-param-assertion	differential	-
+FAIL	evalorder/sweep-s8-early-kinds-legacy/func-param-assertion	differential	-
+FAIL	evalorder/sweep-s8-early-kinds-legacy/array-operand-assertion	differential	-
+FAIL	evalorder/sweep-s8-early-kinds-legacy/assertion-left-array-operand	differential	-
+FAIL	evalorder/sweep-s8-early-kinds-legacy/array-target-assertion	differential	-
+FAIL	evalorder/sweep-s8-early-kinds-legacy/if-cond-slice-expr	lean-observation	panic:?
+FAIL	evalorder/sweep-s8-early-kinds-legacy/for-cond-slice-expr	lean-observation	panic:?
+FAIL	evalorder/sweep-s8-early-kinds-legacy/var-spec-slice-expr	lean-observation	panic:?
+FAIL	evalorder/sweep-s8-early-kinds-legacy/defer-arg-slice-expr	lean-observation	panic:?
+FAIL	evalorder/sweep-s8-early-kinds-legacy/go-arg-slice-expr	lean-observation	panic:?
+FAIL	evalorder/sweep-s8-early-kinds-legacy/defined-int-param-slice-expr	lean-observation	panic:?
+FAIL	evalorder/sweep-s8-early-kinds-legacy/generic-body-slice-expr	lean-observation	panic:?
+FAIL	evalorder/sweep-s8-early-kinds-legacy/if-cond-string-slice	differential	-
+FAIL	evalorder/sweep-s8-early-kinds-legacy/var-spec-string-slice	differential	-
+FAIL	evalorder/sweep-s8-early-kinds-legacy/defer-arg-string-slice	differential	-
+FAIL	evalorder/sweep-s8-early-kinds-legacy/closure-body-string-slice	differential	-
+PASS	evalorder/sweep-s8-early-kinds-legacy/ctl-struct-param-assertion	membership	-
+PASS	evalorder/sweep-s8-early-kinds-legacy/ctl-pointer-param-assertion	membership	-
+PASS	evalorder/sweep-s8-early-kinds-legacy/ctl-string-param-assertion	membership	-
+PASS	evalorder/sweep-s8-early-kinds-legacy/ctl-slice-param-assertion	membership	-
+PASS	evalorder/sweep-s8-general-form/two-index-binary	-	-
+PASS	evalorder/sweep-s8-general-form/two-index-args	-	-
+PASS	evalorder/sweep-s8-general-form/two-index-literal	-	-
+PASS	evalorder/sweep-s8-general-form/index-left-of-zero-divisor	-	-
+PASS	evalorder/sweep-s8-general-form/assertion-left-of-index	-	-
+FAIL	evalorder/sweep-s8-general-form/index-left-of-assertion	differential	-
+FAIL	evalorder/sweep-s8-general-form/tuple-target-panic-vs-rhs-panic	differential	-
+FAIL	evalorder/sweep-s8-general-form/single-target-panic-vs-rhs-panic	differential	-
+FAIL	evalorder/sweep-s8-general-form/three-panicking-targets	differential	-
+FAIL	evalorder/sweep-s8-general-form/two-panicking-map-keys	differential	-
+PASS	evalorder/sweep-s8-method-values/value-method-value-call-arg	-	-
+PASS	evalorder/sweep-s8-method-values/ptr-method-value-call-arg	-	-
+PASS	evalorder/sweep-s8-method-values/value-method-value-return-list	-	-
+PASS	evalorder/sweep-s8-method-values/value-method-value-struct-lit	-	-
+PASS	evalorder/sweep-s8-method-values/value-method-value-tuple	-	-
+PASS	evalorder/sweep-s8-method-values/func-slice-lit-with-call-elem	-	-
+PASS	evalorder/sweep-s8-method-values/iface-method-value-any-slice-lit	-	-
+PASS	evalorder/sweep-s8-method-values/value-method-value-map-lit	-	-
+FAIL	evalorder/sweep-s8-method-values/func-slice-lit-indexed-by-call	differential	-
+FAIL	evalorder/sweep-s8-method-values/iface-method-value-call-arg	differential	-
+FAIL	evalorder/sweep-s8-method-values/value-method-value-any-slice-lit	differential	-
+FAIL	evalorder/sweep-s8-method-values/iface-method-value-return-list	differential	-
+FAIL	evalorder/sweep-s8-method-values/iface-method-value-tuple	differential	-
+PASS	evalorder/sweep-s8-operand-kinds/local-var	membership	-
+PASS	evalorder/sweep-s8-operand-kinds/slice-base-rebound	membership	-
+PASS	evalorder/sweep-s8-operand-kinds/map-key-mutated	membership	-
+PASS	evalorder/sweep-s8-operand-kinds/map-rebound	membership	-
+PASS	evalorder/sweep-s8-operand-kinds/map-entry-deleted	membership	-
+PASS	evalorder/sweep-s8-operand-kinds/ptr-field-redirected	membership	-
+PASS	evalorder/sweep-s8-operand-kinds/struct-value-field	membership	-
+PASS	evalorder/sweep-s8-operand-kinds/int64-conversion	membership	-
+PASS	evalorder/sweep-s8-operand-kinds/runes-conversion	membership	-
+PASS	evalorder/sweep-s8-operand-kinds/division	membership	-
+PASS	evalorder/sweep-s8-operand-kinds/modulo	membership	-
+PASS	evalorder/sweep-s8-operand-kinds/shift	membership	-
+PASS	evalorder/sweep-s8-operand-kinds/assertion-reboxed	membership	-
+PASS	evalorder/sweep-s8-operand-kinds/slice-high-bound	membership	-
+PASS	evalorder/sweep-s8-operand-kinds/string-reassigned	membership	-
+PASS	evalorder/sweep-s8-operand-kinds/unary-minus	membership	-
+PASS	evalorder/sweep-s8-operand-kinds/callee-var-vs-arg-call	membership	-
+PASS	evalorder/sweep-s8-operand-kinds/deref-nil-after-call	membership	-
+PASS	evalorder/sweep-s8-operand-kinds/nested-index	membership	-
+PASS	evalorder/sweep-s8-operand-kinds/index-then-field	membership	-
+PASS	evalorder/sweep-s8-operand-kinds/array-elem	-	-
+PASS	evalorder/sweep-s8-operand-kinds/ptr-array-elem	-	-
+PASS	evalorder/sweep-s8-operand-kinds/defined-conversion	-	-
+PASS	evalorder/sweep-s8-operand-kinds/float-conversion	-	-
+PASS	evalorder/sweep-s8-operand-kinds/len-chan-vs-send	-	-
+PASS	evalorder/sweep-s8-operand-kinds/len-map-vs-insert	-	-
+PASS	evalorder/sweep-s8-operand-kinds/cap-vs-grow	-	-
+PASS	evalorder/sweep-s8-operand-kinds/iface-compare-value	-	-
+PASS	evalorder/sweep-s8-operand-kinds/box-any-vs-write	-	-
+PASS	evalorder/sweep-s8-positions/arg-local-var	membership	-
+PASS	evalorder/sweep-s8-positions/arg-deref	membership	-
+PASS	evalorder/sweep-s8-positions/arg-assertion	membership	-
+PASS	evalorder/sweep-s8-positions/arg-bytes-conv	membership	-
+PASS	evalorder/sweep-s8-positions/arg-string-slice	membership	-
+PASS	evalorder/sweep-s8-positions/slice-lit-deref	membership	-
+PASS	evalorder/sweep-s8-positions/slice-lit-assertion	membership	-
+PASS	evalorder/sweep-s8-positions/slice-lit-bytes-conv	membership	-
+PASS	evalorder/sweep-s8-positions/struct-lit-index	membership	-
+PASS	evalorder/sweep-s8-positions/map-lit-assertion-key	membership	-
+PASS	evalorder/sweep-s8-positions/array-lit-local-var	-	-
+PASS	evalorder/sweep-s8-positions/index-base-slice	membership	-
+PASS	evalorder/sweep-s8-positions/index-base-map	membership	-
+PASS	evalorder/sweep-s8-positions/index-base-ptr-field	membership	-
+PASS	evalorder/sweep-s8-positions/index-base-nested	membership	-
+PASS	evalorder/sweep-s8-positions/send-chan-vs-value-call	-	-
+PASS	evalorder/sweep-s8-positions/target-map-key	membership	-
+PASS	evalorder/sweep-s8-positions/target-ptr-field	membership	-
+PASS	evalorder/sweep-s8-positions/target-array-elem	-	-
+PASS	evalorder/sweep-s8-positions/target-assertion-index	membership	-
+PASS	evalorder/sweep-s8-positions/tuple-assertion	membership	-
+PASS	evalorder/sweep-s8-positions/tuple-deref	membership	-
+PASS	evalorder/sweep-s8-positions/return-assertion	membership	-
+PASS	evalorder/sweep-s8-positions/return-deref	membership	-
+PASS	evalorder/sweep-s8-positions/return-slice-expr	membership	-
+PASS	evalorder/sweep-s8-positions/if-cond-local-var	-	-
+PASS	evalorder/sweep-s8-positions/if-cond-index	-	-
+PASS	evalorder/sweep-s8-positions/for-cond-local-var	-	-
+PASS	evalorder/sweep-s8-positions/switch-tag-local-var	-	-
+PASS	evalorder/sweep-s8-positions/switch-tag-assertion	-	-
+PASS	evalorder/sweep-s8-positions/switch-case-index	-	-
+PASS	evalorder/sweep-s8-positions/right-local-var	membership	-
+PASS	evalorder/sweep-s8-positions/right-assertion	membership	-
+PASS	evalorder/sweep-s8-positions/right-bytes-conv	membership	-
+PASS	evalorder/sweep-s8-positions/defer-arg-bytes-conv	-	-
+PASS	evalorder/sweep-s8-positions/defer-arg-local-var	-	-
+PASS	evalorder/sweep-s8-positions/var-spec-local-var	-	-
+PASS	evalorder/sweep-s8-positions/receiver-var-vs-arg-call	membership	-
+PASS	evalorder/sweep-s8-positions/compound-local-var	membership	-
+PASS	evalorder/sweep-s8-positions/compound-array-elem	-	-
+PASS	evalorder/sweep-s8-positions/compound-string	membership	-
+PASS	evalorder/sweep-s8-sibling-events/method-call-local-var	membership	-
+PASS	evalorder/sweep-s8-sibling-events/method-call-index	membership	-
+PASS	evalorder/sweep-s8-sibling-events/method-call-deref	membership	-
+PASS	evalorder/sweep-s8-sibling-events/method-call-assertion	membership	-
+PASS	evalorder/sweep-s8-sibling-events/method-call-bytes-conv	membership	-
+PASS	evalorder/sweep-s8-sibling-events/iface-method-call-local-var	-	-
+PASS	evalorder/sweep-s8-sibling-events/generic-call-local-var	-	-
+PASS	evalorder/sweep-s8-sibling-events/method-value-call-local-var	membership	-
+PASS	evalorder/sweep-s8-sibling-events/method-expr-call-local-var	-	-
+PASS	evalorder/sweep-s8-sibling-events/promoted-call-local-var	-	-
+PASS	evalorder/sweep-s8-sibling-events/recv-vs-index-panic	membership	-
+PASS	evalorder/sweep-s8-sibling-events/recv-vs-nil-deref	membership	-
+PASS	evalorder/sweep-s8-sibling-events/recv-vs-string-slice-panic	membership	-
+PASS	evalorder/sweep-s8-sibling-events/panicking-call-vs-assertion	membership	-
+PASS	evalorder/sweep-s8-sibling-events/panicking-call-vs-nil-deref	membership	-
+PASS	evalorder/sweep-s8-sibling-events/panicking-call-vs-string-slice	membership	-
+PASS	evalorder/sweep-s8-sibling-events/invoked-lit-local-var	membership	-
+PASS	evalorder/sweep-s8-sibling-events/invoked-lit-index	membership	-
+PASS	evalorder/sweep-s8-target-side/later-target-operand-vs-earlier-call	membership	-
+PASS	evalorder/sweep-s8-target-side/two-panicking-targets-multi-call	membership	-
+PASS	evalorder/sweep-s8-target-side/target-panic-vs-rhs-panic-with-call	membership	-

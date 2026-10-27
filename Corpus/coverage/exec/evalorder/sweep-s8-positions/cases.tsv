@@ -1,0 +1,47 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# Sweep S8 (lane sweep/s8-unseq, 2026-10-27): positions × kinds beside a mutating sibling call. Membership rows: the
+# ONE consumption site is the unseq scheduler's pick (unseqNext); members = the operand read before / after the call;
+# gc LATE except on the type-assertion, slice-expression and []byte rows (EARLY). Strict rows: the grammar declines the
+# statement form (if/for/switch conditions, the send statement, var specs, defer arguments, arrays) and the legacy
+# call-first order is gc's. The early kinds at those declined forms are BUG-310's rows (sweep-s8-early-kinds-legacy).
+arg-local-var	argLocalVar	-	ok	-	calls,closures,evaluation_order,nondet	membership	`sink(x, set())`, set writing x: two arguments of one call are siblings; one unseq pick. members {110, 510}; gc 510	width=3,sites=8,members=2
+arg-deref	argDeref	-	ok	-	calls,closures,evaluation_order,pointers,nondet	membership	`sink(*p, red())`, red redirecting p; one unseq pick. members {110, 510}; gc 510	width=3,sites=8,members=2
+arg-assertion	argAssertion	-	ok	-	calls,closures,evaluation_order,type_assertions,interfaces,nondet	membership	`sink(iv.(int), set())`, set re-boxing iv (the value axis of e13-sibling-panic-order/assert-arg-sibling); one unseq pick. members {110 early, 510 late}; gc 110	width=3,sites=8,members=2
+arg-bytes-conv	argBytesConv	-	ok	-	calls,closures,evaluation_order,conversions,bytes,strings,nondet	membership	`sink(int([]byte(s)[0]), set())`, set reassigning s; one unseq pick. members {9701 early, 12201 late}; gc 9701	width=3,sites=8,members=2
+arg-string-slice	argStringSlice	-	ok	-	calls,closures,evaluation_order,slicing,strings,nondet	membership	`sink(int(str[1:][0]), f())`, f reassigning str: the string slice vs the call (E5e: gc takes the string slice early); one unseq pick. members {9801 early, 12201 late}; gc 9801	width=4,sites=8,members=2
+slice-lit-deref	sliceLitDeref	-	ok	-	calls,closures,evaluation_order,pointers,literals,slices,nondet	membership	`[]int{*p, red()}`, red redirecting p: literal elements are siblings; one unseq pick. members {110, 510}; gc 510	width=3,sites=8,members=2
+slice-lit-assertion	sliceLitAssertion	-	ok	-	calls,closures,evaluation_order,type_assertions,literals,slices,nondet	membership	`[]int{iv.(int), set()}`, set re-boxing iv; one unseq pick. members {110 early, 510 late}; gc 110	width=3,sites=8,members=2
+slice-lit-bytes-conv	sliceLitBytesConv	-	ok	-	calls,closures,evaluation_order,conversions,bytes,literals,slices,nondet	membership	`[]int{int([]byte(s)[0]), set()}`; one unseq pick. members {9701, 12201}; gc 9701	width=3,sites=8,members=2
+struct-lit-index	structLitIndex	-	ok	-	calls,closures,evaluation_order,structs,literals,slices,nondet	membership	`R2{a: s[i], b: set()}`, set writing i; one unseq pick. members {110, 510}; gc 510	width=3,sites=8,members=2
+map-lit-assertion-key	mapLitAssertionKey	-	ok	-	calls,closures,evaluation_order,maps,literals,type_assertions,nondet	membership	`map[int]int{iv.(int): set()}`, set re-boxing iv: the key's assertion vs the value's call inside one literal (E5c: a map literal is an allocate body, its entries occurrences); one unseq pick. members {1000 (key first: m[1]=10), 10 (call first: m[5]=10)}; gc 1000	width=3,sites=8,members=2
+array-lit-local-var	arrayLitLocalVar	-	ok	-	calls,closures,evaluation_order,arrays,literals	-	-	-
+index-base-slice	indexBaseSlice	-	ok	-	calls,closures,evaluation_order,slices,indexing,nondet	membership	`s[f()]`, f rebinding s: «the evaluation and indexing of x» vs the index call; one unseq pick. members {2 (header first), 6}; gc 6	width=3,sites=8,members=2
+index-base-map	indexBaseMap	-	ok	-	calls,closures,evaluation_order,maps,nondet	membership	`m[f()]`, f rebinding m; one unseq pick. members {2, 6}; gc 6	width=3,sites=8,members=2
+index-base-ptr-field	indexBasePtrField	-	ok	-	calls,closures,evaluation_order,pointers,fields,slices,nondet	membership	`p.arr[f()]`, f redirecting p; one unseq pick. members {2, 6}; gc 6	width=3,sites=8,members=2
+index-base-nested	indexBaseNested	-	ok	-	calls,closures,evaluation_order,slices,indexing,nested,nondet	membership	`s[i][f()]`, f writing i; one unseq pick. members {2, 6}; gc 6	width=3,sites=8,members=2
+send-chan-vs-value-call	sendChanVsValueCall	-	ok	-	calls,closures,evaluation_order,channels	-	-	-
+target-map-key	targetMapKey	-	ok	-	calls,closures,evaluation_order,maps,assignment,nondet	membership	`m[k] = f()`, f writing k: the target's key (phase 1) vs the right-hand call — the frozen mapElem plan before or after the call; one unseq pick. members {70, 7}; gc 7	width=3,sites=8,members=2
+target-ptr-field	targetPtrField	-	ok	-	calls,closures,evaluation_order,pointers,fields,assignment,nondet	membership	`p.n = f()`, f redirecting p: the frozen pointer plan before or after the call; one unseq pick. members {70, 7}; gc 7	width=3,sites=8,members=2
+target-array-elem	targetArrayElem	-	ok	-	calls,closures,evaluation_order,arrays,assignment	-	-	-
+target-assertion-index	targetAssertionIndex	-	ok	-	calls,closures,evaluation_order,type_assertions,slices,assignment,nondet	membership	`x[iv.(int)] = f()`, f re-boxing iv: the target's assertion (phase 1) vs the call (the value axis of e13-sibling-panic-order/tgt-assert-vs-call); one unseq pick. members {70 early, 7 late}; gc 70	width=3,sites=8,members=2
+tuple-assertion	tupleAssertion	-	ok	-	calls,closures,evaluation_order,type_assertions,multi_assign,nondet	membership	`a, b := iv.(int), f()`, f re-boxing iv; one unseq pick. members {110 early, 510}; gc 110	width=3,sites=8,members=2
+tuple-deref	tupleDeref	-	ok	-	calls,closures,evaluation_order,pointers,multi_assign,nondet	membership	`a, b := *p, f()`, f redirecting p; one unseq pick. members {110, 510}; gc 510	width=3,sites=8,members=2
+return-assertion	returnAssertion	-	ok	-	calls,closures,evaluation_order,type_assertions,multi_result,returns,nondet	membership	`return iv.(int), set()` in a two-result function, set re-boxing iv; one unseq pick. members {110 early, 510}; gc 110	width=3,sites=8,members=2
+return-deref	returnDeref	-	ok	-	calls,closures,evaluation_order,pointers,multi_result,returns,nondet	membership	`return *p, red()`, red redirecting p; one unseq pick. members {110, 510}; gc 510	width=3,sites=8,members=2
+return-slice-expr	returnSliceExpr	-	ok	-	calls,closures,evaluation_order,slicing,slices,multi_result,returns,nondet	membership	`return s[j:][0], f()`, f moving j out of range: the slice expression before the call (510) or after it (the bounds panic) — statuses=ok+panic; one unseq pick. members {510, panic}; gc 510	width=4,sites=8,members=2,statuses=ok+panic
+if-cond-local-var	ifCondLocalVar	-	ok	-	calls,closures,evaluation_order,if,control_flow	-	-	-
+if-cond-index	ifCondIndex	-	ok	-	calls,closures,evaluation_order,if,slices,control_flow	-	-	-
+for-cond-local-var	forCondLocalVar	-	ok	-	calls,closures,evaluation_order,loops,control_flow	-	-	-
+switch-tag-local-var	switchTagLocalVar	-	ok	-	calls,closures,evaluation_order,switch,control_flow	-	-	-
+switch-tag-assertion	switchTagAssertion	-	ok	-	calls,closures,evaluation_order,switch,type_assertions,control_flow	-	-	-
+switch-case-index	switchCaseIndex	-	ok	-	calls,closures,evaluation_order,switch,slices,control_flow	-	-	-
+right-local-var	rightLocalVar	-	ok	-	calls,closures,evaluation_order,nondet	membership	`f() + x`, f writing x: the operand RIGHT of the call is unsequenced against it too (E13 residual (1) retired at Stage C); one unseq pick. members {11, 15}; gc 15	width=3,sites=8,members=2
+right-assertion	rightAssertion	-	ok	-	calls,closures,evaluation_order,type_assertions,nondet	membership	`f() + iv.(int)`, f re-boxing iv; one unseq pick. members {11, 15}; gc 15 (the call is lexically first: gc hoists it ahead of the assertion's copy)	width=3,sites=8,members=2
+right-bytes-conv	rightBytesConv	-	ok	-	calls,closures,evaluation_order,conversions,bytes,nondet	membership	`f() + int([]byte(s)[0])`; one unseq pick. members {98, 123}; gc 123	width=3,sites=8,members=2
+defer-arg-bytes-conv	deferArgBytesConv	-	ok	-	calls,closures,evaluation_order,defer,conversions,bytes	-	-	-
+defer-arg-local-var	deferArgLocalVar	-	ok	-	calls,closures,evaluation_order,defer	-	-	-
+var-spec-local-var	varSpecLocalVar	-	ok	-	calls,closures,evaluation_order	-	-	-
+receiver-var-vs-arg-call	receiverVarVsArgCall	-	ok	-	calls,closures,evaluation_order,methods,pointers,nondet	membership	`p.Get(red())`, red redirecting the pointer variable p: the receiver operand's read vs the argument call (E14's sub-axis on a pointer VARIABLE operand); one unseq pick. members {110, 510}; gc 510	width=3,sites=8,members=2
+compound-local-var	compoundLocalVar	-	ok	-	calls,closures,evaluation_order,assignment,nondet	membership	`x += f()`, f writing x: the compound load vs the call (the local twin of evalorder/unseq-globals/compound-vs-call); one unseq pick. members {11, 15}; gc 15	width=3,sites=8,members=2
+compound-array-elem	compoundArrayElem	-	ok	-	calls,closures,evaluation_order,arrays,assignment	-	-	-
+compound-string	compoundString	-	ok	-	calls,closures,evaluation_order,strings,concat,assignment,nondet	membership	`str += f()`, f reassigning str: the string load vs the call; one unseq pick. members {"ab", "zb"}; gc "zb"	width=3,sites=8,members=2

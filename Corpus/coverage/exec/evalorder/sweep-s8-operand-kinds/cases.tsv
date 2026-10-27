@@ -1,0 +1,36 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# Sweep S8 (lane sweep/s8-unseq, 2026-10-27; plan docs/2026-10-27_defect-neighbourhood-campaign.md §4): operand kind × a
+# mutating sibling call, binary position. Membership rows: the `unseq` graph's ONE consumption site is the scheduler's
+# pick (`unseqNext`); the two members are the operand read before the call (early) and after it (late); gc's draw is
+# the LATE member on every row except assertion-reboxed and runes-conversion (gc evaluates a type assertion and an
+# allocating conversion EARLY — inventory E13 / E12). Strict rows: the grammar declines the sweep (census reason in the
+# why column's twin comment) and the legacy call-first order is gc's — a (b) pin of E12's call-first point.
+local-var	localVar	-	ok	-	calls,closures,evaluation_order,nondet	membership	`x + setX()`, setX writing the captured x: the read of x is spec-unsequenced against the call (spec#Order_of_evaluation orders only calls, receives and logical operations); the ONE consumption site is the unseq scheduler's pick (unseqNext). members {11 early, 110 late}; gc 110	width=3,sites=8,members=2
+slice-base-rebound	sliceBaseRebound	-	ok	-	calls,closures,evaluation_order,slices,indexing,nondet	membership	`s[0] + rebind()`, rebind rebinding s: the slice header read vs the call, one unseq pick. members {11, 60}; gc 60	width=3,sites=8,members=2
+map-key-mutated	mapKeyMutated	-	ok	-	calls,closures,evaluation_order,maps,nondet	membership	`m[k] + set()`, set writing k: the map read's key vs the call, one unseq pick. members {11, 12}; gc 12	width=3,sites=8,members=2
+map-rebound	mapRebound	-	ok	-	calls,closures,evaluation_order,maps,nondet	membership	`m[1] + reb()`, reb rebinding m: the map value read vs the call, one unseq pick. members {11, 15}; gc 15	width=3,sites=8,members=2
+map-entry-deleted	mapEntryDeleted	-	ok	-	calls,closures,evaluation_order,maps,delete,nondet	membership	`m[1] + del()`, del deleting the entry: the lookup vs the call, one unseq pick. members {11, 10}; gc 10	width=3,sites=8,members=2
+ptr-field-redirected	ptrFieldRedirected	-	ok	-	calls,closures,evaluation_order,pointers,fields,nondet	membership	`p.n + red()`, red redirecting p: the pointer read vs the call, one unseq pick. members {11, 15}; gc 15	width=3,sites=8,members=2
+struct-value-field	structValueField	-	ok	-	calls,closures,evaluation_order,structs,fields,nondet	membership	`v.n + set()`, set writing v.n (v captured): the field read vs the call, one unseq pick. members {11, 15}; gc 15	width=3,sites=8,members=2
+int64-conversion	int64Conversion	-	ok	-	calls,closures,evaluation_order,conversions,nondet	membership	`int64(x) + set()`, set writing x: the conversion is a pure op on the read of x, unsequenced against the call; one unseq pick. members {11, 15}; gc 15	width=3,sites=8,members=2
+runes-conversion	runesConversion	-	ok	-	calls,closures,evaluation_order,conversions,runes,strings,nondet	membership	`int([]rune(s)[0]) + set()`, set reassigning s: the allocating conversion's read of s vs the call (the `[]byte` twin is builtins/e13-sibling-panic-order/bytes-conv-value-vs-mutating-call); one unseq pick. members {98 early, 123 late}; gc 98 (gc evaluates the allocating conversion at its position — inventory E12's recorded exception)	width=3,sites=8,members=2
+division	division	-	ok	-	calls,closures,evaluation_order,division,nondet	membership	`100/d + set()`, set writing d: the divisor read vs the call, one unseq pick. members {51, 26}; gc 26	width=3,sites=8,members=2
+modulo	modulo	-	ok	-	calls,closures,evaluation_order,modulo,nondet	membership	`100%d + set()`, set writing d: one unseq pick. members {2, 3}; gc 3	width=3,sites=8,members=2
+shift	shift	-	ok	-	calls,closures,evaluation_order,shifts,nondet	membership	`1<<sh + set()`, set writing the count: one unseq pick. members {3, 9}; gc 9	width=3,sites=8,members=2
+assertion-reboxed	assertionReboxed	-	ok	-	calls,closures,evaluation_order,type_assertions,interfaces,nondet	membership	`iv.(int) + set()`, set re-boxing iv to another int (the VALUE axis of BUG-101's shape; no panic on either order): one unseq pick. members {4 early, 11 late}; gc 4 (gc copies a non-pointer-shaped assertion at its lexical position, inventory E13's Stage C note)	width=3,sites=8,members=2
+slice-high-bound	sliceHighBound	-	ok	-	calls,closures,evaluation_order,slicing,slices,nondet	membership	`s[:j][0] + set()`, set moving j out of range: the slice expression before the call (value 11) or after it (the bounds panic) — a status-diverse set (statuses=ok+panic); one unseq pick. members {11, panic}; gc 11 (a slice expression is early in gc)	width=3,sites=8,members=2,statuses=ok+panic
+string-reassigned	stringReassigned	-	ok	-	calls,closures,evaluation_order,strings,indexing,nondet	membership	`int(str[0]) + set()`, set reassigning str: the byte read vs the call (the index-mutated twin is evalorder/unseq-strings/str-index-vs-call); one unseq pick. members {98, 123}; gc 123	width=3,sites=8,members=2
+unary-minus	unaryMinus	-	ok	-	calls,closures,evaluation_order,nondet	membership	`-x + set()`: the unary operand's read vs the call, one unseq pick. members {9, -90}; gc -90	width=3,sites=8,members=2
+callee-var-vs-arg-call	calleeVarVsArgCall	-	ok	-	calls,closures,evaluation_order,functions,higher_order,nondet	membership	`fn(set())`, set rebinding the func variable fn: spec#Calls evaluates the function value and the arguments «in the usual order» — the read of fn is not a call, so it is unsequenced against the argument call; one unseq pick. members {101 (fn read first), 201 (after)}; gc 201	width=3,sites=8,members=2
+deref-nil-after-call	derefNilAfterCall	-	ok	-	calls,closures,evaluation_order,pointers,nil,nondet	membership	`*p + nilp()`, nilp setting p = nil: the deref before the call (8) or after it (the nil-dereference panic) — statuses=ok+panic; one unseq pick. members {8, panic}; gc the panic (a deref is late in gc)	width=3,sites=8,members=2,statuses=ok+panic
+nested-index	nestedIndex	-	ok	-	calls,closures,evaluation_order,slices,indexing,nested,nondet	membership	`s[t[i]] + set()`, set writing the inner index i: one unseq pick. members {11, 31}; gc 31	width=3,sites=8,members=2
+index-then-field	indexThenField	-	ok	-	calls,closures,evaluation_order,slices,structs,fields,nondet	membership	`a[i].f + set()`, set writing i: one unseq pick. members {11, 15}; gc 15	width=3,sites=8,members=2
+array-elem	arrayElem	-	ok	-	calls,closures,evaluation_order,arrays,indexing	-	-	-
+ptr-array-elem	ptrArrayElem	-	ok	-	calls,closures,evaluation_order,arrays,pointers,indexing	-	-	-
+defined-conversion	definedConversion	-	ok	-	calls,closures,evaluation_order,conversions,defined_type	-	-	-
+float-conversion	floatConversion	-	ok	-	calls,closures,evaluation_order,conversions,floats	-	-	-
+len-chan-vs-send	lenChanVsSend	-	ok	-	calls,closures,evaluation_order,channels,len	-	-	-
+len-map-vs-insert	lenMapVsInsert	-	ok	-	calls,closures,evaluation_order,maps,len	-	-	-
+cap-vs-grow	capVsGrow	-	ok	-	calls,closures,evaluation_order,slices,cap,make	-	-	-
+iface-compare-value	ifaceCompareValue	-	ok	-	calls,closures,evaluation_order,interfaces,comparisons,equality,bools	-	-	-
+box-any-vs-write	boxAnyVsWrite	-	ok	-	calls,closures,evaluation_order,interfaces,conversions	-	-	-
