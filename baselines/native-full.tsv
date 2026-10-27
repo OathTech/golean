@@ -1,5 +1,55 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 5592 (5250 PASS / 342 FAIL)
+# cases: 5592 (5288 PASS / 304 FAIL)
+# re-pinned: 2026-10-27 [AGENT], lane frontend/fix-hoist-1027 — BUG-276, 277, 278, 279 (the S7 sweep) and BUG-286, 287 (the S9
+#   sweep) FIXED in tools/nativefrontend (the campaign plan's rule that a finding is fixed through the normal train, [USER]
+#   approved 2026-10-27, relayed): (1) emit.go emitBinary binds a `&&`/`||` whose right operand hoists nothing to a temp at
+#   its LEXICAL position whenever an ordered event follows it in the sweep (BUG-113's second route, every sweep the unseq
+#   grammar declines: lifted bodies, array / defined-conversion / promoted-field / interface-comparison / type-parameter
+#   operands, defer / go argument lists); (2) the keyed struct literal's pre-bind and the read-modify-write target share the
+#   ONE predicate containsOrderedEvent (calls, receives, logical operations), replacing containsCall; (3) the callee
+#   identifier is read through parentheses, so `(len)(x)` is the builtin. 38 rows FAIL→PASS and NOTHING ELSE MOVED:
+#   5592 rows; PASS 5250 + 38 = 5288; FAIL 342 - 38 = 304. No new row, no removal, no cause change. Measured by
+#   CAPPED_MEM_MAX=64G capped scripts/ci --diff at the lane tree 2794ff13 before this re-pin (its only drift: these 38 flips), the
+#   rows taken from that run's artifacts/coverage/latest.tsv; the --diff at the tip judges. The moved rows (each on its
+#   entry's Cases line; the pinned FAIL stage/cause before → PASS):
+#     evalorder/sweep-s7-logical-in-closures/or-global-in-funclit                    FAIL/differential → PASS
+#     evalorder/sweep-s7-logical-in-closures/or-slice-elem-in-funclit                FAIL/differential → PASS
+#     evalorder/sweep-s7-logical-in-closures/and-local-in-funclit                    FAIL/differential → PASS
+#     evalorder/sweep-s7-logical-in-closures/or-in-funclit-call-stmt                 FAIL/differential → PASS
+#     evalorder/sweep-s7-logical-in-closures/or-in-stored-closure                    FAIL/differential → PASS
+#     evalorder/sweep-s7-logical-in-closures/or-in-deferred-funclit                  FAIL/differential → PASS
+#     evalorder/sweep-s7-logical-in-closures/or-string-index-in-funclit              FAIL/differential → PASS
+#     evalorder/sweep-s7-logical-in-closures/or-len-then-recv-in-funclit             FAIL/differential → PASS
+#     evalorder/sweep-s7-logical-in-closures/or-in-closure-return                    FAIL/differential → PASS
+#     evalorder/sweep-s7-logical-legacy-kinds/or-array-elem                          FAIL/differential → PASS
+#     evalorder/sweep-s7-logical-legacy-kinds/or-array-via-pointer                   FAIL/differential → PASS
+#     evalorder/sweep-s7-logical-legacy-kinds/or-array-elem-field                    FAIL/differential → PASS
+#     evalorder/sweep-s7-logical-legacy-kinds/or-local-defined-conversion            FAIL/differential → PASS
+#     evalorder/sweep-s7-logical-legacy-kinds/or-defined-conversion                  FAIL/differential → PASS
+#     evalorder/sweep-s7-logical-legacy-kinds/or-defined-int-conversion              FAIL/differential → PASS
+#     evalorder/sweep-s7-logical-legacy-kinds/or-promoted-field                      FAIL/differential → PASS
+#     evalorder/sweep-s7-logical-legacy-kinds/or-interface-nil-compare               FAIL/differential → PASS
+#     evalorder/sweep-s7-logical-legacy-kinds/or-interface-typed-nil-compare         FAIL/differential → PASS
+#     evalorder/sweep-s7-logical-legacy-kinds/or-type-param-compare                  FAIL/differential → PASS
+#     evalorder/sweep-s7-logical-defer-go/defer-or-then-call                         FAIL/differential → PASS
+#     evalorder/sweep-s7-logical-defer-go/go-or-then-call                            FAIL/differential → PASS
+#     evalorder/sweep-s7-keyed-literal-recv/recv-first-field-then-call               FAIL/differential → PASS
+#     evalorder/sweep-s7-keyed-literal-recv/recv-second-field-then-call              FAIL/differential → PASS
+#     evalorder/sweep-s7-keyed-literal-recv/addr-literal-recv-then-call              FAIL/differential → PASS
+#     evalorder/sweep-s7-keyed-literal-recv/nested-literal-recv-then-call            FAIL/differential → PASS
+#     evalorder/sweep-s7-keyed-literal-recv/recv-then-method-call                    FAIL/differential → PASS
+#     evalorder/sweep-s7-keyed-literal-recv/return-literal-recv-then-call            FAIL/differential → PASS
+#     evalorder/sweep-s7-keyed-literal-recv/defer-literal-recv-then-call             FAIL/differential → PASS
+#     evalorder/sweep-s7-keyed-literal-recv/var-spec-literal-recv-then-call          FAIL/differential → PASS
+#     evalorder/sweep-s7-keyed-literal-recv/literal-recv-then-call-in-generic        FAIL/differential → PASS
+#     channels/sweep-s9-rmw-recv-target/slice-recv-index                             FAIL/differential → PASS
+#     channels/sweep-s9-rmw-recv-target/deref-recv                                   FAIL/differential → PASS
+#     channels/sweep-s9-rmw-recv-target/recv-ptr-field                               FAIL/differential → PASS
+#     channels/sweep-s9-rmw-recv-target/array-recv-index                             FAIL/differential → PASS
+#     channels/sweep-s9-rmw-recv-target/slice-recv-index-compound                    FAIL/differential → PASS
+#     channels/sweep-s9-rmw-recv-target/slice-recv-index-single                      FAIL/lean-observation cause=deadlock:machine-deadlock → PASS
+#     builtins/sweep-s9-paren-builtin/paren-builtin                                  FAIL/lean-observation cause=error:decoder-scope-undeclared-local → PASS
+#     builtins/sweep-s9-paren-builtin/paren-builtin-cap                              FAIL/lean-observation cause=error:decoder-scope-undeclared-local → PASS
 # cause keyed 2026-10-27 [AGENT coordinator], train-25 stage: BUG-287's two rows `error:?` → `error:decoder-scope-undeclared-local` (the decoder's scope refusal, the row added at the train-24 stage) and BUG-286's single-buffer row `deadlock:?` → `deadlock:machine-deadlock` (a new scripts/machine-causes.tsv row: the machine deadlocked where gc ran); no row moved.
 # 2026-10-27 lane frontend/fix-admission-1027 [AGENT]: re-pinned from the lane's full `scripts/ci --diff` at the tip, after the rebase onto Run: CAPPED_MEM_MAX=64G capped scripts/ci --diff at 63bbba7a with the row edits and records applied in the tree (1117 s).
 #   the main carrying the S20 and S10 sweep entries. FIVE BUG-216/BUG-226 rows move non-PASS -> PASS with the fixes (the header rule
@@ -9361,8 +9411,8 @@ PASS	builtins/sweep-s9-call-operands/min-calls-then-call	-	-
 PASS	builtins/sweep-s9-call-operands/panic-of-call	-	-
 PASS	builtins/sweep-s9-call-operands/print-calls	-	-
 PASS	builtins/sweep-s9-call-operands/var-decl-len	-	-
-FAIL	builtins/sweep-s9-paren-builtin/paren-builtin	lean-observation	error:decoder-scope-undeclared-local
-FAIL	builtins/sweep-s9-paren-builtin/paren-builtin-cap	lean-observation	error:decoder-scope-undeclared-local
+PASS	builtins/sweep-s9-paren-builtin/paren-builtin	-	-
+PASS	builtins/sweep-s9-paren-builtin/paren-builtin-cap	-	-
 PASS	channels/sweep-s9-recv-operand-positions/append-recv	-	-
 PASS	channels/sweep-s9-recv-operand-positions/compound-recv-rhs	-	-
 PASS	channels/sweep-s9-recv-operand-positions/conv-of-recv	-	-
@@ -9376,15 +9426,15 @@ PASS	channels/sweep-s9-recv-operand-positions/multi-assign-recv-target	-	-
 PASS	channels/sweep-s9-recv-operand-positions/recv-stmt-index-recv-target	-	-
 PASS	channels/sweep-s9-recv-operand-positions/slice-lit-recvs	-	-
 PASS	channels/sweep-s9-recv-operand-positions/struct-field-recv-target	-	-
-FAIL	channels/sweep-s9-rmw-recv-target/array-recv-index	differential	-
-FAIL	channels/sweep-s9-rmw-recv-target/deref-recv	differential	-
+PASS	channels/sweep-s9-rmw-recv-target/array-recv-index	-	-
+PASS	channels/sweep-s9-rmw-recv-target/deref-recv	-	-
 PASS	channels/sweep-s9-rmw-recv-target/deref-recv-store-control	-	-
 PASS	channels/sweep-s9-rmw-recv-target/map-recv-key	-	-
-FAIL	channels/sweep-s9-rmw-recv-target/recv-ptr-field	differential	-
-FAIL	channels/sweep-s9-rmw-recv-target/slice-recv-index	differential	-
-FAIL	channels/sweep-s9-rmw-recv-target/slice-recv-index-compound	differential	-
+PASS	channels/sweep-s9-rmw-recv-target/recv-ptr-field	-	-
+PASS	channels/sweep-s9-rmw-recv-target/slice-recv-index	-	-
+PASS	channels/sweep-s9-rmw-recv-target/slice-recv-index-compound	-	-
 PASS	channels/sweep-s9-rmw-recv-target/slice-recv-index-read-control	-	-
-FAIL	channels/sweep-s9-rmw-recv-target/slice-recv-index-single	lean-observation	deadlock:machine-deadlock
+PASS	channels/sweep-s9-rmw-recv-target/slice-recv-index-single	-	-
 PASS	channels/sweep-s9-rmw-recv-target/slice-recv-index-store-control	-	-
 PASS	channels/sweep-s9-select-operand-calls/closure-select	-	-
 PASS	channels/sweep-s9-select-operand-calls/comma-ok-recv-call	-	-
@@ -9600,15 +9650,15 @@ PASS	evalorder/sweep-s7-index-slice/map-call-key-call	-	-
 PASS	evalorder/sweep-s7-index-slice/slice-expr-calls	-	-
 PASS	evalorder/sweep-s7-index-slice/string-call-index-call	-	-
 PASS	evalorder/sweep-s7-index-slice/three-index-calls	-	-
-FAIL	evalorder/sweep-s7-keyed-literal-recv/addr-literal-recv-then-call	differential	-
-FAIL	evalorder/sweep-s7-keyed-literal-recv/defer-literal-recv-then-call	differential	-
-FAIL	evalorder/sweep-s7-keyed-literal-recv/literal-recv-then-call-in-generic	differential	-
-FAIL	evalorder/sweep-s7-keyed-literal-recv/nested-literal-recv-then-call	differential	-
-FAIL	evalorder/sweep-s7-keyed-literal-recv/recv-first-field-then-call	differential	-
-FAIL	evalorder/sweep-s7-keyed-literal-recv/recv-second-field-then-call	differential	-
-FAIL	evalorder/sweep-s7-keyed-literal-recv/recv-then-method-call	differential	-
-FAIL	evalorder/sweep-s7-keyed-literal-recv/return-literal-recv-then-call	differential	-
-FAIL	evalorder/sweep-s7-keyed-literal-recv/var-spec-literal-recv-then-call	differential	-
+PASS	evalorder/sweep-s7-keyed-literal-recv/addr-literal-recv-then-call	-	-
+PASS	evalorder/sweep-s7-keyed-literal-recv/defer-literal-recv-then-call	-	-
+PASS	evalorder/sweep-s7-keyed-literal-recv/literal-recv-then-call-in-generic	-	-
+PASS	evalorder/sweep-s7-keyed-literal-recv/nested-literal-recv-then-call	-	-
+PASS	evalorder/sweep-s7-keyed-literal-recv/recv-first-field-then-call	-	-
+PASS	evalorder/sweep-s7-keyed-literal-recv/recv-second-field-then-call	-	-
+PASS	evalorder/sweep-s7-keyed-literal-recv/recv-then-method-call	-	-
+PASS	evalorder/sweep-s7-keyed-literal-recv/return-literal-recv-then-call	-	-
+PASS	evalorder/sweep-s7-keyed-literal-recv/var-spec-literal-recv-then-call	-	-
 PASS	evalorder/sweep-s7-literals/and-call-then-call-keyed	-	-
 PASS	evalorder/sweep-s7-literals/array-recv-then-call	-	-
 PASS	evalorder/sweep-s7-literals/funclit-then-call-keyed	-	-
@@ -9624,27 +9674,27 @@ PASS	evalorder/sweep-s7-literals/positional-recv-then-call	-	-
 PASS	evalorder/sweep-s7-literals/slice-of-structs-calls	-	-
 PASS	evalorder/sweep-s7-literals/slice-of-structs-recv-then-call	-	-
 PASS	evalorder/sweep-s7-literals/slice-recv-then-call	-	-
-FAIL	evalorder/sweep-s7-logical-defer-go/defer-or-then-call	differential	-
-FAIL	evalorder/sweep-s7-logical-defer-go/go-or-then-call	differential	-
-FAIL	evalorder/sweep-s7-logical-in-closures/and-local-in-funclit	differential	-
-FAIL	evalorder/sweep-s7-logical-in-closures/or-global-in-funclit	differential	-
-FAIL	evalorder/sweep-s7-logical-in-closures/or-in-closure-return	differential	-
-FAIL	evalorder/sweep-s7-logical-in-closures/or-in-deferred-funclit	differential	-
-FAIL	evalorder/sweep-s7-logical-in-closures/or-in-funclit-call-stmt	differential	-
-FAIL	evalorder/sweep-s7-logical-in-closures/or-in-stored-closure	differential	-
-FAIL	evalorder/sweep-s7-logical-in-closures/or-len-then-recv-in-funclit	differential	-
-FAIL	evalorder/sweep-s7-logical-in-closures/or-slice-elem-in-funclit	differential	-
-FAIL	evalorder/sweep-s7-logical-in-closures/or-string-index-in-funclit	differential	-
-FAIL	evalorder/sweep-s7-logical-legacy-kinds/or-array-elem	differential	-
-FAIL	evalorder/sweep-s7-logical-legacy-kinds/or-array-elem-field	differential	-
-FAIL	evalorder/sweep-s7-logical-legacy-kinds/or-array-via-pointer	differential	-
-FAIL	evalorder/sweep-s7-logical-legacy-kinds/or-defined-conversion	differential	-
-FAIL	evalorder/sweep-s7-logical-legacy-kinds/or-defined-int-conversion	differential	-
-FAIL	evalorder/sweep-s7-logical-legacy-kinds/or-interface-nil-compare	differential	-
-FAIL	evalorder/sweep-s7-logical-legacy-kinds/or-interface-typed-nil-compare	differential	-
-FAIL	evalorder/sweep-s7-logical-legacy-kinds/or-local-defined-conversion	differential	-
-FAIL	evalorder/sweep-s7-logical-legacy-kinds/or-promoted-field	differential	-
-FAIL	evalorder/sweep-s7-logical-legacy-kinds/or-type-param-compare	differential	-
+PASS	evalorder/sweep-s7-logical-defer-go/defer-or-then-call	-	-
+PASS	evalorder/sweep-s7-logical-defer-go/go-or-then-call	-	-
+PASS	evalorder/sweep-s7-logical-in-closures/and-local-in-funclit	-	-
+PASS	evalorder/sweep-s7-logical-in-closures/or-global-in-funclit	-	-
+PASS	evalorder/sweep-s7-logical-in-closures/or-in-closure-return	-	-
+PASS	evalorder/sweep-s7-logical-in-closures/or-in-deferred-funclit	-	-
+PASS	evalorder/sweep-s7-logical-in-closures/or-in-funclit-call-stmt	-	-
+PASS	evalorder/sweep-s7-logical-in-closures/or-in-stored-closure	-	-
+PASS	evalorder/sweep-s7-logical-in-closures/or-len-then-recv-in-funclit	-	-
+PASS	evalorder/sweep-s7-logical-in-closures/or-slice-elem-in-funclit	-	-
+PASS	evalorder/sweep-s7-logical-in-closures/or-string-index-in-funclit	-	-
+PASS	evalorder/sweep-s7-logical-legacy-kinds/or-array-elem	-	-
+PASS	evalorder/sweep-s7-logical-legacy-kinds/or-array-elem-field	-	-
+PASS	evalorder/sweep-s7-logical-legacy-kinds/or-array-via-pointer	-	-
+PASS	evalorder/sweep-s7-logical-legacy-kinds/or-defined-conversion	-	-
+PASS	evalorder/sweep-s7-logical-legacy-kinds/or-defined-int-conversion	-	-
+PASS	evalorder/sweep-s7-logical-legacy-kinds/or-interface-nil-compare	-	-
+PASS	evalorder/sweep-s7-logical-legacy-kinds/or-interface-typed-nil-compare	-	-
+PASS	evalorder/sweep-s7-logical-legacy-kinds/or-local-defined-conversion	-	-
+PASS	evalorder/sweep-s7-logical-legacy-kinds/or-promoted-field	-	-
+PASS	evalorder/sweep-s7-logical-legacy-kinds/or-type-param-compare	-	-
 PASS	evalorder/sweep-s7-make-len-cap-order/arithmetic-args-control	-	-
 FAIL	evalorder/sweep-s7-make-len-cap-order/call-arg	differential	-
 PASS	evalorder/sweep-s7-make-len-cap-order/chan-sum-args-control	-	-
