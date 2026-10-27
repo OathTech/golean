@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 5399 (5088 PASS / 311 FAIL)
+# cases: 5595 (5241 PASS / 354 FAIL)
 # cause keyed 2026-10-27 [AGENT coordinator], train-24 stage: the three BUG-226 rows' refusal cause `error:?` → `error:decoder-scope-undeclared-local` (the new scripts/machine-causes.tsv row for the decoder's «is not in scope at this statement» refusal, which the S10 lane could not add — scripts/ is outside a sweep lane's edit set); no row moved.
 # re-pinned: 2026-10-26 [AGENT], lane sweep/s4-identity — the defect-neighbourhood campaign's S4 sweep (identity, equality and
 #   nil-ness; docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved; members BUG-133/129/121/111/170/139).
@@ -107,6 +107,217 @@
 #     variadic/sweep-s4-nil-pack-routes/tuple-fixed-only                 PASS/- -
 #     variadic/sweep-s4-nil-pack-routes/elem-kinds                       PASS/- -
 #     variadic/sweep-s4-nil-pack-routes/len-cap-append                   PASS/- -
+# re-pinned: 2026-10-27 [AGENT], lane sweep/s7-hoist-order — the defect-neighbourhood campaign's step 2, shape S7 (ordered
+#   events reordered by the hoist; plan docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved 2026-10-27): the
+#   shape's 182-cell matrix probed on both sides — 145 cells by this lane (206 probe subjects), 19 covered by existing rows,
+#   11 duplicates, 7 out of scope — every agreement on a distinct cell pinned as a strict row (expected = gc) and every
+#   DISAGREEMENT rowed RED on a new entry's Cases line. NO existing row moved: 4166 + 196 = 4362; PASS 3901 + 153 = 4054; FAIL 265 + 43 = 308.
+#   No flip, no removal, no cause change (no runtime code changed: corpus and records only). NEW rows (196, 15 packages
+#   Corpus/coverage/exec/evalorder/sweep-s7-*/, every row strict), appended at the end of the file, measured by
+#   CAPPED_MEM_MAX=64G capped scripts/ci --diff at the lane tree 658aa41e before this re-pin (its only drift: these 196 NEW ids and
+#   the 3 NEW negative ids), the rows taken from that run's artifacts/coverage/latest.tsv; the --diff at the tip judges.
+#   FINDINGS (five entries, status open, red-first): BUG-276 (BUG-113's `||`/`&&`-after-a-later-call order in every func-literal
+#   body, 9 rows), BUG-277 (the same at the operand kinds the unseq grammar declines, 10 rows), BUG-278 (the same at defer/go
+#   arguments, 2 rows), BUG-279 (a keyed struct literal's receive element hoisted after every call element, 9 rows), BUG-280
+#   (gc's default build evaluates make([]T, f(), g())'s cap call before its len call; the machine keeps the spec order; the
+#   disposition is the owner's, 13 rows) — the 43 FAIL rows are FAIL/differential (a wrong value, status ok on both sides) on
+#   those Cases lines; BUG-281–285 unused. The rows:
+#     evalorder/sweep-s7-assign-forms/compound-index-call-rhs-call                   PASS/-
+#     evalorder/sweep-s7-assign-forms/define-two-recvs                               PASS/-
+#     evalorder/sweep-s7-assign-forms/deref-call-target-rhs-call                     PASS/-
+#     evalorder/sweep-s7-assign-forms/index-call-target-rhs-call                     PASS/-
+#     evalorder/sweep-s7-assign-forms/map-key-call-rhs-call                          PASS/-
+#     evalorder/sweep-s7-assign-forms/tuple-recv-then-call                           PASS/-
+#     evalorder/sweep-s7-assign-forms/tuple-two-calls                                PASS/-
+#     evalorder/sweep-s7-assign-forms/two-targets-calls-rhs-calls                    PASS/-
+#     evalorder/sweep-s7-assign-forms/var-spec-two-calls                             PASS/-
+#     evalorder/sweep-s7-binary-operands/and-call-left-then-call                     PASS/-
+#     evalorder/sweep-s7-binary-operands/call-eq-call                                PASS/-
+#     evalorder/sweep-s7-binary-operands/call-lt-recv                                PASS/-
+#     evalorder/sweep-s7-binary-operands/call-plus-recv                              PASS/-
+#     evalorder/sweep-s7-binary-operands/cap-then-call                               PASS/-
+#     evalorder/sweep-s7-binary-operands/max-len-then-call                           PASS/-
+#     evalorder/sweep-s7-binary-operands/nested-logical-then-call                    PASS/-
+#     evalorder/sweep-s7-binary-operands/or-assert-then-call                         PASS/-
+#     evalorder/sweep-s7-binary-operands/or-call-left-then-call                      PASS/-
+#     evalorder/sweep-s7-binary-operands/or-global-ptr-field-then-call               PASS/-
+#     evalorder/sweep-s7-binary-operands/or-in-generic-then-call                     PASS/-
+#     evalorder/sweep-s7-binary-operands/or-in-method-body                           PASS/-
+#     evalorder/sweep-s7-binary-operands/or-len-then-call                            PASS/-
+#     evalorder/sweep-s7-binary-operands/or-len-then-recv                            PASS/-
+#     evalorder/sweep-s7-binary-operands/or-map-any-assert-then-call                 PASS/-
+#     evalorder/sweep-s7-binary-operands/or-map-read-then-call                       PASS/-
+#     evalorder/sweep-s7-binary-operands/or-method-then-call                         PASS/-
+#     evalorder/sweep-s7-binary-operands/or-named-result-then-call                   PASS/-
+#     evalorder/sweep-s7-binary-operands/or-nested-field-then-call                   PASS/-
+#     evalorder/sweep-s7-binary-operands/or-ptr-field-then-call                      PASS/-
+#     evalorder/sweep-s7-binary-operands/or-recv-then-call                           PASS/-
+#     evalorder/sweep-s7-binary-operands/or-slice-elem-then-call                     PASS/-
+#     evalorder/sweep-s7-binary-operands/or-string-index-then-call                   PASS/-
+#     evalorder/sweep-s7-binary-operands/or-struct-field-then-call                   PASS/-
+#     evalorder/sweep-s7-binary-operands/or-then-method-call                         PASS/-
+#     evalorder/sweep-s7-binary-operands/parenthesised-calls                         PASS/-
+#     evalorder/sweep-s7-binary-operands/recv-plus-call                              PASS/-
+#     evalorder/sweep-s7-binary-operands/three-calls                                 PASS/-
+#     evalorder/sweep-s7-binary-operands/two-calls                                   PASS/-
+#     evalorder/sweep-s7-call-args/and-then-call                                     PASS/-
+#     evalorder/sweep-s7-call-args/append-args                                       PASS/-
+#     evalorder/sweep-s7-call-args/call-len-call                                     PASS/-
+#     evalorder/sweep-s7-call-args/callee-call-then-arg                              PASS/-
+#     evalorder/sweep-s7-call-args/conversion-of-call-then-call                      PASS/-
+#     evalorder/sweep-s7-call-args/copy-args                                         PASS/-
+#     evalorder/sweep-s7-call-args/delete-args                                       PASS/-
+#     evalorder/sweep-s7-call-args/funclit-then-call                                 PASS/-
+#     evalorder/sweep-s7-call-args/interface-receiver-call-then-args                 PASS/-
+#     evalorder/sweep-s7-call-args/literal-call-then-call                            PASS/-
+#     evalorder/sweep-s7-call-args/method-value-call-then-recv                       PASS/-
+#     evalorder/sweep-s7-call-args/min-args                                          PASS/-
+#     evalorder/sweep-s7-call-args/nested-calls                                      PASS/-
+#     evalorder/sweep-s7-call-args/or-then-call                                      PASS/-
+#     evalorder/sweep-s7-call-args/panic-in-the-middle                               PASS/-
+#     evalorder/sweep-s7-call-args/println-args                                      PASS/-
+#     evalorder/sweep-s7-call-args/receiver-call-then-arg                            PASS/-
+#     evalorder/sweep-s7-call-args/recv-then-call                                    PASS/-
+#     evalorder/sweep-s7-call-args/variadic-calls                                    PASS/-
+#     evalorder/sweep-s7-call-args/variadic-spread-call                              PASS/-
+#     evalorder/sweep-s7-headers/else-if-and-chain                                   PASS/-
+#     evalorder/sweep-s7-headers/else-if-funclit-and                                 PASS/-
+#     evalorder/sweep-s7-headers/else-if-init-chain                                  PASS/-
+#     evalorder/sweep-s7-headers/else-if-recv-chain                                  PASS/-
+#     evalorder/sweep-s7-headers/for-cond-and-calls                                  PASS/-
+#     evalorder/sweep-s7-headers/for-cond-and-post-call                              PASS/-
+#     evalorder/sweep-s7-headers/for-cond-recv-and-call                              PASS/-
+#     evalorder/sweep-s7-headers/for-post-recv                                       PASS/-
+#     evalorder/sweep-s7-headers/for-recv-init-post                                  PASS/-
+#     evalorder/sweep-s7-headers/funclit-if-plus-call                                PASS/-
+#     evalorder/sweep-s7-headers/goto-else-if-chain                                  PASS/-
+#     evalorder/sweep-s7-headers/if-and-calls                                        PASS/-
+#     evalorder/sweep-s7-headers/if-and-in-funclit                                   PASS/-
+#     evalorder/sweep-s7-headers/if-and-in-generic                                   PASS/-
+#     evalorder/sweep-s7-headers/if-init-or-reads-init                               PASS/-
+#     evalorder/sweep-s7-headers/if-recv-and-call                                    PASS/-
+#     evalorder/sweep-s7-headers/switch-call-tag-recv-case                           PASS/-
+#     evalorder/sweep-s7-headers/switch-case-and                                     PASS/-
+#     evalorder/sweep-s7-headers/switch-expressionless-recv-call                     PASS/-
+#     evalorder/sweep-s7-headers/switch-recv-cases                                   PASS/-
+#     evalorder/sweep-s7-headers/switch-recv-init-call-tag                           PASS/-
+#     evalorder/sweep-s7-headers/switch-recv-tag-call-cases                          PASS/-
+#     evalorder/sweep-s7-index-slice/base-call-index-call                            PASS/-
+#     evalorder/sweep-s7-index-slice/index-call-plus-call                            PASS/-
+#     evalorder/sweep-s7-index-slice/index-recv-then-call                            PASS/-
+#     evalorder/sweep-s7-index-slice/map-call-key-call                               PASS/-
+#     evalorder/sweep-s7-index-slice/slice-expr-calls                                PASS/-
+#     evalorder/sweep-s7-index-slice/string-call-index-call                          PASS/-
+#     evalorder/sweep-s7-index-slice/three-index-calls                               PASS/-
+#     evalorder/sweep-s7-keyed-literal-recv/addr-literal-recv-then-call              FAIL/differential cause=-
+#     evalorder/sweep-s7-keyed-literal-recv/defer-literal-recv-then-call             FAIL/differential cause=-
+#     evalorder/sweep-s7-keyed-literal-recv/literal-recv-then-call-in-generic        FAIL/differential cause=-
+#     evalorder/sweep-s7-keyed-literal-recv/nested-literal-recv-then-call            FAIL/differential cause=-
+#     evalorder/sweep-s7-keyed-literal-recv/recv-first-field-then-call               FAIL/differential cause=-
+#     evalorder/sweep-s7-keyed-literal-recv/recv-second-field-then-call              FAIL/differential cause=-
+#     evalorder/sweep-s7-keyed-literal-recv/recv-then-method-call                    FAIL/differential cause=-
+#     evalorder/sweep-s7-keyed-literal-recv/return-literal-recv-then-call            FAIL/differential cause=-
+#     evalorder/sweep-s7-keyed-literal-recv/var-spec-literal-recv-then-call          FAIL/differential cause=-
+#     evalorder/sweep-s7-literals/and-call-then-call-keyed                           PASS/-
+#     evalorder/sweep-s7-literals/array-recv-then-call                               PASS/-
+#     evalorder/sweep-s7-literals/funclit-then-call-keyed                            PASS/-
+#     evalorder/sweep-s7-literals/keyed-recv-of-called-chan-then-call                PASS/-
+#     evalorder/sweep-s7-literals/len-then-call-keyed                                PASS/-
+#     evalorder/sweep-s7-literals/map-key-recv-value-call                            PASS/-
+#     evalorder/sweep-s7-literals/map-keys-values-calls                              PASS/-
+#     evalorder/sweep-s7-literals/map-values-recv-then-call                          PASS/-
+#     evalorder/sweep-s7-literals/method-then-call-keyed                             PASS/-
+#     evalorder/sweep-s7-literals/nested-keyed-calls                                 PASS/-
+#     evalorder/sweep-s7-literals/or-then-call-keyed                                 PASS/-
+#     evalorder/sweep-s7-literals/positional-recv-then-call                          PASS/-
+#     evalorder/sweep-s7-literals/slice-of-structs-calls                             PASS/-
+#     evalorder/sweep-s7-literals/slice-of-structs-recv-then-call                    PASS/-
+#     evalorder/sweep-s7-literals/slice-recv-then-call                               PASS/-
+#     evalorder/sweep-s7-logical-defer-go/defer-or-then-call                         FAIL/differential cause=-
+#     evalorder/sweep-s7-logical-defer-go/go-or-then-call                            FAIL/differential cause=-
+#     evalorder/sweep-s7-logical-in-closures/and-local-in-funclit                    FAIL/differential cause=-
+#     evalorder/sweep-s7-logical-in-closures/or-global-in-funclit                    FAIL/differential cause=-
+#     evalorder/sweep-s7-logical-in-closures/or-in-closure-return                    FAIL/differential cause=-
+#     evalorder/sweep-s7-logical-in-closures/or-in-deferred-funclit                  FAIL/differential cause=-
+#     evalorder/sweep-s7-logical-in-closures/or-in-funclit-call-stmt                 FAIL/differential cause=-
+#     evalorder/sweep-s7-logical-in-closures/or-in-stored-closure                    FAIL/differential cause=-
+#     evalorder/sweep-s7-logical-in-closures/or-len-then-recv-in-funclit             FAIL/differential cause=-
+#     evalorder/sweep-s7-logical-in-closures/or-slice-elem-in-funclit                FAIL/differential cause=-
+#     evalorder/sweep-s7-logical-in-closures/or-string-index-in-funclit              FAIL/differential cause=-
+#     evalorder/sweep-s7-logical-legacy-kinds/or-array-elem                          FAIL/differential cause=-
+#     evalorder/sweep-s7-logical-legacy-kinds/or-array-elem-field                    FAIL/differential cause=-
+#     evalorder/sweep-s7-logical-legacy-kinds/or-array-via-pointer                   FAIL/differential cause=-
+#     evalorder/sweep-s7-logical-legacy-kinds/or-defined-conversion                  FAIL/differential cause=-
+#     evalorder/sweep-s7-logical-legacy-kinds/or-defined-int-conversion              FAIL/differential cause=-
+#     evalorder/sweep-s7-logical-legacy-kinds/or-interface-nil-compare               FAIL/differential cause=-
+#     evalorder/sweep-s7-logical-legacy-kinds/or-interface-typed-nil-compare         FAIL/differential cause=-
+#     evalorder/sweep-s7-logical-legacy-kinds/or-local-defined-conversion            FAIL/differential cause=-
+#     evalorder/sweep-s7-logical-legacy-kinds/or-promoted-field                      FAIL/differential cause=-
+#     evalorder/sweep-s7-logical-legacy-kinds/or-type-param-compare                  FAIL/differential cause=-
+#     evalorder/sweep-s7-make-len-cap-order/arithmetic-args-control                  PASS/-
+#     evalorder/sweep-s7-make-len-cap-order/call-arg                                 FAIL/differential cause=-
+#     evalorder/sweep-s7-make-len-cap-order/chan-sum-args-control                    PASS/-
+#     evalorder/sweep-s7-make-len-cap-order/define                                   FAIL/differential cause=-
+#     evalorder/sweep-s7-make-len-cap-order/global-target                            FAIL/differential cause=-
+#     evalorder/sweep-s7-make-len-cap-order/in-generic                               FAIL/differential cause=-
+#     evalorder/sweep-s7-make-len-cap-order/int64-args                               FAIL/differential cause=-
+#     evalorder/sweep-s7-make-len-cap-order/make-single-as-arg-control               PASS/-
+#     evalorder/sweep-s7-make-len-cap-order/map-hint-sum-control                     PASS/-
+#     evalorder/sweep-s7-make-len-cap-order/noinline-callees-control                 PASS/-
+#     evalorder/sweep-s7-make-len-cap-order/plain-call-control                       PASS/-
+#     evalorder/sweep-s7-make-len-cap-order/return-position                          FAIL/differential cause=-
+#     evalorder/sweep-s7-make-len-cap-order/shared-counter-control                   PASS/-
+#     evalorder/sweep-s7-make-len-cap-order/string-elems                             FAIL/differential cause=-
+#     evalorder/sweep-s7-make-len-cap-order/then-append                              FAIL/differential cause=-
+#     evalorder/sweep-s7-make-len-cap-order/then-call                                FAIL/differential cause=-
+#     evalorder/sweep-s7-make-len-cap-order/then-second-make                         FAIL/differential cause=-
+#     evalorder/sweep-s7-make-len-cap-order/then-store                               FAIL/differential cause=-
+#     evalorder/sweep-s7-make-len-cap-order/toplevel-callees                         FAIL/differential cause=-
+#     evalorder/sweep-s7-make-len-cap-order/var-spec                                 FAIL/differential cause=-
+#     evalorder/sweep-s7-other-events/append-call-spread-call                        PASS/-
+#     evalorder/sweep-s7-other-events/assert-of-call-then-call                       PASS/-
+#     evalorder/sweep-s7-other-events/cap-of-call-then-call                          PASS/-
+#     evalorder/sweep-s7-other-events/funclit-plus-call                              PASS/-
+#     evalorder/sweep-s7-other-events/generic-method-then-call                       PASS/-
+#     evalorder/sweep-s7-other-events/len-call-in-funclit                            PASS/-
+#     evalorder/sweep-s7-other-events/len-of-call-then-call                          PASS/-
+#     evalorder/sweep-s7-other-events/len-recv-in-funclit                            PASS/-
+#     evalorder/sweep-s7-other-events/method-expr-call-then-call                     PASS/-
+#     evalorder/sweep-s7-other-events/method-value-of-call-then-call                 PASS/-
+#     evalorder/sweep-s7-other-events/min-calls-plus-call                            PASS/-
+#     evalorder/sweep-s7-other-events/pkg-init-call-args                             PASS/-
+#     evalorder/sweep-s7-other-events/promoted-method-then-call                      PASS/-
+#     evalorder/sweep-s7-other-events/recover-then-call                              PASS/-
+#     evalorder/sweep-s7-other-events/recv-from-called-chan-then-call                PASS/-
+#     evalorder/sweep-s7-other-events/string-conv-of-call-then-call                  PASS/-
+#     evalorder/sweep-s7-other-events/two-interface-dispatches                       PASS/-
+#     evalorder/sweep-s7-other-events/two-recvs-args                                 PASS/-
+#     evalorder/sweep-s7-other-events/two-recvs-binary                               PASS/-
+#     evalorder/sweep-s7-panic-midway/binary-chain                                   PASS/-
+#     evalorder/sweep-s7-panic-midway/defer-args                                     PASS/-
+#     evalorder/sweep-s7-panic-midway/if-and                                         PASS/-
+#     evalorder/sweep-s7-panic-midway/keyed-literal                                  PASS/-
+#     evalorder/sweep-s7-panic-midway/recv-then-panic                                PASS/-
+#     evalorder/sweep-s7-panic-midway/runtime-panic-in-call                          PASS/-
+#     evalorder/sweep-s7-returns/call-plus-recv                                      PASS/-
+#     evalorder/sweep-s7-returns/call-then-panic                                     PASS/-
+#     evalorder/sweep-s7-returns/call-then-recv                                      PASS/-
+#     evalorder/sweep-s7-returns/or-then-call-toplevel                               PASS/-
+#     evalorder/sweep-s7-returns/recv-then-call                                      PASS/-
+#     evalorder/sweep-s7-returns/two-calls                                           PASS/-
+#     evalorder/sweep-s7-select-defer-go-send/defer-call-then-recv                   PASS/-
+#     evalorder/sweep-s7-select-defer-go-send/defer-len-then-call                    PASS/-
+#     evalorder/sweep-s7-select-defer-go-send/defer-receiver-call-then-arg           PASS/-
+#     evalorder/sweep-s7-select-defer-go-send/defer-recv-then-call                   PASS/-
+#     evalorder/sweep-s7-select-defer-go-send/defer-two-args                         PASS/-
+#     evalorder/sweep-s7-select-defer-go-send/go-two-args                            PASS/-
+#     evalorder/sweep-s7-select-defer-go-send/select-method-chan-then-call           PASS/-
+#     evalorder/sweep-s7-select-defer-go-send/select-recv-then-send-exprs            PASS/-
+#     evalorder/sweep-s7-select-defer-go-send/select-send-then-recv-exprs            PASS/-
+#     evalorder/sweep-s7-select-defer-go-send/select-send-value-recv                 PASS/-
+#     evalorder/sweep-s7-select-defer-go-send/send-call-plus-recv                    PASS/-
+#     evalorder/sweep-s7-select-defer-go-send/send-chan-call-then-logical            PASS/-
+#     evalorder/sweep-s7-select-defer-go-send/send-chan-call-then-value-call         PASS/-
 # re-pinned: 2026-10-27 [AGENT], lane sweep/s9-eval-count — the defect-neighbourhood campaign's step 2 for shape S9 (evaluation
 #   count: twice, never, or re-read; plan docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved 2026-10-27). NO
 #   existing row moved: 4166 + 247 = 4413; PASS 3901 + 239 = 4140; FAIL 265 + 8 = 273. No flip, no removal, no cause change —
@@ -9274,3 +9485,199 @@ PASS	slices/sweep-s9-slice-bounds-calls/recv-high	-	-
 PASS	slices/sweep-s9-slice-bounds-calls/recv-low	-	-
 PASS	slices/sweep-s9-slice-bounds-calls/string-call-base-call-low	-	-
 PASS	slices/sweep-s9-slice-bounds-calls/three-index-calls	-	-
+PASS	evalorder/sweep-s7-assign-forms/compound-index-call-rhs-call	-	-
+PASS	evalorder/sweep-s7-assign-forms/define-two-recvs	-	-
+PASS	evalorder/sweep-s7-assign-forms/deref-call-target-rhs-call	-	-
+PASS	evalorder/sweep-s7-assign-forms/index-call-target-rhs-call	-	-
+PASS	evalorder/sweep-s7-assign-forms/map-key-call-rhs-call	-	-
+PASS	evalorder/sweep-s7-assign-forms/tuple-recv-then-call	-	-
+PASS	evalorder/sweep-s7-assign-forms/tuple-two-calls	-	-
+PASS	evalorder/sweep-s7-assign-forms/two-targets-calls-rhs-calls	-	-
+PASS	evalorder/sweep-s7-assign-forms/var-spec-two-calls	-	-
+PASS	evalorder/sweep-s7-binary-operands/and-call-left-then-call	-	-
+PASS	evalorder/sweep-s7-binary-operands/call-eq-call	-	-
+PASS	evalorder/sweep-s7-binary-operands/call-lt-recv	-	-
+PASS	evalorder/sweep-s7-binary-operands/call-plus-recv	-	-
+PASS	evalorder/sweep-s7-binary-operands/cap-then-call	-	-
+PASS	evalorder/sweep-s7-binary-operands/max-len-then-call	-	-
+PASS	evalorder/sweep-s7-binary-operands/nested-logical-then-call	-	-
+PASS	evalorder/sweep-s7-binary-operands/or-assert-then-call	-	-
+PASS	evalorder/sweep-s7-binary-operands/or-call-left-then-call	-	-
+PASS	evalorder/sweep-s7-binary-operands/or-global-ptr-field-then-call	-	-
+PASS	evalorder/sweep-s7-binary-operands/or-in-generic-then-call	-	-
+PASS	evalorder/sweep-s7-binary-operands/or-in-method-body	-	-
+PASS	evalorder/sweep-s7-binary-operands/or-len-then-call	-	-
+PASS	evalorder/sweep-s7-binary-operands/or-len-then-recv	-	-
+PASS	evalorder/sweep-s7-binary-operands/or-map-any-assert-then-call	-	-
+PASS	evalorder/sweep-s7-binary-operands/or-map-read-then-call	-	-
+PASS	evalorder/sweep-s7-binary-operands/or-method-then-call	-	-
+PASS	evalorder/sweep-s7-binary-operands/or-named-result-then-call	-	-
+PASS	evalorder/sweep-s7-binary-operands/or-nested-field-then-call	-	-
+PASS	evalorder/sweep-s7-binary-operands/or-ptr-field-then-call	-	-
+PASS	evalorder/sweep-s7-binary-operands/or-recv-then-call	-	-
+PASS	evalorder/sweep-s7-binary-operands/or-slice-elem-then-call	-	-
+PASS	evalorder/sweep-s7-binary-operands/or-string-index-then-call	-	-
+PASS	evalorder/sweep-s7-binary-operands/or-struct-field-then-call	-	-
+PASS	evalorder/sweep-s7-binary-operands/or-then-method-call	-	-
+PASS	evalorder/sweep-s7-binary-operands/parenthesised-calls	-	-
+PASS	evalorder/sweep-s7-binary-operands/recv-plus-call	-	-
+PASS	evalorder/sweep-s7-binary-operands/three-calls	-	-
+PASS	evalorder/sweep-s7-binary-operands/two-calls	-	-
+PASS	evalorder/sweep-s7-call-args/and-then-call	-	-
+PASS	evalorder/sweep-s7-call-args/append-args	-	-
+PASS	evalorder/sweep-s7-call-args/call-len-call	-	-
+PASS	evalorder/sweep-s7-call-args/callee-call-then-arg	-	-
+PASS	evalorder/sweep-s7-call-args/conversion-of-call-then-call	-	-
+PASS	evalorder/sweep-s7-call-args/copy-args	-	-
+PASS	evalorder/sweep-s7-call-args/delete-args	-	-
+PASS	evalorder/sweep-s7-call-args/funclit-then-call	-	-
+PASS	evalorder/sweep-s7-call-args/interface-receiver-call-then-args	-	-
+PASS	evalorder/sweep-s7-call-args/literal-call-then-call	-	-
+PASS	evalorder/sweep-s7-call-args/method-value-call-then-recv	-	-
+PASS	evalorder/sweep-s7-call-args/min-args	-	-
+PASS	evalorder/sweep-s7-call-args/nested-calls	-	-
+PASS	evalorder/sweep-s7-call-args/or-then-call	-	-
+PASS	evalorder/sweep-s7-call-args/panic-in-the-middle	-	-
+PASS	evalorder/sweep-s7-call-args/println-args	-	-
+PASS	evalorder/sweep-s7-call-args/receiver-call-then-arg	-	-
+PASS	evalorder/sweep-s7-call-args/recv-then-call	-	-
+PASS	evalorder/sweep-s7-call-args/variadic-calls	-	-
+PASS	evalorder/sweep-s7-call-args/variadic-spread-call	-	-
+PASS	evalorder/sweep-s7-headers/else-if-and-chain	-	-
+PASS	evalorder/sweep-s7-headers/else-if-funclit-and	-	-
+PASS	evalorder/sweep-s7-headers/else-if-init-chain	-	-
+PASS	evalorder/sweep-s7-headers/else-if-recv-chain	-	-
+PASS	evalorder/sweep-s7-headers/for-cond-and-calls	-	-
+PASS	evalorder/sweep-s7-headers/for-cond-and-post-call	-	-
+PASS	evalorder/sweep-s7-headers/for-cond-recv-and-call	-	-
+PASS	evalorder/sweep-s7-headers/for-post-recv	-	-
+PASS	evalorder/sweep-s7-headers/for-recv-init-post	-	-
+PASS	evalorder/sweep-s7-headers/funclit-if-plus-call	-	-
+PASS	evalorder/sweep-s7-headers/goto-else-if-chain	-	-
+PASS	evalorder/sweep-s7-headers/if-and-calls	-	-
+PASS	evalorder/sweep-s7-headers/if-and-in-funclit	-	-
+PASS	evalorder/sweep-s7-headers/if-and-in-generic	-	-
+PASS	evalorder/sweep-s7-headers/if-init-or-reads-init	-	-
+PASS	evalorder/sweep-s7-headers/if-recv-and-call	-	-
+PASS	evalorder/sweep-s7-headers/switch-call-tag-recv-case	-	-
+PASS	evalorder/sweep-s7-headers/switch-case-and	-	-
+PASS	evalorder/sweep-s7-headers/switch-expressionless-recv-call	-	-
+PASS	evalorder/sweep-s7-headers/switch-recv-cases	-	-
+PASS	evalorder/sweep-s7-headers/switch-recv-init-call-tag	-	-
+PASS	evalorder/sweep-s7-headers/switch-recv-tag-call-cases	-	-
+PASS	evalorder/sweep-s7-index-slice/base-call-index-call	-	-
+PASS	evalorder/sweep-s7-index-slice/index-call-plus-call	-	-
+PASS	evalorder/sweep-s7-index-slice/index-recv-then-call	-	-
+PASS	evalorder/sweep-s7-index-slice/map-call-key-call	-	-
+PASS	evalorder/sweep-s7-index-slice/slice-expr-calls	-	-
+PASS	evalorder/sweep-s7-index-slice/string-call-index-call	-	-
+PASS	evalorder/sweep-s7-index-slice/three-index-calls	-	-
+FAIL	evalorder/sweep-s7-keyed-literal-recv/addr-literal-recv-then-call	differential	-
+FAIL	evalorder/sweep-s7-keyed-literal-recv/defer-literal-recv-then-call	differential	-
+FAIL	evalorder/sweep-s7-keyed-literal-recv/literal-recv-then-call-in-generic	differential	-
+FAIL	evalorder/sweep-s7-keyed-literal-recv/nested-literal-recv-then-call	differential	-
+FAIL	evalorder/sweep-s7-keyed-literal-recv/recv-first-field-then-call	differential	-
+FAIL	evalorder/sweep-s7-keyed-literal-recv/recv-second-field-then-call	differential	-
+FAIL	evalorder/sweep-s7-keyed-literal-recv/recv-then-method-call	differential	-
+FAIL	evalorder/sweep-s7-keyed-literal-recv/return-literal-recv-then-call	differential	-
+FAIL	evalorder/sweep-s7-keyed-literal-recv/var-spec-literal-recv-then-call	differential	-
+PASS	evalorder/sweep-s7-literals/and-call-then-call-keyed	-	-
+PASS	evalorder/sweep-s7-literals/array-recv-then-call	-	-
+PASS	evalorder/sweep-s7-literals/funclit-then-call-keyed	-	-
+PASS	evalorder/sweep-s7-literals/keyed-recv-of-called-chan-then-call	-	-
+PASS	evalorder/sweep-s7-literals/len-then-call-keyed	-	-
+PASS	evalorder/sweep-s7-literals/map-key-recv-value-call	-	-
+PASS	evalorder/sweep-s7-literals/map-keys-values-calls	-	-
+PASS	evalorder/sweep-s7-literals/map-values-recv-then-call	-	-
+PASS	evalorder/sweep-s7-literals/method-then-call-keyed	-	-
+PASS	evalorder/sweep-s7-literals/nested-keyed-calls	-	-
+PASS	evalorder/sweep-s7-literals/or-then-call-keyed	-	-
+PASS	evalorder/sweep-s7-literals/positional-recv-then-call	-	-
+PASS	evalorder/sweep-s7-literals/slice-of-structs-calls	-	-
+PASS	evalorder/sweep-s7-literals/slice-of-structs-recv-then-call	-	-
+PASS	evalorder/sweep-s7-literals/slice-recv-then-call	-	-
+FAIL	evalorder/sweep-s7-logical-defer-go/defer-or-then-call	differential	-
+FAIL	evalorder/sweep-s7-logical-defer-go/go-or-then-call	differential	-
+FAIL	evalorder/sweep-s7-logical-in-closures/and-local-in-funclit	differential	-
+FAIL	evalorder/sweep-s7-logical-in-closures/or-global-in-funclit	differential	-
+FAIL	evalorder/sweep-s7-logical-in-closures/or-in-closure-return	differential	-
+FAIL	evalorder/sweep-s7-logical-in-closures/or-in-deferred-funclit	differential	-
+FAIL	evalorder/sweep-s7-logical-in-closures/or-in-funclit-call-stmt	differential	-
+FAIL	evalorder/sweep-s7-logical-in-closures/or-in-stored-closure	differential	-
+FAIL	evalorder/sweep-s7-logical-in-closures/or-len-then-recv-in-funclit	differential	-
+FAIL	evalorder/sweep-s7-logical-in-closures/or-slice-elem-in-funclit	differential	-
+FAIL	evalorder/sweep-s7-logical-in-closures/or-string-index-in-funclit	differential	-
+FAIL	evalorder/sweep-s7-logical-legacy-kinds/or-array-elem	differential	-
+FAIL	evalorder/sweep-s7-logical-legacy-kinds/or-array-elem-field	differential	-
+FAIL	evalorder/sweep-s7-logical-legacy-kinds/or-array-via-pointer	differential	-
+FAIL	evalorder/sweep-s7-logical-legacy-kinds/or-defined-conversion	differential	-
+FAIL	evalorder/sweep-s7-logical-legacy-kinds/or-defined-int-conversion	differential	-
+FAIL	evalorder/sweep-s7-logical-legacy-kinds/or-interface-nil-compare	differential	-
+FAIL	evalorder/sweep-s7-logical-legacy-kinds/or-interface-typed-nil-compare	differential	-
+FAIL	evalorder/sweep-s7-logical-legacy-kinds/or-local-defined-conversion	differential	-
+FAIL	evalorder/sweep-s7-logical-legacy-kinds/or-promoted-field	differential	-
+FAIL	evalorder/sweep-s7-logical-legacy-kinds/or-type-param-compare	differential	-
+PASS	evalorder/sweep-s7-make-len-cap-order/arithmetic-args-control	-	-
+FAIL	evalorder/sweep-s7-make-len-cap-order/call-arg	differential	-
+PASS	evalorder/sweep-s7-make-len-cap-order/chan-sum-args-control	-	-
+FAIL	evalorder/sweep-s7-make-len-cap-order/define	differential	-
+FAIL	evalorder/sweep-s7-make-len-cap-order/global-target	differential	-
+FAIL	evalorder/sweep-s7-make-len-cap-order/in-generic	differential	-
+FAIL	evalorder/sweep-s7-make-len-cap-order/int64-args	differential	-
+PASS	evalorder/sweep-s7-make-len-cap-order/make-single-as-arg-control	-	-
+PASS	evalorder/sweep-s7-make-len-cap-order/map-hint-sum-control	-	-
+PASS	evalorder/sweep-s7-make-len-cap-order/noinline-callees-control	-	-
+PASS	evalorder/sweep-s7-make-len-cap-order/plain-call-control	-	-
+FAIL	evalorder/sweep-s7-make-len-cap-order/return-position	differential	-
+PASS	evalorder/sweep-s7-make-len-cap-order/shared-counter-control	-	-
+FAIL	evalorder/sweep-s7-make-len-cap-order/string-elems	differential	-
+FAIL	evalorder/sweep-s7-make-len-cap-order/then-append	differential	-
+FAIL	evalorder/sweep-s7-make-len-cap-order/then-call	differential	-
+FAIL	evalorder/sweep-s7-make-len-cap-order/then-second-make	differential	-
+FAIL	evalorder/sweep-s7-make-len-cap-order/then-store	differential	-
+FAIL	evalorder/sweep-s7-make-len-cap-order/toplevel-callees	differential	-
+FAIL	evalorder/sweep-s7-make-len-cap-order/var-spec	differential	-
+PASS	evalorder/sweep-s7-other-events/append-call-spread-call	-	-
+PASS	evalorder/sweep-s7-other-events/assert-of-call-then-call	-	-
+PASS	evalorder/sweep-s7-other-events/cap-of-call-then-call	-	-
+PASS	evalorder/sweep-s7-other-events/funclit-plus-call	-	-
+PASS	evalorder/sweep-s7-other-events/generic-method-then-call	-	-
+PASS	evalorder/sweep-s7-other-events/len-call-in-funclit	-	-
+PASS	evalorder/sweep-s7-other-events/len-of-call-then-call	-	-
+PASS	evalorder/sweep-s7-other-events/len-recv-in-funclit	-	-
+PASS	evalorder/sweep-s7-other-events/method-expr-call-then-call	-	-
+PASS	evalorder/sweep-s7-other-events/method-value-of-call-then-call	-	-
+PASS	evalorder/sweep-s7-other-events/min-calls-plus-call	-	-
+PASS	evalorder/sweep-s7-other-events/pkg-init-call-args	-	-
+PASS	evalorder/sweep-s7-other-events/promoted-method-then-call	-	-
+PASS	evalorder/sweep-s7-other-events/recover-then-call	-	-
+PASS	evalorder/sweep-s7-other-events/recv-from-called-chan-then-call	-	-
+PASS	evalorder/sweep-s7-other-events/string-conv-of-call-then-call	-	-
+PASS	evalorder/sweep-s7-other-events/two-interface-dispatches	-	-
+PASS	evalorder/sweep-s7-other-events/two-recvs-args	-	-
+PASS	evalorder/sweep-s7-other-events/two-recvs-binary	-	-
+PASS	evalorder/sweep-s7-panic-midway/binary-chain	-	-
+PASS	evalorder/sweep-s7-panic-midway/defer-args	-	-
+PASS	evalorder/sweep-s7-panic-midway/if-and	-	-
+PASS	evalorder/sweep-s7-panic-midway/keyed-literal	-	-
+PASS	evalorder/sweep-s7-panic-midway/recv-then-panic	-	-
+PASS	evalorder/sweep-s7-panic-midway/runtime-panic-in-call	-	-
+PASS	evalorder/sweep-s7-returns/call-plus-recv	-	-
+PASS	evalorder/sweep-s7-returns/call-then-panic	-	-
+PASS	evalorder/sweep-s7-returns/call-then-recv	-	-
+PASS	evalorder/sweep-s7-returns/or-then-call-toplevel	-	-
+PASS	evalorder/sweep-s7-returns/recv-then-call	-	-
+PASS	evalorder/sweep-s7-returns/two-calls	-	-
+PASS	evalorder/sweep-s7-select-defer-go-send/defer-call-then-recv	-	-
+PASS	evalorder/sweep-s7-select-defer-go-send/defer-len-then-call	-	-
+PASS	evalorder/sweep-s7-select-defer-go-send/defer-receiver-call-then-arg	-	-
+PASS	evalorder/sweep-s7-select-defer-go-send/defer-recv-then-call	-	-
+PASS	evalorder/sweep-s7-select-defer-go-send/defer-two-args	-	-
+PASS	evalorder/sweep-s7-select-defer-go-send/go-two-args	-	-
+PASS	evalorder/sweep-s7-select-defer-go-send/select-method-chan-then-call	-	-
+PASS	evalorder/sweep-s7-select-defer-go-send/select-recv-then-send-exprs	-	-
+PASS	evalorder/sweep-s7-select-defer-go-send/select-send-then-recv-exprs	-	-
+PASS	evalorder/sweep-s7-select-defer-go-send/select-send-value-recv	-	-
+PASS	evalorder/sweep-s7-select-defer-go-send/send-call-plus-recv	-	-
+PASS	evalorder/sweep-s7-select-defer-go-send/send-chan-call-then-logical	-	-
+PASS	evalorder/sweep-s7-select-defer-go-send/send-chan-call-then-value-call	-	-

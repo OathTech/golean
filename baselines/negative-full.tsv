@@ -1,6 +1,6 @@
 # GoLean negative-corpus (compile-rejection) baseline
 # recorded: 2026-08-18  commit: f68a4d86+ (spec-truth P3 slice 2)  oracle: go build (rejection)  [header corrected 2026-08-31: the old "+ frontend fail-closed" conjunct claimed a check that does not exist — scripts/coverage-negative invokes no GoLean tool (p2-fact claim 5)]
-# manifest_cases: 506  pass: 495  fail: 11
+# manifest_cases: 509  pass: 498  fail: 11
 # re-pinned: 2026-10-27 [AGENT], lane sweep/s20-admission — the S20 sweep (the admission boundary; plan §4, [USER]-approved).
 #   ADDITIVE ONLY: 54 new ids from the full run of scripts/ci --diff at a62b01e7 (780 s); no existing row moved. 43 born PASS
 #   (gc rejects AND the frontend refuses as a rejection — file selection, parse, type-check or module): the file-selection and
@@ -13,6 +13,16 @@
 #   (functions/stack-frame-too-large-array-arg, stack-frame-too-large-struct-arg: gc's 1 GB frame limit through the
 #   argument width). Each flips PASS when its entry's fix lands.
 #   Rows: directives/embed-in-body, directives/embed-no-import, directives/embed-on-func, directives/linkname-without-unsafe, directives/noescape-with-body, directives/noinline-bodyless, directives/nowritebarrier-outside-runtime, directives/systemstack-outside-runtime, directives/uintptrkeepalive-outside-std, directives/wasmimport-bodyless, directives/yeswritebarrierrec-outside-runtime, functions/func-redeclared-across-files, functions/main-declared-type, functions/main-declared-var, functions/main-method-only, functions/main-redeclared-across-files, functions/main-type-params, functions/main-with-param, functions/main-with-result, functions/stack-frame-too-large-array-arg, functions/stack-frame-too-large-struct-arg, imports/bare-internal-path, imports/goroot-vendor-name, imports/local-package-two-names, imports/module-mode-bare-local-import, imports/nested-vendor-path-import, imports/package-main-import, imports/unused-local-import, imports/vendor-path-import, init/init-type-params, modules/go117-generics, modules/go121-range-over-int, modules/go122-range-over-func, modules/module-path-cmd, modules/module-path-dot, modules/module-path-quoted-space, modules/module-path-relative, modules/module-path-std-fmt, modules/module-path-std-nested, modules/module-path-trailing-slash, modules/nested-module-language-version, modules/require-path-comment-start, source-selection/all-files-excluded, source-selection/bom-middle, source-selection/cr-only-line-endings, source-selection/form-feed, source-selection/gobuild-malformed, source-selection/gobuild-twice, source-selection/invalid-utf8-comment, source-selection/invalid-utf8-string, source-selection/nul-in-comment, source-selection/test-file-bad-header, source-selection/test-file-other-package, source-selection/two-packages
+# re-pinned: 2026-10-27 [AGENT], lane sweep/s7-hoist-order — the defect-neighbourhood campaign's step 2, shape S7 (ordered
+#   events reordered by the hoist; plan docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved 2026-10-27): the
+#   gc-REJECTED cells of the shape's matrix — a map literal with duplicate constant keys, an array literal with a duplicate
+#   index, a keyed struct literal naming a field twice (each holding two call elements, so no order question survives the
+#   rejection) — gc rejects and the frontend refuses each as a type-check rejection carrying gc's text. THREE BORN ROWS,
+#   appended at the end of the file: 437 + 3 = 440, pass 437 + 3 = 440, fail 0; no existing row moved; measured by the same
+#   scripts/ci --diff at the lane tree 658aa41e (negative-latest.tsv). The rows:
+#     evalorder/sweep-s7-dup-array-index                           PASS/-
+#     evalorder/sweep-s7-dup-map-key                               PASS/-
+#     evalorder/sweep-s7-dup-struct-field                          PASS/-
 # re-pinned: 2026-10-27 [AGENT], lane sweep/s5-method-sets — the defect-neighbourhood campaign's step 2, shape S5 (method sets;
 #   plan docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved 2026-10-27): the gc-REJECTED cells of the shape's
 #   matrix — a pointer method on the non-addressable operands (a composite literal, a call result, a type assertion, a channel
@@ -685,3 +695,6 @@ PASS	methods/sweep-s5-pointer-method-on-receive	-
 PASS	methods/sweep-s5-pointer-to-interface-receiver-call	-
 PASS	methods/sweep-s5-promoted-pointer-method-on-call-result	-
 PASS	methods/sweep-s5-same-depth-field-and-method	-
+PASS	evalorder/sweep-s7-dup-array-index	-
+PASS	evalorder/sweep-s7-dup-map-key	-
+PASS	evalorder/sweep-s7-dup-struct-field	-
