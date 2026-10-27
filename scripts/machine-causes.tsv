@@ -31,3 +31,4 @@ make-footprint-budget	error	footprint budget for a constant-length make
 append-footprint-budget	unsupported	footprint budget for an append spill
 conv-footprint-budget	unsupported	footprint budget for a string conversion
 decoder-scope-undeclared-local	error	is not in scope at this statement
+machine-deadlock	deadlock	all goroutines are asleep

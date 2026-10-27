@@ -1,5 +1,6 @@
 # GoLean native-frontend full-corpus differential baseline
 # cases: 5592 (5250 PASS / 342 FAIL)
+# cause keyed 2026-10-27 [AGENT coordinator], train-25 stage: BUG-287's two rows `error:?` → `error:decoder-scope-undeclared-local` (the decoder's scope refusal, the row added at the train-24 stage) and BUG-286's single-buffer row `deadlock:?` → `deadlock:machine-deadlock` (a new scripts/machine-causes.tsv row: the machine deadlocked where gc ran); no row moved.
 # 2026-10-27 lane frontend/fix-admission-1027 [AGENT]: re-pinned from the lane's full `scripts/ci --diff` at the tip, after the rebase onto Run: CAPPED_MEM_MAX=64G capped scripts/ci --diff at 63bbba7a with the row edits and records applied in the tree (1117 s).
 #   the main carrying the S20 and S10 sweep entries. FIVE BUG-216/BUG-226 rows move non-PASS -> PASS with the fixes (the header rule
 #   ported from go/build; the value form at a zero-length pointer-to-array range): source-selection/sweep-s20-plusbuild-under-gobuild,
@@ -9360,8 +9361,8 @@ PASS	builtins/sweep-s9-call-operands/min-calls-then-call	-	-
 PASS	builtins/sweep-s9-call-operands/panic-of-call	-	-
 PASS	builtins/sweep-s9-call-operands/print-calls	-	-
 PASS	builtins/sweep-s9-call-operands/var-decl-len	-	-
-FAIL	builtins/sweep-s9-paren-builtin/paren-builtin	lean-observation	error:?
-FAIL	builtins/sweep-s9-paren-builtin/paren-builtin-cap	lean-observation	error:?
+FAIL	builtins/sweep-s9-paren-builtin/paren-builtin	lean-observation	error:decoder-scope-undeclared-local
+FAIL	builtins/sweep-s9-paren-builtin/paren-builtin-cap	lean-observation	error:decoder-scope-undeclared-local
 PASS	channels/sweep-s9-recv-operand-positions/append-recv	-	-
 PASS	channels/sweep-s9-recv-operand-positions/compound-recv-rhs	-	-
 PASS	channels/sweep-s9-recv-operand-positions/conv-of-recv	-	-
@@ -9383,7 +9384,7 @@ FAIL	channels/sweep-s9-rmw-recv-target/recv-ptr-field	differential	-
 FAIL	channels/sweep-s9-rmw-recv-target/slice-recv-index	differential	-
 FAIL	channels/sweep-s9-rmw-recv-target/slice-recv-index-compound	differential	-
 PASS	channels/sweep-s9-rmw-recv-target/slice-recv-index-read-control	-	-
-FAIL	channels/sweep-s9-rmw-recv-target/slice-recv-index-single	lean-observation	deadlock:?
+FAIL	channels/sweep-s9-rmw-recv-target/slice-recv-index-single	lean-observation	deadlock:machine-deadlock
 PASS	channels/sweep-s9-rmw-recv-target/slice-recv-index-store-control	-	-
 PASS	channels/sweep-s9-select-operand-calls/closure-select	-	-
 PASS	channels/sweep-s9-select-operand-calls/comma-ok-recv-call	-	-
