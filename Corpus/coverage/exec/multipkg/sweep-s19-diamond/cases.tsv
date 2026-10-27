@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+seq	diamondSeq	-	ok	-	multipackage,imports,init,globals,evaluation_order
+once	diamondOnce	-	ok	-	multipackage,imports,init,globals
+imported-init-seen	importedInitSeen	-	ok	-	multipackage,imports,init,globals
+main-var	mainVar	-	ok	-	multipackage,imports,init,globals

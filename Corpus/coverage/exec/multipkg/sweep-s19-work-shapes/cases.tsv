@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+map-literal	mapLiteral	-	ok	-	multipackage,imports,init,globals,evaluation_order,maps
+arithmetic	arithmetic	-	ok	-	multipackage,imports,init,globals,evaluation_order
+multi-stmt-call	multiStmtCall	-	ok	-	multipackage,imports,init,globals,evaluation_order,calls
+indexing	indexing	-	ok	-	multipackage,imports,init,globals,evaluation_order,slices
+field-read	fieldRead	-	ok	-	multipackage,imports,init,globals,evaluation_order,structs
+iface-call	ifaceCall	-	ok	-	multipackage,imports,init,globals,evaluation_order,interfaces
+func-value-call	funcValueCall	-	ok	-	multipackage,imports,init,globals,evaluation_order,closures

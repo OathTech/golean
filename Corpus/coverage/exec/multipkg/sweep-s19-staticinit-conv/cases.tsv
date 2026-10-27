@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+int64-of-int	int64OfInt	-	ok	-	multipackage,imports,init,globals,evaluation_order,conversions
+uint64-of-uint	uint64OfUint	-	ok	-	multipackage,imports,init,globals,evaluation_order,conversions
+uintptr-of-uint	uintptrOfUint	-	ok	-	multipackage,imports,init,globals,evaluation_order,conversions
+int-of-int64	intOfInt64	-	ok	-	multipackage,imports,init,globals,evaluation_order,conversions
+uint8-of-int	uint8OfInt	-	ok	-	multipackage,imports,init,globals,evaluation_order,conversions
+float64-of-int	float64OfInt	-	ok	-	multipackage,imports,init,globals,evaluation_order,conversions
+int32-of-int	int32OfInt	-	ok	-	multipackage,imports,init,globals,evaluation_order,conversions
+int64-of-dynamic	int64OfDynamic	-	ok	-	multipackage,imports,init,globals,evaluation_order,conversions

@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+zero-valued-take-no-step	zeroValuedTakeNoStep	-	ok	-	init,globals,evaluation_order,zero_values
+transitive-two-bodies	transitiveThroughTwoBodies	-	ok	-	init,globals,evaluation_order,calls
+value-method	throughValueMethod	-	ok	-	init,globals,evaluation_order,methods
+pointer-method	throughPointerMethod	-	ok	-	init,globals,evaluation_order,methods,pointers
+method-value-stored	methodValueStored	-	ok	-	init,globals,evaluation_order,methods
+method-expression	methodExpression	-	ok	-	init,globals,evaluation_order,methods
+closure-stored-called	closureStoredThenCalled	-	ok	-	init,globals,evaluation_order,closures
+closure-invoked-inline	closureInvokedInline	-	ok	-	init,globals,evaluation_order,closures

@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features
+generic-function	genericFunction	-	ok	-	init,globals,evaluation_order,generics,calls
+generic-type-method	genericTypeMethod	-	ok	-	init,globals,evaluation_order,generics,methods
+promoted-through-struct	promotedThroughStruct	-	ok	-	init,globals,evaluation_order,embedding,methods
+multi-name-separate-steps	multiNameSeparateSteps	-	ok	-	init,globals,evaluation_order,calls
+blank-with-dependency	blankWithDependency	-	ok	-	init,globals,evaluation_order
+const-iota-no-step	constIotaNoStep	-	ok	-	init,globals,evaluation_order,constants,iota
+init-after-all-vars	initAfterAllVars	-	ok	-	init,globals,evaluation_order,calls
+operand-positions	operandPositions	-	ok	-	init,globals,evaluation_order,slices,maps,pointers,structs
+function-in-composite-literal	functionInCompositeLiteral	-	ok	-	init,globals,evaluation_order,slices,calls
+callee-writes-dependency	calleeWritesDependency	-	ok	-	init,globals,evaluation_order,calls,assignment
