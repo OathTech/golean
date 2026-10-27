@@ -1,0 +1,15 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep S12 — run-time error texts at the abort line (matrix cells D02,
+# D04–D06, D10–D14; lane sweep/s12-panic-recover, 2026-10-27).
+negative-index	rtNegativeIndex	-1	panic	index out of range [-1]	panic,slices,indexing
+array-3-index	rtArray3Index	5	panic	slice bounds out of range [::5] with length 3	panic,arrays,slicing,full_slice
+slice-3-index	rtSlice3Index	5	panic	slice bounds out of range [::5] with capacity 4	panic,slices,slicing,full_slice
+slice-3-index-low-high	rtSlice3IndexLowHigh	3,2	panic	slice bounds out of range [3:2:]	panic,slices,slicing,full_slice
+nil-map-write	rtNilMapWrite	-	panic	assignment to entry in nil map	panic,maps,nil
+close-nil	rtCloseNil	-	panic	close of nil channel	panic,channels,close,nil
+close-closed	rtCloseClosed	-	panic	close of closed channel	panic,channels,close
+makeslice-len	rtMakesliceLen	-1	panic	makeslice: len out of range	panic,slices,make
+makeslice-cap	rtMakesliceCap	3,2	panic	makeslice: cap out of range	panic,slices,make
+makechan	rtMakechan	-1	panic	makechan: size out of range	panic,channels,make
+unhashable	rtUnhashable	-	panic	hash of unhashable type []int	panic,maps,slices,comparability
+uncomparable	rtUncomparable	-	panic	comparing uncomparable type []int	panic,interfaces,slices,comparability,equality

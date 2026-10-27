@@ -1,0 +1,21 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep S12 — the abort line per basic payload kind (matrix cells A02, A03,
+# A05–A14, A17, A19, A50, A51; lane sweep/s12-panic-recover, 2026-10-27).
+string-computed	abortStringComputed	3,2	panic	computed-gt	panic,strings
+string-empty	abortStringEmpty	-	panic	empty-payload	panic,strings,print
+int8	abortInt8	-	panic	-3	panic,ints,widths
+int16	abortInt16	-	panic	-300	panic,ints,widths
+rune	abortRune	-	panic	120	panic,ints,runes
+int64-min	abortInt64Min	-	panic	-9223372036854775808	panic,ints,widths
+uint	abortUint	-	panic	7	panic,ints,widths
+byte	abortByte	-	panic	200	panic,ints,bytes
+uint16	abortUint16	-	panic	65535	panic,ints,widths
+uint32	abortUint32	-	panic	4294967295	panic,ints,widths
+uint64-max	abortUint64Max	-	panic	18446744073709551615	panic,ints,widths
+uintptr	abortUintptr	-	panic	4096	panic,ints,widths
+bool-false	abortBoolFalse	-	panic	false	panic,bools
+nil-error-var	abortNilErrorVar	-	panic	panic called with nil argument	panic,nil,interfaces
+nil-from-result	abortNilFromResult	-	panic	panic called with nil argument	panic,nil,interfaces
+generic-int	abortGenericInt	-	panic	3	panic,generics,ints
+generic-defined	abortGenericDefined	-	panic	main.code(3)	panic,generics,defined_type
+any-var-int	abortAnyVarInt	-	panic	3	panic,interfaces,ints

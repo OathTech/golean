@@ -1,0 +1,19 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep S12 — the assert-fail text naming the recovered payload's dynamic
+# type (matrix cells C01–C11, C13, C14, C16; lane sweep/s12-panic-recover,
+# 2026-10-27).
+string	assertFailString	-	panic	interface conversion: interface {} is string, not int	panic,recover,defer,type_assertions,strings,closures
+float	assertFailFloat	-	panic	interface conversion: interface {} is float64, not int	panic,recover,defer,type_assertions,floats,closures
+slice	assertFailSlice	-	panic	interface conversion: interface {} is []int, not int	panic,recover,defer,type_assertions,slices,closures
+map	assertFailMap	-	panic	interface conversion: interface {} is map[string]int, not int	panic,recover,defer,type_assertions,maps,closures
+func	assertFailFunc	-	panic	interface conversion: interface {} is func(), not int	panic,recover,defer,type_assertions,functions,closures
+chan	assertFailChan	-	panic	interface conversion: interface {} is chan int, not int	panic,recover,defer,type_assertions,channels,closures
+pointer	assertFailPointer	-	panic	interface conversion: interface {} is *main.plain, not main.plain	panic,recover,defer,type_assertions,pointers,structs,closures
+array	assertFailArray	-	panic	interface conversion: interface {} is [2]int, not int	panic,recover,defer,type_assertions,arrays,closures
+defined-string	assertFailDefinedString	-	panic	interface conversion: interface {} is main.defStr, not string	panic,recover,defer,type_assertions,defined_type,strings,closures
+errors-new	assertFailErrorsNew	-	panic	interface conversion: interface {} is *errors.errorString, not int	panic,recover,defer,type_assertions,stdlib,closures
+fmt-errorf	assertFailFmtErrorf	-	panic	interface conversion: interface {} is *errors.errorString, not int	panic,recover,defer,type_assertions,stdlib,closures
+bool	assertFailBool	-	panic	interface conversion: interface {} is bool, not int	panic,recover,defer,type_assertions,bools,closures
+int8	assertFailInt8	-	panic	interface conversion: interface {} is int8, not int	panic,recover,defer,type_assertions,ints,widths,closures
+struct	assertFailStruct	-	panic	interface conversion: interface {} is main.plain, not int	panic,recover,defer,type_assertions,structs,closures
+repanic-assert-fail	repanicAssertFail	-	panic	interface conversion: interface {} is string, not int [recovered]	panic,recover,defer,type_assertions,strings

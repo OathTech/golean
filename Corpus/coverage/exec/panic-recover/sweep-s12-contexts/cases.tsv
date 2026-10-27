@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep S12 — the abort report from a nested call and from a goroutine
+# (matrix cells G02, G04, G05; lane sweep/s12-panic-recover, 2026-10-27).
+nested-call	ctxNestedCall	-	panic	deep	panic,calls,nested
+nested-defined	ctxNestedDefined	-	panic	deep-error	panic,calls,nested,defined_type,methods
+goroutine-error-payload	ctxGoroutineErrorPayload	-	panic	g-text	panic,goroutines,channels,defined_type,methods
+goroutine-repanic	ctxGoroutineRepanic	-	panic	g-first [recovered]	panic,recover,defer,goroutines,channels

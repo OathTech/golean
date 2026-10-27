@@ -1,0 +1,20 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep S12 — the abort line for defined-type and error-valued payloads
+# (matrix cells A29, A38–A44, A47, A48, A52, J01, J04, J07; lane
+# sweep/s12-panic-recover, 2026-10-27).
+defined-int8	abortDefinedInt8	-	panic	main.t8(-3)	panic,defined_type,ints,widths
+defined-uint64	abortDefinedUint64	-	panic	main.u64(18446744073709551615)	panic,defined_type,ints,widths
+ptr-recv-error-on-ptr	abortPtrRecvErrorOnPtr	-	panic	ptr-text	panic,defined_type,methods,pointers,structs
+value-recv-error-on-ptr	abortValueRecvErrorOnPtr	-	panic	val-text	panic,defined_type,methods,pointers,structs
+defined-string-error	abortDefinedStringError	-	panic	cannot parse	panic,defined_type,methods,strings
+struct-error	abortStructError	-	panic	struct-err-pos	panic,defined_type,methods,structs
+errors-new	abortErrorsNew	-	panic	from-errors-new	panic,stdlib,interfaces
+fmt-errorf	abortFmtErrorf	-	panic	fmt-7	panic,stdlib,interfaces
+wrapped-error	abortWrappedError	-	panic	open: base	panic,stdlib,methods,pointers,structs
+stringer-panics	abortStringerPanics	-	fatal	panic while printing panic value: in-string	panic,defined_type,methods,fatal
+error-empty-text	abortErrorEmptyText	-	panic	empty-error-text	panic,defined_type,methods,structs,print
+via-stringer-iface	abortViaStringerIface	-	panic	stringer-text	panic,defined_type,methods,interfaces
+ptr-stringer-on-value	abortPtrStringerOnValue	-	panic	main.ptrStringer(3)	panic,defined_type,methods,pointers
+error-wrong-sig	rewriteErrorWrongSig	-	panic	main.wrongErr(3)	panic,defined_type,methods
+embedded-error-iface	rewriteEmbeddedErrorIface	-	panic	embedded-text	panic,stdlib,structs,embedding,interfaces
+generic-error	rewriteGenericError	-	panic	box-text	panic,generics,methods,structs

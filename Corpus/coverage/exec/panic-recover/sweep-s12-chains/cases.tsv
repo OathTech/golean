@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep S12 — nested panics and re-panics, the report's head line (matrix
+# cells F04–F07, F09, F10; lane sweep/s12-panic-recover, 2026-10-27).
+three-deep	chainThreeDeep	-	panic	a	panic,defer,nested
+middle-recovered	chainMiddleRecovered	-	panic	a [recovered]	panic,recover,defer,nested
+different-kind	repanicDifferentKind	-	panic	s [recovered]	panic,recover,defer,ints,strings
+after-recovery-new-defer	repanicAfterRecoveryNewDefer	-	panic	second	panic,recover,defer
+two-different-faults	repanicTwoDifferentFaults	-	panic	runtime error: index out of range [0] with length 0 [recovered]	panic,recover,defer,slices,pointers,nil
+from-defer-depth-2	repanicFromDeferDepth2	-	panic	x	panic,recover,defer,nested,nil

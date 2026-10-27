@@ -1,0 +1,33 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep S12 — the recovered payload's dynamic type and value per kind
+# (matrix cells B03–B05, B10–B15, B17–B20, B22–B24; lane
+# sweep/s12-panic-recover, 2026-10-27). Each code's digits are the checks
+# that held (assert at the own kind; rejected at the others).
+int8	recoverInt8	-	ok	-	panic,recover,defer,type_assertions,ints,widths,closures
+int16	recoverInt16	-	ok	-	panic,recover,defer,type_assertions,ints,widths,closures
+int32	recoverInt32	-	ok	-	panic,recover,defer,type_assertions,ints,runes,closures
+int64	recoverInt64	-	ok	-	panic,recover,defer,type_assertions,ints,widths,closures
+uint	recoverUint	-	ok	-	panic,recover,defer,type_assertions,ints,widths,closures
+uint8	recoverUint8	-	ok	-	panic,recover,defer,type_assertions,ints,bytes,closures
+uint16	recoverUint16	-	ok	-	panic,recover,defer,type_assertions,ints,widths,closures
+uint32	recoverUint32	-	ok	-	panic,recover,defer,type_assertions,ints,widths,closures
+uint64	recoverUint64	-	ok	-	panic,recover,defer,type_assertions,ints,widths,closures
+uintptr	recoverUintptr	-	ok	-	panic,recover,defer,type_assertions,ints,widths,closures
+float64	recoverFloat64	-	ok	-	panic,recover,defer,type_assertions,floats,closures
+float32	recoverFloat32	-	ok	-	panic,recover,defer,type_assertions,floats,closures
+bool	recoverBool	-	ok	-	panic,recover,defer,type_assertions,bools,closures
+slice	recoverSlice	-	ok	-	panic,recover,defer,type_assertions,slices,aliasing,closures
+map	recoverMap	-	ok	-	panic,recover,defer,type_assertions,maps,aliasing,closures
+func	recoverFunc	-	ok	-	panic,recover,defer,type_assertions,functions,higher_order,closures
+chan	recoverChan	-	ok	-	panic,recover,defer,type_assertions,channels,closures
+array	recoverArray	-	ok	-	panic,recover,defer,type_assertions,arrays,value_copy,closures
+defined-int	recoverDefinedInt	-	ok	-	panic,recover,defer,type_assertions,defined_type,closures
+defined-string	recoverDefinedString	-	ok	-	panic,recover,defer,type_assertions,defined_type,strings,closures
+defined-struct	recoverDefinedStruct	-	ok	-	panic,recover,defer,type_assertions,defined_type,structs,closures
+errors-new-identity	recoverErrorsNewIdentity	-	ok	-	panic,recover,defer,type_assertions,stdlib,identity,closures
+fmt-errorf	recoverFmtErrorf	-	ok	-	panic,recover,defer,type_assertions,stdlib,closures
+unwrap	recoverUnwrap	-	ok	-	panic,recover,defer,type_assertions,stdlib,methods,pointers,closures
+runtime-error-not-string	recoverRuntimeErrorNotString	-	ok	-	panic,recover,defer,type_assertions,slices,indexing,closures
+generic-assert	recoverGenericAssert	-	ok	-	panic,recover,defer,type_assertions,generics,closures
+empty-struct	recoverEmptyStruct	-	ok	-	panic,recover,defer,type_assertions,structs,empty,closures
+ptr-through-error	recoverPtrThroughError	-	ok	-	panic,recover,defer,type_assertions,pointers,interfaces,methods,closures

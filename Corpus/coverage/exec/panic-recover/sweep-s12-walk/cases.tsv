@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep S12 — the recover walk (matrix cells E04, E13, E14, E20, E21; lane
+# sweep/s12-panic-recover, 2026-10-27).
+defer-func-var	walkDeferFuncVar	-	ok	-	panic,recover,defer,closures,higher_order
+defer-in-defer	walkDeferInDefer	-	ok	-	panic,recover,defer,closures,nested
+recover-in-spawned-goroutine	walkRecoverInSpawnedGoroutine	-	ok	-	panic,recover,defer,goroutines,channels,closures
+defer-method-expr	walkDeferMethodExpr	-	ok	-	panic,recover,defer,methods,pointers
+defer-generic	walkDeferGeneric	-	ok	-	panic,recover,defer,generics,pointers

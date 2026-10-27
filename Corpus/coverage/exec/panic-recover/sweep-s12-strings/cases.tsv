@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep S12 — long string payloads (matrix cells I01, I05; lane
+# sweep/s12-panic-recover, 2026-10-27).
+long	abortLongString	-	panic	abcdefghabcdefghabcdefgh	panic,strings,concat,loops
+long-multiline	abortLongMultiline	-	panic	abcdefghabcdefghabcdefgh	panic,strings,concat,loops,first_line_scope

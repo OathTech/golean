@@ -298,6 +298,40 @@ not by running anything.
   `.tmp/audit/p/V`.)
 - Pinned-by: differential
 - Cases: multipkg/same-name-identity-panic, scoping/local-type-identity/scopes-panic, scoping/local-type-identity/shadow-panic, multipkg/same-name-pointer-panic/no-methods, multipkg/same-name-pointer-panic/value-method, multipkg/same-name-pointer-panic/pointer-method, multipkg/same-name-pointer-panic/slice-control
+- Neighbourhood: S12 (panic and recover: payload, abort text, the recover walk) — swept 2026-10-27 by lane
+  `sweep/s12-panic-recover` (plan §4, [USER]-approved 2026-10-27). THE MATRIX: payloads (a string literal /
+  computed / empty / 8 KiB / multi-line; every integer kind incl. `uintptr` and the rune/byte aliases; float32/64;
+  bool; nil from a literal, a variable and a call result; a typed nil pointer; struct, pointer, slice, map, func, chan,
+  array; defined over int8/uint64/string/bool/float/struct; `Error()` on a value, a pointer, a defined string, a struct,
+  a generic instantiation, an embedded-interface carrier, through a named-interface box; a pointer-receiver `Error()`
+  / `String()` on a value; the wrong signature; `errors.New`, `fmt.Errorf`, a wrapping error; an `Error()`/`String()`
+  that panics, returns the empty string, or returns an invalid-UTF-8 first line; a generic `panic(v)`) × observations
+  (the abort's first line; the recovered value asserted back at its own kind and rejected at the others, with slice /
+  map / chan aliasing, the array copy, a func called, `errors.Unwrap`, sentinel identity; the failed-assertion text
+  naming the dynamic type for 15 kinds; the run-time error texts of the negative index, the 3-index array and slice
+  forms, the nil map write, close of a nil / closed channel, makeslice len / cap, makechan, the unhashable key, the
+  uncomparable `==`; the recover walk through a deferred func variable, a defer-in-defer, a spawned goroutine, a method
+  expression, a generic; a three-deep chain, a middle recovery, a re-panic of another kind, a recovery completed before
+  an older deferred call panics, two different faults, `panic(recover())` one frame too deep) × contexts (the subject,
+  a nested call, a goroutine's preprint and re-panic, `init`): 181 cells — 112 PROBED by this lane (87 agreement rows,
+  22 named refusals in `.tmp/probes/sweep-s12-{abort-refused,oos}` (ephemeral; the texts in the lane's report), 2
+  direct-run agreements under BUG-107's limit (an `init` abort's `Error()` line and its `[recovered]` line: the
+  machine's first line = gc's stderr, the harness refuses pre-main aborts by name), 1 DISAGREEMENT), 66 COVERED by
+  existing rows (cited per cell in the lane's report), 3 OUT OF SCOPE by name (slice→array length FR-10, complex FR-15,
+  the `goroutine N [running]:` trace line the harness never compares). ROWS ADDED: 106 strict rows in 9 packages
+  `Corpus/coverage/exec/panic-recover/sweep-s12-*/` (abort-kinds 18, abort-defined 16, recover-kinds 28, assert-text
+  15, runtime-texts 12, walk 5, chains 6, contexts 4, strings 2), expected = gc, 105 PASS. FINDINGS: one — BUG-236
+  (`fmt.Errorf`'s payload names the frontend's shim type `*main.goleanShimErrorString` in the failed-assertion text
+  where gc names `*errors.errorString`; `sweep-s12-assert-text/fmt-errorf` born red). CELLS LEFT, by name: the
+  machine REFUSES the abort line of a float32/float64 payload (gc 1.26 prints the shortest decimal, `1.5` / `0.25` —
+  FR-29's class), of the address-printing kinds (struct, pointer, slice, map, func, chan, array, defined over struct:
+  gc prints the eface data word, `(main.plain) 0x4bbce8`, reproducible only for the typed nil pointer / nil map / nil
+  chan `0x0`), and of a defined type over string / bool / float (`main.defStr("x")`, `main.defBool(true)`,
+  `main.defFloat(1.5)` — deterministic texts; `renderPanicRewrite`'s `main.T(v)` arm is int-only); `runtime.Goexit`
+  and `os.Exit` are frontend-quarantined by name (Q-GOEXIT; gc's Goexit from main is `fatal error: no goroutines
+  (main called runtime.Goexit) - deadlock!`); `%w` and `errors.Is` (reflectlite) refuse at the frontend by name; a
+  runtime error's `fmt.Sprint` and `r.(runtime.Error)` refuse on BUG-099's class; an `Error()` text whose first line
+  is invalid UTF-8 refuses on both sides (BUG-004 item 3 / D5). The instance here (the display name in a panic text) was re-probed at the failed-assertion text for 15 dynamic kinds (`sweep-s12-assert-text/*`, incl. the stdlib's `*errors.errorString`), all gc's names but the shim type of BUG-236.
 
 > **R-1 conversion state (2026-08-21, raft W4.3 item 5 —
 > docs/raft-w43-log.md).** The 2026-08-20 R-1 ruling quotients this
@@ -422,6 +456,40 @@ and only differentially-visibly.
   (The pin PASSes post-fix: 1032, the 1000+len discriminator.)
 - Pinned-by: differential
 - Cases: sync/waitgroup-panic-payload/payload-is-string
+- Neighbourhood: S12 (panic and recover: payload, abort text, the recover walk) — swept 2026-10-27 by lane
+  `sweep/s12-panic-recover` (plan §4, [USER]-approved 2026-10-27). THE MATRIX: payloads (a string literal /
+  computed / empty / 8 KiB / multi-line; every integer kind incl. `uintptr` and the rune/byte aliases; float32/64;
+  bool; nil from a literal, a variable and a call result; a typed nil pointer; struct, pointer, slice, map, func, chan,
+  array; defined over int8/uint64/string/bool/float/struct; `Error()` on a value, a pointer, a defined string, a struct,
+  a generic instantiation, an embedded-interface carrier, through a named-interface box; a pointer-receiver `Error()`
+  / `String()` on a value; the wrong signature; `errors.New`, `fmt.Errorf`, a wrapping error; an `Error()`/`String()`
+  that panics, returns the empty string, or returns an invalid-UTF-8 first line; a generic `panic(v)`) × observations
+  (the abort's first line; the recovered value asserted back at its own kind and rejected at the others, with slice /
+  map / chan aliasing, the array copy, a func called, `errors.Unwrap`, sentinel identity; the failed-assertion text
+  naming the dynamic type for 15 kinds; the run-time error texts of the negative index, the 3-index array and slice
+  forms, the nil map write, close of a nil / closed channel, makeslice len / cap, makechan, the unhashable key, the
+  uncomparable `==`; the recover walk through a deferred func variable, a defer-in-defer, a spawned goroutine, a method
+  expression, a generic; a three-deep chain, a middle recovery, a re-panic of another kind, a recovery completed before
+  an older deferred call panics, two different faults, `panic(recover())` one frame too deep) × contexts (the subject,
+  a nested call, a goroutine's preprint and re-panic, `init`): 181 cells — 112 PROBED by this lane (87 agreement rows,
+  22 named refusals in `.tmp/probes/sweep-s12-{abort-refused,oos}` (ephemeral; the texts in the lane's report), 2
+  direct-run agreements under BUG-107's limit (an `init` abort's `Error()` line and its `[recovered]` line: the
+  machine's first line = gc's stderr, the harness refuses pre-main aborts by name), 1 DISAGREEMENT), 66 COVERED by
+  existing rows (cited per cell in the lane's report), 3 OUT OF SCOPE by name (slice→array length FR-10, complex FR-15,
+  the `goroutine N [running]:` trace line the harness never compares). ROWS ADDED: 106 strict rows in 9 packages
+  `Corpus/coverage/exec/panic-recover/sweep-s12-*/` (abort-kinds 18, abort-defined 16, recover-kinds 28, assert-text
+  15, runtime-texts 12, walk 5, chains 6, contexts 4, strings 2), expected = gc, 105 PASS. FINDINGS: one — BUG-236
+  (`fmt.Errorf`'s payload names the frontend's shim type `*main.goleanShimErrorString` in the failed-assertion text
+  where gc names `*errors.errorString`; `sweep-s12-assert-text/fmt-errorf` born red). CELLS LEFT, by name: the
+  machine REFUSES the abort line of a float32/float64 payload (gc 1.26 prints the shortest decimal, `1.5` / `0.25` —
+  FR-29's class), of the address-printing kinds (struct, pointer, slice, map, func, chan, array, defined over struct:
+  gc prints the eface data word, `(main.plain) 0x4bbce8`, reproducible only for the typed nil pointer / nil map / nil
+  chan `0x0`), and of a defined type over string / bool / float (`main.defStr("x")`, `main.defBool(true)`,
+  `main.defFloat(1.5)` — deterministic texts; `renderPanicRewrite`'s `main.T(v)` arm is int-only); `runtime.Goexit`
+  and `os.Exit` are frontend-quarantined by name (Q-GOEXIT; gc's Goexit from main is `fatal error: no goroutines
+  (main called runtime.Goexit) - deadlock!`); `%w` and `errors.Is` (reflectlite) refuse at the frontend by name; a
+  runtime error's `fmt.Sprint` and `r.(runtime.Error)` refuse on BUG-099's class; an `Error()` text whose first line
+  is invalid UTF-8 refuses on both sides (BUG-004 item 3 / D5). The instance here (a plain-string payload where the machine had the runtime twin) was re-probed from the other side: the twin is NOT a string (`recover-kinds/runtime-error-not-string`), and every library error payload (`errors.New`, `fmt.Errorf`, a wrapper) recovers as `error` with its text (`recover-kinds/{errors-new-identity,fmt-errorf,unwrap}`).
 
 ## BUG-055 — WaitGroup counter modeled as unbounded Int; gc's is an int32 that wraps mod 2^32 before the negative test (divergent in BOTH directions)
 
@@ -2395,6 +2463,40 @@ boundary).
   last field is now the callee's `FuncId` ([USER] Mike 2026-09-28 (option (1) agreed), relayed).
 - Pinned-by: differential
 - Cases: interfaces/recover-promoted-wrapper/silent-value-embed, interfaces/recover-promoted-wrapper/status-value-embed, interfaces/recover-promoted-wrapper/silent-pointer-embed, interfaces/recover-promoted-wrapper/silent-iface-embed
+- Neighbourhood: S12 (panic and recover: payload, abort text, the recover walk) — swept 2026-10-27 by lane
+  `sweep/s12-panic-recover` (plan §4, [USER]-approved 2026-10-27). THE MATRIX: payloads (a string literal /
+  computed / empty / 8 KiB / multi-line; every integer kind incl. `uintptr` and the rune/byte aliases; float32/64;
+  bool; nil from a literal, a variable and a call result; a typed nil pointer; struct, pointer, slice, map, func, chan,
+  array; defined over int8/uint64/string/bool/float/struct; `Error()` on a value, a pointer, a defined string, a struct,
+  a generic instantiation, an embedded-interface carrier, through a named-interface box; a pointer-receiver `Error()`
+  / `String()` on a value; the wrong signature; `errors.New`, `fmt.Errorf`, a wrapping error; an `Error()`/`String()`
+  that panics, returns the empty string, or returns an invalid-UTF-8 first line; a generic `panic(v)`) × observations
+  (the abort's first line; the recovered value asserted back at its own kind and rejected at the others, with slice /
+  map / chan aliasing, the array copy, a func called, `errors.Unwrap`, sentinel identity; the failed-assertion text
+  naming the dynamic type for 15 kinds; the run-time error texts of the negative index, the 3-index array and slice
+  forms, the nil map write, close of a nil / closed channel, makeslice len / cap, makechan, the unhashable key, the
+  uncomparable `==`; the recover walk through a deferred func variable, a defer-in-defer, a spawned goroutine, a method
+  expression, a generic; a three-deep chain, a middle recovery, a re-panic of another kind, a recovery completed before
+  an older deferred call panics, two different faults, `panic(recover())` one frame too deep) × contexts (the subject,
+  a nested call, a goroutine's preprint and re-panic, `init`): 181 cells — 112 PROBED by this lane (87 agreement rows,
+  22 named refusals in `.tmp/probes/sweep-s12-{abort-refused,oos}` (ephemeral; the texts in the lane's report), 2
+  direct-run agreements under BUG-107's limit (an `init` abort's `Error()` line and its `[recovered]` line: the
+  machine's first line = gc's stderr, the harness refuses pre-main aborts by name), 1 DISAGREEMENT), 66 COVERED by
+  existing rows (cited per cell in the lane's report), 3 OUT OF SCOPE by name (slice→array length FR-10, complex FR-15,
+  the `goroutine N [running]:` trace line the harness never compares). ROWS ADDED: 106 strict rows in 9 packages
+  `Corpus/coverage/exec/panic-recover/sweep-s12-*/` (abort-kinds 18, abort-defined 16, recover-kinds 28, assert-text
+  15, runtime-texts 12, walk 5, chains 6, contexts 4, strings 2), expected = gc, 105 PASS. FINDINGS: one — BUG-236
+  (`fmt.Errorf`'s payload names the frontend's shim type `*main.goleanShimErrorString` in the failed-assertion text
+  where gc names `*errors.errorString`; `sweep-s12-assert-text/fmt-errorf` born red). CELLS LEFT, by name: the
+  machine REFUSES the abort line of a float32/float64 payload (gc 1.26 prints the shortest decimal, `1.5` / `0.25` —
+  FR-29's class), of the address-printing kinds (struct, pointer, slice, map, func, chan, array, defined over struct:
+  gc prints the eface data word, `(main.plain) 0x4bbce8`, reproducible only for the typed nil pointer / nil map / nil
+  chan `0x0`), and of a defined type over string / bool / float (`main.defStr("x")`, `main.defBool(true)`,
+  `main.defFloat(1.5)` — deterministic texts; `renderPanicRewrite`'s `main.T(v)` arm is int-only); `runtime.Goexit`
+  and `os.Exit` are frontend-quarantined by name (Q-GOEXIT; gc's Goexit from main is `fatal error: no goroutines
+  (main called runtime.Goexit) - deadlock!`); `%w` and `errors.Is` (reflectlite) refuse at the frontend by name; a
+  runtime error's `fmt.Sprint` and `r.(runtime.Error)` refuse on BUG-099's class; an `Error()` text whose first line
+  is invalid UTF-8 refuses on both sides (BUG-004 item 3 / D5). The instance here (the walk through a promoted method) was re-probed on the walk's other carriers: a deferred func variable, a method expression, a generic instantiation, a defer-in-defer (nil, gc's rule) and a goroutine spawned by the deferred call (nil) — `sweep-s12-walk/*`, all gc's answers.
 - Discovered: 2026-08-06 (arc-final audit F1 — found by reading the
   slice-2 wrapper design against the pre-existing defer/recover
   machinery; invisible to the whole corpus)
@@ -3007,6 +3109,40 @@ without re-running `step_complete_any_wf`'s mapIterNext case.
 - Status: open
 - Pinned-by: differential
 - Cases: panic-recover/panic-text/invalid-single, panic-recover/panic-text/invalid-first-line, panic-recover/panic-text/invalid-recovered-equal
+- Neighbourhood: S12 (panic and recover: payload, abort text, the recover walk) — swept 2026-10-27 by lane
+  `sweep/s12-panic-recover` (plan §4, [USER]-approved 2026-10-27). THE MATRIX: payloads (a string literal /
+  computed / empty / 8 KiB / multi-line; every integer kind incl. `uintptr` and the rune/byte aliases; float32/64;
+  bool; nil from a literal, a variable and a call result; a typed nil pointer; struct, pointer, slice, map, func, chan,
+  array; defined over int8/uint64/string/bool/float/struct; `Error()` on a value, a pointer, a defined string, a struct,
+  a generic instantiation, an embedded-interface carrier, through a named-interface box; a pointer-receiver `Error()`
+  / `String()` on a value; the wrong signature; `errors.New`, `fmt.Errorf`, a wrapping error; an `Error()`/`String()`
+  that panics, returns the empty string, or returns an invalid-UTF-8 first line; a generic `panic(v)`) × observations
+  (the abort's first line; the recovered value asserted back at its own kind and rejected at the others, with slice /
+  map / chan aliasing, the array copy, a func called, `errors.Unwrap`, sentinel identity; the failed-assertion text
+  naming the dynamic type for 15 kinds; the run-time error texts of the negative index, the 3-index array and slice
+  forms, the nil map write, close of a nil / closed channel, makeslice len / cap, makechan, the unhashable key, the
+  uncomparable `==`; the recover walk through a deferred func variable, a defer-in-defer, a spawned goroutine, a method
+  expression, a generic; a three-deep chain, a middle recovery, a re-panic of another kind, a recovery completed before
+  an older deferred call panics, two different faults, `panic(recover())` one frame too deep) × contexts (the subject,
+  a nested call, a goroutine's preprint and re-panic, `init`): 181 cells — 112 PROBED by this lane (87 agreement rows,
+  22 named refusals in `.tmp/probes/sweep-s12-{abort-refused,oos}` (ephemeral; the texts in the lane's report), 2
+  direct-run agreements under BUG-107's limit (an `init` abort's `Error()` line and its `[recovered]` line: the
+  machine's first line = gc's stderr, the harness refuses pre-main aborts by name), 1 DISAGREEMENT), 66 COVERED by
+  existing rows (cited per cell in the lane's report), 3 OUT OF SCOPE by name (slice→array length FR-10, complex FR-15,
+  the `goroutine N [running]:` trace line the harness never compares). ROWS ADDED: 106 strict rows in 9 packages
+  `Corpus/coverage/exec/panic-recover/sweep-s12-*/` (abort-kinds 18, abort-defined 16, recover-kinds 28, assert-text
+  15, runtime-texts 12, walk 5, chains 6, contexts 4, strings 2), expected = gc, 105 PASS. FINDINGS: one — BUG-236
+  (`fmt.Errorf`'s payload names the frontend's shim type `*main.goleanShimErrorString` in the failed-assertion text
+  where gc names `*errors.errorString`; `sweep-s12-assert-text/fmt-errorf` born red). CELLS LEFT, by name: the
+  machine REFUSES the abort line of a float32/float64 payload (gc 1.26 prints the shortest decimal, `1.5` / `0.25` —
+  FR-29's class), of the address-printing kinds (struct, pointer, slice, map, func, chan, array, defined over struct:
+  gc prints the eface data word, `(main.plain) 0x4bbce8`, reproducible only for the typed nil pointer / nil map / nil
+  chan `0x0`), and of a defined type over string / bool / float (`main.defStr("x")`, `main.defBool(true)`,
+  `main.defFloat(1.5)` — deterministic texts; `renderPanicRewrite`'s `main.T(v)` arm is int-only); `runtime.Goexit`
+  and `os.Exit` are frontend-quarantined by name (Q-GOEXIT; gc's Goexit from main is `fatal error: no goroutines
+  (main called runtime.Goexit) - deadlock!`); `%w` and `errors.Is` (reflectlite) refuse at the frontend by name; a
+  runtime error's `fmt.Sprint` and `r.(runtime.Error)` refuse on BUG-099's class; an `Error()` text whose first line
+  is invalid UTF-8 refuses on both sides (BUG-004 item 3 / D5). The instance here (the abort rendering's items) was re-probed at every payload kind: the renderer's VALUE arms agree with gc on every integer kind, bool, string and the `main.T(v)` form for int underlyings; its `none` arms refuse by name on floats, the address-printing kinds and the defined-over-string/bool/float texts (the cells left above — item 2's other underlyings, recorded here as coverage gaps, not wrong answers); item 1's collapse and item 3's first-line scope held on every new chain row.
 
 **Unit 6b, 2026-10-03 ([AGENT] lane `core/panic-preprint-1003`; design note
 `docs/2026-09-30_bug004-item4-design.md` §2 (i), RULED [USER] Mike 2026-09-30
@@ -5918,6 +6054,40 @@ member the strict lane compares — was wrong.
   this entry (audit F1, recorded 2026-09-29).
 - Pinned-by: differential
 - Cases: noodler/ifaces/mv-iface-nil-call, noodler/ifaces/iface-param-value-nil, noodler/ifaces/global-iface-value-nil, noodler/ifaces/mk-helper-value-nil, noodler/ifaces/iface-dispatch-value-nil, noodler/ifaces/spawn-iface-value-nil, noodler/ifaces/spawn-iface-value-nil-devirt, noodler/ifaces/spawn-helper-value-nil, multipkg/nil-value-method-text, embedding/promoted-stub-dispatch/nil-box-sync-stub, embedding/promoted-stub-dispatch/nil-box-sync-stub-itab, embedding/promoted-stub-dispatch/nil-box-sig-stub
+- Neighbourhood: S12 (panic and recover: payload, abort text, the recover walk) — swept 2026-10-27 by lane
+  `sweep/s12-panic-recover` (plan §4, [USER]-approved 2026-10-27). THE MATRIX: payloads (a string literal /
+  computed / empty / 8 KiB / multi-line; every integer kind incl. `uintptr` and the rune/byte aliases; float32/64;
+  bool; nil from a literal, a variable and a call result; a typed nil pointer; struct, pointer, slice, map, func, chan,
+  array; defined over int8/uint64/string/bool/float/struct; `Error()` on a value, a pointer, a defined string, a struct,
+  a generic instantiation, an embedded-interface carrier, through a named-interface box; a pointer-receiver `Error()`
+  / `String()` on a value; the wrong signature; `errors.New`, `fmt.Errorf`, a wrapping error; an `Error()`/`String()`
+  that panics, returns the empty string, or returns an invalid-UTF-8 first line; a generic `panic(v)`) × observations
+  (the abort's first line; the recovered value asserted back at its own kind and rejected at the others, with slice /
+  map / chan aliasing, the array copy, a func called, `errors.Unwrap`, sentinel identity; the failed-assertion text
+  naming the dynamic type for 15 kinds; the run-time error texts of the negative index, the 3-index array and slice
+  forms, the nil map write, close of a nil / closed channel, makeslice len / cap, makechan, the unhashable key, the
+  uncomparable `==`; the recover walk through a deferred func variable, a defer-in-defer, a spawned goroutine, a method
+  expression, a generic; a three-deep chain, a middle recovery, a re-panic of another kind, a recovery completed before
+  an older deferred call panics, two different faults, `panic(recover())` one frame too deep) × contexts (the subject,
+  a nested call, a goroutine's preprint and re-panic, `init`): 181 cells — 112 PROBED by this lane (87 agreement rows,
+  22 named refusals in `.tmp/probes/sweep-s12-{abort-refused,oos}` (ephemeral; the texts in the lane's report), 2
+  direct-run agreements under BUG-107's limit (an `init` abort's `Error()` line and its `[recovered]` line: the
+  machine's first line = gc's stderr, the harness refuses pre-main aborts by name), 1 DISAGREEMENT), 66 COVERED by
+  existing rows (cited per cell in the lane's report), 3 OUT OF SCOPE by name (slice→array length FR-10, complex FR-15,
+  the `goroutine N [running]:` trace line the harness never compares). ROWS ADDED: 106 strict rows in 9 packages
+  `Corpus/coverage/exec/panic-recover/sweep-s12-*/` (abort-kinds 18, abort-defined 16, recover-kinds 28, assert-text
+  15, runtime-texts 12, walk 5, chains 6, contexts 4, strings 2), expected = gc, 105 PASS. FINDINGS: one — BUG-236
+  (`fmt.Errorf`'s payload names the frontend's shim type `*main.goleanShimErrorString` in the failed-assertion text
+  where gc names `*errors.errorString`; `sweep-s12-assert-text/fmt-errorf` born red). CELLS LEFT, by name: the
+  machine REFUSES the abort line of a float32/float64 payload (gc 1.26 prints the shortest decimal, `1.5` / `0.25` —
+  FR-29's class), of the address-printing kinds (struct, pointer, slice, map, func, chan, array, defined over struct:
+  gc prints the eface data word, `(main.plain) 0x4bbce8`, reproducible only for the typed nil pointer / nil map / nil
+  chan `0x0`), and of a defined type over string / bool / float (`main.defStr("x")`, `main.defBool(true)`,
+  `main.defFloat(1.5)` — deterministic texts; `renderPanicRewrite`'s `main.T(v)` arm is int-only); `runtime.Goexit`
+  and `os.Exit` are frontend-quarantined by name (Q-GOEXIT; gc's Goexit from main is `fatal error: no goroutines
+  (main called runtime.Goexit) - deadlock!`); `%w` and `errors.Is` (reflectlite) refuse at the frontend by name; a
+  runtime error's `fmt.Sprint` and `r.(runtime.Error)` refuse on BUG-099's class; an `Error()` text whose first line
+  is invalid UTF-8 refuses on both sides (BUG-004 item 3 / D5). The instance here (the nil-`*T` value-method text) is a membership envelope; the sweep probed the value-receiver method on a NON-nil pointer payload (`abort-defined/value-recv-error-on-ptr`) and the pointer-receiver one (`ptr-recv-error-on-ptr`), both gc's text.
 - Discovered: 2026-09-03 (the noodler lane — `docs/2026-09-03_noodler-report.md`
   finding F1; probe records `docs/evidence/2026-09-03_noodler/probes/
   gc-wrapper-text/` (seven call shapes) and, the decisive one,
@@ -6854,6 +7024,40 @@ exports revive.
 - Status: open
 - Pinned-by: differential
 - Cases: panic-recover/recovered-runtime-error-type/observed, panic-recover/recovered-runtime-error-type/assert-int, panic-recover/panic-preprint/nil-ptr-receiver-deref, panic-recover/panic-preprint/value-method-nil-ptr
+- Neighbourhood: S12 (panic and recover: payload, abort text, the recover walk) — swept 2026-10-27 by lane
+  `sweep/s12-panic-recover` (plan §4, [USER]-approved 2026-10-27). THE MATRIX: payloads (a string literal /
+  computed / empty / 8 KiB / multi-line; every integer kind incl. `uintptr` and the rune/byte aliases; float32/64;
+  bool; nil from a literal, a variable and a call result; a typed nil pointer; struct, pointer, slice, map, func, chan,
+  array; defined over int8/uint64/string/bool/float/struct; `Error()` on a value, a pointer, a defined string, a struct,
+  a generic instantiation, an embedded-interface carrier, through a named-interface box; a pointer-receiver `Error()`
+  / `String()` on a value; the wrong signature; `errors.New`, `fmt.Errorf`, a wrapping error; an `Error()`/`String()`
+  that panics, returns the empty string, or returns an invalid-UTF-8 first line; a generic `panic(v)`) × observations
+  (the abort's first line; the recovered value asserted back at its own kind and rejected at the others, with slice /
+  map / chan aliasing, the array copy, a func called, `errors.Unwrap`, sentinel identity; the failed-assertion text
+  naming the dynamic type for 15 kinds; the run-time error texts of the negative index, the 3-index array and slice
+  forms, the nil map write, close of a nil / closed channel, makeslice len / cap, makechan, the unhashable key, the
+  uncomparable `==`; the recover walk through a deferred func variable, a defer-in-defer, a spawned goroutine, a method
+  expression, a generic; a three-deep chain, a middle recovery, a re-panic of another kind, a recovery completed before
+  an older deferred call panics, two different faults, `panic(recover())` one frame too deep) × contexts (the subject,
+  a nested call, a goroutine's preprint and re-panic, `init`): 181 cells — 112 PROBED by this lane (87 agreement rows,
+  22 named refusals in `.tmp/probes/sweep-s12-{abort-refused,oos}` (ephemeral; the texts in the lane's report), 2
+  direct-run agreements under BUG-107's limit (an `init` abort's `Error()` line and its `[recovered]` line: the
+  machine's first line = gc's stderr, the harness refuses pre-main aborts by name), 1 DISAGREEMENT), 66 COVERED by
+  existing rows (cited per cell in the lane's report), 3 OUT OF SCOPE by name (slice→array length FR-10, complex FR-15,
+  the `goroutine N [running]:` trace line the harness never compares). ROWS ADDED: 106 strict rows in 9 packages
+  `Corpus/coverage/exec/panic-recover/sweep-s12-*/` (abort-kinds 18, abort-defined 16, recover-kinds 28, assert-text
+  15, runtime-texts 12, walk 5, chains 6, contexts 4, strings 2), expected = gc, 105 PASS. FINDINGS: one — BUG-236
+  (`fmt.Errorf`'s payload names the frontend's shim type `*main.goleanShimErrorString` in the failed-assertion text
+  where gc names `*errors.errorString`; `sweep-s12-assert-text/fmt-errorf` born red). CELLS LEFT, by name: the
+  machine REFUSES the abort line of a float32/float64 payload (gc 1.26 prints the shortest decimal, `1.5` / `0.25` —
+  FR-29's class), of the address-printing kinds (struct, pointer, slice, map, func, chan, array, defined over struct:
+  gc prints the eface data word, `(main.plain) 0x4bbce8`, reproducible only for the typed nil pointer / nil map / nil
+  chan `0x0`), and of a defined type over string / bool / float (`main.defStr("x")`, `main.defBool(true)`,
+  `main.defFloat(1.5)` — deterministic texts; `renderPanicRewrite`'s `main.T(v)` arm is int-only); `runtime.Goexit`
+  and `os.Exit` are frontend-quarantined by name (Q-GOEXIT; gc's Goexit from main is `fatal error: no goroutines
+  (main called runtime.Goexit) - deadlock!`); `%w` and `errors.Is` (reflectlite) refuse at the frontend by name; a
+  runtime error's `fmt.Sprint` and `r.(runtime.Error)` refuse on BUG-099's class; an `Error()` text whose first line
+  is invalid UTF-8 refuses on both sides (BUG-004 item 3 / D5). The instance here (a recovered runtime error's one synthetic type) was re-probed on its comma-ok FALSE half (`r.(string)`, `r.(int)` false both sides, row `recover-kinds/runtime-error-not-string`) and its two refusing routes (`fmt.Sprint(r)`, `r.(runtime.Error)`), both refusing by name on this entry's class.
 - Discovered: 2026-09-05 (lane `fr19-bug097` adversarial audit R3 — the `<TypeId $runtime.Error has no display record>` marker inside a `recover(); r.(error).Error()` refusal disproved the design note's "unreachable" — and R20 — `Ty.dynamicName` passes the synthetic key to the observation channel; the wrong observation measured at the fix round: `docs/evidence/2026-09-05_fr19-bug097/gc-probe-r3-recovered-runtime-error.go`, transcript in the evidence README)
 
 WHAT: gc's runtime panics carry CONCRETE types — an index fault is
@@ -9581,7 +9785,40 @@ spellings score exactly as their nil-right twins).
 - Pinned-by: differential
 - Cases: strings/string-slice-bounds, strings/string-slice-low-high-panic, pointers/pointer-array-slice-bounds
 - Discovered: commit 1ca39648 (three of the eight recorded differential-stage wrong answers of the time were bounds MESSAGES lacking gc's detail; the element-store text was a latent divergence the unwinding arc's probes surfaced); the array 3-index form by the slice's pre-merge audit, commit f64bfc89 finding 6 (no row pins that form).
-- Neighbourhood: to be swept in step 2, shape S12 (panic and recover: payload, abort text, the recover walk)
+- Neighbourhood: S12 (panic and recover: payload, abort text, the recover walk) — swept 2026-10-27 by lane
+  `sweep/s12-panic-recover` (plan §4, [USER]-approved 2026-10-27). THE MATRIX: payloads (a string literal /
+  computed / empty / 8 KiB / multi-line; every integer kind incl. `uintptr` and the rune/byte aliases; float32/64;
+  bool; nil from a literal, a variable and a call result; a typed nil pointer; struct, pointer, slice, map, func, chan,
+  array; defined over int8/uint64/string/bool/float/struct; `Error()` on a value, a pointer, a defined string, a struct,
+  a generic instantiation, an embedded-interface carrier, through a named-interface box; a pointer-receiver `Error()`
+  / `String()` on a value; the wrong signature; `errors.New`, `fmt.Errorf`, a wrapping error; an `Error()`/`String()`
+  that panics, returns the empty string, or returns an invalid-UTF-8 first line; a generic `panic(v)`) × observations
+  (the abort's first line; the recovered value asserted back at its own kind and rejected at the others, with slice /
+  map / chan aliasing, the array copy, a func called, `errors.Unwrap`, sentinel identity; the failed-assertion text
+  naming the dynamic type for 15 kinds; the run-time error texts of the negative index, the 3-index array and slice
+  forms, the nil map write, close of a nil / closed channel, makeslice len / cap, makechan, the unhashable key, the
+  uncomparable `==`; the recover walk through a deferred func variable, a defer-in-defer, a spawned goroutine, a method
+  expression, a generic; a three-deep chain, a middle recovery, a re-panic of another kind, a recovery completed before
+  an older deferred call panics, two different faults, `panic(recover())` one frame too deep) × contexts (the subject,
+  a nested call, a goroutine's preprint and re-panic, `init`): 181 cells — 112 PROBED by this lane (87 agreement rows,
+  22 named refusals in `.tmp/probes/sweep-s12-{abort-refused,oos}` (ephemeral; the texts in the lane's report), 2
+  direct-run agreements under BUG-107's limit (an `init` abort's `Error()` line and its `[recovered]` line: the
+  machine's first line = gc's stderr, the harness refuses pre-main aborts by name), 1 DISAGREEMENT), 66 COVERED by
+  existing rows (cited per cell in the lane's report), 3 OUT OF SCOPE by name (slice→array length FR-10, complex FR-15,
+  the `goroutine N [running]:` trace line the harness never compares). ROWS ADDED: 106 strict rows in 9 packages
+  `Corpus/coverage/exec/panic-recover/sweep-s12-*/` (abort-kinds 18, abort-defined 16, recover-kinds 28, assert-text
+  15, runtime-texts 12, walk 5, chains 6, contexts 4, strings 2), expected = gc, 105 PASS. FINDINGS: one — BUG-236
+  (`fmt.Errorf`'s payload names the frontend's shim type `*main.goleanShimErrorString` in the failed-assertion text
+  where gc names `*errors.errorString`; `sweep-s12-assert-text/fmt-errorf` born red). CELLS LEFT, by name: the
+  machine REFUSES the abort line of a float32/float64 payload (gc 1.26 prints the shortest decimal, `1.5` / `0.25` —
+  FR-29's class), of the address-printing kinds (struct, pointer, slice, map, func, chan, array, defined over struct:
+  gc prints the eface data word, `(main.plain) 0x4bbce8`, reproducible only for the typed nil pointer / nil map / nil
+  chan `0x0`), and of a defined type over string / bool / float (`main.defStr("x")`, `main.defBool(true)`,
+  `main.defFloat(1.5)` — deterministic texts; `renderPanicRewrite`'s `main.T(v)` arm is int-only); `runtime.Goexit`
+  and `os.Exit` are frontend-quarantined by name (Q-GOEXIT; gc's Goexit from main is `fatal error: no goroutines
+  (main called runtime.Goexit) - deadlock!`); `%w` and `errors.Is` (reflectlite) refuse at the frontend by name; a
+  runtime error's `fmt.Sprint` and `r.(runtime.Error)` refuse on BUG-099's class; an `Error()` text whose first line
+  is invalid UTF-8 refuses on both sides (BUG-004 item 3 / D5). The instance here (slice-bounds texts) gained the ARRAY 3-index form the f64bfc89 finding-6 text named with no row (`runtime-texts/array-3-index`: `slice bounds out of range [::5] with length 3`), the slice 3-index forms (`slice-3-index`, `slice-3-index-low-high`) and the negative index (`negative-index`: `index out of range [-1]`, no length), all gc's texts.
 
 WHAT: `s[l:h]`, `s[l:h:m]` over strings, slices and arrays panicked with the plain string `slice bounds out of range`, and a slice element store out of range with `slice index out of bounds`; gc's texts carry the offending index, the limit and its name (`with length` / `with capacity`), and gc checks high before low and max before both in the 3-index form, so a program that recovers and inspects the message — or whose abort line is compared — got a wrong answer. SITE: `GoLean/GoCore/Ops.lean` — `checkSliceBounds` / `checkSliceBounds3` / `checkSliceMax` (the latter with a `limitName`) in `stringSlice`, `sliceFromSlice`, `sliceFromArray`; `sliceIndexLoc` routed through `indexOutOfRangePanic` (already gc-exact for arrays). ROUTE: slice expressions and slice element stores whose panic text is observed (recovered or at the abort line).
 
@@ -9701,7 +9938,40 @@ WHAT: Go ≥ 1.22 gives each iteration its own variable; every way a cell's iden
 - Pinned-by: differential
 - Cases: interfaces/recover-nil-dispatch/nil-interface, interfaces/recover-nil-dispatch/nil-pointer-box, defer/deferred-dispatch-entry-panic/return-drain, defer/deferred-dispatch-entry-panic/fallthrough-drain, defer/deferred-dispatch-entry-panic/during-panic
 - Discovered: commit 00c2bd56 (the general-coverage arc's interface riders exposed it; the two rows landed red first). Pre-existing: at e8e7ef20 `dynamicDispatch?` (Ops.lean) threw the nil-dereference text directly from `enterFrame`.
-- Neighbourhood: to be swept in step 2, shape S12 (panic and recover: payload, abort text, the recover walk)
+- Neighbourhood: S12 (panic and recover: payload, abort text, the recover walk) — swept 2026-10-27 by lane
+  `sweep/s12-panic-recover` (plan §4, [USER]-approved 2026-10-27). THE MATRIX: payloads (a string literal /
+  computed / empty / 8 KiB / multi-line; every integer kind incl. `uintptr` and the rune/byte aliases; float32/64;
+  bool; nil from a literal, a variable and a call result; a typed nil pointer; struct, pointer, slice, map, func, chan,
+  array; defined over int8/uint64/string/bool/float/struct; `Error()` on a value, a pointer, a defined string, a struct,
+  a generic instantiation, an embedded-interface carrier, through a named-interface box; a pointer-receiver `Error()`
+  / `String()` on a value; the wrong signature; `errors.New`, `fmt.Errorf`, a wrapping error; an `Error()`/`String()`
+  that panics, returns the empty string, or returns an invalid-UTF-8 first line; a generic `panic(v)`) × observations
+  (the abort's first line; the recovered value asserted back at its own kind and rejected at the others, with slice /
+  map / chan aliasing, the array copy, a func called, `errors.Unwrap`, sentinel identity; the failed-assertion text
+  naming the dynamic type for 15 kinds; the run-time error texts of the negative index, the 3-index array and slice
+  forms, the nil map write, close of a nil / closed channel, makeslice len / cap, makechan, the unhashable key, the
+  uncomparable `==`; the recover walk through a deferred func variable, a defer-in-defer, a spawned goroutine, a method
+  expression, a generic; a three-deep chain, a middle recovery, a re-panic of another kind, a recovery completed before
+  an older deferred call panics, two different faults, `panic(recover())` one frame too deep) × contexts (the subject,
+  a nested call, a goroutine's preprint and re-panic, `init`): 181 cells — 112 PROBED by this lane (87 agreement rows,
+  22 named refusals in `.tmp/probes/sweep-s12-{abort-refused,oos}` (ephemeral; the texts in the lane's report), 2
+  direct-run agreements under BUG-107's limit (an `init` abort's `Error()` line and its `[recovered]` line: the
+  machine's first line = gc's stderr, the harness refuses pre-main aborts by name), 1 DISAGREEMENT), 66 COVERED by
+  existing rows (cited per cell in the lane's report), 3 OUT OF SCOPE by name (slice→array length FR-10, complex FR-15,
+  the `goroutine N [running]:` trace line the harness never compares). ROWS ADDED: 106 strict rows in 9 packages
+  `Corpus/coverage/exec/panic-recover/sweep-s12-*/` (abort-kinds 18, abort-defined 16, recover-kinds 28, assert-text
+  15, runtime-texts 12, walk 5, chains 6, contexts 4, strings 2), expected = gc, 105 PASS. FINDINGS: one — BUG-236
+  (`fmt.Errorf`'s payload names the frontend's shim type `*main.goleanShimErrorString` in the failed-assertion text
+  where gc names `*errors.errorString`; `sweep-s12-assert-text/fmt-errorf` born red). CELLS LEFT, by name: the
+  machine REFUSES the abort line of a float32/float64 payload (gc 1.26 prints the shortest decimal, `1.5` / `0.25` —
+  FR-29's class), of the address-printing kinds (struct, pointer, slice, map, func, chan, array, defined over struct:
+  gc prints the eface data word, `(main.plain) 0x4bbce8`, reproducible only for the typed nil pointer / nil map / nil
+  chan `0x0`), and of a defined type over string / bool / float (`main.defStr("x")`, `main.defBool(true)`,
+  `main.defFloat(1.5)` — deterministic texts; `renderPanicRewrite`'s `main.T(v)` arm is int-only); `runtime.Goexit`
+  and `os.Exit` are frontend-quarantined by name (Q-GOEXIT; gc's Goexit from main is `fatal error: no goroutines
+  (main called runtime.Goexit) - deadlock!`); `%w` and `errors.Is` (reflectlite) refuse at the frontend by name; a
+  runtime error's `fmt.Sprint` and `r.(runtime.Error)` refuse on BUG-099's class; an `Error()` text whose first line
+  is invalid UTF-8 refuses on both sides (BUG-004 item 3 / D5). The instance here (an entry panic under recover) is on the raising side (S10); the sweep re-probed the recover walk's frames (`sweep-s12-walk/*`) and the goroutine / nested-call contexts (`sweep-s12-contexts/*`) with no new wrong status.
 
 WHAT: spec#Handling_panics — a run-time panic raised while entering a call is an ordinary panic, recoverable by a deferred function of the calling frame; a thrown error that bypasses the panic chain cannot be. SITE: `GoLean/GoCore/Machine.lean` (`callImmediatePanic`, `callTargetsDoneEnterPanic`, `callArgsDoneEnterPanic`, `callValCalleeEnterPanic`, `callValArgsEnterPanic`) and `GoLean/GoCore/StepFn.lean` `enterFrameStep`. The three DEFERRED-call drains kept the thrown behaviour for a few hours only: the same day's audit response (commit 31eeb6dd, findings F1+F5) made them recoverable too — on the normal drains the entry panic is the deferred INVOCATION's and unwinds from the draining frame with its remaining defers (`frameDeferFallEnterPanic` / `frameDeferReturnEnterPanic`), during an unwinding panic it JOINS the chain newest-last (`panicFrameDeferEnterPanic`, `enterFrameDeferPanicking`), gc's rule; the rows `defer/deferred-dispatch-entry-panic/{return-drain,fallthrough-drain,during-panic}` are on the Cases line above. (Corrected 2026-10-27 at the review's F4 — the first text of this entry called the deferred half a deliberate narrowing; the route `defer i.M()` was admitted by the same arc, so the drain half is recorded here rather than as its own entry.) ROUTE: `i.M()` on a nil interface and a value-receiver method through a nil pointer box, under a deferred `recover`; the same dispatch as a deferred call on the return, fallthrough and panicking drains.
 
@@ -9711,7 +9981,40 @@ WHAT: spec#Handling_panics — a run-time panic raised while entering a call is 
 - Pinned-by: differential
 - Cases: panic-recover/panic-nil-recover, panic-recover/panic-nil-abort
 - Discovered: the arc-final audit's F21, 2026-08-06 (`docs/2026-08-06_arc-final-audit-response.md`); both rows were re-pinned to the modern answers with the fix (model and oracle moved together, so the full run showed no drift).
-- Neighbourhood: to be swept in step 2, shape S12 (panic and recover: payload, abort text, the recover walk)
+- Neighbourhood: S12 (panic and recover: payload, abort text, the recover walk) — swept 2026-10-27 by lane
+  `sweep/s12-panic-recover` (plan §4, [USER]-approved 2026-10-27). THE MATRIX: payloads (a string literal /
+  computed / empty / 8 KiB / multi-line; every integer kind incl. `uintptr` and the rune/byte aliases; float32/64;
+  bool; nil from a literal, a variable and a call result; a typed nil pointer; struct, pointer, slice, map, func, chan,
+  array; defined over int8/uint64/string/bool/float/struct; `Error()` on a value, a pointer, a defined string, a struct,
+  a generic instantiation, an embedded-interface carrier, through a named-interface box; a pointer-receiver `Error()`
+  / `String()` on a value; the wrong signature; `errors.New`, `fmt.Errorf`, a wrapping error; an `Error()`/`String()`
+  that panics, returns the empty string, or returns an invalid-UTF-8 first line; a generic `panic(v)`) × observations
+  (the abort's first line; the recovered value asserted back at its own kind and rejected at the others, with slice /
+  map / chan aliasing, the array copy, a func called, `errors.Unwrap`, sentinel identity; the failed-assertion text
+  naming the dynamic type for 15 kinds; the run-time error texts of the negative index, the 3-index array and slice
+  forms, the nil map write, close of a nil / closed channel, makeslice len / cap, makechan, the unhashable key, the
+  uncomparable `==`; the recover walk through a deferred func variable, a defer-in-defer, a spawned goroutine, a method
+  expression, a generic; a three-deep chain, a middle recovery, a re-panic of another kind, a recovery completed before
+  an older deferred call panics, two different faults, `panic(recover())` one frame too deep) × contexts (the subject,
+  a nested call, a goroutine's preprint and re-panic, `init`): 181 cells — 112 PROBED by this lane (87 agreement rows,
+  22 named refusals in `.tmp/probes/sweep-s12-{abort-refused,oos}` (ephemeral; the texts in the lane's report), 2
+  direct-run agreements under BUG-107's limit (an `init` abort's `Error()` line and its `[recovered]` line: the
+  machine's first line = gc's stderr, the harness refuses pre-main aborts by name), 1 DISAGREEMENT), 66 COVERED by
+  existing rows (cited per cell in the lane's report), 3 OUT OF SCOPE by name (slice→array length FR-10, complex FR-15,
+  the `goroutine N [running]:` trace line the harness never compares). ROWS ADDED: 106 strict rows in 9 packages
+  `Corpus/coverage/exec/panic-recover/sweep-s12-*/` (abort-kinds 18, abort-defined 16, recover-kinds 28, assert-text
+  15, runtime-texts 12, walk 5, chains 6, contexts 4, strings 2), expected = gc, 105 PASS. FINDINGS: one — BUG-236
+  (`fmt.Errorf`'s payload names the frontend's shim type `*main.goleanShimErrorString` in the failed-assertion text
+  where gc names `*errors.errorString`; `sweep-s12-assert-text/fmt-errorf` born red). CELLS LEFT, by name: the
+  machine REFUSES the abort line of a float32/float64 payload (gc 1.26 prints the shortest decimal, `1.5` / `0.25` —
+  FR-29's class), of the address-printing kinds (struct, pointer, slice, map, func, chan, array, defined over struct:
+  gc prints the eface data word, `(main.plain) 0x4bbce8`, reproducible only for the typed nil pointer / nil map / nil
+  chan `0x0`), and of a defined type over string / bool / float (`main.defStr("x")`, `main.defBool(true)`,
+  `main.defFloat(1.5)` — deterministic texts; `renderPanicRewrite`'s `main.T(v)` arm is int-only); `runtime.Goexit`
+  and `os.Exit` are frontend-quarantined by name (Q-GOEXIT; gc's Goexit from main is `fatal error: no goroutines
+  (main called runtime.Goexit) - deadlock!`); `%w` and `errors.Is` (reflectlite) refuse at the frontend by name; a
+  runtime error's `fmt.Sprint` and `r.(runtime.Error)` refuse on BUG-099's class; an `Error()` text whose first line
+  is invalid UTF-8 refuses on both sides (BUG-004 item 3 / D5). The instance here (`panic(nil)`) was re-probed on the nil interface from a VARIABLE and from a CALL RESULT (`abort-kinds/{nil-error-var,nil-from-result}`: `panic called with nil argument` both), and on `panic(recover())` one frame too deep (`chains/from-defer-depth-2`: the nil-argument error on line two).
 
 WHAT: Go 1.21 changed `panic(nil)` to panic with a `*runtime.PanicNilError` unless `GODEBUG=panicnil=1`; the oracle's GOPATH-mode invocation inherits the go 1.16-era defaults, so an unpinned oracle could never show the model's legacy answer as wrong. SITE: `GoLean/GoCore/Machine.lean` `panicPayload`; `scripts/diff-coverage` `go_run_oracle` (the pin). ROUTE: `panic(nil)` recovered or aborting; the typed-nil payload (`panic((*T)(nil))`) was unaffected and is the control.
 
@@ -10035,7 +10338,40 @@ WHAT: go/types records the literal's type as the defined type; the emitter must 
 - Pinned-by: differential
 - Cases: arrays/array-bounds, ints/divide-by-zero, ints/negative-shift
 - Discovered: commit 18df1672 (the Phase 0 differential baseline's three message-alignment failures).
-- Neighbourhood: to be swept in step 2, shape S12 (panic and recover: payload, abort text, the recover walk)
+- Neighbourhood: S12 (panic and recover: payload, abort text, the recover walk) — swept 2026-10-27 by lane
+  `sweep/s12-panic-recover` (plan §4, [USER]-approved 2026-10-27). THE MATRIX: payloads (a string literal /
+  computed / empty / 8 KiB / multi-line; every integer kind incl. `uintptr` and the rune/byte aliases; float32/64;
+  bool; nil from a literal, a variable and a call result; a typed nil pointer; struct, pointer, slice, map, func, chan,
+  array; defined over int8/uint64/string/bool/float/struct; `Error()` on a value, a pointer, a defined string, a struct,
+  a generic instantiation, an embedded-interface carrier, through a named-interface box; a pointer-receiver `Error()`
+  / `String()` on a value; the wrong signature; `errors.New`, `fmt.Errorf`, a wrapping error; an `Error()`/`String()`
+  that panics, returns the empty string, or returns an invalid-UTF-8 first line; a generic `panic(v)`) × observations
+  (the abort's first line; the recovered value asserted back at its own kind and rejected at the others, with slice /
+  map / chan aliasing, the array copy, a func called, `errors.Unwrap`, sentinel identity; the failed-assertion text
+  naming the dynamic type for 15 kinds; the run-time error texts of the negative index, the 3-index array and slice
+  forms, the nil map write, close of a nil / closed channel, makeslice len / cap, makechan, the unhashable key, the
+  uncomparable `==`; the recover walk through a deferred func variable, a defer-in-defer, a spawned goroutine, a method
+  expression, a generic; a three-deep chain, a middle recovery, a re-panic of another kind, a recovery completed before
+  an older deferred call panics, two different faults, `panic(recover())` one frame too deep) × contexts (the subject,
+  a nested call, a goroutine's preprint and re-panic, `init`): 181 cells — 112 PROBED by this lane (87 agreement rows,
+  22 named refusals in `.tmp/probes/sweep-s12-{abort-refused,oos}` (ephemeral; the texts in the lane's report), 2
+  direct-run agreements under BUG-107's limit (an `init` abort's `Error()` line and its `[recovered]` line: the
+  machine's first line = gc's stderr, the harness refuses pre-main aborts by name), 1 DISAGREEMENT), 66 COVERED by
+  existing rows (cited per cell in the lane's report), 3 OUT OF SCOPE by name (slice→array length FR-10, complex FR-15,
+  the `goroutine N [running]:` trace line the harness never compares). ROWS ADDED: 106 strict rows in 9 packages
+  `Corpus/coverage/exec/panic-recover/sweep-s12-*/` (abort-kinds 18, abort-defined 16, recover-kinds 28, assert-text
+  15, runtime-texts 12, walk 5, chains 6, contexts 4, strings 2), expected = gc, 105 PASS. FINDINGS: one — BUG-236
+  (`fmt.Errorf`'s payload names the frontend's shim type `*main.goleanShimErrorString` in the failed-assertion text
+  where gc names `*errors.errorString`; `sweep-s12-assert-text/fmt-errorf` born red). CELLS LEFT, by name: the
+  machine REFUSES the abort line of a float32/float64 payload (gc 1.26 prints the shortest decimal, `1.5` / `0.25` —
+  FR-29's class), of the address-printing kinds (struct, pointer, slice, map, func, chan, array, defined over struct:
+  gc prints the eface data word, `(main.plain) 0x4bbce8`, reproducible only for the typed nil pointer / nil map / nil
+  chan `0x0`), and of a defined type over string / bool / float (`main.defStr("x")`, `main.defBool(true)`,
+  `main.defFloat(1.5)` — deterministic texts; `renderPanicRewrite`'s `main.T(v)` arm is int-only); `runtime.Goexit`
+  and `os.Exit` are frontend-quarantined by name (Q-GOEXIT; gc's Goexit from main is `fatal error: no goroutines
+  (main called runtime.Goexit) - deadlock!`); `%w` and `errors.Is` (reflectlite) refuse at the frontend by name; a
+  runtime error's `fmt.Sprint` and `r.(runtime.Error)` refuse on BUG-099's class; an `Error()` text whose first line
+  is invalid UTF-8 refuses on both sides (BUG-004 item 3 / D5). The instance here (index / divide / shift texts) was re-probed on the remaining run-time texts the sweep could reach: nil map write, close of nil / closed channel, makeslice len / cap, makechan, the unhashable key, the uncomparable `==` (`sweep-s12-runtime-texts/*`), all gc's texts.
 
 WHAT: spec#Run_time_panics gives the kind; gc's texts (`runtime error: index out of range [i] with length n`, `runtime error: integer divide by zero`, `runtime error: negative shift amount`) are what a recovered `error`'s `Error()` and the abort line observe. SITE: `GoLean/GoCore/Ops.lean` `indexOutOfRangePanic` (used by the array/string index and store arms), the division and shift arms (then in `Eval.lean`, now `Ops.lean`). ROUTE: every run-time panic whose text is observed.
 
@@ -10181,3 +10517,42 @@ WHAT: gc — `var p *[0]int; n := 0; for i, v := range p { n += i + v + 1 }; ret
 SITE: `tools/nativefrontend/emit.go`, the range emitter's `*types.Pointer` arm: `if valName == "" || arr.Len() == 0 { … coll = <int N>; kindFields["kind"] = "int"; … valName = "" } else { … kind "array-pointer" … }`. The N == 0 branch reuses the index-only desugar (its comment: «The index-only form (and N == 0) never dereferences — a nil pointer iterates fine, N is static») and CLEARS `valName`; but the value variable was already bound (`bind(rs.Value, "$rangeVal", …)`, a declared local the body references), and the emitted range node carries `valVar: null` with no declaration of it, so the body's reads of `v` dangle. The decoder's B6 c3 environment check (`GoLean/NativeToIR.lean`) catches it, fail closed — a visible refusal, never a wrong answer. REACH: every legal program of the shape — a declared `v` must be used (gc: «declared and not used»), so the body always references the dropped local. The ARRAY-VALUE arm (`case *types.Array`) has no such special case and keeps the value variable (the control row). ROUTE: `*[0]T` only, with a value variable (blank key or not); N > 0 is `range/range-array-pointer-nil-value-panic` and `range/range-not-evaluated/*` (green).
 
 FIX SHAPE (a fix lane's): at N == 0 with a value variable present, emit the value form (`kind: array-pointer`, `len: 0` — zero iterations, no dereference, the value variable declared) and keep the key-only desugar for `valName == ""`; the non-evaluation rule (BUG-076, `rangeNotEvaluated`) is unaffected. Shape S17 (a form the emitter mis-carries), found by the S10 sweep; the three rows flip PASS with the fix and leave this line.
+## BUG-236 — `fmt.Errorf`'s payload NAMES THE FRONTEND'S SHIM TYPE: a failed assertion on the recovered value prints `interface conversion: interface {} is *main.goleanShimErrorString, not int` where gc prints `*errors.errorString` — a wrong panic text (the shim's recorded "unobservable" delta has an observable route) [native frontend, the fmt desugar bundle; wrong panic text, status panic on both sides; found by the S12 neighbourhood sweep 2026-10-27]
+
+- Status: open
+- Pinned-by: differential
+- Cases: panic-recover/sweep-s12-assert-text/fmt-errorf
+- Discovered: 2026-10-27 ([AGENT] lane `sweep/s12-panic-recover`, the defect-neighbourhood campaign's S12 sweep — matrix cell C11, the failed-assertion text naming the dynamic type of every payload kind; found on the first probe run, red-first: Lean `{"message":"interface conversion: interface {} is *main.goleanShimErrorString, not int","status":"panic"}` vs Go `{"message":"interface conversion: interface {} is *errors.errorString, not int","status":"panic"}`)
+- Neighbourhood: found by the S12 sweep (panic and recover: payload, abort text, the recover walk; lane `sweep/s12-panic-recover`, 2026-10-27) at cell C11 of its matrix; the sibling cells on the same payload agree (`sweep-s12-abort-defined/fmt-errorf`: the abort line `fmt-7`; `sweep-s12-recover-kinds/fmt-errorf`: `r.(error).Error()` and `r.(string)` false) and the real-library twin `errors.New` prints gc's name (`sweep-s12-assert-text/errors-new`: `*errors.errorString`). The failed assertion to an interface with a missing method (`r.(interface{ Foo() })` → `… is not interface { Foo() }: missing method Foo`) is the same mechanism's second route, not rowed.
+
+WHAT: gc's `fmt.Errorf` without a `%w` verb returns `errors.New(s)` (`fmt/errors.go`), so the
+payload's dynamic type is the library's unexported `*errors.errorString`, and a failed type
+assertion on the recovered value names it (`runtime/error.go` `TypeAssertionError.Error`:
+`interface conversion: interface {} is *errors.errorString, not int`). The native frontend
+desugars `fmt.Errorf` to the injected constructor `goleanShimErrorsNew` over the formatted text
+(`tools/nativefrontend/fmtdesugar.go:479`–`:495`, the `case "Errorf"` arm; the bundle entry
+`tools/nativefrontend/stdlibshim.go:173`), whose concrete type is the injected
+`goleanShimErrorString`, declared in the PROGRAM's package — so the machine's dynamic type is
+`*main.goleanShimErrorString` and `typeAssertPanicMessage` (`GoLean/GoCore/Ops.lean:3851`,
+through `dynamicTypeNameForMessage` / `goTypeNameForMessage`) prints that name. The shim's
+contract (`stdlibshim.go:286`–`:296`, «THE ONE DELTA … Unobservable in the modeled subset: user
+code cannot name the unexported upstream type …, fmt verbs and reflection are not modeled») lists
+the routes that cannot name the type but not the one that PRINTS it: the failed assertion's panic
+text, observable at the abort line and through `recover()` of the assertion's own panic. (A user
+`errors.New(...)` is the real source-through library function since stdlib-source-2, 2026-09-03,
+so its name is gc's; only `Errorf` still constructs the shim type — the shim's own text says it
+keeps the injected type «until slice 4 routes Errorf onto the real errors.New».)
+
+SITE: `tools/nativefrontend/fmtdesugar.go` `case "Errorf"` (the desugar's constructor choice);
+`tools/nativefrontend/stdlibshim.go` `errorsNewShimName` / `errorsNewShimTypeName` (the injected
+declarations). ROUTE: `panic(fmt.Errorf(...))` recovered, then asserted at a concrete type it is
+not (`r.(int)`), or at an interface it does not satisfy; equivalently any `fmt.Errorf` value
+boxed in `any` and asserted wrongly — the panic path is not needed, the recovered-payload route is
+how the sweep reached it.
+
+PLAN [AGENT] (not this lane's; a fix lane through the normal train): route `fmt.Errorf`
+without `%w` onto the real source-through `errors.New` (the shim's own stated plan), retiring
+the injected `goleanShimErrorString` for Errorf — then the dynamic type is `*errors.errorString`
+on every route and the row flips PASS; `%w` stays refused by name (FR-14's fmt subset). Fix
+criterion: the Cases row PASS with gc's text; no other row moves (the abort line and the
+recovered `Error()` text are unchanged by the type's name).
