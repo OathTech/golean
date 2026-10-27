@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 4848 (4545 PASS / 303 FAIL)
+# cases: 5057 (4754 PASS / 303 FAIL)
 # cause keyed 2026-10-27 [AGENT coordinator], train-24 stage: the three BUG-226 rows' refusal cause `error:?` → `error:decoder-scope-undeclared-local` (the new scripts/machine-causes.tsv row for the decoder's «is not in scope at this statement» refusal, which the S10 lane could not add — scripts/ is outside a sweep lane's edit set); no row moved.
 # re-pinned: 2026-10-26 [AGENT], lane sweep/s4-identity — the defect-neighbourhood campaign's S4 sweep (identity, equality and
 #   nil-ness; docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved; members BUG-133/129/121/111/170/139).
@@ -107,6 +107,225 @@
 #     variadic/sweep-s4-nil-pack-routes/tuple-fixed-only                 PASS/- -
 #     variadic/sweep-s4-nil-pack-routes/elem-kinds                       PASS/- -
 #     variadic/sweep-s4-nil-pack-routes/len-cap-append                   PASS/- -
+# re-pinned: 2026-10-27 [AGENT], lane sweep/s1-implicit-conv — the defect-neighbourhood campaign's step 2, shape S1 (implicit
+#   conversion omitted at an assignable context; plan docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved
+#   2026-10-27; members BUG-079/014/051/050/049/017/016/006): the shape's 208-cell matrix probed on both sides — 168 cells by this
+#   lane (12 of them refusal probes recorded as named coverage gaps), 21 covered by existing rows, 9 out of scope — and every
+#   agreement on a distinct route pinned as a strict row (expected = gc). NO existing row moved: 4166 + 209 = 4375; PASS 3901 + 209 =
+#   4110; FAIL 265 + 0 = 265. No flip, no removal, no cause change (no runtime code changed: corpus and records only). NEW rows
+#   (209, 16 packages Corpus/coverage/exec/*/sweep-s1-*/, every row strict, born green), appended at the end of the file, measured
+#   by CAPPED_MEM_MAX=64G capped scripts/ci --diff at the lane tree 503c8430 before this re-pin (its only drift: these 209 NEW ids),
+#   the rows taken from that run's artifacts/coverage/latest.tsv; the --diff at the tip judges. FINDINGS: none (no BUG entry, no
+#   red-first row; BUG-256–265 unused). The rows:
+#     channels/sweep-s1-receive-sinks/send-int                              PASS/-
+#     channels/sweep-s1-receive-sinks/send-float                            PASS/-
+#     channels/sweep-s1-receive-sinks/send-nil                              PASS/-
+#     channels/sweep-s1-receive-sinks/send-defined                          PASS/-
+#     channels/sweep-s1-receive-sinks/send-typed-nil-pointer                PASS/-
+#     channels/sweep-s1-receive-sinks/send-iface                            PASS/-
+#     channels/sweep-s1-receive-sinks/var-init-receive                      PASS/-
+#     channels/sweep-s1-receive-sinks/select-send                           PASS/-
+#     channels/sweep-s1-receive-sinks/select-recv-assign                    PASS/-
+#     channels/sweep-s1-receive-sinks/select-recv-comma-ok                  PASS/-
+#     channels/sweep-s1-receive-sinks/send-defined-const                    PASS/-
+#     channels/sweep-s1-receive-sinks/send-narrower                         PASS/-
+#     channels/sweep-s1-receive-sinks/recv-into-map-elem                    PASS/-
+#     constants/sweep-s1-untyped-default-sinks/assign-int                   PASS/-
+#     constants/sweep-s1-untyped-default-sinks/assign-int-eq                PASS/-
+#     constants/sweep-s1-untyped-default-sinks/assign-float                 PASS/-
+#     constants/sweep-s1-untyped-default-sinks/assign-rune                  PASS/-
+#     constants/sweep-s1-untyped-default-sinks/assign-string                PASS/-
+#     constants/sweep-s1-untyped-default-sinks/assign-bool                  PASS/-
+#     constants/sweep-s1-untyped-default-sinks/assign-shift                 PASS/-
+#     constants/sweep-s1-untyped-default-sinks/assign-typed-const           PASS/-
+#     constants/sweep-s1-untyped-default-sinks/define-default               PASS/-
+#     constants/sweep-s1-untyped-default-sinks/var-typed-int                PASS/-
+#     constants/sweep-s1-untyped-default-sinks/var-typed-float              PASS/-
+#     constants/sweep-s1-untyped-default-sinks/var-typed-rune               PASS/-
+#     constants/sweep-s1-untyped-default-sinks/var-typed-string             PASS/-
+#     constants/sweep-s1-untyped-default-sinks/var-typed-bool               PASS/-
+#     constants/sweep-s1-untyped-default-sinks/var-untyped-then-box         PASS/-
+#     constants/sweep-s1-untyped-default-sinks/arg-int                      PASS/-
+#     constants/sweep-s1-untyped-default-sinks/arg-float                    PASS/-
+#     constants/sweep-s1-untyped-default-sinks/arg-rune                     PASS/-
+#     constants/sweep-s1-untyped-default-sinks/arg-string                   PASS/-
+#     constants/sweep-s1-untyped-default-sinks/arg-bool                     PASS/-
+#     constants/sweep-s1-untyped-default-sinks/arg-defined-int              PASS/-
+#     constants/sweep-s1-untyped-default-sinks/arg-float-param              PASS/-
+#     constants/sweep-s1-untyped-default-sinks/arg-method                   PASS/-
+#     constants/sweep-s1-untyped-default-sinks/arg-func-value               PASS/-
+#     constants/sweep-s1-untyped-default-sinks/arg-iface-method             PASS/-
+#     constants/sweep-s1-untyped-default-sinks/arg-defer                    PASS/-
+#     constants/sweep-s1-untyped-default-sinks/arg-go                       PASS/-
+#     constants/sweep-s1-untyped-default-sinks/arg-func-lit                 PASS/-
+#     constants/sweep-s1-untyped-default-sinks/variadic-pack                PASS/-
+#     constants/sweep-s1-untyped-default-sinks/variadic-defined             PASS/-
+#     constants/sweep-s1-untyped-default-sinks/variadic-method              PASS/-
+#     constants/sweep-s1-untyped-default-sinks/return-float                 PASS/-
+#     constants/sweep-s1-untyped-default-sinks/return-rune                  PASS/-
+#     constants/sweep-s1-untyped-default-sinks/return-named                 PASS/-
+#     constants/sweep-s1-untyped-default-sinks/return-named-value           PASS/-
+#     constants/sweep-s1-untyped-default-sinks/slice-lit                    PASS/-
+#     constants/sweep-s1-untyped-default-sinks/array-lit                    PASS/-
+#     constants/sweep-s1-untyped-default-sinks/map-lit-value                PASS/-
+#     constants/sweep-s1-untyped-default-sinks/struct-keyed                 PASS/-
+#     constants/sweep-s1-untyped-default-sinks/struct-positional            PASS/-
+#     constants/sweep-s1-untyped-default-sinks/struct-nested                PASS/-
+#     constants/sweep-s1-untyped-default-sinks/struct-pointer-lit           PASS/-
+#     constants/sweep-s1-untyped-default-sinks/indexed-lits                 PASS/-
+#     control-flow/sweep-s1-switch-boxing/case-float                        PASS/-
+#     control-flow/sweep-s1-switch-boxing/case-rune                         PASS/-
+#     control-flow/sweep-s1-switch-boxing/case-nil                          PASS/-
+#     control-flow/sweep-s1-switch-boxing/case-multi                        PASS/-
+#     control-flow/sweep-s1-switch-boxing/tag-const-case-any                PASS/-
+#     control-flow/sweep-s1-switch-boxing/tag-defined-case-any              PASS/-
+#     control-flow/sweep-s1-switch-boxing/no-tag                            PASS/-
+#     control-flow/sweep-s1-switch-boxing/init-form                         PASS/-
+#     control-flow/sweep-s1-switch-boxing/binding-reboxed                   PASS/-
+#     functions/sweep-s1-nil-func-chan-sinks/var-func                       PASS/-
+#     functions/sweep-s1-nil-func-chan-sinks/assign-func                    PASS/-
+#     functions/sweep-s1-nil-func-chan-sinks/var-chan                       PASS/-
+#     functions/sweep-s1-nil-func-chan-sinks/assign-chan                    PASS/-
+#     functions/sweep-s1-nil-func-chan-sinks/return-func                    PASS/-
+#     functions/sweep-s1-nil-func-chan-sinks/return-chan                    PASS/-
+#     functions/sweep-s1-nil-func-chan-sinks/arg-func                       PASS/-
+#     functions/sweep-s1-nil-func-chan-sinks/arg-chan                       PASS/-
+#     functions/sweep-s1-nil-func-chan-sinks/struct-fields                  PASS/-
+#     functions/sweep-s1-nil-func-chan-sinks/struct-fields-positional       PASS/-
+#     functions/sweep-s1-nil-func-chan-sinks/slice-func-elem                PASS/-
+#     functions/sweep-s1-nil-func-chan-sinks/map-chan-value                 PASS/-
+#     functions/sweep-s1-nil-func-chan-sinks/append-nil-func                PASS/-
+#     functions/sweep-s1-nil-func-chan-sinks/append-nil-chan                PASS/-
+#     functions/sweep-s1-nil-func-chan-sinks/send-nil-chan                  PASS/-
+#     functions/sweep-s1-nil-func-chan-sinks/send-nil-func                  PASS/-
+#     functions/sweep-s1-nil-func-chan-sinks/select-nil-default             PASS/-
+#     functions/sweep-s1-nil-func-chan-sinks/close-nil-literal              PASS/-
+#     functions/sweep-s1-nil-func-chan-sinks/send-nil-literal-deadlock      PASS/-
+#     functions/sweep-s1-nil-func-chan-sinks/defined-func                   PASS/-
+#     functions/sweep-s1-nil-func-chan-sinks/defined-chan                   PASS/-
+#     functions/sweep-s1-nil-func-chan-sinks/defined-func-return            PASS/-
+#     functions/sweep-s1-nil-func-chan-sinks/defined-chan-arg               PASS/-
+#     generics/sweep-s1-instantiation-boxing/explicit-any-arg               PASS/-
+#     generics/sweep-s1-instantiation-boxing/const-takes-type-param         PASS/-
+#     generics/sweep-s1-instantiation-boxing/inferred-default               PASS/-
+#     generics/sweep-s1-instantiation-boxing/constraint-typed               PASS/-
+#     generics/sweep-s1-instantiation-boxing/box-lit-any                    PASS/-
+#     generics/sweep-s1-instantiation-boxing/box-lit-defined                PASS/-
+#     generics/sweep-s1-instantiation-boxing/method-result-any              PASS/-
+#     generics/sweep-s1-instantiation-boxing/variadic-any                   PASS/-
+#     generics/sweep-s1-instantiation-boxing/comparable-any-default         PASS/-
+#     generics/sweep-s1-instantiation-boxing/inferred-int-returned          PASS/-
+#     init/sweep-s1-package-level-sinks/constants                           PASS/-
+#     init/sweep-s1-package-level-sinks/nils                                PASS/-
+#     init/sweep-s1-package-level-sinks/defined-and-narrower                PASS/-
+#     init/sweep-s1-package-level-sinks/map-keys                            PASS/-
+#     init/sweep-s1-package-level-sinks/call-and-shift                      PASS/-
+#     interfaces/sweep-s1-call-assign-targets/field-target                  PASS/-
+#     interfaces/sweep-s1-call-assign-targets/nested-field-target           PASS/-
+#     interfaces/sweep-s1-call-assign-targets/slice-elem-target             PASS/-
+#     interfaces/sweep-s1-call-assign-targets/array-elem-target             PASS/-
+#     interfaces/sweep-s1-call-assign-targets/deref-target                  PASS/-
+#     interfaces/sweep-s1-call-assign-targets/map-elem-target               PASS/-
+#     interfaces/sweep-s1-call-assign-targets/global-target                 PASS/-
+#     interfaces/sweep-s1-call-assign-targets/param-target                  PASS/-
+#     interfaces/sweep-s1-call-assign-targets/typed-nil-result              PASS/-
+#     interfaces/sweep-s1-call-assign-targets/typed-nil-into-field          PASS/-
+#     interfaces/sweep-s1-call-assign-targets/narrower-result               PASS/-
+#     interfaces/sweep-s1-call-assign-targets/defined-result-assert         PASS/-
+#     interfaces/sweep-s1-comma-ok-iface-targets/assert-iface-into-narrower PASS/-
+#     interfaces/sweep-s1-comma-ok-iface-targets/assert-iface-into-any      PASS/-
+#     interfaces/sweep-s1-comma-ok-iface-targets/assert-iface-miss          PASS/-
+#     interfaces/sweep-s1-comma-ok-iface-targets/assert-define-forms        PASS/-
+#     interfaces/sweep-s1-defined-slot-boxing/slice-both-ways               PASS/-
+#     interfaces/sweep-s1-defined-slot-boxing/map-both-ways                 PASS/-
+#     interfaces/sweep-s1-defined-slot-boxing/chan-both-ways                PASS/-
+#     interfaces/sweep-s1-defined-slot-boxing/func-both-ways                PASS/-
+#     interfaces/sweep-s1-defined-slot-boxing/defined-iface-assign          PASS/-
+#     interfaces/sweep-s1-defined-slot-boxing/defined-error-iface           PASS/-
+#     interfaces/sweep-s1-defined-slot-boxing/slice-at-arg                  PASS/-
+#     interfaces/sweep-s1-defined-slot-boxing/slice-at-return               PASS/-
+#     interfaces/sweep-s1-defined-slot-boxing/slice-at-elem                 PASS/-
+#     interfaces/sweep-s1-nil-sinks/assign-nil-after-value                  PASS/-
+#     interfaces/sweep-s1-nil-sinks/var-error-nil                           PASS/-
+#     interfaces/sweep-s1-nil-sinks/arg-nil-any                             PASS/-
+#     interfaces/sweep-s1-nil-sinks/arg-typed-nil-error                     PASS/-
+#     interfaces/sweep-s1-nil-sinks/return-nil-error                        PASS/-
+#     interfaces/sweep-s1-nil-sinks/return-typed-nil-pointer                PASS/-
+#     interfaces/sweep-s1-nil-sinks/map-lit-nil-key                         PASS/-
+#     interfaces/sweep-s1-nil-sinks/map-store-nil-value                     PASS/-
+#     interfaces/sweep-s1-nil-sinks/struct-field-nil                        PASS/-
+#     interfaces/sweep-s1-nil-sinks/struct-field-typed-nil                  PASS/-
+#     interfaces/sweep-s1-typed-value-sinks/assign-int-kinds                PASS/-
+#     interfaces/sweep-s1-typed-value-sinks/assign-float32                  PASS/-
+#     interfaces/sweep-s1-typed-value-sinks/assign-typed-nil-pointer        PASS/-
+#     interfaces/sweep-s1-typed-value-sinks/assign-slice                    PASS/-
+#     interfaces/sweep-s1-typed-value-sinks/assign-map                      PASS/-
+#     interfaces/sweep-s1-typed-value-sinks/assign-func                     PASS/-
+#     interfaces/sweep-s1-typed-value-sinks/assign-chan                     PASS/-
+#     interfaces/sweep-s1-typed-value-sinks/assign-struct                   PASS/-
+#     interfaces/sweep-s1-typed-value-sinks/assign-array                    PASS/-
+#     interfaces/sweep-s1-typed-value-sinks/assign-defined                  PASS/-
+#     interfaces/sweep-s1-typed-value-sinks/assign-iface-to-any             PASS/-
+#     interfaces/sweep-s1-typed-value-sinks/assign-narrower                 PASS/-
+#     interfaces/sweep-s1-typed-value-sinks/define-keeps-box                PASS/-
+#     interfaces/sweep-s1-typed-value-sinks/var-narrower                    PASS/-
+#     interfaces/sweep-s1-typed-value-sinks/arg-defined                     PASS/-
+#     interfaces/sweep-s1-typed-value-sinks/arg-iface-to-any                PASS/-
+#     interfaces/sweep-s1-typed-value-sinks/arg-narrower                    PASS/-
+#     interfaces/sweep-s1-typed-value-sinks/variadic-narrower               PASS/-
+#     interfaces/sweep-s1-typed-value-sinks/variadic-typed                  PASS/-
+#     interfaces/sweep-s1-typed-value-sinks/return-named-defer              PASS/-
+#     interfaces/sweep-s1-typed-value-sinks/return-narrower                 PASS/-
+#     interfaces/sweep-s1-typed-value-sinks/return-narrower-call            PASS/-
+#     interfaces/sweep-s1-typed-value-sinks/return-closure                  PASS/-
+#     interfaces/sweep-s1-typed-value-sinks/embedded-iface-lit-keyed        PASS/-
+#     interfaces/sweep-s1-typed-value-sinks/embedded-iface-lit-positional   PASS/-
+#     interfaces/sweep-s1-typed-value-sinks/slice-lit-narrower              PASS/-
+#     interfaces/sweep-s1-typed-value-sinks/blank-assert-panic              PASS/-
+#     interfaces/sweep-s1-typed-value-sinks/blank-assert-abort              PASS/-
+#     interfaces/sweep-s1-typed-value-sinks/blank-var-init                  PASS/-
+#     interfaces/sweep-s1-typed-value-sinks/new-iface-operand               PASS/-
+#     maps/sweep-s1-key-boxing/store-read                                   PASS/-
+#     maps/sweep-s1-key-boxing/lit-keys-default-type                        PASS/-
+#     maps/sweep-s1-key-boxing/compound                                     PASS/-
+#     maps/sweep-s1-key-boxing/inc-dec                                      PASS/-
+#     maps/sweep-s1-key-boxing/delete-default-type                          PASS/-
+#     maps/sweep-s1-key-boxing/comma-ok-read                                PASS/-
+#     maps/sweep-s1-key-boxing/value-store                                  PASS/-
+#     maps/sweep-s1-key-boxing/nil-key                                      PASS/-
+#     maps/sweep-s1-key-boxing/blank-comma-ok                               PASS/-
+#     maps/sweep-s1-key-boxing/struct-key-any-field                         PASS/-
+#     maps/sweep-s1-key-boxing/unseq-map-store                              PASS/-
+#     panic-recover/sweep-s1-payload-boxing/const-int                       PASS/-
+#     panic-recover/sweep-s1-payload-boxing/const-float                     PASS/-
+#     panic-recover/sweep-s1-payload-boxing/const-rune                      PASS/-
+#     panic-recover/sweep-s1-payload-boxing/const-bool                      PASS/-
+#     panic-recover/sweep-s1-payload-boxing/pointer                         PASS/-
+#     panic-recover/sweep-s1-payload-boxing/struct-payload                  PASS/-
+#     panic-recover/sweep-s1-payload-boxing/iface-to-iface                  PASS/-
+#     panic-recover/sweep-s1-payload-boxing/const-expr                      PASS/-
+#     panic-recover/sweep-s1-payload-boxing/shift                           PASS/-
+#     range/sweep-s1-assign-form-targets/array-value                        PASS/-
+#     range/sweep-s1-assign-form-targets/array-index                        PASS/-
+#     range/sweep-s1-assign-form-targets/ptr-array-value                    PASS/-
+#     range/sweep-s1-assign-form-targets/chan-elem                          PASS/-
+#     range/sweep-s1-assign-form-targets/int-range                          PASS/-
+#     range/sweep-s1-assign-form-targets/map-value                          PASS/-
+#     returns/sweep-s1-tuple-boxing/return-tuple                            PASS/-
+#     returns/sweep-s1-tuple-boxing/forward-defined-pointer-iface           PASS/-
+#     returns/sweep-s1-tuple-boxing/forward-narrower                        PASS/-
+#     returns/sweep-s1-tuple-boxing/forward-method                          PASS/-
+#     returns/sweep-s1-tuple-boxing/forward-generic                         PASS/-
+#     returns/sweep-s1-tuple-boxing/forward-typed-nil                       PASS/-
+#     returns/sweep-s1-tuple-boxing/return-forward-typed-nil                PASS/-
+#     returns/sweep-s1-tuple-boxing/unseq-args                              PASS/-
+#     returns/sweep-s1-tuple-boxing/unseq-slice-lit                         PASS/-
+#     returns/sweep-s1-tuple-boxing/unseq-struct-lit                        PASS/-
+#     returns/sweep-s1-tuple-boxing/unseq-send                              PASS/-
+#     returns/sweep-s1-tuple-boxing/unseq-return                            PASS/-
+#     slices/sweep-s1-append-boxing/consts-and-nil                          PASS/-
+#     slices/sweep-s1-append-boxing/typed                                   PASS/-
+#     slices/sweep-s1-append-boxing/narrower                                PASS/-
 # re-pinned: 2026-10-27 [AGENT], lane sweep/s5-method-sets — the defect-neighbourhood campaign's step 2, shape S5 (method sets:
 #   records, promotion, receiver adaptation, dispatch; plan docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved
 #   2026-10-27): the shape's 116-cell matrix probed on both sides — 74 cells by this lane (8 of them refusal probes recorded as
@@ -8135,3 +8354,212 @@ PASS	sync/sweep-s5-sync-carriers/value-box-no-methods	-	-
 PASS	sync/sweep-s5-sync-carriers/rwmutex-type-switch	-	-
 PASS	sync/sweep-s5-sync-carriers/lock-method-values	-	-
 PASS	sync/sweep-s5-sync-carriers/depth2-embedded-mutex	-	-
+PASS	channels/sweep-s1-receive-sinks/send-int	-	-
+PASS	channels/sweep-s1-receive-sinks/send-float	-	-
+PASS	channels/sweep-s1-receive-sinks/send-nil	-	-
+PASS	channels/sweep-s1-receive-sinks/send-defined	-	-
+PASS	channels/sweep-s1-receive-sinks/send-typed-nil-pointer	-	-
+PASS	channels/sweep-s1-receive-sinks/send-iface	-	-
+PASS	channels/sweep-s1-receive-sinks/var-init-receive	-	-
+PASS	channels/sweep-s1-receive-sinks/select-send	-	-
+PASS	channels/sweep-s1-receive-sinks/select-recv-assign	-	-
+PASS	channels/sweep-s1-receive-sinks/select-recv-comma-ok	-	-
+PASS	channels/sweep-s1-receive-sinks/send-defined-const	-	-
+PASS	channels/sweep-s1-receive-sinks/send-narrower	-	-
+PASS	channels/sweep-s1-receive-sinks/recv-into-map-elem	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/assign-int	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/assign-int-eq	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/assign-float	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/assign-rune	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/assign-string	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/assign-bool	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/assign-shift	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/assign-typed-const	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/define-default	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/var-typed-int	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/var-typed-float	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/var-typed-rune	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/var-typed-string	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/var-typed-bool	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/var-untyped-then-box	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/arg-int	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/arg-float	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/arg-rune	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/arg-string	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/arg-bool	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/arg-defined-int	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/arg-float-param	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/arg-method	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/arg-func-value	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/arg-iface-method	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/arg-defer	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/arg-go	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/arg-func-lit	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/variadic-pack	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/variadic-defined	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/variadic-method	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/return-float	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/return-rune	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/return-named	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/return-named-value	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/slice-lit	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/array-lit	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/map-lit-value	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/struct-keyed	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/struct-positional	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/struct-nested	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/struct-pointer-lit	-	-
+PASS	constants/sweep-s1-untyped-default-sinks/indexed-lits	-	-
+PASS	control-flow/sweep-s1-switch-boxing/case-float	-	-
+PASS	control-flow/sweep-s1-switch-boxing/case-rune	-	-
+PASS	control-flow/sweep-s1-switch-boxing/case-nil	-	-
+PASS	control-flow/sweep-s1-switch-boxing/case-multi	-	-
+PASS	control-flow/sweep-s1-switch-boxing/tag-const-case-any	-	-
+PASS	control-flow/sweep-s1-switch-boxing/tag-defined-case-any	-	-
+PASS	control-flow/sweep-s1-switch-boxing/no-tag	-	-
+PASS	control-flow/sweep-s1-switch-boxing/init-form	-	-
+PASS	control-flow/sweep-s1-switch-boxing/binding-reboxed	-	-
+PASS	functions/sweep-s1-nil-func-chan-sinks/var-func	-	-
+PASS	functions/sweep-s1-nil-func-chan-sinks/assign-func	-	-
+PASS	functions/sweep-s1-nil-func-chan-sinks/var-chan	-	-
+PASS	functions/sweep-s1-nil-func-chan-sinks/assign-chan	-	-
+PASS	functions/sweep-s1-nil-func-chan-sinks/return-func	-	-
+PASS	functions/sweep-s1-nil-func-chan-sinks/return-chan	-	-
+PASS	functions/sweep-s1-nil-func-chan-sinks/arg-func	-	-
+PASS	functions/sweep-s1-nil-func-chan-sinks/arg-chan	-	-
+PASS	functions/sweep-s1-nil-func-chan-sinks/struct-fields	-	-
+PASS	functions/sweep-s1-nil-func-chan-sinks/struct-fields-positional	-	-
+PASS	functions/sweep-s1-nil-func-chan-sinks/slice-func-elem	-	-
+PASS	functions/sweep-s1-nil-func-chan-sinks/map-chan-value	-	-
+PASS	functions/sweep-s1-nil-func-chan-sinks/append-nil-func	-	-
+PASS	functions/sweep-s1-nil-func-chan-sinks/append-nil-chan	-	-
+PASS	functions/sweep-s1-nil-func-chan-sinks/send-nil-chan	-	-
+PASS	functions/sweep-s1-nil-func-chan-sinks/send-nil-func	-	-
+PASS	functions/sweep-s1-nil-func-chan-sinks/select-nil-default	-	-
+PASS	functions/sweep-s1-nil-func-chan-sinks/close-nil-literal	-	-
+PASS	functions/sweep-s1-nil-func-chan-sinks/send-nil-literal-deadlock	-	-
+PASS	functions/sweep-s1-nil-func-chan-sinks/defined-func	-	-
+PASS	functions/sweep-s1-nil-func-chan-sinks/defined-chan	-	-
+PASS	functions/sweep-s1-nil-func-chan-sinks/defined-func-return	-	-
+PASS	functions/sweep-s1-nil-func-chan-sinks/defined-chan-arg	-	-
+PASS	generics/sweep-s1-instantiation-boxing/explicit-any-arg	-	-
+PASS	generics/sweep-s1-instantiation-boxing/const-takes-type-param	-	-
+PASS	generics/sweep-s1-instantiation-boxing/inferred-default	-	-
+PASS	generics/sweep-s1-instantiation-boxing/constraint-typed	-	-
+PASS	generics/sweep-s1-instantiation-boxing/box-lit-any	-	-
+PASS	generics/sweep-s1-instantiation-boxing/box-lit-defined	-	-
+PASS	generics/sweep-s1-instantiation-boxing/method-result-any	-	-
+PASS	generics/sweep-s1-instantiation-boxing/variadic-any	-	-
+PASS	generics/sweep-s1-instantiation-boxing/comparable-any-default	-	-
+PASS	generics/sweep-s1-instantiation-boxing/inferred-int-returned	-	-
+PASS	init/sweep-s1-package-level-sinks/constants	-	-
+PASS	init/sweep-s1-package-level-sinks/nils	-	-
+PASS	init/sweep-s1-package-level-sinks/defined-and-narrower	-	-
+PASS	init/sweep-s1-package-level-sinks/map-keys	-	-
+PASS	init/sweep-s1-package-level-sinks/call-and-shift	-	-
+PASS	interfaces/sweep-s1-call-assign-targets/field-target	-	-
+PASS	interfaces/sweep-s1-call-assign-targets/nested-field-target	-	-
+PASS	interfaces/sweep-s1-call-assign-targets/slice-elem-target	-	-
+PASS	interfaces/sweep-s1-call-assign-targets/array-elem-target	-	-
+PASS	interfaces/sweep-s1-call-assign-targets/deref-target	-	-
+PASS	interfaces/sweep-s1-call-assign-targets/map-elem-target	-	-
+PASS	interfaces/sweep-s1-call-assign-targets/global-target	-	-
+PASS	interfaces/sweep-s1-call-assign-targets/param-target	-	-
+PASS	interfaces/sweep-s1-call-assign-targets/typed-nil-result	-	-
+PASS	interfaces/sweep-s1-call-assign-targets/typed-nil-into-field	-	-
+PASS	interfaces/sweep-s1-call-assign-targets/narrower-result	-	-
+PASS	interfaces/sweep-s1-call-assign-targets/defined-result-assert	-	-
+PASS	interfaces/sweep-s1-comma-ok-iface-targets/assert-iface-into-narrower	-	-
+PASS	interfaces/sweep-s1-comma-ok-iface-targets/assert-iface-into-any	-	-
+PASS	interfaces/sweep-s1-comma-ok-iface-targets/assert-iface-miss	-	-
+PASS	interfaces/sweep-s1-comma-ok-iface-targets/assert-define-forms	-	-
+PASS	interfaces/sweep-s1-defined-slot-boxing/slice-both-ways	-	-
+PASS	interfaces/sweep-s1-defined-slot-boxing/map-both-ways	-	-
+PASS	interfaces/sweep-s1-defined-slot-boxing/chan-both-ways	-	-
+PASS	interfaces/sweep-s1-defined-slot-boxing/func-both-ways	-	-
+PASS	interfaces/sweep-s1-defined-slot-boxing/defined-iface-assign	-	-
+PASS	interfaces/sweep-s1-defined-slot-boxing/defined-error-iface	-	-
+PASS	interfaces/sweep-s1-defined-slot-boxing/slice-at-arg	-	-
+PASS	interfaces/sweep-s1-defined-slot-boxing/slice-at-return	-	-
+PASS	interfaces/sweep-s1-defined-slot-boxing/slice-at-elem	-	-
+PASS	interfaces/sweep-s1-nil-sinks/assign-nil-after-value	-	-
+PASS	interfaces/sweep-s1-nil-sinks/var-error-nil	-	-
+PASS	interfaces/sweep-s1-nil-sinks/arg-nil-any	-	-
+PASS	interfaces/sweep-s1-nil-sinks/arg-typed-nil-error	-	-
+PASS	interfaces/sweep-s1-nil-sinks/return-nil-error	-	-
+PASS	interfaces/sweep-s1-nil-sinks/return-typed-nil-pointer	-	-
+PASS	interfaces/sweep-s1-nil-sinks/map-lit-nil-key	-	-
+PASS	interfaces/sweep-s1-nil-sinks/map-store-nil-value	-	-
+PASS	interfaces/sweep-s1-nil-sinks/struct-field-nil	-	-
+PASS	interfaces/sweep-s1-nil-sinks/struct-field-typed-nil	-	-
+PASS	interfaces/sweep-s1-typed-value-sinks/assign-int-kinds	-	-
+PASS	interfaces/sweep-s1-typed-value-sinks/assign-float32	-	-
+PASS	interfaces/sweep-s1-typed-value-sinks/assign-typed-nil-pointer	-	-
+PASS	interfaces/sweep-s1-typed-value-sinks/assign-slice	-	-
+PASS	interfaces/sweep-s1-typed-value-sinks/assign-map	-	-
+PASS	interfaces/sweep-s1-typed-value-sinks/assign-func	-	-
+PASS	interfaces/sweep-s1-typed-value-sinks/assign-chan	-	-
+PASS	interfaces/sweep-s1-typed-value-sinks/assign-struct	-	-
+PASS	interfaces/sweep-s1-typed-value-sinks/assign-array	-	-
+PASS	interfaces/sweep-s1-typed-value-sinks/assign-defined	-	-
+PASS	interfaces/sweep-s1-typed-value-sinks/assign-iface-to-any	-	-
+PASS	interfaces/sweep-s1-typed-value-sinks/assign-narrower	-	-
+PASS	interfaces/sweep-s1-typed-value-sinks/define-keeps-box	-	-
+PASS	interfaces/sweep-s1-typed-value-sinks/var-narrower	-	-
+PASS	interfaces/sweep-s1-typed-value-sinks/arg-defined	-	-
+PASS	interfaces/sweep-s1-typed-value-sinks/arg-iface-to-any	-	-
+PASS	interfaces/sweep-s1-typed-value-sinks/arg-narrower	-	-
+PASS	interfaces/sweep-s1-typed-value-sinks/variadic-narrower	-	-
+PASS	interfaces/sweep-s1-typed-value-sinks/variadic-typed	-	-
+PASS	interfaces/sweep-s1-typed-value-sinks/return-named-defer	-	-
+PASS	interfaces/sweep-s1-typed-value-sinks/return-narrower	-	-
+PASS	interfaces/sweep-s1-typed-value-sinks/return-narrower-call	-	-
+PASS	interfaces/sweep-s1-typed-value-sinks/return-closure	-	-
+PASS	interfaces/sweep-s1-typed-value-sinks/embedded-iface-lit-keyed	-	-
+PASS	interfaces/sweep-s1-typed-value-sinks/embedded-iface-lit-positional	-	-
+PASS	interfaces/sweep-s1-typed-value-sinks/slice-lit-narrower	-	-
+PASS	interfaces/sweep-s1-typed-value-sinks/blank-assert-panic	-	-
+PASS	interfaces/sweep-s1-typed-value-sinks/blank-assert-abort	-	-
+PASS	interfaces/sweep-s1-typed-value-sinks/blank-var-init	-	-
+PASS	interfaces/sweep-s1-typed-value-sinks/new-iface-operand	-	-
+PASS	maps/sweep-s1-key-boxing/store-read	-	-
+PASS	maps/sweep-s1-key-boxing/lit-keys-default-type	-	-
+PASS	maps/sweep-s1-key-boxing/compound	-	-
+PASS	maps/sweep-s1-key-boxing/inc-dec	-	-
+PASS	maps/sweep-s1-key-boxing/delete-default-type	-	-
+PASS	maps/sweep-s1-key-boxing/comma-ok-read	-	-
+PASS	maps/sweep-s1-key-boxing/value-store	-	-
+PASS	maps/sweep-s1-key-boxing/nil-key	-	-
+PASS	maps/sweep-s1-key-boxing/blank-comma-ok	-	-
+PASS	maps/sweep-s1-key-boxing/struct-key-any-field	-	-
+PASS	maps/sweep-s1-key-boxing/unseq-map-store	-	-
+PASS	panic-recover/sweep-s1-payload-boxing/const-int	-	-
+PASS	panic-recover/sweep-s1-payload-boxing/const-float	-	-
+PASS	panic-recover/sweep-s1-payload-boxing/const-rune	-	-
+PASS	panic-recover/sweep-s1-payload-boxing/const-bool	-	-
+PASS	panic-recover/sweep-s1-payload-boxing/pointer	-	-
+PASS	panic-recover/sweep-s1-payload-boxing/struct-payload	-	-
+PASS	panic-recover/sweep-s1-payload-boxing/iface-to-iface	-	-
+PASS	panic-recover/sweep-s1-payload-boxing/const-expr	-	-
+PASS	panic-recover/sweep-s1-payload-boxing/shift	-	-
+PASS	range/sweep-s1-assign-form-targets/array-value	-	-
+PASS	range/sweep-s1-assign-form-targets/array-index	-	-
+PASS	range/sweep-s1-assign-form-targets/ptr-array-value	-	-
+PASS	range/sweep-s1-assign-form-targets/chan-elem	-	-
+PASS	range/sweep-s1-assign-form-targets/int-range	-	-
+PASS	range/sweep-s1-assign-form-targets/map-value	-	-
+PASS	returns/sweep-s1-tuple-boxing/return-tuple	-	-
+PASS	returns/sweep-s1-tuple-boxing/forward-defined-pointer-iface	-	-
+PASS	returns/sweep-s1-tuple-boxing/forward-narrower	-	-
+PASS	returns/sweep-s1-tuple-boxing/forward-method	-	-
+PASS	returns/sweep-s1-tuple-boxing/forward-generic	-	-
+PASS	returns/sweep-s1-tuple-boxing/forward-typed-nil	-	-
+PASS	returns/sweep-s1-tuple-boxing/return-forward-typed-nil	-	-
+PASS	returns/sweep-s1-tuple-boxing/unseq-args	-	-
+PASS	returns/sweep-s1-tuple-boxing/unseq-slice-lit	-	-
+PASS	returns/sweep-s1-tuple-boxing/unseq-struct-lit	-	-
+PASS	returns/sweep-s1-tuple-boxing/unseq-send	-	-
+PASS	returns/sweep-s1-tuple-boxing/unseq-return	-	-
+PASS	slices/sweep-s1-append-boxing/consts-and-nil	-	-
+PASS	slices/sweep-s1-append-boxing/typed	-	-
+PASS	slices/sweep-s1-append-boxing/narrower	-	-
