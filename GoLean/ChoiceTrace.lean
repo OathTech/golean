@@ -766,7 +766,13 @@ partial def poolLoop (fuel : Nat) (m : MultiConfig) (r : RaceState) (a : Acc) :
     match m.mainOutcome? with
     | some _ =>
         match runnableIdxs ctx m.shared m.threads with
-        | [] => return { status := "ok", acc := a }
+        | [] =>
+            -- BUG-206: the machine's own main-exit classification
+            -- (`exitOrRefusal`, the one definition behind every driver) — a
+            -- malformed parked goroutine is its named refusal, never «ok».
+            match exitOrRefusal ctx m.shared m.threads () with
+            | .ok () => return { status := "ok", acc := a }
+            | .error e => return { status := e.status, acc := a }
         | _ :: _ =>
             let a := { a with phase := "exit" }
             let (raw, a) := a.draw .l5ExitWindow 2 (exitWindowFacts ctx m)

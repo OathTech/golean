@@ -190,7 +190,13 @@ private def nodeObs (resultLocs : List Loc) (nd : DedupNode) :
           | .error e => throw s!"result readout failed at a terminal: {e.message}"
           | .ok vs =>
               match runnableIdxs ctx nd.m.shared nd.m.threads with
-              | [] => return some (.ok vs, false)
+              | [] =>
+                  -- BUG-206: the pool's own main-exit classification
+                  -- (`exitOrRefusal`) — a malformed parked goroutine is its
+                  -- named refusal, a shape the lane fails loud on.
+                  match exitOrRefusal ctx nd.m.shared nd.m.threads () with
+                  | .ok () => return some (.ok vs, false)
+                  | .error e => throw s!"malformed parked goroutine at main's exit — the pool refuses by name: {e.message}"
               | _ :: _ => return some (.ok vs, true)
       | none =>
           if (runnableIdxs ctx nd.m.shared nd.m.threads).isEmpty then

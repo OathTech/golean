@@ -574,7 +574,8 @@ theorem stepThread_pick_run {s : Store} {ts : Array Thread} {i : Nat} {c : Confi
   rfl
 
 /-- The one-layer unfolding of `execProgLoop`, as an equation
-(incl. the BUG-044 main-exit window at `mainOutcome?`-some). -/
+(incl. the BUG-044 main-exit window at `mainOutcome?`-some, and — BUG-206 —
+the main-exit classification `exitOrRefusal` at its empty menu). -/
 theorem execProgLoop_unfold (fuel : Nat) (m : MultiConfig) (r : RaceState)
     (ch : Choices) :
     execProgLoop ctx fuel m r ch
@@ -587,7 +588,7 @@ theorem execProgLoop_unfold (fuel : Nat) (m : MultiConfig) (r : RaceState)
             match m.mainOutcome? with
             | some out =>
               (match runnableIdxs ctx m.shared m.threads with
-              | [] => return (out, ch)
+              | [] => exitOrRefusal ctx m.shared m.threads (out, ch)
               | _ :: _ =>
                   let (pick, ch₁) := ch.consume 2
                   if pick == 0 then return (out, ch₁)

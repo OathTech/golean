@@ -849,11 +849,25 @@ theorem checkCert_complete_aux
             | nil =>
               rw [hrs] at hnode hobs
               try dsimp only at hnode hobs
-              simp only [obsOf?, pure_eq_ok] at hobs
-              rw [hload] at hobs
-              simp only [Option.some.injEq] at hobs
-              cases hobs
-              exact obsMem_mem hnode
+              -- BUG-206: the driver and the checker's mirror both classify the
+              -- empty menu through `exitOrRefusal`; a malformed park is the
+              -- checker's `false` (the node is refused), so only the
+              -- well-formed case reaches the member check.
+              unfold exitOrRefusal at hnode hobs
+              cases hpw : parkedWellFormed ctx m.shared m.threads.toList with
+              | ok u =>
+                cases u
+                rw [hpw] at hnode hobs
+                try dsimp only at hnode hobs
+                simp only [obsOf?] at hobs
+                rw [hload] at hobs
+                simp only [Option.some.injEq] at hobs
+                cases hobs
+                exact obsMem_mem hnode
+              | error e =>
+                rw [hpw] at hnode
+                try dsimp only at hnode
+                cases hnode
             | cons r0 rest =>
               rw [hrs] at hnode hobs
               try dsimp only at hnode hobs
@@ -971,11 +985,25 @@ theorem checkCert_complete_aux
             | nil =>
               rw [hrs] at hnode hobs
               try dsimp only at hnode hobs
-              simp only [obsOf?, pure_eq_ok] at hobs
-              rw [hload] at hobs
-              simp only [Option.some.injEq] at hobs
-              cases hobs
-              exact obsMem_mem hnode
+              -- BUG-206: the driver and the checker's mirror both classify the
+              -- empty menu through `exitOrRefusal`; a malformed park is the
+              -- checker's `false` (the node is refused), so only the
+              -- well-formed case reaches the member check.
+              unfold exitOrRefusal at hnode hobs
+              cases hpw : parkedWellFormed ctx m.shared m.threads.toList with
+              | ok u =>
+                cases u
+                rw [hpw] at hnode hobs
+                try dsimp only at hnode hobs
+                simp only [obsOf?] at hobs
+                rw [hload] at hobs
+                simp only [Option.some.injEq] at hobs
+                cases hobs
+                exact obsMem_mem hnode
+              | error e =>
+                rw [hpw] at hnode
+                try dsimp only at hnode
+                cases hnode
             | cons r0 rest =>
               rw [hrs] at hnode hobs
               try dsimp only at hnode hobs

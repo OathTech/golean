@@ -330,7 +330,9 @@ boundary on the exported pool API. `wakeReady` below projects the Bool the
 scheduler's menu needs (an error reads «not runnable», so the SCHEDULE is
 unchanged), and the deadlock classification (`deadlockOrRefusal`, used by
 `stepMulti` and the drivers) re-runs this check over every parked goroutine
-before it names «no runnable goroutine» Go's deadlock.
+before it names «no runnable goroutine» Go's deadlock — as does the main-exit
+classification (`exitOrRefusal`, BUG-206) before it returns main's outcome
+over an empty menu.
 
 Sync parks (spec-parity slice 2, design note §6): CELL-based wake readiness —
 can the parked op now acquire against the primitive's state alone? WHICH
@@ -361,7 +363,8 @@ def wakeReady? (s : Store) : Config → Except Stop Bool
 /-- The scheduler's Bool view of `wakeReady?`: a malformed parked state reads
 «not runnable» here — the menu (`runnableIdxs`, `schedSlots`) is a plain list
 — and is REFUSED BY NAME where the pool would otherwise classify the resulting
-«nothing runnable» as Go's deadlock (`deadlockOrRefusal`). -/
+«nothing runnable» as Go's deadlock (`deadlockOrRefusal`) or as main's clean
+exit (`exitOrRefusal`, BUG-206). -/
 def wakeReady (s : Store) (c : Config) : Bool :=
   match wakeReady? ctx s c with
   | .ok b => b
@@ -395,6 +398,33 @@ def deadlockStop (s : Store) (threads : Array Thread) : Stop :=
 `execProgLoopOut_snd`) see one `Stop` whatever the arm's type. -/
 def deadlockOrRefusal {α : Type} (s : Store) (threads : Array Thread) : Except Stop α :=
   .error (deadlockStop ctx s threads)
+
+/-- **The pool's main-exit classification** (BUG-206 — DC11's sibling at the
+terminal): main's outcome over «no runnable goroutine» is the program's outcome
+only when every parked goroutine is validly parked (`parkedWellFormed`); a
+malformed parked state is its own named refusal (`wakeReady?`'s text, the first
+one in thread order — exactly what `deadlockOrRefusal` raises for the same
+state one arm away). Before this definition the drivers' `mainOutcome?` arm
+read the empty menu through the Bool projection `wakeReady` alone, so a
+malformed park beside main's terminal was absorbed into a clean `ok` (the
+window BUG-165's fix named outside its claim). The ONE definition behind the
+drivers' empty menu at main's terminal (`execProgLoop`, `execProgLoopOut`; the
+CLI's `enumPoolRun` and `poolDFS`; the choice-trace and dedup mirrors; the
+certificate checker's `checkNode`) and the proofs' driver model
+(`PoolFacts.front`). Polymorphic in the outcome so each site passes its own
+value and the agreement proofs (`unfold_driver`, `execProgLoopOut_snd`,
+`execProgLoop_unfold`) see one term. -/
+def exitOrRefusal {α : Type} (s : Store) (threads : Array Thread) (out : α) :
+    Except Stop α :=
+  match parkedWellFormed ctx s threads.toList with
+  | .ok () => .ok out
+  | .error e => .error e
+
+/-- A pool whose only goroutine is main at its terminal has nothing parked:
+the main-exit classification is main's outcome (the single-goroutine
+projections, `PoolProjection.front_terminal`). -/
+theorem exitOrRefusal_single_terminal {α : Type} {σ : Store} {out : α} :
+    exitOrRefusal ctx σ #[.running (.next .stop) none] out = .ok out := rfl
 
 /-- Runnable = not done, and (if parked) wake-ready; a goroutine with a
 boundary clear pending is runnable (the clear is its step). -/
@@ -1978,7 +2008,10 @@ def execProgLoop : Nat → MultiConfig → RaceState → Choices →
             match m.mainOutcome? with
             | some out =>
                 (match runnableIdxs ctx m.shared m.threads with
-                | [] => return (out, choices)
+                -- BUG-206: the pool's own main-exit classification — main's
+                -- outcome only over validly parked goroutines, else the
+                -- malformed park's named refusal (`exitOrRefusal`).
+                | [] => exitOrRefusal ctx m.shared m.threads (out, choices)
                 | _ :: _ =>
                     -- The main-exit window (L5, `ChoiceSite.l5ExitWindow`):
                     -- 0 = exit, 1 = step.
@@ -2029,7 +2062,7 @@ def execProgLoopOut : Nat → MultiConfig → RaceState → Choices → GoString
             match m.mainOutcome? with
             | some out =>
                 (match runnableIdxs ctx m.shared m.threads with
-                | [] => (acc, return (out, choices))
+                | [] => (acc, exitOrRefusal ctx m.shared m.threads (out, choices))
                 | _ :: _ =>
                     let (pick, choices₁) := Choices.consumeAt .l5ExitWindow 2 choices
                     if pick == 0 then (acc, return (out, choices₁))

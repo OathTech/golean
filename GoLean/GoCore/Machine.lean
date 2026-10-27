@@ -697,12 +697,21 @@ def applyStrictOp (s : Store) (leafOf : Loc → Loc) :
           if ← valueLess best w then
             best := w
         return (best, s, [])
+  -- BUG-207: an offset AT or PAST the string's end is a malformed operand (no
+  -- decode position has it; `utf8.DecodeRuneInString` answers `(RuneError, 0)`
+  -- there and no Go construct decodes there) — refused by name, never
+  -- `decodeRuneAt`'s out-of-range sentinel (U+FFFD, width 1: the spec's rule
+  -- for a sequence truncated INSIDE the string, kept byte-identical in range).
+  -- The two ops are decoder-synthesized (range-over-string) and the lowering
+  -- guards the offset, so no admitted program reaches the arm.
   | .runeAt, [sv, ov] => do
       match sv with
       | .string str => do
           let off ← valueAsInt ov
           if off < 0 then
             stuck s!"negative rune-decode offset {off}"
+          if (str.length : Int) ≤ off then
+            stuck s!"rune decode offset {off} out of range for a string of {str.length} byte(s)"
           return (.int (decodeRuneAt str off.toNat).1 .int32, s, [])
       | other => stuck s!"expected string operand for rune decode, got {repr other}"
   | .runeSizeAt, [sv, ov] => do
@@ -711,6 +720,8 @@ def applyStrictOp (s : Store) (leafOf : Loc → Loc) :
           let off ← valueAsInt ov
           if off < 0 then
             stuck s!"negative rune-decode offset {off}"
+          if (str.length : Int) ≤ off then
+            stuck s!"rune decode offset {off} out of range for a string of {str.length} byte(s)"
           return (.int (Int.ofNat (decodeRuneAt str off.toNat).2) .int, s, [])
       | other => stuck s!"expected string operand for rune decode, got {repr other}"
   | .defaultValueOf ty, [] => do return ((← defaultValue ctx ty), s, [])

@@ -3161,24 +3161,29 @@ private def malformedParkedStateFacts : IO Bool := do
 
 /-- S26 sweep (lane `sweep/s26-core-defaults`, 2026-10-26; the defect-neighbourhood campaign,
 `docs/2026-10-27_defect-neighbourhood-campaign.md` §4, `docs/defect-shapes.md` S26): the two
-absorbing defaults the reading found, PINNED AT THEIR CURRENT BEHAVIOUR — red-by-design pins of
-open findings (`docs/BUGS.md` BUG-206, BUG-207), beside the valid controls. The fix lane flips
-each pinned fact to the named refusal and keeps the controls.
+absorbing defaults the reading found (`docs/BUGS.md` BUG-206, BUG-207), pinned by the sweep at
+their then-current behaviour (red-by-design) and FLIPPED to the named refusals by the fix lane
+`core/fix-bug206-207-1027` (2026-10-27), beside the valid controls kept as written.
 
-BUG-206 — the MAIN-EXIT WINDOW's empty menu is DC11's sibling at the terminal: with main at
+BUG-206 — the MAIN-EXIT WINDOW's empty menu was DC11's sibling at the terminal: with main at
 `.next .stop`, every driver (`execProgLoop`, `execProgLoopOut`, `enumPoolRun`, `poolDFS`, the
-choice-trace and dedup mirrors) reads `runnableIdxs = []` through the Bool projection `wakeReady`
-— a MALFORMED parked goroutine (the DC11 probe: a send parked on an unbound address of an empty
-store) reads «not runnable» — and answers `ok` with main's readout; `parkedWellFormed` runs only
-on the no-main-outcome arm (`deadlockOrRefusal`). BUG-165 names this window as outside its fix's
-claim. No path from admitted Go source; the pin is the boundary.
+choice-trace and dedup mirrors, the certificate checker) read `runnableIdxs = []` through the
+Bool projection `wakeReady` — a MALFORMED parked goroutine (the DC11 probe: a send parked on an
+unbound address of an empty store) read «not runnable» — and answered `ok` with main's readout;
+`parkedWellFormed` ran only on the no-main-outcome arm (`deadlockOrRefusal`). Now the empty menu
+at main's terminal is `exitOrRefusal` (`GoLean/GoCore/Multi.lean`, the one definition behind
+every mirror): main's outcome over validly parked goroutines, else the first malformed park's
+named refusal — `wakeReady?`'s own text, exactly what `deadlockOrRefusal` raises one arm away.
+No path from admitted Go source; the pin is the boundary.
 
-BUG-207 — `decodeRuneAt`'s out-of-range sentinel (`.getD 0x100`, every range check fails → U+FFFD,
-width 1) is Go's rule for a truncated sequence INSIDE the string, and the same benign answer for
-an offset AT OR PAST the end: the strict ops `.runeAt` / `.runeSizeAt` answer U+FFFD / width 1 on
-a malformed operand (`utf8.DecodeRuneInString` answers `(RuneError, 0)` at the end; the lowering's
-`for range` guards `rnext < len` and never decodes there). The other two decoders
-(`runesOfStringAux`, `utf8StringAux?`) guard `off < length` themselves. -/
+BUG-207 — `decodeRuneAt`'s out-of-range sentinel (`.getD 0x100`, every range check fails →
+U+FFFD, width 1) is Go's rule for a truncated sequence INSIDE the string, and was the same
+benign answer for an offset AT OR PAST the end: the strict ops `.runeAt` / `.runeSizeAt`
+answered U+FFFD / width 1 on a malformed operand (`utf8.DecodeRuneInString` answers
+`(RuneError, 0)` at the end; the lowering's `for range` guards `rnext < len` and never decodes
+there). Now the two strict arms (`GoLean/GoCore/Machine.lean`, `applyStrictOp`) refuse an
+offset `≥ length` by name beside the existing negative-offset refusal; `decodeRuneAt` and its
+two self-guarding callers (`runesOfStringAux`, `utf8StringAux?`) are unchanged. -/
 private def absorbingDefaultResidualFacts : IO Bool := do
   let mut passed := true
   let ctx := GoCore.ProgramCtx.ofTables (types := #[])
@@ -3188,21 +3193,30 @@ private def absorbingDefaultResidualFacts : IO Bool := do
   let mainDone : GoCore.Machine.Thread := .running (.next .stop) none
   let pool (ts : Array GoCore.Machine.Thread) : Except Stop (GoCore.Store × GoCore.Choices) :=
     GoCore.Machine.execProgLoop ctx 10 ⟨ts, emptyStore, 0⟩ {} []
-  -- BUG-206, the finding at its CURRENT behaviour.
-  passed := passed && (← expectTrue "BUG-206 (pinned CURRENT behaviour, open): execProgLoop answers ok at main's exit beside a MALFORMED parked goroutine — the refusal deadlockOrRefusal names away from the exit is absent here"
+  -- BUG-206, fixed: the named refusal at main's exit — `wakeReady?`'s own text, as
+  -- `deadlockOrRefusal` raises it away from the exit.
+  passed := passed && (← expectTrue "BUG-206 (fixed): execProgLoop REFUSES BY NAME at main's exit beside a MALFORMED parked goroutine — exitOrRefusal, the text deadlockOrRefusal names away from the exit"
     (match pool #[mainDone, .running absent none] with
-      | .ok _ => true
+      | .error (Stop.stuck msg) => (msg.splitOn "unbound").length == 2
       | _ => false))
-  passed := passed && (← expectTrue "BUG-206 (pinned CURRENT behaviour, open): execProgLoopOut's outcome is the same ok"
+  passed := passed && (← expectTrue "BUG-206 (fixed): execProgLoopOut's outcome is the same named refusal"
     (match (GoCore.Machine.execProgLoopOut ctx 10 ⟨#[mainDone, .running absent none], emptyStore, 0⟩ {} [] GoString.empty).2 with
-      | .ok _ => true
+      | .error (Stop.stuck msg) => (msg.splitOn "unbound").length == 2
       | _ => false))
   let enumPool (ts : Array GoCore.Machine.Thread) :=
     CLI.enumPoolRun ctx [] #[] none 10 0 ⟨ts, emptyStore, 0⟩ {} [] GoString.empty
-  passed := passed && (← expectTrue "BUG-206 (pinned CURRENT behaviour, open): the enumeration driver's mirror reads the same ok"
+  passed := passed && (← expectTrue "BUG-206 (fixed): the enumeration driver's mirror is the same named refusal"
     (match enumPool #[mainDone, .running absent none] with
-      | .ok ("ok", _, _) => true
+      | .error (Stop.stuck msg, _) => (msg.splitOn "unbound").length == 2
       | _ => false))
+  -- The one definition itself, and its well-formed answer.
+  passed := passed && (← expectTrue "BUG-206: exitOrRefusal over the malformed park is wakeReady?'s own refusal; over a validly parked goroutine it is main's outcome"
+    ((match GoCore.Machine.exitOrRefusal ctx emptyStore #[mainDone, .running absent none] (7 : Nat) with
+      | .error (Stop.stuck msg) => (msg.splitOn "unbound").length == 2
+      | _ => false)
+     && (match GoCore.Machine.exitOrRefusal ctx emptyStore #[mainDone, .running (.blockedSend none (.int 1 .int) .stop) none] (7 : Nat) with
+      | .ok 7 => true
+      | _ => false)))
   -- BUG-206 controls: the same malformed goroutine away from main's exit is the NAMED refusal
   -- (DC11), and a VALIDLY parked goroutine beside main's exit is Go's clean exit.
   passed := passed && (← expectTrue "BUG-206 control: with main parked (no main outcome) the same malformed goroutine is the NAMED refusal (DC11)"
@@ -3213,17 +3227,26 @@ private def absorbingDefaultResidualFacts : IO Bool := do
     (match pool #[mainDone, .running (.blockedSend none (.int 1 .int) .stop) none] with
       | .ok _ => true
       | _ => false))
-  -- BUG-207, the finding at its CURRENT behaviour.
+  passed := passed && (← expectTrue "BUG-206 control: the enumeration driver's mirror keeps the clean exit beside a validly parked goroutine"
+    (match enumPool #[mainDone, .running (.blockedSend none (.int 1 .int) .stop) none] with
+      | .ok ("ok", _, _) => true
+      | _ => false))
+  -- BUG-207, fixed: the two strict arms refuse an offset at or past the end by name.
   let ab : GoValue := .string (GoString.fromLeanString "ab")
-  passed := passed && (← expectTrue "BUG-207 (pinned CURRENT behaviour, open): runeAt at an offset PAST the string's end answers U+FFFD, not a named refusal"
+  passed := passed && (← expectTrue "BUG-207 (fixed): runeAt at an offset PAST the string's end is the named refusal (out of range), not U+FFFD"
     (match GoCore.Machine.applyStrictOp ctx emptyStore id .runeAt [ab, .int 5 .int] with
-      | .ok (.int 0xFFFD .int32, _, _) => true
+      | .error (Stop.stuck msg) => (msg.splitOn "out of range").length == 2
       | _ => false))
-  passed := passed && (← expectTrue "BUG-207 (pinned CURRENT behaviour, open): runeSizeAt AT the string's end answers width 1 (DecodeRuneInString answers 0 there; for range never decodes there)"
+  passed := passed && (← expectTrue "BUG-207 (fixed): runeSizeAt AT the string's end is the named refusal (out of range), not width 1"
     (match GoCore.Machine.applyStrictOp ctx emptyStore id .runeSizeAt [ab, .int 2 .int] with
-      | .ok (.int 1 .int, _, _) => true
+      | .error (Stop.stuck msg) => (msg.splitOn "out of range").length == 2
       | _ => false))
-  -- BUG-207 controls: in range, a valid rune decodes and a TRUNCATED sequence is Go's U+FFFD, width 1.
+  passed := passed && (← expectTrue "BUG-207 (fixed): the empty string refuses at offset 0 (no decode position exists)"
+    (match GoCore.Machine.applyStrictOp ctx emptyStore id .runeAt [.string GoString.empty, .int 0 .int] with
+      | .error (Stop.stuck msg) => (msg.splitOn "out of range").length == 2
+      | _ => false))
+  -- BUG-207 controls: in range, a valid rune decodes and a TRUNCATED sequence is Go's U+FFFD, width 1;
+  -- the negative-offset refusal is kept.
   passed := passed && (← expectTrue "BUG-207 control: runeAt in range decodes the rune ('b' at offset 1)"
     (match GoCore.Machine.applyStrictOp ctx emptyStore id .runeAt [ab, .int 1 .int] with
       | .ok (.int 98 .int32, _, _) => true
@@ -3234,6 +3257,10 @@ private def absorbingDefaultResidualFacts : IO Bool := do
            GoCore.Machine.applyStrictOp ctx emptyStore id .runeSizeAt [truncated, .int 1 .int] with
       | .ok (.int 0xFFFD .int32, _, _), .ok (.int 1 .int, _, _) => true
       | _, _ => false))
+  passed := passed && (← expectTrue "BUG-207 control: a negative offset keeps its own refusal"
+    (match GoCore.Machine.applyStrictOp ctx emptyStore id .runeSizeAt [ab, .int (-1) .int] with
+      | .error (Stop.stuck msg) => (msg.splitOn "negative rune-decode offset").length == 2
+      | _ => false))
   pure passed
 
 /-- BUG-134 at the train-20 audit's F1 (2026-10-26, lane `core/struct-through-conversion-1026`):
@@ -5110,7 +5137,7 @@ def main : IO UInt32 := do
   passed := passed && (← stepLabelAndSeedControls)
   -- DC11 (2026-10-26): the malformed-parked-state refusal and its valid deadlock controls.
   passed := passed && (← malformedParkedStateFacts)
-  -- S26 sweep (2026-10-26): the two absorbing-default residuals pinned at their current behaviour (BUG-206, BUG-207).
+  -- S26 sweep (2026-10-26) / fix lane (2026-10-27): the two absorbing defaults' named refusals (BUG-206, BUG-207).
   passed := passed && (← absorbingDefaultResidualFacts)
   if passed then
     return 0

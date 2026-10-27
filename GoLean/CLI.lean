@@ -1854,6 +1854,11 @@ def enumPoolRun (pctx : GoCore.ProgramCtx) (resultLocs : List Loc) (resultTys : 
                 -- pick 0 exits now, pick 1 takes one more pool step.
                 (match GoCore.Machine.runnableIdxs pctx m.shared m.threads with
                 | [] => do
+                    -- BUG-206: the pool's own main-exit classification
+                    -- (`exitOrRefusal`, the one definition behind every
+                    -- driver) — main's outcome only over validly parked
+                    -- goroutines, else the malformed park's named refusal.
+                    let () ← (GoCore.Machine.exitOrRefusal pctx m.shared m.threads ()).mapError (·, acc)
                     let vals ← (GoCore.Machine.loadMany pctx σf resultLocs).mapError (·, acc)
                     let (st, obs) := readoutObs ⟨pctx.types, resultTys⟩ { values := vals.toArray, output := acc }
                     return (st, obs, choices)
@@ -2292,7 +2297,15 @@ partial def poolDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
                     s!"at a terminal under pick assignment {p.reverse}"
                   recordLeaf ctx o p "ok" obs p.length
           (match GoCore.Machine.runnableIdxs ctx.ep.ctx m.shared m.threads with
-          | [] => exitLeaf out path
+          | [] =>
+              -- BUG-206: the pool's own main-exit classification
+              -- (`exitOrRefusal`) — a malformed parked goroutine is its
+              -- named refusal, never a clean exit (fail loud, as the
+              -- deadlock arm below).
+              match GoCore.Machine.exitOrRefusal ctx.ep.ctx m.shared m.threads () with
+              | .error e =>
+                  .error s!"malformed parked goroutine at main's exit under pick assignment {path.reverse} — the pool refuses by name: {renderStop e}"
+              | .ok () => exitLeaf out path
           | _ :: _ =>
               -- THE MAIN-EXIT WINDOW (L5, BUG-044): a bound-2 site —
               -- pick 0 exits with main's readout, pick 1 takes one more

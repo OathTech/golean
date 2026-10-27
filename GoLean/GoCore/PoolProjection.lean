@@ -143,7 +143,8 @@ theorem front_terminal {σ : Store} {ch : Choices} :
     front ctx ⟨#[.running (.next .stop) none], σ, 0⟩ ch = .ok (.inl (σ, ch)) := by
   have hrun : threadRunnable ctx σ (.running (.next .stop) none) = false := by
     simp [threadRunnable, Config.isTerminal]
-  simp [front, MultiConfig.panicMsg?, MultiConfig.mainOutcome?, runnableIdxs_singleton_none hrun]
+  simp [front, MultiConfig.panicMsg?, MultiConfig.mainOutcome?, runnableIdxs_singleton_none hrun,
+    exitOrRefusal_single_terminal]
 
 /-- The abort tombstone: the `panic` terminal. -/
 theorem front_aborted {σ : Store} {msg : String} {ch : Choices} :

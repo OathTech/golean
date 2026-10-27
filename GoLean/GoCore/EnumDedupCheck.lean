@@ -238,7 +238,16 @@ def checkNode (nodeEqb : DedupNode → DedupNode → Bool)
            | .error _ => false
            | .ok vs =>
               match runnableIdxs ctx nd.m.shared nd.m.threads with
-              | [] => obsMem mems (.ok vs)
+              -- BUG-206 (a checker change, STRICTER only): the driver's
+              -- empty menu at main's terminal is `exitOrRefusal` — a
+              -- malformed parked goroutine refuses by name — so the mirror
+              -- refuses the node too (as the deadlock arm below refuses
+              -- every empty menu); a certificate it accepted before over
+              -- such a node is now refused, never the reverse.
+              | [] =>
+                  match exitOrRefusal ctx nd.m.shared nd.m.threads () with
+                  | .ok () => obsMem mems (.ok vs)
+                  | .error _ => false
               | _ :: _ =>
                   obsMem mems (.ok vs)
                     && checkStep ctx nodeEqb mems nodes succs nd)

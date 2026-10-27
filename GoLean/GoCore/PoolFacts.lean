@@ -937,7 +937,10 @@ def front (m : MultiConfig) (ch : Choices) :
   | some msg => .error (.panic msg)
   | none => match m.mainOutcome? with
     | some s => match runnableIdxs ctx m.shared m.threads with
-      | [] => .ok (.inl (s, ch))
+      -- BUG-206: the main-exit classification is `exitOrRefusal` — main's
+      -- outcome when every parked goroutine is validly parked, else the
+      -- first malformed park's named refusal (the driver's own arm).
+      | [] => exitOrRefusal ctx m.shared m.threads (.inl (s, ch))
       | _ :: _ =>
         let (pick, ch') := Choices.consumeAt .l5ExitWindow 2 ch
         if pick == 0 then .ok (.inl (s, ch')) else .ok (.inr ch')
@@ -970,7 +973,11 @@ theorem unfold_driver (fuel : Nat) (m : MultiConfig) (r : RaceState)
     · simp_all [throw, throwThe, MonadExceptOf.throw]
     · split
       · split
-        · simp_all
+        · -- BUG-206: the empty menu is `exitOrRefusal` on both sides.
+          unfold exitOrRefusal
+          cases hpw : parkedWellFormed ctx m.shared m.threads.toList with
+          | ok u => cases u; simp_all
+          | error e => simp_all
         · split <;> simp_all [throw, throwThe, MonadExceptOf.throw] <;> cases fuel <;> rfl
       · split <;> simp_all [throw, throwThe, MonadExceptOf.throw] <;> cases fuel <;> rfl
 

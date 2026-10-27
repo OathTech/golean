@@ -5127,23 +5127,27 @@ theorem applyStrictOp_wf {σ : Store} {leafOf : Loc → Loc} {op : StrictOp} {vs
                 omega)
              | (show GoValue.locSup b ≤ σ.nextAddr
                 omega))
-  · -- runeAt
+  · -- runeAt (BUG-207: the negative-offset refusal, then the out-of-range refusal)
     split at h
     · simp only [bind_eq_ok, pure_eq_ok] at h
       obtain ⟨off, hoff, h⟩ := h
       split at h
       · simp [Bind.bind, Except.bind] at h
-      · obtain ⟨_, _, rfl, rfl, rfl⟩ := h
-        exact strictWfSame hw (by simp [GoValue.locSup])
+      · split at h
+        · simp [Bind.bind, Except.bind] at h
+        · obtain ⟨_, _, rfl, rfl, rfl⟩ := h
+          exact strictWfSame hw (by simp [GoValue.locSup])
     · simp at h
-  · -- runeSizeAt
+  · -- runeSizeAt (BUG-207: the same two refusals)
     split at h
     · simp only [bind_eq_ok, pure_eq_ok] at h
       obtain ⟨off, hoff, h⟩ := h
       split at h
       · simp [Bind.bind, Except.bind] at h
-      · obtain ⟨_, _, rfl, rfl, rfl⟩ := h
-        exact strictWfSame hw (by simp [GoValue.locSup])
+      · split at h
+        · simp [Bind.bind, Except.bind] at h
+        · obtain ⟨_, _, rfl, rfl, rfl⟩ := h
+          exact strictWfSame hw (by simp [GoValue.locSup])
     · simp at h
   · -- defaultValueOf
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
