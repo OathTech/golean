@@ -1,11 +1,23 @@
 # GoLean negative-corpus (compile-rejection) baseline
 # recorded: 2026-08-18  commit: f68a4d86+ (spec-truth P3 slice 2)  oracle: go build (rejection)  [header corrected 2026-08-31: the old "+ frontend fail-closed" conjunct claimed a check that does not exist — scripts/coverage-negative invokes no GoLean tool (p2-fact claim 5)]
-# manifest_cases: 525  pass: 523  fail: 2
+# manifest_cases: 539  pass: 537  fail: 2
 # re-pinned: 2026-10-27 [AGENT], lane frontend/fix-admission-1027 — BUG-217 and BUG-219 fixed (the main module's path judged
 #   against the pinned GOROOT and gc's reserved names; cmd/go's import rules mirrored at discovery): NINE rows FAIL
 #   frontend-accepts -> PASS from the full run at 63bbba7a with the row edits and records applied in the tree (1117 s) — imports/{vendor-path-import, nested-vendor-path-import,
 #   goroot-vendor-name, bare-internal-path, module-mode-bare-local-import, package-main-import} at frontend=type-check (BUG-219),
 #   modules/{module-path-std-fmt, module-path-std-nested, module-path-cmd} at frontend=module (BUG-217). No other row moves.
+# re-pinned: 2026-10-27 [AGENT], lane sweep/s27-bytes — the defect-neighbourhood campaign's step 2 for shape S27 (byte
+#   transparency of string-carrying channels; plan docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved
+#   2026-10-27): the SOURCE-LEVEL byte classes gc rejects — a raw invalid UTF-8 byte in an interpreted literal, in a raw
+#   literal, in a comment and in a literal of a BOM-prefixed file; a NUL byte in a comment and in a literal; a BOM in the
+#   middle of the file and inside a literal; "\uD800", "\U00110000" and '\U00110000'; \' in a string and \" in a rune literal;
+#   a combining mark in an identifier — FOURTEEN BORN ROWS Corpus/coverage/negative/compile/strings/sweep-s27-*: gc (go1.26.5
+#   under scripts/go-env-pins.sh's pins) rejects each with the recorded substring (the go command's own reader names the
+#   comment-position bytes — «illegal UTF-8 encoding», «unexpected NUL in input» — and gc's syntax scanner the rest) AND the
+#   native frontend refuses each as a parse rejection. No other row moves; no flip. Counts: 437 + 14 = 451; PASS 437 + 14 =
+#   451; FAIL 0. Measured by CAPPED_MEM_MAX=64G capped scripts/ci --diff at the lane tree b7d257d7 before this re-pin (its only
+#   drift: these 14 NEW ids, PASS/-; the differential lane 4293 with its 127 new ids and no other move), the rows taken from
+#   that run's artifacts/coverage/negative-latest.tsv; the --diff at the tip judges.
 # re-pinned: 2026-10-27 [AGENT], lane sweep/s13-binding — the S13 sweep (variable binding; plan §4, [USER]-approved 2026-10-27).
 #   ADDITIVE ONLY: 16 new ids Corpus/coverage/negative/compile/scoping/sweep-s13-* from the full run of scripts/ci --diff at 51a5b41abd0b56d159b3644e301e362c7f1e48dd (git write-tree over 89ba27c5, this commit's tree less the two re-pinned baselines)
 #   (805 s); no existing row moved: 437 + 16 = 453, pass 437 + 16 = 453, fail 0. Every row born PASS (gc rejects AND the frontend
@@ -727,3 +739,17 @@ PASS	scoping/sweep-s13-unused-if-init	-
 PASS	scoping/sweep-s13-unused-nested-block	-
 PASS	scoping/sweep-s13-unused-range-var	-
 PASS	scoping/sweep-s13-unused-select-var	-
+PASS	strings/sweep-s27-above-max-rune-escape	-
+PASS	strings/sweep-s27-above-max-string-escape	-
+PASS	strings/sweep-s27-bom-in-literal	-
+PASS	strings/sweep-s27-bom-mid-file	-
+PASS	strings/sweep-s27-bom-start-raw-invalid-literal	-
+PASS	strings/sweep-s27-combining-mark-identifier	-
+PASS	strings/sweep-s27-double-quote-escape-in-rune	-
+PASS	strings/sweep-s27-nul-in-comment	-
+PASS	strings/sweep-s27-nul-in-literal	-
+PASS	strings/sweep-s27-raw-invalid-in-comment	-
+PASS	strings/sweep-s27-raw-invalid-in-interpreted	-
+PASS	strings/sweep-s27-raw-invalid-in-raw-literal	-
+PASS	strings/sweep-s27-single-quote-escape-in-string	-
+PASS	strings/sweep-s27-surrogate-string-escape	-

@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 5969 (5610 PASS / 359 FAIL)
+# cases: 6096 (5737 PASS / 359 FAIL)
 # re-pinned: 2026-10-27 [AGENT], lane frontend/fix-hoist-1027 — BUG-276, 277, 278, 279 (the S7 sweep) and BUG-286, 287 (the S9
 #   sweep) FIXED in tools/nativefrontend (the campaign plan's rule that a finding is fixed through the normal train, [USER]
 #   approved 2026-10-27, relayed): (1) emit.go emitBinary binds a `&&`/`||` whose right operand hoists nothing to a temp at
@@ -51,6 +51,20 @@
 #     builtins/sweep-s9-paren-builtin/paren-builtin                                  FAIL/lean-observation cause=error:decoder-scope-undeclared-local → PASS
 #     builtins/sweep-s9-paren-builtin/paren-builtin-cap                              FAIL/lean-observation cause=error:decoder-scope-undeclared-local → PASS
 # cause keyed 2026-10-27 [AGENT coordinator], train-25 stage: BUG-287's two rows `error:?` → `error:decoder-scope-undeclared-local` (the decoder's scope refusal, the row added at the train-24 stage) and BUG-286's single-buffer row `deadlock:?` → `deadlock:machine-deadlock` (a new scripts/machine-causes.tsv row: the machine deadlocked where gc ran); no row moved.
+# re-pinned: 2026-10-27 [AGENT], lane sweep/s27-bytes — the defect-neighbourhood campaign's step 2 for shape S27 (byte
+#   transparency of string-carrying channels; members BUG-105 and BUG-138; plan docs/2026-10-27_defect-neighbourhood-campaign.md
+#   §4, [USER]-approved 2026-10-27): a 122-cell matrix (every byte class — valid 2/3/4-byte UTF-8, lone continuation bytes,
+#   truncated / overlong / surrogate / above-U+10FFFF sequences, the never-valid leads, NUL, the C0 and C1 controls and DEL, the
+#   BOM, the JSON-sensitive bytes and U+2028/9, an encoded U+FFFD, \x / octal / \u / \U escapes, empty, 300 B, 10 KiB × every
+#   carrier: literals at every emitter position, the machine's len / index / slice / concat / range / comparison / map-key /
+#   conversion ops and every value carrier, the lowered strings / bytes / unicode/utf8 / strconv / fmt subset, the readout, the
+#   output and abort channels on both sides, non-ASCII identifiers on the wire) probed on both sides, NO disagreement. NEW
+#   rows (127, seventeen packages Corpus/coverage/exec/strings/sweep-s27-{literals,positions,ops,range,runes,carriers,utf8,
+#   strings,bytes,strconv,fmt,readout,output,abort,names,source-bom,source-crlf}/, every row strict, expected = gc), appended
+#   at the end of the file, ALL BORN GREEN. NO existing row moved: 4166 + 127 = 4293; PASS 3901 + 127 = 4028; FAIL 265
+#   unchanged. No flip, no removal, no cause change. Measured by CAPPED_MEM_MAX=64G capped scripts/ci --diff at the lane tree
+#   b7d257d7 before this re-pin (its only drift: these 127 NEW ids, PASS/-; the negative lane 451/451; lake check and lake
+#   comparator PASS), the rows taken from that run's artifacts/coverage/latest.tsv; the --diff at the tip judges.
 # re-pinned: 2026-10-27 [AGENT], lane sweep/s8-unseq — the defect-neighbourhood campaign's step 2, shape S8 (spec-unsequenced
 #   order realized as one member; plan docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved 2026-10-27): the
 #   shape's matrix probed on both sides — 149 matrix cells (127 probed by this lane, 19 covered by existing rows, 2 out of scope,
@@ -10366,3 +10380,130 @@ PASS	evalorder/sweep-s8-sibling-events/invoked-lit-index	membership	-
 PASS	evalorder/sweep-s8-target-side/later-target-operand-vs-earlier-call	membership	-
 PASS	evalorder/sweep-s8-target-side/two-panicking-targets-multi-call	membership	-
 PASS	evalorder/sweep-s8-target-side/target-panic-vs-rhs-panic-with-call	membership	-
+PASS	strings/sweep-s27-abort/bom-and-line-seps	-	-
+PASS	strings/sweep-s27-abort/del-c1	-	-
+PASS	strings/sweep-s27-abort/empty-string	-	-
+PASS	strings/sweep-s27-abort/encoded-replacement	-	-
+PASS	strings/sweep-s27-abort/error-nul-unicode	-	-
+PASS	strings/sweep-s27-abort/four-byte-then-nul	-	-
+PASS	strings/sweep-s27-abort/json-sensitive	-	-
+PASS	strings/sweep-s27-abort/long	-	-
+PASS	strings/sweep-s27-abort/recovered-del-c1	-	-
+PASS	strings/sweep-s27-bytes/buffer-invalid-writes	-	-
+PASS	strings/sweep-s27-bytes/case-and-runes	-	-
+PASS	strings/sweep-s27-bytes/equal-compare-index	-	-
+PASS	strings/sweep-s27-bytes/trim-split-fields	-	-
+PASS	strings/sweep-s27-carriers/channel-and-goroutine	-	-
+PASS	strings/sweep-s27-carriers/closure-and-pointer	-	-
+PASS	strings/sweep-s27-carriers/defer-arg	-	-
+PASS	strings/sweep-s27-carriers/generic-and-method	-	-
+PASS	strings/sweep-s27-carriers/global	-	-
+PASS	strings/sweep-s27-carriers/interface-and-assert	-	-
+PASS	strings/sweep-s27-carriers/struct-array-slice	-	-
+PASS	strings/sweep-s27-carriers/switch-on-invalid-bytes	-	-
+PASS	strings/sweep-s27-fmt/errors-new-bytes	-	-
+PASS	strings/sweep-s27-fmt/sprint-and-errorf	-	-
+PASS	strings/sweep-s27-fmt/sprintf-modeled-verbs	-	-
+PASS	strings/sweep-s27-literals/const-folding	-	-
+PASS	strings/sweep-s27-literals/const-rune-conversions	-	-
+PASS	strings/sweep-s27-literals/esc-abfv	-	-
+PASS	strings/sweep-s27-literals/esc-above-max-and-leads	-	-
+PASS	strings/sweep-s27-literals/esc-bom-inside	-	-
+PASS	strings/sweep-s27-literals/esc-c1-controls	-	-
+PASS	strings/sweep-s27-literals/esc-del-soh	-	-
+PASS	strings/sweep-s27-literals/esc-json-sensitive	-	-
+PASS	strings/sweep-s27-literals/esc-lone-continuation	-	-
+PASS	strings/sweep-s27-literals/esc-octal-high-upper-hex	-	-
+PASS	strings/sweep-s27-literals/esc-overlong	-	-
+PASS	strings/sweep-s27-literals/esc-replacement-spellings	-	-
+PASS	strings/sweep-s27-literals/esc-surrogate	-	-
+PASS	strings/sweep-s27-literals/esc-truncated	-	-
+PASS	strings/sweep-s27-literals/raw-literal-tab-utf8	-	-
+PASS	strings/sweep-s27-literals/raw-text-4-byte	-	-
+PASS	strings/sweep-s27-literals/rune-literals	-	-
+PASS	strings/sweep-s27-names/defined-in-interface	-	-
+PASS	strings/sweep-s27-names/struct-and-field-names	-	-
+PASS	strings/sweep-s27-ops/append-string-to-bytes	-	-
+PASS	strings/sweep-s27-ops/boxed-and-aggregate-equality	-	-
+PASS	strings/sweep-s27-ops/bytes-from-string-per-class	-	-
+PASS	strings/sweep-s27-ops/compare-per-class	-	-
+PASS	strings/sweep-s27-ops/concat-forms-valid	-	-
+PASS	strings/sweep-s27-ops/defined-conversions-keep-bytes	-	-
+PASS	strings/sweep-s27-ops/index-per-class	-	-
+PASS	strings/sweep-s27-ops/len-per-class	-	-
+PASS	strings/sweep-s27-ops/map-keys-nul-and-built	-	-
+PASS	strings/sweep-s27-ops/min-max-sort-strings	-	-
+PASS	strings/sweep-s27-ops/slice-mid-sequence	-	-
+PASS	strings/sweep-s27-ops/string-from-bytes-per-class	-	-
+PASS	strings/sweep-s27-ops/string-of-byte-vs-slice	-	-
+PASS	strings/sweep-s27-ops/string-of-int-kinds-direct	-	-
+PASS	strings/sweep-s27-ops/struct-key-and-any-key	-	-
+PASS	strings/sweep-s27-output/backslash-percent-shell	-	-
+PASS	strings/sweep-s27-output/defined-and-concat	-	-
+PASS	strings/sweep-s27-output/del-c1-bom	-	-
+PASS	strings/sweep-s27-output/json-looking	-	-
+PASS	strings/sweep-s27-output/line-seps-and-json-sensitive	-	-
+PASS	strings/sweep-s27-output/long-10k	-	-
+PASS	strings/sweep-s27-output/no-trailing-newline	-	-
+PASS	strings/sweep-s27-output/nul-only	-	-
+PASS	strings/sweep-s27-output/replacement-from-rune	-	-
+PASS	strings/sweep-s27-output/trailing-nul	-	-
+PASS	strings/sweep-s27-positions/fmt-format-pieces	-	-
+PASS	strings/sweep-s27-positions/generic-instantiation	-	-
+PASS	strings/sweep-s27-positions/globals-and-const	-	-
+PASS	strings/sweep-s27-positions/map-literal	-	-
+PASS	strings/sweep-s27-positions/select-unseq-defined-key	-	-
+PASS	strings/sweep-s27-positions/struct-array-slice-literals	-	-
+PASS	strings/sweep-s27-positions/switch-cases	-	-
+PASS	strings/sweep-s27-range/above-max	-	-
+PASS	strings/sweep-s27-range/bad-leads	-	-
+PASS	strings/sweep-s27-range/bom-and-line-sep	-	-
+PASS	strings/sweep-s27-range/boundary-runes	-	-
+PASS	strings/sweep-s27-range/defined-string	-	-
+PASS	strings/sweep-s27-range/encoded-replacement	-	-
+PASS	strings/sweep-s27-range/four-byte	-	-
+PASS	strings/sweep-s27-range/nul-del-c1	-	-
+PASS	strings/sweep-s27-range/one-var-and-count	-	-
+PASS	strings/sweep-s27-range/overlong-2	-	-
+PASS	strings/sweep-s27-range/overlong-3-and-4	-	-
+PASS	strings/sweep-s27-range/surrogate	-	-
+PASS	strings/sweep-s27-range/truncated-4-at-end	-	-
+PASS	strings/sweep-s27-range/truncated-at-end	-	-
+PASS	strings/sweep-s27-range/truncated-before-ascii	-	-
+PASS	strings/sweep-s27-readout/return-array-of-strings	-	-
+PASS	strings/sweep-s27-readout/return-bom-and-line-seps	-	-
+PASS	strings/sweep-s27-readout/return-defined-and-mixed	-	-
+PASS	strings/sweep-s27-readout/return-empty	-	-
+PASS	strings/sweep-s27-readout/return-four-byte	-	-
+PASS	strings/sweep-s27-readout/return-interface-strings	-	-
+PASS	strings/sweep-s27-readout/return-json-sensitive	-	-
+PASS	strings/sweep-s27-readout/return-long-10k	-	-
+PASS	strings/sweep-s27-readout/return-long-300	-	-
+PASS	strings/sweep-s27-readout/return-nul-del-c1	-	-
+PASS	strings/sweep-s27-readout/return-struct-with-strings	-	-
+PASS	strings/sweep-s27-readout/return-surrogate-overlong	-	-
+PASS	strings/sweep-s27-runes/defined-rune-conversions	-	-
+PASS	strings/sweep-s27-runes/runes-invalid-classes	-	-
+PASS	strings/sweep-s27-runes/rune-slice-to-string-mixed	-	-
+PASS	strings/sweep-s27-runes/runes-round-trip	-	-
+PASS	strings/sweep-s27-runes/runes-valid-classes	-	-
+PASS	strings/sweep-s27-runes/rune-to-string-boundaries	-	-
+PASS	strings/sweep-s27-source-bom/bom-at-start	-	-
+PASS	strings/sweep-s27-source-crlf/crlf-raw-literal	-	-
+PASS	strings/sweep-s27-strconv/printable-and-append	-	-
+PASS	strings/sweep-s27-strconv/quote-ascii-and-rune	-	-
+PASS	strings/sweep-s27-strconv/quote-per-class	-	-
+PASS	strings/sweep-s27-strconv/unquote-forms	-	-
+PASS	strings/sweep-s27-strings/builder-invalid-writes	-	-
+PASS	strings/sweep-s27-strings/case-mapping	-	-
+PASS	strings/sweep-s27-strings/count-repeat-replace	-	-
+PASS	strings/sweep-s27-strings/equal-fold-and-fields	-	-
+PASS	strings/sweep-s27-strings/search-with-partial-needles	-	-
+PASS	strings/sweep-s27-strings/split-cut-join-invalid	-	-
+PASS	strings/sweep-s27-strings/to-valid-utf8	-	-
+PASS	strings/sweep-s27-strings/trim-ascii-cutset-and-func	-	-
+PASS	strings/sweep-s27-strings/unicode-predicates-on-bytes	-	-
+PASS	strings/sweep-s27-utf8/decode-rune-per-class	-	-
+PASS	strings/sweep-s27-utf8/encode-rune-invalid	-	-
+PASS	strings/sweep-s27-utf8/full-rune-len-valid	-	-
+PASS	strings/sweep-s27-utf8/valid-and-count	-	-
