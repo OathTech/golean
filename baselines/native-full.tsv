@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 6179 (5829 PASS / 350 FAIL)
+# cases: 6232 (5876 PASS / 356 FAIL)
 # re-pinned: 2026-10-27 [AGENT], lane frontend/fix-binding-1027 — BUG-300, 301, 302 (the S13 sweep) FIXED in tools/nativefrontend
 #   (the campaign plan's rule that a finding is fixed through the normal train, [USER] approved 2026-10-27, relayed): (1) emit.go
 #   emitDeclStmt lowers a grouped `var ( … )` declaration spec by spec (one `var` node per VarSpec, in source order, into the same
@@ -23,6 +23,76 @@
 #     scoping/sweep-s13-local-iface-dispatch/local-iface-satisfied                   FAIL/lean-observation error:decoder-duplicate-function-id → PASS
 #     scoping/sweep-s13-local-iface-dispatch/local-iface-two-funcs                   FAIL/lean-observation error:decoder-duplicate-function-id → PASS
 # cause keyed 2026-10-27 [AGENT coordinator], train-27 stage, from the stage's full run (scripts/coverage-cause --apply): the 16 rows that carried `?` — BUG-300/302's six `error:decoder-scope-wrong-declaration`, BUG-301's three `error:decoder-duplicate-function-id`, BUG-310's seven `panic:machine-panic` (the three table rows added at this stage); no row moved.
+# re-pinned: 2026-10-27 [AGENT], lane sweep/s19-init-order — the defect-neighbourhood campaign's step 2, shape S19 (package
+#   initialization order; plan docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved 2026-10-27; members BUG-060,
+#   BUG-061, BUG-064, BUG-171): the shape's 95-cell matrix probed on both sides — 73 cells by this lane (gc go1.26.5 under the
+#   runners' pins against the frontend and native-json-run), 21 covered by existing rows, 1 out of scope — every distinct-route
+#   agreement pinned as a strict row and every disagreement entered. NO existing row moved: 4166 + 53 = 4219; PASS 3901 +
+#   47 = 3948; FAIL 265 + 6 = 271. No flip, no removal, no cause change (no runtime code changed: corpus and
+#   records only). NEW rows (53, seventeen packages Corpus/coverage/exec/init/sweep-s19-{var-schedule,var-routes,init-return,
+#   multi-file,library-state,hidden-dep-unobservable,hidden-dep-funcvalue}/ and Corpus/coverage/exec/multipkg/sweep-s19-{diamond,
+#   chain,tiebreak-plus,library-node,library-nonnode,work-shapes,staticinit-conv,uncertain-insensitive,empty-init,import-node}/:
+#   every row strict, expected = gc; 47 born green, 6 born RED at stage differential on the two findings' Cases lines),
+#   appended at the end of the file, measured by CAPPED_MEM_MAX=64G capped scripts/ci --diff at the lane tree f0f3ead5 before this
+#   re-pin (its only drift: these 53 NEW ids), the rows taken from that run's artifacts/coverage/latest.tsv; the --diff at the
+#   tip judges. FINDINGS: BUG-340 (the E7 hidden-dependency guard misses an interface method VALUE and an interface method
+#   PROMOTED through struct embedding — the machine realizes go/types' InitOrder where gc's staticinit has the static target
+#   folded in place: gc 454, the machine 54; 2 rows red) and BUG-341 (the BUG-061 classifier calls int64/uint64/uintptr/int of a
+#   same-representation static global WORK where gc's typecheck.Convertop makes it OCONVNOP and staticinit folds it: a silent
+#   wrong initialization order, gc 12, the machine 21; 4 rows red). The rows:
+#     init/sweep-s19-hidden-dep-funcvalue/embedded-iface-dynamic             PASS/-
+#     init/sweep-s19-hidden-dep-funcvalue/embedded-iface-static              FAIL/differential
+#     init/sweep-s19-hidden-dep-funcvalue/method-value-dynamic               PASS/-
+#     init/sweep-s19-hidden-dep-funcvalue/method-value-static                FAIL/differential
+#     init/sweep-s19-hidden-dep-unobservable                                 PASS/-
+#     init/sweep-s19-init-return                                             PASS/-
+#     init/sweep-s19-library-state                                           PASS/-
+#     init/sweep-s19-multi-file                                              PASS/-
+#     init/sweep-s19-var-routes/blank-with-dependency                        PASS/-
+#     init/sweep-s19-var-routes/callee-writes-dependency                     PASS/-
+#     init/sweep-s19-var-routes/const-iota-no-step                           PASS/-
+#     init/sweep-s19-var-routes/function-in-composite-literal                PASS/-
+#     init/sweep-s19-var-routes/generic-function                             PASS/-
+#     init/sweep-s19-var-routes/generic-type-method                          PASS/-
+#     init/sweep-s19-var-routes/init-after-all-vars                          PASS/-
+#     init/sweep-s19-var-routes/multi-name-separate-steps                    PASS/-
+#     init/sweep-s19-var-routes/operand-positions                            PASS/-
+#     init/sweep-s19-var-routes/promoted-through-struct                      PASS/-
+#     init/sweep-s19-var-schedule/closure-invoked-inline                     PASS/-
+#     init/sweep-s19-var-schedule/closure-stored-called                      PASS/-
+#     init/sweep-s19-var-schedule/method-expression                          PASS/-
+#     init/sweep-s19-var-schedule/method-value-stored                        PASS/-
+#     init/sweep-s19-var-schedule/pointer-method                             PASS/-
+#     init/sweep-s19-var-schedule/transitive-two-bodies                      PASS/-
+#     init/sweep-s19-var-schedule/value-method                               PASS/-
+#     init/sweep-s19-var-schedule/zero-valued-take-no-step                   PASS/-
+#     multipkg/sweep-s19-chain/seq                                           PASS/-
+#     multipkg/sweep-s19-chain/value                                         PASS/-
+#     multipkg/sweep-s19-diamond/imported-init-seen                          PASS/-
+#     multipkg/sweep-s19-diamond/main-var                                    PASS/-
+#     multipkg/sweep-s19-diamond/once                                        PASS/-
+#     multipkg/sweep-s19-diamond/seq                                         PASS/-
+#     multipkg/sweep-s19-empty-init                                          PASS/-
+#     multipkg/sweep-s19-import-node                                         PASS/-
+#     multipkg/sweep-s19-library-node                                        PASS/-
+#     multipkg/sweep-s19-library-nonnode                                     PASS/-
+#     multipkg/sweep-s19-staticinit-conv/float64-of-int                      PASS/-
+#     multipkg/sweep-s19-staticinit-conv/int-of-int64                        FAIL/differential
+#     multipkg/sweep-s19-staticinit-conv/int32-of-int                        PASS/-
+#     multipkg/sweep-s19-staticinit-conv/int64-of-dynamic                    PASS/-
+#     multipkg/sweep-s19-staticinit-conv/int64-of-int                        FAIL/differential
+#     multipkg/sweep-s19-staticinit-conv/uint64-of-uint                      FAIL/differential
+#     multipkg/sweep-s19-staticinit-conv/uint8-of-int                        PASS/-
+#     multipkg/sweep-s19-staticinit-conv/uintptr-of-uint                     FAIL/differential
+#     multipkg/sweep-s19-tiebreak-plus                                       PASS/-
+#     multipkg/sweep-s19-uncertain-insensitive                               PASS/-
+#     multipkg/sweep-s19-work-shapes/arithmetic                              PASS/-
+#     multipkg/sweep-s19-work-shapes/field-read                              PASS/-
+#     multipkg/sweep-s19-work-shapes/func-value-call                         PASS/-
+#     multipkg/sweep-s19-work-shapes/iface-call                              PASS/-
+#     multipkg/sweep-s19-work-shapes/indexing                                PASS/-
+#     multipkg/sweep-s19-work-shapes/map-literal                             PASS/-
+#     multipkg/sweep-s19-work-shapes/multi-stmt-call                         PASS/-
 # re-pinned: 2026-10-27 [AGENT], lane frontend/fix-hoist-1027 — BUG-276, 277, 278, 279 (the S7 sweep) and BUG-286, 287 (the S9
 #   sweep) FIXED in tools/nativefrontend (the campaign plan's rule that a finding is fixed through the normal train, [USER]
 #   approved 2026-10-27, relayed): (1) emit.go emitBinary binds a `&&`/`||` whose right operand hoists nothing to a temp at
@@ -10708,3 +10778,56 @@ PASS	maps/sweep-s14-value-kinds/error-values	-	-
 PASS	maps/sweep-s14-value-kinds/func-values	-	-
 PASS	maps/sweep-s14-value-kinds/pointer-values-through	-	-
 PASS	maps/sweep-s14-value-kinds/nil-value-kinds	-	-
+PASS	init/sweep-s19-hidden-dep-funcvalue/embedded-iface-dynamic	-	-
+FAIL	init/sweep-s19-hidden-dep-funcvalue/embedded-iface-static	differential	-
+PASS	init/sweep-s19-hidden-dep-funcvalue/method-value-dynamic	-	-
+FAIL	init/sweep-s19-hidden-dep-funcvalue/method-value-static	differential	-
+PASS	init/sweep-s19-hidden-dep-unobservable	-	-
+PASS	init/sweep-s19-init-return	-	-
+PASS	init/sweep-s19-library-state	-	-
+PASS	init/sweep-s19-multi-file	-	-
+PASS	init/sweep-s19-var-routes/blank-with-dependency	-	-
+PASS	init/sweep-s19-var-routes/callee-writes-dependency	-	-
+PASS	init/sweep-s19-var-routes/const-iota-no-step	-	-
+PASS	init/sweep-s19-var-routes/function-in-composite-literal	-	-
+PASS	init/sweep-s19-var-routes/generic-function	-	-
+PASS	init/sweep-s19-var-routes/generic-type-method	-	-
+PASS	init/sweep-s19-var-routes/init-after-all-vars	-	-
+PASS	init/sweep-s19-var-routes/multi-name-separate-steps	-	-
+PASS	init/sweep-s19-var-routes/operand-positions	-	-
+PASS	init/sweep-s19-var-routes/promoted-through-struct	-	-
+PASS	init/sweep-s19-var-schedule/closure-invoked-inline	-	-
+PASS	init/sweep-s19-var-schedule/closure-stored-called	-	-
+PASS	init/sweep-s19-var-schedule/method-expression	-	-
+PASS	init/sweep-s19-var-schedule/method-value-stored	-	-
+PASS	init/sweep-s19-var-schedule/pointer-method	-	-
+PASS	init/sweep-s19-var-schedule/transitive-two-bodies	-	-
+PASS	init/sweep-s19-var-schedule/value-method	-	-
+PASS	init/sweep-s19-var-schedule/zero-valued-take-no-step	-	-
+PASS	multipkg/sweep-s19-chain/seq	-	-
+PASS	multipkg/sweep-s19-chain/value	-	-
+PASS	multipkg/sweep-s19-diamond/imported-init-seen	-	-
+PASS	multipkg/sweep-s19-diamond/main-var	-	-
+PASS	multipkg/sweep-s19-diamond/once	-	-
+PASS	multipkg/sweep-s19-diamond/seq	-	-
+PASS	multipkg/sweep-s19-empty-init	-	-
+PASS	multipkg/sweep-s19-import-node	-	-
+PASS	multipkg/sweep-s19-library-node	-	-
+PASS	multipkg/sweep-s19-library-nonnode	-	-
+PASS	multipkg/sweep-s19-staticinit-conv/float64-of-int	-	-
+FAIL	multipkg/sweep-s19-staticinit-conv/int-of-int64	differential	-
+PASS	multipkg/sweep-s19-staticinit-conv/int32-of-int	-	-
+PASS	multipkg/sweep-s19-staticinit-conv/int64-of-dynamic	-	-
+FAIL	multipkg/sweep-s19-staticinit-conv/int64-of-int	differential	-
+FAIL	multipkg/sweep-s19-staticinit-conv/uint64-of-uint	differential	-
+PASS	multipkg/sweep-s19-staticinit-conv/uint8-of-int	-	-
+FAIL	multipkg/sweep-s19-staticinit-conv/uintptr-of-uint	differential	-
+PASS	multipkg/sweep-s19-tiebreak-plus	-	-
+PASS	multipkg/sweep-s19-uncertain-insensitive	-	-
+PASS	multipkg/sweep-s19-work-shapes/arithmetic	-	-
+PASS	multipkg/sweep-s19-work-shapes/field-read	-	-
+PASS	multipkg/sweep-s19-work-shapes/func-value-call	-	-
+PASS	multipkg/sweep-s19-work-shapes/iface-call	-	-
+PASS	multipkg/sweep-s19-work-shapes/indexing	-	-
+PASS	multipkg/sweep-s19-work-shapes/map-literal	-	-
+PASS	multipkg/sweep-s19-work-shapes/multi-stmt-call	-	-
