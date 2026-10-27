@@ -420,6 +420,21 @@ echo "check-frontend-pins: ok [hidden-dep-order] — realized deviation order ma
 # write `c`): the moment of a pure conversion is unobservable and the residual is where gc evaluates it. 0 other.
 # The twin driver (probeTwinChoice, default stream, fuel 8e9) under the machine on the OLD and the NEW wire: observation
 # byte-identical (sha256 76d2bc87… both — the same observation as the S1 and G19 re-pins). fc471d2b… -> be06cf70….
+# [AGENT lane worker, lane frontend/fix-binding-1027] 2026-10-27 twin re-pin: BUG-300 (the S13 sweep; fixed through the
+# normal train per the defect-neighbourhood campaign plan, [USER] approved 2026-10-27, relayed) — a GROUPED `var ( … )`
+# declaration in a function body lowers spec by spec (emit.go emitDeclStmt: one `var` node per VarSpec, in source order,
+# the earlier nodes through the hoist accumulator into the same block) so that an earlier spec's name is in the
+# decoder's R1 scope for a later spec's initializer, and the self-shadow capture set is the spec's OWN names (BUG-142's
+# rule per spec, not per group). Key-by-key JSON comparison of the old and the new wire (the fresh emit re-joined by
+# merging adjacent `var` nodes equals the old one entry for entry): schema golean-native-v3, package, buildContext,
+# fileOrder, types, globals, promotions, methodSets, methods (534) IDENTICAL; funcs 456 unchanged in number and name;
+# 2 declarations change, both the one mechanism: `slices.pdqsortCmpFunc[quorum.tup·1]` (`var ( wasBalanced = true;
+# wasPartitioned = true )`) and `slices.choosePivotCmpFunc[quorum.tup·1]` (its `var ( swaps int; … )` group) — one
+# `var` node with N decls becomes N consecutive `var` nodes with the same decls, types, initializers and `local`
+# indices, the following statements shifted by N-1 positions; the cells are the same block's (C4). 0 other. The twin
+# driver (probeTwinChoice, default stream, fuel 8e9) under the machine on the OLD and the NEW wire: observation
+# byte-identical (sha256 76d2bc87… both — the same observation as the S1, G19 and fix-hoist re-pins).
+# be06cf70… -> 39765cc5….
 # ---- 2. Twin wire pin ----
 TWIN_BASE="baselines/pins/twin-chdriver.wire.json"
 [ -f "$TWIN_BASE" ] || { echo "check-frontend-pins: FAIL — no wire pin at $TWIN_BASE" >&2; exit 1; }

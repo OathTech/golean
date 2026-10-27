@@ -252065,7 +252065,12 @@
         "type": {
          "kind": "bool"
         }
-       },
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
        {
         "id": "wasPartitioned",
         "init": {
@@ -256373,7 +256378,12 @@
          "int": "int",
          "kind": "int"
         }
-       },
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
        {
         "id": "i",
         "init": {
@@ -256439,7 +256449,12 @@
          "int": "int",
          "kind": "int"
         }
-       },
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
        {
         "id": "j",
         "init": {
@@ -256505,7 +256520,12 @@
          "int": "int",
          "kind": "int"
         }
-       },
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
        {
         "id": "k",
         "init": {

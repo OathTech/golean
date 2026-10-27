@@ -423,8 +423,20 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 	// "<Iface>.<Method>" call needs a table entry, but only package-declared
 	// interfaces got one above. Synthesize the missing ones from the recorded
 	// calls, in sorted order for a deterministic wire.
+	// The declared set is the package-level entries in `methods` PLUS the
+	// function-LOCAL interface declarations' entries (BUG-301, fix lane
+	// frontend/fix-binding-1027, 2026-10-27): those were registered during
+	// body emission (emitDeclStmt → e.localIfaceMethods) and join `methods`
+	// only below, after the last mono drain — so a call through a local
+	// interface used to mint an anchor beside the declaration's own entry,
+	// one id twice, and the decoder refused the wire.
 	declaredIface := map[string]bool{}
 	for _, m := range methods {
+		if mm, ok := m.(map[string]any); ok && mm["interface"] == true {
+			declaredIface[methodFuncKey(mm["recvType"].(string), mm["id"].(memberID))] = true
+		}
+	}
+	for _, m := range e.localIfaceMethods {
 		if mm, ok := m.(map[string]any); ok && mm["interface"] == true {
 			declaredIface[methodFuncKey(mm["recvType"].(string), mm["id"].(memberID))] = true
 		}
@@ -4020,13 +4032,25 @@ func (e *emitter) emitDeclStmt(st *ast.DeclStmt) (any, error) {
 	// initialization-then-assign lowering would resolve the name to the
 	// fresh cell. Pre-bind capturing initializers to hoisted temps.
 	// (Pre-merge audit 2026-07-25: the := fix did not cover var.)
-	declNames := map[string]bool{}
-	for _, spec := range gd.Specs {
-		for _, name := range spec.(*ast.ValueSpec).Names {
+	//
+	// The capture set is PER SPEC (BUG-300, fix lane
+	// frontend/fix-binding-1027, 2026-10-27): spec#Declarations_and_scope
+	// starts a name's scope at the END of its own VarSpec, so an earlier
+	// spec's name IS in scope for a later spec's initializer and must read
+	// the NEW cell — `var ( x = 1; y = x + 1 )` has y = 2 under any outer
+	// x. Only the spec's OWN names are not yet in scope at its initializer.
+	// (BUG-142's capture set spanned the whole group and hoisted that read
+	// to the enclosing scope, where the decoder's B6 lexical check refused
+	// the wire.) A grouped declaration lowers spec by spec, below, so each
+	// spec's node precedes the next spec's initializer in the same block.
+	specNames := func(vs *ast.ValueSpec) map[string]bool {
+		names := map[string]bool{}
+		for _, name := range vs.Names {
 			if name.Name != "_" {
-				declNames[name.Name] = true
+				names[name.Name] = true
 			}
 		}
+		return names
 	}
 	// ARITY (BUG-057). A VarSpec pairs its N names with either 0 or N
 	// initializer expressions — EXCEPT the one-expression multi-value
@@ -4059,6 +4083,7 @@ func (e *emitter) emitDeclStmt(st *ast.DeclStmt) (any, error) {
 	// emitSpecDecls lowers ONE ordinary (positionally paired) spec to
 	// `var`-node decl entries. Unchanged from the pre-BUG-057 body.
 	emitSpecDecls := func(vs *ast.ValueSpec) ([]any, error) {
+		declNames := specNames(vs)
 		decls := []any{}
 		for i, name := range vs.Names {
 			obj := e.info.Defs[name]
@@ -4099,35 +4124,31 @@ func (e *emitter) emitDeclStmt(st *ast.DeclStmt) (any, error) {
 		}
 		return decls, nil
 	}
-	multi := false
-	for _, spec := range gd.Specs {
-		if isMultiValueSpec(spec.(*ast.ValueSpec)) {
-			multi = true
-		}
-	}
-	if !multi {
-		// The ordinary declaration: one `var` node for the whole GenDecl,
+	if len(gd.Specs) == 1 && !isMultiValueSpec(gd.Specs[0].(*ast.ValueSpec)) {
+		// The ordinary single-spec declaration: one `var` node,
 		// byte-identical to what this function emitted before.
-		decls := []any{}
-		for _, spec := range gd.Specs {
-			d, err := emitSpecDecls(spec.(*ast.ValueSpec))
-			if err != nil {
-				return nil, err
-			}
-			decls = append(decls, d...)
+		decls, err := emitSpecDecls(gd.Specs[0].(*ast.ValueSpec))
+		if err != nil {
+			return nil, err
 		}
 		return map[string]any{"stmt": "var", "decls": decls}, nil
 	}
-	// A grouped declaration may MIX ordinary and multi-value specs, and
-	// each spec's initializer runs in source order, so the specs lower to a
-	// SEQUENCE of wire statements rather than one node. All but the last go
-	// into the hoist accumulator, which emitStmtList splices immediately
-	// before this statement in the SAME scope — a wire `block` would scope
-	// the declarations away, and emitDeclStmt is only ever reached from a
-	// statement list (Go's grammar admits a declaration nowhere else; a
-	// labeled declaration re-enters through emitLabeled into the same
-	// list). Per-spec hoist capture keeps each spec's own temps ahead of
-	// its own statement instead of ahead of the whole group.
+	// A GROUPED declaration (two or more specs, or a multi-value spec):
+	// each spec's names come into scope at the end of that spec and its
+	// initializer runs in source order, so the specs lower to a SEQUENCE
+	// of wire statements rather than one node — the decoder's R1
+	// environment adds a statement's declarations AFTER the statement, so
+	// one node for the group would leave an earlier spec's name out of
+	// scope for a later spec's initializer (BUG-300; before 2026-10-27
+	// only a group with a multi-value spec took this path). All but the
+	// last go into the hoist accumulator, which emitStmtList splices
+	// immediately before this statement in the SAME scope — a wire
+	// `block` would scope the declarations away, and emitDeclStmt is only
+	// ever reached from a statement list (Go's grammar admits a
+	// declaration nowhere else; a labeled declaration re-enters through
+	// emitLabeled into the same list). Per-spec hoist capture keeps each
+	// spec's own temps ahead of its own statement instead of ahead of the
+	// whole group.
 	seq := []any{}
 	for _, spec := range gd.Specs {
 		vs := spec.(*ast.ValueSpec)
@@ -8361,6 +8382,21 @@ func (e *emitter) emitFuncLit(lit *ast.FuncLit) (any, error) {
 	if !ok {
 		return nil, unsup("func literal without a signature")
 	}
+	// The DECLARATION SITES (B6) are the ORIGINAL signature's objects
+	// (BUG-302, fix lane frontend/fix-binding-1027, 2026-10-27): under a
+	// stencil, `sig` is applySubst's copy, whose parameter and result
+	// `*types.Var`s are FRESH whenever a type mentions a type parameter
+	// (substTuple), while the body's uses resolve through e.info to the
+	// declaring objects — registering the copies left every `func(d T)`
+	// parameter declared twice (param + local) and the decoder refused the
+	// wire. emitType substitutes the TYPES at emission, as it does for a
+	// generic FuncDecl's own parameters (emitFuncDecl registers from
+	// e.info.Defs); `sig` keeps the substitution-aware DECISIONS below
+	// (the result tuple curResults, the variadic marker).
+	declSig, ok := e.info.TypeOf(lit).(*types.Signature)
+	if !ok {
+		return nil, unsup("func literal without a declared signature")
+	}
 	captures := e.freeCaptures(lit)
 
 	name := e.curFuncID + "$lit" + itoa(e.liftSeq)
@@ -8402,12 +8438,12 @@ func (e *emitter) emitFuncLit(lit *ast.FuncLit) (any, error) {
 			"local": e.localID(v, "capture", pname)})
 		newCapture[v] = pname
 	}
-	own, err := e.emitParams(sig.Params())
+	own, err := e.emitParams(declSig.Params())
 	if err != nil {
 		return nil, err
 	}
 	params = append(params, own...)
-	results, err := e.emitResults(sig.Results())
+	results, err := e.emitResults(declSig.Results())
 	if err != nil {
 		return nil, err
 	}
