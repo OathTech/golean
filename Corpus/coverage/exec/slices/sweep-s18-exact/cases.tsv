@@ -1,0 +1,13 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+append-nil-no-elems	appendNilNoElems	-	ok	-	slices,append,cap,nil
+append-full-no-elems	appendFullNoElems	-	ok	-	slices,append,cap
+zero-tail	zeroTail	-	ok	-	slices,append,cap,slicing,zero_values
+make-var-small	makeVarSmall	-	ok	-	slices,make,cap,bytes
+make-var-big	makeVarBig	-	ok	-	slices,make,cap,bytes
+make-len-cap-var	makeLenCapVar	-	ok	-	slices,make,cap,len
+make-0-cap-0	make0cap0	-	ok	-	slices,make,cap,zero_len
+make-0-non-nil	make0NonNil	-	ok	-	slices,make,cap,nil,zero_len
+make-zero-size-var	makeZeroSizeVar	-	ok	-	slices,make,cap,structs,zero_values
+make-defined	makeDefined	-	ok	-	slices,make,cap,defined_type
+new-array-slice	newArraySlice	-	ok	-	slices,new,arrays,cap,slicing
+array-cap	arrayCap	-	ok	-	arrays,cap,pointers

@@ -1,0 +1,24 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+bytes-32-mut	bytes32Mut	-	ok	-	strings,bytes,conversions,cap
+bytes-32-esc	bytes32Esc	-	ok	-	strings,bytes,conversions,cap,escapes
+bytes-48-mut	bytes48Mut	-	ok	-	strings,bytes,conversions,cap
+bytes-1024-esc	bytes1024Esc	-	ok	-	strings,bytes,conversions,cap,escapes
+bytes-32768-esc	bytes32768Esc	-	ok	-	strings,bytes,conversions,cap,escapes
+bytes-lit-40-mut	bytesLit40Mut	-	ok	-	strings,bytes,conversions,cap,literals
+bytes-const-concat-mut	bytesConstConcatMut	-	ok	-	strings,bytes,conversions,cap,constants,concat
+bytes-const-rune-mut	bytesConstRuneMut	-	ok	-	strings,bytes,conversions,cap,constants,runes
+bytes-defined-const-mut	bytesDefinedConstMut	-	ok	-	strings,bytes,conversions,cap,constants,defined_type
+bytes-defined-target-const	bytesDefinedTargetConst	-	ok	-	strings,bytes,conversions,cap,constants,defined_type
+runes-31-nomut	runes31Nomut	-	ok	-	strings,runes,conversions,cap
+runes-31-esc	runes31Esc	-	ok	-	strings,runes,conversions,cap,escapes
+runes-32-nomut	runes32Nomut	-	ok	-	strings,runes,conversions,cap
+runes-40-esc	runes40Esc	-	ok	-	strings,runes,conversions,cap,escapes
+runes-64-nomut	runes64Nomut	-	ok	-	strings,runes,conversions,cap
+runes-255-esc	runes255Esc	-	ok	-	strings,runes,conversions,cap,escapes
+runes-256-nomut	runes256Nomut	-	ok	-	strings,runes,conversions,cap
+runes-257-esc	runes257Esc	-	ok	-	strings,runes,conversions,cap,escapes
+runes-8191-esc	runes8191Esc	-	ok	-	strings,runes,conversions,cap,escapes
+runes-8193-nomut	runes8193Nomut	-	ok	-	strings,runes,conversions,cap
+runes-multibyte-33-esc	runesE33Esc	-	ok	-	strings,runes,conversions,cap,escapes
+runes-invalid-40-nomut	runesX40Nomut	-	ok	-	strings,runes,conversions,cap,invalid_utf8
+runes-defined-const	runesDefinedConst	-	ok	-	strings,runes,conversions,cap,constants,defined_type

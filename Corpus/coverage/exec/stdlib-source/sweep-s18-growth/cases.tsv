@@ -1,0 +1,17 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+builder-write-string	builderWriteString	-	ok	-	stdlib,strings,methods,cap,append,nondet	membership	S18 sweep (docs/defect-shapes.md; plan docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved 2026-10-27; lane sweep/s18-sizes): strings.Builder.WriteString is `b.buf = append(b.buf, s...)` (builder.go:114, source-through) — a string spread onto nil: gc takes growslice (no stack buffer for a spread) and realizes roundupsize(5) = 8, the empty tape's slot 0 (default=gc); envelope [5, 32], ONE spill, bound 28	width=28,sites=8,members=28,default=gc
+builder-reset-cap	builderResetCap	-	ok	-	stdlib,strings,methods,cap
+builder-grow-0	builderGrow0	-	ok	-	stdlib,strings,methods,cap
+builder-len-after-growth	builderLenAfterGrowth	-	ok	-	stdlib,strings,methods,len
+buffer-grow-10	bufferGrow10	-	ok	-	stdlib,bytes,methods,cap
+buffer-grow-64	bufferGrow64	-	ok	-	stdlib,bytes,methods,cap
+buffer-write-hello	bufferWriteHello	-	ok	-	stdlib,bytes,methods,cap
+buffer-write-byte	bufferWriteByte	-	ok	-	stdlib,bytes,methods,cap
+buffer-reset-cap	bufferResetCap	-	ok	-	stdlib,bytes,methods,cap
+buffer-write-60-then-10	bufferWrite60Then10	-	ok	-	stdlib,bytes,methods,cap,append,nondet	membership	S18 sweep (docs/defect-shapes.md; plan docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved 2026-10-27; lane sweep/s18-sizes): the DOUBLING arm of growSlice — 60 bytes fit the exact 64-byte small buffer, the next 10 do not: c = 70 < 2·64 → c = 128 → `append([]byte(nil), make([]byte, 128)...)`: ONE spill at newLen 128, gc realizes roundupsize(128) = 128 = slot 0 (default=gc); envelope [128, 256], bound 129	width=129,cap=150,sites=8,members=129,default=gc
+slices-grow-nil-5	slicesGrowNil5	-	ok	-	stdlib,slices,cap,len,append,make,nondet	membership	S18 sweep (docs/defect-shapes.md; plan docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved 2026-10-27; lane sweep/s18-sizes): slices.Grow is `append(s[:cap(s)], make([]E, n)...)[:len(s)]` (slices.go:426, source-through) — gc's append-of-make form (extendSlice) → growslice at newLen 5: cap 6 = roundupsize(40)/8, len 0 — 60 = slot 0 (default=gc); envelope [5, 32], ONE spill, bound 28	width=28,sites=8,members=28,default=gc
+slices-clone-5	slicesClone5	-	ok	-	stdlib,slices,cap,append,nondet	membership	S18 sweep (docs/defect-shapes.md; plan docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved 2026-10-27; lane sweep/s18-sizes): slices.Clone is `append(S{}, s...)` (slices.go:360): a spread onto an empty non-nil slice — growslice at newLen 5: gc 6 = slot 0 (default=gc); envelope [5, 32], bound 28	width=28,sites=8,members=28,default=gc
+slices-grow-room	slicesGrowRoom	-	ok	-	stdlib,slices,cap,make
+slices-clone-nil	slicesCloneNil	-	ok	-	stdlib,slices,cap,nil
+slices-repeat	slicesRepeat	-	ok	-	stdlib,slices,cap,make
+slices-clip	slicesClip	-	ok	-	stdlib,slices,cap,slicing
