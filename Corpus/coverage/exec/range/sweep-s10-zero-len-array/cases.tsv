@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s10-panics (2026-10-27), shape S10 (plan §4; matrix on BUG-081/063/056/038). Strict, expected = gc go1.26.5.
+# G1.40 control: the zero-length ARRAY VALUE two-variable range lowers and runs (the pointer form is BUG-226, born red).
+-	zeroLenArrayTwoVars	-	ok	-	range,arrays,zero_len

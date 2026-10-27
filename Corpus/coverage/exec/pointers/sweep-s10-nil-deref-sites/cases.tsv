@@ -1,0 +1,32 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s10-panics (2026-10-27), shape S10 of the defect-neighbourhood campaign (plan §4; the matrix on the
+# Neighbourhood lines of BUG-081/063/056/038). Every row strict, expected = gc go1.26.5. G1: the nil dereference at every
+# indirection site the members did not pin (read/store/compound/incdec of `*p`, `p.f`, `p[i]`; nested and deep-offset
+# fields; condition, switch, blank, argument, defer-argument and go-argument positions; the two multi-target orders at the
+# field site; whole-array/struct copies; `**pp`, `*[]T`, `*map` bases) and the no-panic controls.
+blank-deref	blankDeref	-	panic	runtime error: invalid memory address or nil pointer dereference	pointers,nil,panic
+call-arg-deref	callArgDeref	-	panic	runtime error: invalid memory address or nil pointer dereference	pointers,nil,calls,panic
+if-cond-deref	ifCondDeref	-	panic	runtime error: invalid memory address or nil pointer dereference	pointers,nil,if,panic
+switch-deref	switchDeref	-	panic	runtime error: invalid memory address or nil pointer dereference	pointers,nil,switch,panic
+deref-store	derefStore	-	panic	runtime error: invalid memory address or nil pointer dereference	pointers,nil,assignment,panic
+deref-compound	derefCompound	-	panic	runtime error: invalid memory address or nil pointer dereference	pointers,nil,assignment,panic
+deref-incdec	derefIncdec	-	panic	runtime error: invalid memory address or nil pointer dereference	pointers,nil,assignment,panic
+field-store	fieldStore	-	panic	runtime error: invalid memory address or nil pointer dereference	pointers,nil,fields,assignment,panic
+field-compound	fieldCompound	-	panic	runtime error: invalid memory address or nil pointer dereference	pointers,nil,fields,assignment,panic
+field-incdec	fieldIncdec	-	panic	runtime error: invalid memory address or nil pointer dereference	pointers,nil,fields,assignment,panic
+nested-field-read	nestedFieldRead	-	panic	runtime error: invalid memory address or nil pointer dereference	pointers,nil,fields,nested,panic
+nested-field-store	nestedFieldStore	-	panic	runtime error: invalid memory address or nil pointer dereference	pointers,nil,fields,nested,assignment,panic
+deep-offset-read	deepOffsetRead	-	panic	runtime error: invalid memory address or nil pointer dereference	pointers,nil,fields,arrays,panic
+deep-offset-store	deepOffsetStore	-	panic	runtime error: invalid memory address or nil pointer dereference	pointers,nil,fields,arrays,assignment,panic
+array-elem-compound	arrayElemCompound	-	panic	runtime error: invalid memory address or nil pointer dereference	pointers,nil,arrays,indexing,assignment,panic
+array-elem-incdec	arrayElemIncdec	-	panic	runtime error: invalid memory address or nil pointer dereference	pointers,nil,arrays,indexing,assignment,panic
+defer-arg-deref	deferArgDeref	-	ok	-	pointers,nil,defer,calls,panic,recover,evaluation_order
+go-arg-deref	goArgDeref	-	ok	-	pointers,nil,goroutines,calls,panic,recover,evaluation_order
+len-cap-nil-array-ptr	lenCapNilArrayPtr	-	ok	-	pointers,nil,arrays,len,cap,constants
+deref-array-copy	derefArrayCopy	-	panic	runtime error: invalid memory address or nil pointer dereference	pointers,nil,arrays,value_copy,panic
+deref-struct-copy	derefStructCopy	-	panic	runtime error: invalid memory address or nil pointer dereference	pointers,nil,structs,value_copy,panic
+double-deref-inner-nil	doubleDerefInnerNil	-	panic	runtime error: invalid memory address or nil pointer dereference	pointers,nil,panic
+slice-ptr-deref-index	slicePtrDerefIndex	-	panic	runtime error: invalid memory address or nil pointer dereference	pointers,nil,slices,indexing,panic
+map-ptr-deref-index	mapPtrDerefIndex	-	panic	runtime error: invalid memory address or nil pointer dereference	pointers,nil,maps,indexing,panic
+multi-target-field-first	multiTargetFieldFirst	-	ok	-	pointers,nil,fields,multi_assign,panic,recover,evaluation_order
+multi-target-field-second	multiTargetFieldSecond	-	ok	-	pointers,nil,fields,multi_assign,panic,recover,evaluation_order

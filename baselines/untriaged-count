@@ -169,7 +169,7 @@
 #   operand; the frontend now emits the spec's auto-deref), repaired by
 #   its fix and folded into its Cases. The buildout's import of
 #   unittest/embedded.go re-surfaced the class and forced the triage.
-coverage 10
+coverage 5
 latitude 2
 wrong-answer 0
 # 2026-08-09 (spec-parity slice 2, sync guardrails)  16 -> 50, mostly
@@ -364,3 +364,9 @@ wrong-answer 0
 #   open entries BUG-171 and BUG-170 (check (1) holds them FAIL); the rows and
 #   their latitude classification are unchanged, only the accounting moves.
 #   coverage 10 and wrong-answer 0 unchanged.
+# 10 -> 5 coverage (2026-10-27, the defect-neighbourhood campaign's S10 sweep, lane
+#   sweep/s10-panics, [AGENT]): the five slice-base nil-arm rows (pointers/nil-array-ptr-slice/
+#   slice-expr-nil, pointers/nil-array-ptr-slice-elided-high/{deref-elided-high,deref-low-only,
+#   pointer-form,zero-length-array}) moved onto the Cases line of the new open entry BUG-227
+#   (check (1) holds them FAIL); same rows, same reds, same cause; only the accounting moves.
+#   latitude 2 and wrong-answer 0 unchanged.

@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s10-panics (2026-10-27), shape S10 (plan §4; matrix on BUG-081/063/056/038). Strict, expected = gc go1.26.5.
+# G8: the assertion panic raised through a type parameter and on a nil `error` (the kind; the text is S12's).
+assert-type-param	assertTypeParam	-	panic	interface conversion: interface {} is string, not int	interfaces,type_assertions,generics,panic
+nil-error-assert	nilErrorAssert	-	panic	interface conversion: error is nil, not *main.akErr	interfaces,type_assertions,nil,pointers,panic

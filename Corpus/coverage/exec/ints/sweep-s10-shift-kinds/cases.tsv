@@ -1,0 +1,18 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s10-panics (2026-10-27), shape S10 (plan §4; matrix on BUG-081/063/056/038). Strict, expected = gc go1.26.5.
+# G5: a negative shift count at every signed count kind, both directions, compound, an unsigned left operand, a defined
+# count type, the most negative count, recovered.
+shl-count-int8	shlCountInt8	-1	panic	runtime error: negative shift amount	ints,shifts,widths,panic
+shr-count-int8	shrCountInt8	-1	panic	runtime error: negative shift amount	ints,shifts,widths,panic
+shl-count-int16	shlCountInt16	-1	panic	runtime error: negative shift amount	ints,shifts,widths,panic
+shr-count-int16	shrCountInt16	-1	panic	runtime error: negative shift amount	ints,shifts,widths,panic
+shl-count-int32	shlCountInt32	-1	panic	runtime error: negative shift amount	ints,shifts,widths,panic
+shr-count-int32	shrCountInt32	-1	panic	runtime error: negative shift amount	ints,shifts,widths,panic
+shl-count-int64	shlCountInt64	-1	panic	runtime error: negative shift amount	ints,shifts,widths,panic
+shr-count-int64	shrCountInt64	-1	panic	runtime error: negative shift amount	ints,shifts,widths,panic
+shl-assign	shlAssign	-1	panic	runtime error: negative shift amount	ints,shifts,assignment,panic
+shr-assign	shrAssign	-1	panic	runtime error: negative shift amount	ints,shifts,assignment,panic
+unsigned-left-operand	unsignedLeftOperand	-1	panic	runtime error: negative shift amount	ints,shifts,widths,panic
+defined-count	definedCount	-1	panic	runtime error: negative shift amount	ints,shifts,defined_type,panic
+min-count	minCount	-128	panic	runtime error: negative shift amount	ints,shifts,widths,panic
+recovered	shiftRecovered	-1	ok	-	ints,shifts,panic,recover

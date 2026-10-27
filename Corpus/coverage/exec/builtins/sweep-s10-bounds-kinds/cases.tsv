@@ -1,0 +1,12 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s10-panics (2026-10-27), shape S10 (plan §4; matrix on BUG-081/063/056/038). Strict, expected = gc go1.26.5.
+# G2: the bounds panic at the index kinds and slice forms not yet pinned, and the slice-to-array-pointer conversion.
+index-int8-negative	indexInt8Negative	-3	panic	runtime error: index out of range [-3]	slices,indexing,widths,panic
+index-int64-past-len	indexInt64PastLen	9	panic	runtime error: index out of range [9] with length 2	slices,indexing,widths,panic
+const-string-index	constStringIndex	5	panic	runtime error: index out of range [5] with length 3	strings,indexing,constants,panic
+array-three-index-max-past-len	arrayThreeIndexMaxPastLen	5	panic	runtime error: slice bounds out of range [::5] with length 3	arrays,slicing,full_slice,panic
+array-ptr-three-index-high-past-max	arrayPtrThreeIndexHighPastMax	4	panic	runtime error: slice bounds out of range [:4:3]	arrays,pointers,slicing,full_slice,panic
+slice-negative-low	sliceNegativeLow	-1	panic	runtime error: slice bounds out of range [-1:]	slices,slicing,panic
+slice-high-uint-past-cap	sliceHighUintPastCap	7	panic	runtime error: slice bounds out of range [:7] with capacity 3	slices,slicing,widths,panic
+nil-slice-high-past-cap	nilSliceHighPastCap	1	panic	runtime error: slice bounds out of range [:1] with capacity 0	slices,slicing,nil,panic
+slice-to-array-ptr-short	sliceToArrayPtrShort	-	panic	runtime error: cannot convert slice with length 2 to array or pointer to array with length 4	slices,arrays,pointers,conversions,panic

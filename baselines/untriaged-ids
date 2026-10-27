@@ -198,16 +198,20 @@
 #   the rows (check (1): an open entry's row must FAIL, which they do until
 #   their envelopes land). Same rows, same reds, same latitude; only the
 #   accounting moves. latitude 4 -> 2; coverage 10 and wrong-answer 0 unchanged.
+# 2026-10-27 (the defect-neighbourhood campaign's S10 sweep, lane sweep/s10-panics,
+#   [AGENT]): the five slice-base nil-arm rows — pointers/nil-array-ptr-slice/
+#   slice-expr-nil and pointers/nil-array-ptr-slice-elided-high/{deref-elided-high,
+#   deref-low-only,pointer-form,zero-length-array} — LEAVE this set for the Cases
+#   line of the new OPEN entry BUG-227 (plan §4: a `stuck` on a legal program is a
+#   misnamed refusal, a defect, not coverage; the earlier disposition is recorded in
+#   the entry for the owner to rule on). Same rows, same reds, same cause
+#   stuck:nil-slice-base; only the accounting moves. coverage 10 -> 5; latitude 2
+#   and wrong-answer 0 unchanged.
 channels/select-select/beside-loop	coverage
 channels/select-select/core	coverage
 floats/to-int-out-of-range/nan	latitude
 floats/to-int-out-of-range/range	latitude
 goroutines/spawn-in-init/in-init	coverage
-pointers/nil-array-ptr-slice-elided-high/deref-elided-high	coverage
-pointers/nil-array-ptr-slice-elided-high/deref-low-only	coverage
-pointers/nil-array-ptr-slice-elided-high/pointer-form	coverage
-pointers/nil-array-ptr-slice-elided-high/zero-length-array	coverage
-pointers/nil-array-ptr-slice/slice-expr-nil	coverage
 spec-examples-decl/slice-to-array/ok-forms	coverage
 # 2026-09-03 (atomics arc wave 1): sync/atomic-frontier/mp-litmus
 #   RETIRED — flipped PASS (membership exactly {0, 1, 11});

@@ -1,0 +1,12 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s10-panics (2026-10-27), shape S10 (plan §4; matrix on BUG-081/063/056/038). Strict, expected = gc go1.26.5.
+# G6: the unhashable dynamic key at the map, func and named-slice-through-method-interface types, the comma-ok read,
+# a generic map at K = any, recovered; pointer and nil-interface keys as the no-panic controls.
+map-key	mapKey	-	panic	runtime error: hash of unhashable type map[int]int	maps,keys,interfaces,comparability,panic
+func-key	funcKey	-	panic	runtime error: hash of unhashable type func()	maps,keys,interfaces,comparability,functions,panic
+named-slice-through-method-iface	namedSliceThroughMethodIface	-	panic	runtime error: hash of unhashable type main.uhList	maps,keys,interfaces,comparability,defined_type,methods,panic
+comma-ok-read	commaOkRead	-	panic	runtime error: hash of unhashable type []int	maps,keys,interfaces,comparability,comma_ok,panic
+generic-any-key	genericAnyKey	-	panic	runtime error: hash of unhashable type []int	maps,keys,interfaces,comparability,generics,panic
+pointer-key-ok	pointerKeyOk	-	ok	-	maps,keys,interfaces,comparability,pointers,structs
+nil-iface-key-ok	nilIfaceKeyOk	-	ok	-	maps,keys,interfaces,nil,comma_ok
+recovered	unhashableRecovered	-	ok	-	maps,keys,interfaces,comparability,panic,recover

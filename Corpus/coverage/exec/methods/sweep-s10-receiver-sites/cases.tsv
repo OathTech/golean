@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s10-panics (2026-10-27), shape S10 (plan §4; matrix on BUG-081/063/056/038). Strict, expected = gc go1.26.5.
+# G1.24–28: a value method's nil pointer receiver in defer and go position (raised at the statement), the method
+# expression `T.V(*p)`, the pointer method expression `(*T).V(p)` (gc's wrapper text), and a nil pointer field receiver.
+defer-value-recv-nil	deferValueRecvNil	-	ok	-	methods,pointers,nil,defer,panic,recover,evaluation_order
+go-value-recv-nil	goValueRecvNil	-	ok	-	methods,pointers,nil,goroutines,panic,recover,evaluation_order
+method-expr-deref-arg	methodExprDerefArg	-	panic	runtime error: invalid memory address or nil pointer dereference	methods,pointers,nil,functions,panic
+field-ptr-value-recv-nil	fieldPtrValueRecvNil	-	panic	runtime error: invalid memory address or nil pointer dereference	methods,pointers,nil,structs,fields,panic
