@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 4787 (4484 PASS / 303 FAIL)
+# cases: 4848 (4545 PASS / 303 FAIL)
 # re-pinned: 2026-10-26 [AGENT], lane sweep/s4-identity — the defect-neighbourhood campaign's S4 sweep (identity, equality and
 #   nil-ness; docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved; members BUG-133/129/121/111/170/139).
 #   NO existing row moved: 4166 + 94 = 4260; PASS 3901 + 64 = 3965; FAIL 265 + 30 = 295. No flip, no removal, no cause
@@ -106,6 +106,77 @@
 #     variadic/sweep-s4-nil-pack-routes/tuple-fixed-only                 PASS/- -
 #     variadic/sweep-s4-nil-pack-routes/elem-kinds                       PASS/- -
 #     variadic/sweep-s4-nil-pack-routes/len-cap-append                   PASS/- -
+# re-pinned: 2026-10-27 [AGENT], lane sweep/s5-method-sets — the defect-neighbourhood campaign's step 2, shape S5 (method sets:
+#   records, promotion, receiver adaptation, dispatch; plan docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved
+#   2026-10-27): the shape's 116-cell matrix probed on both sides — 74 cells by this lane (8 of them refusal probes recorded as
+#   named coverage gaps, one on a forged wire), 42 covered by existing rows — and every agreement on a distinct route pinned as a
+#   strict row (expected = gc). NO existing row moved: 4166 + 61 = 4227; PASS 3901 + 61 = 3962; FAIL 265 + 0 = 265. No flip, no
+#   removal, no cause change (no runtime code changed: corpus and records only). NEW rows (61, 11 packages
+#   Corpus/coverage/exec/*/sweep-s5-*/, every row strict, born green), appended at the end of the file, measured by
+#   CAPPED_MEM_MAX=64G capped scripts/ci --diff at the lane tree 94c0b932 before this re-pin (its only drift: these 61 NEW ids and
+#   the 15 NEW negative ids), the rows taken from that run's artifacts/coverage/latest.tsv; the --diff at the tip judges.
+#   FINDINGS: none (no BUG entry, no red-first row; BUG-246–255 unused). The rows:
+#     embedding/sweep-s5-depth-and-mixed-hops/depth3-direct                              PASS/-
+#     embedding/sweep-s5-depth-and-mixed-hops/depth3-dispatch                            PASS/-
+#     embedding/sweep-s5-depth-and-mixed-hops/depth3-method-values                       PASS/-
+#     embedding/sweep-s5-depth-and-mixed-hops/depth3-method-expressions                  PASS/-
+#     embedding/sweep-s5-depth-and-mixed-hops/mixed-hops-direct                          PASS/-
+#     embedding/sweep-s5-depth-and-mixed-hops/mixed-hops-dispatch                        PASS/-
+#     embedding/sweep-s5-depth-and-mixed-hops/mixed-hops-method-expression               PASS/-
+#     embedding/sweep-s5-depth-and-mixed-hops/value-method-pointer-embed-dispatch        PASS/-
+#     embedding/sweep-s5-depth-and-mixed-hops/nil-pointer-embed-pointer-method-dispatch  PASS/-
+#     embedding/sweep-s5-embedded-interface-depth/depth2-dispatch                        PASS/-
+#     embedding/sweep-s5-embedded-interface-depth/depth2-nil-method-value                PASS/-
+#     embedding/sweep-s5-embedded-interface-depth/embedded-imported-interface            PASS/-
+#     embedding/sweep-s5-embedded-interface-depth/pointer-then-interface                 PASS/-
+#     embedding/sweep-s5-embedded-interface-depth/method-expression-iface-target         PASS/-
+#     embedding/sweep-s5-shadowing-and-ambiguity/depth1-resolves-depth2                  PASS/-
+#     embedding/sweep-s5-shadowing-and-ambiguity/field-hides-deeper-method               PASS/-
+#     embedding/sweep-s5-shadowing-and-ambiguity/method-hides-deeper-field               PASS/-
+#     embedding/sweep-s5-shadowing-and-ambiguity/shallow-wrong-signature-hides-deep      PASS/-
+#     generics/sweep-s5-generic-carriers/instantiation-satisfies                         PASS/-
+#     generics/sweep-s5-generic-carriers/instantiation-pointer-method                    PASS/-
+#     generics/sweep-s5-generic-carriers/generic-embedding-promotion                     PASS/-
+#     generics/sweep-s5-generic-carriers/instantiation-method-expression                 PASS/-
+#     generics/sweep-s5-generic-carriers/pointer-constraint-idiom                        PASS/-
+#     generics/sweep-s5-generic-carriers/constraint-by-promotion                         PASS/-
+#     generics/sweep-s5-generic-carriers/typeparam-method-value-and-box                  PASS/-
+#     interfaces/sweep-s5-assertion-routes/unrelated-interfaces                          PASS/-
+#     interfaces/sweep-s5-assertion-routes/pointer-method-missing-ok                     PASS/-
+#     interfaces/sweep-s5-assertion-routes/pointer-method-missing-panic                  PASS/-
+#     interfaces/sweep-s5-assertion-routes/type-switch-order                             PASS/-
+#     interfaces/sweep-s5-assertion-routes/pointer-to-interface-no-methods               PASS/-
+#     interfaces/sweep-s5-imported-carriers/duration-stringer                            PASS/-
+#     interfaces/sweep-s5-imported-carriers/buffer-pointer-vs-value                      PASS/-
+#     interfaces/sweep-s5-imported-carriers/imported-type-switch                         PASS/-
+#     interfaces/sweep-s5-imported-carriers/error-string-satisfaction                    PASS/-
+#     interfaces/sweep-s5-imported-carriers/unexported-requirement-modeled               PASS/-
+#     interfaces/sweep-s5-imported-carriers/modeled-box-dispatch                         PASS/-
+#     methods/sweep-s5-method-value-binding/addr-value-method-copies                     PASS/-
+#     methods/sweep-s5-method-value-binding/repointed-pointer-var                        PASS/-
+#     methods/sweep-s5-method-value-binding/stored-method-values                         PASS/-
+#     methods/sweep-s5-method-value-binding/go-value-receiver-copy                       PASS/-
+#     methods/sweep-s5-method-value-binding/iface-method-value-rebound-box               PASS/-
+#     methods/sweep-s5-nonstruct-carriers/int-dispatch                                   PASS/-
+#     methods/sweep-s5-nonstruct-carriers/int-pointer-method-box                         PASS/-
+#     methods/sweep-s5-nonstruct-carriers/slice-map-dispatch                             PASS/-
+#     methods/sweep-s5-nonstruct-carriers/func-chan-dispatch                             PASS/-
+#     methods/sweep-s5-nonstruct-carriers/array-string-bool-float-dispatch               PASS/-
+#     methods/sweep-s5-nonstruct-carriers/nonstruct-auto-address                         PASS/-
+#     methods/sweep-s5-nonstruct-carriers/nonstruct-method-values                        PASS/-
+#     methods/sweep-s5-nonstruct-carriers/nonstruct-method-expressions                   PASS/-
+#     methods/sweep-s5-nonstruct-carriers/nonstruct-type-switch                          PASS/-
+#     methods/sweep-s5-receiver-addressability/pointer-method-addressable-paths          PASS/-
+#     methods/sweep-s5-receiver-addressability/pointer-method-pointer-operands           PASS/-
+#     methods/sweep-s5-receiver-addressability/value-method-nonaddressable               PASS/-
+#     panic-recover/sweep-s5-preprint-promoted/value-embed-error                         PASS/-
+#     panic-recover/sweep-s5-preprint-promoted/pointer-embed-error                       PASS/-
+#     panic-recover/sweep-s5-preprint-promoted/embedded-iface-stringer                   PASS/-
+#     panic-recover/sweep-s5-preprint-promoted/pointer-box-promoted-error                PASS/-
+#     sync/sweep-s5-sync-carriers/value-box-no-methods                                   PASS/-
+#     sync/sweep-s5-sync-carriers/rwmutex-type-switch                                    PASS/-
+#     sync/sweep-s5-sync-carriers/lock-method-values                                     PASS/-
+#     sync/sweep-s5-sync-carriers/depth2-embedded-mutex                                  PASS/-
 # re-pinned: 2026-10-27 [AGENT], lane sweep/s12-panic-recover — the defect-neighbourhood campaign's step 2, shape S12 (panic and
 #   recover: payload, abort text, the recover walk; plan docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved
 #   2026-10-27): the shape's 181-cell matrix probed on both sides — 112 cells by this lane (gc go1.26.5 under the runners' pins =
@@ -8002,3 +8073,64 @@ PASS	panic-recover/sweep-s12-walk/defer-generic	-	-
 PASS	panic-recover/sweep-s12-walk/defer-in-defer	-	-
 PASS	panic-recover/sweep-s12-walk/defer-method-expr	-	-
 PASS	panic-recover/sweep-s12-walk/recover-in-spawned-goroutine	-	-
+PASS	embedding/sweep-s5-depth-and-mixed-hops/depth3-direct	-	-
+PASS	embedding/sweep-s5-depth-and-mixed-hops/depth3-dispatch	-	-
+PASS	embedding/sweep-s5-depth-and-mixed-hops/depth3-method-values	-	-
+PASS	embedding/sweep-s5-depth-and-mixed-hops/depth3-method-expressions	-	-
+PASS	embedding/sweep-s5-depth-and-mixed-hops/mixed-hops-direct	-	-
+PASS	embedding/sweep-s5-depth-and-mixed-hops/mixed-hops-dispatch	-	-
+PASS	embedding/sweep-s5-depth-and-mixed-hops/mixed-hops-method-expression	-	-
+PASS	embedding/sweep-s5-depth-and-mixed-hops/value-method-pointer-embed-dispatch	-	-
+PASS	embedding/sweep-s5-depth-and-mixed-hops/nil-pointer-embed-pointer-method-dispatch	-	-
+PASS	embedding/sweep-s5-embedded-interface-depth/depth2-dispatch	-	-
+PASS	embedding/sweep-s5-embedded-interface-depth/depth2-nil-method-value	-	-
+PASS	embedding/sweep-s5-embedded-interface-depth/embedded-imported-interface	-	-
+PASS	embedding/sweep-s5-embedded-interface-depth/pointer-then-interface	-	-
+PASS	embedding/sweep-s5-embedded-interface-depth/method-expression-iface-target	-	-
+PASS	embedding/sweep-s5-shadowing-and-ambiguity/depth1-resolves-depth2	-	-
+PASS	embedding/sweep-s5-shadowing-and-ambiguity/field-hides-deeper-method	-	-
+PASS	embedding/sweep-s5-shadowing-and-ambiguity/method-hides-deeper-field	-	-
+PASS	embedding/sweep-s5-shadowing-and-ambiguity/shallow-wrong-signature-hides-deep	-	-
+PASS	generics/sweep-s5-generic-carriers/instantiation-satisfies	-	-
+PASS	generics/sweep-s5-generic-carriers/instantiation-pointer-method	-	-
+PASS	generics/sweep-s5-generic-carriers/generic-embedding-promotion	-	-
+PASS	generics/sweep-s5-generic-carriers/instantiation-method-expression	-	-
+PASS	generics/sweep-s5-generic-carriers/pointer-constraint-idiom	-	-
+PASS	generics/sweep-s5-generic-carriers/constraint-by-promotion	-	-
+PASS	generics/sweep-s5-generic-carriers/typeparam-method-value-and-box	-	-
+PASS	interfaces/sweep-s5-assertion-routes/unrelated-interfaces	-	-
+PASS	interfaces/sweep-s5-assertion-routes/pointer-method-missing-ok	-	-
+PASS	interfaces/sweep-s5-assertion-routes/pointer-method-missing-panic	-	-
+PASS	interfaces/sweep-s5-assertion-routes/type-switch-order	-	-
+PASS	interfaces/sweep-s5-assertion-routes/pointer-to-interface-no-methods	-	-
+PASS	interfaces/sweep-s5-imported-carriers/duration-stringer	-	-
+PASS	interfaces/sweep-s5-imported-carriers/buffer-pointer-vs-value	-	-
+PASS	interfaces/sweep-s5-imported-carriers/imported-type-switch	-	-
+PASS	interfaces/sweep-s5-imported-carriers/error-string-satisfaction	-	-
+PASS	interfaces/sweep-s5-imported-carriers/unexported-requirement-modeled	-	-
+PASS	interfaces/sweep-s5-imported-carriers/modeled-box-dispatch	-	-
+PASS	methods/sweep-s5-method-value-binding/addr-value-method-copies	-	-
+PASS	methods/sweep-s5-method-value-binding/repointed-pointer-var	-	-
+PASS	methods/sweep-s5-method-value-binding/stored-method-values	-	-
+PASS	methods/sweep-s5-method-value-binding/go-value-receiver-copy	-	-
+PASS	methods/sweep-s5-method-value-binding/iface-method-value-rebound-box	-	-
+PASS	methods/sweep-s5-nonstruct-carriers/int-dispatch	-	-
+PASS	methods/sweep-s5-nonstruct-carriers/int-pointer-method-box	-	-
+PASS	methods/sweep-s5-nonstruct-carriers/slice-map-dispatch	-	-
+PASS	methods/sweep-s5-nonstruct-carriers/func-chan-dispatch	-	-
+PASS	methods/sweep-s5-nonstruct-carriers/array-string-bool-float-dispatch	-	-
+PASS	methods/sweep-s5-nonstruct-carriers/nonstruct-auto-address	-	-
+PASS	methods/sweep-s5-nonstruct-carriers/nonstruct-method-values	-	-
+PASS	methods/sweep-s5-nonstruct-carriers/nonstruct-method-expressions	-	-
+PASS	methods/sweep-s5-nonstruct-carriers/nonstruct-type-switch	-	-
+PASS	methods/sweep-s5-receiver-addressability/pointer-method-addressable-paths	-	-
+PASS	methods/sweep-s5-receiver-addressability/pointer-method-pointer-operands	-	-
+PASS	methods/sweep-s5-receiver-addressability/value-method-nonaddressable	-	-
+PASS	panic-recover/sweep-s5-preprint-promoted/value-embed-error	-	-
+PASS	panic-recover/sweep-s5-preprint-promoted/pointer-embed-error	-	-
+PASS	panic-recover/sweep-s5-preprint-promoted/embedded-iface-stringer	-	-
+PASS	panic-recover/sweep-s5-preprint-promoted/pointer-box-promoted-error	-	-
+PASS	sync/sweep-s5-sync-carriers/value-box-no-methods	-	-
+PASS	sync/sweep-s5-sync-carriers/rwmutex-type-switch	-	-
+PASS	sync/sweep-s5-sync-carriers/lock-method-values	-	-
+PASS	sync/sweep-s5-sync-carriers/depth2-embedded-mutex	-	-
