@@ -4105,18 +4105,6 @@
 #   an element it leaves in place; a dropped write would be a false ok); the class is posed for the owner's ruling. Measured
 #   by scripts/diff-one at the tree. 4038 + 2 = 4040; 3780 + 1 = 3781; 258 + 1 = 259 FAIL. No PASS -> non-PASS flip.
 result	id	stage	cause
-# reason: channels/select-select/beside-loop — stage alternation ([USER] ruling (a) 2026-09-03;
-#   members re-stated at the strict-lane depth guard, round-8a merge train 2026-09-03 [AGENT]):
-#   gc samples 5 or 90 (the subject's "5 or 90 in gc"); the machine's default stream
-#   commits 5. scripts/diff-coverage runs the strict-lane differential check BEFORE
-#   the oracle-invariance re-run and returns early, so the red's stage is
-#   oracle-schedule-dependent: gc=90 -> Lean=5 != Go=90 -> FAIL/differential;
-#   gc=5 -> equality holds, then a variant-stream run hits the `unsupported`
-#   refusal, which the strict-lane depth guard (membership-depth memo P1 item 4,
-#   lane strict-routing) reports as a REFUSAL at lean-observation — no longer as
-#   "varies with iteration order" (nondet) -> FAIL/lean-observation. Result FAIL
-#   either way; the row stays the F10 over-broad-trigger marker
-#   (baselines/untriaged-ids, disposition coverage).
 PASS	arrays/array-bounds	-	-
 PASS	arrays/array-comparable	-	-
 PASS	arrays/array-copy	-	-
@@ -4624,6 +4612,18 @@ PASS	channels/select-recv-edge/dep-index-target	-	-
 PASS	channels/select-recv-edge/fallback-call-index	-	-
 PASS	channels/select-recv-edge/field-second-target-stores-first	-	-
 PASS	channels/select-recv-edge/nil-index-base-second	-	-
+# reason: channels/select-select/beside-loop — stage alternation ([USER] ruling (a) 2026-09-03;
+#   members re-stated at the strict-lane depth guard, round-8a merge train 2026-09-03 [AGENT]):
+#   gc samples 5 or 90 (the subject's "5 or 90 in gc"); the machine's default stream
+#   commits 5. scripts/diff-coverage runs the strict-lane differential check BEFORE
+#   the oracle-invariance re-run and returns early, so the red's stage is
+#   oracle-schedule-dependent: gc=90 -> Lean=5 != Go=90 -> FAIL/differential;
+#   gc=5 -> equality holds, then a variant-stream run hits the `unsupported`
+#   refusal, which the strict-lane depth guard (membership-depth memo P1 item 4,
+#   lane strict-routing) reports as a REFUSAL at lean-observation — no longer as
+#   "varies with iteration order" (nondet) -> FAIL/lean-observation. Result FAIL
+#   either way; the row stays the F10 over-broad-trigger marker
+#   (baselines/untriaged-ids, disposition coverage).
 FAIL	channels/select-select/beside-loop	lean-observation|differential	unsupported:select-select|-
 FAIL	channels/select-select/core	lean-observation	unsupported:select-select
 PASS	channels/send-closed-panic	-	-
