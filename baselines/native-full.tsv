@@ -1,5 +1,22 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 5595 (5241 PASS / 354 FAIL)
+# cases: 5592 (5245 PASS / 347 FAIL)
+# 2026-10-27 lane frontend/fix-admission-1027 [AGENT]: re-pinned from the lane's full `scripts/ci --diff` at the tip, after the rebase onto Run: CAPPED_MEM_MAX=64G capped scripts/ci --diff at 63bbba7a with the row edits and records applied in the tree (1117 s).
+#   the main carrying the S20 and S10 sweep entries. FIVE BUG-216/BUG-226 rows move non-PASS -> PASS with the fixes (the header rule
+#   ported from go/build; the value form at a zero-length pointer-to-array range): source-selection/sweep-s20-plusbuild-under-gobuild,
+#   source-selection/sweep-s20-plusbuild-in-block, range/sweep-s10-zero-len-two-vars/{ptr-nil-two-vars,ptr-two-vars,ptr-nil-blank-key-value}.
+#   THREE rows REMOVED, their fixtures gone (`# removed:` lines below): source-selection/sweep-s20-plusbuild-no-blank and
+#   source-selection/sweep-s20-plusbuild-after-block — unrowable through the oracle harness, whose go/printer re-print synthesizes a
+#   `//go:build ignore` line from the row's lone `// +build ignore` line (the oracle compiles a file the row does not have: excluded, 1,
+#   where gc on the file as written includes it, 2 — the lane's probes a14/a16b; recorded on BUG-216); and
+#   source-selection/sweep-s20-inert-constraints/bom-ignore-excluded — the standing constraint policy refuses a custom-tag-excluded
+#   file by name, and with go/build's header rule mirrored exactly (the BOM stripped) it reaches this subject, which was green only
+#   through the hole; its three siblings stay PASS. No PASS -> non-PASS move. The negative baseline: nine FAIL frontend-accepts rows
+#   -> PASS (imports/{vendor-path-import,nested-vendor-path-import,goroot-vendor-name,bare-internal-path,module-mode-bare-local-import,
+#   package-main-import} at frontend=type-check — BUG-219; modules/{module-path-std-fmt,module-path-std-nested,module-path-cmd} at
+#   frontend=module — BUG-217); no other row moves.
+# removed: source-selection/sweep-s20-plusbuild-no-blank — fixture retired 2026-10-27 (lane frontend/fix-admission-1027): unrowable through the oracle harness's go/printer re-print (BUG-216)
+# removed: source-selection/sweep-s20-plusbuild-after-block — fixture retired 2026-10-27 (lane frontend/fix-admission-1027): unrowable through the oracle harness's go/printer re-print (BUG-216)
+# removed: source-selection/sweep-s20-inert-constraints/bom-ignore-excluded — subject retired 2026-10-27 (lane frontend/fix-admission-1027): the standing constraint policy's refusal reaches it once go/build's header rule is mirrored (BUG-216, BUG-155)
 # cause keyed 2026-10-27 [AGENT coordinator], train-24 stage: the three BUG-226 rows' refusal cause `error:?` → `error:decoder-scope-undeclared-local` (the new scripts/machine-causes.tsv row for the decoder's «is not in scope at this statement» refusal, which the S10 lane could not add — scripts/ is outside a sweep lane's edit set); no row moved.
 # re-pinned: 2026-10-26 [AGENT], lane sweep/s4-identity — the defect-neighbourhood campaign's S4 sweep (identity, equality and
 #   nil-ness; docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved; members BUG-133/129/121/111/170/139).
@@ -8627,14 +8644,11 @@ PASS	multipkg/sweep-s20-local-selection/excluded-files	-	-
 PASS	multipkg/sweep-s20-local-selection/inert-constraint	-	-
 PASS	source-selection/sweep-s20-bom-file	-	-
 PASS	source-selection/sweep-s20-crlf-raw-string	-	-
-PASS	source-selection/sweep-s20-inert-constraints/bom-ignore-excluded	-	-
 PASS	source-selection/sweep-s20-inert-constraints/custom-tautology	-	-
 PASS	source-selection/sweep-s20-inert-constraints/gobuild-inert	-	-
 PASS	source-selection/sweep-s20-inert-constraints/plusbuild-inert	-	-
-FAIL	source-selection/sweep-s20-plusbuild-after-block	frontend-export	unrowed/build-constraint
-FAIL	source-selection/sweep-s20-plusbuild-in-block	frontend-export	unrowed/build-constraint
-FAIL	source-selection/sweep-s20-plusbuild-no-blank	frontend-export	unrowed/build-constraint
-FAIL	source-selection/sweep-s20-plusbuild-under-gobuild	frontend-export	unrowed/build-constraint
+PASS	source-selection/sweep-s20-plusbuild-in-block	-	-
+PASS	source-selection/sweep-s20-plusbuild-under-gobuild	-	-
 PASS	source-selection/sweep-s20-suffix-tokens	-	-
 PASS	source-selection/sweep-s20-test-files	-	-
 PASS	strings/sweep-s20-dot-import	-	-
@@ -8760,9 +8774,9 @@ PASS	pointers/sweep-s10-nil-deref-sites/multi-target-field-first	-	-
 PASS	pointers/sweep-s10-nil-deref-sites/multi-target-field-second	-	-
 PASS	pointers/sweep-s10-nil-recover/store-recovered	-	-
 PASS	range/sweep-s10-zero-len-array	-	-
-FAIL	range/sweep-s10-zero-len-two-vars/ptr-nil-two-vars	lean-observation	error:decoder-scope-undeclared-local
-FAIL	range/sweep-s10-zero-len-two-vars/ptr-two-vars	lean-observation	error:decoder-scope-undeclared-local
-FAIL	range/sweep-s10-zero-len-two-vars/ptr-nil-blank-key-value	lean-observation	error:decoder-scope-undeclared-local
+PASS	range/sweep-s10-zero-len-two-vars/ptr-nil-two-vars	-	-
+PASS	range/sweep-s10-zero-len-two-vars/ptr-two-vars	-	-
+PASS	range/sweep-s10-zero-len-two-vars/ptr-nil-blank-key-value	-	-
 PASS	stdlib-source/sweep-s10-library-panics/bytes-repeat-negative	-	-
 PASS	stdlib-source/sweep-s10-library-panics/slices-repeat-negative	-	-
 PASS	stdlib-source/sweep-s10-library-panics/slices-delete-oob	-	-

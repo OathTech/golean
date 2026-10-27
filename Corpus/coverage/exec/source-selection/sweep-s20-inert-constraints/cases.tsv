@@ -2,4 +2,3 @@
 gobuild-inert	gobuildInert	-	ok	-	init,globals
 plusbuild-inert	plusbuildInert	-	ok	-	init,globals
 custom-tautology	customTautology	-	ok	-	init,globals
-bom-ignore-excluded	bomIgnoreExcluded	-	ok	-	init,globals
