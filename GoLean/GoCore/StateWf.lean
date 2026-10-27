@@ -4286,18 +4286,20 @@ theorem buildStructFields_locSup :
   | nil =>
     intro vals arr h
     rw [buildStructFields.eq_def] at h
+    -- The S26 (a*) fix: the exhaustion arm is `[], []` only; a count mismatch refuses.
     split at h
-    · simp_all
-    · simp only [pure_eq_ok, Except.ok.injEq] at h
-      subst h
-      simp [goValueFieldsSup]
+    all_goals first
+      | (simp only [pure_eq_ok, Except.ok.injEq] at h; subst h; simp [goValueFieldsSup]; done)
+      | (simp_all; done)
+      | (simp [throw, throwThe, MonadExceptOf.throw] at h; done)
   | cons fd frest ih =>
     intro vals arr h
     cases vals with
     | nil =>
-      simp only [buildStructFields, pure_eq_ok, Except.ok.injEq] at h
-      subst h
-      simp [goValueFieldsSup]
+      -- a field without a value: the mismatch refusal, never `.ok`
+      first
+        | (simp [buildStructFields, throw, throwThe, MonadExceptOf.throw] at h; done)
+        | (rw [buildStructFields.eq_def] at h; simp [throw, throwThe, MonadExceptOf.throw] at h; done)
     | cons v vrest =>
       simp only [buildStructFields, bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
       obtain ⟨head, hhead, tail, htail, rfl⟩ := h

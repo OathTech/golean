@@ -3674,14 +3674,20 @@ def defaultValue (ty : Ty) : Except Stop GoValue :=
 
 /-- Build a struct value field-by-field from positional literal args, normalizing
 each against its field type. Not recursive with `buildStructValue` (it only calls
-the total `normalizeValueForTy`); callers guarantee the checked length. -/
+the total `normalizeValueForTy`); callers guarantee the checked length — and a
+length MISMATCH (one list exhausted before the other) is refused by name all the
+same, never truncated (the S26 sweep's sole-caller-guarded arm, fixed in
+BUG-206/207's lane 2026-10-27: an absorbing default is a defect whatever guards
+it; `.internal` because the caller's own guard makes the arm a core invariant). -/
 def buildStructFields :
     List FieldDef → List GoValue → Except Stop (Array (String × GoValue))
   | field :: fieldRest, value :: valueRest => do
       let head ← normalizeValueForTy ctx field.typ value
       let tail ← buildStructFields fieldRest valueRest
       return #[(field.name, head)] ++ tail
-  | _, _ => return #[]
+  | [], [] => return #[]
+  | fields, values =>
+      throw (.internal s!"struct field/value count mismatch: {fields.length} field(s) against {values.length} value(s) left")
 
 /-- Build a struct value from positional literal args at a struct type.
 NOT recursive (C2): the type's `.defined` indirection is followed by
@@ -4096,14 +4102,18 @@ def valueEq : Ty → GoValue → GoValue → Except Stop Bool
     | .ok (.plain other), l, r => stuck s!"equality at unresolved type {repr other}: {repr l} and {repr r}"
 
 /-- Compare array elements pairwise at the element type; callers
-guarantee equal, checked lengths. -/
+guarantee equal, checked lengths — and a length MISMATCH is refused by name
+all the same, never «equal» (the S26 sweep's sole-caller-guarded arm, fixed in
+BUG-206/207's lane 2026-10-27). -/
 def valueEqList (elem : Ty) : List GoValue → List GoValue → Except Stop Bool
   | leftValue :: leftRest, rightValue :: rightRest => do
       if ← valueEq elem leftValue rightValue then
         valueEqList elem leftRest rightRest
       else
         return false
-  | _, _ => return true
+  | [], [] => return true
+  | l, r =>
+      throw (.internal s!"array equality element count mismatch: {l.length} left against {r.length} right element(s) left")
 
 /-- Compare struct fields pairwise at their declared types, checking
 field-name alignment on both sides. -/
@@ -4118,7 +4128,12 @@ def valueEqFields :
         valueEqFields fieldRest leftRest rightRest
       else
         return false
-  | _, _, _ => return true
+  | [], [], [] => return true
+  -- A count MISMATCH (a list exhausted before the others) is refused by name,
+  -- never «equal» (the S26 sweep's sole-caller-guarded arm, fixed in
+  -- BUG-206/207's lane 2026-10-27; the callers refuse unequal counts first).
+  | fs, l, r =>
+      throw (.internal s!"struct equality field count mismatch: {fs.length} field(s) against {l.length} left and {r.length} right value(s) left")
 
 end
 

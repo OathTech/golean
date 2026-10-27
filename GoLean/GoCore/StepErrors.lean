@@ -380,7 +380,8 @@ theorem buildStructFields_strict :
   | fd :: fs, v :: vs => by
     have ih := @buildStructFields_strict fs vs
     unfold buildStructFields; errp
-  | [], _ => by unfold buildStructFields; errp
+  | [], [] => by unfold buildStructFields; errp
+  | [], _ :: _ => by unfold buildStructFields; errp
   | _ :: _, [] => by unfold buildStructFields; errp
 macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact buildStructFields_strict)
 

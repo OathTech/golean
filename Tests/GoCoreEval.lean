@@ -3261,6 +3261,36 @@ private def absorbingDefaultResidualFacts : IO Bool := do
     (match GoCore.Machine.applyStrictOp ctx emptyStore id .runeSizeAt [ab, .int (-1) .int] with
       | .error (Stop.stuck msg) => (msg.splitOn "negative rune-decode offset").length == 2
       | _ => false))
+  -- The S26 inventory's three sole-caller-guarded arms (class (a*): exhaustive only by the ONE
+  -- caller's prior length refusal), judged one more absorbing default each and fixed in the
+  -- same lane: a length MISMATCH refuses by name (`.internal`) where the exhaustion arm
+  -- truncated (`buildStructFields`) or answered «equal» (`valueEqList`, `valueEqFields`);
+  -- the simultaneous-exhaustion case keeps its answer, so the guarded callers are unchanged.
+  let fieldA : GoCore.FieldDef := { name := "a", typ := .int }
+  passed := passed && (← expectTrue "S26 (a*): buildStructFields refuses a field/value count mismatch by name instead of truncating; the matched case builds"
+    ((match GoCore.buildStructFields ctx [fieldA] [] with
+      | .error (Stop.internal msg) => (msg.splitOn "count mismatch").length == 2
+      | _ => false)
+     && (match GoCore.buildStructFields ctx [] [.int 1 .int] with
+      | .error (Stop.internal msg) => (msg.splitOn "count mismatch").length == 2
+      | _ => false)
+     && (match GoCore.buildStructFields ctx [fieldA] [.int 1 .int] with
+      | .ok fs => fs.size == 1
+      | _ => false)))
+  passed := passed && (← expectTrue "S26 (a*): valueEqList refuses an element count mismatch by name instead of answering equal; equal lists compare"
+    ((match GoCore.valueEqList ctx .int [.int 1 .int] [] with
+      | .error (Stop.internal msg) => (msg.splitOn "count mismatch").length == 2
+      | _ => false)
+     && (match GoCore.valueEqList ctx .int [.int 1 .int] [.int 1 .int] with
+      | .ok true => true
+      | _ => false)))
+  passed := passed && (← expectTrue "S26 (a*): valueEqFields refuses a field count mismatch by name instead of answering equal; aligned fields compare"
+    ((match GoCore.valueEqFields ctx [fieldA] [("a", .int 1 .int)] [] with
+      | .error (Stop.internal msg) => (msg.splitOn "count mismatch").length == 2
+      | _ => false)
+     && (match GoCore.valueEqFields ctx [fieldA] [("a", .int 1 .int)] [("a", .int 2 .int)] with
+      | .ok false => true
+      | _ => false)))
   pure passed
 
 /-- BUG-134 at the train-20 audit's F1 (2026-10-26, lane `core/struct-through-conversion-1026`):
