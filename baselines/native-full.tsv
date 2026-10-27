@@ -1,5 +1,6 @@
 # GoLean native-frontend full-corpus differential baseline
 # cases: 6179 (5820 PASS / 359 FAIL)
+# cause keyed 2026-10-27 [AGENT coordinator], train-27 stage, from the stage's full run (scripts/coverage-cause --apply): the 16 rows that carried `?` — BUG-300/302's six `error:decoder-scope-wrong-declaration`, BUG-301's three `error:decoder-duplicate-function-id`, BUG-310's seven `panic:machine-panic` (the three table rows added at this stage); no row moved.
 # re-pinned: 2026-10-27 [AGENT], lane frontend/fix-hoist-1027 — BUG-276, 277, 278, 279 (the S7 sweep) and BUG-286, 287 (the S9
 #   sweep) FIXED in tools/nativefrontend (the campaign plan's rule that a finding is fixed through the normal train, [USER]
 #   approved 2026-10-27, relayed): (1) emit.go emitBinary binds a `&&`/`||` whose right operand hoists nothing to a temp at
@@ -10143,8 +10144,8 @@ PASS	generics/sweep-s13-contexts/result-shadow	-	-
 PASS	generics/sweep-s13-contexts/self-shadow	-	-
 PASS	generics/sweep-s13-contexts/ts-guard	-	-
 PASS	generics/sweep-s13-contexts/typeparam-named-int	-	-
-FAIL	generics/sweep-s13-lit-param-typeparam/lit-param-capturing	lean-observation	error:?
-FAIL	generics/sweep-s13-lit-param-typeparam/lit-param-no-capture	lean-observation	error:?
+FAIL	generics/sweep-s13-lit-param-typeparam/lit-param-capturing	lean-observation	error:decoder-scope-wrong-declaration
+FAIL	generics/sweep-s13-lit-param-typeparam/lit-param-no-capture	lean-observation	error:decoder-scope-wrong-declaration
 PASS	range/sweep-s13-range-var-cells/array-value-addr	-	-
 PASS	range/sweep-s13-range-var-cells/chan-addr	-	-
 PASS	range/sweep-s13-range-var-cells/int-addr	-	-
@@ -10182,10 +10183,10 @@ PASS	scoping/sweep-s13-global-shadow/select-case-shadow	-	-
 PASS	scoping/sweep-s13-global-shadow/self-shadow-reads-global	-	-
 PASS	scoping/sweep-s13-global-shadow/shadow-in-init	-	-
 PASS	scoping/sweep-s13-global-shadow/ts-guard-shadow	-	-
-FAIL	scoping/sweep-s13-grouped-var-spec/grouped-var-no-outer	lean-observation	error:?
-FAIL	scoping/sweep-s13-grouped-var-spec/grouped-var-reads-new-name	lean-observation	error:?
-FAIL	scoping/sweep-s13-grouped-var-spec/grouped-var-reads-new-name-result	lean-observation	error:?
-FAIL	scoping/sweep-s13-grouped-var-spec/grouped-var-zero-then-read	lean-observation	error:?
+FAIL	scoping/sweep-s13-grouped-var-spec/grouped-var-no-outer	lean-observation	error:decoder-scope-wrong-declaration
+FAIL	scoping/sweep-s13-grouped-var-spec/grouped-var-reads-new-name	lean-observation	error:decoder-scope-wrong-declaration
+FAIL	scoping/sweep-s13-grouped-var-spec/grouped-var-reads-new-name-result	lean-observation	error:decoder-scope-wrong-declaration
+FAIL	scoping/sweep-s13-grouped-var-spec/grouped-var-zero-then-read	lean-observation	error:decoder-scope-wrong-declaration
 PASS	scoping/sweep-s13-init-scopes/else-if-chain	-	-
 PASS	scoping/sweep-s13-init-scopes/if-init-body-self-shadow	-	-
 PASS	scoping/sweep-s13-init-scopes/if-init-captured-in-else	-	-
@@ -10193,9 +10194,9 @@ PASS	scoping/sweep-s13-init-scopes/if-init-commaok-else	-	-
 PASS	scoping/sweep-s13-init-scopes/if-init-else	-	-
 PASS	scoping/sweep-s13-local-iface-controls/decl-only-nil	-	-
 PASS	scoping/sweep-s13-local-iface-controls/empty-assert	-	-
-FAIL	scoping/sweep-s13-local-iface-dispatch/error-local-iface	lean-observation	error:?
-FAIL	scoping/sweep-s13-local-iface-dispatch/local-iface-satisfied	lean-observation	error:?
-FAIL	scoping/sweep-s13-local-iface-dispatch/local-iface-two-funcs	lean-observation	error:?
+FAIL	scoping/sweep-s13-local-iface-dispatch/error-local-iface	lean-observation	error:decoder-duplicate-function-id
+FAIL	scoping/sweep-s13-local-iface-dispatch/local-iface-satisfied	lean-observation	error:decoder-duplicate-function-id
+FAIL	scoping/sweep-s13-local-iface-dispatch/local-iface-two-funcs	lean-observation	error:decoder-duplicate-function-id
 PASS	scoping/sweep-s13-local-types-binding/embedded-promotion	-	-
 PASS	scoping/sweep-s13-local-types-binding/nested-same-name	-	-
 PASS	scoping/sweep-s13-named-result-forms/assert-one-value-shadow	-	-
@@ -10346,13 +10347,13 @@ FAIL	evalorder/sweep-s8-early-kinds-legacy/func-param-assertion	differential	-
 FAIL	evalorder/sweep-s8-early-kinds-legacy/array-operand-assertion	differential	-
 FAIL	evalorder/sweep-s8-early-kinds-legacy/assertion-left-array-operand	differential	-
 FAIL	evalorder/sweep-s8-early-kinds-legacy/array-target-assertion	differential	-
-FAIL	evalorder/sweep-s8-early-kinds-legacy/if-cond-slice-expr	lean-observation	panic:?
-FAIL	evalorder/sweep-s8-early-kinds-legacy/for-cond-slice-expr	lean-observation	panic:?
-FAIL	evalorder/sweep-s8-early-kinds-legacy/var-spec-slice-expr	lean-observation	panic:?
-FAIL	evalorder/sweep-s8-early-kinds-legacy/defer-arg-slice-expr	lean-observation	panic:?
-FAIL	evalorder/sweep-s8-early-kinds-legacy/go-arg-slice-expr	lean-observation	panic:?
-FAIL	evalorder/sweep-s8-early-kinds-legacy/defined-int-param-slice-expr	lean-observation	panic:?
-FAIL	evalorder/sweep-s8-early-kinds-legacy/generic-body-slice-expr	lean-observation	panic:?
+FAIL	evalorder/sweep-s8-early-kinds-legacy/if-cond-slice-expr	lean-observation	panic:machine-panic
+FAIL	evalorder/sweep-s8-early-kinds-legacy/for-cond-slice-expr	lean-observation	panic:machine-panic
+FAIL	evalorder/sweep-s8-early-kinds-legacy/var-spec-slice-expr	lean-observation	panic:machine-panic
+FAIL	evalorder/sweep-s8-early-kinds-legacy/defer-arg-slice-expr	lean-observation	panic:machine-panic
+FAIL	evalorder/sweep-s8-early-kinds-legacy/go-arg-slice-expr	lean-observation	panic:machine-panic
+FAIL	evalorder/sweep-s8-early-kinds-legacy/defined-int-param-slice-expr	lean-observation	panic:machine-panic
+FAIL	evalorder/sweep-s8-early-kinds-legacy/generic-body-slice-expr	lean-observation	panic:machine-panic
 FAIL	evalorder/sweep-s8-early-kinds-legacy/if-cond-string-slice	differential	-
 FAIL	evalorder/sweep-s8-early-kinds-legacy/var-spec-string-slice	differential	-
 FAIL	evalorder/sweep-s8-early-kinds-legacy/defer-arg-string-slice	differential	-
