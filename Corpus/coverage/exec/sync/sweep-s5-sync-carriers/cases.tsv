@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+value-box-no-methods	valueBoxNoMethods	-	ok	-	sync,mutex,interfaces,methods,type_assertions,comma_ok,pointers
+rwmutex-type-switch	rwmutexTypeSwitch	-	ok	-	sync,mutex,rwmutex,interfaces,methods,type_switch,pointers
+lock-method-values	lockMethodValues	-	ok	-	sync,mutex,methods,closures
+depth2-embedded-mutex	depth2EmbeddedMutex	-	ok	-	sync,mutex,embedding,methods,interfaces,pointers,structs

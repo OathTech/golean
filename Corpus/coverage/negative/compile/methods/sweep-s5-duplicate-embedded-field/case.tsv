@@ -1,0 +1,2 @@
+# expected_substring	features
+redeclared	embedding,structs,pointers,compile_error

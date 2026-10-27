@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+value-embed-error	valueEmbedError	-	panic	failure one	panic,methods,embedding,interfaces,structs
+pointer-embed-error	pointerEmbedError	-	panic	failure other	panic,methods,embedding,interfaces,structs,pointers
+embedded-iface-stringer	embeddedIfaceStringer	-	panic	tagged	panic,methods,embedding,interfaces,structs
+pointer-box-promoted-error	pointerBoxPromotedError	-	panic	pointer failure	panic,methods,embedding,interfaces,structs,pointers

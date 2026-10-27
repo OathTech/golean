@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+duration-stringer	durationStringer	-	ok	-	interfaces,methods,stdlib,type_assertions,comma_ok
+buffer-pointer-vs-value	bufferPointerVsValue	-	ok	-	interfaces,methods,stdlib,type_assertions,comma_ok,pointers
+imported-type-switch	importedTypeSwitch	-	ok	-	interfaces,methods,stdlib,type_switch,pointers
+error-string-satisfaction	errorStringSatisfaction	-	ok	-	interfaces,methods,stdlib,type_assertions,comma_ok,pointers
+unexported-requirement-modeled	unexportedRequirementModeled	-	ok	-	interfaces,methods,stdlib,type_assertions,comma_ok,pointers
+modeled-box-dispatch	modeledBoxDispatch	-	ok	-	interfaces,methods,stdlib,pointers,strings,bytes,len

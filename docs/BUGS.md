@@ -437,6 +437,56 @@ and only differentially-visibly.
   unchanged on all 1483 ids.
 - Pinned-by: differential
 - Cases: sync/satisfaction/assert-ok-mutex, sync/satisfaction/type-switch-mutex, sync/satisfaction/bare-assert-mutex, sync/satisfaction/assert-ok-waitgroup, sync/satisfaction/assert-ok-once, sync/satisfaction/trylock-sig-satisfies, sync/satisfaction-locker-sig/assert-ok-rwmutex
+- Neighbourhood: S5 (method sets: records, promotion, receiver adaptation, dispatch) — swept
+  2026-10-27 by lane `sweep/s5-method-sets` (plan §4, [USER]-approved 2026-10-27). THE MATRIX:
+  carriers (declared struct; defined int / string / slice / map / func / chan / array / bool /
+  float; imported types with a D5 exported-only record (`time.Duration`), modeled imported types
+  with a full record (`strings.Builder`, `bytes.Buffer`), the unexported types behind `errors.New`,
+  local module packages, sync primitives, generic instantiations, type parameters under method
+  constraints) × embedding (none; value depth 1 / 2 / 3; pointer; mixed value→pointer→value hops;
+  embedded interface at depth 1 and 2, imported, behind a pointer embed; a nil embedded pointer at
+  call time; ambiguity at depth 2 resolved by depth 1; a field hiding a deeper method and a method
+  hiding a deeper field; a shallow wrong-signature method hiding a deep right one) × receivers
+  (value on value / pointer; pointer on every addressable operand shape and on already-pointer
+  operands; value on the non-addressable operands gc accepts; the pointer-on-non-addressable
+  rejections; method values bound at `(&x).Mv`, re-pointed vars, stored in fields / maps / slices,
+  at a `go` statement, on a re-assigned box; method expressions on non-struct, instantiated,
+  depth-3, pointer-embed and embedded-interface carriers, FR-3's `(*T).Mv`) × routes (direct,
+  interface dispatch from value and pointer boxes, embedded-interface re-dispatch,
+  interface-to-interface assertion to an unrelated interface and to a pointer-method one (comma-ok,
+  panic text), type-switch order, `*I` boxes, defer / go, a constraint's method by promotion and by
+  the pointer-constraint idiom, the preprint rewrite over a promoted Error / String) × sites
+  (`promotionRecords`, `methodSets` coverage, `noteInterface` / `staticIfaceOf`, `methodReceiverArg`
+  / `promotedReceiverArg`, the MethodExpr arm, `resolveMethod?` / `resolvePromoted?`,
+  `methodCarrierKey?` / `dynamicMethodSetRecorded` / `dynamicMethodSetExportedOnly`,
+  `satisfiesMethodSig` / `firstUnsatisfiedMethod?`, `receiverAt`'s `asIs` / `addr` / `deref` / nil
+  arms, `receiverRetag`'s non-struct no-op, `dynamicDispatch?`'s declared / promoted / `.iface` /
+  no-record / stub arms, `preprintDispatch`): 116 cells — 74 PROBED by this lane on both sides (gc
+  go1.26.5 under the runners' pins = the machine on every legal program; 11 row packages, 15
+  negative probes, 8 refusal probes incl. one FORGED wire for the recordless-carrier arm), 42
+  COVERED by existing rows (cited per cell in the lane's report). ROWS ADDED: 61 strict rows in 11
+  packages `Corpus/coverage/exec/*/sweep-s5-*/` (methods 17, embedding 18, interfaces 11, generics
+  7, sync 4, panic-recover 4), expected = gc, all PASS; 15 NEGATIVE rows
+  `Corpus/coverage/negative/compile/methods/sweep-s5-*/` (gc rejects and the frontend refuses as a
+  type-check rejection carrying gc's text: the ambiguous method value and method expression, a field
+  and a method of one name at the same depth, a duplicate embedded field, the static
+  interface-to-interface missing method, a value-set method expression over a pointer method, a
+  receiver whose type-parameter list shadows `int`, a pointer method on a composite literal / call
+  result / type assertion / channel receive / conversion result / a map element through promotion /
+  promoted on a call result, a call through a pointer to an interface). FINDINGS: none — no wrong
+  value, no wrong method dispatched, no `stuck` on a legal program, no program exported where gc
+  rejects; BUG-246–255 unused. CELLS LEFT (refusals named at the point of failure — coverage gaps,
+  not defects): a D5 marker's structural use (`new(time.Duration)` «default value for imported named
+  type»; a `time.Duration` box at `fmt.Stringer` «normalizing imported named type» — BUG-008's open
+  class); the D5 exported-only guard against an UNEXPORTED requirement of package main (refuses
+  where gc answers false: over-conservative by design, an imported type cannot carry `main.secret`);
+  a recordless carrier (no admitted source reaches one — the arm refuses by name on the forged wire,
+  as the GoCoreEval MS: fixtures pin); the FR-3 deref adapter `(*T).Mv`; the fmt shim's `%w` (S21);
+  a sync VALUE boxed as an argument inside a multi-call expression (the unseq lane's «hidden read …
+  boxes a non-atom»; the same box in its own statement is rowed); dispatch THROUGH a promoted sync
+  stub record at depth 2 (the designed red `embedding/promoted-stub-dispatch/box-sync-stub` already
+  holds depth 1); the preprint through a NIL embedded pointer (gc's «panic while printing panic
+  value: type runtime.errorString» fatal, refused as BUG-099).
 
 ## BUG-054 — WaitGroup negative-counter panic payload carried `$runtime.Error`; gc panics with a plain string
 
@@ -833,6 +883,56 @@ verbatim, gc realization version-tracked).
   and landed in the check-in response round (2026-08-08) — see the
   Status line.
 - Triage record: docs/goose-parity-parked.md P4 (branch park/reasoning-2026-08-31).
+- Neighbourhood: S5 (method sets: records, promotion, receiver adaptation, dispatch) — swept
+  2026-10-27 by lane `sweep/s5-method-sets` (plan §4, [USER]-approved 2026-10-27). THE MATRIX:
+  carriers (declared struct; defined int / string / slice / map / func / chan / array / bool /
+  float; imported types with a D5 exported-only record (`time.Duration`), modeled imported types
+  with a full record (`strings.Builder`, `bytes.Buffer`), the unexported types behind `errors.New`,
+  local module packages, sync primitives, generic instantiations, type parameters under method
+  constraints) × embedding (none; value depth 1 / 2 / 3; pointer; mixed value→pointer→value hops;
+  embedded interface at depth 1 and 2, imported, behind a pointer embed; a nil embedded pointer at
+  call time; ambiguity at depth 2 resolved by depth 1; a field hiding a deeper method and a method
+  hiding a deeper field; a shallow wrong-signature method hiding a deep right one) × receivers
+  (value on value / pointer; pointer on every addressable operand shape and on already-pointer
+  operands; value on the non-addressable operands gc accepts; the pointer-on-non-addressable
+  rejections; method values bound at `(&x).Mv`, re-pointed vars, stored in fields / maps / slices,
+  at a `go` statement, on a re-assigned box; method expressions on non-struct, instantiated,
+  depth-3, pointer-embed and embedded-interface carriers, FR-3's `(*T).Mv`) × routes (direct,
+  interface dispatch from value and pointer boxes, embedded-interface re-dispatch,
+  interface-to-interface assertion to an unrelated interface and to a pointer-method one (comma-ok,
+  panic text), type-switch order, `*I` boxes, defer / go, a constraint's method by promotion and by
+  the pointer-constraint idiom, the preprint rewrite over a promoted Error / String) × sites
+  (`promotionRecords`, `methodSets` coverage, `noteInterface` / `staticIfaceOf`, `methodReceiverArg`
+  / `promotedReceiverArg`, the MethodExpr arm, `resolveMethod?` / `resolvePromoted?`,
+  `methodCarrierKey?` / `dynamicMethodSetRecorded` / `dynamicMethodSetExportedOnly`,
+  `satisfiesMethodSig` / `firstUnsatisfiedMethod?`, `receiverAt`'s `asIs` / `addr` / `deref` / nil
+  arms, `receiverRetag`'s non-struct no-op, `dynamicDispatch?`'s declared / promoted / `.iface` /
+  no-record / stub arms, `preprintDispatch`): 116 cells — 74 PROBED by this lane on both sides (gc
+  go1.26.5 under the runners' pins = the machine on every legal program; 11 row packages, 15
+  negative probes, 8 refusal probes incl. one FORGED wire for the recordless-carrier arm), 42
+  COVERED by existing rows (cited per cell in the lane's report). ROWS ADDED: 61 strict rows in 11
+  packages `Corpus/coverage/exec/*/sweep-s5-*/` (methods 17, embedding 18, interfaces 11, generics
+  7, sync 4, panic-recover 4), expected = gc, all PASS; 15 NEGATIVE rows
+  `Corpus/coverage/negative/compile/methods/sweep-s5-*/` (gc rejects and the frontend refuses as a
+  type-check rejection carrying gc's text: the ambiguous method value and method expression, a field
+  and a method of one name at the same depth, a duplicate embedded field, the static
+  interface-to-interface missing method, a value-set method expression over a pointer method, a
+  receiver whose type-parameter list shadows `int`, a pointer method on a composite literal / call
+  result / type assertion / channel receive / conversion result / a map element through promotion /
+  promoted on a call result, a call through a pointer to an interface). FINDINGS: none — no wrong
+  value, no wrong method dispatched, no `stuck` on a legal program, no program exported where gc
+  rejects; BUG-246–255 unused. CELLS LEFT (refusals named at the point of failure — coverage gaps,
+  not defects): a D5 marker's structural use (`new(time.Duration)` «default value for imported named
+  type»; a `time.Duration` box at `fmt.Stringer` «normalizing imported named type» — BUG-008's open
+  class); the D5 exported-only guard against an UNEXPORTED requirement of package main (refuses
+  where gc answers false: over-conservative by design, an imported type cannot carry `main.secret`);
+  a recordless carrier (no admitted source reaches one — the arm refuses by name on the forged wire,
+  as the GoCoreEval MS: fixtures pin); the FR-3 deref adapter `(*T).Mv`; the fmt shim's `%w` (S21);
+  a sync VALUE boxed as an argument inside a multi-call expression (the unseq lane's «hidden read …
+  boxes a non-atom»; the same box in its own statement is rowed); dispatch THROUGH a promoted sync
+  stub record at depth 2 (the designed red `embedding/promoted-stub-dispatch/box-sync-stub` already
+  holds depth 1); the preprint through a NIL embedded pointer (gc's «panic while printing panic
+  value: type runtime.errorString» fatal, refused as BUG-099).
 
 ## BUG-047 — frontend emits a call TWICE when the RHS of a single assign/define is a conversion of a call (silent divergence from Go)
 
@@ -2749,6 +2849,56 @@ observation is byte-identical; the one genuinely divergent channel
 - Cases: interfaces/assert-imported-method-set/comma-ok, interfaces/assert-imported-method-set/panic-form
 - Discovered: 2026-07-31 (final pre-merge adversarial audit of
   `quorum-pilot`, finding 8)
+- Neighbourhood: S5 (method sets: records, promotion, receiver adaptation, dispatch) — swept
+  2026-10-27 by lane `sweep/s5-method-sets` (plan §4, [USER]-approved 2026-10-27). THE MATRIX:
+  carriers (declared struct; defined int / string / slice / map / func / chan / array / bool /
+  float; imported types with a D5 exported-only record (`time.Duration`), modeled imported types
+  with a full record (`strings.Builder`, `bytes.Buffer`), the unexported types behind `errors.New`,
+  local module packages, sync primitives, generic instantiations, type parameters under method
+  constraints) × embedding (none; value depth 1 / 2 / 3; pointer; mixed value→pointer→value hops;
+  embedded interface at depth 1 and 2, imported, behind a pointer embed; a nil embedded pointer at
+  call time; ambiguity at depth 2 resolved by depth 1; a field hiding a deeper method and a method
+  hiding a deeper field; a shallow wrong-signature method hiding a deep right one) × receivers
+  (value on value / pointer; pointer on every addressable operand shape and on already-pointer
+  operands; value on the non-addressable operands gc accepts; the pointer-on-non-addressable
+  rejections; method values bound at `(&x).Mv`, re-pointed vars, stored in fields / maps / slices,
+  at a `go` statement, on a re-assigned box; method expressions on non-struct, instantiated,
+  depth-3, pointer-embed and embedded-interface carriers, FR-3's `(*T).Mv`) × routes (direct,
+  interface dispatch from value and pointer boxes, embedded-interface re-dispatch,
+  interface-to-interface assertion to an unrelated interface and to a pointer-method one (comma-ok,
+  panic text), type-switch order, `*I` boxes, defer / go, a constraint's method by promotion and by
+  the pointer-constraint idiom, the preprint rewrite over a promoted Error / String) × sites
+  (`promotionRecords`, `methodSets` coverage, `noteInterface` / `staticIfaceOf`, `methodReceiverArg`
+  / `promotedReceiverArg`, the MethodExpr arm, `resolveMethod?` / `resolvePromoted?`,
+  `methodCarrierKey?` / `dynamicMethodSetRecorded` / `dynamicMethodSetExportedOnly`,
+  `satisfiesMethodSig` / `firstUnsatisfiedMethod?`, `receiverAt`'s `asIs` / `addr` / `deref` / nil
+  arms, `receiverRetag`'s non-struct no-op, `dynamicDispatch?`'s declared / promoted / `.iface` /
+  no-record / stub arms, `preprintDispatch`): 116 cells — 74 PROBED by this lane on both sides (gc
+  go1.26.5 under the runners' pins = the machine on every legal program; 11 row packages, 15
+  negative probes, 8 refusal probes incl. one FORGED wire for the recordless-carrier arm), 42
+  COVERED by existing rows (cited per cell in the lane's report). ROWS ADDED: 61 strict rows in 11
+  packages `Corpus/coverage/exec/*/sweep-s5-*/` (methods 17, embedding 18, interfaces 11, generics
+  7, sync 4, panic-recover 4), expected = gc, all PASS; 15 NEGATIVE rows
+  `Corpus/coverage/negative/compile/methods/sweep-s5-*/` (gc rejects and the frontend refuses as a
+  type-check rejection carrying gc's text: the ambiguous method value and method expression, a field
+  and a method of one name at the same depth, a duplicate embedded field, the static
+  interface-to-interface missing method, a value-set method expression over a pointer method, a
+  receiver whose type-parameter list shadows `int`, a pointer method on a composite literal / call
+  result / type assertion / channel receive / conversion result / a map element through promotion /
+  promoted on a call result, a call through a pointer to an interface). FINDINGS: none — no wrong
+  value, no wrong method dispatched, no `stuck` on a legal program, no program exported where gc
+  rejects; BUG-246–255 unused. CELLS LEFT (refusals named at the point of failure — coverage gaps,
+  not defects): a D5 marker's structural use (`new(time.Duration)` «default value for imported named
+  type»; a `time.Duration` box at `fmt.Stringer` «normalizing imported named type» — BUG-008's open
+  class); the D5 exported-only guard against an UNEXPORTED requirement of package main (refuses
+  where gc answers false: over-conservative by design, an imported type cannot carry `main.secret`);
+  a recordless carrier (no admitted source reaches one — the arm refuses by name on the forged wire,
+  as the GoCoreEval MS: fixtures pin); the FR-3 deref adapter `(*T).Mv`; the fmt shim's `%w` (S21);
+  a sync VALUE boxed as an argument inside a multi-call expression (the unseq lane's «hidden read …
+  boxes a non-atom»; the same box in its own statement is rowed); dispatch THROUGH a promoted sync
+  stub record at depth 2 (the designed red `embedding/promoted-stub-dispatch/box-sync-stub` already
+  holds depth 1); the preprint through a NIL embedded pointer (gc's «panic while printing panic
+  value: type runtime.errorString» fatal, refused as BUG-099).
 
 BUG-008's sibling in the other polarity, and the exact mirror of the
 interim audit's finding 0 (vacuously TRUE satisfaction) — this one was
@@ -2799,6 +2949,56 @@ named types is the owed sub-slice, and it closes both bugs at once.
 - Cases: maps/imported-named-key-unhashable
 - Discovered: 2026-07-31 (pre-merge adversarial audit of the interfaces
   campaign, finding 11)
+- Neighbourhood: S5 (method sets: records, promotion, receiver adaptation, dispatch) — swept
+  2026-10-27 by lane `sweep/s5-method-sets` (plan §4, [USER]-approved 2026-10-27). THE MATRIX:
+  carriers (declared struct; defined int / string / slice / map / func / chan / array / bool /
+  float; imported types with a D5 exported-only record (`time.Duration`), modeled imported types
+  with a full record (`strings.Builder`, `bytes.Buffer`), the unexported types behind `errors.New`,
+  local module packages, sync primitives, generic instantiations, type parameters under method
+  constraints) × embedding (none; value depth 1 / 2 / 3; pointer; mixed value→pointer→value hops;
+  embedded interface at depth 1 and 2, imported, behind a pointer embed; a nil embedded pointer at
+  call time; ambiguity at depth 2 resolved by depth 1; a field hiding a deeper method and a method
+  hiding a deeper field; a shallow wrong-signature method hiding a deep right one) × receivers
+  (value on value / pointer; pointer on every addressable operand shape and on already-pointer
+  operands; value on the non-addressable operands gc accepts; the pointer-on-non-addressable
+  rejections; method values bound at `(&x).Mv`, re-pointed vars, stored in fields / maps / slices,
+  at a `go` statement, on a re-assigned box; method expressions on non-struct, instantiated,
+  depth-3, pointer-embed and embedded-interface carriers, FR-3's `(*T).Mv`) × routes (direct,
+  interface dispatch from value and pointer boxes, embedded-interface re-dispatch,
+  interface-to-interface assertion to an unrelated interface and to a pointer-method one (comma-ok,
+  panic text), type-switch order, `*I` boxes, defer / go, a constraint's method by promotion and by
+  the pointer-constraint idiom, the preprint rewrite over a promoted Error / String) × sites
+  (`promotionRecords`, `methodSets` coverage, `noteInterface` / `staticIfaceOf`, `methodReceiverArg`
+  / `promotedReceiverArg`, the MethodExpr arm, `resolveMethod?` / `resolvePromoted?`,
+  `methodCarrierKey?` / `dynamicMethodSetRecorded` / `dynamicMethodSetExportedOnly`,
+  `satisfiesMethodSig` / `firstUnsatisfiedMethod?`, `receiverAt`'s `asIs` / `addr` / `deref` / nil
+  arms, `receiverRetag`'s non-struct no-op, `dynamicDispatch?`'s declared / promoted / `.iface` /
+  no-record / stub arms, `preprintDispatch`): 116 cells — 74 PROBED by this lane on both sides (gc
+  go1.26.5 under the runners' pins = the machine on every legal program; 11 row packages, 15
+  negative probes, 8 refusal probes incl. one FORGED wire for the recordless-carrier arm), 42
+  COVERED by existing rows (cited per cell in the lane's report). ROWS ADDED: 61 strict rows in 11
+  packages `Corpus/coverage/exec/*/sweep-s5-*/` (methods 17, embedding 18, interfaces 11, generics
+  7, sync 4, panic-recover 4), expected = gc, all PASS; 15 NEGATIVE rows
+  `Corpus/coverage/negative/compile/methods/sweep-s5-*/` (gc rejects and the frontend refuses as a
+  type-check rejection carrying gc's text: the ambiguous method value and method expression, a field
+  and a method of one name at the same depth, a duplicate embedded field, the static
+  interface-to-interface missing method, a value-set method expression over a pointer method, a
+  receiver whose type-parameter list shadows `int`, a pointer method on a composite literal / call
+  result / type assertion / channel receive / conversion result / a map element through promotion /
+  promoted on a call result, a call through a pointer to an interface). FINDINGS: none — no wrong
+  value, no wrong method dispatched, no `stuck` on a legal program, no program exported where gc
+  rejects; BUG-246–255 unused. CELLS LEFT (refusals named at the point of failure — coverage gaps,
+  not defects): a D5 marker's structural use (`new(time.Duration)` «default value for imported named
+  type»; a `time.Duration` box at `fmt.Stringer` «normalizing imported named type» — BUG-008's open
+  class); the D5 exported-only guard against an UNEXPORTED requirement of package main (refuses
+  where gc answers false: over-conservative by design, an imported type cannot carry `main.secret`);
+  a recordless carrier (no admitted source reaches one — the arm refuses by name on the forged wire,
+  as the GoCoreEval MS: fixtures pin); the FR-3 deref adapter `(*T).Mv`; the fmt shim's `%w` (S21);
+  a sync VALUE boxed as an argument inside a multi-call expression (the unseq lane's «hidden read …
+  boxes a non-atom»; the same box in its own statement is rowed); dispatch THROUGH a promoted sync
+  stub record at depth 2 (the designed red `embedding/promoted-stub-dispatch/box-sync-stub` already
+  holds depth 1); the preprint through a NIL embedded pointer (gc's «panic while printing panic
+  value: type runtime.errorString» fatal, refused as BUG-099).
 
 The frontend emits `TypeDef`s only for types declared in the analyzed
 package, but it emits `{"kind":"named"}` for EVERY `*types.Named` — so any
@@ -2890,6 +3090,56 @@ imported non-interface named types) lands.
 - Discovered: 2026-07-30 (interfaces campaign — these cases were
   frontend-blocked before the campaign; the wrap/dispatch landing made
   the gap VISIBLE at the machine: `dynamic type main.T has no method m`)
+- Neighbourhood: S5 (method sets: records, promotion, receiver adaptation, dispatch) — swept
+  2026-10-27 by lane `sweep/s5-method-sets` (plan §4, [USER]-approved 2026-10-27). THE MATRIX:
+  carriers (declared struct; defined int / string / slice / map / func / chan / array / bool /
+  float; imported types with a D5 exported-only record (`time.Duration`), modeled imported types
+  with a full record (`strings.Builder`, `bytes.Buffer`), the unexported types behind `errors.New`,
+  local module packages, sync primitives, generic instantiations, type parameters under method
+  constraints) × embedding (none; value depth 1 / 2 / 3; pointer; mixed value→pointer→value hops;
+  embedded interface at depth 1 and 2, imported, behind a pointer embed; a nil embedded pointer at
+  call time; ambiguity at depth 2 resolved by depth 1; a field hiding a deeper method and a method
+  hiding a deeper field; a shallow wrong-signature method hiding a deep right one) × receivers
+  (value on value / pointer; pointer on every addressable operand shape and on already-pointer
+  operands; value on the non-addressable operands gc accepts; the pointer-on-non-addressable
+  rejections; method values bound at `(&x).Mv`, re-pointed vars, stored in fields / maps / slices,
+  at a `go` statement, on a re-assigned box; method expressions on non-struct, instantiated,
+  depth-3, pointer-embed and embedded-interface carriers, FR-3's `(*T).Mv`) × routes (direct,
+  interface dispatch from value and pointer boxes, embedded-interface re-dispatch,
+  interface-to-interface assertion to an unrelated interface and to a pointer-method one (comma-ok,
+  panic text), type-switch order, `*I` boxes, defer / go, a constraint's method by promotion and by
+  the pointer-constraint idiom, the preprint rewrite over a promoted Error / String) × sites
+  (`promotionRecords`, `methodSets` coverage, `noteInterface` / `staticIfaceOf`, `methodReceiverArg`
+  / `promotedReceiverArg`, the MethodExpr arm, `resolveMethod?` / `resolvePromoted?`,
+  `methodCarrierKey?` / `dynamicMethodSetRecorded` / `dynamicMethodSetExportedOnly`,
+  `satisfiesMethodSig` / `firstUnsatisfiedMethod?`, `receiverAt`'s `asIs` / `addr` / `deref` / nil
+  arms, `receiverRetag`'s non-struct no-op, `dynamicDispatch?`'s declared / promoted / `.iface` /
+  no-record / stub arms, `preprintDispatch`): 116 cells — 74 PROBED by this lane on both sides (gc
+  go1.26.5 under the runners' pins = the machine on every legal program; 11 row packages, 15
+  negative probes, 8 refusal probes incl. one FORGED wire for the recordless-carrier arm), 42
+  COVERED by existing rows (cited per cell in the lane's report). ROWS ADDED: 61 strict rows in 11
+  packages `Corpus/coverage/exec/*/sweep-s5-*/` (methods 17, embedding 18, interfaces 11, generics
+  7, sync 4, panic-recover 4), expected = gc, all PASS; 15 NEGATIVE rows
+  `Corpus/coverage/negative/compile/methods/sweep-s5-*/` (gc rejects and the frontend refuses as a
+  type-check rejection carrying gc's text: the ambiguous method value and method expression, a field
+  and a method of one name at the same depth, a duplicate embedded field, the static
+  interface-to-interface missing method, a value-set method expression over a pointer method, a
+  receiver whose type-parameter list shadows `int`, a pointer method on a composite literal / call
+  result / type assertion / channel receive / conversion result / a map element through promotion /
+  promoted on a call result, a call through a pointer to an interface). FINDINGS: none — no wrong
+  value, no wrong method dispatched, no `stuck` on a legal program, no program exported where gc
+  rejects; BUG-246–255 unused. CELLS LEFT (refusals named at the point of failure — coverage gaps,
+  not defects): a D5 marker's structural use (`new(time.Duration)` «default value for imported named
+  type»; a `time.Duration` box at `fmt.Stringer` «normalizing imported named type» — BUG-008's open
+  class); the D5 exported-only guard against an UNEXPORTED requirement of package main (refuses
+  where gc answers false: over-conservative by design, an imported type cannot carry `main.secret`);
+  a recordless carrier (no admitted source reaches one — the arm refuses by name on the forged wire,
+  as the GoCoreEval MS: fixtures pin); the FR-3 deref adapter `(*T).Mv`; the fmt shim's `%w` (S21);
+  a sync VALUE boxed as an argument inside a multi-call expression (the unseq lane's «hidden read …
+  boxes a non-atom»; the same box in its own statement is rowed); dispatch THROUGH a promoted sync
+  stub record at depth 2 (the designed red `embedding/promoted-stub-dispatch/box-sync-stub` already
+  holds depth 1); the preprint through a NIL embedded pointer (gc's «panic while printing panic
+  value: type runtime.errorString» fatal, refused as BUG-099).
 
 Go promotes an embedded field's methods (and its interface's method
 set) to the embedding struct, with receiver adjustment through the
@@ -6770,6 +7020,56 @@ carries the trigger.
   interface but registering the declaring receiver's set, last-write-wins — agrees with this entry)
   and this lane FIXED it; slice 3's entry text yielded to this one, its three Cases ids were appended
   above, and the three rows were re-pinned FAIL -> PASS (stage `-`) in this lane's baseline block.)
+- Neighbourhood: S5 (method sets: records, promotion, receiver adaptation, dispatch) — swept
+  2026-10-27 by lane `sweep/s5-method-sets` (plan §4, [USER]-approved 2026-10-27). THE MATRIX:
+  carriers (declared struct; defined int / string / slice / map / func / chan / array / bool /
+  float; imported types with a D5 exported-only record (`time.Duration`), modeled imported types
+  with a full record (`strings.Builder`, `bytes.Buffer`), the unexported types behind `errors.New`,
+  local module packages, sync primitives, generic instantiations, type parameters under method
+  constraints) × embedding (none; value depth 1 / 2 / 3; pointer; mixed value→pointer→value hops;
+  embedded interface at depth 1 and 2, imported, behind a pointer embed; a nil embedded pointer at
+  call time; ambiguity at depth 2 resolved by depth 1; a field hiding a deeper method and a method
+  hiding a deeper field; a shallow wrong-signature method hiding a deep right one) × receivers
+  (value on value / pointer; pointer on every addressable operand shape and on already-pointer
+  operands; value on the non-addressable operands gc accepts; the pointer-on-non-addressable
+  rejections; method values bound at `(&x).Mv`, re-pointed vars, stored in fields / maps / slices,
+  at a `go` statement, on a re-assigned box; method expressions on non-struct, instantiated,
+  depth-3, pointer-embed and embedded-interface carriers, FR-3's `(*T).Mv`) × routes (direct,
+  interface dispatch from value and pointer boxes, embedded-interface re-dispatch,
+  interface-to-interface assertion to an unrelated interface and to a pointer-method one (comma-ok,
+  panic text), type-switch order, `*I` boxes, defer / go, a constraint's method by promotion and by
+  the pointer-constraint idiom, the preprint rewrite over a promoted Error / String) × sites
+  (`promotionRecords`, `methodSets` coverage, `noteInterface` / `staticIfaceOf`, `methodReceiverArg`
+  / `promotedReceiverArg`, the MethodExpr arm, `resolveMethod?` / `resolvePromoted?`,
+  `methodCarrierKey?` / `dynamicMethodSetRecorded` / `dynamicMethodSetExportedOnly`,
+  `satisfiesMethodSig` / `firstUnsatisfiedMethod?`, `receiverAt`'s `asIs` / `addr` / `deref` / nil
+  arms, `receiverRetag`'s non-struct no-op, `dynamicDispatch?`'s declared / promoted / `.iface` /
+  no-record / stub arms, `preprintDispatch`): 116 cells — 74 PROBED by this lane on both sides (gc
+  go1.26.5 under the runners' pins = the machine on every legal program; 11 row packages, 15
+  negative probes, 8 refusal probes incl. one FORGED wire for the recordless-carrier arm), 42
+  COVERED by existing rows (cited per cell in the lane's report). ROWS ADDED: 61 strict rows in 11
+  packages `Corpus/coverage/exec/*/sweep-s5-*/` (methods 17, embedding 18, interfaces 11, generics
+  7, sync 4, panic-recover 4), expected = gc, all PASS; 15 NEGATIVE rows
+  `Corpus/coverage/negative/compile/methods/sweep-s5-*/` (gc rejects and the frontend refuses as a
+  type-check rejection carrying gc's text: the ambiguous method value and method expression, a field
+  and a method of one name at the same depth, a duplicate embedded field, the static
+  interface-to-interface missing method, a value-set method expression over a pointer method, a
+  receiver whose type-parameter list shadows `int`, a pointer method on a composite literal / call
+  result / type assertion / channel receive / conversion result / a map element through promotion /
+  promoted on a call result, a call through a pointer to an interface). FINDINGS: none — no wrong
+  value, no wrong method dispatched, no `stuck` on a legal program, no program exported where gc
+  rejects; BUG-246–255 unused. CELLS LEFT (refusals named at the point of failure — coverage gaps,
+  not defects): a D5 marker's structural use (`new(time.Duration)` «default value for imported named
+  type»; a `time.Duration` box at `fmt.Stringer` «normalizing imported named type» — BUG-008's open
+  class); the D5 exported-only guard against an UNEXPORTED requirement of package main (refuses
+  where gc answers false: over-conservative by design, an imported type cannot carry `main.secret`);
+  a recordless carrier (no admitted source reaches one — the arm refuses by name on the forged wire,
+  as the GoCoreEval MS: fixtures pin); the FR-3 deref adapter `(*T).Mv`; the fmt shim's `%w` (S21);
+  a sync VALUE boxed as an argument inside a multi-call expression (the unseq lane's «hidden read …
+  boxes a non-atom»; the same box in its own statement is rowed); dispatch THROUGH a promoted sync
+  stub record at depth 2 (the designed red `embedding/promoted-stub-dispatch/box-sync-stub` already
+  holds depth 1); the preprint through a NIL embedded pointer (gc's «panic while printing panic
+  value: type runtime.errorString» fatal, refused as BUG-099).
 
 WHAT (spec#Embedded_interfaces, spec#Interface_types, spec#Method_sets): the method set of
 `J interface{ I; bar() }` is the UNION `{foo, bar}`; a type implements `J` iff its method set
@@ -9878,7 +10178,56 @@ WHAT: spec#Declarations_and_scope — the scope of a declared identifier begins 
 - Pinned-by: differential
 - Cases: methods/nil-receiver, methods/pointer-method-value-read
 - Discovered: commit 1e080a83 — the method-value guardrails surfaced it; the fix also repaired `methods/nil-receiver`, which had been failing on main.
-- Neighbourhood: to be swept in step 2, shape S5 (method sets: records, promotion, receiver adaptation, dispatch)
+- Neighbourhood: S5 (method sets: records, promotion, receiver adaptation, dispatch) — swept
+  2026-10-27 by lane `sweep/s5-method-sets` (plan §4, [USER]-approved 2026-10-27). THE MATRIX:
+  carriers (declared struct; defined int / string / slice / map / func / chan / array / bool /
+  float; imported types with a D5 exported-only record (`time.Duration`), modeled imported types
+  with a full record (`strings.Builder`, `bytes.Buffer`), the unexported types behind `errors.New`,
+  local module packages, sync primitives, generic instantiations, type parameters under method
+  constraints) × embedding (none; value depth 1 / 2 / 3; pointer; mixed value→pointer→value hops;
+  embedded interface at depth 1 and 2, imported, behind a pointer embed; a nil embedded pointer at
+  call time; ambiguity at depth 2 resolved by depth 1; a field hiding a deeper method and a method
+  hiding a deeper field; a shallow wrong-signature method hiding a deep right one) × receivers
+  (value on value / pointer; pointer on every addressable operand shape and on already-pointer
+  operands; value on the non-addressable operands gc accepts; the pointer-on-non-addressable
+  rejections; method values bound at `(&x).Mv`, re-pointed vars, stored in fields / maps / slices,
+  at a `go` statement, on a re-assigned box; method expressions on non-struct, instantiated,
+  depth-3, pointer-embed and embedded-interface carriers, FR-3's `(*T).Mv`) × routes (direct,
+  interface dispatch from value and pointer boxes, embedded-interface re-dispatch,
+  interface-to-interface assertion to an unrelated interface and to a pointer-method one (comma-ok,
+  panic text), type-switch order, `*I` boxes, defer / go, a constraint's method by promotion and by
+  the pointer-constraint idiom, the preprint rewrite over a promoted Error / String) × sites
+  (`promotionRecords`, `methodSets` coverage, `noteInterface` / `staticIfaceOf`, `methodReceiverArg`
+  / `promotedReceiverArg`, the MethodExpr arm, `resolveMethod?` / `resolvePromoted?`,
+  `methodCarrierKey?` / `dynamicMethodSetRecorded` / `dynamicMethodSetExportedOnly`,
+  `satisfiesMethodSig` / `firstUnsatisfiedMethod?`, `receiverAt`'s `asIs` / `addr` / `deref` / nil
+  arms, `receiverRetag`'s non-struct no-op, `dynamicDispatch?`'s declared / promoted / `.iface` /
+  no-record / stub arms, `preprintDispatch`): 116 cells — 74 PROBED by this lane on both sides (gc
+  go1.26.5 under the runners' pins = the machine on every legal program; 11 row packages, 15
+  negative probes, 8 refusal probes incl. one FORGED wire for the recordless-carrier arm), 42
+  COVERED by existing rows (cited per cell in the lane's report). ROWS ADDED: 61 strict rows in 11
+  packages `Corpus/coverage/exec/*/sweep-s5-*/` (methods 17, embedding 18, interfaces 11, generics
+  7, sync 4, panic-recover 4), expected = gc, all PASS; 15 NEGATIVE rows
+  `Corpus/coverage/negative/compile/methods/sweep-s5-*/` (gc rejects and the frontend refuses as a
+  type-check rejection carrying gc's text: the ambiguous method value and method expression, a field
+  and a method of one name at the same depth, a duplicate embedded field, the static
+  interface-to-interface missing method, a value-set method expression over a pointer method, a
+  receiver whose type-parameter list shadows `int`, a pointer method on a composite literal / call
+  result / type assertion / channel receive / conversion result / a map element through promotion /
+  promoted on a call result, a call through a pointer to an interface). FINDINGS: none — no wrong
+  value, no wrong method dispatched, no `stuck` on a legal program, no program exported where gc
+  rejects; BUG-246–255 unused. CELLS LEFT (refusals named at the point of failure — coverage gaps,
+  not defects): a D5 marker's structural use (`new(time.Duration)` «default value for imported named
+  type»; a `time.Duration` box at `fmt.Stringer` «normalizing imported named type» — BUG-008's open
+  class); the D5 exported-only guard against an UNEXPORTED requirement of package main (refuses
+  where gc answers false: over-conservative by design, an imported type cannot carry `main.secret`);
+  a recordless carrier (no admitted source reaches one — the arm refuses by name on the forged wire,
+  as the GoCoreEval MS: fixtures pin); the FR-3 deref adapter `(*T).Mv`; the fmt shim's `%w` (S21);
+  a sync VALUE boxed as an argument inside a multi-call expression (the unseq lane's «hidden read …
+  boxes a non-atom»; the same box in its own statement is rowed); dispatch THROUGH a promoted sync
+  stub record at depth 2 (the designed red `embedding/promoted-stub-dispatch/box-sync-stub` already
+  holds depth 1); the preprint through a NIL embedded pointer (gc's «panic while printing panic
+  value: type runtime.errorString» fatal, refused as BUG-099).
 
 WHAT: spec#Calls — for a pointer receiver, an already-pointer base is used as is and an addressable value base has its address taken; for a value receiver the value is copied. SITE: `tools/nativefrontend/emit.go` the shared receiver helper (`methodReceiverArg`), used by `emitMethodCall` and the method-value emission. ROUTE: `p.M()` and `p.M` with `p : *T` and `M` a pointer-receiver method (BUG-048, 2026-08-08, is the value-receiver mirror; BUG-063 the nil `(*q).M()` panic).
 

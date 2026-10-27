@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+depth2-dispatch	depth2Dispatch	-	ok	-	embedding,methods,interfaces,structs,type_assertions,comma_ok,strings
+depth2-nil-method-value	depth2NilMethodValue	-	ok	-	embedding,methods,interfaces,structs,nil,panic,recover,defer,named-results,strings
+embedded-imported-interface	embeddedImportedInterface	-	ok	-	embedding,methods,interfaces,structs,stdlib,strings
+pointer-then-interface	pointerThenInterface	-	ok	-	embedding,methods,interfaces,structs,pointers,nil,panic,recover,defer,named-results,strings
+method-expression-iface-target	methodExpressionIfaceTarget	-	ok	-	embedding,methods,interfaces,structs,functions,strings

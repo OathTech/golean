@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+depth1-resolves-depth2	depth1ResolvesDepth2	-	ok	-	embedding,methods,interfaces,structs,type_assertions,comma_ok,functions
+field-hides-deeper-method	fieldHidesDeeperMethod	-	ok	-	embedding,methods,fields,interfaces,structs,type_assertions,comma_ok,shadowing
+method-hides-deeper-field	methodHidesDeeperField	-	ok	-	embedding,methods,fields,interfaces,structs,type_assertions,comma_ok,shadowing
+shallow-wrong-signature-hides-deep	shallowWrongSignatureHidesDeep	-	ok	-	embedding,methods,interfaces,structs,type_assertions,comma_ok,shadowing,strings,len

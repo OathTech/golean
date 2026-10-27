@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+int-dispatch	intDispatch	-	ok	-	methods,interfaces,defined_type,ints,pointers
+int-pointer-method-box	intPointerMethodBox	-	ok	-	methods,interfaces,defined_type,ints,pointers,type_assertions,comma_ok
+slice-map-dispatch	sliceMapDispatch	-	ok	-	methods,interfaces,defined_type,slices,maps,type_assertions,comma_ok
+func-chan-dispatch	funcChanDispatch	-	ok	-	methods,interfaces,defined_type,functions,channels,type_assertions,comma_ok
+array-string-bool-float-dispatch	arrayStringBoolFloatDispatch	-	ok	-	methods,interfaces,defined_type,arrays,strings,bools,floats,type_assertions,comma_ok
+nonstruct-auto-address	nonstructAutoAddress	-	ok	-	methods,defined_type,ints,pointers,addressability,slices,arrays
+nonstruct-method-values	nonstructMethodValues	-	ok	-	methods,defined_type,ints,pointers,value_copy,closures
+nonstruct-method-expressions	nonstructMethodExpressions	-	ok	-	methods,defined_type,ints,pointers,functions
+nonstruct-type-switch	nonstructTypeSwitch	-	ok	-	methods,interfaces,defined_type,ints,pointers,type_switch

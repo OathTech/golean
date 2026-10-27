@@ -1,0 +1,2 @@
+# expected_substring	features
+pointer to interface, not interface	interfaces,pointers,methods,compile_error

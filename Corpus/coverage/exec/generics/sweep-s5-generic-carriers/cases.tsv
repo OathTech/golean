@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+instantiation-satisfies	instantiationSatisfies	-	ok	-	generics,methods,interfaces,type_assertions,comma_ok,type_switch,structs
+instantiation-pointer-method	instantiationPointerMethod	-	ok	-	generics,methods,interfaces,pointers,addressability,structs
+generic-embedding-promotion	genericEmbeddingPromotion	-	ok	-	generics,methods,interfaces,embedding,pointers,type_assertions,comma_ok,structs
+instantiation-method-expression	instantiationMethodExpression	-	ok	-	generics,methods,pointers,functions,structs
+pointer-constraint-idiom	pointerConstraintIdiom	-	ok	-	generics,methods,constraints,pointers,loops,structs
+constraint-by-promotion	constraintByPromotion	-	ok	-	generics,methods,constraints,embedding,interfaces,structs
+typeparam-method-value-and-box	typeparamMethodValueAndBox	-	ok	-	generics,methods,constraints,interfaces,type_assertions,comma_ok,closures,embedding,structs

@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+depth3-direct	depth3Direct	-	ok	-	embedding,methods,pointers,structs,addressability
+depth3-dispatch	depth3Dispatch	-	ok	-	embedding,methods,interfaces,pointers,structs
+depth3-method-values	depth3MethodValues	-	ok	-	embedding,methods,pointers,structs,value_copy,closures
+depth3-method-expressions	depth3MethodExpressions	-	ok	-	embedding,methods,pointers,structs,functions
+mixed-hops-direct	mixedHopsDirect	-	ok	-	embedding,methods,pointers,structs
+mixed-hops-dispatch	mixedHopsDispatch	-	ok	-	embedding,methods,interfaces,pointers,structs
+mixed-hops-method-expression	mixedHopsMethodExpression	-	ok	-	embedding,methods,pointers,structs,functions
+value-method-pointer-embed-dispatch	valueMethodPointerEmbedDispatch	-	ok	-	embedding,methods,interfaces,pointers,structs
+nil-pointer-embed-pointer-method-dispatch	nilPointerEmbedPointerMethodDispatch	-	ok	-	embedding,methods,interfaces,pointers,nil,structs

@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+pointer-method-addressable-paths	pointerMethodAddressablePaths	-	ok	-	methods,pointers,addressability,structs,fields,arrays,globals
+pointer-method-pointer-operands	pointerMethodPointerOperands	-	ok	-	methods,pointers,maps,slices,literals,calls
+value-method-nonaddressable	valueMethodNonaddressable	-	ok	-	methods,value_copy,maps,calls,type_assertions,literals,channels

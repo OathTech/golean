@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+unrelated-interfaces	unrelatedInterfaces	-	ok	-	interfaces,methods,type_assertions,comma_ok,structs
+pointer-method-missing-ok	pointerMethodMissingOk	-	ok	-	interfaces,methods,type_assertions,comma_ok,pointers,structs
+pointer-method-missing-panic	pointerMethodMissingPanic	-	panic	interface conversion: main.doc is not main.setter: missing method Set	interfaces,methods,type_assertions,pointers,structs,panic
+type-switch-order	typeSwitchOrder	-	ok	-	interfaces,methods,type_switch,pointers,structs
+pointer-to-interface-no-methods	pointerToInterfaceNoMethods	-	ok	-	interfaces,methods,type_assertions,comma_ok,pointers,structs

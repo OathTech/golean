@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+addr-value-method-copies	addrValueMethodCopies	-	ok	-	methods,pointers,value_copy,closures
+repointed-pointer-var	repointedPointerVar	-	ok	-	methods,pointers,value_copy,closures
+stored-method-values	storedMethodValues	-	ok	-	methods,pointers,value_copy,closures,structs,maps,slices,higher_order
+go-value-receiver-copy	goValueReceiverCopy	-	ok	-	methods,value_copy,goroutines,channels
+iface-method-value-rebound-box	ifaceMethodValueReboundBox	-	ok	-	methods,interfaces,value_copy,closures,pointers
