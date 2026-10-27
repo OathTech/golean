@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+search-with-partial-needles	searchWithPartialNeedles	-	ok	-	strings,stdlib,bytes,unicode,invalid_utf8
+count-repeat-replace	countRepeatReplace	-	ok	-	strings,stdlib,invalid_utf8,unicode	strict	-	depth=64
+case-mapping	caseMapping	-	ok	-	strings,stdlib,unicode,invalid_utf8,higher_order	strict	-	depth=64
+to-valid-utf8	toValidUTF8	-	ok	-	strings,stdlib,unicode,invalid_utf8	strict	-	depth=64
+trim-ascii-cutset-and-func	trimAsciiCutsetAndFunc	-	ok	-	strings,stdlib,bytes,invalid_utf8,higher_order
+split-cut-join-invalid	splitCutJoinInvalid	-	ok	-	strings,stdlib,slices,invalid_utf8	strict	-	depth=64
+equal-fold-and-fields	equalFoldAndFields	-	ok	-	strings,stdlib,unicode,invalid_utf8
+builder-invalid-writes	builderInvalidWrites	-	ok	-	strings,stdlib,methods,runes,invalid_utf8
+unicode-predicates-on-bytes	unicodePredicatesOnBytes	-	ok	-	strings,stdlib,unicode,runes

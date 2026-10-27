@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+runes-invalid-classes	runesInvalidClasses	-	ok	-	strings,runes,conversions,invalid_utf8
+runes-valid-classes	runesValidClasses	-	ok	-	strings,runes,conversions,unicode,bytes
+runes-round-trip	runesRoundTrip	-	ok	-	strings,runes,conversions,invalid_utf8,unicode,equality
+rune-to-string-boundaries	runeToStringBoundaries	-	ok	-	strings,runes,conversions,unicode
+rune-slice-to-string-mixed	runeSliceToStringMixed	-	ok	-	strings,runes,conversions,unicode,append
+defined-rune-conversions	definedRuneConversions	-	ok	-	strings,runes,conversions,defined_type,invalid_utf8,unicode

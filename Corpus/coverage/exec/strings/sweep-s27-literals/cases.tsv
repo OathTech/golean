@@ -1,0 +1,18 @@
+# id	subject	args	expected_status	expected_reason	features
+esc-abfv	escAbfv	-	ok	-	strings,literals,escapes,bytes
+esc-octal-high-upper-hex	escOctalHighUpperHex	-	ok	-	strings,literals,escapes,bytes,invalid_utf8
+esc-del-soh	escDelSoh	-	ok	-	strings,literals,escapes,bytes
+esc-lone-continuation	escLoneContinuation	-	ok	-	strings,literals,escapes,bytes,invalid_utf8
+esc-truncated	escTruncated	-	ok	-	strings,literals,escapes,bytes,invalid_utf8,concat
+esc-overlong	escOverlong	-	ok	-	strings,literals,escapes,bytes,invalid_utf8
+esc-surrogate	escSurrogate	-	ok	-	strings,literals,escapes,bytes,invalid_utf8
+esc-above-max-and-leads	escAboveMaxAndLeads	-	ok	-	strings,literals,escapes,bytes,invalid_utf8
+esc-replacement-spellings	escReplacementSpellings	-	ok	-	strings,literals,escapes,bytes,unicode,equality
+esc-bom-inside	escBomInside	-	ok	-	strings,literals,escapes,bytes,unicode,equality
+esc-c1-controls	escC1Controls	-	ok	-	strings,literals,escapes,bytes,unicode,equality
+esc-json-sensitive	escJsonSensitive	-	ok	-	strings,literals,escapes,bytes,unicode
+raw-text-4-byte	rawText4Byte	-	ok	-	strings,literals,bytes,unicode,equality
+raw-literal-tab-utf8	rawLiteralTabUtf8	-	ok	-	strings,literals,escapes,bytes,unicode
+rune-literals	runeLiterals	-	ok	-	strings,literals,runes,escapes,unicode
+const-folding	constFolding	-	ok	-	strings,constants,literals,invalid_utf8,comparisons,len
+const-rune-conversions	constRuneConversions	-	ok	-	strings,constants,conversions,runes,unicode

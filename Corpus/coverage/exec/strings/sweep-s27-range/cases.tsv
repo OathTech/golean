@@ -1,0 +1,16 @@
+# id	subject	args	expected_status	expected_reason	features
+four-byte	range4Byte	-	ok	-	strings,range,runes,unicode,bytes
+truncated-at-end	rangeTruncatedAtEnd	-	ok	-	strings,range,runes,invalid_utf8
+truncated-4-at-end	rangeTruncated4AtEnd	-	ok	-	strings,range,runes,invalid_utf8
+truncated-before-ascii	rangeTruncatedBeforeAscii	-	ok	-	strings,range,runes,invalid_utf8
+overlong-2	rangeOverlong2	-	ok	-	strings,range,runes,invalid_utf8
+overlong-3-and-4	rangeOverlong3and4	-	ok	-	strings,range,runes,invalid_utf8
+surrogate	rangeSurrogate	-	ok	-	strings,range,runes,invalid_utf8
+above-max	rangeAboveMax	-	ok	-	strings,range,runes,invalid_utf8,unicode
+bad-leads	rangeBadLeads	-	ok	-	strings,range,runes,invalid_utf8
+nul-del-c1	rangeNulDelC1	-	ok	-	strings,range,runes,bytes,unicode
+bom-and-line-sep	rangeBomAndLineSep	-	ok	-	strings,range,runes,unicode
+encoded-replacement	rangeEncodedReplacement	-	ok	-	strings,range,runes,unicode,invalid_utf8
+boundary-runes	rangeBoundaryRunes	-	ok	-	strings,range,runes,unicode
+one-var-and-count	rangeOneVarAndCount	-	ok	-	strings,range,bytes,invalid_utf8,ints
+defined-string	rangeDefinedString	-	ok	-	strings,range,runes,defined_type,invalid_utf8

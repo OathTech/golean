@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+del-c1	panicDelC1	-	panic	a	panic,strings,unicode
+bom-and-line-seps	panicBomAndLineSeps	-	panic	x	panic,strings,unicode
+json-sensitive	panicJsonSensitive	-	panic	q	panic,strings,escapes
+encoded-replacement	panicEncodedReplacement	-	panic	r	panic,strings,unicode
+empty-string	panicEmptyString	-	panic	panic:	panic,strings,empty
+four-byte-then-nul	panicFourByteThenNul	-	panic	z	panic,strings,unicode
+long	panicLong	-	panic	0123456789	panic,strings,unicode,loops
+error-nul-unicode	panicErrorNulUnicode	-	panic	e	panic,strings,interfaces,stdlib,unicode
+recovered-del-c1	panicRecoveredDelC1	-	panic	again	panic,recover,defer,strings,unicode

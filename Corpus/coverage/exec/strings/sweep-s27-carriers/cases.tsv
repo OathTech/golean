@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+channel-and-goroutine	throughChannelAndGoroutine	-	ok	-	strings,channels,goroutines,invalid_utf8,equality
+closure-and-pointer	throughClosureAndPointer	-	ok	-	strings,closures,pointers,invalid_utf8,equality
+struct-array-slice	throughStructArraySlice	-	ok	-	strings,structs,arrays,slices,append,invalid_utf8
+interface-and-assert	throughInterfaceAndAssert	-	ok	-	strings,interfaces,type_assertions,defined_type,invalid_utf8
+generic-and-method	throughGenericAndMethod	-	ok	-	strings,generics,methods,defined_type,invalid_utf8
+global	throughGlobal	-	ok	-	strings,globals,init,invalid_utf8,equality
+switch-on-invalid-bytes	switchOnInvalidBytes	-	ok	-	strings,switch,slicing,invalid_utf8
+defer-arg	throughDeferArg	-	ok	-	strings,defer,named-results,invalid_utf8

@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+switch-cases	posSwitch	-	ok	-	strings,literals,switch,invalid_utf8,equality
+map-literal	posMapLiteral	-	ok	-	strings,literals,maps,keys,invalid_utf8
+struct-array-slice-literals	posStructArraySlice	-	ok	-	strings,literals,structs,arrays,slices,invalid_utf8,unicode
+globals-and-const	posGlobals	-	ok	-	strings,literals,globals,constants,init,invalid_utf8
+generic-instantiation	posGeneric	-	ok	-	strings,literals,generics,defined_type,invalid_utf8
+fmt-format-pieces	posFmtFormatPieces	-	ok	-	strings,literals,stdlib,invalid_utf8,bytes
+select-unseq-defined-key	posSelectUnseqDefinedKey	-	ok	-	strings,literals,select,channels,multi_assign,maps,defined_type,invalid_utf8

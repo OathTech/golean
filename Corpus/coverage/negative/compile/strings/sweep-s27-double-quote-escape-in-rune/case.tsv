@@ -1,0 +1,2 @@
+# expected_substring	features
+unknown escape	strings,runes,literals,escapes,compile_error

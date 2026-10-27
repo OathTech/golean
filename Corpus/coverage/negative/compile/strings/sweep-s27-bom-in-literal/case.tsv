@@ -1,0 +1,2 @@
+# expected_substring	features
+invalid BOM in the middle of the file	strings,literals,unicode,compile_error

@@ -1,0 +1,13 @@
+# id	subject	args	expected_status	expected_reason	features
+return-nul-del-c1	returnNulDelC1	-	ok	-	strings,bytes,unicode,returns
+return-bom-and-line-seps	returnBomAndLineSeps	-	ok	-	strings,bytes,unicode,returns
+return-json-sensitive	returnJsonSensitive	-	ok	-	strings,bytes,escapes,returns
+return-four-byte	returnFourByte	-	ok	-	strings,bytes,unicode,returns
+return-surrogate-overlong	returnSurrogateOverlong	-	ok	-	strings,bytes,invalid_utf8,returns
+return-empty	returnEmpty	-	ok	-	strings,empty,returns
+return-long-300	returnLong300	-	ok	-	strings,concat,loops,invalid_utf8,returns
+return-long-10k	returnLong10k	-	ok	-	strings,concat,loops,slicing,returns
+return-defined-and-mixed	returnDefinedAndMixed	-	ok	-	strings,defined_type,multi_result,invalid_utf8,returns
+return-struct-with-strings	returnStructWithStrings	-	ok	-	strings,structs,arrays,defined_type,invalid_utf8,returns
+return-array-of-strings	returnArrayOfStrings	-	ok	-	strings,arrays,invalid_utf8,returns
+return-interface-strings	returnInterfaceStrings	-	ok	-	strings,interfaces,defined_type,invalid_utf8,returns

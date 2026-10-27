@@ -1,0 +1,16 @@
+# id	subject	args	expected_status	expected_reason	features
+len-per-class	lenPerClass	-	ok	-	strings,len,bytes,unicode,invalid_utf8
+index-per-class	indexPerClass	-	ok	-	strings,indexing,bytes,unicode,invalid_utf8
+slice-mid-sequence	sliceMidSequence	-	ok	-	strings,slicing,bytes,unicode,concat,equality
+concat-forms-valid	concatFormsValid	-	ok	-	strings,concat,bytes,invalid_utf8,equality
+compare-per-class	comparePerClass	-	ok	-	strings,comparisons,bytes,invalid_utf8,unicode
+min-max-sort-strings	minMaxSortStrings	-	ok	-	strings,comparisons,min,max,sort,stdlib,invalid_utf8
+boxed-and-aggregate-equality	boxedAndAggregateEquality	-	ok	-	strings,equality,interfaces,structs,arrays,invalid_utf8
+map-keys-nul-and-built	mapKeysNulAndBuilt	-	ok	-	strings,maps,keys,delete,bytes,conversions,invalid_utf8
+struct-key-and-any-key	structKeyAndAnyKey	-	ok	-	strings,maps,keys,structs,interfaces,invalid_utf8
+bytes-from-string-per-class	bytesFromStringPerClass	-	ok	-	strings,bytes,conversions,slices,invalid_utf8
+string-from-bytes-per-class	stringFromBytesPerClass	-	ok	-	strings,bytes,conversions,unicode,invalid_utf8,equality
+defined-conversions-keep-bytes	definedConversionsKeepBytes	-	ok	-	strings,bytes,conversions,defined_type,invalid_utf8
+string-of-byte-vs-slice	stringOfByteVsSlice	-	ok	-	strings,runes,conversions,bytes,unicode
+string-of-int-kinds-direct	stringOfIntKindsDirect	-	ok	-	strings,runes,conversions,ints,unicode
+append-string-to-bytes	appendStringToBytes	-	ok	-	strings,bytes,append,slices,invalid_utf8

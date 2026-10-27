@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+sprintf-modeled-verbs	sprintfModeledVerbs	-	ok	-	strings,stdlib,invalid_utf8
+sprint-and-errorf	sprintAndErrorf	-	ok	-	strings,stdlib,invalid_utf8
+errors-new-bytes	errorsNewBytes	-	ok	-	strings,stdlib,interfaces,invalid_utf8,unicode,equality

@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features
+del-c1-bom	outDelC1Bom	-	ok	-	strings,print,unicode,bytes
+line-seps-and-json-sensitive	outLineSepsAndJsonSensitive	-	ok	-	strings,print,unicode,escapes
+trailing-nul	outTrailingNul	-	ok	-	strings,print,bytes
+nul-only	outNulOnly	-	ok	-	strings,print,bytes
+no-trailing-newline	outNoTrailingNewline	-	ok	-	strings,print
+backslash-percent-shell	outBackslashPercentShell	-	ok	-	strings,print,escapes
+json-looking	outJsonLooking	-	ok	-	strings,print
+long-10k	outLong10k	-	ok	-	strings,print,loops
+replacement-from-rune	outReplacementFromRune	-	ok	-	strings,print,runes,unicode
+defined-and-concat	outDefinedAndConcat	-	ok	-	strings,print,defined_type,concat

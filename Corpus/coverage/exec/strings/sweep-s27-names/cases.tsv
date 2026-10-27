@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+struct-and-field-names	groesse	-	ok	-	strings,structs,unicode,fields
+defined-in-interface	aergerInInterface	-	ok	-	strings,interfaces,methods,defined_type,unicode,globals,invalid_utf8

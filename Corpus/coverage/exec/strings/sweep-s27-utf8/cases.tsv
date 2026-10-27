@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+valid-and-count	validAndCount	-	ok	-	strings,stdlib,unicode,runes,invalid_utf8
+decode-rune-per-class	decodeRunePerClass	-	ok	-	strings,stdlib,unicode,runes,invalid_utf8
+full-rune-len-valid	fullRuneLenValid	-	ok	-	strings,stdlib,unicode,runes,invalid_utf8
+encode-rune-invalid	encodeRuneInvalid	-	ok	-	strings,stdlib,unicode,runes,bytes,append

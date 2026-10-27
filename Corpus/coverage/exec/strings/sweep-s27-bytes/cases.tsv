@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+equal-compare-index	equalCompareIndex	-	ok	-	strings,bytes,stdlib,slices,invalid_utf8,unicode
+case-and-runes	caseAndRunes	-	ok	-	strings,bytes,stdlib,slices,unicode,invalid_utf8,higher_order
+buffer-invalid-writes	bufferInvalidWrites	-	ok	-	strings,bytes,stdlib,methods,runes,invalid_utf8
+trim-split-fields	trimSplitFields	-	ok	-	strings,bytes,stdlib,slices,invalid_utf8

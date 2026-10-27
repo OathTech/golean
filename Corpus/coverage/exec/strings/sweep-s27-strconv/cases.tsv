@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+quote-per-class	quotePerClass	-	ok	-	strings,stdlib,escapes,unicode,invalid_utf8
+quote-ascii-and-rune	quoteAsciiAndRune	-	ok	-	strings,stdlib,escapes,runes,unicode
+unquote-forms	unquoteForms	-	ok	-	strings,stdlib,escapes,invalid_utf8
+printable-and-append	printableAndAppend	-	ok	-	strings,stdlib,unicode,append
