@@ -1,5 +1,27 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 6179 (5820 PASS / 359 FAIL)
+# cases: 6179 (5829 PASS / 350 FAIL)
+# re-pinned: 2026-10-27 [AGENT], lane frontend/fix-binding-1027 — BUG-300, 301, 302 (the S13 sweep) FIXED in tools/nativefrontend
+#   (the campaign plan's rule that a finding is fixed through the normal train, [USER] approved 2026-10-27, relayed): (1) emit.go
+#   emitDeclStmt lowers a grouped `var ( … )` declaration spec by spec (one `var` node per VarSpec, in source order, into the same
+#   block) with the self-shadow capture set per spec, so a later spec's initializer reads an earlier spec's NEW cell; (2) emitProgram's
+#   called-method anchor pass deduplicates against the function-local interface declarations too, one dispatch entry per local
+#   interface method; (3) emitFuncLit registers a literal's parameters and results from the ORIGINAL signature's objects, one B6
+#   declaration per parameter inside a generic function. 9 rows FAIL→PASS and NOTHING ELSE MOVED: 6179 rows; PASS 5820 + 9 = 5829;
+#   FAIL 359 - 9 = 350. No new row, no removal, no cause change (the two machine-cause rows keyed at the train-27 stage,
+#   decoder-scope-wrong-declaration and decoder-duplicate-function-id, now classify no row). Measured by CAPPED_MEM_MAX=64G capped
+#   scripts/ci --diff at the lane tree 5b4c2cba before this re-pin (913 s wall; cases=6179 pass=5829 fail=350 export_status=0; its only drift: these 9 flips, so the
+#   differential baseline diff was its one FAIL and the RESULT line FAIL; every other section ok), the rows taken from that run's
+#   artifacts/coverage/latest.tsv; the --diff at the tip judges. The moved rows (each on its entry's Cases line; the pinned FAIL
+#   stage/cause before → PASS):
+#     generics/sweep-s13-lit-param-typeparam/lit-param-capturing                     FAIL/lean-observation error:decoder-scope-wrong-declaration → PASS
+#     generics/sweep-s13-lit-param-typeparam/lit-param-no-capture                    FAIL/lean-observation error:decoder-scope-wrong-declaration → PASS
+#     scoping/sweep-s13-grouped-var-spec/grouped-var-no-outer                        FAIL/lean-observation error:decoder-scope-wrong-declaration → PASS
+#     scoping/sweep-s13-grouped-var-spec/grouped-var-reads-new-name                  FAIL/lean-observation error:decoder-scope-wrong-declaration → PASS
+#     scoping/sweep-s13-grouped-var-spec/grouped-var-reads-new-name-result           FAIL/lean-observation error:decoder-scope-wrong-declaration → PASS
+#     scoping/sweep-s13-grouped-var-spec/grouped-var-zero-then-read                  FAIL/lean-observation error:decoder-scope-wrong-declaration → PASS
+#     scoping/sweep-s13-local-iface-dispatch/error-local-iface                       FAIL/lean-observation error:decoder-duplicate-function-id → PASS
+#     scoping/sweep-s13-local-iface-dispatch/local-iface-satisfied                   FAIL/lean-observation error:decoder-duplicate-function-id → PASS
+#     scoping/sweep-s13-local-iface-dispatch/local-iface-two-funcs                   FAIL/lean-observation error:decoder-duplicate-function-id → PASS
 # cause keyed 2026-10-27 [AGENT coordinator], train-27 stage, from the stage's full run (scripts/coverage-cause --apply): the 16 rows that carried `?` — BUG-300/302's six `error:decoder-scope-wrong-declaration`, BUG-301's three `error:decoder-duplicate-function-id`, BUG-310's seven `panic:machine-panic` (the three table rows added at this stage); no row moved.
 # re-pinned: 2026-10-27 [AGENT], lane frontend/fix-hoist-1027 — BUG-276, 277, 278, 279 (the S7 sweep) and BUG-286, 287 (the S9
 #   sweep) FIXED in tools/nativefrontend (the campaign plan's rule that a finding is fixed through the normal train, [USER]
@@ -10144,8 +10166,8 @@ PASS	generics/sweep-s13-contexts/result-shadow	-	-
 PASS	generics/sweep-s13-contexts/self-shadow	-	-
 PASS	generics/sweep-s13-contexts/ts-guard	-	-
 PASS	generics/sweep-s13-contexts/typeparam-named-int	-	-
-FAIL	generics/sweep-s13-lit-param-typeparam/lit-param-capturing	lean-observation	error:decoder-scope-wrong-declaration
-FAIL	generics/sweep-s13-lit-param-typeparam/lit-param-no-capture	lean-observation	error:decoder-scope-wrong-declaration
+PASS	generics/sweep-s13-lit-param-typeparam/lit-param-capturing	-	-
+PASS	generics/sweep-s13-lit-param-typeparam/lit-param-no-capture	-	-
 PASS	range/sweep-s13-range-var-cells/array-value-addr	-	-
 PASS	range/sweep-s13-range-var-cells/chan-addr	-	-
 PASS	range/sweep-s13-range-var-cells/int-addr	-	-
@@ -10183,10 +10205,10 @@ PASS	scoping/sweep-s13-global-shadow/select-case-shadow	-	-
 PASS	scoping/sweep-s13-global-shadow/self-shadow-reads-global	-	-
 PASS	scoping/sweep-s13-global-shadow/shadow-in-init	-	-
 PASS	scoping/sweep-s13-global-shadow/ts-guard-shadow	-	-
-FAIL	scoping/sweep-s13-grouped-var-spec/grouped-var-no-outer	lean-observation	error:decoder-scope-wrong-declaration
-FAIL	scoping/sweep-s13-grouped-var-spec/grouped-var-reads-new-name	lean-observation	error:decoder-scope-wrong-declaration
-FAIL	scoping/sweep-s13-grouped-var-spec/grouped-var-reads-new-name-result	lean-observation	error:decoder-scope-wrong-declaration
-FAIL	scoping/sweep-s13-grouped-var-spec/grouped-var-zero-then-read	lean-observation	error:decoder-scope-wrong-declaration
+PASS	scoping/sweep-s13-grouped-var-spec/grouped-var-no-outer	-	-
+PASS	scoping/sweep-s13-grouped-var-spec/grouped-var-reads-new-name	-	-
+PASS	scoping/sweep-s13-grouped-var-spec/grouped-var-reads-new-name-result	-	-
+PASS	scoping/sweep-s13-grouped-var-spec/grouped-var-zero-then-read	-	-
 PASS	scoping/sweep-s13-init-scopes/else-if-chain	-	-
 PASS	scoping/sweep-s13-init-scopes/if-init-body-self-shadow	-	-
 PASS	scoping/sweep-s13-init-scopes/if-init-captured-in-else	-	-
@@ -10194,9 +10216,9 @@ PASS	scoping/sweep-s13-init-scopes/if-init-commaok-else	-	-
 PASS	scoping/sweep-s13-init-scopes/if-init-else	-	-
 PASS	scoping/sweep-s13-local-iface-controls/decl-only-nil	-	-
 PASS	scoping/sweep-s13-local-iface-controls/empty-assert	-	-
-FAIL	scoping/sweep-s13-local-iface-dispatch/error-local-iface	lean-observation	error:decoder-duplicate-function-id
-FAIL	scoping/sweep-s13-local-iface-dispatch/local-iface-satisfied	lean-observation	error:decoder-duplicate-function-id
-FAIL	scoping/sweep-s13-local-iface-dispatch/local-iface-two-funcs	lean-observation	error:decoder-duplicate-function-id
+PASS	scoping/sweep-s13-local-iface-dispatch/error-local-iface	-	-
+PASS	scoping/sweep-s13-local-iface-dispatch/local-iface-satisfied	-	-
+PASS	scoping/sweep-s13-local-iface-dispatch/local-iface-two-funcs	-	-
 PASS	scoping/sweep-s13-local-types-binding/embedded-promotion	-	-
 PASS	scoping/sweep-s13-local-types-binding/nested-same-name	-	-
 PASS	scoping/sweep-s13-named-result-forms/assert-one-value-shadow	-	-
