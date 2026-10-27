@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 4552 (4253 PASS / 299 FAIL)
+# cases: 4681 (4379 PASS / 302 FAIL)
 # re-pinned: 2026-10-26 [AGENT], lane sweep/s4-identity — the defect-neighbourhood campaign's S4 sweep (identity, equality and
 #   nil-ness; docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved; members BUG-133/129/121/111/170/139).
 #   NO existing row moved: 4166 + 94 = 4260; PASS 3901 + 64 = 3965; FAIL 265 + 30 = 295. No flip, no removal, no cause
@@ -106,6 +106,166 @@
 #     variadic/sweep-s4-nil-pack-routes/tuple-fixed-only                 PASS/- -
 #     variadic/sweep-s4-nil-pack-routes/elem-kinds                       PASS/- -
 #     variadic/sweep-s4-nil-pack-routes/len-cap-append                   PASS/- -
+# re-pinned: 2026-10-27 [AGENT], lane sweep/s10-panics — the defect-neighbourhood campaign's S10 sweep (run-time panic missing or
+#   wrongly kinded; docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved 2026-10-27; the matrix and every cell's
+#   disposition on the `- Neighbourhood:` lines of BUG-081/063/056/038). NO existing row moved: 4166 + 129 = 4295; PASS 3901 + 126
+#   = 4027; FAIL 265 + 3 = 268. No flip, no removal, no cause change — corpus and records only, no change to GoLean/, tools/ or
+#   scripts/. NEW rows (129, seventeen packages Corpus/coverage/exec/*/sweep-s10-*/, expected = gc go1.26.5; 123 strict + 3 confluent
+#   born green, 3 strict BORN RED on BUG-226's Cases line — the two-variable range over a pointer to a zero-length array, a
+#   whole-wire decoder refusal (status error) where gc runs zero iterations; cause key error:? because no scripts/machine-causes.tsv
+#   row names the decoder's B6 c3 scope refusal and the sweep lane does not edit scripts/), appended at the end of the file. The
+#   other finding, BUG-227, pins on five EXISTING rows (pointers/nil-array-ptr-slice*, unchanged here: FAIL/lean-observation
+#   stuck:nil-slice-base) that moved from baselines/untriaged-ids onto its Cases line in the previous commit.
+#   Measured by CAPPED_MEM_MAX=64G capped scripts/ci --diff at the lane tree 20d0c3ba before the re-pin (771 s wall; differential
+#   coverage summary: cases=4295 pass=4027 fail=268; its only drift these 129 NEW ids, so the differential baseline diff was its one
+#   FAIL and the RESULT line FAIL; every other section ok), the rows taken from that run's artifacts/coverage/latest.tsv; the --diff
+#   at the tip judges.
+#   builtins/sweep-s10-bounds-kinds/ (9 rows): G2 the bounds panic at int8/int64/constant-string indexes, the three-index forms on an array and a pointer to array, a negative low, a uint high, a nil slice, the slice-to-array-pointer short conversion.
+#     builtins/sweep-s10-bounds-kinds/index-int8-negative  PASS/-
+#     builtins/sweep-s10-bounds-kinds/index-int64-past-len  PASS/-
+#     builtins/sweep-s10-bounds-kinds/const-string-index  PASS/-
+#     builtins/sweep-s10-bounds-kinds/array-three-index-max-past-len  PASS/-
+#     builtins/sweep-s10-bounds-kinds/array-ptr-three-index-high-past-max  PASS/-
+#     builtins/sweep-s10-bounds-kinds/slice-negative-low  PASS/-
+#     builtins/sweep-s10-bounds-kinds/slice-high-uint-past-cap  PASS/-
+#     builtins/sweep-s10-bounds-kinds/nil-slice-high-past-cap  PASS/-
+#     builtins/sweep-s10-bounds-kinds/slice-to-array-ptr-short  PASS/-
+#   builtins/sweep-s10-make-kinds/ (7 rows): G10 run-time negative sizes to make at int64/int8/cap/chan-int64, recovered; the map hint control (no panic).
+#     builtins/sweep-s10-make-kinds/slice-negative-cap  PASS/-
+#     builtins/sweep-s10-make-kinds/slice-len-int64-negative  PASS/-
+#     builtins/sweep-s10-make-kinds/slice-len-int8-negative  PASS/-
+#     builtins/sweep-s10-make-kinds/chan-size-int64-negative  PASS/-
+#     builtins/sweep-s10-make-kinds/map-negative-hint  PASS/-
+#     builtins/sweep-s10-make-kinds/map-hint-int64-negative  PASS/-
+#     builtins/sweep-s10-make-kinds/slice-negative-len-recovered  PASS/-
+#   channels/sweep-s10-nil-range/ (2 rows): G9 a range over a nil channel is the deadlock fatal; close of a closed channel is recoverable.
+#     channels/sweep-s10-nil-range/range-nil-chan-deadlock  PASS/-
+#     channels/sweep-s10-nil-range/close-closed-recovered  PASS/-
+#   comparisons/sweep-s10-uncomparable-routes/ (7 rows): G7 the uncomparable-type panic only at identical dynamic types: differing/comparable/nil/pointer/channel controls, `!=`, recovered.
+#     comparisons/sweep-s10-uncomparable-routes/different-dynamic-types  PASS/-
+#     comparisons/sweep-s10-uncomparable-routes/mixed-with-comparable  PASS/-
+#     comparisons/sweep-s10-uncomparable-routes/vs-nil  PASS/-
+#     comparisons/sweep-s10-uncomparable-routes/not-equal  PASS/-
+#     comparisons/sweep-s10-uncomparable-routes/pointer-to-uncomparable-ok  PASS/-
+#     comparisons/sweep-s10-uncomparable-routes/chan-of-slice-ok  PASS/-
+#     comparisons/sweep-s10-uncomparable-routes/recovered  PASS/-
+#   floats/sweep-s10-div-zero-no-panic/ (2 rows): G4.10 float32 and compound float64 division by a run-time zero: Inf/NaN, no panic.
+#     floats/sweep-s10-div-zero-no-panic/float32  PASS/-
+#     floats/sweep-s10-div-zero-no-panic/float64-compound  PASS/-
+#   goroutines/sweep-s10-contexts/ (3 rows): G16 a run-time panic inside a spawned goroutine: recovered there (nil dereference, send on closed) or aborting the program (bounds); confluent.
+#     goroutines/sweep-s10-contexts/child-recovers-nil-deref  PASS/confluent
+#     goroutines/sweep-s10-contexts/child-bounds-aborts  PASS/confluent
+#     goroutines/sweep-s10-contexts/child-recovers-send-closed  PASS/confluent
+#   interfaces/sweep-s10-assertion-kinds/ (2 rows): G8 the assertion panic through a type parameter and on a nil `error`.
+#     interfaces/sweep-s10-assertion-kinds/assert-type-param  PASS/-
+#     interfaces/sweep-s10-assertion-kinds/nil-error-assert  PASS/-
+#   ints/sweep-s10-div-kinds/ (27 rows): G4 `/` and `%` by a run-time zero at every integer kind, a defined type, compound, a constant dividend, recovered; MinInt / -1 at every signed kind the no-panic control.
+#     ints/sweep-s10-div-kinds/div-int8  PASS/-
+#     ints/sweep-s10-div-kinds/mod-int8  PASS/-
+#     ints/sweep-s10-div-kinds/div-int16  PASS/-
+#     ints/sweep-s10-div-kinds/mod-int16  PASS/-
+#     ints/sweep-s10-div-kinds/div-int32  PASS/-
+#     ints/sweep-s10-div-kinds/mod-int32  PASS/-
+#     ints/sweep-s10-div-kinds/div-int64  PASS/-
+#     ints/sweep-s10-div-kinds/mod-int64  PASS/-
+#     ints/sweep-s10-div-kinds/div-uint  PASS/-
+#     ints/sweep-s10-div-kinds/mod-uint  PASS/-
+#     ints/sweep-s10-div-kinds/div-uint8  PASS/-
+#     ints/sweep-s10-div-kinds/mod-uint8  PASS/-
+#     ints/sweep-s10-div-kinds/div-uint16  PASS/-
+#     ints/sweep-s10-div-kinds/mod-uint16  PASS/-
+#     ints/sweep-s10-div-kinds/div-uint32  PASS/-
+#     ints/sweep-s10-div-kinds/mod-uint32  PASS/-
+#     ints/sweep-s10-div-kinds/div-uint64  PASS/-
+#     ints/sweep-s10-div-kinds/mod-uint64  PASS/-
+#     ints/sweep-s10-div-kinds/div-uintptr  PASS/-
+#     ints/sweep-s10-div-kinds/mod-uintptr  PASS/-
+#     ints/sweep-s10-div-kinds/div-defined  PASS/-
+#     ints/sweep-s10-div-kinds/mod-defined  PASS/-
+#     ints/sweep-s10-div-kinds/div-assign  PASS/-
+#     ints/sweep-s10-div-kinds/mod-assign  PASS/-
+#     ints/sweep-s10-div-kinds/const-dividend  PASS/-
+#     ints/sweep-s10-div-kinds/min-over-neg-one-kinds  PASS/-
+#     ints/sweep-s10-div-kinds/div-recovered  PASS/-
+#   ints/sweep-s10-shift-kinds/ (14 rows): G5 a negative shift count at every signed count kind, both directions, compound, an unsigned left operand, a defined count, the most negative count, recovered.
+#     ints/sweep-s10-shift-kinds/shl-count-int8  PASS/-
+#     ints/sweep-s10-shift-kinds/shr-count-int8  PASS/-
+#     ints/sweep-s10-shift-kinds/shl-count-int16  PASS/-
+#     ints/sweep-s10-shift-kinds/shr-count-int16  PASS/-
+#     ints/sweep-s10-shift-kinds/shl-count-int32  PASS/-
+#     ints/sweep-s10-shift-kinds/shr-count-int32  PASS/-
+#     ints/sweep-s10-shift-kinds/shl-count-int64  PASS/-
+#     ints/sweep-s10-shift-kinds/shr-count-int64  PASS/-
+#     ints/sweep-s10-shift-kinds/shl-assign  PASS/-
+#     ints/sweep-s10-shift-kinds/shr-assign  PASS/-
+#     ints/sweep-s10-shift-kinds/unsigned-left-operand  PASS/-
+#     ints/sweep-s10-shift-kinds/defined-count  PASS/-
+#     ints/sweep-s10-shift-kinds/min-count  PASS/-
+#     ints/sweep-s10-shift-kinds/recovered  PASS/-
+#   maps/sweep-s10-nil-map-routes/ (9 rows): G3 the nil-map write at the IncDec, compound, append-idiom, struct/map-valued, parameter and field routes, recovered; its order against the unhashable hash (the nil check first).
+#     maps/sweep-s10-nil-map-routes/incdec  PASS/-
+#     maps/sweep-s10-nil-map-routes/compound  PASS/-
+#     maps/sweep-s10-nil-map-routes/append-idiom  PASS/-
+#     maps/sweep-s10-nil-map-routes/struct-value  PASS/-
+#     maps/sweep-s10-nil-map-routes/nested-map-value  PASS/-
+#     maps/sweep-s10-nil-map-routes/assign-unhashable-key  PASS/-
+#     maps/sweep-s10-nil-map-routes/through-param  PASS/-
+#     maps/sweep-s10-nil-map-routes/through-field  PASS/-
+#     maps/sweep-s10-nil-map-routes/recovered  PASS/-
+#   maps/sweep-s10-unhashable-routes/ (8 rows): G6 the unhashable dynamic key at the map, func and named-slice-through-method-interface types, comma-ok, a generic map at any, recovered; pointer and nil keys as controls.
+#     maps/sweep-s10-unhashable-routes/map-key  PASS/-
+#     maps/sweep-s10-unhashable-routes/func-key  PASS/-
+#     maps/sweep-s10-unhashable-routes/named-slice-through-method-iface  PASS/-
+#     maps/sweep-s10-unhashable-routes/comma-ok-read  PASS/-
+#     maps/sweep-s10-unhashable-routes/generic-any-key  PASS/-
+#     maps/sweep-s10-unhashable-routes/pointer-key-ok  PASS/-
+#     maps/sweep-s10-unhashable-routes/nil-iface-key-ok  PASS/-
+#     maps/sweep-s10-unhashable-routes/recovered  PASS/-
+#   methods/sweep-s10-receiver-sites/ (4 rows): G1.24–28 a value method on a nil pointer in defer and go position (raised at the statement), the method expression `T.V(*p)`, a nil pointer field receiver.
+#     methods/sweep-s10-receiver-sites/defer-value-recv-nil  PASS/-
+#     methods/sweep-s10-receiver-sites/go-value-recv-nil  PASS/-
+#     methods/sweep-s10-receiver-sites/method-expr-deref-arg  PASS/-
+#     methods/sweep-s10-receiver-sites/field-ptr-value-recv-nil  PASS/-
+#   pointers/sweep-s10-nil-deref-sites/ (26 rows): G1 the nil dereference at the read/store/compound/IncDec sites of `*p`, `p.f`, `p[i]`, nested and deep-offset fields, the blank/argument/condition/switch positions, the defer and go ARGUMENT positions (raised at the statement), the two multi-target orders at the field site, whole-array/struct copies, `**pp`, `*[]T` and `*map` bases, and the `len`/`cap` constant control.
+#     pointers/sweep-s10-nil-deref-sites/blank-deref  PASS/-
+#     pointers/sweep-s10-nil-deref-sites/call-arg-deref  PASS/-
+#     pointers/sweep-s10-nil-deref-sites/if-cond-deref  PASS/-
+#     pointers/sweep-s10-nil-deref-sites/switch-deref  PASS/-
+#     pointers/sweep-s10-nil-deref-sites/deref-store  PASS/-
+#     pointers/sweep-s10-nil-deref-sites/deref-compound  PASS/-
+#     pointers/sweep-s10-nil-deref-sites/deref-incdec  PASS/-
+#     pointers/sweep-s10-nil-deref-sites/field-store  PASS/-
+#     pointers/sweep-s10-nil-deref-sites/field-compound  PASS/-
+#     pointers/sweep-s10-nil-deref-sites/field-incdec  PASS/-
+#     pointers/sweep-s10-nil-deref-sites/nested-field-read  PASS/-
+#     pointers/sweep-s10-nil-deref-sites/nested-field-store  PASS/-
+#     pointers/sweep-s10-nil-deref-sites/deep-offset-read  PASS/-
+#     pointers/sweep-s10-nil-deref-sites/deep-offset-store  PASS/-
+#     pointers/sweep-s10-nil-deref-sites/array-elem-compound  PASS/-
+#     pointers/sweep-s10-nil-deref-sites/array-elem-incdec  PASS/-
+#     pointers/sweep-s10-nil-deref-sites/defer-arg-deref  PASS/-
+#     pointers/sweep-s10-nil-deref-sites/go-arg-deref  PASS/-
+#     pointers/sweep-s10-nil-deref-sites/len-cap-nil-array-ptr  PASS/-
+#     pointers/sweep-s10-nil-deref-sites/deref-array-copy  PASS/-
+#     pointers/sweep-s10-nil-deref-sites/deref-struct-copy  PASS/-
+#     pointers/sweep-s10-nil-deref-sites/double-deref-inner-nil  PASS/-
+#     pointers/sweep-s10-nil-deref-sites/slice-ptr-deref-index  PASS/-
+#     pointers/sweep-s10-nil-deref-sites/map-ptr-deref-index  PASS/-
+#     pointers/sweep-s10-nil-deref-sites/multi-target-field-first  PASS/-
+#     pointers/sweep-s10-nil-deref-sites/multi-target-field-second  PASS/-
+#   pointers/sweep-s10-nil-recover/ (1 row): G1.46 the nil-dereference panic is recoverable: the store panics, the function continues.
+#     pointers/sweep-s10-nil-recover/store-recovered  PASS/-
+#   range/sweep-s10-zero-len-array/ (1 row): G1.40 control: a two-variable range over a zero-length ARRAY VALUE runs (0 iterations).
+#     range/sweep-s10-zero-len-array  PASS/-
+#   range/sweep-s10-zero-len-two-vars/ (3 rows): G1.40 BORN RED (BUG-226): a two-variable range over a pointer to a zero-length array — the emitter drops the value variable, the decoder refuses the whole wire (status error, cause error:? — no machine-causes row) where gc runs zero iterations.
+#     range/sweep-s10-zero-len-two-vars/ptr-nil-two-vars  FAIL/lean-observation error:?
+#     range/sweep-s10-zero-len-two-vars/ptr-two-vars  FAIL/lean-observation error:?
+#     range/sweep-s10-zero-len-two-vars/ptr-nil-blank-key-value  FAIL/lean-observation error:?
+#   stdlib-source/sweep-s10-library-panics/ (4 rows): G13 bytes.Repeat and slices.Repeat negative, slices.Delete out of range, strings.NewReplacer odd argument count.
+#     stdlib-source/sweep-s10-library-panics/bytes-repeat-negative  PASS/-
+#     stdlib-source/sweep-s10-library-panics/slices-repeat-negative  PASS/-
+#     stdlib-source/sweep-s10-library-panics/slices-delete-oob  PASS/-
+#     stdlib-source/sweep-s10-library-panics/new-replacer-odd  PASS/-
 # re-pinned: 2026-10-27 [AGENT], lane sweep/s20-admission — the defect-neighbourhood campaign's S20 sweep (the admission
 #   boundary; docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved; members BUG-158/135/157/128/127/126/125/
 #   109/108/155/070). ADDITIVE ONLY: 34 new ids from the full run of CAPPED_MEM_MAX=64G capped scripts/ci --diff at a62b01e7
@@ -7490,3 +7650,132 @@ FAIL	source-selection/sweep-s20-plusbuild-under-gobuild	frontend-export	unrowed/
 PASS	source-selection/sweep-s20-suffix-tokens	-	-
 PASS	source-selection/sweep-s20-test-files	-	-
 PASS	strings/sweep-s20-dot-import	-	-
+PASS	builtins/sweep-s10-bounds-kinds/index-int8-negative	-	-
+PASS	builtins/sweep-s10-bounds-kinds/index-int64-past-len	-	-
+PASS	builtins/sweep-s10-bounds-kinds/const-string-index	-	-
+PASS	builtins/sweep-s10-bounds-kinds/array-three-index-max-past-len	-	-
+PASS	builtins/sweep-s10-bounds-kinds/array-ptr-three-index-high-past-max	-	-
+PASS	builtins/sweep-s10-bounds-kinds/slice-negative-low	-	-
+PASS	builtins/sweep-s10-bounds-kinds/slice-high-uint-past-cap	-	-
+PASS	builtins/sweep-s10-bounds-kinds/nil-slice-high-past-cap	-	-
+PASS	builtins/sweep-s10-bounds-kinds/slice-to-array-ptr-short	-	-
+PASS	builtins/sweep-s10-make-kinds/slice-negative-cap	-	-
+PASS	builtins/sweep-s10-make-kinds/slice-len-int64-negative	-	-
+PASS	builtins/sweep-s10-make-kinds/slice-len-int8-negative	-	-
+PASS	builtins/sweep-s10-make-kinds/chan-size-int64-negative	-	-
+PASS	builtins/sweep-s10-make-kinds/map-negative-hint	-	-
+PASS	builtins/sweep-s10-make-kinds/map-hint-int64-negative	-	-
+PASS	builtins/sweep-s10-make-kinds/slice-negative-len-recovered	-	-
+PASS	channels/sweep-s10-nil-range/range-nil-chan-deadlock	-	-
+PASS	channels/sweep-s10-nil-range/close-closed-recovered	-	-
+PASS	comparisons/sweep-s10-uncomparable-routes/different-dynamic-types	-	-
+PASS	comparisons/sweep-s10-uncomparable-routes/mixed-with-comparable	-	-
+PASS	comparisons/sweep-s10-uncomparable-routes/vs-nil	-	-
+PASS	comparisons/sweep-s10-uncomparable-routes/not-equal	-	-
+PASS	comparisons/sweep-s10-uncomparable-routes/pointer-to-uncomparable-ok	-	-
+PASS	comparisons/sweep-s10-uncomparable-routes/chan-of-slice-ok	-	-
+PASS	comparisons/sweep-s10-uncomparable-routes/recovered	-	-
+PASS	floats/sweep-s10-div-zero-no-panic/float32	-	-
+PASS	floats/sweep-s10-div-zero-no-panic/float64-compound	-	-
+PASS	goroutines/sweep-s10-contexts/child-recovers-nil-deref	confluent	-
+PASS	goroutines/sweep-s10-contexts/child-bounds-aborts	confluent	-
+PASS	goroutines/sweep-s10-contexts/child-recovers-send-closed	confluent	-
+PASS	interfaces/sweep-s10-assertion-kinds/assert-type-param	-	-
+PASS	interfaces/sweep-s10-assertion-kinds/nil-error-assert	-	-
+PASS	ints/sweep-s10-div-kinds/div-int8	-	-
+PASS	ints/sweep-s10-div-kinds/mod-int8	-	-
+PASS	ints/sweep-s10-div-kinds/div-int16	-	-
+PASS	ints/sweep-s10-div-kinds/mod-int16	-	-
+PASS	ints/sweep-s10-div-kinds/div-int32	-	-
+PASS	ints/sweep-s10-div-kinds/mod-int32	-	-
+PASS	ints/sweep-s10-div-kinds/div-int64	-	-
+PASS	ints/sweep-s10-div-kinds/mod-int64	-	-
+PASS	ints/sweep-s10-div-kinds/div-uint	-	-
+PASS	ints/sweep-s10-div-kinds/mod-uint	-	-
+PASS	ints/sweep-s10-div-kinds/div-uint8	-	-
+PASS	ints/sweep-s10-div-kinds/mod-uint8	-	-
+PASS	ints/sweep-s10-div-kinds/div-uint16	-	-
+PASS	ints/sweep-s10-div-kinds/mod-uint16	-	-
+PASS	ints/sweep-s10-div-kinds/div-uint32	-	-
+PASS	ints/sweep-s10-div-kinds/mod-uint32	-	-
+PASS	ints/sweep-s10-div-kinds/div-uint64	-	-
+PASS	ints/sweep-s10-div-kinds/mod-uint64	-	-
+PASS	ints/sweep-s10-div-kinds/div-uintptr	-	-
+PASS	ints/sweep-s10-div-kinds/mod-uintptr	-	-
+PASS	ints/sweep-s10-div-kinds/div-defined	-	-
+PASS	ints/sweep-s10-div-kinds/mod-defined	-	-
+PASS	ints/sweep-s10-div-kinds/div-assign	-	-
+PASS	ints/sweep-s10-div-kinds/mod-assign	-	-
+PASS	ints/sweep-s10-div-kinds/const-dividend	-	-
+PASS	ints/sweep-s10-div-kinds/min-over-neg-one-kinds	-	-
+PASS	ints/sweep-s10-div-kinds/div-recovered	-	-
+PASS	ints/sweep-s10-shift-kinds/shl-count-int8	-	-
+PASS	ints/sweep-s10-shift-kinds/shr-count-int8	-	-
+PASS	ints/sweep-s10-shift-kinds/shl-count-int16	-	-
+PASS	ints/sweep-s10-shift-kinds/shr-count-int16	-	-
+PASS	ints/sweep-s10-shift-kinds/shl-count-int32	-	-
+PASS	ints/sweep-s10-shift-kinds/shr-count-int32	-	-
+PASS	ints/sweep-s10-shift-kinds/shl-count-int64	-	-
+PASS	ints/sweep-s10-shift-kinds/shr-count-int64	-	-
+PASS	ints/sweep-s10-shift-kinds/shl-assign	-	-
+PASS	ints/sweep-s10-shift-kinds/shr-assign	-	-
+PASS	ints/sweep-s10-shift-kinds/unsigned-left-operand	-	-
+PASS	ints/sweep-s10-shift-kinds/defined-count	-	-
+PASS	ints/sweep-s10-shift-kinds/min-count	-	-
+PASS	ints/sweep-s10-shift-kinds/recovered	-	-
+PASS	maps/sweep-s10-nil-map-routes/incdec	-	-
+PASS	maps/sweep-s10-nil-map-routes/compound	-	-
+PASS	maps/sweep-s10-nil-map-routes/append-idiom	-	-
+PASS	maps/sweep-s10-nil-map-routes/struct-value	-	-
+PASS	maps/sweep-s10-nil-map-routes/nested-map-value	-	-
+PASS	maps/sweep-s10-nil-map-routes/assign-unhashable-key	-	-
+PASS	maps/sweep-s10-nil-map-routes/through-param	-	-
+PASS	maps/sweep-s10-nil-map-routes/through-field	-	-
+PASS	maps/sweep-s10-nil-map-routes/recovered	-	-
+PASS	maps/sweep-s10-unhashable-routes/map-key	-	-
+PASS	maps/sweep-s10-unhashable-routes/func-key	-	-
+PASS	maps/sweep-s10-unhashable-routes/named-slice-through-method-iface	-	-
+PASS	maps/sweep-s10-unhashable-routes/comma-ok-read	-	-
+PASS	maps/sweep-s10-unhashable-routes/generic-any-key	-	-
+PASS	maps/sweep-s10-unhashable-routes/pointer-key-ok	-	-
+PASS	maps/sweep-s10-unhashable-routes/nil-iface-key-ok	-	-
+PASS	maps/sweep-s10-unhashable-routes/recovered	-	-
+PASS	methods/sweep-s10-receiver-sites/defer-value-recv-nil	-	-
+PASS	methods/sweep-s10-receiver-sites/go-value-recv-nil	-	-
+PASS	methods/sweep-s10-receiver-sites/method-expr-deref-arg	-	-
+PASS	methods/sweep-s10-receiver-sites/field-ptr-value-recv-nil	-	-
+PASS	pointers/sweep-s10-nil-deref-sites/blank-deref	-	-
+PASS	pointers/sweep-s10-nil-deref-sites/call-arg-deref	-	-
+PASS	pointers/sweep-s10-nil-deref-sites/if-cond-deref	-	-
+PASS	pointers/sweep-s10-nil-deref-sites/switch-deref	-	-
+PASS	pointers/sweep-s10-nil-deref-sites/deref-store	-	-
+PASS	pointers/sweep-s10-nil-deref-sites/deref-compound	-	-
+PASS	pointers/sweep-s10-nil-deref-sites/deref-incdec	-	-
+PASS	pointers/sweep-s10-nil-deref-sites/field-store	-	-
+PASS	pointers/sweep-s10-nil-deref-sites/field-compound	-	-
+PASS	pointers/sweep-s10-nil-deref-sites/field-incdec	-	-
+PASS	pointers/sweep-s10-nil-deref-sites/nested-field-read	-	-
+PASS	pointers/sweep-s10-nil-deref-sites/nested-field-store	-	-
+PASS	pointers/sweep-s10-nil-deref-sites/deep-offset-read	-	-
+PASS	pointers/sweep-s10-nil-deref-sites/deep-offset-store	-	-
+PASS	pointers/sweep-s10-nil-deref-sites/array-elem-compound	-	-
+PASS	pointers/sweep-s10-nil-deref-sites/array-elem-incdec	-	-
+PASS	pointers/sweep-s10-nil-deref-sites/defer-arg-deref	-	-
+PASS	pointers/sweep-s10-nil-deref-sites/go-arg-deref	-	-
+PASS	pointers/sweep-s10-nil-deref-sites/len-cap-nil-array-ptr	-	-
+PASS	pointers/sweep-s10-nil-deref-sites/deref-array-copy	-	-
+PASS	pointers/sweep-s10-nil-deref-sites/deref-struct-copy	-	-
+PASS	pointers/sweep-s10-nil-deref-sites/double-deref-inner-nil	-	-
+PASS	pointers/sweep-s10-nil-deref-sites/slice-ptr-deref-index	-	-
+PASS	pointers/sweep-s10-nil-deref-sites/map-ptr-deref-index	-	-
+PASS	pointers/sweep-s10-nil-deref-sites/multi-target-field-first	-	-
+PASS	pointers/sweep-s10-nil-deref-sites/multi-target-field-second	-	-
+PASS	pointers/sweep-s10-nil-recover/store-recovered	-	-
+PASS	range/sweep-s10-zero-len-array	-	-
+FAIL	range/sweep-s10-zero-len-two-vars/ptr-nil-two-vars	lean-observation	error:?
+FAIL	range/sweep-s10-zero-len-two-vars/ptr-two-vars	lean-observation	error:?
+FAIL	range/sweep-s10-zero-len-two-vars/ptr-nil-blank-key-value	lean-observation	error:?
+PASS	stdlib-source/sweep-s10-library-panics/bytes-repeat-negative	-	-
+PASS	stdlib-source/sweep-s10-library-panics/slices-repeat-negative	-	-
+PASS	stdlib-source/sweep-s10-library-panics/slices-delete-oob	-	-
+PASS	stdlib-source/sweep-s10-library-panics/new-replacer-odd	-	-
