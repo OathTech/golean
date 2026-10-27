@@ -1,6 +1,18 @@
 # GoLean negative-corpus (compile-rejection) baseline
 # recorded: 2026-08-18  commit: f68a4d86+ (spec-truth P3 slice 2)  oracle: go build (rejection)  [header corrected 2026-08-31: the old "+ frontend fail-closed" conjunct claimed a check that does not exist — scripts/coverage-negative invokes no GoLean tool (p2-fact claim 5)]
-# manifest_cases: 437  pass: 437  fail: 0
+# manifest_cases: 491  pass: 480  fail: 11
+# re-pinned: 2026-10-27 [AGENT], lane sweep/s20-admission — the S20 sweep (the admission boundary; plan §4, [USER]-approved).
+#   ADDITIVE ONLY: 54 new ids from the full run of scripts/ci --diff at a62b01e7 (780 s); no existing row moved. 43 born PASS
+#   (gc rejects AND the frontend refuses as a rejection — file selection, parse, type-check or module): the file-selection and
+#   encoding rejections (source-selection/), the language-version floor and go.mod path shapes (modules/), the directives
+#   outside the allowlist that gc rejects (directives/), gc's rules on main and init (functions/, init/), local imports
+#   (imports/). 11 born FAIL at frontend-accepts — the frontend LOWERS a program gc rejects — each pinned to an open entry:
+#   BUG-217 (modules/module-path-std-fmt, module-path-std-nested, module-path-cmd: a main module named for a std or reserved
+#   path), BUG-219 (imports/vendor-path-import, nested-vendor-path-import, goroot-vendor-name, bare-internal-path,
+#   module-mode-bare-local-import, package-main-import: cmd/go's import rules not mirrored by the loader), BUG-221
+#   (functions/stack-frame-too-large-array-arg, stack-frame-too-large-struct-arg: gc's 1 GB frame limit through the
+#   argument width). Each flips PASS when its entry's fix lands.
+#   Rows: directives/embed-in-body, directives/embed-no-import, directives/embed-on-func, directives/linkname-without-unsafe, directives/noescape-with-body, directives/noinline-bodyless, directives/nowritebarrier-outside-runtime, directives/systemstack-outside-runtime, directives/uintptrkeepalive-outside-std, directives/wasmimport-bodyless, directives/yeswritebarrierrec-outside-runtime, functions/func-redeclared-across-files, functions/main-declared-type, functions/main-declared-var, functions/main-method-only, functions/main-redeclared-across-files, functions/main-type-params, functions/main-with-param, functions/main-with-result, functions/stack-frame-too-large-array-arg, functions/stack-frame-too-large-struct-arg, imports/bare-internal-path, imports/goroot-vendor-name, imports/local-package-two-names, imports/module-mode-bare-local-import, imports/nested-vendor-path-import, imports/package-main-import, imports/unused-local-import, imports/vendor-path-import, init/init-type-params, modules/go117-generics, modules/go121-range-over-int, modules/go122-range-over-func, modules/module-path-cmd, modules/module-path-dot, modules/module-path-quoted-space, modules/module-path-relative, modules/module-path-std-fmt, modules/module-path-std-nested, modules/module-path-trailing-slash, modules/nested-module-language-version, modules/require-path-comment-start, source-selection/all-files-excluded, source-selection/bom-middle, source-selection/cr-only-line-endings, source-selection/form-feed, source-selection/gobuild-malformed, source-selection/gobuild-twice, source-selection/invalid-utf8-comment, source-selection/invalid-utf8-string, source-selection/nul-in-comment, source-selection/test-file-bad-header, source-selection/test-file-other-package, source-selection/two-packages
 # re-pinned: 2026-10-26 [AGENT], lane frontend/workspace-and-oracle-1026 — the train-20 core audit's probe p11-cross-pkg-negative
 #   ([USER] ruling 2026-10-26, relayed: a negative row — gc rejects AND the frontend refuses as a type-check rejection — in this
 #   corpus, naming BUG-134's known limit). ONE BORN ROW: structs/cross-package-unexported-field-conversion — main.C spells sub.A's
@@ -579,3 +591,57 @@ PASS	variadic/non-final-variadic	-
 PASS	variadic/spread-non-final-argument	-
 PASS	variadic/spread-non-slice	-
 PASS	variadic/spread-wrong-element-type	-
+PASS	directives/embed-in-body	-
+PASS	directives/embed-no-import	-
+PASS	directives/embed-on-func	-
+PASS	directives/linkname-without-unsafe	-
+PASS	directives/noescape-with-body	-
+PASS	directives/noinline-bodyless	-
+PASS	directives/nowritebarrier-outside-runtime	-
+PASS	directives/systemstack-outside-runtime	-
+PASS	directives/uintptrkeepalive-outside-std	-
+PASS	directives/wasmimport-bodyless	-
+PASS	directives/yeswritebarrierrec-outside-runtime	-
+PASS	functions/func-redeclared-across-files	-
+PASS	functions/main-declared-type	-
+PASS	functions/main-declared-var	-
+PASS	functions/main-method-only	-
+PASS	functions/main-redeclared-across-files	-
+PASS	functions/main-type-params	-
+PASS	functions/main-with-param	-
+PASS	functions/main-with-result	-
+FAIL	functions/stack-frame-too-large-array-arg	frontend-accepts
+FAIL	functions/stack-frame-too-large-struct-arg	frontend-accepts
+FAIL	imports/bare-internal-path	frontend-accepts
+FAIL	imports/goroot-vendor-name	frontend-accepts
+PASS	imports/local-package-two-names	-
+FAIL	imports/module-mode-bare-local-import	frontend-accepts
+FAIL	imports/nested-vendor-path-import	frontend-accepts
+FAIL	imports/package-main-import	frontend-accepts
+PASS	imports/unused-local-import	-
+FAIL	imports/vendor-path-import	frontend-accepts
+PASS	init/init-type-params	-
+PASS	modules/go117-generics	-
+PASS	modules/go121-range-over-int	-
+PASS	modules/go122-range-over-func	-
+FAIL	modules/module-path-cmd	frontend-accepts
+PASS	modules/module-path-dot	-
+PASS	modules/module-path-quoted-space	-
+PASS	modules/module-path-relative	-
+FAIL	modules/module-path-std-fmt	frontend-accepts
+FAIL	modules/module-path-std-nested	frontend-accepts
+PASS	modules/module-path-trailing-slash	-
+PASS	modules/nested-module-language-version	-
+PASS	modules/require-path-comment-start	-
+PASS	source-selection/all-files-excluded	-
+PASS	source-selection/bom-middle	-
+PASS	source-selection/cr-only-line-endings	-
+PASS	source-selection/form-feed	-
+PASS	source-selection/gobuild-malformed	-
+PASS	source-selection/gobuild-twice	-
+PASS	source-selection/invalid-utf8-comment	-
+PASS	source-selection/invalid-utf8-string	-
+PASS	source-selection/nul-in-comment	-
+PASS	source-selection/test-file-bad-header	-
+PASS	source-selection/test-file-other-package	-
+PASS	source-selection/two-packages	-

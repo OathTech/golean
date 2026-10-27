@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 4518 (4223 PASS / 295 FAIL)
+# cases: 4552 (4253 PASS / 299 FAIL)
 # re-pinned: 2026-10-26 [AGENT], lane sweep/s4-identity — the defect-neighbourhood campaign's S4 sweep (identity, equality and
 #   nil-ness; docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved; members BUG-133/129/121/111/170/139).
 #   NO existing row moved: 4166 + 94 = 4260; PASS 3901 + 64 = 3965; FAIL 265 + 30 = 295. No flip, no removal, no cause
@@ -106,6 +106,15 @@
 #     variadic/sweep-s4-nil-pack-routes/tuple-fixed-only                 PASS/- -
 #     variadic/sweep-s4-nil-pack-routes/elem-kinds                       PASS/- -
 #     variadic/sweep-s4-nil-pack-routes/len-cap-append                   PASS/- -
+# re-pinned: 2026-10-27 [AGENT], lane sweep/s20-admission — the defect-neighbourhood campaign's S20 sweep (the admission
+#   boundary; docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved; members BUG-158/135/157/128/127/126/125/
+#   109/108/155/070). ADDITIVE ONLY: 34 new ids from the full run of CAPPED_MEM_MAX=64G capped scripts/ci --diff at a62b01e7
+#   (780 s); no existing row moved, no flip, no removal, no cause change. 30 born PASS: the S20 sweep's strict rows (expected =
+#   gc go1.26.5 under the runners' pins) on routes no earlier row held — file selection and encoding, the inert constraint
+#   forms, selection inside local packages, blank and dot imports, import paths with _ and testdata elements, directive-looking
+#   prose and placements, the platform constants. 4 born FAIL/frontend-export: BUG-216's four `// +build` placements go/build
+#   ignores (the frontend refuses the export with a false reason; gc includes the file) — on BUG-216's Cases line.
+#   Rows: constants/sweep-s20-platform-constants/int-size-constants, constants/sweep-s20-platform-constants/int-size-idioms, constants/sweep-s20-platform-constants/maxint-value, constants/sweep-s20-platform-constants/maxuint-value, constants/sweep-s20-platform-constants/runtime-compiler, constants/sweep-s20-platform-constants/runtime-target, constants/sweep-s20-platform-constants/wrap-at-width, directives/sweep-s20-block-gobuild, directives/sweep-s20-build-indented, directives/sweep-s20-generate-crlf, directives/sweep-s20-prose-forms/export-prose, directives/sweep-s20-prose-forms/noinline-extra-words, directives/sweep-s20-prose-forms/space-noinline, functions/sweep-s20-blank-imports, multipkg/sweep-s20-blank-import-init/blank, multipkg/sweep-s20-blank-import-init/named, multipkg/sweep-s20-import-paths/testdata-dir, multipkg/sweep-s20-import-paths/underscore-dir, multipkg/sweep-s20-import-paths/underscore-nested, multipkg/sweep-s20-local-selection/excluded-files, multipkg/sweep-s20-local-selection/inert-constraint, source-selection/sweep-s20-bom-file, source-selection/sweep-s20-crlf-raw-string, source-selection/sweep-s20-inert-constraints/bom-ignore-excluded, source-selection/sweep-s20-inert-constraints/custom-tautology, source-selection/sweep-s20-inert-constraints/gobuild-inert, source-selection/sweep-s20-inert-constraints/plusbuild-inert, source-selection/sweep-s20-plusbuild-after-block, source-selection/sweep-s20-plusbuild-in-block, source-selection/sweep-s20-plusbuild-no-blank, source-selection/sweep-s20-plusbuild-under-gobuild, source-selection/sweep-s20-suffix-tokens, source-selection/sweep-s20-test-files, strings/sweep-s20-dot-import
 # re-pinned: 2026-10-26 [AGENT], lane sweep/s2-conversions — the defect-neighbourhood campaign's step 2, shape S2 (conversions:
 #   a missing kernel arm or a value not retagged; plan docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved
 #   2026-10-27): the shape's 118-cell matrix probed on both sides — 74 cells by this lane, 35 covered by existing rows, 9 out of
@@ -7447,3 +7456,37 @@ PASS	structs/sweep-s2-struct-value/method-expr-conversion	-	-
 PASS	structs/sweep-s2-struct-value/struct-typeparam-conv	-	-
 PASS	sync/sweep-s2-converted-struct-with-mutex/pointer-conv	-	-
 PASS	sync/sweep-s2-converted-struct-with-mutex/value-conv	-	-
+PASS	constants/sweep-s20-platform-constants/int-size-constants	-	-
+PASS	constants/sweep-s20-platform-constants/int-size-idioms	-	-
+PASS	constants/sweep-s20-platform-constants/maxint-value	-	-
+PASS	constants/sweep-s20-platform-constants/maxuint-value	-	-
+PASS	constants/sweep-s20-platform-constants/runtime-compiler	-	-
+PASS	constants/sweep-s20-platform-constants/runtime-target	-	-
+PASS	constants/sweep-s20-platform-constants/wrap-at-width	-	-
+PASS	directives/sweep-s20-block-gobuild	-	-
+PASS	directives/sweep-s20-build-indented	-	-
+PASS	directives/sweep-s20-generate-crlf	-	-
+PASS	directives/sweep-s20-prose-forms/export-prose	-	-
+PASS	directives/sweep-s20-prose-forms/noinline-extra-words	-	-
+PASS	directives/sweep-s20-prose-forms/space-noinline	-	-
+PASS	functions/sweep-s20-blank-imports	-	-
+PASS	multipkg/sweep-s20-blank-import-init/blank	-	-
+PASS	multipkg/sweep-s20-blank-import-init/named	-	-
+PASS	multipkg/sweep-s20-import-paths/testdata-dir	-	-
+PASS	multipkg/sweep-s20-import-paths/underscore-dir	-	-
+PASS	multipkg/sweep-s20-import-paths/underscore-nested	-	-
+PASS	multipkg/sweep-s20-local-selection/excluded-files	-	-
+PASS	multipkg/sweep-s20-local-selection/inert-constraint	-	-
+PASS	source-selection/sweep-s20-bom-file	-	-
+PASS	source-selection/sweep-s20-crlf-raw-string	-	-
+PASS	source-selection/sweep-s20-inert-constraints/bom-ignore-excluded	-	-
+PASS	source-selection/sweep-s20-inert-constraints/custom-tautology	-	-
+PASS	source-selection/sweep-s20-inert-constraints/gobuild-inert	-	-
+PASS	source-selection/sweep-s20-inert-constraints/plusbuild-inert	-	-
+FAIL	source-selection/sweep-s20-plusbuild-after-block	frontend-export	unrowed/build-constraint
+FAIL	source-selection/sweep-s20-plusbuild-in-block	frontend-export	unrowed/build-constraint
+FAIL	source-selection/sweep-s20-plusbuild-no-blank	frontend-export	unrowed/build-constraint
+FAIL	source-selection/sweep-s20-plusbuild-under-gobuild	frontend-export	unrowed/build-constraint
+PASS	source-selection/sweep-s20-suffix-tokens	-	-
+PASS	source-selection/sweep-s20-test-files	-	-
+PASS	strings/sweep-s20-dot-import	-	-
