@@ -1,0 +1,37 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# S14 sweep (lane sweep/s14-map-iter, 2026-10-27; docs/defect-shapes.md §3 item 16; members BUG-005, BUG-088):
+# the routes by which the body reaches the ranged map. Strict rows observe an order-invariant cut (a created
+# entry's production folded into a bound check); membership rows carry the pick's latitude with members=.
+nested-delete-outer-current	s14NestedDeleteOuterCurrent	-	ok	-	maps,delete,range,nested,loops,nondet	membership	a nested range over the SAME map whose inner loop deletes the outer's current key: the inner may produce that key before deleting it or not, at each of the three outer productions — inner total 4..6, admitted set {340, 350, 360} (members=3; gc exhibits all three); two in-flight mapIterK frames over one map, pick-next bound <= 3 candidates + stop	width=8,sites=32,members=3
+nested-delete-others	s14NestedDeleteOthers	-	ok	-	maps,delete,range,nested,loops	-	-	-
+nested-insert	s14NestedInsert	-	ok	-	maps,range,nested,loops,nondet	membership	a nested range whose inner loop inserts key 11 whenever it ranges key 1: the outer may produce 11 or not (2 or 3 outer productions), the first inner may produce it or not, the later inners always do — admitted set {250, 260, 381, 391} (members=4; gc exhibits all four); pick-next bound <= 3 candidates + stop	width=8,sites=32,members=4
+delete-via-call	s14DeleteViaCall	-	ok	-	maps,delete,range,calls	-	-	-
+insert-via-call	s14InsertViaCall	-	ok	-	maps,range,calls	-	-	-
+via-alias	s14ViaAlias	-	ok	-	maps,delete,range,aliasing	-	-	-
+via-paths	s14ViaPaths	-	ok	-	maps,delete,range,fields,indexing	-	-	-
+break-after-delete	s14BreakAfterDelete	-	ok	-	maps,delete,range,break	-	-	-
+continue-after-mutation	s14ContinueAfterMutation	-	ok	-	maps,delete,range,continue	-	-	-
+return-mid	s14ReturnMid	-	ok	-	maps,delete,range,return	-	-	-
+goto-out	s14GotoOut	-	ok	-	maps,delete,range,goto	-	-	-
+defer-literal-mutates-mid	s14DeferLiteralMutatesMid	-	ok	-	maps,delete,range,defer,closures,nondet	membership	a deferred func literal deletes the next key in cyclic order when its enclosing literal returns, mid-iteration: the key deleted at the first production is unreached and never produced, the later deletes hit reached keys — admitted set {111, 1011, 1101} by which key came first (members=3; gc exhibits all three); pick-next bound <= 3 candidates + stop	width=8,sites=16,members=3
+defer-literal-inserts-mid	s14DeferLiteralInsertsMid	-	ok	-	maps,range,defer,closures	-	-	-
+defer-after-range	s14DeferAfterRange	-	ok	-	maps,delete,range,defer,named-results	-	-	-
+outer-range-inner-mutate	s14OuterRangeInnerMutate	-	ok	-	maps,delete,range,nested	-	-	-
+range-inner-delete-from-outer	s14RangeInnerDeleteFromOuter	-	ok	-	maps,delete,range,nested	-	-	-
+reassign-variable	s14ReassignVariable	-	ok	-	maps,range,assignment,evaluation_order	-	-	-
+len-during-delete	s14LenDuringDelete	-	ok	-	maps,delete,range,len	-	-	-
+comma-ok-during-delete	s14CommaOkDuringDelete	-	ok	-	maps,delete,range,comma_ok	-	-	-
+bare-form	s14BareForm	-	ok	-	maps,delete,range,loops,nondet	membership	`for range m` deleting key n at the n-th production: the deleted key may be the current one (three productions, len 0) or an unreached one (two productions, len 1) — admitted set {21, 30} (members=2; gc exhibits both); pick-next bound <= 3 candidates + stop	width=8,sites=16,members=2
+key-value-form	s14KeyValueForm	-	ok	-	maps,delete,range,loops	-	-	-
+value-only-form	s14ValueOnlyForm	-	ok	-	maps,delete,range,loops	-	-	-
+assign-form	s14AssignForm	-	ok	-	maps,delete,range,assignment,loops	-	-	-
+self-insert-bounded	s14SelfInsertBounded	-	ok	-	maps,range,loops,nondet	membership	a self-inserting loop bounded by the key (each production of k < 40 creates k+10): the chain of created entries may be cut at any created entry — admitted set {12, 23, 34, 45, 55} (members=5; gc exhibits all five); pick-next bound <= 1 candidate + stop	width=8,sites=16,members=5
+growth-delete-unreached	s14GrowthDeleteUnreached	-	ok	-	maps,delete,range,evaluation_order	-	-	-
+range-call-result	s14RangeCallResult	-	ok	-	maps,delete,range,calls,closures	-	-	-
+read-modify-write-current	s14ReadModifyWriteCurrent	-	ok	-	maps,range,assignment	-	-	-
+generic-route	s14GenericRoute	-	ok	-	maps,delete,range,generics	-	-	-
+defined-map-methods	s14DefinedMapMethods	-	ok	-	maps,delete,range,methods,defined_type	-	-	-
+panic-after-delete	s14PanicAfterDelete	-	ok	-	maps,delete,range,panic,recover,defer	-	-	-
+capture-keys-while-deleting	s14CaptureKeysWhileDeleting	-	ok	-	maps,delete,range,closures,loops	-	-	-
+labelled-break	s14LabelledBreak	-	ok	-	maps,delete,range,labels,break	-	-	-
+second-range-after-mutation	s14SecondRangeAfterMutation	-	ok	-	maps,clear,delete,range	-	-	-

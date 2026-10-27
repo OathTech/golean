@@ -1,0 +1,20 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# S14 sweep (lane sweep/s14-map-iter, 2026-10-27; docs/defect-shapes.md §3 item 16; members BUG-005, BUG-088):
+# the mutation kinds at the map-iteration pick, int keys, three start entries. Strict rows observe an
+# order-invariant cut; membership rows carry a latitude (a created entry produced or skipped) and pin the
+# machine's set cardinality with members=. The pick-next site's bound is live candidates + the stop slot,
+# at most 5 + 1 here (insert-two) — width 8 covers every row.
+delete-unreached	s14DeleteUnreached	-	ok	-	maps,delete,range,evaluation_order	-	-	-
+delete-reached	s14DeleteReached	-	ok	-	maps,delete,range,evaluation_order	-	-	-
+delete-unreached-readd	s14DeleteUnreachedReadd	-	ok	-	maps,delete,range,evaluation_order	-	-	-
+delete-reached-readd-later	s14DeleteReachedReaddLater	-	ok	-	maps,delete,range,evaluation_order,nondet	membership	the first-produced key deleted at the second production and re-created at the third is a NEW entry (I-1): produced again (count 2) or skipped — admitted set {1113, 1123, 1213, 2113} (members=4; gc exhibits the skipped member); the only consumption site is the pick-next, bound <= 3 live candidates + stop	width=8,sites=16,members=4
+update-current	s14UpdateCurrent	-	ok	-	maps,range,assignment,evaluation_order	-	-	-
+update-unreached	s14UpdateUnreached	-	ok	-	maps,range,assignment,evaluation_order	-	-	-
+update-keeps-mandatory	s14UpdateKeepsMandatory	-	ok	-	maps,range,assignment,evaluation_order	-	-	-
+insert-one	s14InsertOne	-	ok	-	maps,range,evaluation_order,nondet	membership	a key created at the first production over three start entries may be produced or skipped (spec: created entries) — admitted set {1110, 1111} (members=2; gc exhibits both); pick-next bound <= 4 candidates + stop	width=8,sites=16,members=2
+insert-two	s14InsertTwo	-	ok	-	maps,range,evaluation_order,nondet	membership	two keys created at the first production, each independently produced or skipped — admitted set {11100, 11101, 11110, 11111} (members=4; gc exhibits three: its slot order never yields the second without the first); pick-next bound <= 5 candidates + stop = 6	width=8,sites=16,members=4
+clear-reinsert-same	s14ClearReinsertSame	-	ok	-	maps,clear,range,evaluation_order,nondet	membership	clear at the first production then re-insert the same keys: nothing stays mandatory and each re-inserted entry is NEW — the first key once plus any subset of the three re-created entries (the first key itself again included), len 3: 19 members (gc exhibits one: its cleared slots are re-filled behind the cursor); pick-next bound <= 3 candidates + stop	width=8,sites=16,members=19
+clear-insert-other	s14ClearInsertOther	-	ok	-	maps,clear,range,evaluation_order	-	-	-
+insert-delete-same-iteration	s14InsertDeleteSameIteration	-	ok	-	maps,delete,range,evaluation_order	-	-	-
+insert-delete-later	s14InsertDeleteLater	-	ok	-	maps,delete,range,evaluation_order,nondet	membership	a key created at the first production and deleted at the second may be produced at the second pick or not — admitted set {1110, 1111} (members=2; gc exhibits both); pick-next bound <= 4 candidates + stop	width=8,sites=16,members=2
+delete-all-reinsert-all	s14DeleteAllReinsertAll	-	ok	-	maps,delete,range,evaluation_order	-	-	-

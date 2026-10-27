@@ -1,0 +1,19 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# S14 sweep (lane sweep/s14-map-iter, 2026-10-27; docs/defect-shapes.md §3 item 16; members BUG-005, BUG-088):
+# key kinds under mutation during the range — the strict rows pin the UPDATE path per kind (delete the current,
+# update the others; order-invariant sum and len), the membership rows the irreflexive keys' latitude.
+string	s14StringKeys	-	ok	-	maps,delete,range,strings,keys	-	-	-
+float	s14FloatKeys	-	ok	-	maps,delete,range,floats,keys	-	-	-
+interface-mixed	s14InterfaceMixedKeys	-	ok	-	maps,delete,range,interfaces,keys	-	-	-
+struct	s14StructKeys	-	ok	-	maps,delete,range,structs,keys	-	-	-
+array	s14ArrayKeys	-	ok	-	maps,delete,range,arrays,keys	-	-	-
+pointer	s14PointerKeys	-	ok	-	maps,delete,range,pointers,keys	-	-	-
+bool	s14BoolKeys	-	ok	-	maps,delete,range,bools,keys	-	-	-
+defined-int	s14DefinedIntKeys	-	ok	-	maps,delete,range,defined_type,keys	-	-	-
+channel	s14ChannelKeys	-	ok	-	maps,delete,range,channels,keys	-	-	-
+nan-inserted-during-range	s14NanInsertedDuringRange	-	ok	-	maps,range,floats,keys,nondet	membership	a NaN key inserted at each of the first two productions is a NEW entry each time (never found: spec#Comparison_operators), each producible or not, the next inserted only on production — admitted set {12, 23, 33} (members=3; gc exhibits all three); pick-next bound <= 1 candidate + stop	width=8,sites=16,members=3
+nan-delete-noop	s14NanDeleteNoop	-	ok	-	maps,delete,range,floats,keys	-	-	-
+nan-clear-mid-range	s14NanClearMidRange	-	ok	-	maps,clear,range,floats,keys,nondet	membership	clear at the first production with two NaN entries present, then one NaN insert — a created entry, produced or skipped: admitted set {11, 21} (members=2; gc exhibits both); pick-next bound <= 3 candidates + stop	width=8,sites=16,members=2
+signed-zero-update-mid-range	s14SignedZeroUpdateMidRange	-	ok	-	maps,range,floats,keys,assignment,nondet	membership	m[-0] = 10 at the first production updates the +0 entry in place (same stamp, still mandatory) and replaces its stored key by -0 (gc: needkeyupdate for floats): the entry is produced first with key +0 and value 1, or later with key -0 and value 10 — admitted set {3001, 3110} (members=2; gc exhibits both); pick-next bound <= 3 candidates + stop	width=8,sites=16,members=2
+interface-nan-inserted	s14InterfaceNanInserted	-	ok	-	maps,range,floats,interfaces,keys,nondet	membership	the NaN-in-an-interface twin of nan-inserted-during-range: each insert a new entry, producible or not — admitted set {12, 23, 33} (members=3; gc exhibits all three); pick-next bound <= 1 candidate + stop	width=8,sites=16,members=3
+struct-nan-mutated	s14StructNanKeysMutated	-	ok	-	maps,delete,range,floats,structs,keys,nondet	membership	struct keys holding NaN mutated at the first production (a new NaN entry inserted, a NaN delete that finds nothing, the non-NaN key updated): three or four productions, the non-NaN key's value read live (30) unless it came first (3), the created entry (4) produced or skipped — admitted set {3006, 3033, 4010, 4037} (members=4; gc exhibits three: the created entry lands behind its cursor when the non-NaN key came first); pick-next bound <= 3 candidates + stop	width=8,sites=16,members=4

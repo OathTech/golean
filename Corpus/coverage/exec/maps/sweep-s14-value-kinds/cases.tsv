@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# S14 sweep (lane sweep/s14-map-iter, 2026-10-27; docs/defect-shapes.md §3 item 16; members BUG-005, BUG-088):
+# value kinds at the pick's self-normalization guard, each with a mutation during the range; every row strict
+# with an order-invariant cut (a created entry's production folded into a bound check).
+any-any-mutated	s14AnyAnyMutated	-	ok	-	maps,delete,range,interfaces,type_switch	-	-	-
+slice-values-replaced	s14SliceValuesReplaced	-	ok	-	maps,range,slices,assignment	-	-	-
+struct-values-replaced	s14StructValuesReplaced	-	ok	-	maps,range,structs,assignment	-	-	-
+error-values	s14ErrorValues	-	ok	-	maps,delete,range,interfaces,methods	-	-	-
+func-values	s14FuncValues	-	ok	-	maps,range,functions,closures,assignment	-	-	-
+pointer-values-through	s14PointerValuesThrough	-	ok	-	maps,range,pointers	-	-	-
+nil-value-kinds	s14NilValueKinds	-	ok	-	maps,delete,range,nil	-	-	-

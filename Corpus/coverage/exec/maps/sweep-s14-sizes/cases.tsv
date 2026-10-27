@@ -1,0 +1,13 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# S14 sweep (lane sweep/s14-map-iter, 2026-10-27; docs/defect-shapes.md §3 item 16; members BUG-005, BUG-088):
+# map sizes under mutation. The twelve-entry strict rows declare depth=64 (the strict lane's depth guard:
+# eleven wide picks outrun the three fixed streams; N = the power of two >= 4*11, min 64).
+empty-insert	s14EmptyInsert	-	ok	-	maps,range,empty	-	-	-
+nil-delete	s14NilDelete	-	ok	-	maps,delete,range,nil	-	-	-
+one-delete-readd	s14OneDeleteReadd	-	ok	-	maps,delete,range,evaluation_order,nondet	membership	one entry deleted and re-created at every production (the size-1 twin of maps/delete-readd-during-range): each re-created entry is NEW and may be produced again, so the tail is unbounded — the subject truncates at five productions, -1 an admitted member: {1, 2, 3, 4, 5, -1} (members=6; gc exhibits 1 — the re-created key takes the slot already passed); pick-next bound <= 1 candidate + stop	width=8,sites=16,members=6
+one-update-current	s14OneUpdateCurrent	-	ok	-	maps,range,assignment	-	-	-
+many-delete-current	s14ManyDeleteCurrent	-	ok	-	maps,delete,range,evaluation_order	-	-	depth=64
+many-delete-evens	s14ManyDeleteEvens	-	ok	-	maps,delete,range,evaluation_order,nondet	membership	twelve entries; at the first production every even key is deleted — the unreached ones are never produced (the forced clause at a gc table size), and the first production was an even key (6 productions) or an odd one (7): admitted set {66, 76} (members=2; gc exhibits both); pick-next bound <= 12 candidates (the first pick) + stop — width 16	width=16,sites=16,members=2,work=2000000
+many-update-unreached	s14ManyUpdateUnreached	-	ok	-	maps,range,assignment,evaluation_order	-	-	depth=64
+many-clear	s14ManyClear	-	ok	-	maps,clear,range	-	-	-
+many-growth	s14ManyGrowth	-	ok	-	maps,range,evaluation_order	-	-	depth=64
