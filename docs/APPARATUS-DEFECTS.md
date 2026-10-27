@@ -366,3 +366,17 @@ WHAT: the production wire is parsed strictly since BUG-110 (`GoLean.StrictJson.p
 - Discovered: 2026-10-27, lane `frontend/fix-admission-1027` while fixing BUG-216 — gc on the file as written prints 2 (go/build ignores the legacy line), the oracle harness's reprint carries a `//go:build ignore` twin (gofmt's synchronization rule), so the oracle excluded the file and printed 1.
 - Neighbourhood: none — an apparatus defect outside the campaign's sweep; the class is «the oracle does not see the file as written»: any construct go/printer normalizes (build-constraint twins, comment placement, import grouping, trailing commas, a BOM) is invisible to the differential on the oracle side. A row whose source depends on exact bytes cannot be oracle-tested until the harness builds from the original files (a fix shape: copy the files verbatim into the oracle's tree and inject the harness code as a separate file).
 
+## BUG-297 — the ORACLE HARNESS REFUSES an ok run whose own program output ends with a line `exit status N`, reading it as the go command's trailer
+
+- Status: open (2026-10-27; entered at the train-27 stage by the [AGENT] coordinator from the S27 sweep lane's report, `sweep/s27-bytes`)
+- Pinned-by: none (apparatus: `tools/coverageharness` `split.go` — the probe `exit-status-trailer`: gc stderr `first\nexit status 1\n` with exit 0; the machine `output:"first\nexit status 1\n"`; the harness: «an `exit status N` trailer on an ok run (the child did not exit 0)»)
+- Discovered: 2026-10-27, the S27 sweep (byte transparency), probing the output channel.
+- Neighbourhood: none — an apparatus defect outside the campaign's sweep. A FALSE RED, never a false green: a program that prints such a line cannot be oracle-tested until the splitter distinguishes the go command's trailer (the last line, after the child's exit, only when the child exited non-zero) from the program's own bytes.
+
+## BUG-298 — the CORPUS MANIFEST admits ASCII subject identifiers only, so a non-ASCII function name cannot be a row
+
+- Status: open (2026-10-27; entered at the train-27 stage by the [AGENT] coordinator from the S27 sweep lane's report)
+- Pinned-by: none (apparatus: `scripts/coverage-manifest` — «invalid subject identifier: größe»; the cell was probed by hand: `--function größe` → the machine `3, [195,188,255]`, gc `3 true 3`, agreement)
+- Discovered: 2026-10-27, the S27 sweep.
+- Neighbourhood: none — an apparatus limit, not a verdict: a legal Go identifier outside ASCII is a construct the corpus cannot hold a row for; the frontend, the wire and the machine carry it (the hand probe).
+

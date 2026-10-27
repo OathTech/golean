@@ -32,3 +32,6 @@ append-footprint-budget	unsupported	footprint budget for an append spill
 conv-footprint-budget	unsupported	footprint budget for a string conversion
 decoder-scope-undeclared-local	error	is not in scope at this statement
 machine-deadlock	deadlock	all goroutines are asleep
+decoder-scope-wrong-declaration	error	but the wire names declaration
+decoder-duplicate-function-id	error	duplicate function id
+machine-panic	panic	runtime error:
