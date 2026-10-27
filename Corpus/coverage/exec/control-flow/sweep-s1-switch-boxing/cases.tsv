@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+case-float	caseFloat	-	ok	-	switch,interfaces,constants,untyped,floats
+case-rune	caseRune	-	ok	-	switch,interfaces,constants,untyped,runes
+case-nil	caseNil	-	ok	-	switch,interfaces,nil,pointers
+case-multi	caseMulti	-	ok	-	switch,interfaces,constants,untyped
+tag-const-case-any	tagConstCaseAny	-	ok	-	switch,interfaces,constants,untyped,floats
+tag-defined-case-any	tagDefinedCaseAny	-	ok	-	switch,interfaces,defined_type
+no-tag	noTag	-	ok	-	switch,interfaces,constants,untyped,equality
+init-form	initForm	-	ok	-	switch,interfaces,constants,untyped
+binding-reboxed	bindingReboxed	-	ok	-	type_switch,interfaces,defined_type

@@ -1,0 +1,13 @@
+# id	subject	args	expected_status	expected_reason	features
+return-tuple	returnTuple	-	ok	-	returns,multi_result,interfaces,constants,untyped
+forward-defined-pointer-iface	forwardDefinedPointerIface	-	ok	-	returns,multi_result,interfaces,calls,defined_type,pointers,nil,type_assertions,comma_ok
+forward-narrower	forwardNarrower	-	ok	-	returns,multi_result,interfaces,calls,methods
+forward-method	forwardMethod	-	ok	-	returns,multi_result,interfaces,calls,methods
+forward-generic	forwardGeneric	-	ok	-	returns,multi_result,interfaces,calls,generics
+forward-typed-nil	forwardTypedNil	-	ok	-	returns,multi_result,interfaces,calls,nil,pointers
+return-forward-typed-nil	returnForwardTypedNil	-	ok	-	returns,multi_result,interfaces,nil,pointers
+unseq-args	unseqArgs	-	ok	-	interfaces,calls,evaluation_order
+unseq-slice-lit	unseqSliceLit	-	ok	-	interfaces,calls,literals,slices,evaluation_order
+unseq-struct-lit	unseqStructLit	-	ok	-	interfaces,calls,literals,structs,evaluation_order
+unseq-send	unseqSend	-	ok	-	interfaces,calls,channels,evaluation_order
+unseq-return	unseqReturn	-	ok	-	interfaces,calls,returns,multi_result,evaluation_order

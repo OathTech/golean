@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features
+assign-nil-after-value	assignNilAfterValue	-	ok	-	interfaces,nil,assignment
+var-error-nil	varErrorNil	-	ok	-	interfaces,nil
+arg-nil-any	argNilAny	-	ok	-	interfaces,nil,calls
+arg-typed-nil-error	argTypedNilError	-	ok	-	interfaces,nil,pointers,calls
+return-nil-error	returnNilError	-	ok	-	interfaces,nil,returns
+return-typed-nil-pointer	returnTypedNilPointer	-	ok	-	interfaces,nil,pointers,returns,methods
+map-lit-nil-key	mapLitNilKey	-	ok	-	interfaces,nil,maps,literals,comma_ok
+map-store-nil-value	mapStoreNilValue	-	ok	-	interfaces,nil,maps,comma_ok
+struct-field-nil	structFieldNil	-	ok	-	interfaces,nil,structs,literals
+struct-field-typed-nil	structFieldTypedNil	-	ok	-	interfaces,nil,pointers,structs,literals

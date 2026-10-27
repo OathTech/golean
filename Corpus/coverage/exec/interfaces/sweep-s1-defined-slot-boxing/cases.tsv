@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+slice-both-ways	sliceBothWays	-	ok	-	interfaces,defined_type,slices,type_switch,assignment
+map-both-ways	mapBothWays	-	ok	-	interfaces,defined_type,maps,type_switch,assignment
+chan-both-ways	chanBothWays	-	ok	-	interfaces,defined_type,channels,type_switch,assignment
+func-both-ways	funcBothWays	-	ok	-	interfaces,defined_type,functions,type_switch,assignment
+defined-iface-assign	definedIfaceAssign	-	ok	-	interfaces,defined_type,constants,untyped
+defined-error-iface	definedErrorIface	-	ok	-	interfaces,defined_type,type_switch,equality
+slice-at-arg	sliceAtArg	-	ok	-	interfaces,defined_type,slices,type_switch,calls
+slice-at-return	sliceAtReturn	-	ok	-	interfaces,defined_type,slices,type_switch,returns
+slice-at-elem	sliceAtElem	-	ok	-	interfaces,defined_type,slices,type_switch,literals

@@ -1,0 +1,12 @@
+# id	subject	args	expected_status	expected_reason	features
+store-read	storeRead	-	ok	-	maps,interfaces,constants,untyped,keys
+lit-keys-default-type	litKeysDefaultType	-	ok	-	maps,interfaces,constants,untyped,keys,literals
+compound	compound	-	ok	-	maps,interfaces,constants,untyped,keys,assignment
+inc-dec	incDec	-	ok	-	maps,interfaces,constants,untyped,keys,assignment
+delete-default-type	deleteDefaultType	-	ok	-	maps,interfaces,constants,untyped,keys,delete
+comma-ok-read	commaOkRead	-	ok	-	maps,interfaces,constants,untyped,keys,comma_ok
+value-store	valueStore	-	ok	-	maps,interfaces,constants,untyped,defined_type,nil
+nil-key	nilKey	-	ok	-	maps,interfaces,nil,keys,comma_ok
+blank-comma-ok	blankCommaOk	-	ok	-	maps,interfaces,constants,untyped,keys,comma_ok
+struct-key-any-field	structKeyAnyField	-	ok	-	maps,interfaces,constants,untyped,keys,structs
+unseq-map-store	unseqMapStore	-	ok	-	maps,interfaces,calls,evaluation_order

@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features
+explicit-any-arg	explicitAnyArg	-	ok	-	generics,interfaces,constants,untyped
+const-takes-type-param	constTakesTypeParam	-	ok	-	generics,interfaces,constants,untyped,widths
+inferred-default	inferredDefault	-	ok	-	generics,interfaces,constants,untyped,inference
+constraint-typed	constraintTyped	-	ok	-	generics,interfaces,constraints,methods
+box-lit-any	boxLitAny	-	ok	-	generics,interfaces,constants,untyped,literals,structs
+box-lit-defined	boxLitDefined	-	ok	-	generics,interfaces,constants,untyped,literals,structs,defined_type
+method-result-any	methodResultAny	-	ok	-	generics,interfaces,methods
+variadic-any	variadicAny	-	ok	-	generics,interfaces,variadic,constants,untyped
+comparable-any-default	comparableAnyDefault	-	ok	-	generics,interfaces,constants,untyped,equality,comparability
+inferred-int-returned	inferredIntReturned	-	ok	-	generics,interfaces,inference,returns

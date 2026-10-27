@@ -1,0 +1,13 @@
+# id	subject	args	expected_status	expected_reason	features
+field-target	fieldTarget	-	ok	-	interfaces,calls,assignment,structs,fields
+nested-field-target	nestedFieldTarget	-	ok	-	interfaces,calls,assignment,structs,fields,defined_type
+slice-elem-target	sliceElemTarget	-	ok	-	interfaces,calls,assignment,slices,indexing
+array-elem-target	arrayElemTarget	-	ok	-	interfaces,calls,assignment,arrays,indexing,defined_type
+deref-target	derefTarget	-	ok	-	interfaces,calls,assignment,pointers
+map-elem-target	mapElemTarget	-	ok	-	interfaces,calls,assignment,maps
+global-target	globalTarget	-	ok	-	interfaces,calls,assignment,globals,defined_type
+param-target	paramTargetCall	-	ok	-	interfaces,calls,assignment
+typed-nil-result	typedNilResult	-	ok	-	interfaces,calls,assignment,nil,pointers,methods
+typed-nil-into-field	typedNilIntoField	-	ok	-	interfaces,calls,assignment,nil,pointers,structs,fields
+narrower-result	narrowerResult	-	ok	-	interfaces,calls,assignment,methods,type_assertions,comma_ok
+defined-result-assert	definedResultAssert	-	ok	-	interfaces,calls,assignment,defined_type,type_assertions,comma_ok

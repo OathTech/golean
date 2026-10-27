@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+constants	constants	-	ok	-	init,globals,interfaces,constants,untyped
+nils	nils	-	ok	-	init,globals,interfaces,nil,pointers,methods
+defined-and-narrower	definedAndNarrower	-	ok	-	init,globals,interfaces,defined_type,methods
+map-keys	mapKeys	-	ok	-	init,globals,interfaces,maps,keys,constants,untyped
+call-and-shift	callAndShift	-	ok	-	init,globals,interfaces,calls,shifts,constants,untyped

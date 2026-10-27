@@ -1,0 +1,14 @@
+# id	subject	args	expected_status	expected_reason	features
+send-int	sendInt	-	ok	-	channels,interfaces,constants,untyped
+send-float	sendFloat	-	ok	-	channels,interfaces,constants,untyped,floats
+send-nil	sendNil	-	ok	-	channels,interfaces,nil
+send-defined	sendDefined	-	ok	-	channels,interfaces,defined_type
+send-typed-nil-pointer	sendTypedNilPointer	-	ok	-	channels,interfaces,nil,pointers,type_assertions,comma_ok
+send-iface	sendIface	-	ok	-	channels,interfaces
+var-init-receive	varInitReceive	-	ok	-	channels,interfaces
+select-send	selectSend	-	ok	-	channels,interfaces,select,constants,untyped
+select-recv-assign	selectRecvAssign	-	ok	-	channels,interfaces,select,assignment
+select-recv-comma-ok	selectRecvCommaOk	-	ok	-	channels,interfaces,select,assignment,comma_ok
+send-defined-const	sendDefinedConst	-	ok	-	channels,interfaces,constants,untyped,defined_type
+send-narrower	sendNarrower	-	ok	-	channels,interfaces,methods
+recv-into-map-elem	recvIntoMapElem	-	ok	-	channels,interfaces,maps,assignment

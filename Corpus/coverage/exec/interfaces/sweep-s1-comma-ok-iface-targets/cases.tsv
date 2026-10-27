@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+assert-iface-into-narrower	assertIfaceIntoNarrower	-	ok	-	interfaces,type_assertions,comma_ok,assignment,methods
+assert-iface-into-any	assertIfaceIntoAny	-	ok	-	interfaces,type_assertions,comma_ok,assignment,type_switch,equality
+assert-iface-miss	assertIfaceMiss	-	ok	-	interfaces,type_assertions,comma_ok,assignment,nil
+assert-define-forms	assertDefineForms	-	ok	-	interfaces,type_assertions,comma_ok,short_decl,methods

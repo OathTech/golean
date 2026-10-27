@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+const-int	constInt	-	ok	-	panic,recover,interfaces,constants,untyped
+const-float	constFloat	-	ok	-	panic,recover,interfaces,constants,untyped,floats
+const-rune	constRune	-	ok	-	panic,recover,interfaces,constants,untyped,runes
+const-bool	constBool	-	ok	-	panic,recover,interfaces,constants,untyped,bools
+pointer	pointer	-	ok	-	panic,recover,interfaces,nil,pointers,type_assertions,comma_ok
+struct-payload	structPayload	-	ok	-	panic,recover,interfaces,structs
+iface-to-iface	ifaceToIface	-	ok	-	panic,recover,interfaces,type_switch,equality
+const-expr	constExpr	-	ok	-	panic,recover,interfaces,constants,untyped,floats
+shift	shift	-	ok	-	panic,recover,interfaces,constants,untyped,shifts

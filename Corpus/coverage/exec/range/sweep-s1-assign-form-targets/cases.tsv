@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+array-value	arrayValue	-	ok	-	range,interfaces,arrays,assignment
+array-index	arrayIndex	-	ok	-	range,interfaces,arrays,assignment
+ptr-array-value	ptrArrayValue	-	ok	-	range,interfaces,arrays,pointers,assignment
+chan-elem	chanElem	-	ok	-	range,interfaces,channels,assignment
+int-range	intRange	-	ok	-	range,interfaces,ints,assignment
+map-value	mapValue	-	ok	-	range,interfaces,maps,assignment

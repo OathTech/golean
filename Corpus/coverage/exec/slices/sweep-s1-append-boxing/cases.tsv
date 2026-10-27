@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+consts-and-nil	constsAndNil	-	ok	-	append,slices,interfaces,constants,untyped,nil
+typed	typed	-	ok	-	append,slices,interfaces,defined_type,pointers,nil,type_assertions,comma_ok
+narrower	narrower	-	ok	-	append,slices,interfaces,methods

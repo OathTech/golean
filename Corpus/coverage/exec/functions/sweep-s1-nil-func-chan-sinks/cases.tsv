@@ -1,0 +1,24 @@
+# id	subject	args	expected_status	expected_reason	features
+var-func	varFunc	-	ok	-	functions,nil,equality
+assign-func	assignFunc	-	ok	-	functions,nil,assignment,equality
+var-chan	varChan	-	ok	-	channels,nil,len,cap
+assign-chan	assignChan	-	ok	-	channels,nil,assignment,len
+return-func	returnFunc	-	ok	-	functions,nil,returns
+return-chan	returnChan	-	ok	-	channels,nil,returns
+arg-func	argFunc	-	ok	-	functions,nil,calls
+arg-chan	argChan	-	ok	-	channels,nil,calls
+struct-fields	structFields	-	ok	-	functions,channels,nil,structs,literals
+struct-fields-positional	structFieldsPositional	-	ok	-	functions,channels,nil,structs,literals
+slice-func-elem	sliceFuncElem	-	ok	-	functions,nil,slices,literals
+map-chan-value	mapChanValue	-	ok	-	channels,nil,maps,literals
+append-nil-func	appendNilFunc	-	ok	-	functions,nil,append
+append-nil-chan	appendNilChan	-	ok	-	channels,nil,append
+send-nil-chan	sendNilChan	-	ok	-	channels,nil
+send-nil-func	sendNilFunc	-	ok	-	functions,channels,nil
+select-nil-default	selectNilDefault	-	ok	-	channels,nil,select,default
+close-nil-literal	closeNilLiteral	-	panic	close of nil channel	channels,nil,close,panic
+send-nil-literal-deadlock	sendNilLiteralDeadlock	-	deadlock	-	channels,nil,deadlock
+defined-func	definedFunc	-	ok	-	functions,nil,defined_type
+defined-chan	definedChan	-	ok	-	channels,nil,defined_type,len
+defined-func-return	definedFuncReturn	-	ok	-	functions,nil,defined_type,returns
+defined-chan-arg	definedChanArg	-	ok	-	channels,nil,defined_type,calls,literals,len

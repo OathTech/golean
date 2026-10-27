@@ -1,0 +1,31 @@
+# id	subject	args	expected_status	expected_reason	features
+assign-int-kinds	assignIntKinds	-	ok	-	interfaces,assignment,widths,type_switch
+assign-float32	assignFloat32	-	ok	-	interfaces,assignment,floats
+assign-typed-nil-pointer	assignTypedNilPointer	-	ok	-	interfaces,assignment,nil,pointers,type_assertions,comma_ok
+assign-slice	assignSlice	-	ok	-	interfaces,assignment,slices,type_switch,nil
+assign-map	assignMap	-	ok	-	interfaces,assignment,maps,type_switch
+assign-func	assignFunc	-	ok	-	interfaces,assignment,functions,type_switch
+assign-chan	assignChan	-	ok	-	interfaces,assignment,channels,equality,type_assertions
+assign-struct	assignStruct	-	ok	-	interfaces,assignment,structs,equality
+assign-array	assignArray	-	ok	-	interfaces,assignment,arrays,equality
+assign-defined	assignDefined	-	ok	-	interfaces,assignment,defined_type,type_switch,methods
+assign-iface-to-any	assignIfaceToAny	-	ok	-	interfaces,assignment,type_switch,equality
+assign-narrower	assignNarrower	-	ok	-	interfaces,assignment,methods,type_assertions,comma_ok
+define-keeps-box	defineKeepsBox	-	ok	-	interfaces,short_decl,type_switch
+var-narrower	varNarrower	-	ok	-	interfaces,methods
+arg-defined	argDefined	-	ok	-	interfaces,calls,defined_type
+arg-iface-to-any	argIfaceToAny	-	ok	-	interfaces,calls,type_switch
+arg-narrower	argNarrower	-	ok	-	interfaces,calls,methods
+variadic-narrower	variadicNarrower	-	ok	-	interfaces,variadic,methods
+variadic-typed	variadicTyped	-	ok	-	interfaces,variadic,pointers,defined_type,type_assertions,comma_ok
+return-named-defer	returnNamedDefer	-	ok	-	interfaces,returns,named-results,defer,closures
+return-narrower	returnNarrower	-	ok	-	interfaces,returns,methods
+return-narrower-call	returnNarrowerCall	-	ok	-	interfaces,returns,methods
+return-closure	returnClosure	-	ok	-	interfaces,returns,closures
+embedded-iface-lit-keyed	embeddedIfaceLitKeyed	-	ok	-	interfaces,embedding,literals,methods
+embedded-iface-lit-positional	embeddedIfaceLitPositional	-	ok	-	interfaces,embedding,literals,methods
+slice-lit-narrower	sliceLitNarrower	-	ok	-	interfaces,literals,slices,methods
+blank-assert-panic	blankAssertPanic	-	ok	-	interfaces,type_assertions,panic,recover
+blank-assert-abort	blankAssertAbort	-	panic	interface conversion: interface {} is string, not int	interfaces,type_assertions,panic
+blank-var-init	blankVarInit	-	ok	-	interfaces,closures,calls
+new-iface-operand	newIfaceOperand	-	ok	-	interfaces,new,equality,type_assertions
