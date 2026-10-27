@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+cap-then-call	capThenCall	-	ok	-	builtins,calls,evaluation_order,globals,cap
+len-map-then-call	lenMapThenCall	-	ok	-	builtins,calls,evaluation_order,globals,maps,len
+len-string-then-call	lenStringThenCall	-	ok	-	builtins,calls,evaluation_order,globals,len,strings
+len-ptr-array-const-then-call	lenPtrArrayConstThenCall	-	ok	-	builtins,calls,evaluation_order,globals,arrays,pointers,len
+len-call-then-mutating-call	lenCallThenMutatingCall	-	ok	-	builtins,calls,evaluation_order,globals,len

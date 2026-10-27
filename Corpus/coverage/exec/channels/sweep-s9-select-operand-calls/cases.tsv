@@ -1,0 +1,13 @@
+# id	subject	args	expected_status	expected_reason	features
+send-calls	sendCalls	-	ok	-	channels,select,calls,evaluation_order
+recv-chan-call-not-ready	recvChanCallNotReady	-	ok	-	channels,select,calls,evaluation_order
+recv-target-index-call-selected	recvTargetIndexCallSelected	-	ok	-	channels,select,calls,evaluation_order,indexing,assignment
+recv-target-index-call-not-selected	recvTargetIndexCallNotSelected	-	ok	-	channels,select,calls,evaluation_order,indexing,assignment
+three-clause-calls	threeClauseCalls	-	ok	-	channels,select,calls,evaluation_order,nested
+loop-entries	loopEntries	-	ok	-	channels,select,calls,evaluation_order,loops
+send-value-call-not-selected	sendValueCallNotSelected	-	ok	-	channels,select,calls,evaluation_order
+comma-ok-recv-call	commaOkRecvCall	-	ok	-	channels,select,calls,evaluation_order,methods,comma_ok
+nil-chan-call	nilChanCall	-	ok	-	channels,select,calls,evaluation_order
+send-calls-selected	sendCallsSelected	-	ok	-	channels,select,calls,evaluation_order
+closure-select	closureSelect	-	ok	-	channels,select,calls,evaluation_order,closures
+generic-select	genericSelect	-	ok	-	channels,select,calls,evaluation_order,generics

@@ -959,6 +959,70 @@ verbatim, gc realization version-tracked).
   surfaced the class; the checkpoint reviewer isolated it, the
   verifier reproduced the matrix below; the buildout worker
   re-reproduced `x := int(bump())` -> 202 vs 101 independently).
+- Neighbourhood: S9 (evaluation count: twice, never, or re-read) — swept 2026-10-27 by lane
+  `sweep/s9-eval-count` (plan §4, [USER]-approved 2026-10-27). THE MATRIX (written before probing;
+  constructs × observation = a call counter folded into the result, a receive drained from a
+  buffer × context = sequential / inside a closure / in a generic function): A read-modify-write
+  targets (`op=`, `++`/`--`) whose address computation holds a call index, a call base, a deref of a
+  call, a field through a call, nested index-then-field, a pointer-to-array call base, three calls,
+  2-D, every compound operator, a parenthesised target, a package-level slice, a `[]*T` index then
+  field, and the RECEIVE forms `s[<-ch] op= v`, `*(<-pch) += 1`, `(<-chp).x++`, `arr[<-ch]++`,
+  `m[<-ch]++`; B conversions of a call as the whole right-hand side of a define/assign at every
+  target kind (bytes, string, rune, `any`, defined, pointer, float, uint8, func, bool, struct,
+  nested, parenthesised type, instantiated generic type, slice→array) and in the var-decl, global,
+  addressed-target, multi-assign, return, blank, argument, literal, switch-tag and if-cond
+  positions; C built-ins with call operands (`len`/`cap` of every operand kind, `append` elements
+  and a spread, `delete`, `min`/`max`, `make` slice/map/chan sizes, `clear`, `close`, `panic`,
+  `print`, `copy`, `real`/`imag`/`complex`, nested builtins, a builtin followed by an ordered
+  call, the blank and var-decl forms, the parenthesised `(len)(x)` spelling, deferred builtins);
+  D slice expressions with calls in the base and every bound (elided and explicit, three-index,
+  pointer-to-array, local array, string, a receive as base and as bound, doubly elided, chained);
+  E select operands (channel and send-value calls on entry whether selected or not, a receive
+  target's index operand only when selected, three clauses, a loop, comma-ok, nil channels);
+  F defer/go callee values and arguments (call-valued callee, closure, receiver from a call, two
+  call args, a receive arg, `defer close(f())`, conversion/len/index args); G method value
+  creation from a call receiver (pointer, value, interface, index, deref) invoked twice, the method
+  expression; H range operands (slice, int, map, string, chan, array one/two vars, pointer-to-array,
+  deref of a call, slice expression, a receive, `len` of a call, an array literal of calls with
+  one var, a panicking effect-free array literal with one var (not evaluated), range-over-func);
+  I switch tags and case expressions (match first/second/none, tagless, type-switch guard, case
+  list, fallthrough, default first, a receive in a case and in the tag); J for cond/post per
+  iteration, cond-only, `len` of a call in the cond, a rmw in the post, init/cond/post calls, a
+  receive cond, comma-ok map with calls; K literal elements (map keys/values, slice, array,
+  `[...]`, `&T{}`, elided `&`, nested, map of slices, duplicate run-time keys, indexed element,
+  embedded field); L comparison/concat chains (short-circuited chain, `==` over ints/strings/
+  interfaces/pointers from calls, a conversion in a concat); M `&&`/`||` (nested mixed, `||` in
+  if, `len`/index-with-call/receive/make/new in the right operand, return and addressed-target
+  positions, a call argument); N a built-in's read before a later mutating call (cap of a slice,
+  len of a map/string/call result, the constant `len(*pa)` never read); P the other statement
+  forms (map read, comma-ok map/assert/receive, send, receive-assign forms, blank assigns, reads
+  and stores through a call, receivers from calls, variadic spread, IIFE, generic calls, unary,
+  address through a call, shift, package-level `var _ = f()`); X a receive in every other
+  once-only position (conversion RHS, make sizes, len/min, append, map-assign key/value,
+  multi-assign target, receive statements, two receives in one define/literal, a field store
+  target, a compound RHS). 217 cells: 177 PROBED on both sides by this lane (263 probe subjects in
+  33 probe packages; gc go1.26.5 under the runners' pins), 32 COVERED by existing rows (cited per
+  cell in the lane's report: BUG-047/066/074/076/082/130/140/164's own rows,
+  maps/compound-assign-eval-once, builtins/len-vs-call-order, min-max-vs-call-order, copy-edge,
+  new/new-expr, bools/short-circuit-effects, spec-examples-stmt/if-init-hoist-order and
+  init-hoist-relatives, strings/{concat,index,slice}-eval-order, defer/defer-*-eval,
+  structs/{keyed,positional}-literal-eval-order, multi-assign/index-target-rhs-call-order,
+  spec-examples-decl/assign-tuple-order), 8 OUT OF SCOPE (spec-unsequenced pairs — a variable
+  read, an index read or a conversion's read against a mutating call: S8; a map element as a
+  rmw target and `unsafe.Sizeof(f())`: not legal / S20's refusal). ROWS ADDED: 247 strict rows
+  (expected = gc) in 18 packages `Corpus/coverage/exec/*/sweep-s9-*/` — 239 born green, 8 born RED
+  on the two findings' Cases lines. FINDINGS: BUG-286 — a read-modify-write target whose address
+  computation holds a RECEIVE and no call is evaluated TWICE (`s[<-ch] += 1` gc 121 / machine 31;
+  with one buffered value gc completes, the machine deadlocks): `emitReadWriteTargetPhase1`'s
+  pure-lvalue path, whose `containsCall` sees calls only, emits the target and the read separately
+  and each hoists its own `chan-recv`; BUG-287 — the parenthesised builtin spelling `(len)(fs())`
+  / `(cap)(fs())` is exported as a call through a func value named `len` and the decoder refuses
+  it naming a local that does not exist (S28's shape, a misnamed refusal; the count is right on
+  the canonical spelling). CELLS LEFT (refusals named at the point of failure — coverage gaps):
+  `[2]int(fsl())` (the slice→array value conversion, L2b frontier), `real`/`imag`/`complex`
+  (frontend-quarantined builtin), `defer delete/print/panic(f())` (defer of a builtin), range over
+  a func iterator (FR-12), a receive / `make` / `new` inside a short-circuit right operand (refused
+  by name as an order-changing hoist).
 - What: for `x := T(f())` and `x = T(f())` — a conversion of a call as
   the WHOLE RHS of a single assign/define — the native frontend emits
   the inner call twice, so a side-effecting callee (or an effectful
@@ -4984,6 +5048,70 @@ the release-readiness backlog, `docs/2026-10-12_release-readiness.md` §2).
 - Pinned-by: differential
 - Cases: slices/slice-elided-high-eval-once/call-base, slices/slice-elided-high-eval-once/call-base-low-only, pointers/slice-elided-high-pointer-array-base, strings/slice-eval-order-elided-high, slices/slice-elided-high-eval-once/nested-slice-expr, slices/slice-elided-high-eval-once/map-index-effectful-key, slices/slice-elided-high-eval-once/pointer-array-call-base, slices/slice-elided-high-eval-once/conversion-base
 
+- Neighbourhood: S9 (evaluation count: twice, never, or re-read) — swept 2026-10-27 by lane
+  `sweep/s9-eval-count` (plan §4, [USER]-approved 2026-10-27). THE MATRIX (written before probing;
+  constructs × observation = a call counter folded into the result, a receive drained from a
+  buffer × context = sequential / inside a closure / in a generic function): A read-modify-write
+  targets (`op=`, `++`/`--`) whose address computation holds a call index, a call base, a deref of a
+  call, a field through a call, nested index-then-field, a pointer-to-array call base, three calls,
+  2-D, every compound operator, a parenthesised target, a package-level slice, a `[]*T` index then
+  field, and the RECEIVE forms `s[<-ch] op= v`, `*(<-pch) += 1`, `(<-chp).x++`, `arr[<-ch]++`,
+  `m[<-ch]++`; B conversions of a call as the whole right-hand side of a define/assign at every
+  target kind (bytes, string, rune, `any`, defined, pointer, float, uint8, func, bool, struct,
+  nested, parenthesised type, instantiated generic type, slice→array) and in the var-decl, global,
+  addressed-target, multi-assign, return, blank, argument, literal, switch-tag and if-cond
+  positions; C built-ins with call operands (`len`/`cap` of every operand kind, `append` elements
+  and a spread, `delete`, `min`/`max`, `make` slice/map/chan sizes, `clear`, `close`, `panic`,
+  `print`, `copy`, `real`/`imag`/`complex`, nested builtins, a builtin followed by an ordered
+  call, the blank and var-decl forms, the parenthesised `(len)(x)` spelling, deferred builtins);
+  D slice expressions with calls in the base and every bound (elided and explicit, three-index,
+  pointer-to-array, local array, string, a receive as base and as bound, doubly elided, chained);
+  E select operands (channel and send-value calls on entry whether selected or not, a receive
+  target's index operand only when selected, three clauses, a loop, comma-ok, nil channels);
+  F defer/go callee values and arguments (call-valued callee, closure, receiver from a call, two
+  call args, a receive arg, `defer close(f())`, conversion/len/index args); G method value
+  creation from a call receiver (pointer, value, interface, index, deref) invoked twice, the method
+  expression; H range operands (slice, int, map, string, chan, array one/two vars, pointer-to-array,
+  deref of a call, slice expression, a receive, `len` of a call, an array literal of calls with
+  one var, a panicking effect-free array literal with one var (not evaluated), range-over-func);
+  I switch tags and case expressions (match first/second/none, tagless, type-switch guard, case
+  list, fallthrough, default first, a receive in a case and in the tag); J for cond/post per
+  iteration, cond-only, `len` of a call in the cond, a rmw in the post, init/cond/post calls, a
+  receive cond, comma-ok map with calls; K literal elements (map keys/values, slice, array,
+  `[...]`, `&T{}`, elided `&`, nested, map of slices, duplicate run-time keys, indexed element,
+  embedded field); L comparison/concat chains (short-circuited chain, `==` over ints/strings/
+  interfaces/pointers from calls, a conversion in a concat); M `&&`/`||` (nested mixed, `||` in
+  if, `len`/index-with-call/receive/make/new in the right operand, return and addressed-target
+  positions, a call argument); N a built-in's read before a later mutating call (cap of a slice,
+  len of a map/string/call result, the constant `len(*pa)` never read); P the other statement
+  forms (map read, comma-ok map/assert/receive, send, receive-assign forms, blank assigns, reads
+  and stores through a call, receivers from calls, variadic spread, IIFE, generic calls, unary,
+  address through a call, shift, package-level `var _ = f()`); X a receive in every other
+  once-only position (conversion RHS, make sizes, len/min, append, map-assign key/value,
+  multi-assign target, receive statements, two receives in one define/literal, a field store
+  target, a compound RHS). 217 cells: 177 PROBED on both sides by this lane (263 probe subjects in
+  33 probe packages; gc go1.26.5 under the runners' pins), 32 COVERED by existing rows (cited per
+  cell in the lane's report: BUG-047/066/074/076/082/130/140/164's own rows,
+  maps/compound-assign-eval-once, builtins/len-vs-call-order, min-max-vs-call-order, copy-edge,
+  new/new-expr, bools/short-circuit-effects, spec-examples-stmt/if-init-hoist-order and
+  init-hoist-relatives, strings/{concat,index,slice}-eval-order, defer/defer-*-eval,
+  structs/{keyed,positional}-literal-eval-order, multi-assign/index-target-rhs-call-order,
+  spec-examples-decl/assign-tuple-order), 8 OUT OF SCOPE (spec-unsequenced pairs — a variable
+  read, an index read or a conversion's read against a mutating call: S8; a map element as a
+  rmw target and `unsafe.Sizeof(f())`: not legal / S20's refusal). ROWS ADDED: 247 strict rows
+  (expected = gc) in 18 packages `Corpus/coverage/exec/*/sweep-s9-*/` — 239 born green, 8 born RED
+  on the two findings' Cases lines. FINDINGS: BUG-286 — a read-modify-write target whose address
+  computation holds a RECEIVE and no call is evaluated TWICE (`s[<-ch] += 1` gc 121 / machine 31;
+  with one buffered value gc completes, the machine deadlocks): `emitReadWriteTargetPhase1`'s
+  pure-lvalue path, whose `containsCall` sees calls only, emits the target and the read separately
+  and each hoists its own `chan-recv`; BUG-287 — the parenthesised builtin spelling `(len)(fs())`
+  / `(cap)(fs())` is exported as a call through a func value named `len` and the decoder refuses
+  it naming a local that does not exist (S28's shape, a misnamed refusal; the count is right on
+  the canonical spelling). CELLS LEFT (refusals named at the point of failure — coverage gaps):
+  `[2]int(fsl())` (the slice→array value conversion, L2b frontier), `real`/`imag`/`complex`
+  (frontend-quarantined builtin), `defer delete/print/panic(f())` (defer of a builtin), range over
+  a func iterator (FR-12), a receive / `make` / `new` inside a short-circuit right operand (refused
+  by name as an order-changing hoist).
 `spec#Slice_expressions` evaluates the sliced operand ONCE; the elided
 high bound "defaults to the length of the sliced operand" — a default
 over the one evaluated operand, not a second evaluation. The frontend's
@@ -5431,6 +5559,70 @@ exactly.
   vs machine panics 42; fixedbugs/issue43111.go, go ok vs machine
   deadlocks; one root cause)
 
+- Neighbourhood: S9 (evaluation count: twice, never, or re-read) — swept 2026-10-27 by lane
+  `sweep/s9-eval-count` (plan §4, [USER]-approved 2026-10-27). THE MATRIX (written before probing;
+  constructs × observation = a call counter folded into the result, a receive drained from a
+  buffer × context = sequential / inside a closure / in a generic function): A read-modify-write
+  targets (`op=`, `++`/`--`) whose address computation holds a call index, a call base, a deref of a
+  call, a field through a call, nested index-then-field, a pointer-to-array call base, three calls,
+  2-D, every compound operator, a parenthesised target, a package-level slice, a `[]*T` index then
+  field, and the RECEIVE forms `s[<-ch] op= v`, `*(<-pch) += 1`, `(<-chp).x++`, `arr[<-ch]++`,
+  `m[<-ch]++`; B conversions of a call as the whole right-hand side of a define/assign at every
+  target kind (bytes, string, rune, `any`, defined, pointer, float, uint8, func, bool, struct,
+  nested, parenthesised type, instantiated generic type, slice→array) and in the var-decl, global,
+  addressed-target, multi-assign, return, blank, argument, literal, switch-tag and if-cond
+  positions; C built-ins with call operands (`len`/`cap` of every operand kind, `append` elements
+  and a spread, `delete`, `min`/`max`, `make` slice/map/chan sizes, `clear`, `close`, `panic`,
+  `print`, `copy`, `real`/`imag`/`complex`, nested builtins, a builtin followed by an ordered
+  call, the blank and var-decl forms, the parenthesised `(len)(x)` spelling, deferred builtins);
+  D slice expressions with calls in the base and every bound (elided and explicit, three-index,
+  pointer-to-array, local array, string, a receive as base and as bound, doubly elided, chained);
+  E select operands (channel and send-value calls on entry whether selected or not, a receive
+  target's index operand only when selected, three clauses, a loop, comma-ok, nil channels);
+  F defer/go callee values and arguments (call-valued callee, closure, receiver from a call, two
+  call args, a receive arg, `defer close(f())`, conversion/len/index args); G method value
+  creation from a call receiver (pointer, value, interface, index, deref) invoked twice, the method
+  expression; H range operands (slice, int, map, string, chan, array one/two vars, pointer-to-array,
+  deref of a call, slice expression, a receive, `len` of a call, an array literal of calls with
+  one var, a panicking effect-free array literal with one var (not evaluated), range-over-func);
+  I switch tags and case expressions (match first/second/none, tagless, type-switch guard, case
+  list, fallthrough, default first, a receive in a case and in the tag); J for cond/post per
+  iteration, cond-only, `len` of a call in the cond, a rmw in the post, init/cond/post calls, a
+  receive cond, comma-ok map with calls; K literal elements (map keys/values, slice, array,
+  `[...]`, `&T{}`, elided `&`, nested, map of slices, duplicate run-time keys, indexed element,
+  embedded field); L comparison/concat chains (short-circuited chain, `==` over ints/strings/
+  interfaces/pointers from calls, a conversion in a concat); M `&&`/`||` (nested mixed, `||` in
+  if, `len`/index-with-call/receive/make/new in the right operand, return and addressed-target
+  positions, a call argument); N a built-in's read before a later mutating call (cap of a slice,
+  len of a map/string/call result, the constant `len(*pa)` never read); P the other statement
+  forms (map read, comma-ok map/assert/receive, send, receive-assign forms, blank assigns, reads
+  and stores through a call, receivers from calls, variadic spread, IIFE, generic calls, unary,
+  address through a call, shift, package-level `var _ = f()`); X a receive in every other
+  once-only position (conversion RHS, make sizes, len/min, append, map-assign key/value,
+  multi-assign target, receive statements, two receives in one define/literal, a field store
+  target, a compound RHS). 217 cells: 177 PROBED on both sides by this lane (263 probe subjects in
+  33 probe packages; gc go1.26.5 under the runners' pins), 32 COVERED by existing rows (cited per
+  cell in the lane's report: BUG-047/066/074/076/082/130/140/164's own rows,
+  maps/compound-assign-eval-once, builtins/len-vs-call-order, min-max-vs-call-order, copy-edge,
+  new/new-expr, bools/short-circuit-effects, spec-examples-stmt/if-init-hoist-order and
+  init-hoist-relatives, strings/{concat,index,slice}-eval-order, defer/defer-*-eval,
+  structs/{keyed,positional}-literal-eval-order, multi-assign/index-target-rhs-call-order,
+  spec-examples-decl/assign-tuple-order), 8 OUT OF SCOPE (spec-unsequenced pairs — a variable
+  read, an index read or a conversion's read against a mutating call: S8; a map element as a
+  rmw target and `unsafe.Sizeof(f())`: not legal / S20's refusal). ROWS ADDED: 247 strict rows
+  (expected = gc) in 18 packages `Corpus/coverage/exec/*/sweep-s9-*/` — 239 born green, 8 born RED
+  on the two findings' Cases lines. FINDINGS: BUG-286 — a read-modify-write target whose address
+  computation holds a RECEIVE and no call is evaluated TWICE (`s[<-ch] += 1` gc 121 / machine 31;
+  with one buffered value gc completes, the machine deadlocks): `emitReadWriteTargetPhase1`'s
+  pure-lvalue path, whose `containsCall` sees calls only, emits the target and the read separately
+  and each hoists its own `chan-recv`; BUG-287 — the parenthesised builtin spelling `(len)(fs())`
+  / `(cap)(fs())` is exported as a call through a func value named `len` and the decoder refuses
+  it naming a local that does not exist (S28's shape, a misnamed refusal; the count is right on
+  the canonical spelling). CELLS LEFT (refusals named at the point of failure — coverage gaps):
+  `[2]int(fsl())` (the slice→array value conversion, L2b frontier), `real`/`imag`/`complex`
+  (frontend-quarantined builtin), `defer delete/print/panic(f())` (defer of a builtin), range over
+  a func iterator (FR-12), a receive / `make` / `new` inside a short-circuit right operand (refused
+  by name as an order-changing hoist).
 Spec (spec#Select_statements step 1): on entry, ALL channel operands
 of receive clauses and BOTH the channel and right-hand-side
 expressions of send clauses are evaluated exactly once, in source
@@ -5558,6 +5750,70 @@ which is the E5 shape.
   special case was already right, range was missing exactly the same
   treatment)
 
+- Neighbourhood: S9 (evaluation count: twice, never, or re-read) — swept 2026-10-27 by lane
+  `sweep/s9-eval-count` (plan §4, [USER]-approved 2026-10-27). THE MATRIX (written before probing;
+  constructs × observation = a call counter folded into the result, a receive drained from a
+  buffer × context = sequential / inside a closure / in a generic function): A read-modify-write
+  targets (`op=`, `++`/`--`) whose address computation holds a call index, a call base, a deref of a
+  call, a field through a call, nested index-then-field, a pointer-to-array call base, three calls,
+  2-D, every compound operator, a parenthesised target, a package-level slice, a `[]*T` index then
+  field, and the RECEIVE forms `s[<-ch] op= v`, `*(<-pch) += 1`, `(<-chp).x++`, `arr[<-ch]++`,
+  `m[<-ch]++`; B conversions of a call as the whole right-hand side of a define/assign at every
+  target kind (bytes, string, rune, `any`, defined, pointer, float, uint8, func, bool, struct,
+  nested, parenthesised type, instantiated generic type, slice→array) and in the var-decl, global,
+  addressed-target, multi-assign, return, blank, argument, literal, switch-tag and if-cond
+  positions; C built-ins with call operands (`len`/`cap` of every operand kind, `append` elements
+  and a spread, `delete`, `min`/`max`, `make` slice/map/chan sizes, `clear`, `close`, `panic`,
+  `print`, `copy`, `real`/`imag`/`complex`, nested builtins, a builtin followed by an ordered
+  call, the blank and var-decl forms, the parenthesised `(len)(x)` spelling, deferred builtins);
+  D slice expressions with calls in the base and every bound (elided and explicit, three-index,
+  pointer-to-array, local array, string, a receive as base and as bound, doubly elided, chained);
+  E select operands (channel and send-value calls on entry whether selected or not, a receive
+  target's index operand only when selected, three clauses, a loop, comma-ok, nil channels);
+  F defer/go callee values and arguments (call-valued callee, closure, receiver from a call, two
+  call args, a receive arg, `defer close(f())`, conversion/len/index args); G method value
+  creation from a call receiver (pointer, value, interface, index, deref) invoked twice, the method
+  expression; H range operands (slice, int, map, string, chan, array one/two vars, pointer-to-array,
+  deref of a call, slice expression, a receive, `len` of a call, an array literal of calls with
+  one var, a panicking effect-free array literal with one var (not evaluated), range-over-func);
+  I switch tags and case expressions (match first/second/none, tagless, type-switch guard, case
+  list, fallthrough, default first, a receive in a case and in the tag); J for cond/post per
+  iteration, cond-only, `len` of a call in the cond, a rmw in the post, init/cond/post calls, a
+  receive cond, comma-ok map with calls; K literal elements (map keys/values, slice, array,
+  `[...]`, `&T{}`, elided `&`, nested, map of slices, duplicate run-time keys, indexed element,
+  embedded field); L comparison/concat chains (short-circuited chain, `==` over ints/strings/
+  interfaces/pointers from calls, a conversion in a concat); M `&&`/`||` (nested mixed, `||` in
+  if, `len`/index-with-call/receive/make/new in the right operand, return and addressed-target
+  positions, a call argument); N a built-in's read before a later mutating call (cap of a slice,
+  len of a map/string/call result, the constant `len(*pa)` never read); P the other statement
+  forms (map read, comma-ok map/assert/receive, send, receive-assign forms, blank assigns, reads
+  and stores through a call, receivers from calls, variadic spread, IIFE, generic calls, unary,
+  address through a call, shift, package-level `var _ = f()`); X a receive in every other
+  once-only position (conversion RHS, make sizes, len/min, append, map-assign key/value,
+  multi-assign target, receive statements, two receives in one define/literal, a field store
+  target, a compound RHS). 217 cells: 177 PROBED on both sides by this lane (263 probe subjects in
+  33 probe packages; gc go1.26.5 under the runners' pins), 32 COVERED by existing rows (cited per
+  cell in the lane's report: BUG-047/066/074/076/082/130/140/164's own rows,
+  maps/compound-assign-eval-once, builtins/len-vs-call-order, min-max-vs-call-order, copy-edge,
+  new/new-expr, bools/short-circuit-effects, spec-examples-stmt/if-init-hoist-order and
+  init-hoist-relatives, strings/{concat,index,slice}-eval-order, defer/defer-*-eval,
+  structs/{keyed,positional}-literal-eval-order, multi-assign/index-target-rhs-call-order,
+  spec-examples-decl/assign-tuple-order), 8 OUT OF SCOPE (spec-unsequenced pairs — a variable
+  read, an index read or a conversion's read against a mutating call: S8; a map element as a
+  rmw target and `unsafe.Sizeof(f())`: not legal / S20's refusal). ROWS ADDED: 247 strict rows
+  (expected = gc) in 18 packages `Corpus/coverage/exec/*/sweep-s9-*/` — 239 born green, 8 born RED
+  on the two findings' Cases lines. FINDINGS: BUG-286 — a read-modify-write target whose address
+  computation holds a RECEIVE and no call is evaluated TWICE (`s[<-ch] += 1` gc 121 / machine 31;
+  with one buffered value gc completes, the machine deadlocks): `emitReadWriteTargetPhase1`'s
+  pure-lvalue path, whose `containsCall` sees calls only, emits the target and the read separately
+  and each hoists its own `chan-recv`; BUG-287 — the parenthesised builtin spelling `(len)(fs())`
+  / `(cap)(fs())` is exported as a call through a func value named `len` and the decoder refuses
+  it naming a local that does not exist (S28's shape, a misnamed refusal; the count is right on
+  the canonical spelling). CELLS LEFT (refusals named at the point of failure — coverage gaps):
+  `[2]int(fsl())` (the slice→array value conversion, L2b frontier), `real`/`imag`/`complex`
+  (frontend-quarantined builtin), `defer delete/print/panic(f())` (defer of a builtin), range over
+  a func iterator (FR-12), a receive / `make` / `new` inside a short-circuit right operand (refused
+  by name as an order-changing hoist).
 Spec (spec#For_statements: "if at most one iteration variable is
 present and len(x) is constant, the range expression is not
 evaluated"; spec#Length_and_capacity: len(x) is constant for array /
@@ -6241,6 +6497,70 @@ refuses); the gc probe append-growth-over-unsafe is its evidence.
   `builtins/make-map-hint` with a constant hint 8, which cannot see
   either half.)
 
+- Neighbourhood: S9 (evaluation count: twice, never, or re-read) — swept 2026-10-27 by lane
+  `sweep/s9-eval-count` (plan §4, [USER]-approved 2026-10-27). THE MATRIX (written before probing;
+  constructs × observation = a call counter folded into the result, a receive drained from a
+  buffer × context = sequential / inside a closure / in a generic function): A read-modify-write
+  targets (`op=`, `++`/`--`) whose address computation holds a call index, a call base, a deref of a
+  call, a field through a call, nested index-then-field, a pointer-to-array call base, three calls,
+  2-D, every compound operator, a parenthesised target, a package-level slice, a `[]*T` index then
+  field, and the RECEIVE forms `s[<-ch] op= v`, `*(<-pch) += 1`, `(<-chp).x++`, `arr[<-ch]++`,
+  `m[<-ch]++`; B conversions of a call as the whole right-hand side of a define/assign at every
+  target kind (bytes, string, rune, `any`, defined, pointer, float, uint8, func, bool, struct,
+  nested, parenthesised type, instantiated generic type, slice→array) and in the var-decl, global,
+  addressed-target, multi-assign, return, blank, argument, literal, switch-tag and if-cond
+  positions; C built-ins with call operands (`len`/`cap` of every operand kind, `append` elements
+  and a spread, `delete`, `min`/`max`, `make` slice/map/chan sizes, `clear`, `close`, `panic`,
+  `print`, `copy`, `real`/`imag`/`complex`, nested builtins, a builtin followed by an ordered
+  call, the blank and var-decl forms, the parenthesised `(len)(x)` spelling, deferred builtins);
+  D slice expressions with calls in the base and every bound (elided and explicit, three-index,
+  pointer-to-array, local array, string, a receive as base and as bound, doubly elided, chained);
+  E select operands (channel and send-value calls on entry whether selected or not, a receive
+  target's index operand only when selected, three clauses, a loop, comma-ok, nil channels);
+  F defer/go callee values and arguments (call-valued callee, closure, receiver from a call, two
+  call args, a receive arg, `defer close(f())`, conversion/len/index args); G method value
+  creation from a call receiver (pointer, value, interface, index, deref) invoked twice, the method
+  expression; H range operands (slice, int, map, string, chan, array one/two vars, pointer-to-array,
+  deref of a call, slice expression, a receive, `len` of a call, an array literal of calls with
+  one var, a panicking effect-free array literal with one var (not evaluated), range-over-func);
+  I switch tags and case expressions (match first/second/none, tagless, type-switch guard, case
+  list, fallthrough, default first, a receive in a case and in the tag); J for cond/post per
+  iteration, cond-only, `len` of a call in the cond, a rmw in the post, init/cond/post calls, a
+  receive cond, comma-ok map with calls; K literal elements (map keys/values, slice, array,
+  `[...]`, `&T{}`, elided `&`, nested, map of slices, duplicate run-time keys, indexed element,
+  embedded field); L comparison/concat chains (short-circuited chain, `==` over ints/strings/
+  interfaces/pointers from calls, a conversion in a concat); M `&&`/`||` (nested mixed, `||` in
+  if, `len`/index-with-call/receive/make/new in the right operand, return and addressed-target
+  positions, a call argument); N a built-in's read before a later mutating call (cap of a slice,
+  len of a map/string/call result, the constant `len(*pa)` never read); P the other statement
+  forms (map read, comma-ok map/assert/receive, send, receive-assign forms, blank assigns, reads
+  and stores through a call, receivers from calls, variadic spread, IIFE, generic calls, unary,
+  address through a call, shift, package-level `var _ = f()`); X a receive in every other
+  once-only position (conversion RHS, make sizes, len/min, append, map-assign key/value,
+  multi-assign target, receive statements, two receives in one define/literal, a field store
+  target, a compound RHS). 217 cells: 177 PROBED on both sides by this lane (263 probe subjects in
+  33 probe packages; gc go1.26.5 under the runners' pins), 32 COVERED by existing rows (cited per
+  cell in the lane's report: BUG-047/066/074/076/082/130/140/164's own rows,
+  maps/compound-assign-eval-once, builtins/len-vs-call-order, min-max-vs-call-order, copy-edge,
+  new/new-expr, bools/short-circuit-effects, spec-examples-stmt/if-init-hoist-order and
+  init-hoist-relatives, strings/{concat,index,slice}-eval-order, defer/defer-*-eval,
+  structs/{keyed,positional}-literal-eval-order, multi-assign/index-target-rhs-call-order,
+  spec-examples-decl/assign-tuple-order), 8 OUT OF SCOPE (spec-unsequenced pairs — a variable
+  read, an index read or a conversion's read against a mutating call: S8; a map element as a
+  rmw target and `unsafe.Sizeof(f())`: not legal / S20's refusal). ROWS ADDED: 247 strict rows
+  (expected = gc) in 18 packages `Corpus/coverage/exec/*/sweep-s9-*/` — 239 born green, 8 born RED
+  on the two findings' Cases lines. FINDINGS: BUG-286 — a read-modify-write target whose address
+  computation holds a RECEIVE and no call is evaluated TWICE (`s[<-ch] += 1` gc 121 / machine 31;
+  with one buffered value gc completes, the machine deadlocks): `emitReadWriteTargetPhase1`'s
+  pure-lvalue path, whose `containsCall` sees calls only, emits the target and the read separately
+  and each hoists its own `chan-recv`; BUG-287 — the parenthesised builtin spelling `(len)(fs())`
+  / `(cap)(fs())` is exported as a call through a func value named `len` and the decoder refuses
+  it naming a local that does not exist (S28's shape, a misnamed refusal; the count is right on
+  the canonical spelling). CELLS LEFT (refusals named at the point of failure — coverage gaps):
+  `[2]int(fsl())` (the slice→array value conversion, L2b frontier), `real`/`imag`/`complex`
+  (frontend-quarantined builtin), `defer delete/print/panic(f())` (defer of a builtin), range over
+  a func iterator (FR-12), a receive / `make` / `new` inside a short-circuit right operand (refused
+  by name as an order-changing hoist).
 Two halves, one site. (1) FIDELITY, FIXED the same day on the
 `bug082-maphint` lane (Status above): spec §Making slices, maps
 and channels lists the hint among the ordinary operands of a `make`
@@ -9945,6 +10265,70 @@ temporaries (`CommittedIndex`'s stack array, `Slice`/`Visit`/`VoterNodes`/`Learn
   plain variable read gives the zero value with nothing evaluated, and any other operand is refused by name». Entry:
   [AGENT] lane worker, 2026-10-14.
 
+- Neighbourhood: S9 (evaluation count: twice, never, or re-read) — swept 2026-10-27 by lane
+  `sweep/s9-eval-count` (plan §4, [USER]-approved 2026-10-27). THE MATRIX (written before probing;
+  constructs × observation = a call counter folded into the result, a receive drained from a
+  buffer × context = sequential / inside a closure / in a generic function): A read-modify-write
+  targets (`op=`, `++`/`--`) whose address computation holds a call index, a call base, a deref of a
+  call, a field through a call, nested index-then-field, a pointer-to-array call base, three calls,
+  2-D, every compound operator, a parenthesised target, a package-level slice, a `[]*T` index then
+  field, and the RECEIVE forms `s[<-ch] op= v`, `*(<-pch) += 1`, `(<-chp).x++`, `arr[<-ch]++`,
+  `m[<-ch]++`; B conversions of a call as the whole right-hand side of a define/assign at every
+  target kind (bytes, string, rune, `any`, defined, pointer, float, uint8, func, bool, struct,
+  nested, parenthesised type, instantiated generic type, slice→array) and in the var-decl, global,
+  addressed-target, multi-assign, return, blank, argument, literal, switch-tag and if-cond
+  positions; C built-ins with call operands (`len`/`cap` of every operand kind, `append` elements
+  and a spread, `delete`, `min`/`max`, `make` slice/map/chan sizes, `clear`, `close`, `panic`,
+  `print`, `copy`, `real`/`imag`/`complex`, nested builtins, a builtin followed by an ordered
+  call, the blank and var-decl forms, the parenthesised `(len)(x)` spelling, deferred builtins);
+  D slice expressions with calls in the base and every bound (elided and explicit, three-index,
+  pointer-to-array, local array, string, a receive as base and as bound, doubly elided, chained);
+  E select operands (channel and send-value calls on entry whether selected or not, a receive
+  target's index operand only when selected, three clauses, a loop, comma-ok, nil channels);
+  F defer/go callee values and arguments (call-valued callee, closure, receiver from a call, two
+  call args, a receive arg, `defer close(f())`, conversion/len/index args); G method value
+  creation from a call receiver (pointer, value, interface, index, deref) invoked twice, the method
+  expression; H range operands (slice, int, map, string, chan, array one/two vars, pointer-to-array,
+  deref of a call, slice expression, a receive, `len` of a call, an array literal of calls with
+  one var, a panicking effect-free array literal with one var (not evaluated), range-over-func);
+  I switch tags and case expressions (match first/second/none, tagless, type-switch guard, case
+  list, fallthrough, default first, a receive in a case and in the tag); J for cond/post per
+  iteration, cond-only, `len` of a call in the cond, a rmw in the post, init/cond/post calls, a
+  receive cond, comma-ok map with calls; K literal elements (map keys/values, slice, array,
+  `[...]`, `&T{}`, elided `&`, nested, map of slices, duplicate run-time keys, indexed element,
+  embedded field); L comparison/concat chains (short-circuited chain, `==` over ints/strings/
+  interfaces/pointers from calls, a conversion in a concat); M `&&`/`||` (nested mixed, `||` in
+  if, `len`/index-with-call/receive/make/new in the right operand, return and addressed-target
+  positions, a call argument); N a built-in's read before a later mutating call (cap of a slice,
+  len of a map/string/call result, the constant `len(*pa)` never read); P the other statement
+  forms (map read, comma-ok map/assert/receive, send, receive-assign forms, blank assigns, reads
+  and stores through a call, receivers from calls, variadic spread, IIFE, generic calls, unary,
+  address through a call, shift, package-level `var _ = f()`); X a receive in every other
+  once-only position (conversion RHS, make sizes, len/min, append, map-assign key/value,
+  multi-assign target, receive statements, two receives in one define/literal, a field store
+  target, a compound RHS). 217 cells: 177 PROBED on both sides by this lane (263 probe subjects in
+  33 probe packages; gc go1.26.5 under the runners' pins), 32 COVERED by existing rows (cited per
+  cell in the lane's report: BUG-047/066/074/076/082/130/140/164's own rows,
+  maps/compound-assign-eval-once, builtins/len-vs-call-order, min-max-vs-call-order, copy-edge,
+  new/new-expr, bools/short-circuit-effects, spec-examples-stmt/if-init-hoist-order and
+  init-hoist-relatives, strings/{concat,index,slice}-eval-order, defer/defer-*-eval,
+  structs/{keyed,positional}-literal-eval-order, multi-assign/index-target-rhs-call-order,
+  spec-examples-decl/assign-tuple-order), 8 OUT OF SCOPE (spec-unsequenced pairs — a variable
+  read, an index read or a conversion's read against a mutating call: S8; a map element as a
+  rmw target and `unsafe.Sizeof(f())`: not legal / S20's refusal). ROWS ADDED: 247 strict rows
+  (expected = gc) in 18 packages `Corpus/coverage/exec/*/sweep-s9-*/` — 239 born green, 8 born RED
+  on the two findings' Cases lines. FINDINGS: BUG-286 — a read-modify-write target whose address
+  computation holds a RECEIVE and no call is evaluated TWICE (`s[<-ch] += 1` gc 121 / machine 31;
+  with one buffered value gc completes, the machine deadlocks): `emitReadWriteTargetPhase1`'s
+  pure-lvalue path, whose `containsCall` sees calls only, emits the target and the read separately
+  and each hoists its own `chan-recv`; BUG-287 — the parenthesised builtin spelling `(len)(fs())`
+  / `(cap)(fs())` is exported as a call through a func value named `len` and the decoder refuses
+  it naming a local that does not exist (S28's shape, a misnamed refusal; the count is right on
+  the canonical spelling). CELLS LEFT (refusals named at the point of failure — coverage gaps):
+  `[2]int(fsl())` (the slice→array value conversion, L2b frontier), `real`/`imag`/`complex`
+  (frontend-quarantined builtin), `defer delete/print/panic(f())` (defer of a builtin), range over
+  a func iterator (FR-12), a receive / `make` / `new` inside a short-circuit right operand (refused
+  by name as an order-changing hoist).
 WHAT gc DOES (the reason the operand is not modeled as an evaluation; the census at the go1.26.5 pin,
 `deps/go/src/cmd/compile/internal/`):
 - F1 — `walk/complit.go:231` `fixedlit`: `if a == ir.BlankNode && !staticinit.AnySideEffects(value) { continue }` — a
@@ -10706,7 +11090,70 @@ WHAT: spec#Passing_arguments_to_..._parameters — with no actual arguments for 
 - Pinned-by: differential
 - Cases: structs/selector-eval-once
 - Discovered: commit c908921e («fixing the writes made a wrong answer reachable within minutes»); BUG-001's entry names the row. Reachability on main before the fix: the struct-field form was masked by BUG-001's stuck; the slice-index and dereference forms took the same separate target/read emission (`emit.go` at 9e43afc9, the compound-assign and IncDec arms) and slice `index-addr` already lowered, so those forms were wrong on main — argued from the code, not re-run.
-- Neighbourhood: to be swept in step 2, shape S9 (evaluation count: twice, never, or re-read)
+- Neighbourhood: S9 (evaluation count: twice, never, or re-read) — swept 2026-10-27 by lane
+  `sweep/s9-eval-count` (plan §4, [USER]-approved 2026-10-27). THE MATRIX (written before probing;
+  constructs × observation = a call counter folded into the result, a receive drained from a
+  buffer × context = sequential / inside a closure / in a generic function): A read-modify-write
+  targets (`op=`, `++`/`--`) whose address computation holds a call index, a call base, a deref of a
+  call, a field through a call, nested index-then-field, a pointer-to-array call base, three calls,
+  2-D, every compound operator, a parenthesised target, a package-level slice, a `[]*T` index then
+  field, and the RECEIVE forms `s[<-ch] op= v`, `*(<-pch) += 1`, `(<-chp).x++`, `arr[<-ch]++`,
+  `m[<-ch]++`; B conversions of a call as the whole right-hand side of a define/assign at every
+  target kind (bytes, string, rune, `any`, defined, pointer, float, uint8, func, bool, struct,
+  nested, parenthesised type, instantiated generic type, slice→array) and in the var-decl, global,
+  addressed-target, multi-assign, return, blank, argument, literal, switch-tag and if-cond
+  positions; C built-ins with call operands (`len`/`cap` of every operand kind, `append` elements
+  and a spread, `delete`, `min`/`max`, `make` slice/map/chan sizes, `clear`, `close`, `panic`,
+  `print`, `copy`, `real`/`imag`/`complex`, nested builtins, a builtin followed by an ordered
+  call, the blank and var-decl forms, the parenthesised `(len)(x)` spelling, deferred builtins);
+  D slice expressions with calls in the base and every bound (elided and explicit, three-index,
+  pointer-to-array, local array, string, a receive as base and as bound, doubly elided, chained);
+  E select operands (channel and send-value calls on entry whether selected or not, a receive
+  target's index operand only when selected, three clauses, a loop, comma-ok, nil channels);
+  F defer/go callee values and arguments (call-valued callee, closure, receiver from a call, two
+  call args, a receive arg, `defer close(f())`, conversion/len/index args); G method value
+  creation from a call receiver (pointer, value, interface, index, deref) invoked twice, the method
+  expression; H range operands (slice, int, map, string, chan, array one/two vars, pointer-to-array,
+  deref of a call, slice expression, a receive, `len` of a call, an array literal of calls with
+  one var, a panicking effect-free array literal with one var (not evaluated), range-over-func);
+  I switch tags and case expressions (match first/second/none, tagless, type-switch guard, case
+  list, fallthrough, default first, a receive in a case and in the tag); J for cond/post per
+  iteration, cond-only, `len` of a call in the cond, a rmw in the post, init/cond/post calls, a
+  receive cond, comma-ok map with calls; K literal elements (map keys/values, slice, array,
+  `[...]`, `&T{}`, elided `&`, nested, map of slices, duplicate run-time keys, indexed element,
+  embedded field); L comparison/concat chains (short-circuited chain, `==` over ints/strings/
+  interfaces/pointers from calls, a conversion in a concat); M `&&`/`||` (nested mixed, `||` in
+  if, `len`/index-with-call/receive/make/new in the right operand, return and addressed-target
+  positions, a call argument); N a built-in's read before a later mutating call (cap of a slice,
+  len of a map/string/call result, the constant `len(*pa)` never read); P the other statement
+  forms (map read, comma-ok map/assert/receive, send, receive-assign forms, blank assigns, reads
+  and stores through a call, receivers from calls, variadic spread, IIFE, generic calls, unary,
+  address through a call, shift, package-level `var _ = f()`); X a receive in every other
+  once-only position (conversion RHS, make sizes, len/min, append, map-assign key/value,
+  multi-assign target, receive statements, two receives in one define/literal, a field store
+  target, a compound RHS). 217 cells: 177 PROBED on both sides by this lane (263 probe subjects in
+  33 probe packages; gc go1.26.5 under the runners' pins), 32 COVERED by existing rows (cited per
+  cell in the lane's report: BUG-047/066/074/076/082/130/140/164's own rows,
+  maps/compound-assign-eval-once, builtins/len-vs-call-order, min-max-vs-call-order, copy-edge,
+  new/new-expr, bools/short-circuit-effects, spec-examples-stmt/if-init-hoist-order and
+  init-hoist-relatives, strings/{concat,index,slice}-eval-order, defer/defer-*-eval,
+  structs/{keyed,positional}-literal-eval-order, multi-assign/index-target-rhs-call-order,
+  spec-examples-decl/assign-tuple-order), 8 OUT OF SCOPE (spec-unsequenced pairs — a variable
+  read, an index read or a conversion's read against a mutating call: S8; a map element as a
+  rmw target and `unsafe.Sizeof(f())`: not legal / S20's refusal). ROWS ADDED: 247 strict rows
+  (expected = gc) in 18 packages `Corpus/coverage/exec/*/sweep-s9-*/` — 239 born green, 8 born RED
+  on the two findings' Cases lines. FINDINGS: BUG-286 — a read-modify-write target whose address
+  computation holds a RECEIVE and no call is evaluated TWICE (`s[<-ch] += 1` gc 121 / machine 31;
+  with one buffered value gc completes, the machine deadlocks): `emitReadWriteTargetPhase1`'s
+  pure-lvalue path, whose `containsCall` sees calls only, emits the target and the read separately
+  and each hoists its own `chan-recv`; BUG-287 — the parenthesised builtin spelling `(len)(fs())`
+  / `(cap)(fs())` is exported as a call through a func value named `len` and the decoder refuses
+  it naming a local that does not exist (S28's shape, a misnamed refusal; the count is right on
+  the canonical spelling). CELLS LEFT (refusals named at the point of failure — coverage gaps):
+  `[2]int(fsl())` (the slice→array value conversion, L2b frontier), `real`/`imag`/`complex`
+  (frontend-quarantined builtin), `defer delete/print/panic(f())` (defer of a builtin), range over
+  a func iterator (FR-12), a receive / `make` / `new` inside a short-circuit right operand (refused
+  by name as an order-changing hoist).
 
 WHAT: spec#Assignment_statements — `x op= y` evaluates `x` once. SITE: `tools/nativefrontend/emit.go` `emitReadWriteTarget`, used by `emitAssign`'s compound arm and `emitIncDec`; a pure lvalue keeps the direct form (its double evaluation is unobservable). ROUTE: compound assignment and `++`/`--` on an lvalue whose address computation contains a call.
 
@@ -11148,7 +11595,70 @@ WHAT: the machine already had the string↔byte-slice and rune→string operator
 - Pinned-by: differential
 - Cases: builtins/copy-edge/eval-order, builtins/copy-edge/forward-overlap
 - Discovered: commit 923e3ec0 («fixed en route»). Reachability on main before the fix: the `copy-edge` rows were `frontend-export` there because `copy` lowered on the same branch; the speculative path (`emitAssign` → `emitCallNode` → `emitBuiltin`, whose `len`/`cap`/`make` arms hoist and report `effectful = false`, so the generic path re-emitted the RHS) was on main — the same code argument BUG-140 makes for its slice-index form.
-- Neighbourhood: to be swept in step 2, shape S9 (evaluation count: twice, never, or re-read)
+- Neighbourhood: S9 (evaluation count: twice, never, or re-read) — swept 2026-10-27 by lane
+  `sweep/s9-eval-count` (plan §4, [USER]-approved 2026-10-27). THE MATRIX (written before probing;
+  constructs × observation = a call counter folded into the result, a receive drained from a
+  buffer × context = sequential / inside a closure / in a generic function): A read-modify-write
+  targets (`op=`, `++`/`--`) whose address computation holds a call index, a call base, a deref of a
+  call, a field through a call, nested index-then-field, a pointer-to-array call base, three calls,
+  2-D, every compound operator, a parenthesised target, a package-level slice, a `[]*T` index then
+  field, and the RECEIVE forms `s[<-ch] op= v`, `*(<-pch) += 1`, `(<-chp).x++`, `arr[<-ch]++`,
+  `m[<-ch]++`; B conversions of a call as the whole right-hand side of a define/assign at every
+  target kind (bytes, string, rune, `any`, defined, pointer, float, uint8, func, bool, struct,
+  nested, parenthesised type, instantiated generic type, slice→array) and in the var-decl, global,
+  addressed-target, multi-assign, return, blank, argument, literal, switch-tag and if-cond
+  positions; C built-ins with call operands (`len`/`cap` of every operand kind, `append` elements
+  and a spread, `delete`, `min`/`max`, `make` slice/map/chan sizes, `clear`, `close`, `panic`,
+  `print`, `copy`, `real`/`imag`/`complex`, nested builtins, a builtin followed by an ordered
+  call, the blank and var-decl forms, the parenthesised `(len)(x)` spelling, deferred builtins);
+  D slice expressions with calls in the base and every bound (elided and explicit, three-index,
+  pointer-to-array, local array, string, a receive as base and as bound, doubly elided, chained);
+  E select operands (channel and send-value calls on entry whether selected or not, a receive
+  target's index operand only when selected, three clauses, a loop, comma-ok, nil channels);
+  F defer/go callee values and arguments (call-valued callee, closure, receiver from a call, two
+  call args, a receive arg, `defer close(f())`, conversion/len/index args); G method value
+  creation from a call receiver (pointer, value, interface, index, deref) invoked twice, the method
+  expression; H range operands (slice, int, map, string, chan, array one/two vars, pointer-to-array,
+  deref of a call, slice expression, a receive, `len` of a call, an array literal of calls with
+  one var, a panicking effect-free array literal with one var (not evaluated), range-over-func);
+  I switch tags and case expressions (match first/second/none, tagless, type-switch guard, case
+  list, fallthrough, default first, a receive in a case and in the tag); J for cond/post per
+  iteration, cond-only, `len` of a call in the cond, a rmw in the post, init/cond/post calls, a
+  receive cond, comma-ok map with calls; K literal elements (map keys/values, slice, array,
+  `[...]`, `&T{}`, elided `&`, nested, map of slices, duplicate run-time keys, indexed element,
+  embedded field); L comparison/concat chains (short-circuited chain, `==` over ints/strings/
+  interfaces/pointers from calls, a conversion in a concat); M `&&`/`||` (nested mixed, `||` in
+  if, `len`/index-with-call/receive/make/new in the right operand, return and addressed-target
+  positions, a call argument); N a built-in's read before a later mutating call (cap of a slice,
+  len of a map/string/call result, the constant `len(*pa)` never read); P the other statement
+  forms (map read, comma-ok map/assert/receive, send, receive-assign forms, blank assigns, reads
+  and stores through a call, receivers from calls, variadic spread, IIFE, generic calls, unary,
+  address through a call, shift, package-level `var _ = f()`); X a receive in every other
+  once-only position (conversion RHS, make sizes, len/min, append, map-assign key/value,
+  multi-assign target, receive statements, two receives in one define/literal, a field store
+  target, a compound RHS). 217 cells: 177 PROBED on both sides by this lane (263 probe subjects in
+  33 probe packages; gc go1.26.5 under the runners' pins), 32 COVERED by existing rows (cited per
+  cell in the lane's report: BUG-047/066/074/076/082/130/140/164's own rows,
+  maps/compound-assign-eval-once, builtins/len-vs-call-order, min-max-vs-call-order, copy-edge,
+  new/new-expr, bools/short-circuit-effects, spec-examples-stmt/if-init-hoist-order and
+  init-hoist-relatives, strings/{concat,index,slice}-eval-order, defer/defer-*-eval,
+  structs/{keyed,positional}-literal-eval-order, multi-assign/index-target-rhs-call-order,
+  spec-examples-decl/assign-tuple-order), 8 OUT OF SCOPE (spec-unsequenced pairs — a variable
+  read, an index read or a conversion's read against a mutating call: S8; a map element as a
+  rmw target and `unsafe.Sizeof(f())`: not legal / S20's refusal). ROWS ADDED: 247 strict rows
+  (expected = gc) in 18 packages `Corpus/coverage/exec/*/sweep-s9-*/` — 239 born green, 8 born RED
+  on the two findings' Cases lines. FINDINGS: BUG-286 — a read-modify-write target whose address
+  computation holds a RECEIVE and no call is evaluated TWICE (`s[<-ch] += 1` gc 121 / machine 31;
+  with one buffered value gc completes, the machine deadlocks): `emitReadWriteTargetPhase1`'s
+  pure-lvalue path, whose `containsCall` sees calls only, emits the target and the read separately
+  and each hoists its own `chan-recv`; BUG-287 — the parenthesised builtin spelling `(len)(fs())`
+  / `(cap)(fs())` is exported as a call through a func value named `len` and the decoder refuses
+  it naming a local that does not exist (S28's shape, a misnamed refusal; the count is right on
+  the canonical spelling). CELLS LEFT (refusals named at the point of failure — coverage gaps):
+  `[2]int(fsl())` (the slice→array value conversion, L2b frontier), `real`/`imag`/`complex`
+  (frontend-quarantined builtin), `defer delete/print/panic(f())` (defer of a builtin), range over
+  a func iterator (FR-12), a receive / `make` / `new` inside a short-circuit right operand (refused
+  by name as an order-changing hoist).
 
 WHAT: a built-in whose operand is a call hoists that call; an emitter that then re-emits the built-in from the generic path hoists it again. SITE: `tools/nativefrontend/emit.go` `emitAssign`'s speculative `emitCallNode` guard (`isBuiltinCall`; `isConversion` joined it at BUG-047). ROUTE: a built-in with an effectful operand as the whole right-hand side of a define or assignment.
 
@@ -11464,3 +11974,28 @@ the injected `goleanShimErrorString` for Errorf — then the dynamic type is `*e
 on every route and the row flips PASS; `%w` stays refused by name (FR-14's fmt subset). Fix
 criterion: the Cases row PASS with gc's text; no other row moves (the abort line and the
 recovered `Error()` text are unchanged by the type's name).
+## BUG-286 — a read-modify-write target whose address computation contains a channel RECEIVE and no call is evaluated TWICE: `s[<-ch] += 1`, `s[<-ch]++`, `*(<-pch) += 1`, `(<-chp).x++`, `arr[<-ch]++` receive twice, the address from the first value and the read from the second — a wrong value with status ok, and with one buffered value a wrong DEADLOCK where gc completes [native frontend lowering; evaluation count; BUG-140's site, its RECEIVE member — the fix's `containsCall` predicate sees calls only; found by the S9 sweep of the defect-neighbourhood campaign, lane `sweep/s9-eval-count`, 2026-10-27]
+
+- Status: open
+- Pinned-by: differential
+- Cases: channels/sweep-s9-rmw-recv-target/slice-recv-index, channels/sweep-s9-rmw-recv-target/deref-recv, channels/sweep-s9-rmw-recv-target/recv-ptr-field, channels/sweep-s9-rmw-recv-target/array-recv-index, channels/sweep-s9-rmw-recv-target/slice-recv-index-compound, channels/sweep-s9-rmw-recv-target/slice-recv-index-single
+- Discovered: 2026-10-27, the S9 sweep's cell A10–A13 (`.tmp/matrix.md` of lane `sweep/s9-eval-count`; plan `docs/2026-10-27_defect-neighbourhood-campaign.md` §4): the matrix row «a receive in the target's address computation» was enumerated from BUG-140's site by reading the predicate its fix chose, then measured.
+
+WHAT: spec#Assignment_statements — in `x op= y`, «x is evaluated only once»; spec#Order_of_evaluation orders communication operations with the calls. With two values buffered, `s := []int{10, 20, 30}; s[<-ch] += 1` leaves one value in the channel and increments `s[1]` in gc (the row's checksum `len(ch)*100 + s[1] + s[2] - 30` = 121); the machine drains BOTH values, takes the ADDRESS from the first receive (`s[1]`) and the READ from the second (`s[2]`), so `s[1] = s[2] + 1 = 31` and the channel is empty (31). Measured on the six Cases (gc / machine): `slice-recv-index` 121 / 31; `deref-recv` (`*(<-pch) += 1`) 101 / 11; `recv-ptr-field` (`(<-chp).x++`) 101 / 11; `array-recv-index` (`arr[<-ch]++`) 121 / 31; `slice-recv-index-compound` (`s[<-ch] *= 2`) 140 / 60; `slice-recv-index-single` (ONE buffered value) gc 21 with status ok, the machine `deadlock` («all goroutines are asleep - deadlock!») — the second receive has nothing to take. The wire shows the mechanism directly: two `chan-recv` statements per statement (`$c2`, `$c3` for the first subject), the `incdec`/`compound-assign` node's `target` built from one temp and its `read` from the other.
+
+SITE: `tools/nativefrontend/emit.go` `emitReadWriteTargetPhase1` (:4894, used by `emitAssign`'s compound arm and `emitIncDec`): `if !containsCall(lv)` takes the «pure lvalue» path, which emits the TARGET (`emitLValuePhase1` → `emitAddressOf`) and the READ (`emitExpr(lv)`) as two independent emissions on the argument that a call-free lvalue's double evaluation is unobservable; `containsCall` (:7753) inspects the lvalue for `*ast.CallExpr` only, so a receive `<-ch` — an `*ast.UnaryExpr` with `token.ARROW`, a communication operation with an evaluation moment — counts as pure, and each emission hoists its own receive through `hoistChanRecv` (:11805). BUG-140 (2026-07-25) fixed the CALL member of this site by binding the address once for a call-bearing lvalue; the predicate it chose is exactly what this member slips past (go/types' own `hasCallOrRecv`, mirrored by the emitter's `exprHasCallOrRecv` for BUG-076's range arm, is the predicate the spec's «evaluation moment» needs here). The siblings are right: `emitMapCompound` (:4935) hoists base and key once, so `m[<-ch]++` agrees (row `map-recv-key`, green); the plain read `v := s[<-ch]` and the plain store `s[<-ch] = 5` go through one emission each (rows `slice-recv-index-read-control`, `slice-recv-index-store-control`, `deref-recv-store-control`, green); a receive in every OTHER once-only position agrees (package `channels/sweep-s9-recv-operand-positions`, 13 rows green).
+
+ROUTE: compound assignment and `++`/`--` on a slice/array element, a pointer indirection or a field through a pointer whose index / operand / base is (or contains) a channel receive with no call beside it. Reachability on main: the lowering has taken this path since BUG-140's fix (`c908921e`); the corpus held no receive-in-target row. Not fixed in the sweep lane (the plan's §4: findings go to a fix lane through the normal train).
+
+## BUG-287 — the parenthesised builtin spelling `(len)(x)` / `(cap)(x)` — legal Go — is exported as a call through a func VALUE named `len`, which the decoder refuses with a cause that misnames itself («the source local 'len' (declaration 1) is not in scope»): a legal program refused at status `error`, the refusal naming a local that does not exist [native frontend lowering; spelling admission — S28's shape, a misnamed refusal (plan §4 step 3), never a wrong answer; found by the S9 sweep's cell C33, lane `sweep/s9-eval-count`, 2026-10-27]
+
+- Status: open
+- Pinned-by: differential
+- Cases: builtins/sweep-s9-paren-builtin/paren-builtin, builtins/sweep-s9-paren-builtin/paren-builtin-cap
+- Discovered: 2026-10-27, the S9 sweep's cell C33 — enumerated because BUG-164's speculative-path guard `isBuiltinCall` tests `call.Fun.(*ast.Ident)`, so the parenthesised spelling was a candidate bypass of the guard; measured, the mis-route happens earlier, in the callee dispatch.
+
+WHAT: gc accepts `n := (len)(fs())` (go/types: a parenthesised built-in in callee position is the built-in; `recordBuiltinType` records the parenthesised `Fun` with the call's signature) and evaluates `fs` once — the rows' checksum `cnt*100 + n` is 103 for `(len)` and `(cap)` alike. The machine answers status `error` with the decoder's scope refusal: «native lowering: program.funcs[1].body.body[2].rhs[0].callee: the source local 'len' (declaration 1) is not in scope at this statement — no declaration of that spelling among the enclosing function's params, results …». The refusal is fail-closed (no wrong value) but names the wrong cause: there is no local `len` in the program; the emitter minted one.
+
+SITE: `tools/nativefrontend/emit.go` `emitCallNode` (:8857): the builtin arm is reached only through `fnID, ok := c.Fun.(*ast.Ident)` resolving in `e.info.Uses` to a `*types.Builtin` (:9014, :9067); a `*ast.ParenExpr` callee is not an `*ast.Ident`, so it falls to the «any other func-typed EXPRESSION in callee position» arm (:9016), where `e.goTypeOf(c.Fun)` is the `*types.Signature` go/types recorded for the builtin call and the emitter emits `call-value` with `callee` = `emitExpr((len))` — the identifier arm renders `len` as a local `ident` with a minted local id — and the decoder (`GoLean/NativeToIR.lean`'s scope check) refuses the undeclared local by name. The assign-site speculative guard (`isBuiltinCall`, :3788) tests the same `*ast.Ident` shape and is bypassed too, but the mis-route above comes first; by contrast the conversion guard `isConversion` (:3803) reads `e.info.Types[call.Fun].IsType()`, which sees through parentheses — `(int)(f())` lowers and evaluates once (row `assign-order/sweep-s9-conversion-of-call/paren-type-conv`, green). The right behaviour: unparenthesise the callee (`ast.Unparen(c.Fun)`) before the builtin dispatch (and in the guard), as the map-target and IncDec arms already do for their operands (`ast.Unparen(st.X)`), so the spelling takes the builtin path and counts once; failing that, a refusal that NAMES the parenthesised builtin.
+
+ROUTE: any built-in called through a parenthesised name (`(len)(x)`, `(cap)(x)`, `(append)(s, v)`, …). Entered under the plan's §4 step 3 (a refusal that misnames itself is a finding) with its shape flagged as S28 (spelling admission) for the coordinator's triage; not fixed in the sweep lane.

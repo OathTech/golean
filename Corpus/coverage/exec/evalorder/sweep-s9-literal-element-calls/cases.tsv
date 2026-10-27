@@ -1,0 +1,14 @@
+# id	subject	args	expected_status	expected_reason	features
+map-lit-calls	mapLitCalls	-	ok	-	literals,calls,evaluation_order,maps
+slice-lit-calls	sliceLitCalls	-	ok	-	literals,calls,evaluation_order,slices
+array-lit-calls	arrayLitCalls	-	ok	-	literals,calls,evaluation_order,arrays
+ellipsis-array-lit-calls	ellipsisArrayLitCalls	-	ok	-	literals,calls,evaluation_order,arrays
+addr-lit-call	addrLitCall	-	ok	-	literals,calls,evaluation_order,pointers
+elided-addr-lit-call	elidedAddrLitCall	-	ok	-	literals,calls,evaluation_order,pointers
+nested-lit-calls	nestedLitCalls	-	ok	-	literals,calls,evaluation_order,nested
+map-of-slice-lit-call	mapOfSliceLitCall	-	ok	-	literals,calls,evaluation_order,maps,slices
+map-lit-dup-runtime-keys	mapLitDupRuntimeKeys	-	ok	-	literals,calls,evaluation_order,maps
+indexed-slice-lit-call	indexedSliceLitCall	-	ok	-	literals,calls,evaluation_order,slices,indexing
+embedded-lit-call	embeddedLitCall	-	ok	-	literals,calls,evaluation_order,structs,fields,nested
+closure-lit	closureLit	-	ok	-	literals,calls,evaluation_order,closures
+generic-lit	genericLit	-	ok	-	literals,calls,evaluation_order,generics

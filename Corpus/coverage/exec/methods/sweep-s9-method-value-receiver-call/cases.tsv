@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+ptr-recv-call-value	ptrRecvCallValue	-	ok	-	methods,calls,evaluation_order,pointers,channels
+value-recv-call-value	valueRecvCallValue	-	ok	-	methods,calls,evaluation_order,channels
+iface-recv-call-value	ifaceRecvCallValue	-	ok	-	methods,calls,evaluation_order,interfaces,channels,bools
+method-expr-call-arg	methodExprCallArg	-	ok	-	methods,calls,evaluation_order
+index-call-recv-value	indexCallRecvValue	-	ok	-	methods,calls,evaluation_order,channels,indexing
+deref-call-recv-value	derefCallRecvValue	-	ok	-	methods,calls,evaluation_order,pointers,channels
+closure-mv	closureMv	-	ok	-	methods,calls,evaluation_order,closures
+generic-mv	genericMv	-	ok	-	methods,calls,evaluation_order,generics

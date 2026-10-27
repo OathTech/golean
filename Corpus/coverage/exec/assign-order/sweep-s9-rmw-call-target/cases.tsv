@@ -1,0 +1,19 @@
+# id	subject	args	expected_status	expected_reason	features
+slice-call-index	sliceCallIndex	-	ok	-	assignment,evaluation_order,calls,indexing,slices
+slice-call-base	sliceCallBase	-	ok	-	assignment,evaluation_order,calls,indexing,slices
+array-call-index	arrayCallIndex	-	ok	-	assignment,evaluation_order,calls,indexing,arrays
+map-call-base	mapCallBase	-	ok	-	assignment,evaluation_order,calls,indexing,maps
+deref-call	derefCall	-	ok	-	assignment,evaluation_order,calls,indexing,pointers
+index-call-then-field	indexCallThenField	-	ok	-	assignment,evaluation_order,calls,indexing,structs,fields
+ptr-field-array-call-index	ptrFieldArrayCallIndex	-	ok	-	assignment,evaluation_order,calls,indexing,arrays,pointers,structs,fields
+index-call-rhs-call	indexCallRhsCall	-	ok	-	assignment,evaluation_order,calls,indexing
+other-ops	otherOps	-	ok	-	assignment,evaluation_order,calls,indexing
+paren-target	parenTarget	-	ok	-	assignment,evaluation_order,calls,indexing
+ptr-array-call-base-call-index	ptrArrayCallBaseCallIndex	-	ok	-	assignment,evaluation_order,calls,indexing,arrays,pointers
+three-calls	threeCalls	-	ok	-	assignment,evaluation_order,calls,indexing,nested
+two-dim	twoDim	-	ok	-	assignment,evaluation_order,calls,indexing,multi_assign
+global-slice-call-index	globalSliceCallIndex	-	ok	-	assignment,evaluation_order,calls,indexing,slices,globals
+ptr-slice-call-index-field	ptrSliceCallIndexField	-	ok	-	assignment,evaluation_order,calls,indexing,slices,pointers,structs,fields
+closure-rmw	closureRmw	-	ok	-	assignment,evaluation_order,calls,indexing,closures
+generic-rmw	genericRmw	-	ok	-	assignment,evaluation_order,calls,indexing,generics
+generic-rmw-int64	genericRmwInt64	-	ok	-	assignment,evaluation_order,calls,indexing,generics

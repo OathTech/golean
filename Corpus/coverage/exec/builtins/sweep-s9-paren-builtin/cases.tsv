@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+paren-builtin	parenBuiltin	-	ok	-	builtins,calls,evaluation_order,slices
+paren-builtin-cap	parenBuiltinCap	-	ok	-	builtins,calls,evaluation_order,slices,cap

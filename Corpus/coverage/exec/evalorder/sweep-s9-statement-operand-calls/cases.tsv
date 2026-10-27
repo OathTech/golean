@@ -1,0 +1,21 @@
+# id	subject	args	expected_status	expected_reason	features
+map-read-calls	mapReadCalls	-	ok	-	calls,evaluation_order,maps
+comma-ok-map-calls	commaOkMapCalls	-	ok	-	calls,evaluation_order,maps,comma_ok
+comma-ok-assert-call	commaOkAssertCall	-	ok	-	calls,evaluation_order,interfaces,type_assertions,comma_ok
+comma-ok-recv-call	commaOkRecvCall	-	ok	-	calls,evaluation_order,methods,channels,comma_ok
+send-calls	sendCalls	-	ok	-	calls,evaluation_order,channels
+recv-assign-chan-call	recvAssignChanCall	-	ok	-	calls,evaluation_order,channels
+recv-assign-index-call	recvAssignIndexCall	-	ok	-	calls,evaluation_order,channels,indexing
+blank-calls	blankCalls	-	ok	-	calls,evaluation_order,unused
+call-reads	callReads	-	ok	-	calls,evaluation_order
+store-through-call	storeThroughCall	-	ok	-	calls,evaluation_order
+iface-call-recv-call	ifaceCallRecvCall	-	ok	-	calls,evaluation_order,interfaces,methods,channels,bools
+ptr-recv-call	ptrRecvCall	-	ok	-	calls,evaluation_order,pointers,methods,channels
+value-recv-call	valueRecvCall	-	ok	-	calls,evaluation_order,methods,channels
+variadic-spread-call	variadicSpreadCall	-	ok	-	calls,evaluation_order,variadic,short_decl
+iife	iife	-	ok	-	calls,evaluation_order,closures
+generic-call-arg	genericCallArg	-	ok	-	calls,evaluation_order,generics
+unary-calls	unaryCalls	-	ok	-	calls,evaluation_order,ints
+addr-through-call	addrThroughCall	-	ok	-	calls,evaluation_order,pointers
+shift-calls	shiftCalls	-	ok	-	calls,evaluation_order,shifts
+pkg-blank-var-call	pkgBlankVarCall	-	ok	-	calls,evaluation_order,globals,init,unused,short_decl

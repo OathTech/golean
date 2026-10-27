@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+cmp-chain-short-circuit	cmpChainShortCircuit	-	ok	-	comparisons,calls,evaluation_order,bools,nested
+eq-calls-int	eqCallsInt	-	ok	-	comparisons,calls,evaluation_order,ints
+eq-calls-string	eqCallsString	-	ok	-	comparisons,calls,evaluation_order,strings
+eq-calls-iface	eqCallsIface	-	ok	-	comparisons,calls,evaluation_order,interfaces,bools
+eq-calls-ptr	eqCallsPtr	-	ok	-	comparisons,calls,evaluation_order,pointers
+conv-concat	convConcat	-	ok	-	comparisons,calls,evaluation_order,conversions,strings
+closure-chain	closureChain	-	ok	-	comparisons,calls,evaluation_order,closures,nested
+generic-chain	genericChain	-	ok	-	comparisons,calls,evaluation_order,generics,nested

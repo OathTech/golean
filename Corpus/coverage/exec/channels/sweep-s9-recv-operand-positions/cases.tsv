@@ -1,0 +1,14 @@
+# id	subject	args	expected_status	expected_reason	features
+conv-of-recv	convOfRecv	-	ok	-	channels,evaluation_order,conversions
+make-map-hint-recv	makeMapHintRecv	-	ok	-	channels,evaluation_order,maps,make
+make-slice-len-recv	makeSliceLenRecv	-	ok	-	channels,evaluation_order,slices,len,make
+len-of-recv	lenOfRecv	-	ok	-	channels,evaluation_order,len
+min-of-recvs	minOfRecvs	-	ok	-	channels,evaluation_order,min
+append-recv	appendRecv	-	ok	-	channels,evaluation_order,append
+map-assign-recv-key-value	mapAssignRecvKeyValue	-	ok	-	channels,evaluation_order,maps
+multi-assign-recv-target	multiAssignRecvTarget	-	ok	-	channels,evaluation_order,multi_assign,assignment
+recv-stmt-index-recv-target	recvStmtIndexRecvTarget	-	ok	-	channels,evaluation_order,indexing,assignment
+define-two-recvs	defineTwoRecvs	-	ok	-	channels,evaluation_order,multi_assign
+slice-lit-recvs	sliceLitRecvs	-	ok	-	channels,evaluation_order,slices,literals
+struct-field-recv-target	structFieldRecvTarget	-	ok	-	channels,evaluation_order,strings,structs,fields,assignment
+compound-recv-rhs	compoundRecvRhs	-	ok	-	channels,evaluation_order,assignment

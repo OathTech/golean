@@ -1,0 +1,18 @@
+# id	subject	args	expected_status	expected_reason	features
+slice-call	sliceCall	-	ok	-	range,loops,calls,evaluation_order,slices
+int-call	intCall	-	ok	-	range,loops,calls,evaluation_order,ints
+map-call	mapCall	-	ok	-	range,loops,calls,evaluation_order,maps
+string-call	stringCall	-	ok	-	range,loops,calls,evaluation_order,strings
+chan-call	chanCall	-	ok	-	range,loops,calls,evaluation_order,channels
+array-call-two-vars	arrayCallTwoVars	-	ok	-	range,loops,calls,evaluation_order,arrays,multi_assign,short_decl
+slice-expr-call	sliceExprCall	-	ok	-	range,loops,calls,evaluation_order,slices
+recv-operand	recvOperand	-	ok	-	range,loops,calls,evaluation_order,channels
+ptr-array-call-index-only	ptrArrayCallIndexOnly	-	ok	-	range,loops,calls,evaluation_order,arrays,pointers,indexing
+len-call-int	lenCallInt	-	ok	-	range,loops,calls,evaluation_order,len,ints
+array-lit-calls-one-var	arrayLitCallsOneVar	-	ok	-	range,loops,calls,evaluation_order,arrays,literals,short_decl
+array-lit-panicky-one-var	arrayLitPanickyOneVar	-	ok	-	range,loops,calls,evaluation_order,arrays,panic,recover,literals,short_decl
+slice-call-no-var	sliceCallNoVar	-	ok	-	range,loops,calls,evaluation_order,slices,short_decl
+deref-call-one-var	derefCallOneVar	-	ok	-	range,loops,calls,evaluation_order,pointers,short_decl
+array-call-one-var	arrayCallOneVar	-	ok	-	range,loops,calls,evaluation_order,arrays,short_decl
+closure-range	closureRange	-	ok	-	range,loops,calls,evaluation_order,closures
+generic-range	genericRange	-	ok	-	range,loops,calls,evaluation_order,generics

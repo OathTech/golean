@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features
+slice-recv-index	sliceRecvIndex	-	ok	-	channels,assignment,evaluation_order,indexing,slices
+deref-recv	derefRecv	-	ok	-	channels,assignment,evaluation_order,indexing,pointers
+recv-ptr-field	recvPtrField	-	ok	-	channels,assignment,evaluation_order,indexing,pointers,structs,fields
+array-recv-index	arrayRecvIndex	-	ok	-	channels,assignment,evaluation_order,indexing,arrays
+map-recv-key	mapRecvKey	-	ok	-	channels,assignment,evaluation_order,indexing,maps
+slice-recv-index-compound	sliceRecvIndexCompound	-	ok	-	channels,assignment,evaluation_order,indexing,slices
+slice-recv-index-single	sliceRecvIndexSingle	-	ok	-	channels,assignment,evaluation_order,indexing,slices
+slice-recv-index-read-control	sliceRecvIndexReadControl	-	ok	-	channels,assignment,evaluation_order,indexing,slices
+slice-recv-index-store-control	sliceRecvIndexStoreControl	-	ok	-	channels,assignment,evaluation_order,indexing,slices
+deref-recv-store-control	derefRecvStoreControl	-	ok	-	channels,assignment,evaluation_order,indexing,pointers

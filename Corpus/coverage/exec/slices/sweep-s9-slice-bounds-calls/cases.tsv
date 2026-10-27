@@ -1,0 +1,15 @@
+# id	subject	args	expected_status	expected_reason	features
+call-base-call-low	callBaseCallLow	-	ok	-	slices,slicing,calls,evaluation_order
+call-base-call-high	callBaseCallHigh	-	ok	-	slices,slicing,calls,evaluation_order
+three-index-calls	threeIndexCalls	-	ok	-	slices,slicing,calls,evaluation_order,indexing,nested
+ptr-array-call-low	ptrArrayCallLow	-	ok	-	slices,slicing,calls,evaluation_order,arrays,pointers
+recv-base	recvBase	-	ok	-	slices,slicing,calls,evaluation_order,channels
+recv-low	recvLow	-	ok	-	slices,slicing,calls,evaluation_order,channels
+array-call-low	arrayCallLow	-	ok	-	slices,slicing,calls,evaluation_order,arrays
+nested-elided	nestedElided	-	ok	-	slices,slicing,calls,evaluation_order,nested
+explicit-high-call	explicitHighCall	-	ok	-	slices,slicing,calls,evaluation_order
+chain-call-lows	chainCallLows	-	ok	-	slices,slicing,calls,evaluation_order,comparisons,nested
+string-call-base-call-low	stringCallBaseCallLow	-	ok	-	slices,slicing,calls,evaluation_order,strings
+recv-high	recvHigh	-	ok	-	slices,slicing,calls,evaluation_order,channels
+closure-slice	closureSlice	-	ok	-	slices,slicing,calls,evaluation_order,closures
+generic-slice	genericSlice	-	ok	-	slices,slicing,calls,evaluation_order,generics

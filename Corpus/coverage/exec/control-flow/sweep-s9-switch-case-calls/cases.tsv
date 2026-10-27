@@ -1,0 +1,13 @@
+# id	subject	args	expected_status	expected_reason	features
+tag-cases-first	tagCasesFirst	-	ok	-	switch,control_flow,calls,evaluation_order
+tag-cases-second	tagCasesSecond	-	ok	-	switch,control_flow,calls,evaluation_order
+tag-cases-none	tagCasesNone	-	ok	-	switch,control_flow,calls,evaluation_order
+tagless-calls	taglessCalls	-	ok	-	switch,control_flow,calls,evaluation_order
+type-switch-guard-call	typeSwitchGuardCall	-	ok	-	switch,control_flow,calls,evaluation_order,type_switch
+case-list-calls	caseListCalls	-	ok	-	switch,control_flow,calls,evaluation_order
+fallthrough-skips-case	fallthroughSkipsCase	-	ok	-	switch,control_flow,calls,evaluation_order
+default-first	defaultFirst	-	ok	-	switch,control_flow,calls,evaluation_order
+closure-switch	closureSwitch	-	ok	-	switch,control_flow,calls,evaluation_order,closures
+generic-switch	genericSwitch	-	ok	-	switch,control_flow,calls,evaluation_order,generics
+recv-in-case	recvInCase	-	ok	-	switch,control_flow,calls,evaluation_order,channels
+recv-in-tag-switch	recvInTagSwitch	-	ok	-	switch,control_flow,calls,evaluation_order,channels

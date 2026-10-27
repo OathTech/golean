@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+nested-mixed	nestedMixed	-	ok	-	bools,calls,evaluation_order,nested
+if-or	ifOr	-	ok	-	bools,calls,evaluation_order
+len-call-in-rhs	lenCallInRhs	-	ok	-	bools,calls,evaluation_order,len
+index-call-in-rhs	indexCallInRhs	-	ok	-	bools,calls,evaluation_order,indexing
+return-sc	returnSc	-	ok	-	bools,calls,evaluation_order,returns
+index-target-sc	indexTargetSc	-	ok	-	bools,calls,evaluation_order,indexing,assignment
+closure-sc	closureSc	-	ok	-	bools,calls,evaluation_order,closures
+generic-sc	genericSc	-	ok	-	bools,calls,evaluation_order,generics
+call-arg-sc	callArgSc	-	ok	-	bools,calls,evaluation_order

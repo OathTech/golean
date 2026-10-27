@@ -1,0 +1,14 @@
+# id	subject	args	expected_status	expected_reason	features
+defer-call-value-call-arg	deferCallValueCallArg	-	ok	-	defer,calls,evaluation_order
+defer-closure-call-arg	deferClosureCallArg	-	ok	-	defer,calls,evaluation_order,closures
+go-call-value-call-arg	goCallValueCallArg	-	ok	-	defer,calls,evaluation_order,goroutines
+defer-recv-call	deferRecvCall	-	ok	-	defer,calls,evaluation_order,methods,channels
+defer-two-call-args	deferTwoCallArgs	-	ok	-	defer,calls,evaluation_order,multi_assign
+defer-recv-arg	deferRecvArg	-	ok	-	defer,calls,evaluation_order,channels
+defer-close-call	deferCloseCall	-	ok	-	defer,calls,evaluation_order,close
+defer-conv-arg	deferConvArg	-	ok	-	defer,calls,evaluation_order,conversions
+defer-len-arg	deferLenArg	-	ok	-	defer,calls,evaluation_order,len
+defer-index-call-arg	deferIndexCallArg	-	ok	-	defer,calls,evaluation_order,indexing
+go-recv-arg	goRecvArg	-	ok	-	defer,calls,evaluation_order,goroutines,channels
+go-conv-arg	goConvArg	-	ok	-	defer,calls,evaluation_order,goroutines,conversions
+go-func-value-call	goFuncValueCall	-	ok	-	defer,calls,evaluation_order,goroutines

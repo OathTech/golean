@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features
+cond-post-counts	condPostCounts	-	ok	-	loops,control_flow,calls,evaluation_order
+cond-only	condOnly	-	ok	-	loops,control_flow,calls,evaluation_order
+len-call-cond	lenCallCond	-	ok	-	loops,control_flow,calls,evaluation_order,len
+post-rmw-call	postRmwCall	-	ok	-	loops,control_flow,calls,evaluation_order,assignment
+init-cond-post-calls	initCondPostCalls	-	ok	-	loops,control_flow,calls,evaluation_order
+recv-cond	recvCond	-	ok	-	loops,control_flow,calls,evaluation_order,channels
+comma-ok-map-calls	commaOkMapCalls	-	ok	-	loops,control_flow,calls,evaluation_order,maps,comma_ok
+post-call-in-body	postCallInBody	-	ok	-	loops,control_flow,calls,evaluation_order
+closure-for	closureFor	-	ok	-	loops,control_flow,calls,evaluation_order,closures
+generic-for	genericFor	-	ok	-	loops,control_flow,calls,evaluation_order,generics
