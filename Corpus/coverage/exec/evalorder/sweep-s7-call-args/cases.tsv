@@ -1,0 +1,21 @@
+# id	subject	args	expected_status	expected_reason	features
+recv-then-call	a3	-	ok	-	calls,closures,evaluation_order,channels,select
+nested-calls	a4	-	ok	-	calls,closures,evaluation_order
+variadic-calls	a5	-	ok	-	calls,closures,evaluation_order,variadic
+variadic-spread-call	a5s	-	ok	-	calls,closures,evaluation_order,variadic,slices
+receiver-call-then-arg	a7	-	ok	-	calls,closures,evaluation_order,methods,structs
+interface-receiver-call-then-args	a8	-	ok	-	calls,closures,evaluation_order,methods,interfaces
+method-value-call-then-recv	a9	-	ok	-	calls,closures,evaluation_order,methods,channels,select
+and-then-call	a10	-	ok	-	calls,closures,evaluation_order,bools
+or-then-call	a10o	-	ok	-	calls,closures,evaluation_order,bools
+panic-in-the-middle	a12	-	ok	-	calls,closures,evaluation_order,panic,recover,defer,named-results
+funclit-then-call	a13	-	ok	-	calls,closures,evaluation_order
+conversion-of-call-then-call	a14	-	ok	-	calls,closures,evaluation_order,conversions,ints
+callee-call-then-arg	a15	-	ok	-	calls,closures,evaluation_order,higher_order
+literal-call-then-call	a17	-	ok	-	calls,closures,evaluation_order,structs,literals
+append-args	a18append	-	ok	-	calls,closures,evaluation_order,append,slices,builtins
+copy-args	a18copy	-	ok	-	calls,closures,evaluation_order,copy,slices,builtins
+delete-args	a18delete	-	ok	-	calls,closures,evaluation_order,delete,maps,builtins
+println-args	a18print	-	ok	-	calls,closures,evaluation_order,print,builtins
+min-args	a18min	-	ok	-	calls,closures,evaluation_order,min,builtins
+call-len-call	a19	-	ok	-	calls,closures,evaluation_order,len,channels,builtins

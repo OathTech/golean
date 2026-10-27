@@ -1,0 +1,23 @@
+# id	subject	args	expected_status	expected_reason	features
+if-and-calls	f1	-	ok	-	calls,closures,evaluation_order,if,bools
+if-recv-and-call	f2	-	ok	-	calls,closures,evaluation_order,if,bools,channels,select
+for-cond-and-calls	f4	-	ok	-	calls,closures,evaluation_order,loops,bools
+for-cond-recv-and-call	f5	-	ok	-	calls,closures,evaluation_order,loops,bools,channels
+for-recv-init-post	f6	-	ok	-	calls,closures,evaluation_order,loops,channels
+switch-recv-tag-call-cases	f7	-	ok	-	calls,closures,evaluation_order,switch,channels
+switch-expressionless-recv-call	f8	-	ok	-	calls,closures,evaluation_order,switch,channels
+switch-recv-init-call-tag	f10	-	ok	-	calls,closures,evaluation_order,switch,channels
+else-if-recv-chain	f13	-	ok	-	calls,closures,evaluation_order,if,channels
+else-if-and-chain	f14	-	ok	-	calls,closures,evaluation_order,if,bools
+else-if-init-chain	f15	-	ok	-	calls,closures,evaluation_order,if
+for-post-recv	f16	-	ok	-	calls,closures,evaluation_order,loops,channels
+if-and-in-generic	f19g	-	ok	-	calls,closures,evaluation_order,if,bools,generics
+if-and-in-funclit	f19l	-	ok	-	calls,closures,evaluation_order,if,bools
+if-init-or-reads-init	f21	-	ok	-	calls,closures,evaluation_order,if,bools
+switch-case-and	f22	-	ok	-	calls,closures,evaluation_order,switch,bools
+for-cond-and-post-call	f23	-	ok	-	calls,closures,evaluation_order,loops,bools
+goto-else-if-chain	f26g	-	ok	-	calls,evaluation_order,if,goto,labels,globals
+funclit-if-plus-call	p1	-	ok	-	calls,closures,evaluation_order,if,bools
+else-if-funclit-and	p2	-	ok	-	calls,closures,evaluation_order,if,bools
+switch-call-tag-recv-case	p3	-	ok	-	calls,closures,evaluation_order,switch,channels
+switch-recv-cases	f13s	-	ok	-	calls,closures,evaluation_order,switch,channels

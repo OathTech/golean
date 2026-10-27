@@ -1,0 +1,2 @@
+# expected_substring	features
+duplicate field name a in struct literal	structs,literals,evaluation_order,compile_error

@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+keyed-literal	k2	-	ok	-	calls,closures,evaluation_order,panic,recover,defer,named-results,structs,literals
+binary-chain	k3	-	ok	-	calls,closures,evaluation_order,panic,recover,defer,named-results,concat
+if-and	k5	-	ok	-	calls,closures,evaluation_order,panic,recover,defer,named-results,if,bools
+recv-then-panic	k6	-	ok	-	calls,closures,evaluation_order,panic,recover,defer,named-results,channels,len
+runtime-panic-in-call	k7	-	ok	-	calls,closures,evaluation_order,panic,recover,defer,named-results,maps,nil
+defer-args	k8	-	ok	-	calls,closures,evaluation_order,panic,recover,defer,named-results

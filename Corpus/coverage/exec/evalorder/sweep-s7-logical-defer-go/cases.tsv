@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+defer-or-then-call	h7	-	ok	-	calls,closures,evaluation_order,bools,globals,defer
+go-or-then-call	h8	-	ok	-	calls,closures,evaluation_order,bools,globals,goroutines,channels

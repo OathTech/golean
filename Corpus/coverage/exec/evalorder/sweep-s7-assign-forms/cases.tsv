@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+tuple-two-calls	j1	-	ok	-	calls,closures,evaluation_order,multi_assign
+tuple-recv-then-call	j2	-	ok	-	calls,closures,evaluation_order,multi_assign,channels,select
+index-call-target-rhs-call	j3	-	ok	-	calls,closures,evaluation_order,assignment,slices,indexing
+compound-index-call-rhs-call	j4	-	ok	-	calls,closures,evaluation_order,assignment,slices,indexing
+var-spec-two-calls	j5	-	ok	-	calls,closures,evaluation_order,assignment
+map-key-call-rhs-call	j8	-	ok	-	calls,closures,evaluation_order,assignment,maps
+deref-call-target-rhs-call	j9	-	ok	-	calls,closures,evaluation_order,assignment,pointers
+define-two-recvs	j12	-	ok	-	channels,evaluation_order,multi_assign,short_decl
+two-targets-calls-rhs-calls	j14	-	ok	-	calls,closures,evaluation_order,multi_assign,slices,indexing

@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+or-global-in-funclit	d22	-	ok	-	calls,closures,evaluation_order,bools,globals
+or-slice-elem-in-funclit	d22s	-	ok	-	calls,closures,evaluation_order,bools,slices
+and-local-in-funclit	d22a	-	ok	-	calls,closures,evaluation_order,bools
+or-in-funclit-call-stmt	d22c	-	ok	-	calls,closures,evaluation_order,bools,globals
+or-in-stored-closure	d22v	-	ok	-	calls,closures,evaluation_order,bools,globals
+or-in-deferred-funclit	d22d	-	ok	-	calls,closures,evaluation_order,bools,globals,defer,named-results
+or-string-index-in-funclit	d18l	-	ok	-	calls,closures,evaluation_order,bools,strings,indexing
+or-len-then-recv-in-funclit	d26l	-	ok	-	calls,closures,evaluation_order,bools,len,channels,globals
+or-in-closure-return	b3	-	ok	-	calls,closures,evaluation_order,bools,globals,returns,multi_result

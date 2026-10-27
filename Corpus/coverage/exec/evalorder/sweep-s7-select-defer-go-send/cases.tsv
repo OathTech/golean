@@ -1,0 +1,14 @@
+# id	subject	args	expected_status	expected_reason	features
+select-send-then-recv-exprs	g1	-	ok	-	calls,closures,evaluation_order,select,channels
+select-recv-then-send-exprs	g2	-	ok	-	calls,closures,evaluation_order,select,channels
+select-send-value-recv	g3	-	ok	-	calls,closures,evaluation_order,select,channels,default
+select-method-chan-then-call	g4	-	ok	-	calls,closures,evaluation_order,select,channels,methods
+defer-two-args	h1	-	ok	-	calls,closures,evaluation_order,defer
+defer-call-then-recv	h2	-	ok	-	calls,closures,evaluation_order,defer,channels,select
+defer-recv-then-call	h2r	-	ok	-	calls,closures,evaluation_order,defer,channels,select
+defer-receiver-call-then-arg	h3	-	ok	-	calls,closures,evaluation_order,defer,methods
+go-two-args	h4	-	ok	-	calls,closures,evaluation_order,goroutines,channels
+defer-len-then-call	h9	-	ok	-	calls,closures,evaluation_order,defer,len,channels
+send-chan-call-then-value-call	i1	-	ok	-	calls,closures,evaluation_order,channels
+send-call-plus-recv	i2	-	ok	-	calls,closures,evaluation_order,channels,select
+send-chan-call-then-logical	i4	-	ok	-	calls,closures,evaluation_order,channels,bools,globals

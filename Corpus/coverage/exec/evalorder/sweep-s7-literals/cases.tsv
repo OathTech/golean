@@ -1,0 +1,16 @@
+# id	subject	args	expected_status	expected_reason	features
+or-then-call-keyed	c3	-	ok	-	calls,closures,evaluation_order,structs,literals,bools,globals
+len-then-call-keyed	c4	-	ok	-	calls,closures,evaluation_order,structs,literals,len,channels
+method-then-call-keyed	c5	-	ok	-	calls,closures,evaluation_order,structs,literals,methods
+nested-keyed-calls	c6	-	ok	-	calls,closures,evaluation_order,structs,literals,nested
+positional-recv-then-call	c7	-	ok	-	calls,closures,evaluation_order,structs,literals,channels,select
+slice-of-structs-calls	c8	-	ok	-	calls,closures,evaluation_order,structs,slices,literals
+array-recv-then-call	c9	-	ok	-	calls,closures,evaluation_order,arrays,literals,channels,select
+slice-recv-then-call	c10	-	ok	-	calls,closures,evaluation_order,slices,literals,channels,select
+map-keys-values-calls	c11	-	ok	-	calls,closures,evaluation_order,maps,literals
+funclit-then-call-keyed	c14	-	ok	-	calls,closures,evaluation_order,structs,literals
+and-call-then-call-keyed	c15	-	ok	-	calls,closures,evaluation_order,structs,literals,bools
+map-key-recv-value-call	c17	-	ok	-	calls,closures,evaluation_order,maps,literals,channels,select
+slice-of-structs-recv-then-call	c8r	-	ok	-	calls,closures,evaluation_order,structs,slices,literals,channels,select
+keyed-recv-of-called-chan-then-call	c2c	-	ok	-	calls,closures,evaluation_order,structs,literals,channels,select
+map-values-recv-then-call	c17v	-	ok	-	calls,closures,evaluation_order,maps,structs,literals,channels,select

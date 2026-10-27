@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features
+or-array-elem	d10	-	ok	-	calls,closures,evaluation_order,bools,arrays
+or-array-via-pointer	d10p	-	ok	-	calls,closures,evaluation_order,bools,arrays,pointers
+or-array-elem-field	d10f	-	ok	-	calls,closures,evaluation_order,bools,arrays,structs,fields
+or-local-defined-conversion	d14	-	ok	-	calls,closures,evaluation_order,bools,conversions,defined_type
+or-defined-conversion	d14p	-	ok	-	calls,closures,evaluation_order,bools,conversions,defined_type
+or-defined-int-conversion	d14i	-	ok	-	calls,closures,evaluation_order,bools,conversions,defined_type,ints
+or-promoted-field	d15	-	ok	-	calls,closures,evaluation_order,bools,embedding,fields
+or-interface-nil-compare	d16	-	ok	-	calls,closures,evaluation_order,bools,interfaces,nil,comparisons
+or-interface-typed-nil-compare	d16p	-	ok	-	calls,closures,evaluation_order,bools,interfaces,nil,comparisons,pointers
+or-type-param-compare	d21c	-	ok	-	calls,closures,evaluation_order,bools,generics,comparisons

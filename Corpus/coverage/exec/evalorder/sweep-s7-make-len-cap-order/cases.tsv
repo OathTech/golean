@@ -1,0 +1,21 @@
+# id	subject	args	expected_status	expected_reason	features
+define	mk1	-	ok	-	calls,closures,evaluation_order,make,slices,builtins,len,cap
+global-target	mk2	-	ok	-	calls,closures,evaluation_order,make,slices,builtins,len,cap,globals
+call-arg	mk3	-	ok	-	calls,closures,evaluation_order,make,slices,builtins
+var-spec	mk4	-	ok	-	calls,closures,evaluation_order,make,slices,builtins,len,cap
+then-call	mk5	-	ok	-	calls,closures,evaluation_order,make,slices,builtins,len,cap
+string-elems	mk6	-	ok	-	calls,closures,evaluation_order,make,slices,builtins,len,cap,strings
+then-append	mk7	-	ok	-	calls,closures,evaluation_order,make,slices,builtins,len,cap,append
+int64-args	mk11	-	ok	-	calls,closures,evaluation_order,make,slices,builtins,len,cap,ints
+toplevel-callees	mk14	-	ok	-	calls,evaluation_order,make,slices,builtins,len,cap,globals
+return-position	mk16	-	ok	-	calls,closures,evaluation_order,make,slices,builtins,len,cap,globals,returns
+in-generic	mk17	-	ok	-	calls,closures,evaluation_order,make,slices,builtins,len,cap,generics
+then-second-make	mk19	-	ok	-	calls,closures,evaluation_order,make,slices,builtins,len,cap
+then-store	mk21	-	ok	-	calls,closures,evaluation_order,make,slices,builtins,len,cap
+chan-sum-args-control	mk8	-	ok	-	calls,closures,evaluation_order,make,channels,builtins,cap
+arithmetic-args-control	mk9	-	ok	-	calls,closures,evaluation_order,make,slices,builtins,len,cap
+plain-call-control	mk10	-	ok	-	calls,closures,evaluation_order
+shared-counter-control	mk12	-	ok	-	calls,closures,evaluation_order,make,slices,builtins,len,cap
+noinline-callees-control	mk13	-	ok	-	calls,evaluation_order,make,slices,builtins,len,cap,defer,globals
+map-hint-sum-control	mk18	-	ok	-	calls,closures,evaluation_order,make,maps,builtins
+make-single-as-arg-control	mk20	-	ok	-	calls,closures,evaluation_order,make,slices,builtins

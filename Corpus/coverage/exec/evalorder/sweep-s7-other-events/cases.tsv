@@ -1,0 +1,20 @@
+# id	subject	args	expected_status	expected_reason	features
+recv-from-called-chan-then-call	n1	-	ok	-	calls,closures,evaluation_order,channels,select
+assert-of-call-then-call	n2	-	ok	-	calls,closures,evaluation_order,type_assertions,interfaces
+string-conv-of-call-then-call	n4	-	ok	-	calls,closures,evaluation_order,conversions,bytes,strings,concat
+len-of-call-then-call	n5	-	ok	-	calls,closures,evaluation_order,len,builtins,slices
+cap-of-call-then-call	n6	-	ok	-	calls,closures,evaluation_order,cap,builtins,slices,make
+funclit-plus-call	n7	-	ok	-	calls,closures,evaluation_order,concat
+append-call-spread-call	n8	-	ok	-	calls,closures,evaluation_order,append,slices,builtins
+min-calls-plus-call	n11	-	ok	-	calls,closures,evaluation_order,min,builtins
+recover-then-call	n12	-	ok	-	calls,closures,evaluation_order,panic,recover,defer,named-results,interfaces
+method-value-of-call-then-call	n13	-	ok	-	calls,closures,evaluation_order,methods,higher_order
+method-expr-call-then-call	n14	-	ok	-	calls,closures,evaluation_order,methods
+two-interface-dispatches	n15	-	ok	-	calls,closures,evaluation_order,methods,interfaces,concat
+promoted-method-then-call	n16	-	ok	-	calls,closures,evaluation_order,methods,embedding,concat
+generic-method-then-call	n17	-	ok	-	calls,closures,evaluation_order,methods,generics,concat
+two-recvs-args	n18	-	ok	-	calls,closures,evaluation_order,channels
+two-recvs-binary	n19	-	ok	-	channels,evaluation_order,concat
+len-recv-in-funclit	c23l	-	ok	-	calls,closures,evaluation_order,len,channels
+len-call-in-funclit	c62l	-	ok	-	calls,closures,evaluation_order,len,channels
+pkg-init-call-args	m4	-	ok	-	calls,evaluation_order,globals,init

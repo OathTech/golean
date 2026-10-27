@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+two-calls	b1	-	ok	-	calls,closures,evaluation_order,returns,multi_result
+recv-then-call	b2	-	ok	-	calls,closures,evaluation_order,returns,multi_result,channels,select
+call-then-recv	b2r	-	ok	-	calls,closures,evaluation_order,returns,multi_result,channels,select
+call-plus-recv	b4	-	ok	-	calls,closures,evaluation_order,returns,channels,select
+call-then-panic	b6	-	ok	-	calls,closures,evaluation_order,returns,panic,recover,defer,named-results
+or-then-call-toplevel	b3t	-	ok	-	calls,closures,evaluation_order,returns,multi_result,bools,globals

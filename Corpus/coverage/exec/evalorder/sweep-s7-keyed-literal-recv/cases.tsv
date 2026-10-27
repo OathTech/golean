@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+recv-first-field-then-call	c2a	-	ok	-	calls,closures,evaluation_order,structs,literals,channels,select
+recv-second-field-then-call	c2b	-	ok	-	calls,closures,evaluation_order,structs,literals,channels,select
+addr-literal-recv-then-call	c13	-	ok	-	calls,closures,evaluation_order,structs,literals,pointers,channels,select
+nested-literal-recv-then-call	c6r	-	ok	-	calls,closures,evaluation_order,structs,literals,nested,channels,select
+recv-then-method-call	c2m	-	ok	-	methods,evaluation_order,structs,literals,channels,select
+return-literal-recv-then-call	b5	-	ok	-	calls,closures,evaluation_order,structs,literals,returns,channels,select
+defer-literal-recv-then-call	h10	-	ok	-	calls,closures,evaluation_order,structs,literals,defer,channels,select
+var-spec-literal-recv-then-call	j6	-	ok	-	calls,closures,evaluation_order,structs,literals,assignment,channels,select
+literal-recv-then-call-in-generic	m1c	-	ok	-	calls,closures,evaluation_order,structs,literals,generics,channels,select

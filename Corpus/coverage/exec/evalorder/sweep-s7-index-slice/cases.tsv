@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+base-call-index-call	e1	-	ok	-	calls,closures,evaluation_order,slices,indexing
+index-recv-then-call	e2	-	ok	-	calls,closures,evaluation_order,slices,indexing,channels,select
+map-call-key-call	e3	-	ok	-	calls,closures,evaluation_order,maps,indexing
+slice-expr-calls	e4	-	ok	-	calls,closures,evaluation_order,slices,slicing
+three-index-calls	e4t	-	ok	-	calls,closures,evaluation_order,slices,slicing,full_slice
+string-call-index-call	e5	-	ok	-	calls,closures,evaluation_order,strings,indexing
+index-call-plus-call	e6	-	ok	-	calls,closures,evaluation_order,slices,indexing
