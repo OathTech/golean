@@ -1,0 +1,18 @@
+# id	subject	args	expected_status	expected_reason	features
+nil-map-recv-drains	rNilMapRecvDrains	-	ok	-	assignment,evaluation_order,channels,maps,nil,panic,recover,closures,len
+closed-comma-ok-index-targets	rClosedCommaOkIndexTargets	-	ok	-	assignment,evaluation_order,channels,close,comma_ok,slices,indexing,multi_assign
+closed-comma-ok-deref-targets	rClosedCommaOkDerefTargets	-	ok	-	assignment,evaluation_order,channels,close,comma_ok,pointers,multi_assign
+call-index-before-recv	rCallIndexBeforeRecv	-	ok	-	assignment,evaluation_order,channels,calls,slices,indexing,len,print
+call-deref-before-recv	rCallDerefBeforeRecv	-	ok	-	assignment,evaluation_order,channels,calls,pointers,closures,len,print
+call-map-key-before-recv	rCallMapKeyBeforeRecv	-	ok	-	assignment,evaluation_order,channels,calls,maps,len,print
+select-nil-deref-drains	rSelectNilDerefDrains	-	ok	-	assignment,evaluation_order,channels,select,pointers,nil,panic,recover,closures,len
+select-oob-drains	rSelectOobDrains	-	ok	-	assignment,evaluation_order,channels,select,slices,indexing,panic,recover,closures,len
+select-nil-map-drains	rSelectNilMapDrains	-	ok	-	assignment,evaluation_order,channels,select,maps,nil,panic,recover,closures,len
+select-map-first-store-lands	rSelectMapFirstStoreLands	-	ok	-	assignment,evaluation_order,channels,select,maps,pointers,nil,panic,recover,closures,multi_assign
+select-blank-elem	rSelectBlankElem	-	ok	-	assignment,evaluation_order,channels,select,comma_ok,len
+select-blank-ok	rSelectBlankOk	-	ok	-	assignment,evaluation_order,channels,select,comma_ok,len
+select-iface-fallback-second-oob	rSelectIfaceFallbackSecondOob	-	ok	-	assignment,evaluation_order,channels,select,interfaces,type_assertions,comma_ok,slices,indexing,panic,recover,closures,multi_assign
+closed-into-nil-map-ok-untouched	rClosedIntoNilMapOkUntouched	-	ok	-	assignment,evaluation_order,channels,close,comma_ok,maps,nil,panic,recover,closures,multi_assign
+generic-recv-index	rGenericRecvIndex	-	ok	-	assignment,evaluation_order,channels,generics,comma_ok,slices,indexing,multi_assign
+closed-recv-nil-deref	rClosedRecvNilDeref	-	ok	-	assignment,evaluation_order,channels,close,pointers,nil,panic,recover,closures,len
+select-bad-target-blocks	rSelectBadTargetBlocks	-	deadlock	-	assignment,evaluation_order,channels,select,pointers,nil,deadlock

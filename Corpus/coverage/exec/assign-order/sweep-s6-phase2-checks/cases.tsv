@@ -1,0 +1,16 @@
+# id	subject	args	expected_status	expected_reason	features
+nil-map-vs-rhs-panic	p2NilMapVsRhs	-	panic	integer divide by zero	assignment,evaluation_order,maps,nil,division,panic
+nil-ptr-array-vs-rhs-panic	p2NilPtrArrayVsRhs	-	panic	integer divide by zero	assignment,evaluation_order,pointers,arrays,nil,division,panic
+chain-vs-rhs-panic	p2ChainVsRhs	-	panic	integer divide by zero	assignment,evaluation_order,slices,structs,indexing,division,panic
+nil-map-first-rhs-effects	p2NilMapFirstRhsEffects	-	panic	assignment to entry in nil map	assignment,evaluation_order,multi_assign,maps,nil,calls,print,panic
+struct-field-chain-nil-base	p2StructFieldChainNilBase	-	ok	-	assignment,evaluation_order,multi_assign,pointers,structs,nil,panic,recover,closures
+pointer-field-nil-at-store	p2PointerFieldNilAtStore	-	ok	-	assignment,evaluation_order,multi_assign,pointers,structs,nil,panic,recover,closures
+pointer-field-nil-base-phase1	p2PointerFieldNilBasePhase1	-	ok	-	assignment,evaluation_order,multi_assign,pointers,structs,nil,panic,recover,closures
+nil-slice-ptr-base-phase1	p2NilSlicePtrBasePhase1	-	ok	-	assignment,evaluation_order,multi_assign,pointers,slices,indexing,nil,panic,recover,closures
+comma-ok-deref-second-nil	p2CommaOkDerefSecondNil	-	ok	-	assignment,evaluation_order,multi_assign,maps,comma_ok,pointers,nil,panic,recover,closures
+comma-ok-first-oob	p2CommaOkFirstOob	-	ok	-	assignment,evaluation_order,multi_assign,maps,comma_ok,slices,indexing,calls,print,panic,recover,closures
+comma-ok-into-nil-map	p2CommaOkIntoNilMap	-	panic	assignment to entry in nil map	assignment,evaluation_order,multi_assign,maps,comma_ok,nil,panic
+assert-into-nil-map	p2AssertIntoNilMap	-	panic	assignment to entry in nil map	assignment,evaluation_order,multi_assign,maps,type_assertions,comma_ok,nil,panic
+call-into-nil-map	p2CallIntoNilMap	-	panic	assignment to entry in nil map	assignment,evaluation_order,multi_assign,maps,nil,calls,multi_result,print,panic
+generic-second-oob	p2GenericSecondOob	-	ok	-	assignment,evaluation_order,multi_assign,generics,slices,indexing,panic,recover,named-results,defer
+both-oob-first-wins	p2BothOobFirstWins	-	panic	index out of range [9] with length 1	assignment,evaluation_order,multi_assign,slices,indexing,panic

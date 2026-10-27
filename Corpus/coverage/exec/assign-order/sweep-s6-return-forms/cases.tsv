@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features
+named-observed-in-defer	tNamedObservedInDefer	-	ok	-	assignment,evaluation_order,returns,named-results,multi_result,defer,recover,pointers,nil,panic,print
+call-effects-then-panic	tCallEffectsThenPanic	-	ok	-	assignment,evaluation_order,returns,named-results,multi_result,defer,recover,calls,panic,print
+three-middle-panic	tThreeMiddlePanic	-	ok	-	assignment,evaluation_order,returns,named-results,multi_result,defer,recover,pointers,nil,panic,print
+forward-then-defer	tForwardThenDefer	-	ok	-	assignment,evaluation_order,returns,named-results,multi_result,defer,calls
+iface-result-unset	tIfaceResultUnset	-	ok	-	assignment,evaluation_order,returns,multi_result,defer,recover,interfaces,pointers,nil,panic
+closure-named-results	tClosureNamedResults	-	ok	-	assignment,evaluation_order,returns,closures,named-results,multi_result,defer,recover,pointers,nil,panic
+generic-two-phase	tGenericTwoPhase	-	ok	-	assignment,evaluation_order,returns,generics,named-results,multi_result,defer,recover,pointers,nil,panic
+results-snapshot-before-defer	tResultsSnapshotBeforeDefer	-	ok	-	assignment,evaluation_order,returns,multi_result,defer,closures
+recv-then-call-panic	tRecvThenCallPanic	-	ok	-	assignment,evaluation_order,returns,channels,calls,named-results,multi_result,defer,recover,panic,len
+prior-named-values-survive	tPriorNamedValuesSurvive	-	ok	-	assignment,evaluation_order,returns,named-results,multi_result,defer,recover,pointers,nil,panic

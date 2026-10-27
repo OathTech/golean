@@ -672,6 +672,41 @@ Discipline notes, recorded up front:
   deferred closure is the same observation channel and is not covered.
   So this is an ALIASING optimization whose panic path leaks through
   `recover` — not a designed realization of latitude.
+- Sweep S6 re-probe (2026-10-27, [AGENT] lane `sweep/s6-two-phase`, the
+  defect-neighbourhood campaign; probes `.tmp/probes/g-l016*` of the lane,
+  reproducible from the statements below; go1.26.5 under the runners'
+  pins, default flags): the UNPROBED predictions above are now data, and
+  the AXIS is the LATER OPERAND's memory read, not the target's storage
+  class. Each probe sets the earlier target to 58, panics in the later
+  operand, and reads the target in the deferred closure after `recover`
+  (`r` = the observation; the machine answers 58 on every row).
+
+  | statement (earlier target; later operand) | gc | machine = spec |
+  |---|---|---|
+  | `v, b = 29, z/z` local v, LOCAL z (p5 again) | **29** early | 58 |
+  | `v, b = 29, iv.(int)` failing assertion | 58 held back | 58 |
+  | `v, b = 29, 1<<n` negative local n | **29** early | 58 |
+  | `s[0], b = 29, z/z` slice element | **29** early | 58 |
+  | `*p, b = 29, z/z` deref | **29** early | 58 |
+  | `gG, b = 29, z/z` PACKAGE-LEVEL gG, local z | **29** early | 58 |
+  | `m[1], b = 29, z/z` map element | **29** early | 58 |
+  | `p.x, b = 29, z/z` field through a pointer | **29** early | 58 |
+  | `v, b = 29, int(z)/z` | **29** early | 58 |
+  | `gG, b = 29, zG/zG` global target, GLOBAL divisor | 58 held back | 58 |
+  | `v, b = 29, zG/zG` local target, GLOBAL divisor | 58 held back | 58 |
+  | `v, b = 29, (gG+z)/z` a global READ in the later operand | 58 held back | 58 |
+
+  So: a division or shift whose operands are LOCALS stores the earlier
+  target early WHATEVER its kind (local, slice element, deref, global,
+  map element, field); any memory read in the later operand — an index
+  (p4), a global — holds it back, and so does a failing type assertion
+  (the prediction above of an early store there is REFUTED). The
+  2026-08-15 dossier's «storage-class datum» (a global target realizes
+  the spec point) is a misattribution: that probe's divisor `z` was a
+  package-level variable, which is what held the store back — the
+  inventory §E5 sentence citing it inherits the misreading. No row was
+  added for any of these (the ledger's rule above); the machine is
+  unchanged.
 - Stance: **`gc-bug`; the machine is right.** The two-phase sentence is
   a forced point, and the "both spec-legal" reading (BUG-032, 2026-08-06)
   rested on spec#Order_of_evaluation's list of ordered EVENTS — which

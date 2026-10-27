@@ -1466,6 +1466,56 @@ verbatim, gc realization version-tracked).
   pre-existing behavior — the round-3 spine closed the outermost level
   and left the same class one nesting level deeper — but the round-3
   prose claimed the boundary exact)
+- Neighbourhood: S6 (assignment and return: the two-phase order) — swept 2026-10-27 by lane
+  `sweep/s6-two-phase` (plan §4, [USER]-approved 2026-10-27; WHICH phase each operand is
+  evaluated in and the left-to-right order of the stores — the sibling shapes hold the order of
+  ordered events across a hoist (S7), spec-unsequenced pairs (S8) and the evaluation count (S9)).
+  THE MATRIX: statement forms (single assignment; tuple assignment incl. three targets and
+  repeated targets; multi-value call; comma-ok map read / type assertion / receive; the receive
+  statement; select receive clauses incl. the temp-fallback lowering; compound assignment and
+  IncDec; the range clause's ASSIGN form; `return` of two and three values with named, unnamed,
+  blank-named and interface-typed results, `return f()` forwarded, a receive as an operand; blanks
+  beside effects) × target kinds (plain, captured and package-level variables; slice, array and
+  pointer-to-array elements; map elements incl. through a pointer's field; `*p`; a field through a
+  pointer; the chains `a[i].f`, `a[i][j]`, `p.q.x` with q a struct field vs a pointer field,
+  `pp[9].f` over `[]*T`, `(*pp)[0]` over `*[]int`; aliasing pairs — one pointer twice, one map key
+  twice, two headers over one array, one field through two pointers, one variable as both
+  comma-ok targets) × effects (a right-hand index read or nil deref panicking in phase 1; a target
+  operand's index or key panicking in phase 1; a store's bounds / nil pointer / nil map check in
+  phase 2 after the right-hand calls printed and earlier stores landed; a nil map's phase-2 panic
+  after phase 1 evaluated everything; a closed channel's zero/false delivery; a blocking receive
+  with a bad target; calls in a target's index/pointer/key before the receive) × contexts
+  (sequential; targets captured by a closure or observed by the deferred closure; generic
+  functions) × sites (`emitAssign`'s compound / type-assert / chan-recv / map-assign / phase-1
+  target / call-routing arms, `emitAssignTargetPhase1`, `emitReturn` and its `return f()` splat,
+  `emitReadWriteTargetPhase1`, `emitMapCompound`, `emitIncDec`, `emitRange`'s ASSIGN form,
+  `emitChanRecvAssign`, `machineSelectTargets`, `selectRecvClause`'s fallback; `decodeReturn`'s
+  `$ret<i>` temps, `decodeAssign`'s blank discards and comma-ok arm, the `compound-assign` arm;
+  `targetSpine` / `targetPlan` / `completeTargetRef` / `resolveChain` / `storeTarget`, `RhsOp` /
+  `applyRhsOp`, the call rules' frame-exit `tgtOpK`): 165 cells — 112 PROBED by this lane on both
+  sides (gc go1.26.5 under the runners' pins; 109 agreement cells of which 12 are L-016 cells
+  (below) and 2 probe-only S8 cells, plus 3 named-refusal probes), 48 COVERED by existing rows
+  (cited per cell in the lane's report), 5 neither — 4 in the sibling shapes' scope (S8's
+  inter-operand orders, BUG-052's pinned call-vs-operand latitude, S15's concurrent observers)
+  and the FR-6 gap below. ROWS ADDED: 95
+  strict rows in 8 packages `Corpus/coverage/exec/assign-order/sweep-s6-*/` (phase1-operands 13,
+  phase2-checks 15, phase1-panics 10, store-order 12, receive-forms 17 incl. the select
+  bad-target deadlock, blank-forms 8, compound-incdec 10, return-forms 10), expected = gc, all
+  PASS. FINDINGS: none — no wrong value, no wrong panic identity, no lost or early store, no
+  `stuck` on a legal program; BUG-266–275 unused. L-016 EVIDENCE (gc's deviation, never a row;
+  the machine holds the spec point on all 12): with a LOCAL division or a negative shift as the
+  later operand gc stores the earlier target early on every target kind (local, slice element,
+  deref, package-level variable, map element, field — the 2026-08-15 dossier's storage-class
+  reading is a misattribution: its divisor was a global); it holds the store back when the later
+  operand READS MEMORY (an index, a global divisor, a global read) and on a failing type
+  assertion (the ledger's prediction of an early store there is refuted). CELLS LEFT (refusals
+  named at the point of failure — coverage gaps, not defects): the range clause's ASSIGN form
+  into non-identifier targets (`for i, x[i] = range x`, the spec's own example — FR-6
+  `range-assign-nonident`, the rows `range/assign-form-nonident/*` and
+  `spec-examples-decl/assign-tuple-order/range-assign` are red by name); the receive statement
+  into an interface-typed target and the two-target receive into an interface-valued map element
+  (frontend-quarantined, `emitChanRecvAssign`); a multi-value call into interface-typed targets
+  (FR-7 `tuple-iface-box`, S1's BUG-079 class).
 
 gc treats a target's whole address CHAIN — every `indexAddr`/
 `fieldAddr` step from the anchor outward — as ONE phase-2 address
@@ -1505,6 +1555,56 @@ replaying the chain (checks included) in `storeTarget`.
 - Discovered: 2026-08-06 (round-4 convergence check, verified major;
   pre-existing — outside the round-3 migration's enumeration, inside
   its "every multi-target store path" claim)
+- Neighbourhood: S6 (assignment and return: the two-phase order) — swept 2026-10-27 by lane
+  `sweep/s6-two-phase` (plan §4, [USER]-approved 2026-10-27; WHICH phase each operand is
+  evaluated in and the left-to-right order of the stores — the sibling shapes hold the order of
+  ordered events across a hoist (S7), spec-unsequenced pairs (S8) and the evaluation count (S9)).
+  THE MATRIX: statement forms (single assignment; tuple assignment incl. three targets and
+  repeated targets; multi-value call; comma-ok map read / type assertion / receive; the receive
+  statement; select receive clauses incl. the temp-fallback lowering; compound assignment and
+  IncDec; the range clause's ASSIGN form; `return` of two and three values with named, unnamed,
+  blank-named and interface-typed results, `return f()` forwarded, a receive as an operand; blanks
+  beside effects) × target kinds (plain, captured and package-level variables; slice, array and
+  pointer-to-array elements; map elements incl. through a pointer's field; `*p`; a field through a
+  pointer; the chains `a[i].f`, `a[i][j]`, `p.q.x` with q a struct field vs a pointer field,
+  `pp[9].f` over `[]*T`, `(*pp)[0]` over `*[]int`; aliasing pairs — one pointer twice, one map key
+  twice, two headers over one array, one field through two pointers, one variable as both
+  comma-ok targets) × effects (a right-hand index read or nil deref panicking in phase 1; a target
+  operand's index or key panicking in phase 1; a store's bounds / nil pointer / nil map check in
+  phase 2 after the right-hand calls printed and earlier stores landed; a nil map's phase-2 panic
+  after phase 1 evaluated everything; a closed channel's zero/false delivery; a blocking receive
+  with a bad target; calls in a target's index/pointer/key before the receive) × contexts
+  (sequential; targets captured by a closure or observed by the deferred closure; generic
+  functions) × sites (`emitAssign`'s compound / type-assert / chan-recv / map-assign / phase-1
+  target / call-routing arms, `emitAssignTargetPhase1`, `emitReturn` and its `return f()` splat,
+  `emitReadWriteTargetPhase1`, `emitMapCompound`, `emitIncDec`, `emitRange`'s ASSIGN form,
+  `emitChanRecvAssign`, `machineSelectTargets`, `selectRecvClause`'s fallback; `decodeReturn`'s
+  `$ret<i>` temps, `decodeAssign`'s blank discards and comma-ok arm, the `compound-assign` arm;
+  `targetSpine` / `targetPlan` / `completeTargetRef` / `resolveChain` / `storeTarget`, `RhsOp` /
+  `applyRhsOp`, the call rules' frame-exit `tgtOpK`): 165 cells — 112 PROBED by this lane on both
+  sides (gc go1.26.5 under the runners' pins; 109 agreement cells of which 12 are L-016 cells
+  (below) and 2 probe-only S8 cells, plus 3 named-refusal probes), 48 COVERED by existing rows
+  (cited per cell in the lane's report), 5 neither — 4 in the sibling shapes' scope (S8's
+  inter-operand orders, BUG-052's pinned call-vs-operand latitude, S15's concurrent observers)
+  and the FR-6 gap below. ROWS ADDED: 95
+  strict rows in 8 packages `Corpus/coverage/exec/assign-order/sweep-s6-*/` (phase1-operands 13,
+  phase2-checks 15, phase1-panics 10, store-order 12, receive-forms 17 incl. the select
+  bad-target deadlock, blank-forms 8, compound-incdec 10, return-forms 10), expected = gc, all
+  PASS. FINDINGS: none — no wrong value, no wrong panic identity, no lost or early store, no
+  `stuck` on a legal program; BUG-266–275 unused. L-016 EVIDENCE (gc's deviation, never a row;
+  the machine holds the spec point on all 12): with a LOCAL division or a negative shift as the
+  later operand gc stores the earlier target early on every target kind (local, slice element,
+  deref, package-level variable, map element, field — the 2026-08-15 dossier's storage-class
+  reading is a misattribution: its divisor was a global); it holds the store back when the later
+  operand READS MEMORY (an index, a global divisor, a global read) and on a failing type
+  assertion (the ledger's prediction of an early store there is refuted). CELLS LEFT (refusals
+  named at the point of failure — coverage gaps, not defects): the range clause's ASSIGN form
+  into non-identifier targets (`for i, x[i] = range x`, the spec's own example — FR-6
+  `range-assign-nonident`, the rows `range/assign-form-nonident/*` and
+  `spec-examples-decl/assign-tuple-order/range-assign` are red by name); the receive statement
+  into an interface-typed target and the two-target receive into an interface-valued map element
+  (frontend-quarantined, `emitChanRecvAssign`); a multi-value call into interface-typed targets
+  (FR-7 `tuple-iface-box`, S1's BUG-079 class).
 
 `stmtPlan` still classifies `.mapLookup`/`.typeAssert` with
 `ntargets = 2`: both target addresses resolve eagerly (checks
@@ -1527,6 +1627,56 @@ lookup/assert after the RHS operands as the value source.
 - Cases: multi-assign/blank-dep-index
 - Discovered: 2026-08-06 (round-4 convergence check, verified major;
   pre-existing decoder lowering, vintage bca14c5)
+- Neighbourhood: S6 (assignment and return: the two-phase order) — swept 2026-10-27 by lane
+  `sweep/s6-two-phase` (plan §4, [USER]-approved 2026-10-27; WHICH phase each operand is
+  evaluated in and the left-to-right order of the stores — the sibling shapes hold the order of
+  ordered events across a hoist (S7), spec-unsequenced pairs (S8) and the evaluation count (S9)).
+  THE MATRIX: statement forms (single assignment; tuple assignment incl. three targets and
+  repeated targets; multi-value call; comma-ok map read / type assertion / receive; the receive
+  statement; select receive clauses incl. the temp-fallback lowering; compound assignment and
+  IncDec; the range clause's ASSIGN form; `return` of two and three values with named, unnamed,
+  blank-named and interface-typed results, `return f()` forwarded, a receive as an operand; blanks
+  beside effects) × target kinds (plain, captured and package-level variables; slice, array and
+  pointer-to-array elements; map elements incl. through a pointer's field; `*p`; a field through a
+  pointer; the chains `a[i].f`, `a[i][j]`, `p.q.x` with q a struct field vs a pointer field,
+  `pp[9].f` over `[]*T`, `(*pp)[0]` over `*[]int`; aliasing pairs — one pointer twice, one map key
+  twice, two headers over one array, one field through two pointers, one variable as both
+  comma-ok targets) × effects (a right-hand index read or nil deref panicking in phase 1; a target
+  operand's index or key panicking in phase 1; a store's bounds / nil pointer / nil map check in
+  phase 2 after the right-hand calls printed and earlier stores landed; a nil map's phase-2 panic
+  after phase 1 evaluated everything; a closed channel's zero/false delivery; a blocking receive
+  with a bad target; calls in a target's index/pointer/key before the receive) × contexts
+  (sequential; targets captured by a closure or observed by the deferred closure; generic
+  functions) × sites (`emitAssign`'s compound / type-assert / chan-recv / map-assign / phase-1
+  target / call-routing arms, `emitAssignTargetPhase1`, `emitReturn` and its `return f()` splat,
+  `emitReadWriteTargetPhase1`, `emitMapCompound`, `emitIncDec`, `emitRange`'s ASSIGN form,
+  `emitChanRecvAssign`, `machineSelectTargets`, `selectRecvClause`'s fallback; `decodeReturn`'s
+  `$ret<i>` temps, `decodeAssign`'s blank discards and comma-ok arm, the `compound-assign` arm;
+  `targetSpine` / `targetPlan` / `completeTargetRef` / `resolveChain` / `storeTarget`, `RhsOp` /
+  `applyRhsOp`, the call rules' frame-exit `tgtOpK`): 165 cells — 112 PROBED by this lane on both
+  sides (gc go1.26.5 under the runners' pins; 109 agreement cells of which 12 are L-016 cells
+  (below) and 2 probe-only S8 cells, plus 3 named-refusal probes), 48 COVERED by existing rows
+  (cited per cell in the lane's report), 5 neither — 4 in the sibling shapes' scope (S8's
+  inter-operand orders, BUG-052's pinned call-vs-operand latitude, S15's concurrent observers)
+  and the FR-6 gap below. ROWS ADDED: 95
+  strict rows in 8 packages `Corpus/coverage/exec/assign-order/sweep-s6-*/` (phase1-operands 13,
+  phase2-checks 15, phase1-panics 10, store-order 12, receive-forms 17 incl. the select
+  bad-target deadlock, blank-forms 8, compound-incdec 10, return-forms 10), expected = gc, all
+  PASS. FINDINGS: none — no wrong value, no wrong panic identity, no lost or early store, no
+  `stuck` on a legal program; BUG-266–275 unused. L-016 EVIDENCE (gc's deviation, never a row;
+  the machine holds the spec point on all 12): with a LOCAL division or a negative shift as the
+  later operand gc stores the earlier target early on every target kind (local, slice element,
+  deref, package-level variable, map element, field — the 2026-08-15 dossier's storage-class
+  reading is a misattribution: its divisor was a global); it holds the store back when the later
+  operand READS MEMORY (an index, a global divisor, a global read) and on a failing type
+  assertion (the ledger's prediction of an early store there is refuted). CELLS LEFT (refusals
+  named at the point of failure — coverage gaps, not defects): the range clause's ASSIGN form
+  into non-identifier targets (`for i, x[i] = range x`, the spec's own example — FR-6
+  `range-assign-nonident`, the rows `range/assign-form-nonident/*` and
+  `spec-examples-decl/assign-tuple-order/range-assign` are red by name); the receive statement
+  into an interface-typed target and the two-target receive into an interface-valued map element
+  (frontend-quarantined, `emitChanRecvAssign`); a multi-value call into interface-typed targets
+  (FR-7 `tuple-iface-box`, S1's BUG-079 class).
 
 The decoder's blank-containing multi-assign lowering (RHS temps +
 per-target single assigns) evaluates a later target's index operands
@@ -1549,6 +1699,56 @@ emit ONE `.assignMany` so the statement rides the spine.
 - Discovered: 2026-08-06 (round-4 convergence check, verified major;
   the fallback is the pre-existing lowering — round 3 shrank its
   domain but left it silently collapsing)
+- Neighbourhood: S6 (assignment and return: the two-phase order) — swept 2026-10-27 by lane
+  `sweep/s6-two-phase` (plan §4, [USER]-approved 2026-10-27; WHICH phase each operand is
+  evaluated in and the left-to-right order of the stores — the sibling shapes hold the order of
+  ordered events across a hoist (S7), spec-unsequenced pairs (S8) and the evaluation count (S9)).
+  THE MATRIX: statement forms (single assignment; tuple assignment incl. three targets and
+  repeated targets; multi-value call; comma-ok map read / type assertion / receive; the receive
+  statement; select receive clauses incl. the temp-fallback lowering; compound assignment and
+  IncDec; the range clause's ASSIGN form; `return` of two and three values with named, unnamed,
+  blank-named and interface-typed results, `return f()` forwarded, a receive as an operand; blanks
+  beside effects) × target kinds (plain, captured and package-level variables; slice, array and
+  pointer-to-array elements; map elements incl. through a pointer's field; `*p`; a field through a
+  pointer; the chains `a[i].f`, `a[i][j]`, `p.q.x` with q a struct field vs a pointer field,
+  `pp[9].f` over `[]*T`, `(*pp)[0]` over `*[]int`; aliasing pairs — one pointer twice, one map key
+  twice, two headers over one array, one field through two pointers, one variable as both
+  comma-ok targets) × effects (a right-hand index read or nil deref panicking in phase 1; a target
+  operand's index or key panicking in phase 1; a store's bounds / nil pointer / nil map check in
+  phase 2 after the right-hand calls printed and earlier stores landed; a nil map's phase-2 panic
+  after phase 1 evaluated everything; a closed channel's zero/false delivery; a blocking receive
+  with a bad target; calls in a target's index/pointer/key before the receive) × contexts
+  (sequential; targets captured by a closure or observed by the deferred closure; generic
+  functions) × sites (`emitAssign`'s compound / type-assert / chan-recv / map-assign / phase-1
+  target / call-routing arms, `emitAssignTargetPhase1`, `emitReturn` and its `return f()` splat,
+  `emitReadWriteTargetPhase1`, `emitMapCompound`, `emitIncDec`, `emitRange`'s ASSIGN form,
+  `emitChanRecvAssign`, `machineSelectTargets`, `selectRecvClause`'s fallback; `decodeReturn`'s
+  `$ret<i>` temps, `decodeAssign`'s blank discards and comma-ok arm, the `compound-assign` arm;
+  `targetSpine` / `targetPlan` / `completeTargetRef` / `resolveChain` / `storeTarget`, `RhsOp` /
+  `applyRhsOp`, the call rules' frame-exit `tgtOpK`): 165 cells — 112 PROBED by this lane on both
+  sides (gc go1.26.5 under the runners' pins; 109 agreement cells of which 12 are L-016 cells
+  (below) and 2 probe-only S8 cells, plus 3 named-refusal probes), 48 COVERED by existing rows
+  (cited per cell in the lane's report), 5 neither — 4 in the sibling shapes' scope (S8's
+  inter-operand orders, BUG-052's pinned call-vs-operand latitude, S15's concurrent observers)
+  and the FR-6 gap below. ROWS ADDED: 95
+  strict rows in 8 packages `Corpus/coverage/exec/assign-order/sweep-s6-*/` (phase1-operands 13,
+  phase2-checks 15, phase1-panics 10, store-order 12, receive-forms 17 incl. the select
+  bad-target deadlock, blank-forms 8, compound-incdec 10, return-forms 10), expected = gc, all
+  PASS. FINDINGS: none — no wrong value, no wrong panic identity, no lost or early store, no
+  `stuck` on a legal program; BUG-266–275 unused. L-016 EVIDENCE (gc's deviation, never a row;
+  the machine holds the spec point on all 12): with a LOCAL division or a negative shift as the
+  later operand gc stores the earlier target early on every target kind (local, slice element,
+  deref, package-level variable, map element, field — the 2026-08-15 dossier's storage-class
+  reading is a misattribution: its divisor was a global); it holds the store back when the later
+  operand READS MEMORY (an index, a global divisor, a global read) and on a failing type
+  assertion (the ledger's prediction of an early store there is refuted). CELLS LEFT (refusals
+  named at the point of failure — coverage gaps, not defects): the range clause's ASSIGN form
+  into non-identifier targets (`for i, x[i] = range x`, the spec's own example — FR-6
+  `range-assign-nonident`, the rows `range/assign-form-nonident/*` and
+  `spec-examples-decl/assign-tuple-order/range-assign` are red by name); the receive statement
+  into an interface-typed target and the two-target receive into an interface-valued map element
+  (frontend-quarantined, `emitChanRecvAssign`); a multi-value call into interface-typed targets
+  (FR-7 `tuple-iface-box`, S1's BUG-079 class).
 
 When a clause target's emission hoists (a call in an index) or needs
 boxing, `selectRecvClause` falls back to temps + body-side SINGLE
@@ -1582,6 +1782,56 @@ spine, post-BUG-025) and keep the phase split inside the clause.
 - Discovered: 2026-08-06 (round-4 convergence check, verified major;
   pre-existing — the round-3 doctrine was applied only to multi-target
   statements)
+- Neighbourhood: S6 (assignment and return: the two-phase order) — swept 2026-10-27 by lane
+  `sweep/s6-two-phase` (plan §4, [USER]-approved 2026-10-27; WHICH phase each operand is
+  evaluated in and the left-to-right order of the stores — the sibling shapes hold the order of
+  ordered events across a hoist (S7), spec-unsequenced pairs (S8) and the evaluation count (S9)).
+  THE MATRIX: statement forms (single assignment; tuple assignment incl. three targets and
+  repeated targets; multi-value call; comma-ok map read / type assertion / receive; the receive
+  statement; select receive clauses incl. the temp-fallback lowering; compound assignment and
+  IncDec; the range clause's ASSIGN form; `return` of two and three values with named, unnamed,
+  blank-named and interface-typed results, `return f()` forwarded, a receive as an operand; blanks
+  beside effects) × target kinds (plain, captured and package-level variables; slice, array and
+  pointer-to-array elements; map elements incl. through a pointer's field; `*p`; a field through a
+  pointer; the chains `a[i].f`, `a[i][j]`, `p.q.x` with q a struct field vs a pointer field,
+  `pp[9].f` over `[]*T`, `(*pp)[0]` over `*[]int`; aliasing pairs — one pointer twice, one map key
+  twice, two headers over one array, one field through two pointers, one variable as both
+  comma-ok targets) × effects (a right-hand index read or nil deref panicking in phase 1; a target
+  operand's index or key panicking in phase 1; a store's bounds / nil pointer / nil map check in
+  phase 2 after the right-hand calls printed and earlier stores landed; a nil map's phase-2 panic
+  after phase 1 evaluated everything; a closed channel's zero/false delivery; a blocking receive
+  with a bad target; calls in a target's index/pointer/key before the receive) × contexts
+  (sequential; targets captured by a closure or observed by the deferred closure; generic
+  functions) × sites (`emitAssign`'s compound / type-assert / chan-recv / map-assign / phase-1
+  target / call-routing arms, `emitAssignTargetPhase1`, `emitReturn` and its `return f()` splat,
+  `emitReadWriteTargetPhase1`, `emitMapCompound`, `emitIncDec`, `emitRange`'s ASSIGN form,
+  `emitChanRecvAssign`, `machineSelectTargets`, `selectRecvClause`'s fallback; `decodeReturn`'s
+  `$ret<i>` temps, `decodeAssign`'s blank discards and comma-ok arm, the `compound-assign` arm;
+  `targetSpine` / `targetPlan` / `completeTargetRef` / `resolveChain` / `storeTarget`, `RhsOp` /
+  `applyRhsOp`, the call rules' frame-exit `tgtOpK`): 165 cells — 112 PROBED by this lane on both
+  sides (gc go1.26.5 under the runners' pins; 109 agreement cells of which 12 are L-016 cells
+  (below) and 2 probe-only S8 cells, plus 3 named-refusal probes), 48 COVERED by existing rows
+  (cited per cell in the lane's report), 5 neither — 4 in the sibling shapes' scope (S8's
+  inter-operand orders, BUG-052's pinned call-vs-operand latitude, S15's concurrent observers)
+  and the FR-6 gap below. ROWS ADDED: 95
+  strict rows in 8 packages `Corpus/coverage/exec/assign-order/sweep-s6-*/` (phase1-operands 13,
+  phase2-checks 15, phase1-panics 10, store-order 12, receive-forms 17 incl. the select
+  bad-target deadlock, blank-forms 8, compound-incdec 10, return-forms 10), expected = gc, all
+  PASS. FINDINGS: none — no wrong value, no wrong panic identity, no lost or early store, no
+  `stuck` on a legal program; BUG-266–275 unused. L-016 EVIDENCE (gc's deviation, never a row;
+  the machine holds the spec point on all 12): with a LOCAL division or a negative shift as the
+  later operand gc stores the earlier target early on every target kind (local, slice element,
+  deref, package-level variable, map element, field — the 2026-08-15 dossier's storage-class
+  reading is a misattribution: its divisor was a global); it holds the store back when the later
+  operand READS MEMORY (an index, a global divisor, a global read) and on a failing type
+  assertion (the ledger's prediction of an early store there is refuted). CELLS LEFT (refusals
+  named at the point of failure — coverage gaps, not defects): the range clause's ASSIGN form
+  into non-identifier targets (`for i, x[i] = range x`, the spec's own example — FR-6
+  `range-assign-nonident`, the rows `range/assign-form-nonident/*` and
+  `spec-examples-decl/assign-tuple-order/range-assign` are red by name); the receive statement
+  into an interface-typed target and the two-target receive into an interface-valued map element
+  (frontend-quarantined, `emitChanRecvAssign`); a multi-value call into interface-typed targets
+  (FR-7 `tuple-iface-box`, S1's BUG-079 class).
 
 `.assign` evaluates the full target address (bounds/nil checks
 included) BEFORE the RHS; spec §Assignments puts the RHS in phase 1
@@ -1662,6 +1912,56 @@ operand non-panic-free (then the BUG-032 refusal applies).
 - Cases: channels/select-recv-edge/dep-index-target, channels/select-recv-edge/nil-index-base-second
 - Discovered: 2026-08-06 (channels-arc-s1 convergence round; introduced
   by the D3 fix, commit 12f2d42 — a regression of the OPPOSITE phase)
+- Neighbourhood: S6 (assignment and return: the two-phase order) — swept 2026-10-27 by lane
+  `sweep/s6-two-phase` (plan §4, [USER]-approved 2026-10-27; WHICH phase each operand is
+  evaluated in and the left-to-right order of the stores — the sibling shapes hold the order of
+  ordered events across a hoist (S7), spec-unsequenced pairs (S8) and the evaluation count (S9)).
+  THE MATRIX: statement forms (single assignment; tuple assignment incl. three targets and
+  repeated targets; multi-value call; comma-ok map read / type assertion / receive; the receive
+  statement; select receive clauses incl. the temp-fallback lowering; compound assignment and
+  IncDec; the range clause's ASSIGN form; `return` of two and three values with named, unnamed,
+  blank-named and interface-typed results, `return f()` forwarded, a receive as an operand; blanks
+  beside effects) × target kinds (plain, captured and package-level variables; slice, array and
+  pointer-to-array elements; map elements incl. through a pointer's field; `*p`; a field through a
+  pointer; the chains `a[i].f`, `a[i][j]`, `p.q.x` with q a struct field vs a pointer field,
+  `pp[9].f` over `[]*T`, `(*pp)[0]` over `*[]int`; aliasing pairs — one pointer twice, one map key
+  twice, two headers over one array, one field through two pointers, one variable as both
+  comma-ok targets) × effects (a right-hand index read or nil deref panicking in phase 1; a target
+  operand's index or key panicking in phase 1; a store's bounds / nil pointer / nil map check in
+  phase 2 after the right-hand calls printed and earlier stores landed; a nil map's phase-2 panic
+  after phase 1 evaluated everything; a closed channel's zero/false delivery; a blocking receive
+  with a bad target; calls in a target's index/pointer/key before the receive) × contexts
+  (sequential; targets captured by a closure or observed by the deferred closure; generic
+  functions) × sites (`emitAssign`'s compound / type-assert / chan-recv / map-assign / phase-1
+  target / call-routing arms, `emitAssignTargetPhase1`, `emitReturn` and its `return f()` splat,
+  `emitReadWriteTargetPhase1`, `emitMapCompound`, `emitIncDec`, `emitRange`'s ASSIGN form,
+  `emitChanRecvAssign`, `machineSelectTargets`, `selectRecvClause`'s fallback; `decodeReturn`'s
+  `$ret<i>` temps, `decodeAssign`'s blank discards and comma-ok arm, the `compound-assign` arm;
+  `targetSpine` / `targetPlan` / `completeTargetRef` / `resolveChain` / `storeTarget`, `RhsOp` /
+  `applyRhsOp`, the call rules' frame-exit `tgtOpK`): 165 cells — 112 PROBED by this lane on both
+  sides (gc go1.26.5 under the runners' pins; 109 agreement cells of which 12 are L-016 cells
+  (below) and 2 probe-only S8 cells, plus 3 named-refusal probes), 48 COVERED by existing rows
+  (cited per cell in the lane's report), 5 neither — 4 in the sibling shapes' scope (S8's
+  inter-operand orders, BUG-052's pinned call-vs-operand latitude, S15's concurrent observers)
+  and the FR-6 gap below. ROWS ADDED: 95
+  strict rows in 8 packages `Corpus/coverage/exec/assign-order/sweep-s6-*/` (phase1-operands 13,
+  phase2-checks 15, phase1-panics 10, store-order 12, receive-forms 17 incl. the select
+  bad-target deadlock, blank-forms 8, compound-incdec 10, return-forms 10), expected = gc, all
+  PASS. FINDINGS: none — no wrong value, no wrong panic identity, no lost or early store, no
+  `stuck` on a legal program; BUG-266–275 unused. L-016 EVIDENCE (gc's deviation, never a row;
+  the machine holds the spec point on all 12): with a LOCAL division or a negative shift as the
+  later operand gc stores the earlier target early on every target kind (local, slice element,
+  deref, package-level variable, map element, field — the 2026-08-15 dossier's storage-class
+  reading is a misattribution: its divisor was a global); it holds the store back when the later
+  operand READS MEMORY (an index, a global divisor, a global read) and on a failing type
+  assertion (the ledger's prediction of an early store there is refuted). CELLS LEFT (refusals
+  named at the point of failure — coverage gaps, not defects): the range clause's ASSIGN form
+  into non-identifier targets (`for i, x[i] = range x`, the spec's own example — FR-6
+  `range-assign-nonident`, the rows `range/assign-form-nonident/*` and
+  `spec-examples-decl/assign-tuple-order/range-assign` are red by name); the receive statement
+  into an interface-typed target and the two-target receive into an interface-valued map element
+  (frontend-quarantined, `emitChanRecvAssign`); a multi-value call into interface-typed targets
+  (FR-7 `tuple-iface-box`, S1's BUG-079 class).
 
 Spec §Assignments is two-phase: phase 1 evaluates the LHS
 index/indirection OPERANDS (and the RHS) in the usual order; phase 2
@@ -1701,6 +2001,56 @@ after earlier stores landed).
 - Cases: channels/recv-map-elem/first-store-lands
 - Discovered: 2026-08-06 (channels-arc-s1 convergence round, verified
   major; lowering shape pre-existing, S4)
+- Neighbourhood: S6 (assignment and return: the two-phase order) — swept 2026-10-27 by lane
+  `sweep/s6-two-phase` (plan §4, [USER]-approved 2026-10-27; WHICH phase each operand is
+  evaluated in and the left-to-right order of the stores — the sibling shapes hold the order of
+  ordered events across a hoist (S7), spec-unsequenced pairs (S8) and the evaluation count (S9)).
+  THE MATRIX: statement forms (single assignment; tuple assignment incl. three targets and
+  repeated targets; multi-value call; comma-ok map read / type assertion / receive; the receive
+  statement; select receive clauses incl. the temp-fallback lowering; compound assignment and
+  IncDec; the range clause's ASSIGN form; `return` of two and three values with named, unnamed,
+  blank-named and interface-typed results, `return f()` forwarded, a receive as an operand; blanks
+  beside effects) × target kinds (plain, captured and package-level variables; slice, array and
+  pointer-to-array elements; map elements incl. through a pointer's field; `*p`; a field through a
+  pointer; the chains `a[i].f`, `a[i][j]`, `p.q.x` with q a struct field vs a pointer field,
+  `pp[9].f` over `[]*T`, `(*pp)[0]` over `*[]int`; aliasing pairs — one pointer twice, one map key
+  twice, two headers over one array, one field through two pointers, one variable as both
+  comma-ok targets) × effects (a right-hand index read or nil deref panicking in phase 1; a target
+  operand's index or key panicking in phase 1; a store's bounds / nil pointer / nil map check in
+  phase 2 after the right-hand calls printed and earlier stores landed; a nil map's phase-2 panic
+  after phase 1 evaluated everything; a closed channel's zero/false delivery; a blocking receive
+  with a bad target; calls in a target's index/pointer/key before the receive) × contexts
+  (sequential; targets captured by a closure or observed by the deferred closure; generic
+  functions) × sites (`emitAssign`'s compound / type-assert / chan-recv / map-assign / phase-1
+  target / call-routing arms, `emitAssignTargetPhase1`, `emitReturn` and its `return f()` splat,
+  `emitReadWriteTargetPhase1`, `emitMapCompound`, `emitIncDec`, `emitRange`'s ASSIGN form,
+  `emitChanRecvAssign`, `machineSelectTargets`, `selectRecvClause`'s fallback; `decodeReturn`'s
+  `$ret<i>` temps, `decodeAssign`'s blank discards and comma-ok arm, the `compound-assign` arm;
+  `targetSpine` / `targetPlan` / `completeTargetRef` / `resolveChain` / `storeTarget`, `RhsOp` /
+  `applyRhsOp`, the call rules' frame-exit `tgtOpK`): 165 cells — 112 PROBED by this lane on both
+  sides (gc go1.26.5 under the runners' pins; 109 agreement cells of which 12 are L-016 cells
+  (below) and 2 probe-only S8 cells, plus 3 named-refusal probes), 48 COVERED by existing rows
+  (cited per cell in the lane's report), 5 neither — 4 in the sibling shapes' scope (S8's
+  inter-operand orders, BUG-052's pinned call-vs-operand latitude, S15's concurrent observers)
+  and the FR-6 gap below. ROWS ADDED: 95
+  strict rows in 8 packages `Corpus/coverage/exec/assign-order/sweep-s6-*/` (phase1-operands 13,
+  phase2-checks 15, phase1-panics 10, store-order 12, receive-forms 17 incl. the select
+  bad-target deadlock, blank-forms 8, compound-incdec 10, return-forms 10), expected = gc, all
+  PASS. FINDINGS: none — no wrong value, no wrong panic identity, no lost or early store, no
+  `stuck` on a legal program; BUG-266–275 unused. L-016 EVIDENCE (gc's deviation, never a row;
+  the machine holds the spec point on all 12): with a LOCAL division or a negative shift as the
+  later operand gc stores the earlier target early on every target kind (local, slice element,
+  deref, package-level variable, map element, field — the 2026-08-15 dossier's storage-class
+  reading is a misattribution: its divisor was a global); it holds the store back when the later
+  operand READS MEMORY (an index, a global divisor, a global read) and on a failing type
+  assertion (the ledger's prediction of an early store there is refuted). CELLS LEFT (refusals
+  named at the point of failure — coverage gaps, not defects): the range clause's ASSIGN form
+  into non-identifier targets (`for i, x[i] = range x`, the spec's own example — FR-6
+  `range-assign-nonident`, the rows `range/assign-form-nonident/*` and
+  `spec-examples-decl/assign-tuple-order/range-assign` are red by name); the receive statement
+  into an interface-typed target and the two-target receive into an interface-valued map element
+  (frontend-quarantined, `emitChanRecvAssign`); a multi-value call into interface-typed targets
+  (FR-7 `tuple-iface-box`, S1's BUG-079 class).
 
 `m[0], *okp = <-ch` with nil `okp`: gc stores `m[0]` (phase 2 is
 left-to-right) and then panics storing `*okp` — the map store SURVIVES
@@ -2090,6 +2440,56 @@ hoist further.
 - Cases: multi-assign/call-write-back/effects-suppressed, multi-assign/call-write-back/panic-identity, multi-assign/call-write-back/nil-field-store
 - Discovered: 2026-08-06 (channels-arc-s1 delta review D3, generalized
   by the verifier: pre-existing on main, NOT channel-specific)
+- Neighbourhood: S6 (assignment and return: the two-phase order) — swept 2026-10-27 by lane
+  `sweep/s6-two-phase` (plan §4, [USER]-approved 2026-10-27; WHICH phase each operand is
+  evaluated in and the left-to-right order of the stores — the sibling shapes hold the order of
+  ordered events across a hoist (S7), spec-unsequenced pairs (S8) and the evaluation count (S9)).
+  THE MATRIX: statement forms (single assignment; tuple assignment incl. three targets and
+  repeated targets; multi-value call; comma-ok map read / type assertion / receive; the receive
+  statement; select receive clauses incl. the temp-fallback lowering; compound assignment and
+  IncDec; the range clause's ASSIGN form; `return` of two and three values with named, unnamed,
+  blank-named and interface-typed results, `return f()` forwarded, a receive as an operand; blanks
+  beside effects) × target kinds (plain, captured and package-level variables; slice, array and
+  pointer-to-array elements; map elements incl. through a pointer's field; `*p`; a field through a
+  pointer; the chains `a[i].f`, `a[i][j]`, `p.q.x` with q a struct field vs a pointer field,
+  `pp[9].f` over `[]*T`, `(*pp)[0]` over `*[]int`; aliasing pairs — one pointer twice, one map key
+  twice, two headers over one array, one field through two pointers, one variable as both
+  comma-ok targets) × effects (a right-hand index read or nil deref panicking in phase 1; a target
+  operand's index or key panicking in phase 1; a store's bounds / nil pointer / nil map check in
+  phase 2 after the right-hand calls printed and earlier stores landed; a nil map's phase-2 panic
+  after phase 1 evaluated everything; a closed channel's zero/false delivery; a blocking receive
+  with a bad target; calls in a target's index/pointer/key before the receive) × contexts
+  (sequential; targets captured by a closure or observed by the deferred closure; generic
+  functions) × sites (`emitAssign`'s compound / type-assert / chan-recv / map-assign / phase-1
+  target / call-routing arms, `emitAssignTargetPhase1`, `emitReturn` and its `return f()` splat,
+  `emitReadWriteTargetPhase1`, `emitMapCompound`, `emitIncDec`, `emitRange`'s ASSIGN form,
+  `emitChanRecvAssign`, `machineSelectTargets`, `selectRecvClause`'s fallback; `decodeReturn`'s
+  `$ret<i>` temps, `decodeAssign`'s blank discards and comma-ok arm, the `compound-assign` arm;
+  `targetSpine` / `targetPlan` / `completeTargetRef` / `resolveChain` / `storeTarget`, `RhsOp` /
+  `applyRhsOp`, the call rules' frame-exit `tgtOpK`): 165 cells — 112 PROBED by this lane on both
+  sides (gc go1.26.5 under the runners' pins; 109 agreement cells of which 12 are L-016 cells
+  (below) and 2 probe-only S8 cells, plus 3 named-refusal probes), 48 COVERED by existing rows
+  (cited per cell in the lane's report), 5 neither — 4 in the sibling shapes' scope (S8's
+  inter-operand orders, BUG-052's pinned call-vs-operand latitude, S15's concurrent observers)
+  and the FR-6 gap below. ROWS ADDED: 95
+  strict rows in 8 packages `Corpus/coverage/exec/assign-order/sweep-s6-*/` (phase1-operands 13,
+  phase2-checks 15, phase1-panics 10, store-order 12, receive-forms 17 incl. the select
+  bad-target deadlock, blank-forms 8, compound-incdec 10, return-forms 10), expected = gc, all
+  PASS. FINDINGS: none — no wrong value, no wrong panic identity, no lost or early store, no
+  `stuck` on a legal program; BUG-266–275 unused. L-016 EVIDENCE (gc's deviation, never a row;
+  the machine holds the spec point on all 12): with a LOCAL division or a negative shift as the
+  later operand gc stores the earlier target early on every target kind (local, slice element,
+  deref, package-level variable, map element, field — the 2026-08-15 dossier's storage-class
+  reading is a misattribution: its divisor was a global); it holds the store back when the later
+  operand READS MEMORY (an index, a global divisor, a global read) and on a failing type
+  assertion (the ledger's prediction of an early store there is refuted). CELLS LEFT (refusals
+  named at the point of failure — coverage gaps, not defects): the range clause's ASSIGN form
+  into non-identifier targets (`for i, x[i] = range x`, the spec's own example — FR-6
+  `range-assign-nonident`, the rows `range/assign-form-nonident/*` and
+  `spec-examples-decl/assign-tuple-order/range-assign` are red by name); the receive statement
+  into an interface-typed target and the two-target receive into an interface-valued map element
+  (frontend-quarantined, `emitChanRecvAssign`); a multi-value call into interface-typed targets
+  (FR-7 `tuple-iface-box`, S1's BUG-079 class).
 
 Spec §Assignments: "Second, the assignments are carried out in
 left-to-right order", with the spec's own example making an earlier
@@ -2172,6 +2572,56 @@ by the S6 fix. Fix: qualify with the enclosing function name.
 - Pinned-by: differential
 - Cases: channels/recv-map-elem/key-panic-drains
 - Discovered: 2026-08-06 (channels-arc-s1 delta review D5)
+- Neighbourhood: S6 (assignment and return: the two-phase order) — swept 2026-10-27 by lane
+  `sweep/s6-two-phase` (plan §4, [USER]-approved 2026-10-27; WHICH phase each operand is
+  evaluated in and the left-to-right order of the stores — the sibling shapes hold the order of
+  ordered events across a hoist (S7), spec-unsequenced pairs (S8) and the evaluation count (S9)).
+  THE MATRIX: statement forms (single assignment; tuple assignment incl. three targets and
+  repeated targets; multi-value call; comma-ok map read / type assertion / receive; the receive
+  statement; select receive clauses incl. the temp-fallback lowering; compound assignment and
+  IncDec; the range clause's ASSIGN form; `return` of two and three values with named, unnamed,
+  blank-named and interface-typed results, `return f()` forwarded, a receive as an operand; blanks
+  beside effects) × target kinds (plain, captured and package-level variables; slice, array and
+  pointer-to-array elements; map elements incl. through a pointer's field; `*p`; a field through a
+  pointer; the chains `a[i].f`, `a[i][j]`, `p.q.x` with q a struct field vs a pointer field,
+  `pp[9].f` over `[]*T`, `(*pp)[0]` over `*[]int`; aliasing pairs — one pointer twice, one map key
+  twice, two headers over one array, one field through two pointers, one variable as both
+  comma-ok targets) × effects (a right-hand index read or nil deref panicking in phase 1; a target
+  operand's index or key panicking in phase 1; a store's bounds / nil pointer / nil map check in
+  phase 2 after the right-hand calls printed and earlier stores landed; a nil map's phase-2 panic
+  after phase 1 evaluated everything; a closed channel's zero/false delivery; a blocking receive
+  with a bad target; calls in a target's index/pointer/key before the receive) × contexts
+  (sequential; targets captured by a closure or observed by the deferred closure; generic
+  functions) × sites (`emitAssign`'s compound / type-assert / chan-recv / map-assign / phase-1
+  target / call-routing arms, `emitAssignTargetPhase1`, `emitReturn` and its `return f()` splat,
+  `emitReadWriteTargetPhase1`, `emitMapCompound`, `emitIncDec`, `emitRange`'s ASSIGN form,
+  `emitChanRecvAssign`, `machineSelectTargets`, `selectRecvClause`'s fallback; `decodeReturn`'s
+  `$ret<i>` temps, `decodeAssign`'s blank discards and comma-ok arm, the `compound-assign` arm;
+  `targetSpine` / `targetPlan` / `completeTargetRef` / `resolveChain` / `storeTarget`, `RhsOp` /
+  `applyRhsOp`, the call rules' frame-exit `tgtOpK`): 165 cells — 112 PROBED by this lane on both
+  sides (gc go1.26.5 under the runners' pins; 109 agreement cells of which 12 are L-016 cells
+  (below) and 2 probe-only S8 cells, plus 3 named-refusal probes), 48 COVERED by existing rows
+  (cited per cell in the lane's report), 5 neither — 4 in the sibling shapes' scope (S8's
+  inter-operand orders, BUG-052's pinned call-vs-operand latitude, S15's concurrent observers)
+  and the FR-6 gap below. ROWS ADDED: 95
+  strict rows in 8 packages `Corpus/coverage/exec/assign-order/sweep-s6-*/` (phase1-operands 13,
+  phase2-checks 15, phase1-panics 10, store-order 12, receive-forms 17 incl. the select
+  bad-target deadlock, blank-forms 8, compound-incdec 10, return-forms 10), expected = gc, all
+  PASS. FINDINGS: none — no wrong value, no wrong panic identity, no lost or early store, no
+  `stuck` on a legal program; BUG-266–275 unused. L-016 EVIDENCE (gc's deviation, never a row;
+  the machine holds the spec point on all 12): with a LOCAL division or a negative shift as the
+  later operand gc stores the earlier target early on every target kind (local, slice element,
+  deref, package-level variable, map element, field — the 2026-08-15 dossier's storage-class
+  reading is a misattribution: its divisor was a global); it holds the store back when the later
+  operand READS MEMORY (an index, a global divisor, a global read) and on a failing type
+  assertion (the ledger's prediction of an early store there is refuted). CELLS LEFT (refusals
+  named at the point of failure — coverage gaps, not defects): the range clause's ASSIGN form
+  into non-identifier targets (`for i, x[i] = range x`, the spec's own example — FR-6
+  `range-assign-nonident`, the rows `range/assign-form-nonident/*` and
+  `spec-examples-decl/assign-tuple-order/range-assign` are red by name); the receive statement
+  into an interface-typed target and the two-target receive into an interface-valued map element
+  (frontend-quarantined, `emitChanRecvAssign`); a multi-value call into interface-typed targets
+  (FR-7 `tuple-iface-box`, S1's BUG-079 class).
 
 The S4 lowering hoists the map base and key ahead of the chan-recv
 statement, so a key whose evaluation panics (a non-call operand — an
@@ -2205,6 +2655,56 @@ receive flag), aligning both target kinds with gc.
 - Cases: channels/recv-edge/nil-deref-target-drains, channels/recv-edge/oob-target-drains, channels/recv-edge/bad-target-blocks
 - Discovered: 2026-08-06 (channels-arc-s1 pre-merge audit S1+S7,
   independently verified; probes reproduced against go1.26.5)
+- Neighbourhood: S6 (assignment and return: the two-phase order) — swept 2026-10-27 by lane
+  `sweep/s6-two-phase` (plan §4, [USER]-approved 2026-10-27; WHICH phase each operand is
+  evaluated in and the left-to-right order of the stores — the sibling shapes hold the order of
+  ordered events across a hoist (S7), spec-unsequenced pairs (S8) and the evaluation count (S9)).
+  THE MATRIX: statement forms (single assignment; tuple assignment incl. three targets and
+  repeated targets; multi-value call; comma-ok map read / type assertion / receive; the receive
+  statement; select receive clauses incl. the temp-fallback lowering; compound assignment and
+  IncDec; the range clause's ASSIGN form; `return` of two and three values with named, unnamed,
+  blank-named and interface-typed results, `return f()` forwarded, a receive as an operand; blanks
+  beside effects) × target kinds (plain, captured and package-level variables; slice, array and
+  pointer-to-array elements; map elements incl. through a pointer's field; `*p`; a field through a
+  pointer; the chains `a[i].f`, `a[i][j]`, `p.q.x` with q a struct field vs a pointer field,
+  `pp[9].f` over `[]*T`, `(*pp)[0]` over `*[]int`; aliasing pairs — one pointer twice, one map key
+  twice, two headers over one array, one field through two pointers, one variable as both
+  comma-ok targets) × effects (a right-hand index read or nil deref panicking in phase 1; a target
+  operand's index or key panicking in phase 1; a store's bounds / nil pointer / nil map check in
+  phase 2 after the right-hand calls printed and earlier stores landed; a nil map's phase-2 panic
+  after phase 1 evaluated everything; a closed channel's zero/false delivery; a blocking receive
+  with a bad target; calls in a target's index/pointer/key before the receive) × contexts
+  (sequential; targets captured by a closure or observed by the deferred closure; generic
+  functions) × sites (`emitAssign`'s compound / type-assert / chan-recv / map-assign / phase-1
+  target / call-routing arms, `emitAssignTargetPhase1`, `emitReturn` and its `return f()` splat,
+  `emitReadWriteTargetPhase1`, `emitMapCompound`, `emitIncDec`, `emitRange`'s ASSIGN form,
+  `emitChanRecvAssign`, `machineSelectTargets`, `selectRecvClause`'s fallback; `decodeReturn`'s
+  `$ret<i>` temps, `decodeAssign`'s blank discards and comma-ok arm, the `compound-assign` arm;
+  `targetSpine` / `targetPlan` / `completeTargetRef` / `resolveChain` / `storeTarget`, `RhsOp` /
+  `applyRhsOp`, the call rules' frame-exit `tgtOpK`): 165 cells — 112 PROBED by this lane on both
+  sides (gc go1.26.5 under the runners' pins; 109 agreement cells of which 12 are L-016 cells
+  (below) and 2 probe-only S8 cells, plus 3 named-refusal probes), 48 COVERED by existing rows
+  (cited per cell in the lane's report), 5 neither — 4 in the sibling shapes' scope (S8's
+  inter-operand orders, BUG-052's pinned call-vs-operand latitude, S15's concurrent observers)
+  and the FR-6 gap below. ROWS ADDED: 95
+  strict rows in 8 packages `Corpus/coverage/exec/assign-order/sweep-s6-*/` (phase1-operands 13,
+  phase2-checks 15, phase1-panics 10, store-order 12, receive-forms 17 incl. the select
+  bad-target deadlock, blank-forms 8, compound-incdec 10, return-forms 10), expected = gc, all
+  PASS. FINDINGS: none — no wrong value, no wrong panic identity, no lost or early store, no
+  `stuck` on a legal program; BUG-266–275 unused. L-016 EVIDENCE (gc's deviation, never a row;
+  the machine holds the spec point on all 12): with a LOCAL division or a negative shift as the
+  later operand gc stores the earlier target early on every target kind (local, slice element,
+  deref, package-level variable, map element, field — the 2026-08-15 dossier's storage-class
+  reading is a misattribution: its divisor was a global); it holds the store back when the later
+  operand READS MEMORY (an index, a global divisor, a global read) and on a failing type
+  assertion (the ledger's prediction of an early store there is refuted). CELLS LEFT (refusals
+  named at the point of failure — coverage gaps, not defects): the range clause's ASSIGN form
+  into non-identifier targets (`for i, x[i] = range x`, the spec's own example — FR-6
+  `range-assign-nonident`, the rows `range/assign-form-nonident/*` and
+  `spec-examples-decl/assign-tuple-order/range-assign` are red by name); the receive statement
+  into an interface-typed target and the two-target receive into an interface-valued map element
+  (frontend-quarantined, `emitChanRecvAssign`); a multi-value call into interface-typed targets
+  (FR-7 `tuple-iface-box`, S1's BUG-079 class).
 
 `chanPlan` orders the receive STATEMENT as target-addresses-first and
 `chanStK`/`applyChanOp` panic on a failing target (nil deref, index out
@@ -4962,6 +5462,56 @@ readiness/commit machinery. The full select corpus slice re-ran green
   docs/2026-09-01_gotest-triage.md M2 — fixedbugs/issue43835.go, go
   ok vs machine panics FAIL; the f/g/h probes isolated the return
   path: the assign path was already two-phase and correct)
+- Neighbourhood: S6 (assignment and return: the two-phase order) — swept 2026-10-27 by lane
+  `sweep/s6-two-phase` (plan §4, [USER]-approved 2026-10-27; WHICH phase each operand is
+  evaluated in and the left-to-right order of the stores — the sibling shapes hold the order of
+  ordered events across a hoist (S7), spec-unsequenced pairs (S8) and the evaluation count (S9)).
+  THE MATRIX: statement forms (single assignment; tuple assignment incl. three targets and
+  repeated targets; multi-value call; comma-ok map read / type assertion / receive; the receive
+  statement; select receive clauses incl. the temp-fallback lowering; compound assignment and
+  IncDec; the range clause's ASSIGN form; `return` of two and three values with named, unnamed,
+  blank-named and interface-typed results, `return f()` forwarded, a receive as an operand; blanks
+  beside effects) × target kinds (plain, captured and package-level variables; slice, array and
+  pointer-to-array elements; map elements incl. through a pointer's field; `*p`; a field through a
+  pointer; the chains `a[i].f`, `a[i][j]`, `p.q.x` with q a struct field vs a pointer field,
+  `pp[9].f` over `[]*T`, `(*pp)[0]` over `*[]int`; aliasing pairs — one pointer twice, one map key
+  twice, two headers over one array, one field through two pointers, one variable as both
+  comma-ok targets) × effects (a right-hand index read or nil deref panicking in phase 1; a target
+  operand's index or key panicking in phase 1; a store's bounds / nil pointer / nil map check in
+  phase 2 after the right-hand calls printed and earlier stores landed; a nil map's phase-2 panic
+  after phase 1 evaluated everything; a closed channel's zero/false delivery; a blocking receive
+  with a bad target; calls in a target's index/pointer/key before the receive) × contexts
+  (sequential; targets captured by a closure or observed by the deferred closure; generic
+  functions) × sites (`emitAssign`'s compound / type-assert / chan-recv / map-assign / phase-1
+  target / call-routing arms, `emitAssignTargetPhase1`, `emitReturn` and its `return f()` splat,
+  `emitReadWriteTargetPhase1`, `emitMapCompound`, `emitIncDec`, `emitRange`'s ASSIGN form,
+  `emitChanRecvAssign`, `machineSelectTargets`, `selectRecvClause`'s fallback; `decodeReturn`'s
+  `$ret<i>` temps, `decodeAssign`'s blank discards and comma-ok arm, the `compound-assign` arm;
+  `targetSpine` / `targetPlan` / `completeTargetRef` / `resolveChain` / `storeTarget`, `RhsOp` /
+  `applyRhsOp`, the call rules' frame-exit `tgtOpK`): 165 cells — 112 PROBED by this lane on both
+  sides (gc go1.26.5 under the runners' pins; 109 agreement cells of which 12 are L-016 cells
+  (below) and 2 probe-only S8 cells, plus 3 named-refusal probes), 48 COVERED by existing rows
+  (cited per cell in the lane's report), 5 neither — 4 in the sibling shapes' scope (S8's
+  inter-operand orders, BUG-052's pinned call-vs-operand latitude, S15's concurrent observers)
+  and the FR-6 gap below. ROWS ADDED: 95
+  strict rows in 8 packages `Corpus/coverage/exec/assign-order/sweep-s6-*/` (phase1-operands 13,
+  phase2-checks 15, phase1-panics 10, store-order 12, receive-forms 17 incl. the select
+  bad-target deadlock, blank-forms 8, compound-incdec 10, return-forms 10), expected = gc, all
+  PASS. FINDINGS: none — no wrong value, no wrong panic identity, no lost or early store, no
+  `stuck` on a legal program; BUG-266–275 unused. L-016 EVIDENCE (gc's deviation, never a row;
+  the machine holds the spec point on all 12): with a LOCAL division or a negative shift as the
+  later operand gc stores the earlier target early on every target kind (local, slice element,
+  deref, package-level variable, map element, field — the 2026-08-15 dossier's storage-class
+  reading is a misattribution: its divisor was a global); it holds the store back when the later
+  operand READS MEMORY (an index, a global divisor, a global read) and on a failing type
+  assertion (the ledger's prediction of an early store there is refuted). CELLS LEFT (refusals
+  named at the point of failure — coverage gaps, not defects): the range clause's ASSIGN form
+  into non-identifier targets (`for i, x[i] = range x`, the spec's own example — FR-6
+  `range-assign-nonident`, the rows `range/assign-form-nonident/*` and
+  `spec-examples-decl/assign-tuple-order/range-assign` are red by name); the receive statement
+  into an interface-typed target and the two-target receive into an interface-valued map element
+  (frontend-quarantined, `emitChanRecvAssign`); a multi-value call into interface-typed targets
+  (FR-7 `tuple-iface-box`, S1's BUG-079 class).
 
 Spec (spec#Return_statements): "return e1, .., en" assigns to the
 result variables LIKE AN ASSIGNMENT — all right-hand operands

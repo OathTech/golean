@@ -1,0 +1,14 @@
+# id	subject	args	expected_status	expected_reason	features
+deref-operand	p1DerefOperand	-	ok	-	assignment,evaluation_order,multi_assign,pointers
+field-operand	p1FieldOperand	-	ok	-	assignment,evaluation_order,multi_assign,pointers,structs
+chain-operand	p1ChainOperand	-	ok	-	assignment,evaluation_order,multi_assign,slices,structs,indexing
+nested-array-operand	p1NestedOperand	-	ok	-	assignment,evaluation_order,multi_assign,arrays,indexing
+ptr-array-operand	p1PtrArrayOperand	-	ok	-	assignment,evaluation_order,multi_assign,pointers,arrays,indexing
+assert-ok-dep-index	p1AssertDep	-	ok	-	assignment,evaluation_order,multi_assign,type_assertions,comma_ok,slices,indexing
+captured-dep-index	p1Captured	-	ok	-	assignment,evaluation_order,multi_assign,closures,slices,indexing
+generic-dep-index	p1Generic	-	ok	-	assignment,evaluation_order,multi_assign,generics,slices,indexing
+map-via-field-key	p1MapViaField	-	ok	-	assignment,evaluation_order,multi_assign,maps,pointers,structs
+two-receives-deref-operand	p1TwoReceives	-	ok	-	assignment,evaluation_order,multi_assign,channels,pointers
+call-index-then-rhs-call	p1CallIndexThenRhs	-	ok	-	assignment,evaluation_order,calls,slices,indexing
+call-deref-then-rhs-call	p1CallDerefThenRhs	-	ok	-	assignment,evaluation_order,calls,pointers,closures
+call-map-key-then-rhs-call	p1CallMapKeyThenRhs	-	ok	-	assignment,evaluation_order,calls,maps

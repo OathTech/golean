@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features
+target-operand-panic	nTargetOperandPanic	-	ok	-	assignment,evaluation_order,multi_assign,slices,indexing,panic,recover,closures
+rhs-index-panic	nRhsIndexPanic	-	ok	-	assignment,evaluation_order,multi_assign,slices,indexing,panic,recover,closures
+rhs-nil-deref	nRhsNilDeref	-	ok	-	assignment,evaluation_order,multi_assign,pointers,nil,panic,recover,closures
+map-target-rhs-panic	nMapTargetRhsPanic	-	ok	-	assignment,evaluation_order,multi_assign,maps,slices,indexing,panic,recover,closures
+deref-target-rhs-panic	nDerefTargetRhsPanic	-	ok	-	assignment,evaluation_order,multi_assign,pointers,slices,indexing,panic,recover,closures
+phase1-beats-phase2	nPhase1BeatsPhase2	-	panic	index out of range [9] with length 1	assignment,evaluation_order,multi_assign,slices,indexing,panic
+captured-rhs-index-panic	nCapturedRhsIndexPanic	-	ok	-	assignment,evaluation_order,multi_assign,closures,defer,named-results,slices,indexing,panic,recover
+generic-rhs-index-panic	nGenericRhsIndexPanic	-	ok	-	assignment,evaluation_order,multi_assign,generics,defer,named-results,slices,indexing,panic,recover
+map-key-operand-panic	nMapKeyOperandPanic	-	ok	-	assignment,evaluation_order,multi_assign,maps,slices,indexing,panic,recover,closures
+ptr-slice-index-get-phase1	nPtrSliceIndexGetPhase1	-	ok	-	assignment,evaluation_order,multi_assign,pointers,slices,structs,indexing,panic,recover,closures

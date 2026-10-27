@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+blank-index-panics	bBlankIndexPanics	-	panic	index out of range [9] with length 1	assignment,evaluation_order,slices,indexing,panic
+blank-call-panics-no-store	bBlankCallPanicsNoStore	-	ok	-	assignment,evaluation_order,multi_assign,calls,multi_result,panic,recover,closures
+oob-target-vs-blank-call-panic	bOobTargetVsBlankCallPanic	-	panic	boom	assignment,evaluation_order,multi_assign,slices,indexing,calls,panic
+blank-then-nil-map	bBlankThenNilMap	-	panic	assignment to entry in nil map	assignment,evaluation_order,multi_assign,maps,nil,calls,print,panic
+blank-ok-forms	bBlankOkForms	-	ok	-	assignment,evaluation_order,multi_assign,maps,channels,comma_ok
+blank-first-dep-index	bBlankFirstDepIndex	-	ok	-	assignment,evaluation_order,multi_assign,calls,print,slices,indexing
+blank-between-aliases	bBlankBetweenAliases	-	ok	-	assignment,evaluation_order,multi_assign,pointers,aliasing
+blank-comma-ok-key-panic	bBlankCommaOkKeyPanic	-	ok	-	assignment,evaluation_order,multi_assign,maps,comma_ok,slices,indexing,panic,recover,closures

@@ -1,0 +1,13 @@
+# id	subject	args	expected_status	expected_reason	features
+deref-alias	oDerefAlias	-	ok	-	assignment,evaluation_order,multi_assign,aliasing,pointers
+map-same-key	oMapSameKey	-	ok	-	assignment,evaluation_order,multi_assign,aliasing,maps
+slice-alias	oSliceAlias	-	ok	-	assignment,evaluation_order,multi_assign,aliasing,slices,arrays,slicing
+field-alias	oFieldAlias	-	ok	-	assignment,evaluation_order,multi_assign,aliasing,pointers,structs
+comma-ok-map-same-var	oCommaOkMapSameVar	-	ok	-	assignment,evaluation_order,multi_assign,aliasing,maps,comma_ok
+comma-ok-assert-same-var	oCommaOkAssertSameVar	-	ok	-	assignment,evaluation_order,multi_assign,aliasing,type_assertions,comma_ok
+recv-same-var	oRecvSameVar	-	ok	-	assignment,evaluation_order,multi_assign,aliasing,channels,comma_ok
+select-recv-same-var	oSelectRecvSameVar	-	ok	-	assignment,evaluation_order,multi_assign,aliasing,select,channels,comma_ok
+range-same-var	oRangeSameVar	-	ok	-	assignment,evaluation_order,aliasing,range,loops
+generic-deref-alias	oGenericDerefAlias	-	ok	-	assignment,evaluation_order,multi_assign,aliasing,generics,pointers
+three-targets-repeat	oThreeTargetsRepeat	-	ok	-	assignment,evaluation_order,multi_assign,aliasing
+call-deref-alias	oCallDerefAlias	-	ok	-	assignment,evaluation_order,multi_assign,aliasing,calls,multi_result,pointers

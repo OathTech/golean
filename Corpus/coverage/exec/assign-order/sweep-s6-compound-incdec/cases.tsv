@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features
+nil-map-compound	cNilMapCompound	-	panic	assignment to entry in nil map	assignment,evaluation_order,maps,nil,panic
+nil-map-incdec	cNilMapIncDec	-	panic	assignment to entry in nil map	assignment,evaluation_order,maps,nil,panic
+nil-deref-compound	cNilDerefCompound	-	panic	invalid memory address or nil pointer dereference	assignment,evaluation_order,pointers,nil,panic
+nil-field-incdec	cNilFieldIncDec	-	panic	invalid memory address or nil pointer dereference	assignment,evaluation_order,pointers,structs,nil,panic
+oob-compound	cOobCompound	-	panic	index out of range [9] with length 1	assignment,evaluation_order,slices,indexing,panic
+nil-ptr-array-incdec	cNilPtrArrayIncDec	-	panic	invalid memory address or nil pointer dereference	assignment,evaluation_order,pointers,arrays,nil,panic
+nil-map-compound-rhs-call	cNilMapCompoundRhsCall	-	panic	assignment to entry in nil map	assignment,evaluation_order,maps,nil,calls,print,panic
+generic-compound	cGenericCompound	-	ok	-	assignment,evaluation_order,generics,slices,indexing
+captured-compound	cCapturedCompound	-	ok	-	assignment,evaluation_order,closures,slices,indexing
+chain-compound	cChainCompound	-	ok	-	assignment,evaluation_order,slices,structs,indexing
