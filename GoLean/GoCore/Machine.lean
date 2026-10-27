@@ -262,6 +262,15 @@ def applySlice (s : Store) (b : GoValue) (lowValue highValue : Int)
   match b with
   | .string value => return ((← stringSlice value lowValue highValue maxValue), s)
   | .slice slice => return ((← sliceFromSlice slice lowValue highValue maxValue), s)
+  -- A nil pointer-to-array base is gc's recoverable nil-pointer dereference,
+  -- raised BEFORE any bound is looked at and for every spelling — `(*ap)[lo:hi]`,
+  -- `ap[:]`, the 3-index form, the `*[0]T` form (spec#Slice_expressions: the
+  -- array operand is addressed, and spec#Address_operators' eager nil clause
+  -- applies). The emitter's `&*` collapse hands this arm the POINTER value, as
+  -- it hands `indexTargetLoc` and `.indexGet`, whose nil arms BUG-038 added
+  -- (the `valueAsLoc` convention); the slice base was the one consumer still
+  -- falling to the catch-all below (BUG-227, fixed 2026-10-27).
+  | .nil => panic nilDerefPanicText
   | .addr baseLoc =>
       match ← loadLoc ctx s baseLoc with
       | .array values =>

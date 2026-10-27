@@ -2506,6 +2506,60 @@ private def slSeq (σ : GoCore.Store) (c : GoCore.Machine.Config) (ch : GoCore.C
   | .ok (_, _, _, l) => some l
   | .error _ => none
 
+
+/-- BUG-227 (lane `core/fix-bug227-236-1027`, 2026-10-27; found by the S10 sweep, lane
+`sweep/s10-panics`, the defect-neighbourhood campaign `docs/2026-10-27_defect-neighbourhood-campaign.md`
+§4): slicing a NIL pointer to array — `(*ap)[lo:hi]`, `ap[:]`, `(*ap)[lo:]`, the 3-index form, the
+`*[0]T` form — went `stuck` («expected array or slice value for slice expression, got GoValue.nil»)
+where gc raises the recoverable nil-pointer dereference: `applySlice` (`GoLean/GoCore/Machine.lean`)
+had no `.nil` base arm where `indexTargetLoc` and `.indexGet` got theirs (BUG-038). Now the `.nil`
+arm raises `panic nilDerefPanicText` — the same constructor, the same text, the same recoverability
+as the index arms — before any bound is looked at, for the 2- and 3-index forms alike. The pins
+below are the arm's facts; the five corpus rows (`pointers/nil-array-ptr-slice/slice-expr-nil`,
+`pointers/nil-array-ptr-slice-elided-high/*`) are the end-to-end differential pins. Controls: a
+string base, a slice base and a non-addressable array value keep their arms. -/
+private def nilSliceBaseFacts : IO Bool := do
+  let mut passed := true
+  let ctx := GoCore.ProgramCtx.ofTables (types := #[])
+  let emptyStore : GoCore.Store := {}
+  let isNilDeref : Except Stop (GoValue × GoCore.Store) → Bool
+    | .error (Stop.panic msg) => msg == GoCore.nilDerefPanicText
+    | _ => false
+  passed := passed && (← expectTrue "BUG-227 (fixed): applySlice on a nil base, 2-index form, is gc's recoverable nil-dereference panic"
+    (isNilDeref (GoCore.Machine.applySlice ctx emptyStore .nil 0 1 none)))
+  passed := passed && (← expectTrue "BUG-227 (fixed): the elided-bounds spelling ([:], lo = 0, hi = N) on a nil base is the same panic"
+    (isNilDeref (GoCore.Machine.applySlice ctx emptyStore .nil 0 4 none)))
+  passed := passed && (← expectTrue "BUG-227 (fixed): the 3-index form on a nil base is the same panic"
+    (isNilDeref (GoCore.Machine.applySlice ctx emptyStore .nil 0 1 (some 2))))
+  passed := passed && (← expectTrue "BUG-227 (fixed): the *[0]T form (lo = hi = 0) on a nil base is the same panic — the nil check precedes the empty slice"
+    (isNilDeref (GoCore.Machine.applySlice ctx emptyStore .nil 0 0 none)))
+  passed := passed && (← expectTrue "BUG-227 (fixed): the panic precedes every bound check — out-of-range bounds on a nil base still raise the nil dereference, not a bounds panic"
+    (isNilDeref (GoCore.Machine.applySlice ctx emptyStore .nil 3 1 none)
+      && isNilDeref (GoCore.Machine.applySlice ctx emptyStore .nil (-1) 1 (some 0))))
+  passed := passed && (← expectTrue "BUG-227 (fixed): the text is the index arms' text (indexTargetLoc's nil arm, BUG-038)"
+    (match GoCore.Machine.indexTargetLoc ctx emptyStore .nil (.int 0),
+           GoCore.Machine.applySlice ctx emptyStore .nil 0 1 none with
+      | .error (Stop.panic a), .error (Stop.panic b) => a == b
+      | _, _ => false))
+  -- Controls: the other arms are untouched.
+  passed := passed && (← expectTrue "BUG-227 control: a string base slices as before"
+    (match GoCore.Machine.applySlice ctx emptyStore (.string (GoString.fromLeanString "hello")) 1 3 none with
+      | .ok (.string v, _) => v == GoString.fromLeanString "el"
+      | _ => false))
+  passed := passed && (← expectTrue "BUG-227 control: a nil SLICE value (a slice with no base) still slices to an empty slice, never the nil-dereference panic"
+    (match GoCore.Machine.applySlice ctx emptyStore (.slice { base := none, offset := 0, len := 0, cap := 0 }) 0 0 none with
+      | .ok (.slice v, _) => v.len == 0 && v.base.isNone
+      | _ => false))
+  passed := passed && (← expectTrue "BUG-227 control: a non-addressable array value keeps its named unsupported refusal"
+    (match GoCore.Machine.applySlice ctx emptyStore (.array #[.int 1, .int 2]) 0 1 none with
+      | .error (Stop.unsupported msg) => (msg.splitOn "non-addressable array").length == 2
+      | _ => false))
+  passed := passed && (← expectTrue "BUG-227 control: an ill-typed base (an int) keeps the catch-all stuck refusal"
+    (match GoCore.Machine.applySlice ctx emptyStore (.int 7) 0 1 none with
+      | .error (Stop.stuck msg) => (msg.splitOn "expected array or slice value").length == 2
+      | _ => false))
+  return passed
+
 /-- The label of the one-goroutine pool step over the same configuration. -/
 private def slPool (σ : GoCore.Store) (c : GoCore.Machine.Config) (ch : GoCore.Choices) :
     Option (GoCore.Machine.StepAction × GoCore.StepLabel) :=
@@ -3491,6 +3545,9 @@ private def makeFootprintRuntimeTests : IO Bool := do
     (refusesWith (run types (.defined sIdx) false ((1 <<< 13) + 1)) ["elements of 2048 scalar elements each", "footprint budget for a run-time-length make"] []))
   passed := passed && (← expectTrue "row 31(d): the same struct element at 4 elements runs"
     (run types (.defined sIdx) false 4).isOk)
+  -- BUG-227 (2026-10-27, lane core/fix-bug227-236-1027): the nil slice-base arm's facts, folded
+  -- in here so `main`'s do-block does not grow (it is at the elaborator's recursion-depth limit).
+  passed := passed && (← nilSliceBaseFacts)
   pure passed
 
 /-- raft-proofs' G21 (1) (2026-10-27; the [USER]'s relay of 2026-10-26): the five former
@@ -3947,6 +4004,7 @@ private def choiceReportPins : IO Bool := do
 -- deeper than the default `maxRecDepth` (512) and needs the raised limit (the stripped file
 -- fails here and nowhere else; measured 2026-10-26, lane core/dc12-warnings-1026).
 set_option maxRecDepth 4096 in
+
 def main : IO UInt32 := do
   let mut passed := true
   passed := passed && (← expectFloatVectors "FloatBits hardware-oracle vectors")

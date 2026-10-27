@@ -10,10 +10,14 @@ package main
 // function below.
 //
 // The machine's `emitAddressOf` StarExpr collapse hands the slice node a
-// nil base, so the base-nil arm it does not model surfaces as an honest
-// STUCK ("expected array or slice value for slice expression, got
-// GoValue.nil") — fail closed, never a wrong answer, exactly the sibling
-// row `nil-array-ptr-slice/slice-expr-nil` (explicit high) records.
+// nil base; until 2026-10-27 the base-nil arm was not modeled and surfaced
+// as an honest STUCK ("expected array or slice value for slice expression,
+// got GoValue.nil") — fail closed, never a wrong answer, exactly what the
+// sibling row `nil-array-ptr-slice/slice-expr-nil` (explicit high)
+// recorded. FIXED 2026-10-27 (BUG-227, lane core/fix-bug227-236-1027):
+// applySlice's `.nil` base arm raises gc's recoverable nil dereference
+// before any bound is looked at, so the four nil rows below are strict
+// PASS rows now, beside the two scope controls.
 //
 // WHY THESE ROWS EXIST NOW. Two of them (`deref-elided-high`,
 // `deref-low-only`) used to answer 100 by ACCIDENT: the pre-BUG-066
@@ -29,12 +33,11 @@ package main
 // fail-closed refusal that was always the machine's real position on
 // this base path; it never made a right answer wrong.
 //
-// The two green rows below are the scope control: a nil pointer reached
-// through a FIELD selector panics correctly on both sides, so the
-// refusal is the slice-base nil arm specifically, not a blanket loss of
-// nil handling under the fix. Retires with that arm (tracked in
-// baselines/untriaged-ids as `coverage`, same disposition as the
-// explicit-high sibling).
+// The two green rows below were the scope control while the refusal
+// stood: a nil pointer reached through a FIELD selector panicked
+// correctly on both sides, so the refusal was the slice-base nil arm
+// specifically, not a blanket loss of nil handling under the fix. They
+// stay as the controls of the arm that now exists.
 
 type nabox struct{ arr [3]int }
 

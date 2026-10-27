@@ -4471,6 +4471,8 @@ theorem applySlice_locSup {σ : Store} {b : GoValue} {lo hi : Int}
     have : GoValue.locSup (GoValue.slice sl) = optLocSup sl.base := rfl
     have h2 := sliceFromSlice_locSup hsv
     omega
+  · -- nil base: the nil-dereference panic (BUG-227), never `.ok`
+    simp at h
   · -- addr base
     rename_i baseLoc
     try simp only [bind_eq_ok] at h

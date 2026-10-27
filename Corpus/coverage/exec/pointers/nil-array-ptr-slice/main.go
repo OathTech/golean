@@ -10,15 +10,15 @@ package main
 // BEFORE the differential ran).
 //
 // The machine's emitAddressOf StarExpr collapse hands the slice node a
-// nil base and execution goes STUCK — an honest fail-closed refusal,
-// never a wrong answer, which is why this row is NOT on the BUG-063
-// Cases line: the receiver shapes lose the panic SILENTLY, this one
-// loses it VISIBLY. Tracked as a coverage-disposition row in
-// baselines/untriaged-ids; it flips green only when the slice-base
-// path grows its own nil handling (fix only if it falls out of the
-// BUG-063 movement naturally — it did not, by scope: the fix is
-// receiver-position only, and this base position is a store-adjacent
-// consumer where the five store-order pins live).
+// nil base, and until 2026-10-27 execution went STUCK there — an honest
+// fail-closed refusal, never a wrong answer, which is why this row was
+// NOT on the BUG-063 Cases line: the receiver shapes lost the panic
+// SILENTLY, this one lost it VISIBLY. Tracked as a coverage-disposition
+// row in baselines/untriaged-ids until the S10 sweep entered it as
+// BUG-227 (a `stuck` on a legal program is a misnamed refusal); FIXED
+// the same day by lane core/fix-bug227-236-1027: applySlice's `.nil`
+// base arm raises gc's recoverable nil dereference (the index arms'
+// constructor, BUG-038), so this row is a strict PASS row now.
 func nilArrayPtrSliceExpr() int {
 	var ap *[4]int
 	r := 0
