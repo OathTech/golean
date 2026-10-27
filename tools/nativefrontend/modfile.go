@@ -404,6 +404,18 @@ type modScan struct {
 	blockVerb string // the open block's verb, "" outside a block
 	blockLine int
 	retracts  []retractVersion // judged at the end against the module path's major (gc's rule)
+	// The module graph's edges as written (BUG-219, 2026-10-27): every
+	// `require` path with its versions (gc tolerates a repeated require —
+	// measured: it builds), every `replace`. The loader (load.go) reads
+	// them to decide whether a case-local import is one gc resolves.
+	requires map[string][]string
+	replaces []modReplace
+}
+
+// modReplace is one `replace old [oldVersion] => new [newVersion]` line.
+// A version-less new side is a directory path (gc's rule, directoryPathOK).
+type modReplace struct {
+	oldPath, oldVersion, newPath, newVersion string
 }
 
 type retractVersion struct {
@@ -436,7 +448,15 @@ func (m *modScan) judgeArgs(verb string, args []string, lineno int, raw string) 
 		if len(args) != 2 {
 			return usage(verb + " module/path v1.2.3")
 		}
-		return m.judgeVersionedPath(verb, args[0], args[1], lineno, usage, verb+" module/path v1.2.3")
+		if err := m.judgeVersionedPath(verb, args[0], args[1], lineno, usage, verb+" module/path v1.2.3"); err != nil {
+			return err
+		}
+		if verb == "require" {
+			if m.requires == nil {
+				m.requires = map[string][]string{}
+			}
+			m.requires[args[0]] = append(m.requires[args[0]], args[1])
+		}
 	case "tool", "ignore":
 		if len(args) != 1 {
 			return modRefuse("%s:%d: %q — gc refuses the go.mod («%s directive expects exactly one argument»; `{`, `}`, `[`, `]` and `,` are tokens of their own in its lexer); fail closed", m.path, lineno, strings.TrimSpace(raw), verb)
@@ -459,6 +479,7 @@ func (m *modScan) judgeArgs(verb string, args []string, lineno int, raw string) 
 		}
 		left, right := args[:arrow], args[arrow+1:]
 		const replaceForm = "replace module/path [v1.2.3] => other/module v1.4\n\t or replace module/path [v1.2.3] => ../local/directory"
+		var rep modReplace
 		switch len(left) {
 		case 1:
 			if !modulePathOK(left[0]) {
@@ -467,10 +488,12 @@ func (m *modScan) judgeArgs(verb string, args []string, lineno int, raw string) 
 			if _, ok := pathMajor(left[0]); !ok {
 				return modRefuse("%s:%d: replace %s: malformed module path %q — a /vN suffix must be v2 or higher without a leading zero or a dot (module.SplitPathVersion); gc refuses the go.mod the same way; fail closed", m.path, lineno, left[0], left[0])
 			}
+			rep.oldPath = left[0]
 		case 2:
 			if err := m.judgeVersionedPath("replace", left[0], left[1], lineno, usage, replaceForm); err != nil {
 				return err
 			}
+			rep.oldPath, rep.oldVersion = left[0], left[1]
 		default:
 			return usage(replaceForm)
 		}
@@ -482,13 +505,16 @@ func (m *modScan) judgeArgs(verb string, args []string, lineno int, raw string) 
 			if strings.ContainsAny(right[0], "{}[],") {
 				return usage(replaceForm)
 			}
+			rep.newPath = right[0]
 		case 2:
 			if err := m.judgeVersionedPath("replace", right[0], right[1], lineno, usage, replaceForm); err != nil {
 				return err
 			}
+			rep.newPath, rep.newVersion = right[0], right[1]
 		default:
 			return usage(replaceForm)
 		}
+		m.replaces = append(m.replaces, rep)
 	case "retract":
 		switch {
 		case len(args) == 1 && semverCanonicalRE.MatchString(args[0]):
@@ -504,19 +530,39 @@ func (m *modScan) judgeArgs(verb string, args []string, lineno int, raw string) 
 	return nil
 }
 
+// modFile is what the scanner records of an accepted go.mod: its path and
+// directory (the module root), the module path, the `go` version as
+// written, and the module graph's edges (BUG-219; nil/empty when none).
+type modFile struct {
+	path, dir string
+	module    string
+	goVersion string
+	requires  map[string][]string
+	replaces  []modReplace
+}
+
 // goDirective scans the go.mod at path, judging every directive by
 // goModVerbs, and returns the `go` directive's version as written
 // ("1.26.5"). Fail closed: anything the grammar above does not admit is a
 // refusal naming the file and the line.
 func goDirective(path string) (string, error) {
+	mf, err := scanGoMod(path)
+	if err != nil {
+		return "", err
+	}
+	return mf.goVersion, nil
+}
+
+// scanGoMod is goDirective's scan, returning the whole record.
+func scanGoMod(path string) (*modFile, error) {
 	f, err := os.Open(path)
 	if err != nil {
-		return "", modRefuse("cannot read %s (%v) — fail closed", path, err)
+		return nil, modRefuse("cannot read %s (%v) — fail closed", path, err)
 	}
 	defer f.Close()
 	pinnedTC, err := pinnedToolchainName()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	m := &modScan{path: path, pinnedTC: pinnedTC}
 	sc := bufio.NewScanner(f)
@@ -531,13 +577,13 @@ func goDirective(path string) (string, error) {
 			line = line[:i]
 		}
 		if i := strings.Index(line, "/*"); i >= 0 {
-			return "", modRefuse("%s:%d:%d: a /* */ comment — gc refuses the go.mod («mod files must use // comments (not /* */ comments)»); fail closed", path, lineno, i+1)
+			return nil, modRefuse("%s:%d:%d: a /* */ comment — gc refuses the go.mod («mod files must use // comments (not /* */ comments)»); fail closed", path, lineno, i+1)
 		}
 		if col, r, bad := lexerRejects(line); bad {
-			return "", modRefuse("%s:%d:%d: unexpected input character %#q — gc's lexer refuses the go.mod the same way (x/mod modfile/read.go: space, tab and CR separate tokens; an identifier is any printable non-space rune); fail closed", path, lineno, col, r)
+			return nil, modRefuse("%s:%d:%d: unexpected input character %#q — gc's lexer refuses the go.mod the same way (x/mod modfile/read.go: space, tab and CR separate tokens; an identifier is any printable non-space rune); fail closed", path, lineno, col, r)
 		}
 		if strings.ContainsAny(line, "\"`") {
-			return "", modRefuse("%s:%d: %q carries a quoted token — x/mod's quoted strings are not validated by this scanner; refuse by name (fail closed)", path, lineno, strings.TrimSpace(raw))
+			return nil, modRefuse("%s:%d: %q carries a quoted token — x/mod's quoted strings are not validated by this scanner; refuse by name (fail closed)", path, lineno, strings.TrimSpace(raw))
 		}
 		fields := strings.Fields(tokens.Replace(line))
 		if len(fields) == 0 {
@@ -549,24 +595,24 @@ func goDirective(path string) (string, error) {
 				continue
 			}
 			if err := m.judgeArgs(m.blockVerb, fields, lineno, raw); err != nil {
-				return "", err
+				return nil, err
 			}
 			continue
 		}
 		verb, args := fields[0], fields[1:]
 		switch {
 		case verb == "godebug":
-			return "", modRefuse("%s sets godebug (%s) — GODEBUG settings are not modeled: the semantics is the Go 1.26 module defaults (panic(nil) raises *runtime.PanicNilError; the differential oracle is pinned with GODEBUG=panicnil=0); refuse by name (fail closed)", path, strings.TrimSpace(raw))
+			return nil, modRefuse("%s sets godebug (%s) — GODEBUG settings are not modeled: the semantics is the Go 1.26 module defaults (panic(nil) raises *runtime.PanicNilError; the differential oracle is pinned with GODEBUG=panicnil=0); refuse by name (fail closed)", path, strings.TrimSpace(raw))
 		case verb == "go", verb == "toolchain":
 			if len(args) >= 1 && args[0] == "(" {
-				return "", modRefuse("%s:%d: %q opens a block — gc refuses the go.mod («unknown block type: %s»); fail closed", path, lineno, strings.TrimSpace(line), verb)
+				return nil, modRefuse("%s:%d: %q opens a block — gc refuses the go.mod («unknown block type: %s»); fail closed", path, lineno, strings.TrimSpace(line), verb)
 			}
 			if verb == "toolchain" {
 				if len(args) != 1 {
-					return "", modRefuse("%s has a malformed toolchain directive %q — fail closed", path, strings.TrimSpace(line))
+					return nil, modRefuse("%s has a malformed toolchain directive %q — fail closed", path, strings.TrimSpace(line))
 				}
 				if m.toolchain != "" {
-					return "", modRefuse("%s repeats the toolchain directive (%s and %s) — the go command refuses this too («repeated toolchain statement»); fail closed", path, m.toolchain, args[0])
+					return nil, modRefuse("%s repeats the toolchain directive (%s and %s) — the go command refuses this too («repeated toolchain statement»); fail closed", path, m.toolchain, args[0])
 				}
 				// Judged after the scan (judgeToolchain): gc's rule compares
 				// it with the go line, which may follow it.
@@ -574,21 +620,21 @@ func goDirective(path string) (string, error) {
 				continue
 			}
 			if len(args) != 1 || !goModVersionRE.MatchString(args[0]) {
-				return "", modRefuse("%s has a malformed go directive %q — fail closed", path, strings.TrimSpace(line))
+				return nil, modRefuse("%s has a malformed go directive %q — fail closed", path, strings.TrimSpace(line))
 			}
 			if m.goVersion != "" {
-				return "", modRefuse("%s repeats the go directive (%s and %s) — the go command refuses this too; fail closed", path, m.goVersion, args[0])
+				return nil, modRefuse("%s repeats the go directive (%s and %s) — the go command refuses this too; fail closed", path, m.goVersion, args[0])
 			}
 			m.goVersion = args[0]
 		case verb == "module":
 			if len(args) >= 1 && args[0] == "(" {
-				return "", modRefuse("%s:%d: a `module (` block is not validated by this scanner (an empty one, `module ()`, gc refuses: «missing module declaration»); write `module <path>` on one line (fail closed)", path, lineno)
+				return nil, modRefuse("%s:%d: a `module (` block is not validated by this scanner (an empty one, `module ()`, gc refuses: «missing module declaration»); write `module <path>` on one line (fail closed)", path, lineno)
 			}
 			if m.module != "" {
-				return "", modRefuse("%s:%d: repeats the module directive (%s and %q) — the go command refuses this too («repeated module statement»); fail closed", path, lineno, m.module, strings.TrimSpace(line))
+				return nil, modRefuse("%s:%d: repeats the module directive (%s and %q) — the go command refuses this too («repeated module statement»); fail closed", path, lineno, m.module, strings.TrimSpace(line))
 			}
 			if err := m.judgeArgs("module", args, lineno, raw); err != nil {
-				return "", err
+				return nil, err
 			}
 			m.module = args[0]
 		case goModAccepted[verb]:
@@ -603,26 +649,26 @@ func goDirective(path string) (string, error) {
 				continue
 			}
 			if err := m.judgeArgs(verb, args, lineno, raw); err != nil {
-				return "", err
+				return nil, err
 			}
 		default:
-			return "", modRefuse("%s has a directive this scanner does not know (%q) — the go command refuses the go.mod («unknown directive: %s»), and nothing unknown is guessed here; fail closed", path, strings.TrimSpace(line), verb)
+			return nil, modRefuse("%s has a directive this scanner does not know (%q) — the go command refuses the go.mod («unknown directive: %s»), and nothing unknown is guessed here; fail closed", path, strings.TrimSpace(line), verb)
 		}
 	}
 	if err := sc.Err(); err != nil {
-		return "", modRefuse("cannot scan %s (%v) — fail closed", path, err)
+		return nil, modRefuse("cannot scan %s (%v) — fail closed", path, err)
 	}
 	if m.blockVerb != "" {
-		return "", modRefuse("%s: the %s block opened at line %d is not closed before the end of the file — the go command refuses this too («syntax error (unterminated block …)»); fail closed", path, m.blockVerb, m.blockLine)
+		return nil, modRefuse("%s: the %s block opened at line %d is not closed before the end of the file — the go command refuses this too («syntax error (unterminated block …)»); fail closed", path, m.blockVerb, m.blockLine)
 	}
 	if m.module == "" {
-		return "", modRefuse("%s has no module directive — the go command refuses this too («missing module declaration»); fail closed", path)
+		return nil, modRefuse("%s has no module directive — the go command refuses this too («missing module declaration»); fail closed", path)
 	}
 	if m.goVersion == "" {
-		return "", modRefuse("%s has no go directive; the go command assumes go 1.16 for such a module — GoLean implements the Go 1.26 language only", path)
+		return nil, modRefuse("%s has no go directive; the go command assumes go 1.16 for such a module — GoLean implements the Go 1.26 language only", path)
 	}
 	if err := m.judgeToolchain(); err != nil {
-		return "", err
+		return nil, err
 	}
 	// gc checks a retract version against the MODULE's own path (the
 	// `module test/v2` / `retract v1.0.0` shape: «retract test/v2: version
@@ -632,11 +678,11 @@ func goDirective(path string) (string, error) {
 	if ok {
 		for _, r := range m.retracts {
 			if why := majorMismatch(r.version, major); why != "" {
-				return "", modRefuse("%s:%d: retract %s: version %q invalid: %s — gc refuses the go.mod the same way (module.CheckPathMajor against the module path); fail closed", path, r.lineno, m.module, r.version, why)
+				return nil, modRefuse("%s:%d: retract %s: version %q invalid: %s — gc refuses the go.mod the same way (module.CheckPathMajor against the module path); fail closed", path, r.lineno, m.module, r.version, why)
 			}
 		}
 	}
-	return m.goVersion, nil
+	return &modFile{path: path, dir: filepath.Dir(path), module: m.module, goVersion: m.goVersion, requires: m.requires, replaces: m.replaces}, nil
 }
 
 // gcToolchainNameRE is x/mod's ToolchainRE (modfile/rule.go): a toolchain
@@ -785,6 +831,132 @@ func refuseForeignModuleVersion(dir string) error {
 	}
 	if version.Compare(full, pinnedTC) > 0 {
 		return modRefuse("%s requires go >= %s; the oracle is pinned to %s — gc refuses to build this module under GOTOOLCHAIN=local («go: go.mod requires go >= %s (running %s; GOTOOLCHAIN=local)»), and under GOTOOLCHAIN=auto would switch to a toolchain the semantics is not measured against; refuse by name (fail closed)", modPath, found, pinnedTC, found, strings.TrimPrefix(pinnedTC, "go"))
+	}
+	return nil
+}
+
+// moduleFor returns the go.mod governing dir as the go command finds one
+// (findGoMod: the nearest go.mod at or above dir) — nil when there is
+// none (GOPATH mode, the positive corpus's) — scanned by the grammar above.
+// The version policy (refuseForeignModuleVersion) is applied separately,
+// before loading, by every caller that lowers a directory.
+func moduleFor(dir string) (*modFile, error) {
+	modPath, err := findGoMod(dir)
+	if err != nil {
+		return nil, err
+	}
+	if modPath == "" {
+		return nil, nil
+	}
+	return scanGoMod(modPath)
+}
+
+// mainPackagePath is the import path the go command gives the package in
+// dir under the module mf (modload's DirImportPath): the module path, then
+// the directory's path relative to the module root.
+func mainPackagePath(dir string, mf *modFile) (string, error) {
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		return "", modRefuse("cannot resolve %s (%v) — fail closed", dir, err)
+	}
+	absRoot, err := filepath.Abs(mf.dir)
+	if err != nil {
+		return "", modRefuse("cannot resolve %s (%v) — fail closed", mf.dir, err)
+	}
+	rel, err := filepath.Rel(absRoot, absDir)
+	if err != nil {
+		return "", modRefuse("cannot relate %s to its module root %s (%v) — fail closed", dir, mf.dir, err)
+	}
+	if rel == "." {
+		return mf.module, nil
+	}
+	return mf.module + "/" + filepath.ToSlash(rel), nil
+}
+
+// metaPackageNames are the go command's reserved pattern names
+// (cmd/go/internal/search IsMetaPackage): an import path that is one of
+// them is «not an importable package».
+var metaPackageNames = map[string]bool{"std": true, "cmd": true, "tool": true, "work": true, "all": true}
+
+// isStandardImportPath mirrors search.IsStandardImportPath: the first
+// path element contains no dot.
+func isStandardImportPath(path string) bool {
+	elem := path
+	if i := strings.Index(path, "/"); i >= 0 {
+		elem = path[:i]
+	}
+	return !strings.Contains(elem, ".")
+}
+
+// gorootSrcDir reports whether GOROOT/src/<path> is a directory of the
+// pinned toolchain (go/build's GOROOT, the one file selection is pinned
+// to), and whether it holds a `.go` entry — the test goroot.IsStandardPackage
+// makes (any entry named *.go, test files and all): a std PACKAGE for the
+// module loader's «ambiguous import», and in GOPATH mode the directory gc
+// resolves an import to BEFORE GOPATH whether or not it has Go files.
+func gorootSrcDir(path string) (isDir, hasGoFiles bool) {
+	root := pinnedBuildContext().GOROOT
+	if root == "" {
+		return false, false
+	}
+	entries, err := os.ReadDir(filepath.Join(root, "src", filepath.FromSlash(path)))
+	if err != nil {
+		return false, false
+	}
+	for _, e := range entries {
+		if strings.HasSuffix(e.Name(), ".go") {
+			return true, true
+		}
+	}
+	return true, false
+}
+
+// refuseReservedModulePath refuses, as the `module` class, a MAIN module
+// under which the lowered directory's import path is one the go command
+// cannot build (BUG-217; measured 2026-10-27 at go1.26.5, module mode,
+// the runners' pins):
+//
+//   - a standard-library package path — `module fmt`, `module math/bits`,
+//     `module math` with the package in bits/, `module cmd/go`, and
+//     `unsafe`, `internal/abi`, `net/http`, `strings` alike: «ambiguous
+//     import: found package fmt in multiple modules» (std and the main
+//     module both provide it); a path that is only a GOROOT DIRECTORY
+//     with no Go files (`internal`, `vendor`, `testdata`) is accepted, as
+//     is `cmd/x`, `std/x`, `C/x`, `fmt/v2`, `example.com/fmt`, and `fmt`
+//     with the package in cmd/ (`fmt/cmd` is no std package);
+//   - one of the go command's reserved pattern names `std`, `cmd`,
+//     `tool`, `work`, `all`: «"cmd" is not an importable package; see 'go
+//     help packages'»;
+//   - `C`: «unknown import path "C": internal error: module loader did not
+//     resolve import»;
+//   - a module path `go` or `toolchain` (the synthetic toolchain modules,
+//     gover.IsToolchain): «go: error reading go.mod: invalid module path
+//     "go"».
+//
+// Before 2026-10-27 the scanner validated the module path's SHAPE only
+// (modulePathOK) and exported such programs, which the machine answered.
+// The check is the main module's: a case-local module reached through a
+// replace is imported by its require path, which the loader judges
+// (load.go), not by its own go.mod's module line (gc accepts a replaced
+// directory whose go.mod declares another path — measured).
+func refuseReservedModulePath(dir string, mf *modFile) error {
+	if mf.module == "go" || mf.module == "toolchain" {
+		return modRefuse("%s declares module %s — gc refuses the go.mod («go: error reading go.mod: invalid module path: %q»: the synthetic toolchain module names); fail closed", mf.path, mf.module, mf.module)
+	}
+	path, err := mainPackagePath(dir, mf)
+	if err != nil {
+		return err
+	}
+	if metaPackageNames[path] {
+		return modRefuse("%s declares module %s, so the package in %s has import path %q — gc refuses to build it («%q is not an importable package; see 'go help packages'»: a reserved pattern name of the go command); fail closed", mf.path, mf.module, dir, path, path)
+	}
+	if path == "C" {
+		return modRefuse("%s declares module %s, so the package in %s has import path \"C\" — gc refuses to build it («unknown import path \"C\": internal error: module loader did not resolve import»: cgo's pseudo-package); fail closed", mf.path, mf.module, dir)
+	}
+	if isStandardImportPath(path) {
+		if _, hasGo := gorootSrcDir(path); hasGo {
+			return modRefuse("%s declares module %s, so the package in %s has import path %q, a standard-library package of the pinned GOROOT — gc refuses to build it («ambiguous import: found package %s in multiple modules»: std and the main module both provide it); fail closed", mf.path, mf.module, dir, path, path)
+		}
 	}
 	return nil
 }

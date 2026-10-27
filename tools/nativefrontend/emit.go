@@ -4694,16 +4694,48 @@ func (e *emitter) emitRange(rs *ast.RangeStmt) (any, error) {
 		// non-evaluation case above holds, in which case it does not
 		// evaluate AT ALL (an effect-free operand whose evaluation
 		// would nil-deref, `for range s.p` with s nil, must not panic).
-		// The index-only form (and N == 0) never dereferences — a nil
-		// pointer iterates fine, N is static — while the value form
-		// reads elements through it (nil panics at the first read,
-		// which the up-front deref reproduces: nothing observable
-		// happens between loop entry and the first element read).
+		// The index-only form never dereferences — a nil pointer
+		// iterates fine, N is static — while the value form reads
+		// elements through it (nil panics at the first read, which the
+		// up-front deref reproduces: nothing observable happens between
+		// loop entry and the first element read).
+		//
+		// N == 0 WITH a value variable (BUG-226, 2026-10-27): the value
+		// form, zero iterations — the value variable is declared (the body
+		// names it; gc would reject it unused), the pointer evaluates once,
+		// no element is read. Before this the arm took the index-only
+		// desugar and CLEARED the bound value variable, so the body's use
+		// named a local the wire never declared and the decoder refused
+		// the whole wire. The value form is faithful exactly where gc
+		// indexes per iteration — cmd/compile walk/range.go takes `ha[i]`
+		// when cheapComputableIndex(elem width) holds, widths 1, 2, 4, 8 on
+		// amd64 — and gc runs zero iterations without touching the pointer
+		// (measured 2026-10-27 at go1.26.5 on nil *[0]{int, int16, int32,
+		// bool, float64, uint64, *int, [1]int8, an 8-byte struct, a named
+		// [0]int}: 0). At every OTHER width gc slices the array through
+		// the pointer BEFORE the loop (`hs = arr[:]`), and a nil pointer
+		// panics with zero iterations to run (measured: nil *[0]{string,
+		// struct{}, [3]int8, [2]int, complex128, any, a 16-byte struct,
+		// []int} — invalid memory address, in the `:=`, `=` and blank-key
+		// forms alike; the key-only and key+blank forms never dereference).
+		// The value form would answer 0 there — a wrong answer with status
+		// ok — so those widths REFUSE by name: a backend artifact of gc
+		// (not the spec's rule, which indexes nothing in zero iterations)
+		// that this lowering does not model; an explicit dereference
+		// before the loop would reproduce it and is a design point for the
+		// owner (whether a gc backend artifact is latitude to model or a
+		// quirk to refuse), recorded in BUG-226.
 		arr, ok := ptr.Elem().Underlying().(*types.Array)
 		if !ok {
 			return nil, unsup("range over %s", e.goTypeOf(rs.X))
 		}
-		if valName == "" || arr.Len() == 0 {
+		if valName != "" && arr.Len() == 0 {
+			elem := e.applySubst(arr.Elem())
+			if width := gcSizes.Sizeof(elem); width != 1 && width != 2 && width != 4 && width != 8 {
+				return nil, unsup("two-variable range over %s (a pointer to a zero-length array of %d-byte elements): gc dereferences the pointer before a loop that runs no iteration when the element width is not 1, 2, 4 or 8 bytes (cmd/compile walk/range.go, cheapComputableIndex), so a nil pointer panics there where this lowering would run zero iterations without reading through it; refused by name rather than answered (BUG-226)", e.goTypeOf(rs.X), width)
+			}
+		}
+		if valName == "" {
 			if !rangeNotEvaluated {
 				savedRoot := e.sweepStmt
 				e.sweepStmt = rs.X

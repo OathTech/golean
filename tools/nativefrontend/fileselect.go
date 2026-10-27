@@ -51,10 +51,8 @@ package main
 // from a comment that the lowering would otherwise never see.
 
 import (
-	"bufio"
 	"go/ast"
 	"go/build"
-	"go/build/constraint"
 	"go/parser"
 	"go/token"
 	"os"
@@ -153,21 +151,30 @@ func selectPackageFiles(fset *token.FileSet, dir string) ([]*ast.File, error) {
 	sort.Strings(names)
 	files := make([]*ast.File, 0, len(names))
 	for _, name := range names {
-		f, err := parser.ParseFile(fset, filepath.Join(dir, name), nil, parser.ParseComments)
+		path := filepath.Join(dir, name)
+		// Read once: the bytes go to the parser AND to the constraint
+		// policy's header reader (buildheader.go), so the header judged
+		// is the header parsed — no second read, no race with the disk.
+		content, err := os.ReadFile(path)
 		if err != nil {
+			return nil, unsup("file selection in %s: cannot read selected file %s (%v) — fail closed", dir, name, err)
+		}
+		f, err := parser.ParseFile(fset, path, content, parser.ParseComments)
+		if err != nil {
+			return nil, err
+		}
+		// The SELECTED file's build constraints: the standing
+		// langversion.go policy (reserved tags refuse; a custom-tag
+		// constraint must be inert) over the lines go/build honoured
+		// (BUG-216), applied here so selection and policy are ONE site
+		// for both the main package and every imported unit.
+		if err := judgeSelectedFileConstraints(path, content); err != nil {
 			return nil, err
 		}
 		files = append(files, f)
 	}
 	if len(files) == 0 {
 		return nil, unsup("file selection in %s: no Go files selected under the pinned target (fail closed)", dir)
-	}
-	// The SELECTED files' build constraints: the standing langversion.go
-	// policy (reserved tags refuse; a custom-tag constraint must be inert),
-	// applied here so selection and policy are ONE site for both the main
-	// package and every imported unit — previously each caller ran it.
-	if err := refuseBuildConstrainedFiles(fset, files); err != nil {
-		return nil, err
 	}
 	// COMPILER DIRECTIVES (directives.go, BUG-127/BUG-128): every comment
 	// of the selected files is scanned; a `//go:` directive outside the
@@ -197,56 +204,38 @@ func nonGoSources(pkg *build.Package) []string {
 	return out
 }
 
-// refuseIgnoredFileConstraints scans an EXCLUDED file's header — the
-// leading `//` and `/* */` comment lines before the package clause, as
-// go/build's own header reader does — for build-constraint lines and
-// judges each by the langversion.go policy. A header with no constraint
-// line means go/build excluded the file for its NAME, which gc decides
-// identically on every host: nothing to refuse. A header that does not
-// parse is a filename-excluded file gc never opens (a constraint-
-// excluded file's header was read successfully by go/build, else it
-// would be an InvalidGoFile); its lines are still scanned textually, so
-// a constraint line in garbage is refused rather than skipped.
+// refuseIgnoredFileConstraints judges an EXCLUDED file's build
+// constraints by the langversion.go policy over the lines go/build
+// honoured in its header (buildheader.go — go/build's own header rule,
+// BUG-216; before 2026-10-27 this was a textual scan of every `//` line
+// before the package clause, which judged `+build` lines go/build ignores
+// and stopped at a leading BOM go/build strips). A header with no
+// honoured constraint line means go/build excluded the file for its NAME,
+// which gc decides identically on every host: nothing to refuse. A
+// reserved tag refuses; a custom-tags-only line that is FALSE with every
+// tag unset is the constraint go/build excluded the file for — identically
+// on the oracle's side, which runs no -tags — and the standing policy
+// refuses it by name rather than drop the file silently. (A `//go:build`
+// line that does not parse cannot reach here: go/build lists such a file
+// under InvalidGoFiles, refused above.)
 func refuseIgnoredFileConstraints(dir, name string) error {
 	path := filepath.Join(dir, name)
-	f, err := os.Open(path)
+	content, err := os.ReadFile(path)
 	if err != nil {
 		return unsup("file selection in %s: cannot read excluded file %s (%v) — fail closed", dir, name, err)
 	}
-	defer f.Close()
-	sc := bufio.NewScanner(f)
-	sc.Buffer(make([]byte, 0, 64*1024), 1<<20)
-	inBlock := false
-	for sc.Scan() {
-		line := strings.TrimSpace(sc.Text())
-		if inBlock {
-			if i := strings.Index(line, "*/"); i >= 0 {
-				inBlock = false
-				line = strings.TrimSpace(line[i+2:])
-			} else {
-				continue
-			}
-		}
-		if line == "" {
-			continue
-		}
-		if strings.HasPrefix(line, "/*") {
-			if !strings.Contains(line, "*/") {
-				inBlock = true
-			}
-			continue
-		}
-		if !strings.HasPrefix(line, "//") {
-			break // the package clause (or anything else): the header is over
-		}
-		if constraint.IsGoBuild(line) || constraint.IsPlusBuild(line) {
-			if err := judgeBuildConstraintLine(path, line); err != nil {
-				return err
-			}
-		}
+	lines, err := honouredConstraintLines(content)
+	if err != nil {
+		return unsup("file selection in %s: excluded file %s: %v (a build constraint go/build refuses the file for; fail closed)", dir, name, err)
 	}
-	if err := sc.Err(); err != nil {
-		return unsup("file selection in %s: cannot scan excluded file %s (%v) — fail closed", dir, name, err)
+	for _, line := range lines {
+		holds, err := judgeBuildConstraintLine(path, line)
+		if err != nil {
+			return err
+		}
+		if !holds {
+			return unsup("file %s is EXCLUDED by build constraint %q under the pipeline's default (no -tags) context — the oracle would compile without this file, which is file-set selection outside the modeled fragment; fail closed rather than silently include or drop it", path, line)
+		}
 	}
 	return nil
 }

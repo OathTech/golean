@@ -46,11 +46,18 @@ package main
 // host. Everything else — excluded files, platform tags, version
 // tags, feature/ToolTags — is a refusal, never a silent include OR a
 // silent exclude.
+//
+// WHICH lines are judged is go/build's own choice since 2026-10-27
+// (BUG-216, lane frontend/fix-admission-1027; buildheader.go): a
+// `//go:build` line controls and every `+build` line is then ignored, else
+// the `+build` lines of the leading `//` comment run count — so a `+build`
+// line go/build ignores (under a `//go:build` line, not followed by a blank
+// line, inside or after a `/* */` block) is prose here too, where before it
+// refused the export claiming the oracle would exclude the file it had
+// compiled with (the S20 sweep's rows source-selection/sweep-s20-plusbuild-*).
 
 import (
-	"go/ast"
 	"go/build/constraint"
-	"go/token"
 	"go/version"
 	"regexp"
 	"sort"
@@ -153,18 +160,23 @@ func constraintTags(expr constraint.Expr, into map[string]bool) {
 	}
 }
 
-// judgeBuildConstraintLine applies the header rule (this file's doc
-// comment) to ONE constraint line of the file at name: an unparseable
-// constraint refuses; any reserved tag refuses; a custom-tags-only
-// expression that is FALSE with every tag unset refuses (the oracle
-// would exclude the file); anything else is inert. Shared by the
-// selected-file pass below and by fileselect.go's header scan of files
-// go/build EXCLUDED (BUG-108) — one policy, two call sites. The refusal
-// texts are the pre-BUG-108 ones, unchanged.
-func judgeBuildConstraintLine(name, line string) error {
+// judgeBuildConstraintLine applies the policy (this file's doc comment)
+// to ONE constraint line go/build honours in the file at name: an
+// unparseable constraint refuses; any reserved tag refuses; otherwise
+// holds reports whether the custom-tags-only expression is TRUE with
+// every tag unset — the verdict go/build reached for the same line under
+// the pipeline's no-tags context — and the caller says what a false one
+// means at its site (langversion.go's selected-file site, fileselect.go's
+// excluded-file site). WHICH lines are judged is go/build's own choice,
+// ported in buildheader.go (BUG-216): before 2026-10-27 the two sites
+// judged every constraint-shaped line of every comment before the package
+// clause, so a `+build` line go/build ignores refused the export with a
+// reason that misstated gc. The refusal texts are the pre-BUG-108 ones,
+// unchanged.
+func judgeBuildConstraintLine(name, line string) (holds bool, err error) {
 	expr, err := constraint.Parse(line)
 	if err != nil {
-		return unsup("file %s carries an unparseable build constraint %q (%v) — build-constrained files are outside the modeled fragment (fail closed)", name, line, err)
+		return false, unsup("file %s carries an unparseable build constraint %q (%v) — build-constrained files are outside the modeled fragment (fail closed)", name, line, err)
 	}
 	tags := map[string]bool{}
 	constraintTags(expr, tags)
@@ -175,40 +187,36 @@ func judgeBuildConstraintLine(name, line string) error {
 	sort.Strings(tagNames) // deterministic refusal message (BUG-091)
 	for _, tag := range tagNames {
 		if reservedConstraintTag(tag) {
-			return unsup("file %s carries build constraint %q using reserved tag %q (platform/version/toolchain-conditional file selection is outside the modeled fragment) — fail closed", name, line, tag)
+			return false, unsup("file %s carries build constraint %q using reserved tag %q (platform/version/toolchain-conditional file selection is outside the modeled fragment) — fail closed", name, line, tag)
 		}
 	}
 	// Custom tags only: the pipeline never sets -tags, so every custom
-	// tag is false — identically for the oracle. Included ⇒ inert;
-	// excluded ⇒ the oracle would drop the file, which is file-set
-	// selection we do not model.
-	if !expr.Eval(func(string) bool { return false }) {
-		return unsup("file %s is EXCLUDED by build constraint %q under the pipeline's default (no -tags) context — the oracle would compile without this file, which is file-set selection outside the modeled fragment; fail closed rather than silently include or drop it", name, line)
-	}
-	return nil
+	// tag is false — identically for the oracle.
+	return expr.Eval(func(string) bool { return false }), nil
 }
 
-// refuseBuildConstrainedFiles scans each file's pre-package comment
-// lines for build constraints and refuses per the header rule.
-func refuseBuildConstrainedFiles(fset *token.FileSet, files []*ast.File) error {
-	for _, f := range files {
-		for _, group := range f.Comments {
-			// Constraints are only effective before the package
-			// clause; a mention further down is prose.
-			if group.Pos() >= f.Package {
-				continue
-			}
-			for _, c := range group.List {
-				for _, line := range strings.Split(c.Text, "\n") {
-					line = strings.TrimSpace(line)
-					if !constraint.IsGoBuild(line) && !constraint.IsPlusBuild(line) {
-						continue
-					}
-					if err := judgeBuildConstraintLine(fset.Position(c.Pos()).Filename, line); err != nil {
-						return err
-					}
-				}
-			}
+// judgeSelectedFileConstraints applies the policy to a file go/build
+// SELECTED under the pinned target (fileselect.go hands over the bytes it
+// parsed): the lines judged are the ones go/build honoured
+// (honouredConstraintLines), each by judgeBuildConstraintLine. A reserved
+// tag refuses as before. A custom-tags-only line that is FALSE with every
+// tag unset cannot describe a selected file — go/build evaluated the same
+// line under the same no-tags context and included the file — so it is
+// refused as a disagreement between the mirrored header rule and
+// go/build's verdict, never with the claim that the oracle excluded the
+// file (the false claim of BUG-216).
+func judgeSelectedFileConstraints(name string, content []byte) error {
+	lines, err := honouredConstraintLines(content)
+	if err != nil {
+		return unsup("file %s: %v (a build constraint go/build refuses the file for; fail closed)", name, err)
+	}
+	for _, line := range lines {
+		holds, err := judgeBuildConstraintLine(name, line)
+		if err != nil {
+			return err
+		}
+		if !holds {
+			return unsup("file %s was SELECTED by go/build under the pinned target, yet its honoured build constraint %q is false with every custom tag unset — the header rule mirrored here (buildheader.go, go/build's parseFileHeader and shouldBuild) and go/build's own verdict disagree; fail closed", name, line)
 		}
 	}
 	return nil

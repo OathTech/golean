@@ -145,6 +145,14 @@ func TestSelectPackageFilesRefusalsByName(t *testing.T) {
 		{"selected file carrying a reserved-tag constraint (standing policy, unchanged)",
 			map[string]string{"main.go": selMain, "x.go": "//go:build linux\n\npackage main\n"},
 			[]string{"x.go", "reserved tag", "linux"}},
+		// BUG-216 at the excluded-file site: go/build strips a leading BOM, so
+		// a BOM-led `//go:build ignore` IS the constraint it excluded the file
+		// for — the standing policy's refusal reaches it (before 2026-10-27
+		// the textual scan stopped at the BOM and dropped the file silently;
+		// the S20 sweep's probe a19).
+		{"excluded file whose constraint follows a BOM (go/build honours it)",
+			map[string]string{"main.go": selMain, "bom.go": "\xef\xbb\xbf//go:build ignore\n\npackage main\n"},
+			[]string{"bom.go", "EXCLUDED by build constraint", "//go:build ignore"}},
 	}
 	for _, c := range cases {
 		t.Run(c.label, func(t *testing.T) {
@@ -157,6 +165,33 @@ func TestSelectPackageFilesRefusalsByName(t *testing.T) {
 				if !strings.Contains(err.Error(), w) {
 					t.Fatalf("refusal %q does not name %q", err.Error(), w)
 				}
+			}
+		})
+	}
+}
+
+// BUG-216 at the excluded-file site, the other direction: a `+build` line
+// go/build IGNORES in a file it excluded for its NAME is prose, and the
+// file is dropped silently as a name-excluded file (before 2026-10-27 the
+// scan refused it claiming the constraint excluded it — the lane's probes
+// h6 and h7, gc builds without the file on both counts).
+func TestSelectPackageFilesIgnoredPlusBuildInExcludedFile(t *testing.T) {
+	cases := map[string]string{
+		"plusbuild-no-blank":  "// +build ignore\npackage main\n\nfunc init() {}\n",
+		"gobuild-in-block":    "/*\n//go:build ignore\n*/\n\npackage main\n\nfunc init() {}\n",
+		"plusbuild-reserved":  "// +build linux\npackage main\n\nfunc init() {}\n",
+		"plusbuild-after-doc": "/* c */\n\n// +build ignore\n\npackage main\n\nfunc init() {}\n",
+	}
+	for name, src := range cases {
+		t.Run(name, func(t *testing.T) {
+			dir := writeDir(t, map[string]string{"main.go": selMain, "x_windows.go": src})
+			fset := token.NewFileSet()
+			files, err := selectPackageFiles(fset, dir)
+			if err != nil {
+				t.Fatalf("a name-excluded file with a +build line go/build ignores must drop silently, got: %v", err)
+			}
+			if got := baseNames(fset, files); strings.Join(got, ",") != "main.go" {
+				t.Fatalf("selected %v, want [main.go]", got)
 			}
 		})
 	}

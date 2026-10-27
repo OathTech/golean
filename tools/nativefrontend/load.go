@@ -12,6 +12,71 @@ package main
 // packages, stdlib-shadowing local dirs, and import cycles all refuse
 // the export loudly.
 //
+// CMD/GO'S IMPORT RULES (BUG-219; lane frontend/fix-admission-1027,
+// 2026-10-27). The predicate above admitted ANY subdirectory holding
+// non-test .go files and mirrored none of the rules the go command applies
+// on top of resolution (cmd/go/internal/load/pkg.go loadImport, and in
+// module mode the module graph, cmd/go/internal/modload/import.go), so a
+// program gc refuses to build was exported and answered. judgeLocalImport
+// and judgeLocalUnit below mirror them, each measured at go1.26.5 under the
+// runners' environments (the positive harness's GOPATH layout — the main
+// package outside GOPATH/src, each imported subdirectory at
+// GOPATH/src/<path>; the negative runner's module leg — a go.mod in the
+// lowered directory, GOPROXY=off) and refused with gc's own reason as the
+// `type-check` rejection class (gc reports each at the import's position,
+// after the file set is fixed and before compiling; the class has no
+// loader member, and BUG-125's link-time rule and gclimits.go's
+// compile-time rules already carry it for gc's non-go/types rejections):
+//
+//   GOPATH mode (no go.mod governs the lowered directory):
+//   (a) a path whose directory exists under GOROOT/src is resolved by gc
+//       to GOROOT first, GOPATH never: with no Go files there, «imports
+//       vendor: no Go files in GOROOT/src/vendor» (`vendor`, `internal`);
+//       with Go files, the standing shadowing refusal;
+//   (V) a non-terminating `vendor` element (FindVendor: `vendor/lib`,
+//       `lib/vendor/x`; `x/vendor` is its own package): «use of vendored
+//       package not allowed» — the main package is outside every vendor
+//       tree (disallowVendorVisibility);
+//   (I) an `internal` element (findInternal: `internal/x`, `lib/internal/x`,
+//       `lib/internal`): the importer must be inside the tree rooted at the
+//       parent of `internal` — the main package never is; a case-local
+//       importer Q is iff Q has the path prefix (`lib` may import
+//       `lib/internal/x`, `a` may not import `b/internal/x`): «use of
+//       internal package lib/internal/x not allowed»;
+//   (P) a directory whose package clause is `main`: «import "prog" is a
+//       program, not an importable package», whoever imports it.
+//
+//   Module mode (a go.mod governs the lowered directory):
+//   (V) as above, gc's module-mode text «vendor/lib must be imported as
+//       lib» (the text rule runs before resolution);
+//   (M) a case-local path resolves ONLY through the main module's graph —
+//       `require P v…` plus `replace P [v] => <dir>` whose directory is the
+//       case-local one, with its own go.mod (the BUG-134 row's shape, the
+//       control m00) — otherwise gc's reason: a dotless path is «package
+//       lib is not in std (GOROOT/src/lib)», a replace without the require
+//       «module lib provides package lib and is replaced but not required»,
+//       a require without the replace «missing go.sum entry for module
+//       providing package lib» (GOPROXY=off), a replacement directory with
+//       no go.mod «module ./lib: reading lib/go.mod: no such file»; a
+//       replace pointing at ANOTHER directory is refused by name (gc builds
+//       the other directory — measured: a different answer — and this
+//       lowering reads case-local directories only); a `vendor` directory
+//       at the module root beside such an import is refused by name — gc
+//       is in vendor mode there (go 1.14+) and reads vendor/modules.txt and
+//       the vendor tree, not the replacement («inconsistent vendoring»
+//       without the file, measured);
+//   (I) by import path (the importer's module path: the main package's is
+//       the module path plus its directory, a replaced module's its require
+//       path; a top-level `internal/x` has the empty parent, which every
+//       importer is inside — gc accepts the replace-backed `internal/x`,
+//       measured; `lib/internal/x` from `test` is refused);
+//   (P) as above.
+//
+//   Legal neighbours, unchanged: `_lib`, `lib/_x`, `testdata/lib` (gc skips
+//   such directories only when matching patterns), `lib/vendor` and
+//   `x/internal`'s own importer, the require+replace control, and a
+//   `main` function of an imported package (an ordinary function).
+//
 // PROGRAM INITIALIZATION ORDER (design note §5; audit F1, delta-review
 // F1). The schedule is gc's, not the spec's literal reading, and the
 // rule plus its evidence live in inittask.go — read that first.
@@ -36,6 +101,7 @@ import (
 	"go/types"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -111,6 +177,11 @@ type loader struct {
 	// first use after type-checking (staticinit.go funcDeclOf).
 	funcDecls map[*types.Func]*ast.FuncDecl
 	declInfo  map[*ast.FuncDecl]*types.Info
+	// The go.mod governing rootDir (modfile.go moduleFor), nil in GOPATH
+	// mode; mainName is the main unit's path (its package name), the
+	// importer identity the import rules test (BUG-219).
+	mod      *modFile
+	mainName string
 }
 
 func newLoader(fset *token.FileSet, rootDir string) *loader {
@@ -207,6 +278,12 @@ func (l *loader) discover(importerPath string, files []*ast.File) error {
 				// type-check (fail closed there, as before).
 				continue
 			}
+			// cmd/go's import rules on the path and the module graph
+			// (BUG-219; the file's header): before any parse of the
+			// directory, as gc's loader judges them.
+			if err := l.judgeLocalImport(importerPath, spec, p, dir); err != nil {
+				return err
+			}
 			// Fail-closed register (design note §6):
 			if l.isStdlib(p) {
 				return unsup("import %q is BOTH a stdlib package and a case-local directory — shadowing is refused, rename the local package", p)
@@ -220,11 +297,26 @@ func (l *loader) discover(importerPath string, files []*ast.File) error {
 			if spec.Name != nil && spec.Name.Name == "." {
 				return unsup("dot import of local package %q (dot imports of source packages are not modeled)", p)
 			}
-			if _, seen := l.locals[p]; seen {
+			if seen, ok := l.locals[p]; ok {
+				// gc checks the importer-dependent rules on EVERY import
+				// edge («the rules depend on the code doing the
+				// importing»): a unit first reached through an importer
+				// the internal rule allows (`lib` importing
+				// `lib/internal/x`) is still refused to one it does not
+				// (the main package importing the same path; the lane's
+				// probe g14, measured).
+				if err := l.judgeLocalUnit(importerPath, spec, p, seen); err != nil {
+					return err
+				}
 				continue
 			}
 			unit, err := l.parseLocal(p, dir)
 			if err != nil {
+				return err
+			}
+			// The rules that need the parsed unit (BUG-219: the internal
+			// rule's importer test, the package-main rule).
+			if err := l.judgeLocalUnit(importerPath, spec, p, unit); err != nil {
 				return err
 			}
 			l.locals[p] = unit
@@ -682,6 +774,20 @@ func (l *loader) loadProgram(mainFiles []*ast.File) ([]*sourcePkg, error) {
 		return nil, fmt.Errorf("no Go files in %s", l.rootDir)
 	}
 	mainName := mainFiles[0].Name.Name
+	l.mainName = mainName
+	// The module governing the lowered directory (BUG-217, BUG-219): its
+	// path's meaning for the main package is judged first, and its graph
+	// is what a case-local import must resolve through in discover.
+	mod, err := moduleFor(l.rootDir)
+	if err != nil {
+		return nil, err
+	}
+	l.mod = mod
+	if mod != nil {
+		if err := refuseReservedModulePath(l.rootDir, mod); err != nil {
+			return nil, err
+		}
+	}
 	if err := l.discover(mainName, mainFiles); err != nil {
 		return nil, err
 	}
@@ -767,6 +873,9 @@ func (l *loader) loadProgram(mainFiles []*ast.File) ([]*sourcePkg, error) {
 	if err := checkEntryDeclared(l.rootDir, mainUnit); err != nil { // entrymode.go, BUG-125
 		return nil, err
 	}
+	if err := checkEntryReferenced(l.fset, mainUnit); err != nil { // entrymode.go, BUG-220
+		return nil, err
+	}
 
 	// gc's type-size limits (gclimits.go, release-readiness row 34): a
 	// whole-program, type-check-class rejection — gc rejects the
@@ -800,4 +909,173 @@ func (l *loader) loadProgram(mainFiles []*ast.File) ([]*sourcePkg, error) {
 		return nil, unsup("initialization list ends at %q, not the main package %q", last.path, mainName)
 	}
 	return initOrder, nil
+}
+
+// rejectImport is a `type-check`-class refusal at an import's position with
+// gc's reason: the class the negative runner reads for gc's rejections of
+// a program's source (the file's header on the class choice).
+func (l *loader) rejectImport(spec *ast.ImportSpec, format string, args ...any) error {
+	return fmt.Errorf("type-check: %s: %s", l.fset.Position(spec.Pos()), fmt.Sprintf(format, args...))
+}
+
+// findVendorElem mirrors cmd/go's FindVendor: the index of the last
+// NON-TERMINATING `vendor` element (`x/vendor` is its own package).
+func findVendorElem(path string) (int, bool) {
+	switch {
+	case strings.Contains(path, "/vendor/"):
+		return strings.LastIndex(path, "/vendor/") + 1, true
+	case strings.HasPrefix(path, "vendor/"):
+		return 0, true
+	}
+	return 0, false
+}
+
+// findInternalElem mirrors cmd/go's findInternal: the index of the final
+// `internal` element, at the start, in the middle or at the end.
+func findInternalElem(path string) (int, bool) {
+	switch {
+	case strings.HasSuffix(path, "/internal"):
+		return len(path) - len("internal"), true
+	case strings.Contains(path, "/internal/"):
+		return strings.LastIndex(path, "/internal/") + 1, true
+	case path == "internal", strings.HasPrefix(path, "internal/"):
+		return 0, true
+	}
+	return 0, false
+}
+
+// hasPathPrefix mirrors cmd/go's str.HasPathPrefix: s begins with the
+// slash-separated elements of prefix (the empty prefix is every path's).
+func hasPathPrefix(s, prefix string) bool {
+	return prefix == "" || s == prefix || strings.HasPrefix(s, prefix+"/")
+}
+
+// importerImportPath is the import path gc gives the importing package:
+// in GOPATH mode "" for the main package (it is outside GOPATH/src, and
+// outside every internal/vendor tree) and the case-local path for a local
+// unit; in module mode the main module's path plus the lowered directory
+// (modload's DirImportPath) for the main package, the require path for a
+// replaced case-local module.
+func (l *loader) importerImportPath(importerPath string) (string, error) {
+	if importerPath != l.mainName {
+		return importerPath, nil
+	}
+	if l.mod == nil {
+		return "", nil
+	}
+	return mainPackagePath(l.rootDir, l.mod)
+}
+
+// judgeLocalImport applies the rules that need only the import path and
+// the module graph (the file's header: (a), (V), (M)) to a case-local
+// import p at dir, imported by importerPath.
+func (l *loader) judgeLocalImport(importerPath string, spec *ast.ImportSpec, p, dir string) error {
+	// (V) the vendor text rule, both modes — gc's text differs by mode:
+	// in GOPATH mode the visibility rule speaks first (the importer is
+	// outside the vendor tree), in module mode the path rule.
+	if i, ok := findVendorElem(p); ok {
+		if l.mod == nil {
+			return l.rejectImport(spec, "use of vendored package not allowed — gc's rule for an import path with a vendor element (cmd/go disallowVendorVisibility): the importing package is outside the tree that vendors %q; a vendored package is imported by its path after vendor/ (%q)", p, p[i+len("vendor/"):])
+		}
+		return l.rejectImport(spec, "%s must be imported as %s — gc's rule for an import path with a vendor element (cmd/go disallowVendor)", p, p[i+len("vendor/"):])
+	}
+	if l.mod == nil {
+		// (a) GOPATH mode: a directory under GOROOT/src takes the import
+		// before GOPATH is searched (go/build Import), Go files or not.
+		if isDir, hasGo := gorootSrcDir(p); isDir {
+			if hasGo {
+				return unsup("import %q is BOTH a stdlib package and a case-local directory (GOROOT/src/%s holds Go files, which is go/build's test; in GOPATH mode gc resolves the import to GOROOT, never to the case-local directory) — shadowing is refused, rename the local package", p, p)
+			}
+			return l.rejectImport(spec, "import %q: no Go files in GOROOT/src/%s — in GOPATH mode gc resolves an import whose directory exists under GOROOT/src to GOROOT before GOPATH (go/build Import), and that directory holds no Go files; the case-local directory is never read", p, p)
+		}
+		return nil
+	}
+	// (M) module mode: the main module's graph must provide p — a
+	// require plus a replace onto the case-local directory, which must be
+	// a module of its own (its go.mod); the vendor directory rule beside it.
+	versions := l.mod.requires[p]
+	var rep *modReplace
+	for i := range l.mod.replaces {
+		r := &l.mod.replaces[i]
+		if r.oldPath != p {
+			continue
+		}
+		if r.oldVersion != "" && !slices.Contains(versions, r.oldVersion) {
+			continue // a replace of a version the module does not require is inert
+		}
+		rep = r
+		break
+	}
+	switch {
+	case len(versions) == 0 && rep == nil:
+		if isStandardImportPath(p) {
+			return l.rejectImport(spec, "package %s is not in std (%s) — in module mode a dotless import path is a standard-library package or one a required module provides, and the main module (%s, %s) requires none for it; the case-local directory %s is not read by gc", p, filepath.Join(pinnedBuildContext().GOROOT, "src", filepath.FromSlash(p)), l.mod.module, l.mod.path, dir)
+		}
+		return l.rejectImport(spec, "no required module provides package %s — the main module (%s, %s) requires none for it; the case-local directory %s is not read by gc in module mode", p, l.mod.module, l.mod.path, dir)
+	case rep == nil:
+		return l.rejectImport(spec, "missing go.sum entry for module providing package %s (imported by %s) — the main module requires %s but replaces it with no directory, so gc would fetch it (the apparatus runs GOPROXY=off; a fetched module is not the case-local directory %s in any case)", p, l.mod.module, p, dir)
+	case len(versions) == 0:
+		return l.rejectImport(spec, "module %s provides package %s and is replaced but not required — gc's rule: a replace alone adds nothing to the build list (the main module %s, %s)", p, p, l.mod.module, l.mod.path)
+	}
+	if rep.newVersion != "" {
+		return unsup("import %q: the main module (%s) replaces %s with the module %s %s, not a directory — the lowering reads case-local directories only; refuse by name (fail closed)", p, l.mod.path, p, rep.newPath, rep.newVersion)
+	}
+	target := rep.newPath
+	if !filepath.IsAbs(target) {
+		target = filepath.Join(l.mod.dir, filepath.FromSlash(target))
+	}
+	absTarget, err1 := filepath.Abs(target)
+	absDir, err2 := filepath.Abs(dir)
+	if err1 != nil || err2 != nil {
+		return unsup("import %q: cannot resolve the replacement directory %s against %s (%v, %v; fail closed)", p, rep.newPath, dir, err1, err2)
+	}
+	if filepath.Clean(absTarget) != filepath.Clean(absDir) {
+		return unsup("import %q: the main module (%s) replaces %s with the directory %s, which is not the case-local directory %s — gc builds the replacement and this lowering reads case-local directories only; refuse by name (fail closed)", p, l.mod.path, p, rep.newPath, dir)
+	}
+	if fi, err := os.Stat(filepath.Join(dir, "go.mod")); err != nil || fi.IsDir() {
+		return l.rejectImport(spec, "module %s: reading %s: no such file or directory — gc requires a replacement directory to be a module (its own go.mod)", rep.newPath, filepath.Join(filepath.FromSlash(p), "go.mod"))
+	}
+	if fi, err := os.Stat(filepath.Join(l.mod.dir, "vendor")); err == nil && fi.IsDir() {
+		return modRefuse("%s has a vendor directory beside the module root and the program imports the replaced module %s — with a go version of 1.14 or later gc builds such a module in VENDOR mode (-mod=vendor by default), reading vendor/modules.txt and the vendor tree instead of the replacement directory (without the file it refuses: «inconsistent vendoring», measured); vendor mode is not modeled; refuse by name (fail closed)", l.mod.path, p)
+	}
+	return nil
+}
+
+// judgeLocalUnit applies the rules that need the parsed unit (the file's
+// header: (I), (P)) to a case-local import p imported by importerPath.
+func (l *loader) judgeLocalUnit(importerPath string, spec *ast.ImportSpec, p string, unit *sourcePkg) error {
+	// (I) the internal rule: the importer must be inside the tree rooted
+	// at the parent of the final `internal` element — by directory in
+	// GOPATH mode (the main package, outside GOPATH/src, is inside none;
+	// a case-local importer Q at GOPATH/src/Q is inside GOPATH/src/parent
+	// iff Q has the path prefix), by import path in module mode.
+	if i, ok := findInternalElem(p); ok {
+		if i > 0 {
+			i-- // rewind over the slash in ".../internal"
+		}
+		parent := p[:i]
+		importer, err := l.importerImportPath(importerPath)
+		if err != nil {
+			return err
+		}
+		allowed := hasPathPrefix(importer, parent)
+		if l.mod == nil && importerPath == l.mainName {
+			allowed = false // the main package is outside every tree under GOPATH/src
+		}
+		if !allowed {
+			return l.rejectImport(spec, "use of internal package %s not allowed — gc's rule (golang.org/s/go14internal, cmd/go disallowInternal): the importing package (%s) is outside the tree rooted at the parent of internal (%q)", p, importerDisplay(importerPath, l.mainName), parent)
+		}
+	}
+	// (P) a program is not importable.
+	if len(unit.files) > 0 && unit.files[0].Name.Name == "main" {
+		return l.rejectImport(spec, "import %q is a program, not an importable package — gc's rule (cmd/go loadImport): the directory's package clause is main", p)
+	}
+	return nil
+}
+
+func importerDisplay(importerPath, mainName string) string {
+	if importerPath == mainName {
+		return "the main package"
+	}
+	return importerPath
 }

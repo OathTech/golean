@@ -10,7 +10,10 @@ package main
 // classification is pinned, and the unknown/empty/nameless shapes
 // must REFUSE the export, never mint a record.
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestMethodSetCoverageKnownKinds(t *testing.T) {
 	cases := []struct {
@@ -60,5 +63,109 @@ func TestMethodSetCoverageEmptyNameRefuses(t *testing.T) {
 	// A nameless TypeDef must not mint a record keyed "".
 	if _, _, err := methodSetCoverageForKind("", "struct"); err == nil {
 		t.Fatal("empty TypeDef name did not refuse")
+	}
+}
+
+// BUG-226: a two-variable range over a pointer to a ZERO-LENGTH array keeps
+// its value variable — the value form (`array-pointer`, len 0) exactly where
+// gc indexes per iteration (element width 1/2/4/8 on amd64, measured: zero
+// iterations, no dereference), a refusal by name at the other widths (gc
+// slices the array through the pointer before the loop and a nil pointer
+// panics there — measured on string, struct{}, [3]int8, [2]int, any, []int).
+func TestRangeZeroLengthArrayPointer(t *testing.T) {
+	withStdlibRoots(t)
+	findRange := func(t *testing.T, node any) map[string]any {
+		t.Helper()
+		var found map[string]any
+		var walk func(any)
+		walk = func(n any) {
+			switch v := n.(type) {
+			case map[string]any:
+				if v["stmt"] == "range" && found == nil {
+					found = v
+					return
+				}
+				for _, x := range v {
+					walk(x)
+				}
+			case []any:
+				for _, x := range v {
+					walk(x)
+				}
+			}
+		}
+		walk(node)
+		if found == nil {
+			t.Fatalf("no range node on the wire")
+		}
+		return found
+	}
+	valueForm := []struct{ name, elem string }{
+		{"int", "int"}, {"int16", "int16"}, {"int32", "int32"}, {"bool", "bool"}, {"float64", "float64"},
+		{"pointer", "*int"}, {"[1]int8", "[1]int8"}, {"8-byte struct", "S8"}, {"uint64", "uint64"},
+	}
+	for _, c := range valueForm {
+		t.Run("value form/"+c.name, func(t *testing.T) {
+			dir := writeMain(t, "package main\n\ntype S8 struct{ a, b int32 }\n\nfunc probe() int { var p *[0]"+c.elem+"; n := 0; for i, v := range p { _ = v; n += i }; return n }\n\nfunc main() { println(probe()) }\n")
+			prog, err := lowerProgramDir(t, dir)
+			if err != nil {
+				t.Fatalf("lower: %v", err)
+			}
+			rng := findRange(t, funcNames(prog)["probe"])
+			if rng["kind"] != "array-pointer" || rng["valVar"] == nil || rng["keyVar"] == nil {
+				t.Fatalf("want the value form with both variables, got kind=%v keyVar=%v valVar=%v", rng["kind"], rng["keyVar"], rng["valVar"])
+			}
+			if n, _ := rng["len"].(int64); n != 0 {
+				t.Fatalf("want len 0, got %v", rng["len"])
+			}
+		})
+	}
+	t.Run("assign form keeps the value temp", func(t *testing.T) {
+		dir := writeMain(t, "package main\n\nfunc probe() int { var p *[0]int; n, i, v := 0, 0, 0; for i, v = range p { n += i + v }; return n + i + v }\n\nfunc main() { println(probe()) }\n")
+		prog, err := lowerProgramDir(t, dir)
+		if err != nil {
+			t.Fatalf("lower: %v", err)
+		}
+		rng := findRange(t, funcNames(prog)["probe"])
+		if rng["kind"] != "array-pointer" || rng["valVar"] != "$rangeVal" {
+			t.Fatalf("want the value form binding $rangeVal, got kind=%v valVar=%v", rng["kind"], rng["valVar"])
+		}
+	})
+	keyOnly := map[string]string{
+		"key only":          "for i := range p { n += i }",
+		"key, blank value":  "for i, _ := range p { n += i }",
+		"no variables":      "for range p { n++ }",
+	}
+	for name, loop := range keyOnly {
+		t.Run("index form/"+name, func(t *testing.T) {
+			dir := writeMain(t, "package main\n\nfunc probe() int { var p *[0]string; n := 0; "+loop+"; return n }\n\nfunc main() { println(probe()) }\n")
+			prog, err := lowerProgramDir(t, dir)
+			if err != nil {
+				t.Fatalf("lower: %v", err)
+			}
+			rng := findRange(t, funcNames(prog)["probe"])
+			if rng["kind"] != "int" || rng["valVar"] != nil {
+				t.Fatalf("want the static-length int desugar with no value variable, got kind=%v valVar=%v", rng["kind"], rng["valVar"])
+			}
+		})
+	}
+	refused := []struct{ name, elem string }{
+		{"string", "string"}, {"struct{}", "struct{}"}, {"[3]int8", "[3]int8"}, {"[2]int", "[2]int"}, {"any", "any"}, {"[]int", "[]int"}, {"16-byte struct", "S16"},
+	}
+	for _, c := range refused {
+		t.Run("refused/"+c.name, func(t *testing.T) {
+			dir := writeMain(t, "package main\n\ntype S16 struct{ a, b int }\n\nfunc probe() int { var p *[0]"+c.elem+"; n := 0; for i, v := range p { _ = v; n += i }; return n }\n\nfunc main() { println(probe()) }\n")
+			prog, err := lowerProgramDir(t, dir)
+			if err != nil {
+				t.Fatalf("lower: %v", err)
+			}
+			// The per-declaration quarantine turns the refusal into a stub
+			// carrying its reason in `unsupported`.
+			fn := funcNames(prog)["probe"]
+			reason, _ := fn["unsupported"].(string)
+			if !strings.Contains(reason, "BUG-226") || !strings.Contains(reason, "cheapComputableIndex") {
+				t.Fatalf("want probe quarantined with the BUG-226 refusal by name, got %v", fn)
+			}
+		})
 	}
 }

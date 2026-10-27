@@ -10,6 +10,7 @@ package main
 // docs/evidence/2026-09-11_review-boundary/.
 
 import (
+	"go/token"
 	"os"
 	"path/filepath"
 	"strings"
@@ -346,4 +347,81 @@ func TestWorkspaceRefusal(t *testing.T) {
 		_, err := lowerDir(t, dir)
 		wantWorkspaceRefusal(t, err, filepath.Join("lib", "go.work"))
 	})
+}
+
+// BUG-217: the main module's path MEANING (refuseReservedModulePath), each
+// cell measured against gc go1.26.5 in module mode on 2026-10-27 (the S20
+// sweep's b2 batch and the lane's p1–p12): a std package path, a reserved
+// pattern name, C, and the synthetic toolchain module names refuse as the
+// `module` class with gc's reason; a GOROOT directory without Go files
+// (`internal`, `vendor`), `cmd/x`, `std/x`, `C/x`, `fmt/v2`,
+// `example.com/fmt`, `main`, `test`, `vendor/x` and `fmt` with the package
+// in a subdirectory are accepted, as gc accepts them.
+func TestModulePathMeaning(t *testing.T) {
+	const src = "package main\n\nfunc probe() int { return 7 }\n\nfunc main() { println(probe()) }\n"
+	cases := []struct {
+		module, subdir, want string
+	}{
+		{"fmt", "", "ambiguous import: found package fmt in multiple modules"},
+		{"math/bits", "", "ambiguous import: found package math/bits in multiple modules"},
+		{"math", "bits", "ambiguous import: found package math/bits in multiple modules"},
+		{"strings", "", "ambiguous import"},
+		{"unsafe", "", "ambiguous import"},
+		{"internal/abi", "", "ambiguous import"},
+		{"net/http", "", "ambiguous import"},
+		{"cmd/go", "", "ambiguous import: found package cmd/go in multiple modules"},
+		{"cmd", "", "\"cmd\" is not an importable package"},
+		{"std", "", "\"std\" is not an importable package"},
+		{"tool", "", "\"tool\" is not an importable package"},
+		{"work", "", "\"work\" is not an importable package"},
+		{"all", "", "\"all\" is not an importable package"},
+		{"C", "", "unknown import path \"C\""},
+		{"go", "", "invalid module path: \"go\""},
+		{"toolchain", "", "invalid module path: \"toolchain\""},
+		{"main", "", ""},
+		{"test", "", ""},
+		{"example.com/fmt", "", ""},
+		{"fmt/v2", "", ""},
+		{"vendor/x", "", ""},
+		{"fmt", "cmd", ""},
+		{"cmd/x", "", ""},
+		{"internal", "", ""},
+		{"vendor", "", ""},
+		{"std/x", "", ""},
+		{"C/x", "", ""},
+		{"testdata", "", ""},
+	}
+	for _, c := range cases {
+		t.Run(c.module+"/"+c.subdir, func(t *testing.T) {
+			root := t.TempDir()
+			if err := os.WriteFile(filepath.Join(root, "go.mod"), []byte("module "+c.module+"\n\ngo 1.26\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			dir := root
+			if c.subdir != "" {
+				dir = filepath.Join(root, c.subdir)
+				if err := os.MkdirAll(dir, 0o755); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte(src), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			fset := token.NewFileSet()
+			files, err := selectPackageFiles(fset, dir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, err = loadProgram(fset, dir, files)
+			if c.want == "" {
+				if err != nil {
+					t.Fatalf("want acceptance, got %v", err)
+				}
+				return
+			}
+			if err == nil || !strings.HasPrefix(err.Error(), "native frontend unsupported: module directive: ") || !strings.Contains(err.Error(), c.want) {
+				t.Fatalf("want a module-class refusal containing %q, got %v", c.want, err)
+			}
+		})
+	}
 }
