@@ -1,5 +1,6 @@
 # GoLean native-frontend full-corpus differential baseline
 # cases: 4848 (4545 PASS / 303 FAIL)
+# cause keyed 2026-10-27 [AGENT coordinator], train-24 stage: the three BUG-226 rows' refusal cause `error:?` → `error:decoder-scope-undeclared-local` (the new scripts/machine-causes.tsv row for the decoder's «is not in scope at this statement» refusal, which the S10 lane could not add — scripts/ is outside a sweep lane's edit set); no row moved.
 # re-pinned: 2026-10-26 [AGENT], lane sweep/s4-identity — the defect-neighbourhood campaign's S4 sweep (identity, equality and
 #   nil-ness; docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved; members BUG-133/129/121/111/170/139).
 #   NO existing row moved: 4166 + 94 = 4260; PASS 3901 + 64 = 3965; FAIL 265 + 30 = 295. No flip, no removal, no cause
@@ -7960,9 +7961,9 @@ PASS	pointers/sweep-s10-nil-deref-sites/multi-target-field-first	-	-
 PASS	pointers/sweep-s10-nil-deref-sites/multi-target-field-second	-	-
 PASS	pointers/sweep-s10-nil-recover/store-recovered	-	-
 PASS	range/sweep-s10-zero-len-array	-	-
-FAIL	range/sweep-s10-zero-len-two-vars/ptr-nil-two-vars	lean-observation	error:?
-FAIL	range/sweep-s10-zero-len-two-vars/ptr-two-vars	lean-observation	error:?
-FAIL	range/sweep-s10-zero-len-two-vars/ptr-nil-blank-key-value	lean-observation	error:?
+FAIL	range/sweep-s10-zero-len-two-vars/ptr-nil-two-vars	lean-observation	error:decoder-scope-undeclared-local
+FAIL	range/sweep-s10-zero-len-two-vars/ptr-two-vars	lean-observation	error:decoder-scope-undeclared-local
+FAIL	range/sweep-s10-zero-len-two-vars/ptr-nil-blank-key-value	lean-observation	error:decoder-scope-undeclared-local
 PASS	stdlib-source/sweep-s10-library-panics/bytes-repeat-negative	-	-
 PASS	stdlib-source/sweep-s10-library-panics/slices-repeat-negative	-	-
 PASS	stdlib-source/sweep-s10-library-panics/slices-delete-oob	-	-
