@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 5057 (4754 PASS / 303 FAIL)
+# cases: 5152 (4849 PASS / 303 FAIL)
 # cause keyed 2026-10-27 [AGENT coordinator], train-24 stage: the three BUG-226 rows' refusal cause `error:?` → `error:decoder-scope-undeclared-local` (the new scripts/machine-causes.tsv row for the decoder's «is not in scope at this statement» refusal, which the S10 lane could not add — scripts/ is outside a sweep lane's edit set); no row moved.
 # re-pinned: 2026-10-26 [AGENT], lane sweep/s4-identity — the defect-neighbourhood campaign's S4 sweep (identity, equality and
 #   nil-ness; docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved; members BUG-133/129/121/111/170/139).
@@ -107,6 +107,111 @@
 #     variadic/sweep-s4-nil-pack-routes/tuple-fixed-only                 PASS/- -
 #     variadic/sweep-s4-nil-pack-routes/elem-kinds                       PASS/- -
 #     variadic/sweep-s4-nil-pack-routes/len-cap-append                   PASS/- -
+# re-pinned: 2026-10-27 [AGENT], lane sweep/s6-two-phase — the defect-neighbourhood campaign's step 2, shape S6 (assignment and
+#   return: the two-phase order; plan docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved 2026-10-27): the
+#   shape's 165-cell matrix probed on both sides — 112 cells by this lane (12 of them L-016 cells recorded at the ledger, never
+#   rows; 3 named-refusal probes recorded as coverage gaps), 48 covered by existing rows — and every agreement on a distinct
+#   route pinned as a strict row (expected = gc). NO existing row moved: 4166 + 95 = 4261; PASS 3901 + 95 = 3996;
+#   FAIL 265 + 0 = 265. No flip, no removal, no cause change (no runtime code changed: corpus and records only). NEW rows
+#   (95, 8 packages Corpus/coverage/exec/assign-order/sweep-s6-*/, every row strict, born green), appended at the end of the
+#   file, measured by CAPPED_MEM_MAX=64G capped scripts/ci --diff at the lane tree 52a506a4 before this re-pin (its only
+#   drift: these 95 NEW ids), the rows taken from that run's artifacts/coverage/latest.tsv; the --diff at the tip judges.
+#   FINDINGS: none (no BUG entry, no red-first row; BUG-266–275 unused). The rows:
+#     assign-order/sweep-s6-blank-forms/blank-between-aliases                              PASS/-
+#     assign-order/sweep-s6-blank-forms/blank-call-panics-no-store                         PASS/-
+#     assign-order/sweep-s6-blank-forms/blank-comma-ok-key-panic                           PASS/-
+#     assign-order/sweep-s6-blank-forms/blank-first-dep-index                              PASS/-
+#     assign-order/sweep-s6-blank-forms/blank-index-panics                                 PASS/-
+#     assign-order/sweep-s6-blank-forms/blank-ok-forms                                     PASS/-
+#     assign-order/sweep-s6-blank-forms/blank-then-nil-map                                 PASS/-
+#     assign-order/sweep-s6-blank-forms/oob-target-vs-blank-call-panic                     PASS/-
+#     assign-order/sweep-s6-compound-incdec/captured-compound                              PASS/-
+#     assign-order/sweep-s6-compound-incdec/chain-compound                                 PASS/-
+#     assign-order/sweep-s6-compound-incdec/generic-compound                               PASS/-
+#     assign-order/sweep-s6-compound-incdec/nil-deref-compound                             PASS/-
+#     assign-order/sweep-s6-compound-incdec/nil-field-incdec                               PASS/-
+#     assign-order/sweep-s6-compound-incdec/nil-map-compound                               PASS/-
+#     assign-order/sweep-s6-compound-incdec/nil-map-compound-rhs-call                      PASS/-
+#     assign-order/sweep-s6-compound-incdec/nil-map-incdec                                 PASS/-
+#     assign-order/sweep-s6-compound-incdec/nil-ptr-array-incdec                           PASS/-
+#     assign-order/sweep-s6-compound-incdec/oob-compound                                   PASS/-
+#     assign-order/sweep-s6-phase1-operands/assert-ok-dep-index                            PASS/-
+#     assign-order/sweep-s6-phase1-operands/call-deref-then-rhs-call                       PASS/-
+#     assign-order/sweep-s6-phase1-operands/call-index-then-rhs-call                       PASS/-
+#     assign-order/sweep-s6-phase1-operands/call-map-key-then-rhs-call                     PASS/-
+#     assign-order/sweep-s6-phase1-operands/captured-dep-index                             PASS/-
+#     assign-order/sweep-s6-phase1-operands/chain-operand                                  PASS/-
+#     assign-order/sweep-s6-phase1-operands/deref-operand                                  PASS/-
+#     assign-order/sweep-s6-phase1-operands/field-operand                                  PASS/-
+#     assign-order/sweep-s6-phase1-operands/generic-dep-index                              PASS/-
+#     assign-order/sweep-s6-phase1-operands/map-via-field-key                              PASS/-
+#     assign-order/sweep-s6-phase1-operands/nested-array-operand                           PASS/-
+#     assign-order/sweep-s6-phase1-operands/ptr-array-operand                              PASS/-
+#     assign-order/sweep-s6-phase1-operands/two-receives-deref-operand                     PASS/-
+#     assign-order/sweep-s6-phase1-panics/captured-rhs-index-panic                         PASS/-
+#     assign-order/sweep-s6-phase1-panics/deref-target-rhs-panic                           PASS/-
+#     assign-order/sweep-s6-phase1-panics/generic-rhs-index-panic                          PASS/-
+#     assign-order/sweep-s6-phase1-panics/map-key-operand-panic                            PASS/-
+#     assign-order/sweep-s6-phase1-panics/map-target-rhs-panic                             PASS/-
+#     assign-order/sweep-s6-phase1-panics/phase1-beats-phase2                              PASS/-
+#     assign-order/sweep-s6-phase1-panics/ptr-slice-index-get-phase1                       PASS/-
+#     assign-order/sweep-s6-phase1-panics/rhs-index-panic                                  PASS/-
+#     assign-order/sweep-s6-phase1-panics/rhs-nil-deref                                    PASS/-
+#     assign-order/sweep-s6-phase1-panics/target-operand-panic                             PASS/-
+#     assign-order/sweep-s6-phase2-checks/assert-into-nil-map                              PASS/-
+#     assign-order/sweep-s6-phase2-checks/both-oob-first-wins                              PASS/-
+#     assign-order/sweep-s6-phase2-checks/call-into-nil-map                                PASS/-
+#     assign-order/sweep-s6-phase2-checks/chain-vs-rhs-panic                               PASS/-
+#     assign-order/sweep-s6-phase2-checks/comma-ok-deref-second-nil                        PASS/-
+#     assign-order/sweep-s6-phase2-checks/comma-ok-first-oob                               PASS/-
+#     assign-order/sweep-s6-phase2-checks/comma-ok-into-nil-map                            PASS/-
+#     assign-order/sweep-s6-phase2-checks/generic-second-oob                               PASS/-
+#     assign-order/sweep-s6-phase2-checks/nil-map-first-rhs-effects                        PASS/-
+#     assign-order/sweep-s6-phase2-checks/nil-map-vs-rhs-panic                             PASS/-
+#     assign-order/sweep-s6-phase2-checks/nil-ptr-array-vs-rhs-panic                       PASS/-
+#     assign-order/sweep-s6-phase2-checks/nil-slice-ptr-base-phase1                        PASS/-
+#     assign-order/sweep-s6-phase2-checks/pointer-field-nil-at-store                       PASS/-
+#     assign-order/sweep-s6-phase2-checks/pointer-field-nil-base-phase1                    PASS/-
+#     assign-order/sweep-s6-phase2-checks/struct-field-chain-nil-base                      PASS/-
+#     assign-order/sweep-s6-receive-forms/call-deref-before-recv                           PASS/-
+#     assign-order/sweep-s6-receive-forms/call-index-before-recv                           PASS/-
+#     assign-order/sweep-s6-receive-forms/call-map-key-before-recv                         PASS/-
+#     assign-order/sweep-s6-receive-forms/closed-comma-ok-deref-targets                    PASS/-
+#     assign-order/sweep-s6-receive-forms/closed-comma-ok-index-targets                    PASS/-
+#     assign-order/sweep-s6-receive-forms/closed-into-nil-map-ok-untouched                 PASS/-
+#     assign-order/sweep-s6-receive-forms/closed-recv-nil-deref                            PASS/-
+#     assign-order/sweep-s6-receive-forms/generic-recv-index                               PASS/-
+#     assign-order/sweep-s6-receive-forms/nil-map-recv-drains                              PASS/-
+#     assign-order/sweep-s6-receive-forms/select-bad-target-blocks                         PASS/-
+#     assign-order/sweep-s6-receive-forms/select-blank-elem                                PASS/-
+#     assign-order/sweep-s6-receive-forms/select-blank-ok                                  PASS/-
+#     assign-order/sweep-s6-receive-forms/select-iface-fallback-second-oob                 PASS/-
+#     assign-order/sweep-s6-receive-forms/select-map-first-store-lands                     PASS/-
+#     assign-order/sweep-s6-receive-forms/select-nil-deref-drains                          PASS/-
+#     assign-order/sweep-s6-receive-forms/select-nil-map-drains                            PASS/-
+#     assign-order/sweep-s6-receive-forms/select-oob-drains                                PASS/-
+#     assign-order/sweep-s6-return-forms/call-effects-then-panic                           PASS/-
+#     assign-order/sweep-s6-return-forms/closure-named-results                             PASS/-
+#     assign-order/sweep-s6-return-forms/forward-then-defer                                PASS/-
+#     assign-order/sweep-s6-return-forms/generic-two-phase                                 PASS/-
+#     assign-order/sweep-s6-return-forms/iface-result-unset                                PASS/-
+#     assign-order/sweep-s6-return-forms/named-observed-in-defer                           PASS/-
+#     assign-order/sweep-s6-return-forms/prior-named-values-survive                        PASS/-
+#     assign-order/sweep-s6-return-forms/recv-then-call-panic                              PASS/-
+#     assign-order/sweep-s6-return-forms/results-snapshot-before-defer                     PASS/-
+#     assign-order/sweep-s6-return-forms/three-middle-panic                                PASS/-
+#     assign-order/sweep-s6-store-order/call-deref-alias                                   PASS/-
+#     assign-order/sweep-s6-store-order/comma-ok-assert-same-var                           PASS/-
+#     assign-order/sweep-s6-store-order/comma-ok-map-same-var                              PASS/-
+#     assign-order/sweep-s6-store-order/deref-alias                                        PASS/-
+#     assign-order/sweep-s6-store-order/field-alias                                        PASS/-
+#     assign-order/sweep-s6-store-order/generic-deref-alias                                PASS/-
+#     assign-order/sweep-s6-store-order/map-same-key                                       PASS/-
+#     assign-order/sweep-s6-store-order/range-same-var                                     PASS/-
+#     assign-order/sweep-s6-store-order/recv-same-var                                      PASS/-
+#     assign-order/sweep-s6-store-order/select-recv-same-var                               PASS/-
+#     assign-order/sweep-s6-store-order/slice-alias                                        PASS/-
+#     assign-order/sweep-s6-store-order/three-targets-repeat                               PASS/-
 # re-pinned: 2026-10-27 [AGENT], lane sweep/s1-implicit-conv — the defect-neighbourhood campaign's step 2, shape S1 (implicit
 #   conversion omitted at an assignable context; plan docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved
 #   2026-10-27; members BUG-079/014/051/050/049/017/016/006): the shape's 208-cell matrix probed on both sides — 168 cells by this
@@ -8563,3 +8668,98 @@ PASS	returns/sweep-s1-tuple-boxing/unseq-return	-	-
 PASS	slices/sweep-s1-append-boxing/consts-and-nil	-	-
 PASS	slices/sweep-s1-append-boxing/typed	-	-
 PASS	slices/sweep-s1-append-boxing/narrower	-	-
+PASS	assign-order/sweep-s6-blank-forms/blank-between-aliases	-	-
+PASS	assign-order/sweep-s6-blank-forms/blank-call-panics-no-store	-	-
+PASS	assign-order/sweep-s6-blank-forms/blank-comma-ok-key-panic	-	-
+PASS	assign-order/sweep-s6-blank-forms/blank-first-dep-index	-	-
+PASS	assign-order/sweep-s6-blank-forms/blank-index-panics	-	-
+PASS	assign-order/sweep-s6-blank-forms/blank-ok-forms	-	-
+PASS	assign-order/sweep-s6-blank-forms/blank-then-nil-map	-	-
+PASS	assign-order/sweep-s6-blank-forms/oob-target-vs-blank-call-panic	-	-
+PASS	assign-order/sweep-s6-compound-incdec/captured-compound	-	-
+PASS	assign-order/sweep-s6-compound-incdec/chain-compound	-	-
+PASS	assign-order/sweep-s6-compound-incdec/generic-compound	-	-
+PASS	assign-order/sweep-s6-compound-incdec/nil-deref-compound	-	-
+PASS	assign-order/sweep-s6-compound-incdec/nil-field-incdec	-	-
+PASS	assign-order/sweep-s6-compound-incdec/nil-map-compound	-	-
+PASS	assign-order/sweep-s6-compound-incdec/nil-map-compound-rhs-call	-	-
+PASS	assign-order/sweep-s6-compound-incdec/nil-map-incdec	-	-
+PASS	assign-order/sweep-s6-compound-incdec/nil-ptr-array-incdec	-	-
+PASS	assign-order/sweep-s6-compound-incdec/oob-compound	-	-
+PASS	assign-order/sweep-s6-phase1-operands/assert-ok-dep-index	-	-
+PASS	assign-order/sweep-s6-phase1-operands/call-deref-then-rhs-call	-	-
+PASS	assign-order/sweep-s6-phase1-operands/call-index-then-rhs-call	-	-
+PASS	assign-order/sweep-s6-phase1-operands/call-map-key-then-rhs-call	-	-
+PASS	assign-order/sweep-s6-phase1-operands/captured-dep-index	-	-
+PASS	assign-order/sweep-s6-phase1-operands/chain-operand	-	-
+PASS	assign-order/sweep-s6-phase1-operands/deref-operand	-	-
+PASS	assign-order/sweep-s6-phase1-operands/field-operand	-	-
+PASS	assign-order/sweep-s6-phase1-operands/generic-dep-index	-	-
+PASS	assign-order/sweep-s6-phase1-operands/map-via-field-key	-	-
+PASS	assign-order/sweep-s6-phase1-operands/nested-array-operand	-	-
+PASS	assign-order/sweep-s6-phase1-operands/ptr-array-operand	-	-
+PASS	assign-order/sweep-s6-phase1-operands/two-receives-deref-operand	-	-
+PASS	assign-order/sweep-s6-phase1-panics/captured-rhs-index-panic	-	-
+PASS	assign-order/sweep-s6-phase1-panics/deref-target-rhs-panic	-	-
+PASS	assign-order/sweep-s6-phase1-panics/generic-rhs-index-panic	-	-
+PASS	assign-order/sweep-s6-phase1-panics/map-key-operand-panic	-	-
+PASS	assign-order/sweep-s6-phase1-panics/map-target-rhs-panic	-	-
+PASS	assign-order/sweep-s6-phase1-panics/phase1-beats-phase2	-	-
+PASS	assign-order/sweep-s6-phase1-panics/ptr-slice-index-get-phase1	-	-
+PASS	assign-order/sweep-s6-phase1-panics/rhs-index-panic	-	-
+PASS	assign-order/sweep-s6-phase1-panics/rhs-nil-deref	-	-
+PASS	assign-order/sweep-s6-phase1-panics/target-operand-panic	-	-
+PASS	assign-order/sweep-s6-phase2-checks/assert-into-nil-map	-	-
+PASS	assign-order/sweep-s6-phase2-checks/both-oob-first-wins	-	-
+PASS	assign-order/sweep-s6-phase2-checks/call-into-nil-map	-	-
+PASS	assign-order/sweep-s6-phase2-checks/chain-vs-rhs-panic	-	-
+PASS	assign-order/sweep-s6-phase2-checks/comma-ok-deref-second-nil	-	-
+PASS	assign-order/sweep-s6-phase2-checks/comma-ok-first-oob	-	-
+PASS	assign-order/sweep-s6-phase2-checks/comma-ok-into-nil-map	-	-
+PASS	assign-order/sweep-s6-phase2-checks/generic-second-oob	-	-
+PASS	assign-order/sweep-s6-phase2-checks/nil-map-first-rhs-effects	-	-
+PASS	assign-order/sweep-s6-phase2-checks/nil-map-vs-rhs-panic	-	-
+PASS	assign-order/sweep-s6-phase2-checks/nil-ptr-array-vs-rhs-panic	-	-
+PASS	assign-order/sweep-s6-phase2-checks/nil-slice-ptr-base-phase1	-	-
+PASS	assign-order/sweep-s6-phase2-checks/pointer-field-nil-at-store	-	-
+PASS	assign-order/sweep-s6-phase2-checks/pointer-field-nil-base-phase1	-	-
+PASS	assign-order/sweep-s6-phase2-checks/struct-field-chain-nil-base	-	-
+PASS	assign-order/sweep-s6-receive-forms/call-deref-before-recv	-	-
+PASS	assign-order/sweep-s6-receive-forms/call-index-before-recv	-	-
+PASS	assign-order/sweep-s6-receive-forms/call-map-key-before-recv	-	-
+PASS	assign-order/sweep-s6-receive-forms/closed-comma-ok-deref-targets	-	-
+PASS	assign-order/sweep-s6-receive-forms/closed-comma-ok-index-targets	-	-
+PASS	assign-order/sweep-s6-receive-forms/closed-into-nil-map-ok-untouched	-	-
+PASS	assign-order/sweep-s6-receive-forms/closed-recv-nil-deref	-	-
+PASS	assign-order/sweep-s6-receive-forms/generic-recv-index	-	-
+PASS	assign-order/sweep-s6-receive-forms/nil-map-recv-drains	-	-
+PASS	assign-order/sweep-s6-receive-forms/select-bad-target-blocks	-	-
+PASS	assign-order/sweep-s6-receive-forms/select-blank-elem	-	-
+PASS	assign-order/sweep-s6-receive-forms/select-blank-ok	-	-
+PASS	assign-order/sweep-s6-receive-forms/select-iface-fallback-second-oob	-	-
+PASS	assign-order/sweep-s6-receive-forms/select-map-first-store-lands	-	-
+PASS	assign-order/sweep-s6-receive-forms/select-nil-deref-drains	-	-
+PASS	assign-order/sweep-s6-receive-forms/select-nil-map-drains	-	-
+PASS	assign-order/sweep-s6-receive-forms/select-oob-drains	-	-
+PASS	assign-order/sweep-s6-return-forms/call-effects-then-panic	-	-
+PASS	assign-order/sweep-s6-return-forms/closure-named-results	-	-
+PASS	assign-order/sweep-s6-return-forms/forward-then-defer	-	-
+PASS	assign-order/sweep-s6-return-forms/generic-two-phase	-	-
+PASS	assign-order/sweep-s6-return-forms/iface-result-unset	-	-
+PASS	assign-order/sweep-s6-return-forms/named-observed-in-defer	-	-
+PASS	assign-order/sweep-s6-return-forms/prior-named-values-survive	-	-
+PASS	assign-order/sweep-s6-return-forms/recv-then-call-panic	-	-
+PASS	assign-order/sweep-s6-return-forms/results-snapshot-before-defer	-	-
+PASS	assign-order/sweep-s6-return-forms/three-middle-panic	-	-
+PASS	assign-order/sweep-s6-store-order/call-deref-alias	-	-
+PASS	assign-order/sweep-s6-store-order/comma-ok-assert-same-var	-	-
+PASS	assign-order/sweep-s6-store-order/comma-ok-map-same-var	-	-
+PASS	assign-order/sweep-s6-store-order/deref-alias	-	-
+PASS	assign-order/sweep-s6-store-order/field-alias	-	-
+PASS	assign-order/sweep-s6-store-order/generic-deref-alias	-	-
+PASS	assign-order/sweep-s6-store-order/map-same-key	-	-
+PASS	assign-order/sweep-s6-store-order/range-same-var	-	-
+PASS	assign-order/sweep-s6-store-order/recv-same-var	-	-
+PASS	assign-order/sweep-s6-store-order/select-recv-same-var	-	-
+PASS	assign-order/sweep-s6-store-order/slice-alias	-	-
+PASS	assign-order/sweep-s6-store-order/three-targets-repeat	-	-
