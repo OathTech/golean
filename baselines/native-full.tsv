@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 5592 (5245 PASS / 347 FAIL)
+# cases: 5592 (5250 PASS / 342 FAIL)
 # 2026-10-27 lane frontend/fix-admission-1027 [AGENT]: re-pinned from the lane's full `scripts/ci --diff` at the tip, after the rebase onto Run: CAPPED_MEM_MAX=64G capped scripts/ci --diff at 63bbba7a with the row edits and records applied in the tree (1117 s).
 #   the main carrying the S20 and S10 sweep entries. FIVE BUG-216/BUG-226 rows move non-PASS -> PASS with the fixes (the header rule
 #   ported from go/build; the value form at a zero-length pointer-to-array range): source-selection/sweep-s20-plusbuild-under-gobuild,
@@ -124,6 +124,19 @@
 #     variadic/sweep-s4-nil-pack-routes/tuple-fixed-only                 PASS/- -
 #     variadic/sweep-s4-nil-pack-routes/elem-kinds                       PASS/- -
 #     variadic/sweep-s4-nil-pack-routes/len-cap-append                   PASS/- -
+# re-pinned: 2026-10-27 [AGENT], lane core/fix-bug227-236-1027 — BUG-227 FIXED (found by the S10 sweep; the campaign plan's
+#   rule that a finding is fixed through the normal train, [USER]-approved 2026-10-27, relayed): applySlice's `.nil` base
+#   arm raises gc's recoverable nil dereference (GoLean/GoCore/Machine.lean), so the five Cases rows of the entry —
+#   pointers/nil-array-ptr-slice/slice-expr-nil and pointers/nil-array-ptr-slice-elided-high/{deref-elided-high,
+#   deref-low-only,pointer-form,zero-length-array} — move FAIL/lean-observation (cause stuck:nil-slice-base, pinned since
+#   2026-08-19/21 as `coverage`) -> PASS: 4848 rows, PASS 4545 + 5 = 4550, FAIL 303 - 5 = 298. NO other row moved (no
+#   flip, no removal, no cause change; the entry's controls field-through-nil-ptr, field-through-nil-call,
+#   race/free/addr-deref-no-read, the store-order pins and spec-examples-decl/addr-deref-nil-matrix/* PASS as before).
+#   Measured by CAPPED_MEM_MAX=64G capped scripts/ci --diff at the lane tree 5e34d0d8 (1268 s wall; its only drift:
+#   these five rows FAIL -> PASS), the rows taken from that run's artifacts/coverage/latest.tsv. The cause row
+#   nil-slice-base stays in scripts/machine-causes.tsv (no machine message produces it now; it keeps earlier records
+#   classifiable).
+# cause keyed 2026-10-27 [AGENT coordinator], train-24 stage: the three BUG-226 rows' refusal cause `error:?` → `error:decoder-scope-undeclared-local` (the new scripts/machine-causes.tsv row for the decoder's «is not in scope at this statement» refusal, which the S10 lane could not add — scripts/ is outside a sweep lane's edit set); no row moved.
 # re-pinned: 2026-10-27 [AGENT], lane sweep/s7-hoist-order — the defect-neighbourhood campaign's step 2, shape S7 (ordered
 #   events reordered by the hoist; plan docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved 2026-10-27): the
 #   shape's 182-cell matrix probed on both sides — 145 cells by this lane (206 probe subjects), 19 covered by existing rows,
@@ -4091,6 +4104,18 @@
 #   an element it leaves in place; a dropped write would be a false ok); the class is posed for the owner's ruling. Measured
 #   by scripts/diff-one at the tree. 4038 + 2 = 4040; 3780 + 1 = 3781; 258 + 1 = 259 FAIL. No PASS -> non-PASS flip.
 result	id	stage	cause
+# reason: channels/select-select/beside-loop — stage alternation ([USER] ruling (a) 2026-09-03;
+#   members re-stated at the strict-lane depth guard, round-8a merge train 2026-09-03 [AGENT]):
+#   gc samples 5 or 90 (the subject's "5 or 90 in gc"); the machine's default stream
+#   commits 5. scripts/diff-coverage runs the strict-lane differential check BEFORE
+#   the oracle-invariance re-run and returns early, so the red's stage is
+#   oracle-schedule-dependent: gc=90 -> Lean=5 != Go=90 -> FAIL/differential;
+#   gc=5 -> equality holds, then a variant-stream run hits the `unsupported`
+#   refusal, which the strict-lane depth guard (membership-depth memo P1 item 4,
+#   lane strict-routing) reports as a REFUSAL at lean-observation — no longer as
+#   "varies with iteration order" (nondet) -> FAIL/lean-observation. Result FAIL
+#   either way; the row stays the F10 over-broad-trigger marker
+#   (baselines/untriaged-ids, disposition coverage).
 PASS	arrays/array-bounds	-	-
 PASS	arrays/array-comparable	-	-
 PASS	arrays/array-copy	-	-
@@ -4598,18 +4623,6 @@ PASS	channels/select-recv-edge/dep-index-target	-	-
 PASS	channels/select-recv-edge/fallback-call-index	-	-
 PASS	channels/select-recv-edge/field-second-target-stores-first	-	-
 PASS	channels/select-recv-edge/nil-index-base-second	-	-
-# reason: channels/select-select/beside-loop — stage alternation ([USER] ruling (a) 2026-09-03;
-#   members re-stated at the strict-lane depth guard, round-8a merge train 2026-09-03 [AGENT]):
-#   gc samples 5 or 90 (the subject's "5 or 90 in gc"); the machine's default stream
-#   commits 5. scripts/diff-coverage runs the strict-lane differential check BEFORE
-#   the oracle-invariance re-run and returns early, so the red's stage is
-#   oracle-schedule-dependent: gc=90 -> Lean=5 != Go=90 -> FAIL/differential;
-#   gc=5 -> equality holds, then a variant-stream run hits the `unsupported`
-#   refusal, which the strict-lane depth guard (membership-depth memo P1 item 4,
-#   lane strict-routing) reports as a REFUSAL at lean-observation — no longer as
-#   "varies with iteration order" (nondet) -> FAIL/lean-observation. Result FAIL
-#   either way; the row stays the F10 over-broad-trigger marker
-#   (baselines/untriaged-ids, disposition coverage).
 FAIL	channels/select-select/beside-loop	lean-observation|differential	unsupported:select-select|-
 FAIL	channels/select-select/core	lean-observation	unsupported:select-select
 PASS	channels/send-closed-panic	-	-
@@ -7036,13 +7049,13 @@ PASS	pointers/inc-via-call	-	-
 PASS	pointers/nil-array-elem-store	-	-
 PASS	pointers/nil-array-elem-store/second-target	-	-
 PASS	pointers/nil-array-index-panic	-	-
-FAIL	pointers/nil-array-ptr-slice-elided-high/deref-elided-high	lean-observation	stuck:nil-slice-base
-FAIL	pointers/nil-array-ptr-slice-elided-high/deref-low-only	lean-observation	stuck:nil-slice-base
+PASS	pointers/nil-array-ptr-slice-elided-high/deref-elided-high	-	-
+PASS	pointers/nil-array-ptr-slice-elided-high/deref-low-only	-	-
 PASS	pointers/nil-array-ptr-slice-elided-high/field-through-nil-call	-	-
 PASS	pointers/nil-array-ptr-slice-elided-high/field-through-nil-ptr	-	-
-FAIL	pointers/nil-array-ptr-slice-elided-high/pointer-form	lean-observation	stuck:nil-slice-base
-FAIL	pointers/nil-array-ptr-slice-elided-high/zero-length-array	lean-observation	stuck:nil-slice-base
-FAIL	pointers/nil-array-ptr-slice/slice-expr-nil	lean-observation	stuck:nil-slice-base
+PASS	pointers/nil-array-ptr-slice-elided-high/pointer-form	-	-
+PASS	pointers/nil-array-ptr-slice-elided-high/zero-length-array	-	-
+PASS	pointers/nil-array-ptr-slice/slice-expr-nil	-	-
 PASS	pointers/nil-deref-panic	-	-
 PASS	pointers/nil-selector-panic	-	-
 PASS	pointers/nil-value-receiver-call-panic	-	-
