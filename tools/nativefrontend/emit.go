@@ -3141,9 +3141,14 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 			return map[string]any{"stmt": "chan-recv", "targets": []any{}, "ch": chW, "elem": elemTy}, nil
 		}
 		// A call in statement position lowers directly to a GoCore call
-		// statement (no value needed, so no hoist).
-		if call, ok := st.X.(*ast.CallExpr); ok {
-			if id, ok := call.Fun.(*ast.Ident); ok {
+		// statement (no value needed, so no hoist). Parentheses around the
+		// statement (`(f(x))`) and around the callee (`(close)(ch)`) are
+		// the same call (BUG-287's local space, lane frontend/fix-hoist-1027,
+		// 2026-10-27): before, the parenthesised statement fell to the
+		// expression fallback below, whose hoisted temp the decoder refused
+		// as a whole-package error (`expression statement is not a call`).
+		if call, ok := ast.Unparen(st.X).(*ast.CallExpr); ok {
+			if id, ok := ast.Unparen(call.Fun).(*ast.Ident); ok {
 				if _, isBuiltin := e.info.Uses[id].(*types.Builtin); isBuiltin {
 					switch id.Name {
 					case "panic":
@@ -3304,7 +3309,7 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 		if err := e.refuseRandIntnDeferGo("defer", st.Call); err != nil {
 			return nil, err
 		}
-		if id, ok := st.Call.Fun.(*ast.Ident); ok {
+		if id, ok := ast.Unparen(st.Call.Fun).(*ast.Ident); ok { // `defer (close)(ch)` too (BUG-287)
 			if _, isBuiltin := e.info.Uses[id].(*types.Builtin); isBuiltin {
 				// `defer recover()` does NOT recover: recover must be called
 				// BY a deferred function, not AS one (oracle-pinned by
@@ -3357,7 +3362,7 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 		// machine's pool performs the spawn. Builtin callees are
 		// restricted as for expression statements and none is modeled in
 		// spawn position — fail closed.
-		if id, ok := st.Call.Fun.(*ast.Ident); ok {
+		if id, ok := ast.Unparen(st.Call.Fun).(*ast.Ident); ok { // `go (f)(x)` is no builtin; `go (len)(x)` is (BUG-287)
 			if _, isBuiltin := e.info.Uses[id].(*types.Builtin); isBuiltin {
 				return nil, unsup("go of builtin %s", id.Name)
 			}
@@ -3786,7 +3791,7 @@ func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
 			// twice). Route builtin RHSes through the generic single-emit
 			// path.
 			isBuiltinCall := false
-			if id, ok := call.Fun.(*ast.Ident); ok {
+			if id, ok := ast.Unparen(call.Fun).(*ast.Ident); ok { // `(len)(x)` too (BUG-287)
 				if _, isB := e.info.Uses[id].(*types.Builtin); isB {
 					isBuiltinCall = true
 				}
@@ -4920,11 +4925,14 @@ func (e *emitter) emitRange(rs *ast.RangeStmt) (any, error) {
 // statement (compound assign, ++/--). Go evaluates the operand's ADDRESS
 // once; emitting target and read independently would run any call in the
 // lvalue twice (`structs/selector-eval-once`: get().x += 4 must call get
-// once). When the lvalue is effectful, pre-bind its address to a temp and
-// read through it; a pure lvalue keeps the direct two-emission form, whose
-// double evaluation is unobservable.
+// once) — or RECEIVE twice (`s[<-ch] += 1`, BUG-286: the address from the
+// first value, the read from the second; with one buffered value a wrong
+// deadlock). When the lvalue contains an ordered event
+// (`containsOrderedEvent`), pre-bind its address to a temp and read through
+// it; an event-free lvalue keeps the direct two-emission form, whose double
+// evaluation is unobservable.
 func (e *emitter) emitReadWriteTargetPhase1(lv ast.Expr) (any, any, error) {
-	if !containsCall(lv) {
+	if !e.containsOrderedEvent(lv) {
 		// The READ below passes through the probe hook as a whole (`x[k]`
 		// is a probeKind node): its bounds/assertion panic is phase-1
 		// material of the RHS `x op y` (spec#Assignment_statements: "x is
@@ -7780,15 +7788,49 @@ func (e *emitter) hoistNewFromValue(val any, elem types.Type, lit ast.Expr) (any
 	return map[string]any{"expr": "ident", "name": name, "type": ptrTy}, nil
 }
 
-// containsCall reports whether an expression performs a call (and so has an
-// observable evaluation MOMENT, not just a value).
-func containsCall(x ast.Expr) bool {
+// containsOrderedEvent reports whether evaluating x performs a spec-ORDERED
+// event — and so has an observable evaluation MOMENT among the other
+// events of its statement, not just a value: a call that runs at execution
+// time (`orderedCall`: user functions, methods, func values and every
+// builtin incl. len/cap/min/max, which spec#Built-in_functions calls «like
+// any other function»; a conversion and a constant-folded call are none),
+// a channel receive, or a binary logical operation (spec#Order_of_evaluation:
+// «all function calls, method calls, receive operations, and binary logical
+// operations are evaluated in lexical left-to-right order»). A func-literal
+// body runs only when called and is not entered. THE ONE predicate of the
+// two sites that must bind a sub-expression ONCE at its source position —
+// the keyed struct literal's pre-bind (`emitStructLit`) and the
+// read-modify-write target (`emitReadWriteTargetPhase1`) — replacing their
+// `containsCall` (any `*ast.CallExpr`, conversions included, receives and
+// logical operations NOT): BUG-279 (a receive element of a keyed literal
+// emitted after every call temp) and BUG-286 (a receive in a compound
+// target received twice), lane frontend/fix-hoist-1027, 2026-10-27.
+func (e *emitter) containsOrderedEvent(x ast.Expr) bool {
 	found := false
 	ast.Inspect(x, func(n ast.Node) bool {
-		if _, ok := n.(*ast.CallExpr); ok {
-			found = true
+		if found || n == nil {
+			return false
 		}
-		return !found
+		switch nn := n.(type) {
+		case *ast.FuncLit:
+			return false
+		case *ast.UnaryExpr:
+			if nn.Op == token.ARROW {
+				found = true
+				return false
+			}
+		case *ast.BinaryExpr:
+			if nn.Op == token.LAND || nn.Op == token.LOR {
+				found = true
+				return false
+			}
+		case *ast.CallExpr:
+			if e.orderedCall(nn) {
+				found = true
+				return false
+			}
+		}
+		return true
 	})
 	return found
 }
@@ -7863,15 +7905,18 @@ func (e *emitter) emitStructLit(cl *ast.CompositeLit, t types.Type, st *types.St
 		}
 	}
 	// Go evaluates a keyed literal's values in SOURCE order, but GoCore's
-	// structLit takes them in DECLARATION order. When a value performs a
-	// call, that reordering is observable (`structs/keyed-literal-eval-order`),
-	// so pre-bind the effectful ones to temps in source order and use the
-	// temps below. Pure values need no temp — their evaluation moment is
-	// unobservable.
+	// structLit takes them in DECLARATION order. When a value performs an
+	// ordered event — a call (`structs/keyed-literal-eval-order`), a
+	// receive (BUG-279: `T{a: <-ch, b: f()}` received AFTER the call temp
+	// under the old call-only test) or a logical operation (whose operand
+	// reads a sibling's call may move) — that reordering is observable, so
+	// pre-bind the event-bearing ones to temps in source order and use the
+	// temps below. Event-free values need no temp — their evaluation moment
+	// is unobservable.
 	preBound := map[string]any{}
 	for _, elt := range cl.Elts {
 		kv, ok := elt.(*ast.KeyValueExpr)
-		if !ok || !containsCall(kv.Value) {
+		if !ok || !e.containsOrderedEvent(kv.Value) {
 			continue
 		}
 		w, err := e.emitExpr(kv.Value)
@@ -8702,6 +8747,38 @@ func (e *emitter) emitBinary(b *ast.BinaryExpr) (any, error) {
 			})
 			return ref, nil
 		}
+		// A PURE-RHS short-circuit beside a LATER ordered event (BUG-276/
+		// BUG-277/BUG-278, lane frontend/fix-hoist-1027, 2026-10-27 — BUG-113's
+		// second route, taken for every sweep the unseq grammar declines).
+		// spec#Order_of_evaluation orders «function calls, method calls,
+		// receive operations, and binary logical operations» lexically among
+		// themselves, and spec#Logical_operators evaluates the operands AS
+		// PART of the operation («The left operand is evaluated, and then the
+		// right if the condition requires it»), so `left || b` beside a
+		// lexically later `change()` reads `b` BEFORE the call. Inline, the
+		// operation sat in the residual AFTER every hoisted call temp — the
+		// call-first order, a wrong value with status ok. The rule is the
+		// ANF hoist's own, the one the calls, receives and the A6 builtins
+		// already follow: an ordered event that an ordered event FOLLOWS in
+		// the same sweep binds to a temp at its lexical position, and the
+		// residual reads the temp. The operands' own evaluation (and any
+		// panic in them) is forced at that position too, exactly as a call's
+		// arguments are forced before the call (F2; gc's order pass
+		// materializes `&&`/`||` into `r = x; if …{ r = y }` at the same
+		// point): no probe survives (`pushHoist` drops the operands'), no A6
+		// unordered-panic guard applies — the operation is itself the
+		// ordered event, not an inline read hoisted past one. With no later
+		// event the inline form realizes gc's point exactly and stays
+		// byte-identical; the unseq lane realizes the same order through its
+		// guard completion anchoring (`unseq_lower.go` guard) for the sweeps
+		// it admits.
+		if (e.hoistForbidden == "" || e.scHoistOK) && e.sweepOrderedEventAfter(b.End()) {
+			ty, err := e.typeOf(b) // the node carries its type like every emitExpr node
+			if err != nil {
+				return nil, err
+			}
+			return e.hoist(map[string]any{"expr": "binary", "op": op, "x": x, "y": y, "type": ty}, e.goTypeOf(b))
+		}
 	} else {
 		y, err = e.emitExpr(b.Y)
 		if err != nil {
@@ -9044,11 +9121,18 @@ func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
 			"resultTypes": resultTypes}, true, nil
 	}
 
-	fnID, ok := c.Fun.(*ast.Ident)
+	// The callee identifier is read THROUGH parentheses (BUG-287, lane
+	// frontend/fix-hoist-1027, 2026-10-27): `(len)(x)` / `(cap)(x)` / `(f)(x)`
+	// are the builtin / the declared function spelled with parentheses —
+	// go/types records the parenthesised callee as the builtin
+	// (`recordBuiltinType`) and gc evaluates the operand once — and the
+	// shape below `(ast.Unparen)` fell to the func-VALUE arm, which minted a
+	// local named `len` the decoder then refused by a misnaming cause.
+	fnID, ok := ast.Unparen(c.Fun).(*ast.Ident)
 	if !ok {
 		// Any other func-typed EXPRESSION in callee position (an indexed
-		// func value `fns[i]()`, a parenthesized value, a field read) is a
-		// call through the value — the §8 machinery.
+		// func value `fns[i]()`, a parenthesized selector or literal, a
+		// field read) is a call through the value — the §8 machinery.
 		if vsig, ok := e.goTypeOf(c.Fun).Underlying().(*types.Signature); ok {
 			callee, err := e.emitExpr(c.Fun)
 			if err != nil {
@@ -11374,11 +11458,8 @@ func (e *emitter) sweepOrderedEventAfter(pos token.Pos) bool {
 // predicate's doc); every other call — user functions, methods,
 // function values, the effectful builtins — answers true.
 func (e *emitter) runtimeOrderedCall(c *ast.CallExpr) bool {
-	if tv, ok := e.info.Types[c]; ok && tv.Value != nil {
-		return false // constant-folded: no runtime evaluation
-	}
-	if tv, ok := e.info.Types[c.Fun]; ok && tv.IsType() {
-		return false // conversion; a call in its argument is scanned on its own
+	if !e.orderedCall(c) {
+		return false
 	}
 	if id, ok := ast.Unparen(c.Fun).(*ast.Ident); ok {
 		if _, isBuiltin := e.info.Uses[id].(*types.Builtin); isBuiltin {
@@ -11387,6 +11468,23 @@ func (e *emitter) runtimeOrderedCall(c *ast.CallExpr) bool {
 				return false
 			}
 		}
+	}
+	return true
+}
+
+// orderedCall reports whether c is a call that RUNS at execution time — a
+// spec-ordered event: neither constant-folded (no runtime evaluation) nor
+// a conversion (pure; a call in its argument is scanned on its own). The
+// inline builtins len/cap/min/max ARE ordered calls here (spec#Built-in_functions);
+// `runtimeOrderedCall` additionally excludes them for the A6 "does an
+// event follow" scan, where a later inline builtin hoists only if a real
+// event follows IT.
+func (e *emitter) orderedCall(c *ast.CallExpr) bool {
+	if tv, ok := e.info.Types[c]; ok && tv.Value != nil {
+		return false
+	}
+	if tv, ok := e.info.Types[c.Fun]; ok && tv.IsType() {
+		return false
 	}
 	return true
 }

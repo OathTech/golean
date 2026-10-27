@@ -399,6 +399,27 @@ echo "check-frontend-pins: ok [hidden-dep-order] — realized deviation order ma
 # buildContext, fileOrder 20, types 94, globals 56, promotions 71, methodSets 82 IDENTICAL (key-by-key JSON comparison, the
 # structural diff in the re-pin commit's message). Observations unchanged by construction: the sorted result of an
 # integer slice is unique. 661022b9… -> fc471d2b….
+# [AGENT lane worker, lane frontend/fix-hoist-1027] 2026-10-27 twin re-pin: the legacy ANF hoist's evaluation-order fixes
+# (BUG-276/277/278/279/286/287 of the S7 and S9 sweeps, fixed through the normal train per the defect-neighbourhood
+# campaign plan, [USER] approved 2026-10-27, relayed): (1) a `&&`/`||` whose right operand hoists nothing binds to a temp
+# at its lexical position whenever an ordered event follows it in the sweep (emit.go emitBinary); (2) the keyed struct
+# literal's pre-bind and the read-modify-write target share the one predicate containsOrderedEvent (calls, receives,
+# logical operations — a conversion is none), replacing containsCall. Key-by-key JSON comparison of the old and the new
+# wire: schema golean-native-v3, package, buildContext, fileOrder 20, types, globals, promotions, methodSets IDENTICAL;
+# funcs 456 and methods 534 unchanged in number; 399 declarations differ ONLY by the renumbering of the emitter's hoist
+# temporaries (5130 leaves, pure spelling); 4 declarations change structurally, every change one of the two mechanisms:
+# (a) an inner `&&` that is the LEFT operand of an E3-normalized outer `&&` (one whose right operand carries a call)
+# now binds to its own temp before the outer's `$c := x` — `internal/strconv.underscoreOK` (two sites: the base-prefix
+# test `len(s) >= 2 && s[0] == '0' && (lower(s[1]) == …)` and the hex-digit test) and `raft.(*raft).promotable`
+# (`pr != nil && !pr.IsLearner && !r.raftLog.hasNextOrInProgressSnapshot()`): one extra `$c` per site, the operation
+# evaluated at the same point as before (the outer's `$c := x` already sat there); (b) a keyed literal's CONVERSION
+# element is no longer pre-bound to a temp in source order but evaluated inline in the literal's payload, in
+# declaration order after the call elements' temps — `newTwin` (`uint64(id)` in `&twinNode{…}` and in
+# `&raft.Config{…}`; `id` a loop local no call can reach) and `raft.newRaft` (`entryEncodingSize(c.MaxSizePerMsg)`,
+# `entryPayloadSize(c.MaxUncommittedEntriesSize)` beside `tracker.MakeProgressTracker(…)` / `newReadOnly(…)`, which do not
+# write `c`): the moment of a pure conversion is unobservable and the residual is where gc evaluates it. 0 other.
+# The twin driver (probeTwinChoice, default stream, fuel 8e9) under the machine on the OLD and the NEW wire: observation
+# byte-identical (sha256 76d2bc87… both — the same observation as the S1 and G19 re-pins). fc471d2b… -> be06cf70….
 # ---- 2. Twin wire pin ----
 TWIN_BASE="baselines/pins/twin-chdriver.wire.json"
 [ -f "$TWIN_BASE" ] || { echo "check-frontend-pins: FAIL — no wire pin at $TWIN_BASE" >&2; exit 1; }
