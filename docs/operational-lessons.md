@@ -1221,3 +1221,15 @@ README's commands, under the box-wide build lock:
      still be in force; the line quoted is the run's own at `268f7776`.)
 Reproduce: the two command lists above in a fresh clone; the logs are
 ephemeral.
+
+## 2026-10-28 — the coordinator's own process memory killed two sessions
+
+The coordinating Claude Code session of 2026-10-26/27 (about 50 subagents over
+two days, a 26 MB transcript, 135 MB of subagent transcripts kept by the harness)
+died twice while 3–6 subagents were live — the box was at 3 GB of 125, so the
+kill was the session process's own memory, not the machine's. Measured remedies:
+cap concurrent subagents at three; keep the coordinator's turns and tool outputs
+short; hand the campaign across sessions through a dated handoff page
+(`docs/2026-10-28_coordinator-handoff.md`) rather than resuming agents whose
+transcripts the dead process held. Snapshot every dirty worktree to a ref before
+anything else after a crash (`refs/snapshots/<lane>-crash*`), as the global rule says.
