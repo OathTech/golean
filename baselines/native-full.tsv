@@ -1,5 +1,43 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 7475 (7096 PASS / 379 FAIL)
+# cases: 7475 (7104 PASS / 371 FAIL)
+# re-pinned: 2026-11-05 [AGENT], lane frontend/fix-init-admission-1105 — BUG-340, 341 (the S19 sweep), 401 (S21), 412 (S23) FIXED in
+#   tools/nativefrontend (the campaign plan's rule that a finding is fixed through the normal train, [USER] approved 2026-10-27, relayed):
+#   (1) hiddendep.go — the E7 guard's REACH is the selected method's receiver type on every selection (a direct call, a method value,
+#   a method expression, a promotion through an embedded interface, a call on a constrained type parameter) and OBSERVABLE is a
+#   target gc may fold (the BUG-061 classifier's kinds carried per unit); (2) staticinit.go — integer kinds of one types.SimType
+#   class are OCONVNOP-shaped, same-kind float conversions are work; (3) emit.go checkInitQuarantine — the shim's run-time refusal
+#   helper is passed over by the $pkginit reach walk; (4) budgets.go — the footprint and violation walks carry no depth bound.
+#   EIGHT rows FAIL -> PASS: the seven fmt/sweep-s21-init-* rows (BUG-401) and arrays/sweep-s23-type-sites/unit-nesting-65 (BUG-412).
+#   SIX rows move from FAIL/differential (a silent wrong value) to FAIL/frontend-export BY NAME under NEW ids, their fixtures split
+#   into one package per verdict (the E7 and BUG-061 refusals are whole-export; the dynamic / work-shaped controls keep their ids
+#   and their PASS): init/sweep-s19-hidden-dep-funcvalue/{method-value,embedded-iface}-static ->
+#   init/sweep-s19-hidden-dep-funcvalue-static/* (c-pin/hidden-dep-init-order, BUG-340's Cases line, Expect: FAIL) and
+#   multipkg/sweep-s19-staticinit-conv/{int64-of-int,uint64-of-uint,uintptr-of-uint,int-of-int64} ->
+#   multipkg/sweep-s19-staticinit-conv-same-class/* (c-pin/staticinit-uncertain-order, BUG-341's Cases line, Expect: FAIL); the
+#   old ids carry `# removed:` lines below. NO PASS -> non-PASS move; no other row moved: 7475 - 6 + 6 = 7475; PASS 7096 + 8 = 7104;
+#   FAIL 379 - 8 - 6 + 6 = 371. Measured by CAPPED_MEM_MAX=64G capped scripts/ci --diff at the lane tree ef681be4 (the rows and records
+#   applied) before this re-pin, the rows taken from that run's artifacts/coverage/latest.tsv; the fast tier at the tip judges.
+#   The negative baseline is unchanged. The rows that moved:
+#     arrays/sweep-s23-type-sites/unit-nesting-65                            FAIL/* -> PASS/-
+#     fmt/sweep-s21-init-q-initializer                                       FAIL/* -> PASS/-
+#     fmt/sweep-s21-init-s-error-initializer                                 FAIL/* -> PASS/-
+#     fmt/sweep-s21-init-spread-sprintf-in-init                              FAIL/* -> PASS/-
+#     fmt/sweep-s21-init-sprint-indirect                                     FAIL/* -> PASS/-
+#     fmt/sweep-s21-init-sprint-initializer                                  FAIL/* -> PASS/-
+#     fmt/sweep-s21-init-sprintln-in-init                                    FAIL/* -> PASS/-
+#     fmt/sweep-s21-init-v-stringer-initializer                              FAIL/* -> PASS/-
+#     init/sweep-s19-hidden-dep-funcvalue/method-value-static                FAIL/differential -> removed; init/sweep-s19-hidden-dep-funcvalue-static/method-value-static FAIL/frontend-export (c-pin/hidden-dep-init-order)
+#     init/sweep-s19-hidden-dep-funcvalue/embedded-iface-static              FAIL/differential -> removed; init/sweep-s19-hidden-dep-funcvalue-static/embedded-iface-static FAIL/frontend-export (c-pin/hidden-dep-init-order)
+#     multipkg/sweep-s19-staticinit-conv/int64-of-int                        FAIL/differential -> removed; multipkg/sweep-s19-staticinit-conv-same-class/int64-of-int FAIL/frontend-export (c-pin/staticinit-uncertain-order)
+#     multipkg/sweep-s19-staticinit-conv/uint64-of-uint                      FAIL/differential -> removed; multipkg/sweep-s19-staticinit-conv-same-class/uint64-of-uint FAIL/frontend-export (c-pin/staticinit-uncertain-order)
+#     multipkg/sweep-s19-staticinit-conv/uintptr-of-uint                     FAIL/differential -> removed; multipkg/sweep-s19-staticinit-conv-same-class/uintptr-of-uint FAIL/frontend-export (c-pin/staticinit-uncertain-order)
+#     multipkg/sweep-s19-staticinit-conv/int-of-int64                        FAIL/differential -> removed; multipkg/sweep-s19-staticinit-conv-same-class/int-of-int64 FAIL/frontend-export (c-pin/staticinit-uncertain-order)
+# removed: init/sweep-s19-hidden-dep-funcvalue/method-value-static — fixture moved 2026-11-05 (lane frontend/fix-init-admission-1105) to init/sweep-s19-hidden-dep-funcvalue-static/method-value-static: the fix turns the row into a whole-export refusal by name, which cannot share a package with its green control
+# removed: init/sweep-s19-hidden-dep-funcvalue/embedded-iface-static — fixture moved 2026-11-05 (lane frontend/fix-init-admission-1105) to init/sweep-s19-hidden-dep-funcvalue-static/embedded-iface-static: the fix turns the row into a whole-export refusal by name, which cannot share a package with its green control
+# removed: multipkg/sweep-s19-staticinit-conv/int64-of-int — fixture moved 2026-11-05 (lane frontend/fix-init-admission-1105) to multipkg/sweep-s19-staticinit-conv-same-class/int64-of-int: the fix turns the row into a whole-export refusal by name, which cannot share a package with its green control
+# removed: multipkg/sweep-s19-staticinit-conv/uint64-of-uint — fixture moved 2026-11-05 (lane frontend/fix-init-admission-1105) to multipkg/sweep-s19-staticinit-conv-same-class/uint64-of-uint: the fix turns the row into a whole-export refusal by name, which cannot share a package with its green control
+# removed: multipkg/sweep-s19-staticinit-conv/uintptr-of-uint — fixture moved 2026-11-05 (lane frontend/fix-init-admission-1105) to multipkg/sweep-s19-staticinit-conv-same-class/uintptr-of-uint: the fix turns the row into a whole-export refusal by name, which cannot share a package with its green control
+# removed: multipkg/sweep-s19-staticinit-conv/int-of-int64 — fixture moved 2026-11-05 (lane frontend/fix-init-admission-1105) to multipkg/sweep-s19-staticinit-conv-same-class/int-of-int64: the fix turns the row into a whole-export refusal by name, which cannot share a package with its green control
 # re-pinned 2026-11-05 [AGENT coordinator], train-30 stage, from the stage's full run: 9 rows FAIL→PASS — the S29 sweep's `generics/sweep-s29-lit-typeparam-neighbours/*` rows, pinned red on main (BUG-302's neighbours) and green here with train 28's binding fix beneath them, as the sweep lane predicted; no other row moved: generics/sweep-s29-lit-typeparam-neighbours/lit-func-param-t, generics/sweep-s29-lit-typeparam-neighbours/lit-in-generic-method-t, generics/sweep-s29-lit-typeparam-neighbours/lit-map-param-t, generics/sweep-s29-lit-typeparam-neighbours/lit-named-result-t, generics/sweep-s29-lit-typeparam-neighbours/lit-nested-param-t, generics/sweep-s29-lit-typeparam-neighbours/lit-ptr-param-t, generics/sweep-s29-lit-typeparam-neighbours/lit-second-param-s, generics/sweep-s29-lit-typeparam-neighbours/lit-slice-param-t, generics/sweep-s29-lit-typeparam-neighbours/lit-struct-param-t
 # cause keyed 2026-11-05 [AGENT coordinator], train-30 stage: BUG-402's three rows `unsupported:?` → `unsupported:convert-to-bool-arm` (the scripts/machine-causes.tsv row added at this stage; the gate at this tip verifies the key); no row moved.
 # cause keyed 2026-11-05 [AGENT coordinator], train-29 stage, from the stage's full run (scripts/coverage-cause --apply): the five rows that carried `?` — BUG-390's two (`unrowed/fallthrough-trailing-empty-stmt`, the tools/lowerdiag/causes.tsv row added at this stage) and BUG-391's three (`error:decoder-unseq-head-not-admitted`, the scripts/machine-causes.tsv row added at this stage); no row moved.
@@ -12131,9 +12169,7 @@ PASS	maps/sweep-s14-value-kinds/func-values	-	-
 PASS	maps/sweep-s14-value-kinds/pointer-values-through	-	-
 PASS	maps/sweep-s14-value-kinds/nil-value-kinds	-	-
 PASS	init/sweep-s19-hidden-dep-funcvalue/embedded-iface-dynamic	-	-
-FAIL	init/sweep-s19-hidden-dep-funcvalue/embedded-iface-static	differential	-
 PASS	init/sweep-s19-hidden-dep-funcvalue/method-value-dynamic	-	-
-FAIL	init/sweep-s19-hidden-dep-funcvalue/method-value-static	differential	-
 PASS	init/sweep-s19-hidden-dep-unobservable	-	-
 PASS	init/sweep-s19-init-return	-	-
 PASS	init/sweep-s19-library-state	-	-
@@ -12167,13 +12203,9 @@ PASS	multipkg/sweep-s19-import-node	-	-
 PASS	multipkg/sweep-s19-library-node	-	-
 PASS	multipkg/sweep-s19-library-nonnode	-	-
 PASS	multipkg/sweep-s19-staticinit-conv/float64-of-int	-	-
-FAIL	multipkg/sweep-s19-staticinit-conv/int-of-int64	differential	-
 PASS	multipkg/sweep-s19-staticinit-conv/int32-of-int	-	-
 PASS	multipkg/sweep-s19-staticinit-conv/int64-of-dynamic	-	-
-FAIL	multipkg/sweep-s19-staticinit-conv/int64-of-int	differential	-
-FAIL	multipkg/sweep-s19-staticinit-conv/uint64-of-uint	differential	-
 PASS	multipkg/sweep-s19-staticinit-conv/uint8-of-int	-	-
-FAIL	multipkg/sweep-s19-staticinit-conv/uintptr-of-uint	differential	-
 PASS	multipkg/sweep-s19-tiebreak-plus	-	-
 PASS	multipkg/sweep-s19-uncertain-insensitive	-	-
 PASS	multipkg/sweep-s19-work-shapes/arithmetic	-	-
@@ -13144,7 +13176,7 @@ FAIL	arrays/sweep-s23-type-sites/param-over	frontend-export	by-design/materializ
 PASS	arrays/sweep-s23-type-sites/pointer-leaves	-	-
 FAIL	arrays/sweep-s23-type-sites/return-over	frontend-export	by-design/materialization-budget
 PASS	arrays/sweep-s23-type-sites/unit-nesting-64	-	-
-FAIL	arrays/sweep-s23-type-sites/unit-nesting-65	frontend-export	by-design/materialization-budget
+PASS	arrays/sweep-s23-type-sites/unit-nesting-65	-	-
 PASS	functions/sweep-s23-depth/boxed-nesting-1e3	-	-
 PASS	functions/sweep-s23-depth/call-nesting-500	-	-
 PASS	functions/sweep-s23-depth/defers-1e4	-	-
@@ -13253,13 +13285,13 @@ PASS	fmt/sweep-s21-errorf/in-closure-and-method	-	-
 FAIL	fmt/sweep-s21-errorf/assert-iface	differential	-
 PASS	fmt/sweep-s21-formatter-controls/never-boxed	-	-
 PASS	fmt/sweep-s21-formatter-no-dyn/errorf-no-dyn-boxed	-	-
-FAIL	fmt/sweep-s21-init-q-initializer	frontend-export	FR-22/init-callee-unmodeled
-FAIL	fmt/sweep-s21-init-s-error-initializer	frontend-export	FR-22/init-callee-unmodeled
-FAIL	fmt/sweep-s21-init-spread-sprintf-in-init	frontend-export	FR-22/init-callee-unmodeled
-FAIL	fmt/sweep-s21-init-sprint-indirect	frontend-export	FR-22/init-callee-unmodeled
-FAIL	fmt/sweep-s21-init-sprint-initializer	frontend-export	FR-22/init-callee-unmodeled
-FAIL	fmt/sweep-s21-init-sprintln-in-init	frontend-export	FR-22/init-callee-unmodeled
-FAIL	fmt/sweep-s21-init-v-stringer-initializer	frontend-export	FR-22/init-callee-unmodeled
+PASS	fmt/sweep-s21-init-q-initializer	-	-
+PASS	fmt/sweep-s21-init-s-error-initializer	-	-
+PASS	fmt/sweep-s21-init-spread-sprintf-in-init	-	-
+PASS	fmt/sweep-s21-init-sprint-indirect	-	-
+PASS	fmt/sweep-s21-init-sprint-initializer	-	-
+PASS	fmt/sweep-s21-init-sprintln-in-init	-	-
+PASS	fmt/sweep-s21-init-v-stringer-initializer	-	-
 PASS	fmt/sweep-s21-sprint-space/pairs	-	-
 PASS	fmt/sweep-s21-sprint-space/int-stringer-pair	-	-
 PASS	fmt/sweep-s21-sprint-space/empties	-	-
@@ -13426,3 +13458,9 @@ PASS	strings/sweep-s21-utf8/encode-boundaries	-	-
 PASS	strings/sweep-s21-utf8/encode-invalid	-	-
 PASS	strings/sweep-s21-utf8/decode-last	-	-
 PASS	strings/sweep-s21-utf8/append-rune-and-start	-	-
+FAIL	init/sweep-s19-hidden-dep-funcvalue-static/method-value-static	frontend-export	c-pin/hidden-dep-init-order
+FAIL	init/sweep-s19-hidden-dep-funcvalue-static/embedded-iface-static	frontend-export	c-pin/hidden-dep-init-order
+FAIL	multipkg/sweep-s19-staticinit-conv-same-class/int64-of-int	frontend-export	c-pin/staticinit-uncertain-order
+FAIL	multipkg/sweep-s19-staticinit-conv-same-class/uint64-of-uint	frontend-export	c-pin/staticinit-uncertain-order
+FAIL	multipkg/sweep-s19-staticinit-conv-same-class/uintptr-of-uint	frontend-export	c-pin/staticinit-uncertain-order
+FAIL	multipkg/sweep-s19-staticinit-conv-same-class/int-of-int64	frontend-export	c-pin/staticinit-uncertain-order
