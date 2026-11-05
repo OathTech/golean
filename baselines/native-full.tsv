@@ -1,5 +1,6 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 7475 (7087 PASS / 388 FAIL)
+# cases: 7475 (7096 PASS / 379 FAIL)
+# re-pinned 2026-11-05 [AGENT coordinator], train-30 stage, from the stage's full run: 9 rows FAIL→PASS — the S29 sweep's `generics/sweep-s29-lit-typeparam-neighbours/*` rows, pinned red on main (BUG-302's neighbours) and green here with train 28's binding fix beneath them, as the sweep lane predicted; no other row moved: generics/sweep-s29-lit-typeparam-neighbours/lit-func-param-t, generics/sweep-s29-lit-typeparam-neighbours/lit-in-generic-method-t, generics/sweep-s29-lit-typeparam-neighbours/lit-map-param-t, generics/sweep-s29-lit-typeparam-neighbours/lit-named-result-t, generics/sweep-s29-lit-typeparam-neighbours/lit-nested-param-t, generics/sweep-s29-lit-typeparam-neighbours/lit-ptr-param-t, generics/sweep-s29-lit-typeparam-neighbours/lit-second-param-s, generics/sweep-s29-lit-typeparam-neighbours/lit-slice-param-t, generics/sweep-s29-lit-typeparam-neighbours/lit-struct-param-t
 # cause keyed 2026-11-05 [AGENT coordinator], train-30 stage: BUG-402's three rows `unsupported:?` → `unsupported:convert-to-bool-arm` (the scripts/machine-causes.tsv row added at this stage; the gate at this tip verifies the key); no row moved.
 # cause keyed 2026-11-05 [AGENT coordinator], train-29 stage, from the stage's full run (scripts/coverage-cause --apply): the five rows that carried `?` — BUG-390's two (`unrowed/fallthrough-trailing-empty-stmt`, the tools/lowerdiag/causes.tsv row added at this stage) and BUG-391's three (`error:decoder-unseq-head-not-admitted`, the scripts/machine-causes.tsv row added at this stage); no row moved.
 # re-pinned: 2026-10-27 [AGENT], lane frontend/fix-binding-1027 — BUG-300, 301, 302 (the S13 sweep) FIXED in tools/nativefrontend
@@ -13074,15 +13075,15 @@ PASS	generics/sweep-s28-paren-assert-inst-methodexpr/paren-instantiations	-	-
 PASS	generics/sweep-s28-paren-assert-inst-methodexpr/paren-method-exprs-values	-	-
 PASS	generics/sweep-s28-paren-typeparam-constraints	-	-
 PASS	generics/sweep-s29-lit-typeparam-control	-	-
-FAIL	generics/sweep-s29-lit-typeparam-neighbours/lit-func-param-t	lean-observation	error:decoder-scope-wrong-declaration
-FAIL	generics/sweep-s29-lit-typeparam-neighbours/lit-in-generic-method-t	lean-observation	error:decoder-scope-wrong-declaration
-FAIL	generics/sweep-s29-lit-typeparam-neighbours/lit-map-param-t	lean-observation	error:decoder-scope-wrong-declaration
-FAIL	generics/sweep-s29-lit-typeparam-neighbours/lit-named-result-t	lean-observation	error:decoder-scope-wrong-declaration
-FAIL	generics/sweep-s29-lit-typeparam-neighbours/lit-nested-param-t	lean-observation	error:decoder-scope-wrong-declaration
-FAIL	generics/sweep-s29-lit-typeparam-neighbours/lit-ptr-param-t	lean-observation	error:decoder-scope-wrong-declaration
-FAIL	generics/sweep-s29-lit-typeparam-neighbours/lit-second-param-s	lean-observation	error:decoder-scope-wrong-declaration
-FAIL	generics/sweep-s29-lit-typeparam-neighbours/lit-slice-param-t	lean-observation	error:decoder-scope-wrong-declaration
-FAIL	generics/sweep-s29-lit-typeparam-neighbours/lit-struct-param-t	lean-observation	error:decoder-scope-wrong-declaration
+PASS	generics/sweep-s29-lit-typeparam-neighbours/lit-func-param-t	-	-
+PASS	generics/sweep-s29-lit-typeparam-neighbours/lit-in-generic-method-t	-	-
+PASS	generics/sweep-s29-lit-typeparam-neighbours/lit-map-param-t	-	-
+PASS	generics/sweep-s29-lit-typeparam-neighbours/lit-named-result-t	-	-
+PASS	generics/sweep-s29-lit-typeparam-neighbours/lit-nested-param-t	-	-
+PASS	generics/sweep-s29-lit-typeparam-neighbours/lit-ptr-param-t	-	-
+PASS	generics/sweep-s29-lit-typeparam-neighbours/lit-second-param-s	-	-
+PASS	generics/sweep-s29-lit-typeparam-neighbours/lit-slice-param-t	-	-
+PASS	generics/sweep-s29-lit-typeparam-neighbours/lit-struct-param-t	-	-
 PASS	maps/sweep-s28-paren-comma-ok-rhs/paren-comma-ok-rhs-assign-var	-	-
 PASS	maps/sweep-s28-paren-comma-ok-rhs/paren-comma-ok-rhs-define	-	-
 PASS	methods/sweep-s29-receivers-captures-names/capture-binders-subject	-	-
