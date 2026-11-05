@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+# S23 sweep (resource budgets — docs/defect-shapes.md; plan docs/2026-10-27_defect-neighbourhood-campaign.md
+# §4; lane sweep/s23-budgets, 2026-11-05): an over-budget array type through a generic instantiation —
+# the whole export refuses by name (the designed residual LOW-2 of BUG-078's 2026-10-13 fix round).
+# RED BY DESIGN (FAIL/frontend-export; BUG-078 Cases); gc answers 70002.
+generic-over	genericOver	-	ok	-	arrays,generics,structs

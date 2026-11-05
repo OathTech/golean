@@ -1,0 +1,14 @@
+# id	subject	args	expected_status	expected_reason	features
+# S23 sweep (resource budgets — docs/defect-shapes.md; plan docs/2026-10-27_defect-neighbourhood-campaign.md
+# §4; lane sweep/s23-budgets, 2026-11-05): the depth doors at the depths the gate's wall admits (main.go
+# names each; the deeper grinds are BUG-411). All PASS.
+recursion-1e4	recursion1e4	-	ok	-	functions,recursion
+recursion-defer-panic-1e4	recursionDeferPanic1e4	-	ok	-	functions,recursion,defer,panic,recover
+recursion-method-closure	recursionMethodClosure	-	ok	-	functions,recursion,methods,closures
+recursion-goroutine-3000	recursionGoroutine3000	-	ok	-	functions,recursion,goroutines,channels
+expr-nesting-500	exprNesting500	-	ok	-	functions,ints
+call-nesting-500	callNesting500	-	ok	-	functions,calls
+literal-nesting-500	literalNesting500	-	ok	-	literals,interfaces,type_assertions,slices
+defers-1e4	defers1e4	-	ok	-	defer,closures
+list-1e4	list1e4	-	ok	-	pointers,structs
+boxed-nesting-1e3	boxedNesting1e3	-	ok	-	interfaces,structs,type_assertions

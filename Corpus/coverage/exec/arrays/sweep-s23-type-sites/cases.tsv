@@ -1,0 +1,24 @@
+# id	subject	args	expected_status	expected_reason	features
+# S23 sweep (resource budgets — docs/defect-shapes.md; plan docs/2026-10-27_defect-neighbourhood-campaign.md
+# §4; lane sweep/s23-budgets, 2026-11-05): array types at the declaration sites the quarantine rows leave
+# out (main.go names each). gc builds and answers on every row. RED BY DESIGN (FAIL/frontend-export,
+# by-design/materialization-budget) on BUG-078's Cases line: local-over, field-over, fields-sum-over,
+# defined-chain-over, param-over, return-over, map-value-over, new-over, deep-nesting-over,
+# index-keyed-literal-over; unit-nesting-65 is BUG-412's Cases row (the footprint walk's depth
+# saturation misnames a one-leaf type as over budget). The rest PASS.
+local-over	localOver	-	ok	-	arrays
+local-sibling	localSibling	-	ok	-	arrays
+field-over	fieldOver	-	ok	-	arrays,structs
+fields-sum-over	fieldsSumOver	-	ok	-	arrays,structs
+fields-sum-at	fieldsSumAt	-	ok	-	arrays,structs
+defined-chain-over	definedChainOver	-	ok	-	arrays
+param-over	paramOver	-	ok	-	arrays,functions
+return-over	returnOver	-	ok	-	arrays,functions
+map-value-over	mapValueOver	-	ok	-	arrays,maps
+new-over	newOver	-	ok	-	arrays,new,pointers
+new-at-dim	newAtDim	-	ok	-	arrays,new,pointers
+deep-nesting-over	deepNestingOver	-	ok	-	arrays
+unit-nesting-64	unitNesting64	-	ok	-	arrays
+unit-nesting-65	unitNesting65	-	ok	-	arrays
+pointer-leaves	pointerLeaves	-	ok	-	arrays,pointers
+index-keyed-literal-over	indexKeyedLiteralOver	-	ok	-	arrays,literals

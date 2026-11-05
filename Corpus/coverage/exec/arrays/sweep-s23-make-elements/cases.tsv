@@ -1,0 +1,31 @@
+# id	subject	args	expected_status	expected_reason	features
+# S23 sweep (resource budgets — docs/defect-shapes.md; plan docs/2026-10-27_defect-neighbourhood-campaign.md
+# §4, [USER]-approved 2026-10-27; lane sweep/s23-budgets, 2026-11-05): the make door at the element kinds,
+# count forms and routes the budget rows of 2026-10-12/13/25 leave out (main.go names each). The expected
+# column is the oracle's truth: gc allocates and answers on every row. RED BY DESIGN, refusing by name on
+# the budget vocabulary: const-cap-over, struct-elem-const-over, imported-elem-const (FAIL/frontend-export,
+# by-design/materialization-budget — BUG-078 Cases); const-len-runtime-cap-over, struct-elem-runtime-over,
+# nested-elem-runtime-over, bigarray-elem-runtime-over, arg-over, in-goroutine, in-defer-unwinding,
+# generic-over, closure, imported-elem-runtime (FAIL/lean-observation,
+# unsupported:make-footprint-budget-runtime — BUG-131 Cases); count-bound, zero-size-elem
+# (FAIL/lean-observation, unsupported:slice-cap-budget — BUG-090 Cases). The rest PASS.
+const-cap-over	makeConstCapOver	-	ok	-	arrays,slices,make,cap
+const-len-runtime-cap-over	makeConstLenRuntimeCapOver	-	ok	-	arrays,slices,make,cap
+struct-elem-const-over	makeStructElemConstOver	-	ok	-	arrays,slices,make,structs
+struct-elem-runtime-over	makeStructElemRuntimeOver	-	ok	-	arrays,slices,make,structs
+struct-elem-runtime-at	makeStructElemRuntimeAt	-	ok	-	arrays,slices,make,structs
+nested-elem-runtime-over	makeNestedElemRuntimeOver	-	ok	-	arrays,slices,make
+pointer-elem	makePointerElem	-	ok	-	arrays,slices,make,pointers
+leaf-elems	makeLeafElems	-	ok	-	slices,make,strings,interfaces,closures
+bigarray-elem-runtime-over	makeBigArrayElemRuntimeOver	-	ok	-	arrays,slices,make
+arg-over	makeArg	32768	ok	-	arrays,slices,make
+arg-under	makeArg	16	ok	-	arrays,slices,make
+in-goroutine	makeInGoroutine	-	ok	-	arrays,slices,make,goroutines,channels
+in-defer-unwinding	makeInDeferUnwinding	-	ok	-	arrays,slices,make,defer,panic,recover
+generic-over	makeGenericOver	-	ok	-	arrays,slices,make,generics
+generic-under	makeGenericUnder	-	ok	-	arrays,slices,make,generics
+closure	makeClosure	-	ok	-	arrays,slices,make,closures
+count-bound	makeCountBound	-	ok	-	slices,make
+imported-elem-runtime	makeImportedElemRuntime	-	ok	-	slices,make,bytes,stdlib
+imported-elem-const	makeImportedElemConst	-	ok	-	slices,make,bytes,stdlib
+zero-size-elem	makeZeroSizeElem	-	ok	-	slices,make,structs,arrays

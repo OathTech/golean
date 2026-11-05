@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+# S23 sweep (resource budgets — docs/defect-shapes.md; plan docs/2026-10-27_defect-neighbourhood-campaign.md
+# §4; lane sweep/s23-budgets, 2026-11-05): the run-time-count make in a package initializer. RED BY
+# DESIGN (FAIL/lean-observation, unsupported:make-footprint-budget-runtime, the `package init:` prefix;
+# BUG-131 Cases); gc answers 32768.
+init-make	initMake	-	ok	-	arrays,slices,make,init
