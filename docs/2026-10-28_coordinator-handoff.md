@@ -53,3 +53,18 @@ S22 (tier 3) — `docs/defect-shapes.md` §3 has the axes; reserve numbers from 
 - Worktrees to remove once the trains land: every `.claude/worktrees/sweep-s*`,
   `fix-*`, `stage2*-1027` (each holds a `.lake` copy of ~640 MB and run
   artifacts of up to 11 GB); `codexpass-1013` on the owner's word.
+
+
+## 4. Addendum 2026-11-06 — the stop cause and the working limits
+
+The stops were the user slice's memory limit (operational lesson of 2026-11-06),
+not the session process. Working limits from here: one merge-tier gate at a time
+on the whole box (check for orphaned `scripts/ci` runs of a dead session before
+starting one); `CAPPED_MEM_MAX=32G` for gates on a warm tree; at most two lanes at
+once, one heavy job each; sampling probes under `CAPPED_MEM_MAX=4G`, serially.
+
+State at the addendum: trains 28–31 staged on `stage/train-31-1105` (`d296811a`,
+29 commits over main), its merge gate running orphaned when the session stopped
+(its log in that worktree's `.tmp/ci-diff.log`); S22 (readout) partial in its
+transcript only; S15 at WIP `989a38e3` (branch `sweep/s15-scheduling`); S16 at
+snapshot `refs/snapshots/sweep-s16-crash4-1106`.

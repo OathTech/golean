@@ -1233,3 +1233,21 @@ short; hand the campaign across sessions through a dated handoff page
 (`docs/2026-10-28_coordinator-handoff.md`) rather than resuming agents whose
 transcripts the dead process held. Snapshot every dirty worktree to a ref before
 anything else after a crash (`refs/snapshots/<lane>-crash*`), as the global rule says.
+
+## 2026-11-06 — the session stops were the user slice's memory limit, not the process
+
+Four coordinator-session stops (2026-10-27 ×2, 2026-11-05 ×2) were read first as the
+session process's own memory and then as a sandbox-runtime stop (nono printed
+«Session stopped», the process died of SIGTERM). The cgroup counters settle it:
+`user-1001.slice` carries `memory.max` ≈ 119 GiB on a 125 GiB box and its
+`memory.events` shows `oom_kill 35` — the kernel's OOM killer has fired inside the
+user's slice 35 times, each time the aggregate of concurrent memory-capped jobs
+(two merge-tier gates at `CAPPED_MEM_MAX=64G` once a crash had orphaned one of them
+past the lock, lanes' coverage builds outside the lock, and a sweep lane's
+`-race` schedule sampling) crossed the slice's limit. `capped` bounds one job, not
+the box. Measured remedies: at most ONE merge-tier gate on the box at a time (the
+lock, and never a gate started while an orphan of a dead session still runs —
+`ps -eo pid,etime,args | grep 'scripts/ci'` first); gates at `CAPPED_MEM_MAX=32G`
+except the cold full build; at most two lanes concurrently, each with one heavy
+job at a time; schedule-sampling probes under a small cap (`CAPPED_MEM_MAX=4G`)
+and never in parallel batches; the coordinator's own session is not the consumer.
