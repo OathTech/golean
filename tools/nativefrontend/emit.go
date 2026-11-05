@@ -4142,6 +4142,14 @@ func (e *emitter) emitDeclStmt(st *ast.DeclStmt) (any, error) {
 		}
 		return decls, nil
 	}
+	if len(gd.Specs) == 0 {
+		// The EMPTY group `var ()` (legal Go, declares nothing): the
+		// empty `var` node this function always emitted for it. Fix lane
+		// frontend/fix-grouped-regress-1105 (2026-11-05): the spec-by-spec
+		// path below has no last node to return for zero specs and
+		// crashed the frontend on `scoping/sweep-s28-grouped-decls/*`.
+		return map[string]any{"stmt": "var", "decls": []any{}}, nil
+	}
 	if len(gd.Specs) == 1 && !isMultiValueSpec(gd.Specs[0].(*ast.ValueSpec)) {
 		// The ordinary single-spec declaration: one `var` node,
 		// byte-identical to what this function emitted before.

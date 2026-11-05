@@ -89,6 +89,22 @@ func litParamT[T Number](v T) T {
 
 func useLitParamT() int { return litParamT(1) }
 
+func one() int { return 1 }
+
+// The S28 sweep's grouped forms (scoping/sweep-s28-grouped-decls, regression
+// fix lane frontend/fix-grouped-regress-1105): the EMPTY group, the
+// parenthesised single spec, a group of one with a call initializer, a
+// two-spec group on one line, and an empty const / type group beside them.
+func emptyGroup() int {
+	var ()
+	const ()
+	type ()
+	var (a = 1)
+	var (f = one())
+	var (g = 4; h = g + 1)
+	return a + f + h
+}
+
 func main() {}
 `
 
@@ -272,5 +288,45 @@ func TestGenericLiteralParamDeclaredOnce(t *testing.T) {
 	}
 	if count["d/param"] != 1 || count["r/result"] != 1 || count["d/local"] != 0 || count["r/local"] != 0 {
 		t.Errorf("the literal's parameter d and result r must each be declared once (param/result), table %v", locals)
+	}
+}
+
+func TestEmptyAndSingleParenthesisedGroups(t *testing.T) {
+	program := bindingProgram(t)
+	stmts := bodyStmts(t, wireFunc(t, program, "emptyGroup"))
+	kinds := []string{}
+	for _, s := range stmts {
+		kinds = append(kinds, stmtKind(s))
+	}
+	// var () is an empty var node; const () and type () are no-op blocks;
+	// var (a = 1) one node; var (f = one()) the hoisted call then one node;
+	// var (g = 4; h = g + 1) two nodes, h's initializer inline.
+	want := []string{"var", "block", "block", "var", "assign", "var", "var", "var", "return"}
+	if len(kinds) != len(want) {
+		t.Fatalf("emptyGroup: expected %v, got %v", want, kinds)
+	}
+	for i := range want {
+		if kinds[i] != want[i] {
+			t.Fatalf("emptyGroup: statement %d expected %s, got %s (all: %v)", i, want[i], kinds[i], kinds)
+		}
+	}
+	if d := varDecls(t, stmts[0]); len(d) != 0 {
+		t.Errorf("emptyGroup: var () must declare nothing, got %v", d)
+	}
+	if d := varDecls(t, stmts[3]); len(d) != 1 || d[0]["id"] != "a" {
+		t.Errorf("emptyGroup: var (a = 1) must be one node declaring a, got %v", d)
+	}
+	hoist, _ := stmts[4].(map[string]any)
+	if d := varDecls(t, stmts[5]); hoist["define"] != true || len(d) != 1 || d[0]["id"] != "f" {
+		t.Errorf("emptyGroup: var (f = one()) must hoist the call then declare f, got %v / %v", hoist, d)
+	}
+	g, h := varDecls(t, stmts[6]), varDecls(t, stmts[7])
+	if len(g) != 1 || g[0]["id"] != "g" || len(h) != 1 || h[0]["id"] != "h" {
+		t.Fatalf("emptyGroup: var (g = 4; h = g + 1) must be two nodes, got %v / %v", g, h)
+	}
+	init, _ := h[0]["init"].(map[string]any)
+	gRef, _ := init["x"].(map[string]any)
+	if init["expr"] != "binary" || gRef["local"] != g[0]["local"] {
+		t.Errorf("emptyGroup: h's initializer must read g's declaration inline, got %v", init)
 	}
 }
