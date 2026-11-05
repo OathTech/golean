@@ -1,0 +1,2 @@
+# expected_substring	features
+as float32 value in variable declaration (overflows)	constants,floats,shifts,overflow,compile_error

@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s11-kinds (2026-11-05), shape S11 (plan §4; matrix on BUG-096/094/162/055/043/042/174/173). Strict, expected = gc go1.26.5.
+# C2–C4, C6: the count's kind at the width, constant counts past the width, the untyped left operand's type, defined
+# operand types and the map/pointer/field routes.
+count-kinds-at-width	countKindsAtWidth	-	ok	-	ints,widths,shifts,multi_result
+count-kinds-compound	countKindsCompound	-	ok	-	ints,widths,shifts,assignment,multi_result
+constant-counts-past-width	constantCountsPastWidth	-	ok	-	ints,widths,shifts,constants,overflow,multi_result
+untyped-left-operand	untypedLeftOperand	7	ok	-	ints,widths,shifts,untyped,constants,multi_result
+untyped-left-explicit	untypedLeftExplicitConversion	7	ok	-	ints,widths,shifts,untyped,conversions,multi_result
+defined-and-routes	shiftsAtDefinedAndRoutes	-	ok	-	ints,widths,shifts,defined_type,maps,pointers,structs,multi_result

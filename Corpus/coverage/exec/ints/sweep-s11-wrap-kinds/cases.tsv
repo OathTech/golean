@@ -1,0 +1,23 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s11-kinds (2026-11-05), shape S11 (plan §4; matrix on BUG-096/094/162/055/043/042/174/173). Strict, expected = gc go1.26.5.
+int8	wrapInt8	-	ok	-	ints,widths,overflow,division,modulo,multi_result
+int16	wrapInt16	-	ok	-	ints,widths,overflow,division,modulo,multi_result
+int32	wrapInt32	-	ok	-	ints,widths,overflow,division,modulo,multi_result
+int64	wrapInt64	-	ok	-	ints,widths,overflow,division,modulo,multi_result
+int	wrapInt	-	ok	-	ints,widths,overflow,division,modulo,multi_result
+uint8	wrapUint8	-	ok	-	ints,widths,overflow,division,modulo,multi_result
+uint16	wrapUint16	-	ok	-	ints,widths,overflow,division,modulo,multi_result
+uint32	wrapUint32	-	ok	-	ints,widths,overflow,division,modulo,multi_result
+uint64	wrapUint64	-	ok	-	ints,widths,overflow,division,modulo,multi_result
+uint	wrapUint	-	ok	-	ints,widths,overflow,division,modulo,multi_result
+uintptr	wrapUintptr	-	ok	-	ints,widths,overflow,division,modulo,multi_result
+byte	wrapByte	-	ok	-	ints,widths,overflow,aliases,multi_result
+rune	wrapRune	-	ok	-	ints,widths,overflow,aliases,multi_result
+defined-int8	wrapDInt8	-	ok	-	ints,widths,overflow,defined_type,multi_result
+defined-uint16	wrapDUint16	-	ok	-	ints,widths,overflow,defined_type,multi_result
+defined-int64	wrapDInt64	-	ok	-	ints,widths,overflow,defined_type,multi_result
+defined-uint64	wrapDUint64	-	ok	-	ints,widths,overflow,defined_type,multi_result
+compound-int8	wrapCompoundInt8	-	ok	-	ints,widths,overflow,assignment,multi_result
+compound-uint8	wrapCompoundUint8	-	ok	-	ints,widths,overflow,assignment,multi_result
+compound-int64	wrapCompoundInt64	-	ok	-	ints,widths,overflow,assignment,multi_result
+compound-uint64	wrapCompoundUint64	-	ok	-	ints,widths,overflow,assignment,multi_result

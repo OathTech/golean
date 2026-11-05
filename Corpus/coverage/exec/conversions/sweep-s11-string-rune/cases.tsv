@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s11-kinds (2026-11-05), shape S11 (plan §4; matrix on BUG-096/094/162/055/043/042/174/173). Strict, expected = gc go1.26.5.
+# O: run-time string(integer) at every code-point boundary, from every integer kind, to a defined string type, generic.
+rune-boundaries	stringOfRuneBoundaries	-	ok	-	conversions,strings,runes,unicode,multi_result
+rune-high	stringOfRuneHigh	-	ok	-	conversions,strings,runes,unicode,multi_result
+other-kinds	stringOfOtherKinds	-	ok	-	conversions,strings,runes,unicode,ints,widths,multi_result
+to-defined	stringOfRuneToDefined	-	ok	-	conversions,strings,runes,unicode,defined_type,multi_result
+generic	stringOfRuneGeneric	-	ok	-	conversions,strings,runes,unicode,generics,type_sets,multi_result

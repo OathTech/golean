@@ -1,0 +1,19 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s11-kinds (2026-11-05), shape S11 (plan §4; matrix on BUG-096/094/162/055/043/042/174/173). Strict, expected = gc go1.26.5.
+int8	incDecInt8	-	ok	-	ints,widths,overflow,assignment,multi_result
+int16	incDecInt16	-	ok	-	ints,widths,overflow,assignment,multi_result
+int32	incDecInt32	-	ok	-	ints,widths,overflow,assignment,multi_result
+int64	incDecInt64	-	ok	-	ints,widths,overflow,assignment,multi_result
+int	incDecInt	-	ok	-	ints,widths,overflow,assignment,multi_result
+uint8	incDecUint8	-	ok	-	ints,widths,overflow,assignment,multi_result
+uint16	incDecUint16	-	ok	-	ints,widths,overflow,assignment,multi_result
+uint32	incDecUint32	-	ok	-	ints,widths,overflow,assignment,multi_result
+uint64	incDecUint64	-	ok	-	ints,widths,overflow,assignment,multi_result
+uint	incDecUint	-	ok	-	ints,widths,overflow,assignment,multi_result
+uintptr	incDecUintptr	-	ok	-	ints,widths,overflow,assignment,multi_result
+defined	incDecDefined	-	ok	-	ints,widths,overflow,defined_type,assignment,multi_result
+aliases	incDecAliases	-	ok	-	ints,widths,overflow,aliases,assignment,multi_result
+field	incDecField	-	ok	-	ints,widths,overflow,structs,assignment,multi_result
+elements	incDecElements	-	ok	-	ints,widths,overflow,arrays,slices,maps,assignment,multi_result
+pointer	incDecPointer	-	ok	-	ints,widths,overflow,pointers,assignment,multi_result
+floats-absorbed	incDecFloatsAbsorbed	-	ok	-	floats,float_bits,assignment,multi_result

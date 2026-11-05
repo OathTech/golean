@@ -1,0 +1,2 @@
+# expected_substring	features
+mismatched types int8 (previous argument) and int16	builtins,min,ints,widths,compile_error

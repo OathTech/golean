@@ -1,0 +1,18 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s11-kinds (2026-11-05), shape S11 (plan §4; matrix on BUG-096/094/162/055/043/042/174/173). Strict, expected = gc go1.26.5.
+# Q4: untyped constants at defined kinds of every width, the IncDec/compound/range/map-compound desugars' synthetic literals.
+defined-int8	definedLiteralInt8	-	ok	-	ints,defined_type,constants,overflow,assignment,multi_result
+defined-int16	definedLiteralInt16	-	ok	-	ints,defined_type,constants,overflow,assignment,multi_result
+defined-int32	definedLiteralInt32	-	ok	-	ints,defined_type,constants,overflow,assignment,multi_result
+defined-int64	definedLiteralInt64	-	ok	-	ints,defined_type,constants,overflow,assignment,multi_result
+defined-int	definedLiteralInt	-	ok	-	ints,defined_type,constants,overflow,assignment,multi_result
+defined-unsigned	definedLiteralUnsigned	-	ok	-	ints,defined_type,constants,overflow,assignment,multi_result
+defined-float32	definedLiteralFloat32	-	ok	-	floats,float_bits,defined_type,constants,assignment,multi_result
+range-uint8-max	rangeUint8Max	-	ok	-	range,loops,ints,widths,overflow,multi_result
+range-int8-max	rangeInt8Max	-	ok	-	range,loops,ints,widths,overflow,multi_result
+range-wide-kinds	rangeWideKinds	-	ok	-	range,loops,ints,widths,overflow,multi_result
+range-typed-constants	rangeTypedConstants	-	ok	-	range,loops,ints,constants,typed,multi_result
+range-loop-var-modified	rangeLoopVarModified	-	ok	-	range,loops,ints,assignment,multi_result
+range-defined-method	rangeDefinedMethod	-	ok	-	range,loops,ints,defined_type,methods,overflow,multi_result
+map-compound-kinds	mapCompoundKinds	-	ok	-	maps,ints,widths,overflow,assignment,multi_result
+map-compound-float32	mapCompoundFloat32	-	ok	-	maps,floats,float_bits,assignment,multi_result

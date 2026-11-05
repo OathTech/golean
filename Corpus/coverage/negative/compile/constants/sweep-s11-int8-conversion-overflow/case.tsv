@@ -1,0 +1,2 @@
+# expected_substring	features
+constant -129 overflows int8	constants,ints,widths,conversions,overflow,compile_error

@@ -1,0 +1,23 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s11-kinds (2026-11-05), shape S11 (plan §4; matrix on BUG-096/094/162/055/043/042/174/173). Strict, expected = gc go1.26.5.
+# K: min/max at every integer kind's extremes, with constants, and the float special cases in every argument position.
+int8	minMaxInt8	-	ok	-	builtins,min,max,ints,widths,multi_result
+int16	minMaxInt16	-	ok	-	builtins,min,max,ints,widths,multi_result
+int32	minMaxInt32	-	ok	-	builtins,min,max,ints,widths,multi_result
+int64	minMaxInt64	-	ok	-	builtins,min,max,ints,widths,multi_result
+int	minMaxInt	-	ok	-	builtins,min,max,ints,widths,multi_result
+uint8	minMaxUint8	-	ok	-	builtins,min,max,ints,widths,multi_result
+uint16	minMaxUint16	-	ok	-	builtins,min,max,ints,widths,multi_result
+uint32	minMaxUint32	-	ok	-	builtins,min,max,ints,widths,multi_result
+uint64	minMaxUint64	-	ok	-	builtins,min,max,ints,widths,multi_result
+uint	minMaxUint	-	ok	-	builtins,min,max,ints,widths,multi_result
+uintptr	minMaxUintptr	-	ok	-	builtins,min,max,ints,widths,multi_result
+constants-mixed	minMaxConstantsMixed	-	ok	-	builtins,min,max,ints,constants,untyped,multi_result
+nan-positions	minMaxNaNPositions	-	ok	-	builtins,min,max,floats,comparisons,division,multi_result
+nan-positions-32	minMaxNaNPositions32	-	ok	-	builtins,min,max,floats,comparisons,division,multi_result
+signed-zeros-3	minMaxSignedZeros3	-	ok	-	builtins,min,max,floats,float_bits,multi_result
+signed-zeros-32	minMaxSignedZeros32	-	ok	-	builtins,min,max,floats,float_bits,multi_result
+infinities	minMaxInfinities	-	ok	-	builtins,min,max,floats,float_bits,division,multi_result
+payload-3-args	minMaxPayload3Args	-	ok	-	builtins,min,max,floats,float_bits,multi_result
+untyped-at-32	minMaxUntypedAt32	-	ok	-	builtins,min,max,floats,float_bits,untyped,multi_result
+defined-float	minMaxDefinedFloat	-	ok	-	builtins,min,max,floats,float_bits,defined_type,division,multi_result

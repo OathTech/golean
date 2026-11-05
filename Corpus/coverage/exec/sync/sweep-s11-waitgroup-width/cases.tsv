@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s11-kinds (2026-11-05), shape S11 (plan §4; matrix on BUG-096/094/162/055/043/042/174/173). Strict, expected = gc go1.26.5.
+# R1: the WaitGroup counter's int32 width at every boundary (BUG-055's site).
+add-max-then-one	wgAddMaxThenOne	-	panic	sync: negative WaitGroup counter	sync,waitgroup,overflow,panic
+add-two-pow-32	wgAddTwoPow32	-	ok	-	sync,waitgroup,overflow
+add-two-pow-32-plus-one	wgAddTwoPow32PlusOne	-	ok	-	sync,waitgroup,overflow
+add-neg-two-pow-31	wgAddNegTwoPow31	-	panic	sync: negative WaitGroup counter	sync,waitgroup,panic
+add-max-cancelled	wgAddMaxCancelled	-	ok	-	sync,waitgroup
+done-at-zero	wgDoneAtZero	-	panic	sync: negative WaitGroup counter	sync,waitgroup,panic
+add-min-int64	wgAddMinInt64	-	ok	-	sync,waitgroup,overflow
+add-below-neg-two-pow-31	wgAddBelowNegTwoPow31	-	ok	-	sync,waitgroup,overflow

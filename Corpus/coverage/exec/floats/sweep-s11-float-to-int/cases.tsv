@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s11-kinds (2026-11-05), shape S11 (plan §4; matrix on BUG-096/094/162/055/043/042/174/173). Strict, expected = gc go1.26.5.
+# F1: float → int in range at every target kind; the out-of-range/NaN cells are R6's designed refusal (probed, not rowed).
+f64-signed	truncF64ToSigned	-	ok	-	floats,conversions,ints,widths,multi_result
+f64-unsigned	truncF64ToUnsigned	-	ok	-	floats,conversions,ints,widths,multi_result
+f64-exact-bounds	truncF64ExactBounds	-	ok	-	floats,conversions,ints,widths,multi_result
+f32-targets	truncF32ToInts	-	ok	-	floats,conversions,ints,widths,multi_result
+uintptr-targets	truncUintptrTargets	-	ok	-	floats,conversions,ints,widths,multi_result
+defined	truncDefined	-	ok	-	floats,conversions,ints,defined_type,multi_result

@@ -1,0 +1,2 @@
+# expected_substring	features
+as uint64 value in variable declaration (overflows)	constants,ints,widths,shifts,overflow,compile_error

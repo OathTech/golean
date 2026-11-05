@@ -1,0 +1,2 @@
+# expected_substring	features
+constant 256 of type uint8) overflows uint8	constants,ints,widths,overflow,compile_error

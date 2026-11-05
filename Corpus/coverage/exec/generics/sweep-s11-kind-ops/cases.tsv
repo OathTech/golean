@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s11-kinds (2026-11-05), shape S11 (plan §4; matrix on BUG-096/094/162/055/043/042/174/173). Strict, expected = gc go1.26.5.
+# Q1: the shape's operations in generic functions over integer and float type sets, at every kind and at defined kinds.
+wrap-kinds	genericWrapKinds	-	ok	-	generics,type_sets,ints,widths,overflow,multi_result
+shift-kinds	genericShiftKinds	-	ok	-	generics,type_sets,ints,widths,shifts,multi_result
+compl-conv	genericComplConv	-	ok	-	generics,type_sets,ints,widths,bitwise,conversions,multi_result
+incdec-minmax	genericIncDecMinMax	-	ok	-	generics,type_sets,ints,widths,overflow,min,max,multi_result
+div-range	genericDivRange	-	ok	-	generics,type_sets,ints,widths,division,range,loops,overflow,multi_result
+lit-shift-by-t	genericLitShiftByT	-	ok	-	generics,type_sets,ints,widths,shifts,constants,multi_result
+floats	genericFloats	-	ok	-	generics,type_sets,floats,float_bits,comparisons,min,division,multi_result

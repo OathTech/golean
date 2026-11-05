@@ -1,0 +1,2 @@
+# expected_substring	features
+as byte value in variable declaration (overflows)	constants,ints,widths,aliases,overflow,compile_error

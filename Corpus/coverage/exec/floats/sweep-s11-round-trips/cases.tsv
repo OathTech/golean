@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s11-kinds (2026-11-05), shape S11 (plan §4; matrix on BUG-096/094/162/055/043/042/174/173). Strict, expected = gc go1.26.5.
+# P: int ↔ float round trips in range; the out-of-range trips are R6's designed refusal (probed, not rowed).
+int64	roundTripInt64	9007199254740992,9007199254740993,9007199254740995	ok	-	floats,conversions,ints,widths,multi_result
+float64	roundTripFloat64	-	ok	-	floats,float_bits,conversions,multi_result
+uint64	roundTripUint64	-	ok	-	floats,conversions,ints,widths,multi_result
+narrow	roundTripNarrow	-	ok	-	floats,conversions,ints,widths,multi_result

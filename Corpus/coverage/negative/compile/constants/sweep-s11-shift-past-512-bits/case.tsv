@@ -1,0 +1,2 @@
+# expected_substring	features
+constant shift overflow	constants,shifts,representability,compile_error

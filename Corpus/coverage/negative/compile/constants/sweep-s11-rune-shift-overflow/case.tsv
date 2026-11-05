@@ -1,0 +1,2 @@
+# expected_substring	features
+as rune value in variable declaration (overflows)	constants,ints,widths,aliases,shifts,overflow,compile_error

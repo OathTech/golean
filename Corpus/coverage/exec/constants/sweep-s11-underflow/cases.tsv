@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s11-kinds (2026-11-05), shape S11 (plan §4; matrix on BUG-096/094/162/055/043/042/174/173). Strict, expected = gc go1.26.5.
+# L1: float constants below the type's range round to (unsigned) zero.
+-	constantUnderflow	-	ok	-	constants,floats,float_bits,representability,multi_result

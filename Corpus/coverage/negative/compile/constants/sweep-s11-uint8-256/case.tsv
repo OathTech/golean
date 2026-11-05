@@ -1,0 +1,2 @@
+# expected_substring	features
+untyped int constant) as uint8 value in variable declaration (overflows)	constants,ints,widths,overflow,compile_error

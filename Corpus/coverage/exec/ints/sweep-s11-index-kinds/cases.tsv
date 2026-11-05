@@ -1,0 +1,18 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s11-kinds (2026-11-05), shape S11 (plan §4; matrix on BUG-096/094/162/055/043/042/174/173). Strict, expected = gc go1.26.5.
+# N: an index of every integer kind, slicing with mixed kinds, make and array sizes by kind, len/cap in arithmetic, and
+# the bounds panic text at the index kinds sweep-s10-bounds-kinds left.
+every-kind	indexEveryKind	-	ok	-	ints,widths,indexing,slices,multi_result
+string-and-array	indexStringAndArray	-	ok	-	ints,widths,indexing,strings,arrays,constants,multi_result
+slice-mixed-kinds	sliceMixedKinds	-	ok	-	ints,widths,slicing,slices,multi_result
+make-with-kinds	makeWithKinds	-	ok	-	ints,widths,make,slices,channels,multi_result
+array-sizes-by-kind	arraySizesByKind	-	ok	-	ints,widths,arrays,constants,len,multi_result
+len-cap-arithmetic	lenCapArithmetic	-	ok	-	ints,widths,len,cap,conversions,multi_result
+panic-uint8-past-len	indexUint8PastLen	255	panic	runtime error: index out of range [255] with length 3	ints,widths,indexing,panic
+panic-uint64-huge	indexUint64Huge	-	panic	runtime error: index out of range [18446744073709551615] with length 3	ints,widths,indexing,panic
+panic-int8-min	indexInt8Min	-128	panic	runtime error: index out of range [-128]	ints,widths,indexing,panic
+panic-uint32-max	indexUint32Max	-	panic	runtime error: index out of range [4294967295] with length 3	ints,widths,indexing,panic
+panic-uintptr-past-len	indexUintptrPastLen	5	panic	runtime error: index out of range [5] with length 3	ints,widths,indexing,panic
+panic-rune-negative	indexRuneNegative	-1	panic	runtime error: index out of range [-1]	ints,widths,indexing,strings,panic
+panic-int16-min-array	indexInt16MinArray	-32768	panic	runtime error: index out of range [-32768]	ints,widths,indexing,arrays,panic
+panic-slice-high-uint8	sliceHighUint8PastCap	200	panic	runtime error: slice bounds out of range [:200] with capacity 3	ints,widths,slicing,panic

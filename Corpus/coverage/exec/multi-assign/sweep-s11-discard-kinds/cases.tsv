@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s11-kinds (2026-11-05), shape S11 (plan §4; matrix on BUG-096/094/162/055/043/042/174/173). Strict, expected = gc go1.26.5.
+# Q3: blank-target discards of every kind (BUG-173's position: the discard temp typed by resultTypes).
+scalars	discardScalars	-	ok	-	multi_assign,ints,floats,strings,bools,widths
+composites	discardComposites	-	ok	-	multi_assign,structs,pointers,slices,interfaces
+multi-value	discardMultiValue	-	ok	-	multi_assign,multi_result,ints,floats,strings,widths
+receive-and-vars	discardReceiveAndVars	-	ok	-	multi_assign,channels,ints,floats,widths,multi_result

@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s11-kinds (2026-11-05), shape S11 (plan §4; matrix on BUG-096/094/162/055/043/042/174/173). Strict, expected = gc go1.26.5.
+# R2: the atomic integer kinds wrap at their widths, typed and function forms, at the extremes.
+typed-wraps	atomicTypedWraps	-	ok	-	sync,atomics,ints,widths,overflow,multi_result
+func-wraps	atomicFuncWraps	-	ok	-	sync,atomics,ints,widths,overflow,multi_result
+add-returns	atomicAddReturns	-	ok	-	sync,atomics,ints,widths,overflow,conversions,multi_result

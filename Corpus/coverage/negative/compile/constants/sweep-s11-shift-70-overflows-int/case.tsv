@@ -1,0 +1,2 @@
+# expected_substring	features
+untyped int constant 1180591620717411303424) as int value in assignment (overflows)	constants,ints,widths,shifts,overflow,compile_error

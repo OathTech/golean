@@ -1,0 +1,15 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s11-kinds (2026-11-05), shape S11 (plan §4; matrix on BUG-096/094/162/055/043/042/174/173). Strict, expected = gc go1.26.5.
+int8	bitwiseInt8	-	ok	-	ints,widths,bitwise,multi_result
+int16	bitwiseInt16	-	ok	-	ints,widths,bitwise,multi_result
+int32	bitwiseInt32	-	ok	-	ints,widths,bitwise,multi_result
+int64	bitwiseInt64	-	ok	-	ints,widths,bitwise,multi_result
+int	bitwiseInt	-	ok	-	ints,widths,bitwise,multi_result
+uint8	bitwiseUint8	-	ok	-	ints,widths,bitwise,multi_result
+uint16	bitwiseUint16	-	ok	-	ints,widths,bitwise,multi_result
+uint32	bitwiseUint32	-	ok	-	ints,widths,bitwise,multi_result
+uint64	bitwiseUint64	-	ok	-	ints,widths,bitwise,multi_result
+uint	bitwiseUint	-	ok	-	ints,widths,bitwise,multi_result
+uintptr	bitwiseUintptr	-	ok	-	ints,widths,bitwise,multi_result
+compound-int8	bitwiseCompoundInt8	-	ok	-	ints,widths,bitwise,assignment,multi_result
+const-operands	bitwiseConstOperands	-	ok	-	ints,widths,bitwise,constants,multi_result

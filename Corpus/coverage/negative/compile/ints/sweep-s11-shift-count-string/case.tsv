@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot convert "a" (untyped string constant) to type uint	ints,shifts,strings,compile_error

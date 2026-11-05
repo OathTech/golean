@@ -1,0 +1,2 @@
+# expected_substring	features
+int8 and int16 have different underlying types	generics,type_sets,range,ints,compile_error

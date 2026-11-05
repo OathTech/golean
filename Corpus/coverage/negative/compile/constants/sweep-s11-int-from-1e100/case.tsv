@@ -1,0 +1,2 @@
+# expected_substring	features
+as int value in variable declaration (truncated)	constants,floats,ints,representability,compile_error

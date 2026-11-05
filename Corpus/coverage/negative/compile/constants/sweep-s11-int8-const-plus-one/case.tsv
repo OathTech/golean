@@ -1,0 +1,2 @@
+# expected_substring	features
+untyped int constant 128) as int8 value in constant declaration (overflows)	constants,ints,widths,overflow,compile_error

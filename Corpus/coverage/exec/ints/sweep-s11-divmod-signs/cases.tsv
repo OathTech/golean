@@ -1,0 +1,17 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s11-kinds (2026-11-05), shape S11 (plan §4; matrix on BUG-096/094/162/055/043/042/174/173). Strict, expected = gc go1.26.5.
+int8	divModInt8	-	ok	-	ints,widths,division,modulo,overflow,multi_result
+int16	divModInt16	-	ok	-	ints,widths,division,modulo,overflow,multi_result
+int32	divModInt32	-	ok	-	ints,widths,division,modulo,overflow,multi_result
+int64	divModInt64	-	ok	-	ints,widths,division,modulo,overflow,multi_result
+int	divModInt	-	ok	-	ints,widths,division,modulo,overflow,multi_result
+uint8	divModUint8	-	ok	-	ints,widths,division,modulo,overflow,multi_result
+uint16	divModUint16	-	ok	-	ints,widths,division,modulo,overflow,multi_result
+uint32	divModUint32	-	ok	-	ints,widths,division,modulo,overflow,multi_result
+uint64	divModUint64	-	ok	-	ints,widths,division,modulo,overflow,multi_result
+uint	divModUint	-	ok	-	ints,widths,division,modulo,overflow,multi_result
+uintptr	divModUintptr	-	ok	-	ints,widths,division,modulo,overflow,multi_result
+defined-int32	divModDefinedInt32	-	ok	-	ints,division,modulo,defined_type,overflow,multi_result
+compound	divModCompound	-	ok	-	ints,division,modulo,assignment,overflow,multi_result
+const-dividend-neg	divModConstDividend	-2	ok	-	ints,division,modulo,constants,multi_result
+const-dividend-pos	divModConstDividend	2	ok	-	ints,division,modulo,constants,multi_result

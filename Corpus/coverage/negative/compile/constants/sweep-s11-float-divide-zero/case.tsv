@@ -1,0 +1,2 @@
+# expected_substring	features
+invalid operation: division by zero	constants,floats,division,compile_error

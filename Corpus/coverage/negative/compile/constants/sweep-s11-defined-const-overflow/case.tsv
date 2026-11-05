@@ -1,0 +1,2 @@
+# expected_substring	features
+constant -129 of int8 type cI8) overflows int8	constants,typed,defined_type,overflow,compile_error

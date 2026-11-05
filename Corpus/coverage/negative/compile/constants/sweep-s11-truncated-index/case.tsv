@@ -1,0 +1,2 @@
+# expected_substring	features
+1.5 (untyped float constant) truncated to int	constants,floats,indexing,representability,compile_error

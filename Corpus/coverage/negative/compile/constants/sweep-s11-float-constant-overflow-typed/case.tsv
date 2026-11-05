@@ -1,0 +1,2 @@
+# expected_substring	features
+untyped float constant 1e+400) as float64 value in variable declaration (overflows)	constants,floats,overflow,compile_error

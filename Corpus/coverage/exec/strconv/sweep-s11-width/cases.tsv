@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s11-kinds (2026-11-05), shape S11 (plan §4; matrix on BUG-096/094/162/055/043/042/174/173). Strict, expected = gc go1.26.5.
+# R3: strconv at the integer widths, the format and parse boundaries including the range-error path.
+format-widths	strconvFormatWidths	-	ok	-	stdlib,strings,ints,widths,multi_result
+parse-happy-widths	strconvParseHappyWidths	-	ok	-	stdlib,strings,ints,widths,multi_result
+# parse-range-errors declares depth=64 (the strict-lane depth guard, docs/coverage-suite-structure.md «Lane assignment»): the
+# NumError text is built by appends inside strconv (appendSpill latitude observable only through cap, which the row never
+# reads); default-stream wide count w=10 → the smallest power of two ≥ 4·w, min 64 [AGENT sizing, the format-parse rows' rule].
+parse-range-errors	strconvParseRangeErrors	-	ok	-	stdlib,strings,ints,widths,range,multi_result	strict	-	depth=64
