@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 6232 (5917 PASS / 315 FAIL)
+# cases: 6307 (5992 PASS / 315 FAIL)
 # re-pinned: 2026-10-27 [AGENT], lane frontend/fix-binding-1027 — BUG-300, 301, 302 (the S13 sweep) FIXED in tools/nativefrontend
 #   (the campaign plan's rule that a finding is fixed through the normal train, [USER] approved 2026-10-27, relayed): (1) emit.go
 #   emitDeclStmt lowers a grouped `var ( … )` declaration spec by spec (one `var` node per VarSpec, in source order, into the same
@@ -22,6 +22,96 @@
 #     scoping/sweep-s13-local-iface-dispatch/error-local-iface                       FAIL/lean-observation error:decoder-duplicate-function-id → PASS
 #     scoping/sweep-s13-local-iface-dispatch/local-iface-satisfied                   FAIL/lean-observation error:decoder-duplicate-function-id → PASS
 #     scoping/sweep-s13-local-iface-dispatch/local-iface-two-funcs                   FAIL/lean-observation error:decoder-duplicate-function-id → PASS
+# cause keyed 2026-10-27 [AGENT coordinator], train-27 stage, from the stage's full run (scripts/coverage-cause --apply): the 16 rows that carried `?` — BUG-300/302's six `error:decoder-scope-wrong-declaration`, BUG-301's three `error:decoder-duplicate-function-id`, BUG-310's seven `panic:machine-panic` (the three table rows added at this stage); no row moved.
+# re-pinned: 2026-11-05 [AGENT], lane sweep/s18-sizes (rebased onto main 12d7a79a) — the defect-neighbourhood campaign's step 2, shape S18 (implementation-
+#   specific sizes; plan docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved 2026-10-27; members BUG-021, BUG-118):
+#   the shape's 1055-cell matrix probed on both sides — 1042 cells by this lane (gc go1.26.5 plain and -race under the runners' pins
+#   against the frontend, native-json-run's default tape and coverage-observations' sets), 5 covered by existing rows, 2 out of
+#   scope, 6 sites checked (the size-class tables byte-equal to gc's source) — gc's realized capacity the empty tape's slot 0 on
+#   every heap-regime cell and a member of the envelope on every other, the enumerated conversion sets equal to convCapMembers on
+#   every cell. NO existing row moved: 6179 + 75 = 6254; PASS 5820 + 75 = 5895; FAIL 359 + 0 = 359. No flip, no removal, no cause change (no
+#   runtime code changed: corpus and records only). NEW rows (75, eight packages Corpus/coverage/exec/{slices/sweep-s18-{growslice,
+#   stack-regimes,aliasing,exact,zero-size},strings/sweep-s18-{conv-singletons,conv-members},stdlib-source/sweep-s18-growth}/: 47
+#   strict, 28 membership (default=gc on the heap-regime ones), every row born green; each membership row the cheapest witness of
+#   its arm, the wide-envelope cells probed only), appended at the end of the file, measured by CAPPED_MEM_MAX=64G capped scripts/ci
+#   --diff at the lane tree 7e3a4d9b before this re-pin (its only drift: these 75 NEW ids), the rows taken from that run's
+#   artifacts/coverage/latest.tsv (2026-11-05, 1367 s wall: differential 6254 = 5820 + 75 PASS + 359 FAIL, negative 539/539, every
+#   step and speedbump ok); the --diff at the tip judges. FINDINGS: none (no BUG entry, no red-first row; BUG-350–359 unused). The rows:
+#     slices/sweep-s18-aliasing/byte                                           PASS/membership
+#     slices/sweep-s18-aliasing/int                                            PASS/membership
+#     slices/sweep-s18-aliasing/int-three                                      PASS/membership
+#     slices/sweep-s18-aliasing/ptr                                            PASS/membership
+#     slices/sweep-s18-aliasing/str                                            PASS/membership
+#     slices/sweep-s18-exact/append-full-no-elems                              PASS/-
+#     slices/sweep-s18-exact/append-nil-no-elems                               PASS/-
+#     slices/sweep-s18-exact/array-cap                                         PASS/-
+#     slices/sweep-s18-exact/make-0-cap-0                                      PASS/-
+#     slices/sweep-s18-exact/make-0-non-nil                                    PASS/-
+#     slices/sweep-s18-exact/make-defined                                      PASS/-
+#     slices/sweep-s18-exact/make-len-cap-var                                  PASS/-
+#     slices/sweep-s18-exact/make-var-big                                      PASS/-
+#     slices/sweep-s18-exact/make-var-small                                    PASS/-
+#     slices/sweep-s18-exact/make-zero-size-var                                PASS/-
+#     slices/sweep-s18-exact/new-array-slice                                   PASS/-
+#     slices/sweep-s18-exact/zero-tail                                         PASS/-
+#     slices/sweep-s18-growslice/arr128int-17-18                               PASS/membership
+#     slices/sweep-s18-growslice/arr3int-11-12                                 PASS/membership
+#     slices/sweep-s18-growslice/arr3int16-15-16                               PASS/membership
+#     slices/sweep-s18-growslice/byteslice-11-12                               PASS/membership
+#     slices/sweep-s18-growslice/m64-8-9                                       PASS/membership
+#     slices/sweep-s18-stack-regimes/int16-nil-1                               PASS/membership
+#     slices/sweep-s18-stack-regimes/ladder-int-3                              PASS/membership
+#     slices/sweep-s18-stack-regimes/ladder-ret-int-3                          PASS/membership
+#     slices/sweep-s18-stack-regimes/make-spread-nil                           PASS/membership
+#     slices/sweep-s18-stack-regimes/str-spread-nil                            PASS/membership
+#     slices/sweep-s18-zero-size/nil-1                                         PASS/membership
+#     stdlib-source/sweep-s18-growth/buffer-grow-10                            PASS/-
+#     stdlib-source/sweep-s18-growth/buffer-grow-64                            PASS/-
+#     stdlib-source/sweep-s18-growth/buffer-reset-cap                          PASS/-
+#     stdlib-source/sweep-s18-growth/buffer-write-60-then-10                   PASS/membership
+#     stdlib-source/sweep-s18-growth/buffer-write-byte                         PASS/-
+#     stdlib-source/sweep-s18-growth/buffer-write-hello                        PASS/-
+#     stdlib-source/sweep-s18-growth/builder-grow-0                            PASS/-
+#     stdlib-source/sweep-s18-growth/builder-len-after-growth                  PASS/-
+#     stdlib-source/sweep-s18-growth/builder-reset-cap                         PASS/-
+#     stdlib-source/sweep-s18-growth/builder-write-string                      PASS/membership
+#     stdlib-source/sweep-s18-growth/slices-clip                               PASS/-
+#     stdlib-source/sweep-s18-growth/slices-clone-5                            PASS/membership
+#     stdlib-source/sweep-s18-growth/slices-clone-nil                          PASS/-
+#     stdlib-source/sweep-s18-growth/slices-grow-nil-5                         PASS/membership
+#     stdlib-source/sweep-s18-growth/slices-grow-room                          PASS/-
+#     stdlib-source/sweep-s18-growth/slices-repeat                             PASS/-
+#     strings/sweep-s18-conv-members/bytes-1-mut                               PASS/membership
+#     strings/sweep-s18-conv-members/bytes-1017-esc                            PASS/membership
+#     strings/sweep-s18-conv-members/bytes-32769-esc                           PASS/membership
+#     strings/sweep-s18-conv-members/bytes-const-slice-mut                     PASS/membership
+#     strings/sweep-s18-conv-members/bytes-generic-const-mut                   PASS/membership
+#     strings/sweep-s18-conv-members/bytes-nonascii-esc                        PASS/membership
+#     strings/sweep-s18-conv-members/runes-1-nomut                             PASS/membership
+#     strings/sweep-s18-conv-members/runes-9-esc                               PASS/membership
+#     strings/sweep-s18-conv-singletons/bytes-1024-esc                         PASS/-
+#     strings/sweep-s18-conv-singletons/bytes-32-esc                           PASS/-
+#     strings/sweep-s18-conv-singletons/bytes-32-mut                           PASS/-
+#     strings/sweep-s18-conv-singletons/bytes-32768-esc                        PASS/-
+#     strings/sweep-s18-conv-singletons/bytes-48-mut                           PASS/-
+#     strings/sweep-s18-conv-singletons/bytes-const-concat-mut                 PASS/-
+#     strings/sweep-s18-conv-singletons/bytes-const-rune-mut                   PASS/-
+#     strings/sweep-s18-conv-singletons/bytes-defined-const-mut                PASS/-
+#     strings/sweep-s18-conv-singletons/bytes-defined-target-const             PASS/-
+#     strings/sweep-s18-conv-singletons/bytes-lit-40-mut                       PASS/-
+#     strings/sweep-s18-conv-singletons/runes-255-esc                          PASS/-
+#     strings/sweep-s18-conv-singletons/runes-256-nomut                        PASS/-
+#     strings/sweep-s18-conv-singletons/runes-257-esc                          PASS/-
+#     strings/sweep-s18-conv-singletons/runes-31-esc                           PASS/-
+#     strings/sweep-s18-conv-singletons/runes-31-nomut                         PASS/-
+#     strings/sweep-s18-conv-singletons/runes-32-nomut                         PASS/-
+#     strings/sweep-s18-conv-singletons/runes-40-esc                           PASS/-
+#     strings/sweep-s18-conv-singletons/runes-64-nomut                         PASS/-
+#     strings/sweep-s18-conv-singletons/runes-8191-esc                         PASS/-
+#     strings/sweep-s18-conv-singletons/runes-8193-nomut                       PASS/-
+#     strings/sweep-s18-conv-singletons/runes-defined-const                    PASS/-
+#     strings/sweep-s18-conv-singletons/runes-invalid-40-nomut                 PASS/-
+#     strings/sweep-s18-conv-singletons/runes-multibyte-33-esc                 PASS/-
 # cause keyed 2026-10-27 [AGENT coordinator], train-27 stage, from the stage's full run (scripts/coverage-cause --apply): the 16 rows that carried `?` — BUG-300/302's six `error:decoder-scope-wrong-declaration`, BUG-301's three `error:decoder-duplicate-function-id`, BUG-310's seven `panic:machine-panic` (the three table rows added at this stage); no row moved.
 # re-pinned: 2026-10-27 [AGENT], lane frontend/fix-unseq-seam-1027 — BUG-310, 311, 313 (the S8 sweep) FIXED in
 #   tools/nativefrontend (the campaign plan's rule that a finding is fixed through the normal train, [USER] approved
@@ -10896,3 +10986,78 @@ PASS	multipkg/sweep-s19-work-shapes/iface-call	-	-
 PASS	multipkg/sweep-s19-work-shapes/indexing	-	-
 PASS	multipkg/sweep-s19-work-shapes/map-literal	-	-
 PASS	multipkg/sweep-s19-work-shapes/multi-stmt-call	-	-
+PASS	slices/sweep-s18-aliasing/byte	membership	-
+PASS	slices/sweep-s18-aliasing/int	membership	-
+PASS	slices/sweep-s18-aliasing/int-three	membership	-
+PASS	slices/sweep-s18-aliasing/ptr	membership	-
+PASS	slices/sweep-s18-aliasing/str	membership	-
+PASS	slices/sweep-s18-exact/append-full-no-elems	-	-
+PASS	slices/sweep-s18-exact/append-nil-no-elems	-	-
+PASS	slices/sweep-s18-exact/array-cap	-	-
+PASS	slices/sweep-s18-exact/make-0-cap-0	-	-
+PASS	slices/sweep-s18-exact/make-0-non-nil	-	-
+PASS	slices/sweep-s18-exact/make-defined	-	-
+PASS	slices/sweep-s18-exact/make-len-cap-var	-	-
+PASS	slices/sweep-s18-exact/make-var-big	-	-
+PASS	slices/sweep-s18-exact/make-var-small	-	-
+PASS	slices/sweep-s18-exact/make-zero-size-var	-	-
+PASS	slices/sweep-s18-exact/new-array-slice	-	-
+PASS	slices/sweep-s18-exact/zero-tail	-	-
+PASS	slices/sweep-s18-growslice/arr128int-17-18	membership	-
+PASS	slices/sweep-s18-growslice/arr3int-11-12	membership	-
+PASS	slices/sweep-s18-growslice/arr3int16-15-16	membership	-
+PASS	slices/sweep-s18-growslice/byteslice-11-12	membership	-
+PASS	slices/sweep-s18-growslice/m64-8-9	membership	-
+PASS	slices/sweep-s18-stack-regimes/int16-nil-1	membership	-
+PASS	slices/sweep-s18-stack-regimes/ladder-int-3	membership	-
+PASS	slices/sweep-s18-stack-regimes/ladder-ret-int-3	membership	-
+PASS	slices/sweep-s18-stack-regimes/make-spread-nil	membership	-
+PASS	slices/sweep-s18-stack-regimes/str-spread-nil	membership	-
+PASS	slices/sweep-s18-zero-size/nil-1	membership	-
+PASS	stdlib-source/sweep-s18-growth/buffer-grow-10	-	-
+PASS	stdlib-source/sweep-s18-growth/buffer-grow-64	-	-
+PASS	stdlib-source/sweep-s18-growth/buffer-reset-cap	-	-
+PASS	stdlib-source/sweep-s18-growth/buffer-write-60-then-10	membership	-
+PASS	stdlib-source/sweep-s18-growth/buffer-write-byte	-	-
+PASS	stdlib-source/sweep-s18-growth/buffer-write-hello	-	-
+PASS	stdlib-source/sweep-s18-growth/builder-grow-0	-	-
+PASS	stdlib-source/sweep-s18-growth/builder-len-after-growth	-	-
+PASS	stdlib-source/sweep-s18-growth/builder-reset-cap	-	-
+PASS	stdlib-source/sweep-s18-growth/builder-write-string	membership	-
+PASS	stdlib-source/sweep-s18-growth/slices-clip	-	-
+PASS	stdlib-source/sweep-s18-growth/slices-clone-5	membership	-
+PASS	stdlib-source/sweep-s18-growth/slices-clone-nil	-	-
+PASS	stdlib-source/sweep-s18-growth/slices-grow-nil-5	membership	-
+PASS	stdlib-source/sweep-s18-growth/slices-grow-room	-	-
+PASS	stdlib-source/sweep-s18-growth/slices-repeat	-	-
+PASS	strings/sweep-s18-conv-members/bytes-1-mut	membership	-
+PASS	strings/sweep-s18-conv-members/bytes-1017-esc	membership	-
+PASS	strings/sweep-s18-conv-members/bytes-32769-esc	membership	-
+PASS	strings/sweep-s18-conv-members/bytes-const-slice-mut	membership	-
+PASS	strings/sweep-s18-conv-members/bytes-generic-const-mut	membership	-
+PASS	strings/sweep-s18-conv-members/bytes-nonascii-esc	membership	-
+PASS	strings/sweep-s18-conv-members/runes-1-nomut	membership	-
+PASS	strings/sweep-s18-conv-members/runes-9-esc	membership	-
+PASS	strings/sweep-s18-conv-singletons/bytes-1024-esc	-	-
+PASS	strings/sweep-s18-conv-singletons/bytes-32-esc	-	-
+PASS	strings/sweep-s18-conv-singletons/bytes-32-mut	-	-
+PASS	strings/sweep-s18-conv-singletons/bytes-32768-esc	-	-
+PASS	strings/sweep-s18-conv-singletons/bytes-48-mut	-	-
+PASS	strings/sweep-s18-conv-singletons/bytes-const-concat-mut	-	-
+PASS	strings/sweep-s18-conv-singletons/bytes-const-rune-mut	-	-
+PASS	strings/sweep-s18-conv-singletons/bytes-defined-const-mut	-	-
+PASS	strings/sweep-s18-conv-singletons/bytes-defined-target-const	-	-
+PASS	strings/sweep-s18-conv-singletons/bytes-lit-40-mut	-	-
+PASS	strings/sweep-s18-conv-singletons/runes-255-esc	-	-
+PASS	strings/sweep-s18-conv-singletons/runes-256-nomut	-	-
+PASS	strings/sweep-s18-conv-singletons/runes-257-esc	-	-
+PASS	strings/sweep-s18-conv-singletons/runes-31-esc	-	-
+PASS	strings/sweep-s18-conv-singletons/runes-31-nomut	-	-
+PASS	strings/sweep-s18-conv-singletons/runes-32-nomut	-	-
+PASS	strings/sweep-s18-conv-singletons/runes-40-esc	-	-
+PASS	strings/sweep-s18-conv-singletons/runes-64-nomut	-	-
+PASS	strings/sweep-s18-conv-singletons/runes-8191-esc	-	-
+PASS	strings/sweep-s18-conv-singletons/runes-8193-nomut	-	-
+PASS	strings/sweep-s18-conv-singletons/runes-defined-const	-	-
+PASS	strings/sweep-s18-conv-singletons/runes-invalid-40-nomut	-	-
+PASS	strings/sweep-s18-conv-singletons/runes-multibyte-33-esc	-	-
