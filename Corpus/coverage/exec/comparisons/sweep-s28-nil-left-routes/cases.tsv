@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+nil-left-routes	nilLeftRoutes	-	ok	-	comparisons,nil,equality,pointers,maps,slices,channels,interfaces,switch,type_assertions
+nil-left-boxed-and-assert	nilLeftBoxedAndAssert	-	ok	-	comparisons,nil,equality,pointers,maps,slices,channels,interfaces,switch,type_assertions
+paren-nil-sinks	parenNilSinks	-	ok	-	comparisons,nil,equality,pointers,maps,slices,channels,interfaces,switch,type_assertions
+paren-nil-panic	parenNilPanic	-	panic	panic called with nil argument	comparisons,nil,equality,pointers,maps,slices,channels,interfaces,switch,type_assertions,panic

@@ -1,0 +1,2 @@
+# expected_substring	features
+undefined: T	generics,structs,compile_error

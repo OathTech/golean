@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features
+paren-local-inc-dec-compound	parenLocalIncDecCompound	-	ok	-	assignment,multi_assign,indexing,fields,pointers,comma_ok,channels,select
+paren-slice-elem-targets	parenSliceElemTargets	-	ok	-	assignment,multi_assign,indexing,fields,pointers,comma_ok,channels,select
+paren-array-elem-targets	parenArrayElemTargets	-	ok	-	assignment,multi_assign,indexing,fields,pointers,comma_ok,channels,select
+paren-field-targets	parenFieldTargets	-	ok	-	assignment,multi_assign,indexing,fields,pointers,comma_ok,channels,select
+paren-deref-targets	parenDerefTargets	-	ok	-	assignment,multi_assign,indexing,fields,pointers,comma_ok,channels,select
+paren-multi-targets	parenMultiTargets	-	ok	-	assignment,multi_assign,indexing,fields,pointers,comma_ok,channels,select
+paren-comma-ok-targets	parenCommaOkTargets	-	ok	-	assignment,multi_assign,indexing,fields,pointers,comma_ok,channels,select
+paren-send-recv	parenSendRecv	-	ok	-	assignment,multi_assign,indexing,fields,pointers,comma_ok,channels,select
+paren-select-forms	parenSelectForms	-	ok	-	assignment,multi_assign,indexing,fields,pointers,comma_ok,channels,select
+paren-deep-nesting	parenDeepNesting	-	ok	-	assignment,multi_assign,indexing,fields,pointers,comma_ok,channels,select

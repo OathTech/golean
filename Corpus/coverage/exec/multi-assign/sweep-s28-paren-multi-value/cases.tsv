@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+paren-multi-value-define	parenMultiValueDefine	-	ok	-	multi_assign,multi_result,calls,returns,short_decl
+paren-multi-value-var	parenMultiValueVar	-	ok	-	multi_assign,multi_result,calls,returns,short_decl
+paren-multi-value-assign	parenMultiValueAssign	-	ok	-	multi_assign,multi_result,calls,returns,short_decl
+paren-multi-value-return	parenMultiValueReturn	-	ok	-	multi_assign,multi_result,calls,returns,short_decl
+paren-multi-value-spread	parenMultiValueSpread	-	ok	-	multi_assign,multi_result,calls,returns,short_decl

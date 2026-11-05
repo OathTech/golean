@@ -1,0 +1,16 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+hoists-two-statements	hoistsTwoStatements	-	ok	-	calls,evaluation_order,switch,fallthrough,type_switch,goto,multi_result,closures,loops,range,select,generics,stdlib,init,methods	strict	-	-
+hoist-in-literal-inside-hoist	hoistInLiteralInsideHoist	-	ok	-	calls,evaluation_order,switch,fallthrough,type_switch,goto,multi_result,closures,loops,range,select,generics,stdlib,init,methods	strict	-	-
+hoist-in-generic-two-insts	hoistInGenericTwoInsts	-	ok	-	calls,evaluation_order,switch,fallthrough,type_switch,goto,multi_result,closures,loops,range,select,generics,stdlib,init,methods	strict	-	-
+switches-twice-nested-and-literal	switchesTwiceNestedAndLiteral	-	ok	-	calls,evaluation_order,switch,fallthrough,type_switch,goto,multi_result,closures,loops,range,select,generics,stdlib,init,methods	strict	-	-
+switch-in-generic-two-insts	switchInGenericTwoInsts	-	ok	-	calls,evaluation_order,switch,fallthrough,type_switch,goto,multi_result,closures,loops,range,select,generics,stdlib,init,methods	strict	-	-
+type-switches-nested	typeSwitchesNested	-	ok	-	calls,evaluation_order,switch,fallthrough,type_switch,goto,multi_result,closures,loops,range,select,generics,stdlib,init,methods	strict	-	-
+goto-two-labels	gotoTwoLabels	-	ok	-	calls,evaluation_order,switch,fallthrough,type_switch,goto,multi_result,closures,loops,range,select,generics,stdlib,init,methods	strict	-	-
+multi-value-temps	multiValueTemps	-	ok	-	calls,evaluation_order,switch,fallthrough,type_switch,goto,multi_result,closures,loops,range,select,generics,stdlib,init,methods	strict	-	-
+multi-value-in-generic-two-insts	multiValueInGenericTwoInsts	-	ok	-	calls,evaluation_order,switch,fallthrough,type_switch,goto,multi_result,closures,loops,range,select,generics,stdlib,init,methods	strict	-	-
+loop-var-captures-twice-nested	loopVarCapturesTwiceNested	-	ok	-	calls,evaluation_order,switch,fallthrough,type_switch,goto,multi_result,closures,loops,range,select,generics,stdlib,init,methods	strict	-	-
+loop-var-in-generic-two-insts	loopVarInGenericTwoInsts	-	ok	-	calls,evaluation_order,switch,fallthrough,type_switch,goto,multi_result,closures,loops,range,select,generics,stdlib,init,methods	strict	-	-
+range-assign-nested	rangeAssignNested	-	ok	-	calls,evaluation_order,switch,fallthrough,type_switch,goto,multi_result,closures,loops,range,select,generics,stdlib,init,methods	strict	-	-
+selects-twice-nested	selectsTwiceNested	-	ok	-	calls,evaluation_order,switch,fallthrough,type_switch,goto,multi_result,closures,loops,range,select,generics,stdlib,init,methods	strict	-	-
+select-in-generic-two-insts	selectInGenericTwoInsts	-	ok	-	calls,evaluation_order,switch,fallthrough,type_switch,goto,multi_result,closures,loops,range,select,generics,stdlib,init,methods	strict	-	-
+fmt-lifts-scopes	fmtLiftsScopes	-	ok	-	calls,evaluation_order,switch,fallthrough,type_switch,goto,multi_result,closures,loops,range,select,generics,stdlib,init,methods	strict	-	depth=32

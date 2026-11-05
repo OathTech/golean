@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+good-a	goodA	-	ok	-	closures,defer,close,recover,channels,generics,stdlib
+good-b	goodB	-	ok	-	closures,defer,close,recover,channels,generics,stdlib
+good-c	goodC	-	ok	-	closures,defer,close,recover,channels,generics,stdlib
+good-d	goodD	-	ok	-	closures,defer,close,recover,channels,generics,stdlib
+stencil-good-after-bad	stencilGoodAfterBad	-	ok	-	closures,defer,close,recover,channels,generics,stdlib

@@ -1,0 +1,2 @@
+# expected_substring	features
+operator == not defined on untyped nil	comparisons,nil,equality,compile_error

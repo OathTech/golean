@@ -1,0 +1,2 @@
+# expected_substring	features
+duplicate index 0 in array or slice literal	slices,literals,indexing,compile_error

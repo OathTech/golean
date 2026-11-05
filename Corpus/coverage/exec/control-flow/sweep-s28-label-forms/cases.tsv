@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+labelled-empty-statements	labelledEmptyStatements	-	ok	-	labels,goto,break,loops,switch,select,closures,init,scoping
+labelled-block-and-names	labelledBlockAndNames	-	ok	-	labels,goto,break,loops,switch,select,closures,init,scoping
+label-in-closure-and-outer	labelInClosureAndOuter	-	ok	-	labels,goto,break,loops,switch,select,closures,init,scoping

@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+paren-literal-types	parenLiteralTypes	-	ok	-	literals,slices,arrays,maps,pointers,channels,make,new,goroutines	strict	-	-
+paren-make-new-chan-ptr	parenMakeNewChanPtr	-	ok	-	literals,slices,arrays,maps,pointers,channels,make,new,goroutines	strict	-	depth=32

@@ -1,0 +1,2 @@
+# expected_substring	features
+non-name (p.a) on left side of :=	short_decl,methods,fields,compile_error

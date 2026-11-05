@@ -1,0 +1,2 @@
+# expected_substring	features
+too few values in struct literal of type pt	structs,literals,compile_error

@@ -1,0 +1,2 @@
+# expected_substring	features
+non-name (x) on left side of :=	short_decl,assignment,compile_error

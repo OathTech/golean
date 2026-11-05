@@ -1,0 +1,2 @@
+# expected_substring	features
+unexpected newline in composite literal	slices,literals,compile_error

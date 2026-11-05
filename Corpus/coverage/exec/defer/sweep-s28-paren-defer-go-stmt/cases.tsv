@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+defer-paren-callees	deferParenCallees	-	ok	-	defer,goroutines,calls,closures,recover,close,channels	strict	-	-
+go-paren-callees-joined	goParenCalleesJoined	-	ok	-	defer,goroutines,calls,closures,recover,close,channels	strict	-	depth=32
+defer-paren-builtins	deferParenBuiltins	-	ok	-	defer,goroutines,calls,closures,recover,close,channels	strict	-	-
+defer-paren-recover-swallows	deferParenRecoverSwallows	-	ok	-	defer,goroutines,calls,closures,recover,close,channels	strict	-	-
+paren-expr-stmts	parenExprStmts	-	ok	-	defer,goroutines,calls,closures,recover,close,channels	strict	-	-

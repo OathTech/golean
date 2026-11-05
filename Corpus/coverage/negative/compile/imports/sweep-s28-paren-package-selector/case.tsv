@@ -1,0 +1,2 @@
+# expected_substring	features
+use of package strings not in selector	imports,calls,compile_error

@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	litResultOnlyT	-	ok	-	generics,closures,named-results,slices,pointers,maps,higher_order,structs,methods

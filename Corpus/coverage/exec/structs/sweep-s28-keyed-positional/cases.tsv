@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+mixed-keyed-positional-elements	mixedKeyedPositionalElements	-	ok	-	literals,structs,slices,arrays,maps,pointers,constants,nested
+keyed-index-forms	keyedIndexForms	-	ok	-	literals,structs,slices,arrays,maps,pointers,constants,nested

@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+paren-comma-ok-rhs-define	parenCommaOkRhsDefine	-	ok	-	comma_ok,maps,type_assertions,channels,short_decl,assignment
+paren-comma-ok-rhs-assign-var	parenCommaOkRhsAssignVar	-	ok	-	comma_ok,maps,type_assertions,channels,short_decl,assignment

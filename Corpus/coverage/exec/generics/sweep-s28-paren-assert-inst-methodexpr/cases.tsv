@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+paren-assertions	parenAssertions	-	ok	-	type_assertions,comma_ok,type_switch,generics,methods,embedding,interfaces,closures
+paren-instantiations	parenInstantiations	-	ok	-	type_assertions,comma_ok,type_switch,generics,methods,embedding,interfaces,closures
+paren-method-exprs-values	parenMethodExprsValues	-	ok	-	type_assertions,comma_ok,type_switch,generics,methods,embedding,interfaces,closures

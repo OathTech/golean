@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+paren-var-decls	parenVarDecls	-	ok	-	functions,methods,defined_type,structs,variadic,named-results,zero_values
+paren-type-decls	parenTypeDecls	-	ok	-	functions,methods,defined_type,structs,variadic,named-results,zero_values

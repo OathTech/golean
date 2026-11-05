@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+paren-if-conds	parenIfConds	-	ok	-	if,loops,switch,type_switch,returns,control_flow
+paren-for-conds	parenForConds	-	ok	-	if,loops,switch,type_switch,returns,control_flow
+paren-switch-tags	parenSwitchTags	-	ok	-	if,loops,switch,type_switch,returns,control_flow
+paren-type-switches	parenTypeSwitches	-	ok	-	if,loops,switch,type_switch,returns,control_flow
+paren-returns	parenReturns	-	ok	-	if,loops,switch,type_switch,returns,control_flow

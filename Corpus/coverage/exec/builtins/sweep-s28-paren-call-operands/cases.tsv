@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+paren-call-args	parenCallArgs	-	ok	-	builtins,calls,variadic,len,cap,append,copy,delete,close,make,new,clear,min,max,print,panic,recover
+paren-builtin-operands	parenBuiltinOperands	-	ok	-	builtins,calls,variadic,len,cap,append,copy,delete,close,make,new,clear,min,max,print,panic,recover
+paren-builtin-callees	parenBuiltinCallees	-	ok	-	builtins,calls,variadic,len,cap,append,copy,delete,close,make,new,clear,min,max,print,panic,recover
+paren-print-panic-callees	parenPrintPanicCallees	-	ok	-	builtins,calls,variadic,len,cap,append,copy,delete,close,make,new,clear,min,max,print,panic,recover

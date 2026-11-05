@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+lit-named-result-t	litNamedResultT	-	ok	-	generics,closures,named-results,slices,pointers,maps,higher_order,structs,methods
+lit-slice-param-t	litSliceParamT	-	ok	-	generics,closures,named-results,slices,pointers,maps,higher_order,structs,methods
+lit-ptr-param-t	litPtrParamT	-	ok	-	generics,closures,named-results,slices,pointers,maps,higher_order,structs,methods
+lit-map-param-t	litMapParamT	-	ok	-	generics,closures,named-results,slices,pointers,maps,higher_order,structs,methods
+lit-func-param-t	litFuncParamT	-	ok	-	generics,closures,named-results,slices,pointers,maps,higher_order,structs,methods
+lit-second-param-s	litSecondParamS	-	ok	-	generics,closures,named-results,slices,pointers,maps,higher_order,structs,methods
+lit-struct-param-t	litStructParamT	-	ok	-	generics,closures,named-results,slices,pointers,maps,higher_order,structs,methods
+lit-nested-param-t	litNestedParamT	-	ok	-	generics,closures,named-results,slices,pointers,maps,higher_order,structs,methods
+lit-in-generic-method-t	litInGenericMethodT	-	ok	-	generics,closures,named-results,slices,pointers,maps,higher_order,structs,methods

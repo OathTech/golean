@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+two-lits-one-line	twoLitsOneLine	-	ok	-	closures,methods,init,globals,generics,goroutines,defer,higher_order	strict	-	-
+lits-as-args	litsAsArgs	-	ok	-	closures,methods,init,globals,generics,goroutines,defer,higher_order	strict	-	-
+lits-in-same-name-methods	litsInSameNameMethods	-	ok	-	closures,methods,init,globals,generics,goroutines,defer,higher_order	strict	-	-
+lits-in-inits	litsInInits	-	ok	-	closures,methods,init,globals,generics,goroutines,defer,higher_order	strict	-	-
+lits-in-generic-two-insts	litsInGenericTwoInsts	-	ok	-	closures,methods,init,globals,generics,goroutines,defer,higher_order	strict	-	-
+lits-in-generic-method-two-insts	litsInGenericMethodTwoInsts	-	ok	-	closures,methods,init,globals,generics,goroutines,defer,higher_order	strict	-	-
+lits-in-go-defer	litsInGoDefer	-	ok	-	closures,methods,init,globals,generics,goroutines,defer,higher_order	strict	-	depth=32

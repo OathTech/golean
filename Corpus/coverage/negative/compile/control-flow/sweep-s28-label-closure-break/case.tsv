@@ -1,0 +1,2 @@
+# expected_substring	features
+label L defined and not used	labels,break,closures,loops,compile_error

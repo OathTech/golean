@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+paren-unary	parenUnary	-	ok	-	bitwise,shifts,pointers,evaluation_order,division
+paren-binary	parenBinary	-	ok	-	bitwise,shifts,pointers,evaluation_order,division
+paren-binary-order	parenBinaryOrder	-	ok	-	bitwise,shifts,pointers,evaluation_order,division
+paren-div-zero-panic	parenDivZeroPanic	-	panic	runtime error: integer divide by zero	bitwise,shifts,pointers,evaluation_order,division,panic

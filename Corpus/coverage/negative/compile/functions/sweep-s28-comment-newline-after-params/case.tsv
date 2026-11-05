@@ -1,0 +1,2 @@
+# expected_substring	features
+non-declaration statement outside function body	functions,compile_error

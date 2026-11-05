@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+semicolon-forms	semicolonForms	-	ok	-	functions,loops,switch,if,structs,scoping
+double-semicolons	doubleSemicolons	-	ok	-	functions,loops,switch,if,structs,scoping

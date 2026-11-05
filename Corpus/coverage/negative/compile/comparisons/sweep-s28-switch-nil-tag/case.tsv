@@ -1,0 +1,2 @@
+# expected_substring	features
+use of untyped nil in switch expression	switch,nil,compile_error

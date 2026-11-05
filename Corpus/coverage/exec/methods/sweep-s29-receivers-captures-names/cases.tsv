@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+receiver-slots	receiverSlots	-	ok	-	methods,closures,named-results,type_switch,select,embedding,generics,scoping	strict	-	depth=32
+capture-binders-subject	captureBindersSubject	-	ok	-	methods,closures,named-results,type_switch,select,embedding,generics,scoping	strict	-	-
+method-value-spellings	methodValueSpellings	-	ok	-	methods,closures,named-results,type_switch,select,embedding,generics,scoping	strict	-	-
+stencil-name-kinds	stencilNameKinds	-	ok	-	methods,closures,named-results,type_switch,select,embedding,generics,scoping	strict	-	-
+synthetic-lookalike-names	syntheticLookalikeNames	-	ok	-	methods,closures,named-results,type_switch,select,embedding,generics,scoping	strict	-	depth=32

@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+paren-blank-single	parenBlankSingle	-	ok	-	assignment,multi_assign
+paren-blank-multi	parenBlankMulti	-	ok	-	assignment,multi_assign
+paren-blank-multi-value	parenBlankMultiValue	-	ok	-	assignment,multi_assign

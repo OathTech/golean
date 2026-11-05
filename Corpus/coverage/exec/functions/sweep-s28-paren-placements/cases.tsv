@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+paren-in-closure	parenInClosure	-	ok	-	closures,generics,methods,init,globals,evaluation_order,maps,assignment	strict	-	depth=32
+paren-in-generic-both	parenInGenericBoth	-	ok	-	closures,generics,methods,init,globals,evaluation_order,maps,assignment	strict	-	-
+paren-in-method	parenInMethod	-	ok	-	closures,generics,methods,init,globals,evaluation_order,maps,assignment	strict	-	-
+paren-package-level	parenPackageLevel	-	ok	-	closures,generics,methods,init,globals,evaluation_order,maps,assignment	strict	-	-
+paren-beside-calls	parenBesideCalls	-	ok	-	closures,generics,methods,init,globals,evaluation_order,maps,assignment	strict	-	-

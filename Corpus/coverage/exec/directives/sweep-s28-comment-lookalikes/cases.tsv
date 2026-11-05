@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+space-noinline-body	spaceNoinlineBody	-	ok	-	functions
+block-noinline	blockNoinlineSubject	-	ok	-	functions

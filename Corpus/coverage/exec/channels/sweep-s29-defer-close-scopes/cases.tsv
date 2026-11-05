@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+two-closers-one-function	twoClosersOneFunction	-	ok	-	defer,close,channels,methods,closures,generics,init,loops,sync,mutex,once,waitgroup,goroutines	strict	-	-
+closers-same-name-methods-and-func	closersSameNameMethodsAndFunc	-	ok	-	defer,close,channels,methods,closures,generics,init,loops,sync,mutex,once,waitgroup,goroutines	strict	-	-
+closer-in-literal-and-enclosing	closerInLiteralAndEnclosing	-	ok	-	defer,close,channels,methods,closures,generics,init,loops,sync,mutex,once,waitgroup,goroutines	strict	-	-
+closer-in-generic-two-insts	closerInGenericTwoInsts	-	ok	-	defer,close,channels,methods,closures,generics,init,loops,sync,mutex,once,waitgroup,goroutines	strict	-	-
+closers-in-inits	closersInInits	-	ok	-	defer,close,channels,methods,closures,generics,init,loops,sync,mutex,once,waitgroup,goroutines	strict	-	-
+closer-in-loop	closerInLoop	-	ok	-	defer,close,channels,methods,closures,generics,init,loops,sync,mutex,once,waitgroup,goroutines	strict	-	-
+closer-operand-spellings	closerOperandSpellings	-	ok	-	defer,close,channels,methods,closures,generics,init,loops,sync,mutex,once,waitgroup,goroutines	strict	-	-
+defer-unlock-scopes	deferUnlockScopes	-	ok	-	defer,close,channels,methods,closures,generics,init,loops,sync,mutex,once,waitgroup,goroutines	strict	-	-
+once-do-scopes	onceDoScopes	-	ok	-	defer,close,channels,methods,closures,generics,init,loops,sync,mutex,once,waitgroup,goroutines	strict	-	-
+defer-done-two-literals	deferDoneTwoLiterals	-	ok	-	defer,close,channels,methods,closures,generics,init,loops,sync,mutex,once,waitgroup,goroutines	strict	-	depth=32

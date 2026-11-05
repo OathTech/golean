@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+const-left-comparisons	constLeftComparisons	-	ok	-	comparisons,constants,untyped,shifts,defined_type,interfaces
+const-left-arithmetic	constLeftArithmetic	-	ok	-	comparisons,constants,untyped,shifts,defined_type,interfaces

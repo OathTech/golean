@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+range-paren-ident-targets	rangeParenIdentTargets	-	ok	-	range,assignment
+range-paren-value-only	rangeParenValueOnly	-	ok	-	range,assignment

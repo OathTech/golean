@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot parenthesize type in composite literal	structs,literals,compile_error

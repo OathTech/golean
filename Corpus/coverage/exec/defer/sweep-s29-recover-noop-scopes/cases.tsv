@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+noop-first	noopFirst	-	ok	-	defer,recover,panic,methods,closures,init,generics
+noop-second	noopSecond	-	ok	-	defer,recover,panic,methods,closures,init,generics
+noop-twice-and-literal	noopTwiceAndLiteral	-	ok	-	defer,recover,panic,methods,closures,init,generics
+noop-in-generic-two-insts	noopInGenericTwoInsts	-	ok	-	defer,recover,panic,methods,closures,init,generics
+noop-does-not-recover	noopDoesNotRecover	-	ok	-	defer,recover,panic,methods,closures,init,generics

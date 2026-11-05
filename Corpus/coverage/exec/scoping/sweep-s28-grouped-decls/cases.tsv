@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+grouped-var-forms	groupedVarForms	-	ok	-	scoping,constants,iota,defined_type,aliases,methods,closures
+grouped-const-forms	groupedConstForms	-	ok	-	scoping,constants,iota,defined_type,aliases,methods,closures
+grouped-type-forms	groupedTypeForms	-	ok	-	scoping,constants,iota,defined_type,aliases,methods,closures

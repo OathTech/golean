@@ -1,0 +1,2 @@
+# expected_substring	features
+duplicate key "a" in map literal	maps,literals,keys,compile_error

@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+paren-literal-elements	parenLiteralElements	-	ok	-	literals,indexing,slicing,maps,arrays,strings,fields,methods,embedding,type_assertions	strict	-	depth=32
+paren-index-slice	parenIndexSlice	-	ok	-	literals,indexing,slicing,maps,arrays,strings,fields,methods,embedding,type_assertions	strict	-	-
+paren-selectors	parenSelectors	-	ok	-	literals,indexing,slicing,maps,arrays,strings,fields,methods,embedding,type_assertions	strict	-	-
