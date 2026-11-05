@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s21-stdlib (2026-11-05), shape S21 (stdlib shims and source-through; plan §4; the matrix on BUG-089/086/073/071/154/153). Strict, expected = gc go1.26.5.
+delete-func-cleared-tail	deleteFuncClearedTail	-	ok	-	stdlib,slices,generics,closures,aliasing
+clone-nil-empty	cloneNilEmpty	-	ok	-	stdlib,slices,generics,nil
+compact-family	compactFamily	-	ok	-	stdlib,slices,generics,closures,nil
+grow-clip-reverse	growClipReverse	-	ok	-	stdlib,slices,generics,cap,nil
+concat-repeat	concatRepeat	-	ok	-	stdlib,slices,generics,variadic,nil
+insert-no-spare	insertNoSpare	-	ok	-	stdlib,slices,generics,variadic,nil
+replace-no-spare	replaceNoSpare	-	ok	-	stdlib,slices,generics,variadic

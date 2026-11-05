@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# Sweep lane sweep/s21-stdlib (2026-11-05), shape S21 (stdlib shims and source-through; plan §4; the matrix on BUG-089/086/073/071/154/153). Strict, expected = gc go1.26.5.
+# depth= (the strict-lane depth guard, docs/coverage-suite-structure.md "Lane assignment"): the rows so marked outrun the
+# three fixed adversarial streams at appendSpill (capacity latitude inside the library's string building, unobservable
+# here); depth=N is the smallest power of two >= 4*w (w = the default-stream wide count the runner reported), min 64.
+fprint-named-string	fprintNamedString	-	ok	-	stdlib,strings,defined_type,multi_result,unicode	strict	-	-
+fprint-results	fprintResults	-	ok	-	stdlib,strings,bytes,multi_result	strict	-	-
+fprintf-writer-order	fprintfWriterOrder	-	ok	-	stdlib,strings,evaluation_order,globals	strict	-	-
+fprintf-nil-builder	fprintfNilBuilder	-	panic	invalid memory address	stdlib,strings,pointers,nil,panic	strict	-	-
+fprintf-buffer-every-verb	fprintfBufferEveryVerb	-	ok	-	stdlib,strings,bytes,ints,bools,widths	strict	-	depth=64
+fprint-buffer-named	fprintBufferNamed	-	ok	-	stdlib,strings,bytes,defined_type,multi_result	strict	-	-

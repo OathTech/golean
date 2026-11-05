@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s21-stdlib (2026-11-05), shape S21 (stdlib shims and source-through; plan §4; the matrix on BUG-089/086/073/071/154/153). Strict, expected = gc go1.26.5.
+all-orders-uint	allOrdersUint	-	ok	-	stdlib,bytes,ints,widths
+put-family	putFamily	-	ok	-	stdlib,bytes,ints,widths,slicing
+append-family	appendFamily	-	ok	-	stdlib,bytes,ints,nil
+order-strings	orderStrings	-	ok	-	stdlib,strings,methods
+iface-dispatch	ifaceDispatch	-	ok	-	stdlib,bytes,interfaces,methods,loops

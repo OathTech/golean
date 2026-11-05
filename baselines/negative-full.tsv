@@ -1,11 +1,24 @@
 # GoLean negative-corpus (compile-rejection) baseline
 # recorded: 2026-08-18  commit: f68a4d86+ (spec-truth P3 slice 2)  oracle: go build (rejection)  [header corrected 2026-08-31: the old "+ frontend fail-closed" conjunct claimed a check that does not exist — scripts/coverage-negative invokes no GoLean tool (p2-fact claim 5)]
-# manifest_cases: 635  pass: 633  fail: 2
+# manifest_cases: 642  pass: 640  fail: 2
 # re-pinned: 2026-10-27 [AGENT], lane frontend/fix-admission-1027 — BUG-217 and BUG-219 fixed (the main module's path judged
 #   against the pinned GOROOT and gc's reserved names; cmd/go's import rules mirrored at discovery): NINE rows FAIL
 #   frontend-accepts -> PASS from the full run at 63bbba7a with the row edits and records applied in the tree (1117 s) — imports/{vendor-path-import, nested-vendor-path-import,
 #   goroot-vendor-name, bare-internal-path, module-mode-bare-local-import, package-main-import} at frontend=type-check (BUG-219),
 #   modules/{module-path-std-fmt, module-path-std-nested, module-path-cmd} at frontend=module (BUG-217). No other row moves.
+# re-pinned: 2026-11-05 [AGENT], lane sweep/s21-stdlib (on main 12d7a79a) — the defect-neighbourhood campaign's step 2, shape S21 (stdlib shims
+#   and source-through; plan §4, [USER]-approved 2026-10-27): SEVEN BORN ROWS, the library call shapes gc rejects — a pointer method on a
+#   map-element strings.Builder, errors.AsType[int], slices.Sort of a struct slice, a non-string Sprintf format, strings.Repeat's arity,
+#   strconv.Itoa over an int64, String() on a Builder value returned by a call — gc (go1.26.5, the runners' pins) rejects each and the
+#   frontend refuses it as a rejection with the matched text. NO existing row moved: 539 + 7 = 546, measured by the lane's full --diff at over main 12d7a79a (this commit's corpus and records, before the re-pin)
+#   (2026-11-05). The rows:
+#     generics/sweep-s21-astype-int                                            PASS/-
+#     generics/sweep-s21-sort-struct                                           PASS/-
+#     strings/sweep-s21-builder-map-elem                                       PASS/-
+#     strings/sweep-s21-builder-string-value-call                              PASS/-
+#     strings/sweep-s21-itoa-int64                                             PASS/-
+#     strings/sweep-s21-repeat-arity                                           PASS/-
+#     strings/sweep-s21-sprintf-nonstring-format                               PASS/-
 # re-pinned: 2026-11-05 [AGENT], lane sweep/s28-s29-spelling-symbols (on main 12d7a79a) — the S28 sweep (spelling admission; plan §4,
 #   [USER]-approved 2026-10-27). ADDITIVE ONLY: 27 new ids Corpus/coverage/negative/compile/*/sweep-s28-* from the full run of
 #   scripts/ci --diff at the lane tree 4ab5a479 (929 s); no existing row moved: 539 + 27 = 566, pass 537 + 27 = 564, fail 2.
@@ -938,3 +951,10 @@ PASS	structs/sweep-s28-dup-field-key	-
 PASS	structs/sweep-s28-mixed-keyed-positional	-
 PASS	structs/sweep-s28-paren-literal-type	-
 PASS	structs/sweep-s28-positional-too-few	-
+PASS	generics/sweep-s21-astype-int	-
+PASS	generics/sweep-s21-sort-struct	-
+PASS	strings/sweep-s21-builder-map-elem	-
+PASS	strings/sweep-s21-builder-string-value-call	-
+PASS	strings/sweep-s21-itoa-int64	-
+PASS	strings/sweep-s21-repeat-arity	-
+PASS	strings/sweep-s21-sprintf-nonstring-format	-

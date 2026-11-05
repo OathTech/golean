@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s21-stdlib (2026-11-05), shape S21 (stdlib shims and source-through; plan §4; the matrix on BUG-089/086/073/071/154/153). Strict, expected = gc go1.26.5.
+error-panic-error-payload	errorPanicErrorPayload	-	ok	-	stdlib,strings,methods,interfaces,panic,recover
+stringer-panic-errorf-payload	stringerPanicErrorfPayload	-	ok	-	stdlib,strings,methods,panic,recover
+nested-stringer	nestedStringer	-	ok	-	stdlib,strings,methods,structs,nested
+q-stringer-escapes	qStringerEscapes	-	ok	-	stdlib,strings,methods,escapes
+x-error-multibyte	xErrorMultibyte	-	ok	-	stdlib,strings,methods,interfaces,unicode
+value-error-at-error-iface	valueErrorAtErrorIface	-	ok	-	stdlib,strings,methods,interfaces
+errors-new-at-every-verb	errorsNewAtEveryVerb	-	ok	-	stdlib,strings,interfaces,escapes
+panic-render-drops-width-flag	panicRenderDropsWidthFlag	-	ok	-	stdlib,strings,methods,panic,recover
+typed-nil-error-handled	typedNilErrorHandled	-	ok	-	stdlib,strings,methods,interfaces,pointers,nil

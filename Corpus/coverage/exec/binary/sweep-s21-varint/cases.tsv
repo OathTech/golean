@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s21-stdlib (2026-11-05), shape S21 (stdlib shims and source-through; plan §4; the matrix on BUG-089/086/073/071/154/153). Strict, expected = gc go1.26.5.
+uvarint-roundtrip	uvarintRoundtrip	-	ok	-	stdlib,bytes,ints,loops
+varint-roundtrip	varintRoundtrip	-	ok	-	stdlib,bytes,ints,loops
+overflow-and-truncated	overflowAndTruncated	-	ok	-	stdlib,bytes,ints,overflow,nil
+append-varints	appendVarints	-	ok	-	stdlib,bytes,ints,constants

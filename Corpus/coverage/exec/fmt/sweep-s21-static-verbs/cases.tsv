@@ -1,0 +1,20 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# Sweep lane sweep/s21-stdlib (2026-11-05), shape S21 (stdlib shims and source-through; plan §4; the matrix on BUG-089/086/073/071/154/153). Strict, expected = gc go1.26.5.
+# depth= (the strict-lane depth guard, docs/coverage-suite-structure.md "Lane assignment"): the rows so marked outrun the
+# three fixed adversarial streams at appendSpill (capacity latitude inside the library's string building, unobservable
+# here); depth=N is the smallest power of two >= 4*w (w = the default-stream wide count the runner reported), min 64.
+d-kinds	dKinds	-	ok	-	stdlib,strings,ints,widths,defined_type	strict	-	depth=256
+d-named-error	dNamedError	-	ok	-	stdlib,strings,ints,methods,interfaces,defined_type	strict	-	-
+x-unsigned-kinds	xUnsignedKinds	-	ok	-	stdlib,strings,ints,bitwise,defined_type	strict	-	depth=64
+v-kinds-all	vKindsAll	-	ok	-	stdlib,strings,ints,bools,defined_type	strict	-	depth=128
+plusv-scalars	plusVScalars	-	ok	-	stdlib,strings,ints,bools,defined_type	strict	-	-
+v-error-and-stringer	vErrorAndStringer	-	ok	-	stdlib,strings,methods,interfaces,structs	strict	-	-
+v-nil-ptr-handled	vNilPtrHandled	-	ok	-	stdlib,strings,methods,pointers,nil	strict	-	-
+t-named-bool	tNamedBool	-	ok	-	stdlib,strings,bools,defined_type	strict	-	-
+v-named-bool	vNamedBool	-	ok	-	stdlib,strings,bools,defined_type	strict	-	-
+d-generic-body	dGenericBody	-	ok	-	stdlib,strings,generics,ints	strict	-	-
+width-kinds	widthKinds	-	ok	-	stdlib,strings,ints,widths,defined_type	strict	-	depth=128
+const-expr-format	constExprFormat	-	ok	-	stdlib,strings,constants	strict	-	-
+literal-bytes	literalBytes	-	ok	-	stdlib,strings,escapes,multi_result	strict	-	-
+percent-adjacent	percentAdjacent	-	ok	-	stdlib,strings,ints	strict	-	-
+stringer-under-every-verb	stringerUnderEveryVerb	-	ok	-	stdlib,strings,methods,pointers	strict	-	-

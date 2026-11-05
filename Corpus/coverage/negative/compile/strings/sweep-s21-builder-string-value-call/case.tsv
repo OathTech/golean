@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot call pointer method String on strings.Builder	stdlib,strings,methods,compile_error

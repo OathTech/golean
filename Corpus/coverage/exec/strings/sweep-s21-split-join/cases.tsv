@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# Sweep lane sweep/s21-stdlib (2026-11-05), shape S21 (stdlib shims and source-through; plan §4; the matrix on BUG-089/086/073/071/154/153). Strict, expected = gc go1.26.5.
+# depth= (the strict-lane depth guard, docs/coverage-suite-structure.md "Lane assignment"): the rows so marked outrun the
+# three fixed adversarial streams at appendSpill (capacity latitude inside the library's string building, unobservable
+# here); depth=N is the smallest power of two >= 4*w (w = the default-stream wide count the runner reported), min 64.
+splitn-counts	splitNCounts	-	ok	-	stdlib,strings,slices,loops,unicode	strict	-	depth=128
+splitafter-family	splitAfterFamily	-	ok	-	stdlib,strings,slices,unicode	strict	-	depth=128
+fields-func	fieldsFunc	-	ok	-	stdlib,strings,slices,closures,unicode	strict	-	depth=64
+join-classes	joinClasses	-	ok	-	stdlib,strings,slices,nil,unicode	strict	-	depth=256

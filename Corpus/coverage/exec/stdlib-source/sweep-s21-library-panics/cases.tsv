@@ -1,0 +1,17 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s21-stdlib (2026-11-05), shape S21 (stdlib shims and source-through; plan §4; the matrix on BUG-089/086/073/071/154/153). Strict, expected = gc go1.26.5.
+slices-min-empty	slicesMinEmpty	-	panic	slices.Min: empty list	stdlib,slices,generics,panic
+slices-max-empty	slicesMaxEmpty	-	panic	slices.Max: empty list	stdlib,slices,generics,strings,nil,panic
+slices-minfunc-empty	slicesMinFuncEmpty	-	panic	slices.MinFunc: empty list	stdlib,slices,generics,closures,panic
+slices-maxfunc-empty	slicesMaxFuncEmpty	-	panic	slices.MaxFunc: empty list	stdlib,slices,generics,closures,panic
+slices-grow-negative	slicesGrowNegative	-	panic	cannot be negative	stdlib,slices,generics,panic
+slices-repeat-overflow	slicesRepeatOverflow	-	panic	overflows	stdlib,slices,generics,overflow,panic
+bytes-repeat-overflow	bytesRepeatOverflow	-	panic	bytes: Repeat output length overflow	stdlib,bytes,overflow,panic
+appendint-illegal-base	appendIntIllegalBase	-	panic	strconv: illegal AppendInt/FormatInt base	stdlib,strings,ints,panic
+formatuint-illegal-base	formatUintIllegalBase	-	panic	strconv: illegal AppendInt/FormatInt base	stdlib,strings,ints,panic
+putuvarint-short	putUvarintShort	-	panic	index out of range	stdlib,bytes,slices,panic
+encoderune-short	encodeRuneShort	-	panic	index out of range	stdlib,unicode,slices,panic
+nil-builder-write	nilBuilderWrite	-	panic	invalid memory address	stdlib,strings,pointers,nil,panic
+nil-buffer-len	nilBufferLen	-	panic	invalid memory address	stdlib,bytes,pointers,nil,panic
+bigendian-nil	bigEndianNil	-	panic	index out of range	stdlib,bytes,nil,panic
+putuint32-short	putUint32Short	-	panic	index out of range	stdlib,bytes,slices,panic

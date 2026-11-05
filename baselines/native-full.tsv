@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 7219 (6847 PASS / 372 FAIL)
+# cases: 7475 (7087 PASS / 388 FAIL)
 # cause keyed 2026-11-05 [AGENT coordinator], train-29 stage, from the stage's full run (scripts/coverage-cause --apply): the five rows that carried `?` — BUG-390's two (`unrowed/fallthrough-trailing-empty-stmt`, the tools/lowerdiag/causes.tsv row added at this stage) and BUG-391's three (`error:decoder-unseq-head-not-admitted`, the scripts/machine-causes.tsv row added at this stage); no row moved.
 # re-pinned: 2026-10-27 [AGENT], lane frontend/fix-binding-1027 — BUG-300, 301, 302 (the S13 sweep) FIXED in tools/nativefrontend
 #   (the campaign plan's rule that a finding is fixed through the normal train, [USER] approved 2026-10-27, relayed): (1) emit.go
@@ -24,6 +24,280 @@
 #     scoping/sweep-s13-local-iface-dispatch/local-iface-satisfied                   FAIL/lean-observation error:decoder-duplicate-function-id → PASS
 #     scoping/sweep-s13-local-iface-dispatch/local-iface-two-funcs                   FAIL/lean-observation error:decoder-duplicate-function-id → PASS
 # cause keyed 2026-10-27 [AGENT coordinator], train-27 stage, from the stage's full run (scripts/coverage-cause --apply): the 16 rows that carried `?` — BUG-300/302's six `error:decoder-scope-wrong-declaration`, BUG-301's three `error:decoder-duplicate-function-id`, BUG-310's seven `panic:machine-panic` (the three table rows added at this stage); no row moved.
+# re-pinned: 2026-11-05 [AGENT], lane sweep/s21-stdlib (on main 12d7a79a) — the defect-neighbourhood campaign's step 2, shape S21 (stdlib shims
+#   and source-through; plan docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved 2026-10-27; members BUG-089, 086, 073,
+#   071, 154, 153): the shape's 150-cell matrix probed on both sides — 93 cells by this lane (gc go1.26.5 under the runners' pins against
+#   the frontend and native-json-run), 11 covered by existing rows, 38 named refusals left as gaps, 8 out of scope by name. NO existing
+#   row moved: 6179 + 256 = 6435; PASS 5820 + 240 = 6060; FAIL 359 + 16 = 375. No flip, no removal, no cause change (no runtime code
+#   changed: corpus and records only). NEW rows (256, 53 strict packages Corpus/coverage/exec/{fmt/sweep-s21-{static-verbs,static-renders,
+#   composites,dyn-verbs,sprint-space,errorf,writers,alias-import,contexts,alone-*,init-*,formatter-controls,formatter-no-dyn},multipkg/
+#   sweep-s21-fmt-crosspkg,stdlib-source/sweep-s21-{overlay-clone,overlay-builder,substitution-search,routes,library-panics,cmp,bits,unicode},
+#   errors/sweep-s21-join-text,slices/sweep-s21-{sort-kinds,search,edit},strings/sweep-s21-{search,split-join,transform,trim,utf8},strconv/
+#   sweep-s21-{parse,format,quote},bytes/sweep-s21-{search,transform,buffer},binary/sweep-s21-{orders,varint}}/; 51 declare depth= under the
+#   strict-lane depth guard), appended at the end of the file: 240 born green and 16 born RED — the sweep's findings, each on its entry's
+#   Cases line: BUG-400 (fmt.Sprint's space rule over a named string kind; 5 rows FAIL/differential), BUG-401 (a fmt desugar reached from
+#   package initialization whose helper references the force-quarantined refusal helper refuses the whole export; 7 rows FAIL/frontend-export),
+#   BUG-402 (%t / %v over a defined bool: a convert node the core has no arm for; 3 rows FAIL/lean-observation, the cause unclassified —
+#   `unsupported:?` — a scripts/machine-causes.tsv row this lane does not edit), BUG-236's second route (1 row FAIL/differential). Measured
+#   by CAPPED_MEM_MAX=64G capped scripts/ci --diff at the lane tree over main 12d7a79a (this commit's corpus and records, before the re-pin) before this re-pin (its only drift: these 256 NEW ids), the rows
+#   taken from that run's artifacts/coverage/latest.tsv (2026-11-05, 937 s wall: differential 6435 = 5820 + 240 PASS + 359 + 16 FAIL, negative
+#   546 = 537 + 7 PASS + 2 FAIL, every gate step ok); the --diff at the tip judges. The rows:
+#     binary/sweep-s21-orders/all-orders-uint                                  PASS/-
+#     binary/sweep-s21-orders/put-family                                       PASS/-
+#     binary/sweep-s21-orders/append-family                                    PASS/-
+#     binary/sweep-s21-orders/order-strings                                    PASS/-
+#     binary/sweep-s21-orders/iface-dispatch                                   PASS/-
+#     binary/sweep-s21-varint/uvarint-roundtrip                                PASS/-
+#     binary/sweep-s21-varint/varint-roundtrip                                 PASS/-
+#     binary/sweep-s21-varint/overflow-and-truncated                           PASS/-
+#     binary/sweep-s21-varint/append-varints                                   PASS/-
+#     bytes/sweep-s21-buffer/write-family-results                              PASS/-
+#     bytes/sweep-s21-buffer/truncate-next                                     PASS/-
+#     bytes/sweep-s21-buffer/bytes-aliasing                                    PASS/-
+#     bytes/sweep-s21-buffer/constructors                                      PASS/-
+#     bytes/sweep-s21-buffer/grow-then-write                                   PASS/-
+#     bytes/sweep-s21-search/contains-family                                   PASS/-
+#     bytes/sweep-s21-search/prefix-suffix-cut                                 PASS/-
+#     bytes/sweep-s21-search/index-family                                      PASS/-
+#     bytes/sweep-s21-transform/split-fields                                   PASS/-
+#     bytes/sweep-s21-transform/replace-family                                 PASS/-
+#     bytes/sweep-s21-transform/trim-family                                    PASS/-
+#     bytes/sweep-s21-transform/map-runes-title                                PASS/-
+#     bytes/sweep-s21-transform/equalfold-clone-join-repeat                    PASS/-
+#     errors/sweep-s21-join-text/multibyte-and-nul                             PASS/-
+#     errors/sweep-s21-join-text/newlines-inside                               PASS/-
+#     errors/sweep-s21-join-text/three-and-nested                              PASS/-
+#     errors/sweep-s21-join-text/through-errorf-and-sprint                     PASS/-
+#     errors/sweep-s21-join-text/elem-panics                                   PASS/-
+#     errors/sweep-s21-join-text/single-and-unwrap-of-join                     PASS/-
+#     fmt/sweep-s21-alias-import/alias-sprintf                                 PASS/-
+#     fmt/sweep-s21-alias-import/alias-errorf                                  PASS/-
+#     fmt/sweep-s21-alias-import/alias-sprint-spread                           PASS/-
+#     fmt/sweep-s21-alone-errorf                                               PASS/-
+#     fmt/sweep-s21-alone-fprint                                               PASS/-
+#     fmt/sweep-s21-alone-fprintf                                              PASS/-
+#     fmt/sweep-s21-alone-spread-sprint                                        PASS/-
+#     fmt/sweep-s21-alone-spread-sprintf                                       PASS/-
+#     fmt/sweep-s21-alone-spread-sprintln                                      PASS/-
+#     fmt/sweep-s21-alone-sprint                                               PASS/-
+#     fmt/sweep-s21-alone-sprintf                                              PASS/-
+#     fmt/sweep-s21-alone-sprintln                                             PASS/-
+#     fmt/sweep-s21-composites/empty-struct                                    PASS/-
+#     fmt/sweep-s21-composites/slice-named-ints                                PASS/-
+#     fmt/sweep-s21-composites/struct-all-int-kinds                            PASS/-
+#     fmt/sweep-s21-composites/slice-of-slices                                 PASS/-
+#     fmt/sweep-s21-composites/struct-with-slice-of-structs                    PASS/-
+#     fmt/sweep-s21-composites/plusv-depth-3                                   PASS/-
+#     fmt/sweep-s21-composites/bool-and-string-fields                          PASS/-
+#     fmt/sweep-s21-composites/nil-slice-field                                 PASS/-
+#     fmt/sweep-s21-composites/slice-of-slice-of-strings                       PASS/-
+#     fmt/sweep-s21-composites/named-bool-field                                FAIL/lean-observation (unsupported:?)
+#     fmt/sweep-s21-contexts/initializers                                      PASS/-
+#     fmt/sweep-s21-contexts/in-method                                         PASS/-
+#     fmt/sweep-s21-contexts/in-goroutine                                      PASS/-
+#     fmt/sweep-s21-contexts/in-defer                                          PASS/-
+#     fmt/sweep-s21-contexts/generic-sprint                                    PASS/-
+#     fmt/sweep-s21-contexts/shim-named-method                                 PASS/-
+#     fmt/sweep-s21-contexts/dead-site-only                                    PASS/-
+#     fmt/sweep-s21-dyn-verbs/d-kinds                                          PASS/-
+#     fmt/sweep-s21-dyn-verbs/x-kinds                                          PASS/-
+#     fmt/sweep-s21-dyn-verbs/x-string                                         PASS/-
+#     fmt/sweep-s21-dyn-verbs/bytes-verbs                                      PASS/-
+#     fmt/sweep-s21-dyn-verbs/slice-kinds                                      PASS/-
+#     fmt/sweep-s21-dyn-verbs/bool-verbs                                       PASS/-
+#     fmt/sweep-s21-dyn-verbs/nil-spread                                       PASS/-
+#     fmt/sweep-s21-dyn-verbs/error-kinds                                      PASS/-
+#     fmt/sweep-s21-dyn-verbs/stringer-kinds                                   PASS/-
+#     fmt/sweep-s21-dyn-verbs/error-panic                                      PASS/-
+#     fmt/sweep-s21-dyn-verbs/dyn-plusv                                        PASS/-
+#     fmt/sweep-s21-dyn-verbs/percent-runtime                                  PASS/-
+#     fmt/sweep-s21-dyn-verbs/empty-format                                     PASS/-
+#     fmt/sweep-s21-dyn-verbs/error-before-stringer                            PASS/-
+#     fmt/sweep-s21-dyn-verbs/named-string-format                              PASS/-
+#     fmt/sweep-s21-dyn-verbs/nil-ptr-handled                                  PASS/-
+#     fmt/sweep-s21-errorf/verbs                                               PASS/-
+#     fmt/sweep-s21-errorf/no-verbs                                            PASS/-
+#     fmt/sweep-s21-errorf/identity-routes                                     PASS/-
+#     fmt/sweep-s21-errorf/unwrap                                              PASS/-
+#     fmt/sweep-s21-errorf/astype                                              PASS/-
+#     fmt/sweep-s21-errorf/rendered                                            PASS/-
+#     fmt/sweep-s21-errorf/in-closure-and-method                               PASS/-
+#     fmt/sweep-s21-errorf/assert-iface                                        FAIL/differential (-)
+#     fmt/sweep-s21-formatter-controls/never-boxed                             PASS/-
+#     fmt/sweep-s21-formatter-no-dyn/errorf-no-dyn-boxed                       PASS/-
+#     fmt/sweep-s21-init-q-initializer                                         FAIL/frontend-export (FR-22/init-callee-unmodeled)
+#     fmt/sweep-s21-init-s-error-initializer                                   FAIL/frontend-export (FR-22/init-callee-unmodeled)
+#     fmt/sweep-s21-init-spread-sprintf-in-init                                FAIL/frontend-export (FR-22/init-callee-unmodeled)
+#     fmt/sweep-s21-init-sprint-indirect                                       FAIL/frontend-export (FR-22/init-callee-unmodeled)
+#     fmt/sweep-s21-init-sprint-initializer                                    FAIL/frontend-export (FR-22/init-callee-unmodeled)
+#     fmt/sweep-s21-init-sprintln-in-init                                      FAIL/frontend-export (FR-22/init-callee-unmodeled)
+#     fmt/sweep-s21-init-v-stringer-initializer                                FAIL/frontend-export (FR-22/init-callee-unmodeled)
+#     fmt/sweep-s21-sprint-space/pairs                                         PASS/-
+#     fmt/sweep-s21-sprint-space/int-stringer-pair                             PASS/-
+#     fmt/sweep-s21-sprint-space/empties                                       PASS/-
+#     fmt/sweep-s21-sprint-space/fixed-mixed                                   PASS/-
+#     fmt/sweep-s21-sprint-space/sprintln-mixed                                PASS/-
+#     fmt/sweep-s21-sprint-space/named-string-stringer                         FAIL/differential (-)
+#     fmt/sweep-s21-sprint-space/named-string-stringer-mixed                   FAIL/differential (-)
+#     fmt/sweep-s21-sprint-space/named-string-error                            FAIL/differential (-)
+#     fmt/sweep-s21-sprint-space/named-string-error-then-int                   FAIL/differential (-)
+#     fmt/sweep-s21-sprint-space/spread-named-string                           FAIL/differential (-)
+#     fmt/sweep-s21-sprint-space/named-string-sprintln                         PASS/-
+#     fmt/sweep-s21-static-renders/error-panic-error-payload                   PASS/-
+#     fmt/sweep-s21-static-renders/stringer-panic-errorf-payload               PASS/-
+#     fmt/sweep-s21-static-renders/nested-stringer                             PASS/-
+#     fmt/sweep-s21-static-renders/q-stringer-escapes                          PASS/-
+#     fmt/sweep-s21-static-renders/x-error-multibyte                           PASS/-
+#     fmt/sweep-s21-static-renders/value-error-at-error-iface                  PASS/-
+#     fmt/sweep-s21-static-renders/errors-new-at-every-verb                    PASS/-
+#     fmt/sweep-s21-static-renders/panic-render-drops-width-flag               PASS/-
+#     fmt/sweep-s21-static-renders/typed-nil-error-handled                     PASS/-
+#     fmt/sweep-s21-static-verbs/d-kinds                                       PASS/-
+#     fmt/sweep-s21-static-verbs/d-named-error                                 PASS/-
+#     fmt/sweep-s21-static-verbs/x-unsigned-kinds                              PASS/-
+#     fmt/sweep-s21-static-verbs/v-kinds-all                                   PASS/-
+#     fmt/sweep-s21-static-verbs/plusv-scalars                                 PASS/-
+#     fmt/sweep-s21-static-verbs/v-error-and-stringer                          PASS/-
+#     fmt/sweep-s21-static-verbs/v-nil-ptr-handled                             PASS/-
+#     fmt/sweep-s21-static-verbs/t-named-bool                                  FAIL/lean-observation (unsupported:?)
+#     fmt/sweep-s21-static-verbs/v-named-bool                                  FAIL/lean-observation (unsupported:?)
+#     fmt/sweep-s21-static-verbs/d-generic-body                                PASS/-
+#     fmt/sweep-s21-static-verbs/width-kinds                                   PASS/-
+#     fmt/sweep-s21-static-verbs/const-expr-format                             PASS/-
+#     fmt/sweep-s21-static-verbs/literal-bytes                                 PASS/-
+#     fmt/sweep-s21-static-verbs/percent-adjacent                              PASS/-
+#     fmt/sweep-s21-static-verbs/stringer-under-every-verb                     PASS/-
+#     fmt/sweep-s21-writers/fprint-named-string                                PASS/-
+#     fmt/sweep-s21-writers/fprint-results                                     PASS/-
+#     fmt/sweep-s21-writers/fprintf-writer-order                               PASS/-
+#     fmt/sweep-s21-writers/fprintf-nil-builder                                PASS/-
+#     fmt/sweep-s21-writers/fprintf-buffer-every-verb                          PASS/-
+#     fmt/sweep-s21-writers/fprint-buffer-named                                PASS/-
+#     multipkg/sweep-s21-fmt-crosspkg/cross-errorf-then-sprint                 PASS/-
+#     multipkg/sweep-s21-fmt-crosspkg/cross-stringer                           PASS/-
+#     slices/sweep-s21-edit/delete-func-cleared-tail                           PASS/-
+#     slices/sweep-s21-edit/clone-nil-empty                                    PASS/-
+#     slices/sweep-s21-edit/compact-family                                     PASS/-
+#     slices/sweep-s21-edit/grow-clip-reverse                                  PASS/-
+#     slices/sweep-s21-edit/concat-repeat                                      PASS/-
+#     slices/sweep-s21-edit/insert-no-spare                                    PASS/-
+#     slices/sweep-s21-edit/replace-no-spare                                   PASS/-
+#     slices/sweep-s21-search/index-contains                                   PASS/-
+#     slices/sweep-s21-search/equal-compare                                    PASS/-
+#     slices/sweep-s21-search/binary-search                                    PASS/-
+#     slices/sweep-s21-search/is-sorted                                        PASS/-
+#     slices/sweep-s21-search/min-max                                          PASS/-
+#     slices/sweep-s21-sort-kinds/int8                                         PASS/-
+#     slices/sweep-s21-sort-kinds/uint8                                        PASS/-
+#     slices/sweep-s21-sort-kinds/int16                                        PASS/-
+#     slices/sweep-s21-sort-kinds/uint16                                       PASS/-
+#     slices/sweep-s21-sort-kinds/int32                                        PASS/-
+#     slices/sweep-s21-sort-kinds/uint32                                       PASS/-
+#     slices/sweep-s21-sort-kinds/rune-and-byte                                PASS/-
+#     stdlib-source/sweep-s21-bits/len-family                                  PASS/-
+#     stdlib-source/sweep-s21-bits/ones-count                                  PASS/-
+#     stdlib-source/sweep-s21-bits/rotate                                      PASS/-
+#     stdlib-source/sweep-s21-bits/reverse-family                              PASS/-
+#     stdlib-source/sweep-s21-bits/add-sub-mul                                 PASS/-
+#     stdlib-source/sweep-s21-cmp/compare-kinds                                PASS/-
+#     stdlib-source/sweep-s21-cmp/less-kinds                                   PASS/-
+#     stdlib-source/sweep-s21-cmp/or-kinds                                     PASS/-
+#     stdlib-source/sweep-s21-library-panics/slices-min-empty                  PASS/-
+#     stdlib-source/sweep-s21-library-panics/slices-max-empty                  PASS/-
+#     stdlib-source/sweep-s21-library-panics/slices-minfunc-empty              PASS/-
+#     stdlib-source/sweep-s21-library-panics/slices-maxfunc-empty              PASS/-
+#     stdlib-source/sweep-s21-library-panics/slices-grow-negative              PASS/-
+#     stdlib-source/sweep-s21-library-panics/slices-repeat-overflow            PASS/-
+#     stdlib-source/sweep-s21-library-panics/bytes-repeat-overflow             PASS/-
+#     stdlib-source/sweep-s21-library-panics/appendint-illegal-base            PASS/-
+#     stdlib-source/sweep-s21-library-panics/formatuint-illegal-base           PASS/-
+#     stdlib-source/sweep-s21-library-panics/putuvarint-short                  PASS/-
+#     stdlib-source/sweep-s21-library-panics/encoderune-short                  PASS/-
+#     stdlib-source/sweep-s21-library-panics/nil-builder-write                 PASS/-
+#     stdlib-source/sweep-s21-library-panics/nil-buffer-len                    PASS/-
+#     stdlib-source/sweep-s21-library-panics/bigendian-nil                     PASS/-
+#     stdlib-source/sweep-s21-library-panics/putuint32-short                   PASS/-
+#     stdlib-source/sweep-s21-overlay-builder/string-twice-equal               PASS/-
+#     stdlib-source/sweep-s21-overlay-builder/string-stable-after-realloc      PASS/-
+#     stdlib-source/sweep-s21-overlay-builder/string-stable-after-reset        PASS/-
+#     stdlib-source/sweep-s21-overlay-builder/alias-pointer-writes             PASS/-
+#     stdlib-source/sweep-s21-overlay-builder/struct-field-builder             PASS/-
+#     stdlib-source/sweep-s21-overlay-builder/slice-elem-builder               PASS/-
+#     stdlib-source/sweep-s21-overlay-builder/nil-builder-string               PASS/-
+#     stdlib-source/sweep-s21-overlay-builder/copy-append-realloc              PASS/-
+#     stdlib-source/sweep-s21-overlay-builder/copy-param                       PASS/-
+#     stdlib-source/sweep-s21-overlay-builder/copy-return                      PASS/-
+#     stdlib-source/sweep-s21-overlay-builder/copy-deref-assign                PASS/-
+#     stdlib-source/sweep-s21-overlay-builder/copy-zero-then-both              PASS/-
+#     stdlib-source/sweep-s21-overlay-builder/grow-large-then-write            PASS/-
+#     stdlib-source/sweep-s21-overlay-builder/write-method-results             PASS/-
+#     stdlib-source/sweep-s21-overlay-builder/builder-iface-dispatch           PASS/-
+#     stdlib-source/sweep-s21-overlay-clone/strings-clone                      PASS/-
+#     stdlib-source/sweep-s21-overlay-clone/parseint-errors                    PASS/-
+#     stdlib-source/sweep-s21-overlay-clone/atoi-errors                        PASS/-
+#     stdlib-source/sweep-s21-overlay-clone/parsebool-errors                   PASS/-
+#     stdlib-source/sweep-s21-overlay-clone/parseuint-base-bit-errors          PASS/-
+#     stdlib-source/sweep-s21-routes/func-values                               PASS/-
+#     stdlib-source/sweep-s21-routes/method-values                             PASS/-
+#     stdlib-source/sweep-s21-routes/generic-apply                             PASS/-
+#     stdlib-source/sweep-s21-routes/closure-defer-go                          PASS/-
+#     stdlib-source/sweep-s21-routes/init-calls                                PASS/-
+#     stdlib-source/sweep-s21-routes/iface-dispatch                            PASS/-
+#     stdlib-source/sweep-s21-routes/explicit-inst-value                       PASS/-
+#     stdlib-source/sweep-s21-substitution-search/index-needle-lengths         PASS/-
+#     stdlib-source/sweep-s21-substitution-search/rabin-karp-fallback          PASS/-
+#     stdlib-source/sweep-s21-substitution-search/count-classes                PASS/-
+#     stdlib-source/sweep-s21-substitution-search/compare-classes              PASS/-
+#     stdlib-source/sweep-s21-substitution-search/bytes-search-classes         PASS/-
+#     stdlib-source/sweep-s21-substitution-search/index-byte-classes           PASS/-
+#     stdlib-source/sweep-s21-unicode/predicates-ascii                         PASS/-
+#     stdlib-source/sweep-s21-unicode/predicates-latin1-bmp                    PASS/-
+#     stdlib-source/sweep-s21-unicode/predicates-astral                        PASS/-
+#     stdlib-source/sweep-s21-unicode/case-mapping                             PASS/-
+#     stdlib-source/sweep-s21-unicode/simple-fold-orbits                       PASS/-
+#     stdlib-source/sweep-s21-unicode/to-cases                                 PASS/-
+#     stdlib-source/sweep-s21-unicode/tables-in-is                             PASS/-
+#     strconv/sweep-s21-format/format-bool                                     PASS/-
+#     strconv/sweep-s21-format/append-family                                   PASS/-
+#     strconv/sweep-s21-format/itoa-vs-formatint                               PASS/-
+#     strconv/sweep-s21-format/append-aliasing                                 PASS/-
+#     strconv/sweep-s21-parse/parseint-bases                                   PASS/-
+#     strconv/sweep-s21-parse/parseint-bitsizes                                PASS/-
+#     strconv/sweep-s21-parse/parseint-saturation                              PASS/-
+#     strconv/sweep-s21-parse/parsebool-spellings                              PASS/-
+#     strconv/sweep-s21-parse/atoi-classes                                     PASS/-
+#     strconv/sweep-s21-parse/itoa-extremes                                    PASS/-
+#     strconv/sweep-s21-quote/graphic-variants                                 PASS/-
+#     strconv/sweep-s21-quote/can-backquote                                    PASS/-
+#     strconv/sweep-s21-quote/graphic-vs-print                                 PASS/-
+#     strconv/sweep-s21-quote/unquote-char                                     PASS/-
+#     strconv/sweep-s21-quote/quoted-prefix                                    PASS/-
+#     strconv/sweep-s21-quote/unquote-backquote                                PASS/-
+#     strings/sweep-s21-search/contains-family                                 PASS/-
+#     strings/sweep-s21-search/prefix-suffix                                   PASS/-
+#     strings/sweep-s21-search/index-family                                    PASS/-
+#     strings/sweep-s21-search/cut-family                                      PASS/-
+#     strings/sweep-s21-search/reader-pure-methods                             PASS/-
+#     strings/sweep-s21-split-join/splitn-counts                               PASS/-
+#     strings/sweep-s21-split-join/splitafter-family                           PASS/-
+#     strings/sweep-s21-split-join/fields-func                                 PASS/-
+#     strings/sweep-s21-split-join/join-classes                                PASS/-
+#     strings/sweep-s21-transform/replace-counts                               PASS/-
+#     strings/sweep-s21-transform/replacer-paths                               PASS/-
+#     strings/sweep-s21-transform/map-drop-and-width                           PASS/-
+#     strings/sweep-s21-transform/case-special                                 PASS/-
+#     strings/sweep-s21-transform/title-deprecated                             PASS/-
+#     strings/sweep-s21-transform/repeat-chunked                               PASS/-
+#     strings/sweep-s21-transform/repeat-count-one-empty                       PASS/-
+#     strings/sweep-s21-transform/equalfold-classes                            PASS/-
+#     strings/sweep-s21-trim/trim-cutsets                                      PASS/-
+#     strings/sweep-s21-trim/trim-left-right                                   PASS/-
+#     strings/sweep-s21-trim/trim-prefix-suffix                                PASS/-
+#     strings/sweep-s21-trim/trim-func-family                                  PASS/-
+#     strings/sweep-s21-utf8/encode-boundaries                                 PASS/-
+#     strings/sweep-s21-utf8/encode-invalid                                    PASS/-
+#     strings/sweep-s21-utf8/decode-last                                       PASS/-
+#     strings/sweep-s21-utf8/append-rune-and-start                             PASS/-
 # re-pinned: 2026-11-05 [AGENT], lane sweep/s23-budgets (on main 12d7a79a) — the defect-neighbourhood campaign's step 2, shape S23 (resource
 #   budgets; plan docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved 2026-10-27; members BUG-131, 090, 078): the shape's
 #   109-cell matrix (the doors a large or deep computation enters × count class × element footprint × site), 80 cells probed on both sides
@@ -12894,3 +13168,259 @@ PASS	strings/sweep-s23-conversions/runes-multibyte	-	-
 PASS	strings/sweep-s23-conversions/string-of-bytes	-	-
 PASS	strings/sweep-s23-conversions/string-of-runes	-	-
 FAIL	strings/sweep-s23-conversions/to-array-over	frontend-export	by-design/materialization-budget
+PASS	binary/sweep-s21-orders/all-orders-uint	-	-
+PASS	binary/sweep-s21-orders/put-family	-	-
+PASS	binary/sweep-s21-orders/append-family	-	-
+PASS	binary/sweep-s21-orders/order-strings	-	-
+PASS	binary/sweep-s21-orders/iface-dispatch	-	-
+PASS	binary/sweep-s21-varint/uvarint-roundtrip	-	-
+PASS	binary/sweep-s21-varint/varint-roundtrip	-	-
+PASS	binary/sweep-s21-varint/overflow-and-truncated	-	-
+PASS	binary/sweep-s21-varint/append-varints	-	-
+PASS	bytes/sweep-s21-buffer/write-family-results	-	-
+PASS	bytes/sweep-s21-buffer/truncate-next	-	-
+PASS	bytes/sweep-s21-buffer/bytes-aliasing	-	-
+PASS	bytes/sweep-s21-buffer/constructors	-	-
+PASS	bytes/sweep-s21-buffer/grow-then-write	-	-
+PASS	bytes/sweep-s21-search/contains-family	-	-
+PASS	bytes/sweep-s21-search/prefix-suffix-cut	-	-
+PASS	bytes/sweep-s21-search/index-family	-	-
+PASS	bytes/sweep-s21-transform/split-fields	-	-
+PASS	bytes/sweep-s21-transform/replace-family	-	-
+PASS	bytes/sweep-s21-transform/trim-family	-	-
+PASS	bytes/sweep-s21-transform/map-runes-title	-	-
+PASS	bytes/sweep-s21-transform/equalfold-clone-join-repeat	-	-
+PASS	errors/sweep-s21-join-text/multibyte-and-nul	-	-
+PASS	errors/sweep-s21-join-text/newlines-inside	-	-
+PASS	errors/sweep-s21-join-text/three-and-nested	-	-
+PASS	errors/sweep-s21-join-text/through-errorf-and-sprint	-	-
+PASS	errors/sweep-s21-join-text/elem-panics	-	-
+PASS	errors/sweep-s21-join-text/single-and-unwrap-of-join	-	-
+PASS	fmt/sweep-s21-alias-import/alias-sprintf	-	-
+PASS	fmt/sweep-s21-alias-import/alias-errorf	-	-
+PASS	fmt/sweep-s21-alias-import/alias-sprint-spread	-	-
+PASS	fmt/sweep-s21-alone-errorf	-	-
+PASS	fmt/sweep-s21-alone-fprint	-	-
+PASS	fmt/sweep-s21-alone-fprintf	-	-
+PASS	fmt/sweep-s21-alone-spread-sprint	-	-
+PASS	fmt/sweep-s21-alone-spread-sprintf	-	-
+PASS	fmt/sweep-s21-alone-spread-sprintln	-	-
+PASS	fmt/sweep-s21-alone-sprint	-	-
+PASS	fmt/sweep-s21-alone-sprintf	-	-
+PASS	fmt/sweep-s21-alone-sprintln	-	-
+PASS	fmt/sweep-s21-composites/empty-struct	-	-
+PASS	fmt/sweep-s21-composites/slice-named-ints	-	-
+PASS	fmt/sweep-s21-composites/struct-all-int-kinds	-	-
+PASS	fmt/sweep-s21-composites/slice-of-slices	-	-
+PASS	fmt/sweep-s21-composites/struct-with-slice-of-structs	-	-
+PASS	fmt/sweep-s21-composites/plusv-depth-3	-	-
+PASS	fmt/sweep-s21-composites/bool-and-string-fields	-	-
+PASS	fmt/sweep-s21-composites/nil-slice-field	-	-
+PASS	fmt/sweep-s21-composites/slice-of-slice-of-strings	-	-
+FAIL	fmt/sweep-s21-composites/named-bool-field	lean-observation	unsupported:?
+PASS	fmt/sweep-s21-contexts/initializers	-	-
+PASS	fmt/sweep-s21-contexts/in-method	-	-
+PASS	fmt/sweep-s21-contexts/in-goroutine	-	-
+PASS	fmt/sweep-s21-contexts/in-defer	-	-
+PASS	fmt/sweep-s21-contexts/generic-sprint	-	-
+PASS	fmt/sweep-s21-contexts/shim-named-method	-	-
+PASS	fmt/sweep-s21-contexts/dead-site-only	-	-
+PASS	fmt/sweep-s21-dyn-verbs/d-kinds	-	-
+PASS	fmt/sweep-s21-dyn-verbs/x-kinds	-	-
+PASS	fmt/sweep-s21-dyn-verbs/x-string	-	-
+PASS	fmt/sweep-s21-dyn-verbs/bytes-verbs	-	-
+PASS	fmt/sweep-s21-dyn-verbs/slice-kinds	-	-
+PASS	fmt/sweep-s21-dyn-verbs/bool-verbs	-	-
+PASS	fmt/sweep-s21-dyn-verbs/nil-spread	-	-
+PASS	fmt/sweep-s21-dyn-verbs/error-kinds	-	-
+PASS	fmt/sweep-s21-dyn-verbs/stringer-kinds	-	-
+PASS	fmt/sweep-s21-dyn-verbs/error-panic	-	-
+PASS	fmt/sweep-s21-dyn-verbs/dyn-plusv	-	-
+PASS	fmt/sweep-s21-dyn-verbs/percent-runtime	-	-
+PASS	fmt/sweep-s21-dyn-verbs/empty-format	-	-
+PASS	fmt/sweep-s21-dyn-verbs/error-before-stringer	-	-
+PASS	fmt/sweep-s21-dyn-verbs/named-string-format	-	-
+PASS	fmt/sweep-s21-dyn-verbs/nil-ptr-handled	-	-
+PASS	fmt/sweep-s21-errorf/verbs	-	-
+PASS	fmt/sweep-s21-errorf/no-verbs	-	-
+PASS	fmt/sweep-s21-errorf/identity-routes	-	-
+PASS	fmt/sweep-s21-errorf/unwrap	-	-
+PASS	fmt/sweep-s21-errorf/astype	-	-
+PASS	fmt/sweep-s21-errorf/rendered	-	-
+PASS	fmt/sweep-s21-errorf/in-closure-and-method	-	-
+FAIL	fmt/sweep-s21-errorf/assert-iface	differential	-
+PASS	fmt/sweep-s21-formatter-controls/never-boxed	-	-
+PASS	fmt/sweep-s21-formatter-no-dyn/errorf-no-dyn-boxed	-	-
+FAIL	fmt/sweep-s21-init-q-initializer	frontend-export	FR-22/init-callee-unmodeled
+FAIL	fmt/sweep-s21-init-s-error-initializer	frontend-export	FR-22/init-callee-unmodeled
+FAIL	fmt/sweep-s21-init-spread-sprintf-in-init	frontend-export	FR-22/init-callee-unmodeled
+FAIL	fmt/sweep-s21-init-sprint-indirect	frontend-export	FR-22/init-callee-unmodeled
+FAIL	fmt/sweep-s21-init-sprint-initializer	frontend-export	FR-22/init-callee-unmodeled
+FAIL	fmt/sweep-s21-init-sprintln-in-init	frontend-export	FR-22/init-callee-unmodeled
+FAIL	fmt/sweep-s21-init-v-stringer-initializer	frontend-export	FR-22/init-callee-unmodeled
+PASS	fmt/sweep-s21-sprint-space/pairs	-	-
+PASS	fmt/sweep-s21-sprint-space/int-stringer-pair	-	-
+PASS	fmt/sweep-s21-sprint-space/empties	-	-
+PASS	fmt/sweep-s21-sprint-space/fixed-mixed	-	-
+PASS	fmt/sweep-s21-sprint-space/sprintln-mixed	-	-
+FAIL	fmt/sweep-s21-sprint-space/named-string-stringer	differential	-
+FAIL	fmt/sweep-s21-sprint-space/named-string-stringer-mixed	differential	-
+FAIL	fmt/sweep-s21-sprint-space/named-string-error	differential	-
+FAIL	fmt/sweep-s21-sprint-space/named-string-error-then-int	differential	-
+FAIL	fmt/sweep-s21-sprint-space/spread-named-string	differential	-
+PASS	fmt/sweep-s21-sprint-space/named-string-sprintln	-	-
+PASS	fmt/sweep-s21-static-renders/error-panic-error-payload	-	-
+PASS	fmt/sweep-s21-static-renders/stringer-panic-errorf-payload	-	-
+PASS	fmt/sweep-s21-static-renders/nested-stringer	-	-
+PASS	fmt/sweep-s21-static-renders/q-stringer-escapes	-	-
+PASS	fmt/sweep-s21-static-renders/x-error-multibyte	-	-
+PASS	fmt/sweep-s21-static-renders/value-error-at-error-iface	-	-
+PASS	fmt/sweep-s21-static-renders/errors-new-at-every-verb	-	-
+PASS	fmt/sweep-s21-static-renders/panic-render-drops-width-flag	-	-
+PASS	fmt/sweep-s21-static-renders/typed-nil-error-handled	-	-
+PASS	fmt/sweep-s21-static-verbs/d-kinds	-	-
+PASS	fmt/sweep-s21-static-verbs/d-named-error	-	-
+PASS	fmt/sweep-s21-static-verbs/x-unsigned-kinds	-	-
+PASS	fmt/sweep-s21-static-verbs/v-kinds-all	-	-
+PASS	fmt/sweep-s21-static-verbs/plusv-scalars	-	-
+PASS	fmt/sweep-s21-static-verbs/v-error-and-stringer	-	-
+PASS	fmt/sweep-s21-static-verbs/v-nil-ptr-handled	-	-
+FAIL	fmt/sweep-s21-static-verbs/t-named-bool	lean-observation	unsupported:?
+FAIL	fmt/sweep-s21-static-verbs/v-named-bool	lean-observation	unsupported:?
+PASS	fmt/sweep-s21-static-verbs/d-generic-body	-	-
+PASS	fmt/sweep-s21-static-verbs/width-kinds	-	-
+PASS	fmt/sweep-s21-static-verbs/const-expr-format	-	-
+PASS	fmt/sweep-s21-static-verbs/literal-bytes	-	-
+PASS	fmt/sweep-s21-static-verbs/percent-adjacent	-	-
+PASS	fmt/sweep-s21-static-verbs/stringer-under-every-verb	-	-
+PASS	fmt/sweep-s21-writers/fprint-named-string	-	-
+PASS	fmt/sweep-s21-writers/fprint-results	-	-
+PASS	fmt/sweep-s21-writers/fprintf-writer-order	-	-
+PASS	fmt/sweep-s21-writers/fprintf-nil-builder	-	-
+PASS	fmt/sweep-s21-writers/fprintf-buffer-every-verb	-	-
+PASS	fmt/sweep-s21-writers/fprint-buffer-named	-	-
+PASS	multipkg/sweep-s21-fmt-crosspkg/cross-errorf-then-sprint	-	-
+PASS	multipkg/sweep-s21-fmt-crosspkg/cross-stringer	-	-
+PASS	slices/sweep-s21-edit/delete-func-cleared-tail	-	-
+PASS	slices/sweep-s21-edit/clone-nil-empty	-	-
+PASS	slices/sweep-s21-edit/compact-family	-	-
+PASS	slices/sweep-s21-edit/grow-clip-reverse	-	-
+PASS	slices/sweep-s21-edit/concat-repeat	-	-
+PASS	slices/sweep-s21-edit/insert-no-spare	-	-
+PASS	slices/sweep-s21-edit/replace-no-spare	-	-
+PASS	slices/sweep-s21-search/index-contains	-	-
+PASS	slices/sweep-s21-search/equal-compare	-	-
+PASS	slices/sweep-s21-search/binary-search	-	-
+PASS	slices/sweep-s21-search/is-sorted	-	-
+PASS	slices/sweep-s21-search/min-max	-	-
+PASS	slices/sweep-s21-sort-kinds/int8	-	-
+PASS	slices/sweep-s21-sort-kinds/uint8	-	-
+PASS	slices/sweep-s21-sort-kinds/int16	-	-
+PASS	slices/sweep-s21-sort-kinds/uint16	-	-
+PASS	slices/sweep-s21-sort-kinds/int32	-	-
+PASS	slices/sweep-s21-sort-kinds/uint32	-	-
+PASS	slices/sweep-s21-sort-kinds/rune-and-byte	-	-
+PASS	stdlib-source/sweep-s21-bits/len-family	-	-
+PASS	stdlib-source/sweep-s21-bits/ones-count	-	-
+PASS	stdlib-source/sweep-s21-bits/rotate	-	-
+PASS	stdlib-source/sweep-s21-bits/reverse-family	-	-
+PASS	stdlib-source/sweep-s21-bits/add-sub-mul	-	-
+PASS	stdlib-source/sweep-s21-cmp/compare-kinds	-	-
+PASS	stdlib-source/sweep-s21-cmp/less-kinds	-	-
+PASS	stdlib-source/sweep-s21-cmp/or-kinds	-	-
+PASS	stdlib-source/sweep-s21-library-panics/slices-min-empty	-	-
+PASS	stdlib-source/sweep-s21-library-panics/slices-max-empty	-	-
+PASS	stdlib-source/sweep-s21-library-panics/slices-minfunc-empty	-	-
+PASS	stdlib-source/sweep-s21-library-panics/slices-maxfunc-empty	-	-
+PASS	stdlib-source/sweep-s21-library-panics/slices-grow-negative	-	-
+PASS	stdlib-source/sweep-s21-library-panics/slices-repeat-overflow	-	-
+PASS	stdlib-source/sweep-s21-library-panics/bytes-repeat-overflow	-	-
+PASS	stdlib-source/sweep-s21-library-panics/appendint-illegal-base	-	-
+PASS	stdlib-source/sweep-s21-library-panics/formatuint-illegal-base	-	-
+PASS	stdlib-source/sweep-s21-library-panics/putuvarint-short	-	-
+PASS	stdlib-source/sweep-s21-library-panics/encoderune-short	-	-
+PASS	stdlib-source/sweep-s21-library-panics/nil-builder-write	-	-
+PASS	stdlib-source/sweep-s21-library-panics/nil-buffer-len	-	-
+PASS	stdlib-source/sweep-s21-library-panics/bigendian-nil	-	-
+PASS	stdlib-source/sweep-s21-library-panics/putuint32-short	-	-
+PASS	stdlib-source/sweep-s21-overlay-builder/string-twice-equal	-	-
+PASS	stdlib-source/sweep-s21-overlay-builder/string-stable-after-realloc	-	-
+PASS	stdlib-source/sweep-s21-overlay-builder/string-stable-after-reset	-	-
+PASS	stdlib-source/sweep-s21-overlay-builder/alias-pointer-writes	-	-
+PASS	stdlib-source/sweep-s21-overlay-builder/struct-field-builder	-	-
+PASS	stdlib-source/sweep-s21-overlay-builder/slice-elem-builder	-	-
+PASS	stdlib-source/sweep-s21-overlay-builder/nil-builder-string	-	-
+PASS	stdlib-source/sweep-s21-overlay-builder/copy-append-realloc	-	-
+PASS	stdlib-source/sweep-s21-overlay-builder/copy-param	-	-
+PASS	stdlib-source/sweep-s21-overlay-builder/copy-return	-	-
+PASS	stdlib-source/sweep-s21-overlay-builder/copy-deref-assign	-	-
+PASS	stdlib-source/sweep-s21-overlay-builder/copy-zero-then-both	-	-
+PASS	stdlib-source/sweep-s21-overlay-builder/grow-large-then-write	-	-
+PASS	stdlib-source/sweep-s21-overlay-builder/write-method-results	-	-
+PASS	stdlib-source/sweep-s21-overlay-builder/builder-iface-dispatch	-	-
+PASS	stdlib-source/sweep-s21-overlay-clone/strings-clone	-	-
+PASS	stdlib-source/sweep-s21-overlay-clone/parseint-errors	-	-
+PASS	stdlib-source/sweep-s21-overlay-clone/atoi-errors	-	-
+PASS	stdlib-source/sweep-s21-overlay-clone/parsebool-errors	-	-
+PASS	stdlib-source/sweep-s21-overlay-clone/parseuint-base-bit-errors	-	-
+PASS	stdlib-source/sweep-s21-routes/func-values	-	-
+PASS	stdlib-source/sweep-s21-routes/method-values	-	-
+PASS	stdlib-source/sweep-s21-routes/generic-apply	-	-
+PASS	stdlib-source/sweep-s21-routes/closure-defer-go	-	-
+PASS	stdlib-source/sweep-s21-routes/init-calls	-	-
+PASS	stdlib-source/sweep-s21-routes/iface-dispatch	-	-
+PASS	stdlib-source/sweep-s21-routes/explicit-inst-value	-	-
+PASS	stdlib-source/sweep-s21-substitution-search/index-needle-lengths	-	-
+PASS	stdlib-source/sweep-s21-substitution-search/rabin-karp-fallback	-	-
+PASS	stdlib-source/sweep-s21-substitution-search/count-classes	-	-
+PASS	stdlib-source/sweep-s21-substitution-search/compare-classes	-	-
+PASS	stdlib-source/sweep-s21-substitution-search/bytes-search-classes	-	-
+PASS	stdlib-source/sweep-s21-substitution-search/index-byte-classes	-	-
+PASS	stdlib-source/sweep-s21-unicode/predicates-ascii	-	-
+PASS	stdlib-source/sweep-s21-unicode/predicates-latin1-bmp	-	-
+PASS	stdlib-source/sweep-s21-unicode/predicates-astral	-	-
+PASS	stdlib-source/sweep-s21-unicode/case-mapping	-	-
+PASS	stdlib-source/sweep-s21-unicode/simple-fold-orbits	-	-
+PASS	stdlib-source/sweep-s21-unicode/to-cases	-	-
+PASS	stdlib-source/sweep-s21-unicode/tables-in-is	-	-
+PASS	strconv/sweep-s21-format/format-bool	-	-
+PASS	strconv/sweep-s21-format/append-family	-	-
+PASS	strconv/sweep-s21-format/itoa-vs-formatint	-	-
+PASS	strconv/sweep-s21-format/append-aliasing	-	-
+PASS	strconv/sweep-s21-parse/parseint-bases	-	-
+PASS	strconv/sweep-s21-parse/parseint-bitsizes	-	-
+PASS	strconv/sweep-s21-parse/parseint-saturation	-	-
+PASS	strconv/sweep-s21-parse/parsebool-spellings	-	-
+PASS	strconv/sweep-s21-parse/atoi-classes	-	-
+PASS	strconv/sweep-s21-parse/itoa-extremes	-	-
+PASS	strconv/sweep-s21-quote/graphic-variants	-	-
+PASS	strconv/sweep-s21-quote/can-backquote	-	-
+PASS	strconv/sweep-s21-quote/graphic-vs-print	-	-
+PASS	strconv/sweep-s21-quote/unquote-char	-	-
+PASS	strconv/sweep-s21-quote/quoted-prefix	-	-
+PASS	strconv/sweep-s21-quote/unquote-backquote	-	-
+PASS	strings/sweep-s21-search/contains-family	-	-
+PASS	strings/sweep-s21-search/prefix-suffix	-	-
+PASS	strings/sweep-s21-search/index-family	-	-
+PASS	strings/sweep-s21-search/cut-family	-	-
+PASS	strings/sweep-s21-search/reader-pure-methods	-	-
+PASS	strings/sweep-s21-split-join/splitn-counts	-	-
+PASS	strings/sweep-s21-split-join/splitafter-family	-	-
+PASS	strings/sweep-s21-split-join/fields-func	-	-
+PASS	strings/sweep-s21-split-join/join-classes	-	-
+PASS	strings/sweep-s21-transform/replace-counts	-	-
+PASS	strings/sweep-s21-transform/replacer-paths	-	-
+PASS	strings/sweep-s21-transform/map-drop-and-width	-	-
+PASS	strings/sweep-s21-transform/case-special	-	-
+PASS	strings/sweep-s21-transform/title-deprecated	-	-
+PASS	strings/sweep-s21-transform/repeat-chunked	-	-
+PASS	strings/sweep-s21-transform/repeat-count-one-empty	-	-
+PASS	strings/sweep-s21-transform/equalfold-classes	-	-
+PASS	strings/sweep-s21-trim/trim-cutsets	-	-
+PASS	strings/sweep-s21-trim/trim-left-right	-	-
+PASS	strings/sweep-s21-trim/trim-prefix-suffix	-	-
+PASS	strings/sweep-s21-trim/trim-func-family	-	-
+PASS	strings/sweep-s21-utf8/encode-boundaries	-	-
+PASS	strings/sweep-s21-utf8/encode-invalid	-	-
+PASS	strings/sweep-s21-utf8/decode-last	-	-
+PASS	strings/sweep-s21-utf8/append-rune-and-start	-	-

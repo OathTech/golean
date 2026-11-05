@@ -1,0 +1,16 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# Sweep lane sweep/s21-stdlib (2026-11-05), shape S21 (stdlib shims and source-through; plan §4; the matrix on BUG-089/086/073/071/154/153). Strict, expected = gc go1.26.5.
+# depth= (the strict-lane depth guard, docs/coverage-suite-structure.md "Lane assignment"): the rows so marked outrun the
+# three fixed adversarial streams at appendSpill (capacity latitude inside the library's string building, unobservable
+# here); depth=N is the smallest power of two >= 4*w (w = the default-stream wide count the runner reported), min 64.
+pairs	pairs	-	ok	-	stdlib,strings,variadic,ints,bools,nil,interfaces,bytes	strict	-	depth=128
+int-stringer-pair	intStringerPair	-	ok	-	stdlib,strings,variadic,methods,defined_type	strict	-	-
+empties	empties	-	ok	-	stdlib,strings,variadic,nil,multi_result	strict	-	-
+fixed-mixed	fixedMixed	-	ok	-	stdlib,strings,variadic,ints,bools	strict	-	depth=64
+sprintln-mixed	sprintlnMixed	-	ok	-	stdlib,strings,variadic,ints	strict	-	-
+named-string-stringer	namedStringStringer	-	ok	-	stdlib,strings,variadic,methods,defined_type	strict	-	-
+named-string-stringer-mixed	namedStringStringerMixed	-	ok	-	stdlib,strings,variadic,methods,defined_type,ints	strict	-	-
+named-string-error	namedStringError	-	ok	-	stdlib,strings,variadic,methods,interfaces,defined_type	strict	-	-
+named-string-error-then-int	namedStringErrorThenInt	-	ok	-	stdlib,strings,variadic,methods,interfaces,defined_type,ints	strict	-	-
+spread-named-string	spreadNamedString	-	ok	-	stdlib,strings,variadic,methods,defined_type,closures	strict	-	-
+named-string-sprintln	namedStringSprintln	-	ok	-	stdlib,strings,variadic,methods,defined_type	strict	-	-

@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s21-stdlib (2026-11-05), shape S21 (stdlib shims and source-through; plan §4; the matrix on BUG-089/086/073/071/154/153). Strict, expected = gc go1.26.5.
+compare-kinds	compareKinds	-	ok	-	stdlib,generics,ints,widths,strings,defined_type
+less-kinds	lessKinds	-	ok	-	stdlib,generics,ints,strings,bools,defined_type
+or-kinds	orKinds	-	ok	-	stdlib,generics,ints,strings,bools,structs,defined_type

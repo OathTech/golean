@@ -1,0 +1,15 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# Sweep lane sweep/s21-stdlib (2026-11-05), shape S21 (stdlib shims and source-through; plan §4; the matrix on BUG-089/086/073/071/154/153). Strict, expected = gc go1.26.5.
+# depth= (the strict-lane depth guard, docs/coverage-suite-structure.md "Lane assignment"): the rows so marked outrun the
+# three fixed adversarial streams at appendSpill (capacity latitude inside the library's string building, unobservable
+# here); depth=N is the smallest power of two >= 4*w (w = the default-stream wide count the runner reported), min 64.
+empty-struct	emptyStruct	-	ok	-	stdlib,strings,structs	strict	-	-
+slice-named-ints	sliceNamedInts	-	ok	-	stdlib,strings,slices,defined_type	strict	-	-
+struct-all-int-kinds	structAllIntKinds	-	ok	-	stdlib,strings,structs,ints,widths	strict	-	depth=128
+slice-of-slices	sliceOfSlices	-	ok	-	stdlib,strings,slices,nested,nil	strict	-	-
+struct-with-slice-of-structs	structWithSliceOfStructs	-	ok	-	stdlib,strings,structs,slices,nested,nil	strict	-	-
+plusv-depth-3	plusVDepth3	-	ok	-	stdlib,strings,structs,nested	strict	-	-
+bool-and-string-fields	boolAndStringFields	-	ok	-	stdlib,strings,structs,bools	strict	-	-
+nil-slice-field	nilSliceField	-	ok	-	stdlib,strings,structs,slices,nil	strict	-	-
+slice-of-slice-of-strings	sliceOfSliceOfStrings	-	ok	-	stdlib,strings,structs,slices,nested	strict	-	-
+named-bool-field	namedBoolField	-	ok	-	stdlib,strings,structs,bools,defined_type	strict	-	-

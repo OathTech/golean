@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s21-stdlib (2026-11-05), shape S21 (stdlib shims and source-through; plan §4; the matrix on BUG-089/086/073/071/154/153). Strict, expected = gc go1.26.5.
+graphic-variants	graphicVariants	-	ok	-	stdlib,strings,unicode,escapes,bytes
+can-backquote	canBackquote	-	ok	-	stdlib,strings,bools,unicode
+graphic-vs-print	graphicVsPrint	-	ok	-	stdlib,strings,bools,unicode,runes
+unquote-char	unquoteChar	-	ok	-	stdlib,strings,escapes,runes,multi_result
+quoted-prefix	quotedPrefix	-	ok	-	stdlib,strings,escapes,interfaces
+unquote-backquote	unquoteBackquote	-	ok	-	stdlib,strings,escapes

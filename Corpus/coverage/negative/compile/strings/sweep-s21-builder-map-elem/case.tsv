@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot call pointer method WriteString on strings.Builder	stdlib,strings,methods,maps,compile_error

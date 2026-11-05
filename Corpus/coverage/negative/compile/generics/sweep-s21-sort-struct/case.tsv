@@ -1,0 +1,2 @@
+# expected_substring	features
+does not satisfy cmp.Ordered	stdlib,generics,slices,structs,compile_error

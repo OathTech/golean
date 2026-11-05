@@ -1,0 +1,21 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# Sweep lane sweep/s21-stdlib (2026-11-05), shape S21 (stdlib shims and source-through; plan §4; the matrix on BUG-089/086/073/071/154/153). Strict, expected = gc go1.26.5.
+# depth= (the strict-lane depth guard, docs/coverage-suite-structure.md "Lane assignment"): the rows so marked outrun the
+# three fixed adversarial streams at appendSpill (capacity latitude inside the library's string building, unobservable
+# here); depth=N is the smallest power of two >= 4*w (w = the default-stream wide count the runner reported), min 64.
+d-kinds	dKinds	-	ok	-	stdlib,strings,variadic,ints,widths	strict	-	depth=128
+x-kinds	xKinds	-	ok	-	stdlib,strings,variadic,ints,bitwise	strict	-	depth=64
+x-string	xString	-	ok	-	stdlib,strings,variadic,unicode	strict	-	-
+bytes-verbs	bytesVerbs	-	ok	-	stdlib,strings,variadic,slices,bytes,nil	strict	-	depth=64
+slice-kinds	sliceKinds	-	ok	-	stdlib,strings,variadic,slices,ints,nil	strict	-	-
+bool-verbs	boolVerbs	-	ok	-	stdlib,strings,variadic,bools	strict	-	-
+nil-spread	nilSpread	-	ok	-	stdlib,strings,variadic,nil	strict	-	-
+error-kinds	errorKinds	-	ok	-	stdlib,strings,variadic,interfaces,methods,pointers	strict	-	depth=64
+stringer-kinds	stringerKinds	-	ok	-	stdlib,strings,variadic,methods,pointers	strict	-	-
+error-panic	errorPanic	-	ok	-	stdlib,strings,variadic,methods,panic,recover	strict	-	-
+dyn-plusv	dynPlusV	-	ok	-	stdlib,strings,variadic,methods	strict	-	-
+percent-runtime	percentRuntime	-	ok	-	stdlib,strings,variadic	strict	-	-
+empty-format	emptyFormat	-	ok	-	stdlib,strings,variadic,unicode	strict	-	-
+error-before-stringer	errorBeforeStringer	-	ok	-	stdlib,strings,variadic,interfaces,methods	strict	-	-
+named-string-format	namedStringFormat	-	ok	-	stdlib,strings,variadic,defined_type,closures	strict	-	-
+nil-ptr-handled	nilPtrHandled	-	ok	-	stdlib,strings,variadic,methods,pointers,nil	strict	-	-

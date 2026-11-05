@@ -1,0 +1,20 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# Sweep lane sweep/s21-stdlib (2026-11-05), shape S21 (stdlib shims and source-through; plan §4; the matrix on BUG-089/086/073/071/154/153). Strict, expected = gc go1.26.5.
+# depth= (the strict-lane depth guard, docs/coverage-suite-structure.md "Lane assignment"): the rows so marked outrun the
+# three fixed adversarial streams at appendSpill (capacity latitude inside the library's string building, unobservable
+# here); depth=N is the smallest power of two >= 4*w (w = the default-stream wide count the runner reported), min 64.
+string-twice-equal	stringTwiceEqual	-	ok	-	stdlib,strings,methods,multi_result	strict	-	-
+string-stable-after-realloc	stringStableAfterRealloc	-	ok	-	stdlib,strings,methods,multi_result	strict	-	depth=64
+string-stable-after-reset	stringStableAfterReset	-	ok	-	stdlib,strings,methods,multi_result	strict	-	-
+alias-pointer-writes	aliasPointerWrites	-	ok	-	stdlib,strings,methods,pointers,unicode	strict	-	-
+struct-field-builder	structFieldBuilder	-	ok	-	stdlib,strings,methods,structs,pointers,multi_result	strict	-	-
+slice-elem-builder	sliceElemBuilder	-	ok	-	stdlib,strings,methods,slices	strict	-	-
+nil-builder-string	nilBuilderString	-	panic	invalid memory address	stdlib,strings,methods,pointers,nil,panic	strict	-	-
+copy-append-realloc	copyAppendRealloc	-	panic	illegal use of non-zero Builder	stdlib,strings,methods,slices,panic	strict	-	-
+copy-param	copyParam	-	panic	illegal use of non-zero Builder	stdlib,strings,methods,calls,panic	strict	-	-
+copy-return	copyReturn	-	panic	illegal use of non-zero Builder	stdlib,strings,methods,returns,panic	strict	-	-
+copy-deref-assign	copyDerefAssign	-	panic	illegal use of non-zero Builder	stdlib,strings,methods,pointers,panic	strict	-	-
+copy-zero-then-both	copyZeroThenBoth	-	ok	-	stdlib,strings,methods	strict	-	-
+grow-large-then-write	growLargeThenWrite	-	ok	-	stdlib,strings,methods,multi_result	strict	-	-
+write-method-results	writeMethodResults	-	ok	-	stdlib,strings,methods,bytes,unicode,variadic	strict	-	-
+builder-iface-dispatch	builderIfaceDispatch	-	ok	-	stdlib,strings,methods,interfaces,type_assertions	strict	-	-
