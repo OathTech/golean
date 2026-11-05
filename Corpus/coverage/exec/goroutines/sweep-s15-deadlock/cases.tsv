@@ -1,0 +1,15 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep S15 (scheduling boundaries and the menu), group F — the deadlock
+# terminal when nobody is runnable, with the park KINDS MIXED (the existing
+# deadlock rows park everybody on one kind): gc's detector counts every
+# goroutine parked on a Go-visible primitive and the machine's
+# `deadlockOrRefusal` classifies the empty menu the same way (latitude
+# inventory C9). Lane sweep/s15-scheduling, 2026-10-27, per the
+# defect-neighbourhood campaign's §4 (docs/defect-shapes.md S15; BUG-044's
+# Neighbourhood line). Strict rows: the terminal is schedule-invariant.
+mixed-wg-mutex	mixedWgMutex	-	deadlock	-	goroutines,sync,waitgroup,mutex,deadlock
+mixed-recv-once	mixedRecvOnce	-	deadlock	-	goroutines,channels,sync,once,deadlock
+mixed-select-rlock	mixedSelectRlock	-	deadlock	-	goroutines,channels,select,sync,rwmutex,deadlock
+mixed-wg-nil-chan	mixedWgNilChan	-	deadlock	-	goroutines,channels,nil,sync,waitgroup,deadlock
+full-buffer-send	fullBufferSend	-	deadlock	-	goroutines,channels,make,deadlock
+select-empty-with-parked-child	selectEmptyWithParkedChild	-	deadlock	-	goroutines,channels,select,deadlock

@@ -1,0 +1,16 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# Sweep S15 (scheduling boundaries and the menu), group D — spawn and
+# goroutine exit (BUG-040's class, the post-spawn reschedule point; the
+# deferred-call drain at a goroutine's exit). Lane sweep/s15-scheduling,
+# 2026-10-27, per the defect-neighbourhood campaign's §4
+# (docs/defect-shapes.md S15; BUG-040's Neighbourhood line). Each set
+# certified by coverage-observations at width 4; gc go1.26.5 sampled 200
+# plain / 200 -race / 50 at GOMAXPROCS=1 under the runners' pins, every draw
+# a member. `defer println("d")` / `defer print("D")` of the BUILTIN are
+# frontend-quarantined by name (a coverage gap of the drain cell, recorded
+# in the sweep); the rows use the deferred-literal spelling.
+go-arg-recv	goArgRecv	-	ok	-	goroutines,channels	confluent	the go statement's argument is received in the SPAWNER before the child exists (spec#Go_statements): 10 on every schedule	width=4,sites=16
+defer-println-drain	deferPrintlnDrain	-	ok	-	goroutines,channels,defer,builtins,print,nondet	membership	a deferred print at the child's normal drain (the deferred-literal spelling): main's a lands before b, between b and d, or after d; certified set {"a\nb\nd\n", "b\na\nd\n", "b\nd\na\n"} (members=3)	width=4,sites=16,members=3
+defer-done-drain	deferDoneDrain	-	ok	-	goroutines,sync,waitgroup,defer,print	confluent	a deferred wg.Done at the drain runs after the child's B, so main's A after Wait follows it on every schedule: BA	width=4,sites=16
+defer-close-drain	deferCloseDrain	-	ok	-	goroutines,channels,close,defer,print	confluent	a deferred close at the drain wakes main's receive after the child's B on every schedule: BA	width=4,sites=16
+defer-unlock-drain	deferUnlockDrain	-	ok	-	goroutines,sync,mutex,defer,print	confluent	a deferred Unlock at the drain releases main's Lock after the child's B on every schedule: BA	width=4,sites=24

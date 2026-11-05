@@ -1,0 +1,30 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# Sweep S15 (scheduling boundaries and the menu), group B — the loop
+# re-entry shapes (BUG-152's back-edge class, `ChoiceSite.backEdge`): every
+# loop form a goroutine can spin in, printing one `s` per iteration after a
+# wake-producing send, beside main's `m` after the wake; and three pollers
+# that spin until a peer's action becomes visible through a select, a
+# channel-length read or a mutex. The labelled-continue and goto forms
+# travel the `contTo` path, which has no back-edge arm
+# (docs/2026-10-06_spin-bounds.md §2.1): their bounded printing shapes are
+# rowed; their unbounded pure spinners refuse by name under iters= (the
+# re-entry is not counted) and are recorded on BUG-152's Neighbourhood line
+# as coverage gaps. Lane sweep/s15-scheduling, 2026-10-27, per the
+# defect-neighbourhood campaign's §4 (docs/defect-shapes.md S15). backedge=1
+# explores the canonical slot plus one anti-progress slot at every back-edge
+# consult — exhaustive at these two-goroutine menus. Each set certified by
+# coverage-observations; gc go1.26.5 sampled 200 plain / 200 -race / 50 at
+# GOMAXPROCS=1 under the runners' pins, every draw a member.
+for-clause-interleave	forClauseInterleave	-	ok	-	goroutines,channels,loops,print,nondet	membership	a three-clause for printing twice after the wake: main's m lands before, between or after the two s (the print pre-boundaries and the back-edge consults): certified set {mss, sms, ssm} (members=3)	width=4,sites=24,members=3,work=400000,backedge=1
+range-int-interleave	rangeIntInterleave	-	ok	-	goroutines,channels,loops,range,ints,print,nondet	membership	range over an integer printing twice after the wake: certified set {mss, sms, ssm} (members=3)	width=4,sites=24,members=3,work=400000,backedge=1
+range-slice-interleave	rangeSliceInterleave	-	ok	-	goroutines,channels,loops,range,slices,print,nondet	membership	range over a slice printing twice after the wake: certified set {mss, sms, ssm} (members=3)	width=4,sites=24,members=3,work=400000,backedge=1
+range-chan-interleave	rangeChanInterleave	-	ok	-	goroutines,channels,loops,range,close,print,nondet	membership	range over a channel: the producer's p after its unbuffered send pairs and the consumer's c after the receive are concurrent, the close ends the range; certified set {cp, pc} (members=2)	width=4,sites=24,members=2,work=400000,backedge=1
+range-map-interleave	rangeMapInterleave	-	ok	-	goroutines,channels,loops,range,maps,print,nondet	membership	range over a two-key map (the mapIterK re-entry; the order pick is consumed but unobserved) printing twice after the wake: certified set {mss, sms, ssm} (members=3)	width=4,sites=24,members=3,work=600000,backedge=1
+continue-interleave	continueInterleave	-	ok	-	goroutines,channels,loops,print,nondet	membership	the body ends in a bare continue (`.signal .cont (.loop …)`, a back-edge shape): certified set {mss, sms, ssm} (members=3)	width=4,sites=24,members=3,work=400000,backedge=1
+continue-in-switch-interleave	continueInSwitchInterleave	-	ok	-	goroutines,channels,loops,switch,print,nondet	membership	continue from inside a switch inside the loop (the signal passes the breakable frame to the loop): certified set {mss, sms, ssm} (members=3)	width=4,sites=24,members=3,work=400000,backedge=1
+continue-in-select-interleave	continueInSelectInterleave	-	ok	-	goroutines,channels,loops,select,default,print,nondet	membership	continue from inside a select with a default clause inside the loop (the no-operand select entry is a boundary too): certified set {mss, sms, ssm} (members=3)	width=4,sites=24,members=3,work=600000,backedge=1
+continue-label-interleave	continueLabelInterleave	-	ok	-	goroutines,channels,loops,labels,print,nondet	membership	a labelled continue L to the enclosing loop re-enters the loop head through the contTo signal (no back-edge arm, spin-bounds note §2.1); the print pre-boundaries alone realize every order: certified set {mss, sms, ssm} (members=3)	width=4,sites=24,members=3,work=200000,backedge=1
+continue-outer-label-interleave	continueOuterLabelInterleave	-	ok	-	goroutines,channels,loops,labels,print,nondet	membership	a labelled continue outer from an inner loop (the same contTo path across two loop frames): certified set {mss, sms, ssm} (members=3)	width=4,sites=24,members=3,work=200000,backedge=1
+goto-interleave	gotoInterleave	-	ok	-	goroutines,channels,loops,goto,print,nondet	membership	a goto loop in a named function (the frontend's dispatch-loop restructuring emits a labelled continue-to, the same contTo path): certified set {mss, sms, ssm} (members=3)	width=4,sites=24,members=3,work=200000,backedge=1
+select-default-poll	selectDefaultPoll	-	ok	-	goroutines,channels,loops,select,default,nondet	membership	a goroutine polls a select with default in a loop until main's send: the terminating member is 42; the polling branches that never see the send are cut by the iters=5 re-entry budget and counted as non-terminating, never members; certified TERMINATING set {42} (members=1)	width=4,sites=48,members=1,work=400000,iters=5,backedge=1
+len-poll	lenPoll	-	ok	-	goroutines,channels,loops,len,make,nondet	membership	a goroutine polls len(ch) until main's buffered send lands (the channel-length apply is a boundary, BUG-123, and the loop re-entry another): certified TERMINATING set {7} (members=1) under iters=5	width=4,sites=32,members=1,work=400000,iters=5,backedge=1

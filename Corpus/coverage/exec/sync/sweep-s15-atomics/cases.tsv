@@ -1,0 +1,15 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# Sweep S15 (scheduling boundaries and the menu), group A14/G3 — the atomics
+# as registry boundaries whose L1 order is the sequentially consistent order
+# mem#atomic pins (latitude inventory U-6; the MP litmus is
+# sync/atomic-frontier/mp-litmus). Lane sweep/s15-scheduling, 2026-10-27, per
+# the defect-neighbourhood campaign's §4 (docs/defect-shapes.md S15; BUG-123's
+# Neighbourhood line). The whole state graph is certified under engine=dedup
+# (the DFS tree of three goroutines over atomics and a done channel passes
+# 4 M work units); gc go1.26.5 sampled 200 plain / 200 -race / 50 at
+# GOMAXPROCS=1 under the runners' pins, every draw a member.
+sb-litmus	sbLitmus	-	ok	-	sync,atomics,goroutines,channels,nondet	membership	store buffering: each goroutine stores its flag then loads the other's; SC forbids both loads reading 0, so the certified set is {1, 10, 11} (members=3) with 0 absent — the fused atomic steps interleave only at L1 (U-6)	work=2000000,members=3,engine=dedup
+lb-litmus	lbLitmus	-	ok	-	sync,atomics,goroutines,channels,nondet	membership	load buffering: each goroutine loads the other's flag then stores its own; SC forbids both loads reading 1, so the certified set is {0, 1, 10} (members=3) with 11 absent	work=2000000,members=3,engine=dedup
+swap-order	swapOrder	-	ok	-	sync,atomics,goroutines,channels,nondet	membership	two Swaps on one word: the second swapper reads the first one's value; a-first gives 1, b-first gives 20; certified set {1, 20} (members=2)	work=2000000,members=2,engine=dedup
+cas-order	casOrder	-	ok	-	sync,atomics,goroutines,channels,nondet	membership	two CompareAndSwaps from 0: exactly one succeeds; a won = 11, b won = 102; certified set {11, 102} (members=2)	work=2000000,members=2,engine=dedup
+add-join	addJoin	-	ok	-	sync,atomics,goroutines,channels	confluent	two Adds on one word read after the join: 7 on every schedule	work=2000000,engine=dedup
