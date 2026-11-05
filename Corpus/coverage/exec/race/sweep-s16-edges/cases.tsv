@@ -1,0 +1,31 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# S16 sweep (the defect-neighbourhood campaign, lane sweep/s16-race, 2026-10-27):
+# the happens-before EDGES — the unbuffered edge in the wrong direction, the
+# buffered k/k+C rule at capacities 1 and 2 (the edge and its absence), the close
+# edge's exact reach (a zero-value receive by a plain receive, a select, a range,
+# a comma-ok acquires; a BUFFERED value received after the close does not), the
+# channel-object keys (two senders; a select's send poll with a default; a parked
+# select receive), len/cap on channels, the go edge, the goroutine's exit, a
+# grandchild, a transitive chain. gc -race 10/10 at GOMAXPROCS 1 and 8 on every
+# row; the enumerator certified RACE-ALL / |set| = 1 (len-chan-vs-send: {1, 11}).
+go-value-recv-copied-at-spawn	edgesGoValueRecvCopiedAtSpawn	-	ok	-	goroutines,channels,race,structs,methods	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
+unbuffered-wrong-direction	edgesUnbufferedWrongDirection	-	race	-	goroutines,channels,race	racy	-	width=4,sites=16
+buf-cap1-second-send-edge	edgesBufCap1SecondSendEdge	-	ok	-	goroutines,channels,race	confluent	the 2nd send on a capacity-1 channel completes after the 1st receive (go_mem's k/k+C rule), ordering the child's write before main's read; readout 1	width=4,sites=16
+buf-cap1-first-send-no-edge	edgesBufCap1FirstSendNoEdge	-	race	-	goroutines,channels,race	racy	-	width=4,sites=16
+buf-cap2-third-send-edge	edgesBufCap2ThirdSendEdge	-	ok	-	goroutines,channels,race	confluent	the 3rd send on a capacity-2 channel completes after the 1st receive; readout 1	width=4,sites=48,work=4000000
+buf-cap2-second-send-no-edge	edgesBufCap2SecondSendNoEdge	-	race	-	goroutines,channels,race	racy	-	width=4,sites=16
+close-then-buffered-value-recv-no-edge	edgesCloseThenBufferedValueRecvNoEdge	-	race	-	goroutines,channels,race,close	racy	-	width=4,sites=16
+select-recv-closed-acquires	edgesSelectRecvClosedAcquires	-	ok	-	goroutines,channels,race,select,close	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
+range-chan-close-acquires	edgesRangeChanCloseAcquires	-	ok	-	goroutines,channels,race,range,close	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16,backedge=full
+comma-ok-closed-acquires	edgesCommaOkClosedAcquires	-	ok	-	goroutines,channels,race,comma_ok,close	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
+write-after-close-races	edgesWriteAfterCloseRaces	-	race	-	goroutines,channels,race,close	racy	-	width=4,sites=16
+two-senders-same-chan	edgesTwoSendersSameChan	-	ok	-	goroutines,channels,race	confluent	both sends are received before the readout, whichever pairs first; the sum and the two join-ordered reads are fixed, 312	width=4,sites=24,work=2000000
+select-default-send-poll-vs-close	edgesSelectDefaultSendPollVsClose	-	race	-	goroutines,channels,race,select,close	racy	-	width=4,sites=16
+select-recv-vs-close	edgesSelectRecvVsClose	-	ok	-	goroutines,channels,race,select,close	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
+len-chan-vs-send	edgesLenChanVsSend	-	ok	-	goroutines,channels,race,len,nondet	membership	len(ch) beside the child's buffered send reads 0 or 1 (uninstrumented both sides, no race); the scheduler site has bound 2, inside width 4	width=4,sites=16,members=2
+cap-chan-vs-close	edgesCapChanVsClose	-	ok	-	goroutines,channels,race,cap,close	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
+exit-no-edge	edgesExitNoEdge	-	race	-	goroutines,channels,race	racy	-	width=4,sites=16
+spawn-edge-write-before	edgesSpawnEdgeWriteBefore	-	ok	-	goroutines,channels,race	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
+spawn-edge-write-after	edgesSpawnEdgeWriteAfter	-	race	-	goroutines,channels,race	racy	-	width=4,sites=16
+grandchild-inherits-clock	edgesGrandchildInheritsClock	-	ok	-	goroutines,channels,race	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=24
+transitive-two-chans	edgesTransitiveTwoChans	-	ok	-	goroutines,channels,race	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=24

@@ -1091,6 +1091,7 @@ verbatim, gc realization version-tracked).
   corrected in place.)
 - Pinned-by: differential
 - Cases: goroutines/select-closed-arrival/send-close-race
+- Neighbourhood: S16 (race detector footprint and keys) — swept 2026-10-27 by lane `sweep/s16-race` ([AGENT], plan §4, [USER]-approved 2026-10-27). THE MATRIX (119 cells = operations with a memory effect × access kinds × key kinds × happens-before edges × observations × sites, written before probing; reproduced in the lane's report): 85 cells probed on both sides through 88 probe subjects (`scripts/detector-soundness --manifest`: gc go1.26.5 `-race` 10 runs at GOMAXPROCS 1 and 8 vs the enumerator over every schedule and the default tape), 31 covered by existing rows or the 2026-09-02 evidence probes, 2 out of scope (the exit window, BUG-159; the owner-free unlock, U5), 1 folded. Verdicts: 33 agree-race (every one 20/20 red), 48 agree-DRF, 6 over-refusals, 1 named refusal (`unsupported: init-go`, already pinned by `goroutines/spawn-in-init/in-init`). Rows: 87 in five packages `Corpus/coverage/exec/race/sweep-s16-{keys,footprint,edges,init-edge,sync}/` — 33 racy, 46 confluent, 2 membership, 6 strict born RED (two on the open members' Cases lines, four on the findings'). Findings: BUG-370 (`clear(s)` records a write per element where gc's `-race` build instruments nothing — go_mem-racy, TSan-blind, BUG-084's class at a new site, posed for the owner's ruling) and BUG-371 (a zero-size cell recorded as an access: a false race). THIS ENTRY'S CELLS: E16–E17 — the send+default form of the poll (`select { case ch <- 1: default: }` beside a close) is rowed racy (`select-default-send-poll-vs-close`, 20/20 red, the closed-channel panic recovered in the child as the existing row does); the recv-only select beside a close stays DRF. Left: none.
 - Discovered: 2026-08-08 (convergence check on the BUG-045 fix,
   major; verifier-reproduced from primary source — go1.26.5
   runtime/select.go:288 `racereadpc(c.raceaddr(), casePC(casi),
@@ -1158,6 +1159,7 @@ verbatim, gc realization version-tracked).
   and U3 corrected in place.)
 - Pinned-by: differential
 - Cases: goroutines/close-wake/sender-panics, goroutines/close-wake/sender-full-buffer, goroutines/select-closed-arrival/recv-parked-sender
+- Neighbourhood: S16 (race detector footprint and keys) — swept 2026-10-27 by lane `sweep/s16-race` ([AGENT], plan §4, [USER]-approved 2026-10-27). THE MATRIX (119 cells = operations with a memory effect × access kinds × key kinds × happens-before edges × observations × sites, written before probing; reproduced in the lane's report): 85 cells probed on both sides through 88 probe subjects (`scripts/detector-soundness --manifest`: gc go1.26.5 `-race` 10 runs at GOMAXPROCS 1 and 8 vs the enumerator over every schedule and the default tape), 31 covered by existing rows or the 2026-09-02 evidence probes, 2 out of scope (the exit window, BUG-159; the owner-free unlock, U5), 1 folded. Verdicts: 33 agree-race (every one 20/20 red), 48 agree-DRF, 6 over-refusals, 1 named refusal (`unsupported: init-go`, already pinned by `goroutines/spawn-in-init/in-init`). Rows: 87 in five packages `Corpus/coverage/exec/race/sweep-s16-{keys,footprint,edges,init-edge,sync}/` — 33 racy, 46 confluent, 2 membership, 6 strict born RED (two on the open members' Cases lines, four on the findings'). Findings: BUG-370 (`clear(s)` records a write per element where gc's `-race` build instruments nothing — go_mem-racy, TSan-blind, BUG-084's class at a new site, posed for the owner's ruling) and BUG-371 (a zero-size cell recorded as an access: a false race). THIS ENTRY'S CELLS: E8–E17 — the channel object under two senders is read/read (agree-DRF, `two-senders-same-chan`); a write after the close beside the zero-value receiver's read is a race (`write-after-close-races`); a parked select receive beside the close is DRF (`select-recv-vs-close`); the close edge reaches exactly the zero-value receive — plain, select, `for range`, comma-ok (four confluent rows) — and NOT a buffered value received after the close (`close-then-buffered-value-recv-no-edge`, agree-race 20/20: gc's `chanrecv` with data takes the slot edge only, as the machine does). Left: none in this class.
 - Discovered: 2026-08-08 (channels-arc final audit F1, major/envelope;
   verifier-reproduced from primary sources: go1.26.5 runtime/chan.go —
   `chansend` line 190 does `racereadpc(c.raceaddr(), …)` at ENTRY,
@@ -1363,7 +1365,8 @@ verbatim, gc realization version-tracked).
   conflicts with a same-element write and with a whole-array write).
   What REMAINS OPEN is the DYNAMIC-index residual below.
 - Pinned-by: differential
-- Cases: race/free/array-dyn-index-read-write
+- Cases: race/free/array-dyn-index-read-write, race/sweep-s16-footprint/struct-array-field-dyn-other-elem
+- Neighbourhood: S16 (race detector footprint and keys) — swept 2026-10-27 by lane `sweep/s16-race` ([AGENT], plan §4, [USER]-approved 2026-10-27). THE MATRIX (119 cells = operations with a memory effect × access kinds × key kinds × happens-before edges × observations × sites, written before probing; reproduced in the lane's report): 85 cells probed on both sides through 88 probe subjects (`scripts/detector-soundness --manifest`: gc go1.26.5 `-race` 10 runs at GOMAXPROCS 1 and 8 vs the enumerator over every schedule and the default tape), 31 covered by existing rows or the 2026-09-02 evidence probes, 2 out of scope (the exit window, BUG-159; the owner-free unlock, U5), 1 folded. Verdicts: 33 agree-race (every one 20/20 red), 48 agree-DRF, 6 over-refusals, 1 named refusal (`unsupported: init-go`, already pinned by `goroutines/spawn-in-init/in-init`). Rows: 87 in five packages `Corpus/coverage/exec/race/sweep-s16-{keys,footprint,edges,init-edge,sync}/` — 33 racy, 46 confluent, 2 membership, 6 strict born RED (two on the open members' Cases lines, four on the findings'). Findings: BUG-370 (`clear(s)` records a write per element where gc's `-race` build instruments nothing — go_mem-racy, TSan-blind, BUG-084's class at a new site, posed for the owner's ruling) and BUG-371 (a zero-size cell recorded as an access: a false race). THIS ENTRY'S CELLS: B1–B7, A19–A20 — the pointer-to-array dynamic-index read `p[i]` is PRECISE (`ptr-array-dyn-index-read`, agree-DRF: the index goes through the address path, not the whole pointee); dynamic-index WRITES are precise (`array-dyn-index-write-write-disjoint`); slice dynamic indices and a struct's slice field are precise; the array FIELD read `o.arr[i]` beside a sibling field is DRF (the chain narrows to the field) but beside `o.arr[0]` is this entry's class — the read stays the whole field — pinned born RED on this Cases line (`struct-array-field-dyn-other-elem`); a value-receiver method through a pointer copies the whole pointee (agree-race, `value-recv-via-ptr-whole-read`), a pointer-receiver method on an addressable value reads nothing (agree-DRF). Left: the dynamic-index residual itself (the open half, two instances now).
 - Discovered: 2026-08-07 (S3 pre-merge audit, major finding 3 — the
   original record named only `evalVar` and shipped write/write-only
   free-lane guards, so the read/write direction that actually trips
@@ -6302,6 +6305,7 @@ one-line chan-arm check — left to its own lane. (TAKEN 2026-10-13: release-rea
   probes-u4kind-{pre,post}.*`, `corpus-bug080.*`.)
 - Pinned-by: differential
 - Cases: race/negative-sync/wg-overwrite, race/negative-sync/mutex-copy, race/negative-sync/rw-overwrite, race/negative-sync/once-copy, race/negative-sync/nested-mutex-copy
+- Neighbourhood: S16 (race detector footprint and keys) — swept 2026-10-27 by lane `sweep/s16-race` ([AGENT], plan §4, [USER]-approved 2026-10-27). THE MATRIX (119 cells = operations with a memory effect × access kinds × key kinds × happens-before edges × observations × sites, written before probing; reproduced in the lane's report): 85 cells probed on both sides through 88 probe subjects (`scripts/detector-soundness --manifest`: gc go1.26.5 `-race` 10 runs at GOMAXPROCS 1 and 8 vs the enumerator over every schedule and the default tape), 31 covered by existing rows or the 2026-09-02 evidence probes, 2 out of scope (the exit window, BUG-159; the owner-free unlock, U5), 1 folded. Verdicts: 33 agree-race (every one 20/20 red), 48 agree-DRF, 6 over-refusals, 1 named refusal (`unsupported: init-go`, already pinned by `goroutines/spawn-in-init/in-init`). Rows: 87 in five packages `Corpus/coverage/exec/race/sweep-s16-{keys,footprint,edges,init-edge,sync}/` — 33 racy, 46 confluent, 2 membership, 6 strict born RED (two on the open members' Cases lines, four on the findings'). Findings: BUG-370 (`clear(s)` records a write per element where gc's `-race` build instruments nothing — go_mem-racy, TSan-blind, BUG-084's class at a new site, posed for the owner's ruling) and BUG-371 (a zero-size cell recorded as an access: a false race). THIS ENTRY'S CELLS: F9–F10 — one Mutex under two spellings (`p := &o.mu` vs `o.mu`) keys ONE word and ONE clock (`mutex-two-spellings`, membership {0, 1}, no refusing path); primitives in slice and array elements are keyed per element (`mutex-{slice,array}-elems-disjoint`, `mutex-slice-elem-contended`: agree-DRF). The copy/overwrite class itself was not re-probed (F1: the u4kind/u4gomem families and the rows hold it). Left: none.
 - Field-path pin (2026-09-19, the C1 S2c audit fix round, audit F3 — `docs/2026-09-19_c1-s2c-
   audit.md`; [AGENT]): the four pins above copy or overwrite ROOT variables, whose `.base` key is
   a prefix of every path under it whatever the typeIds. `race/negative-sync/nested-mutex-copy`
@@ -6813,6 +6817,7 @@ the records-only fix round).
   born-FAIL row is explained here.)
 - Expect: FAIL
 - Cases: race/gomem-only/rw-copy-vs-runlock, race/gomem-only/rw-copy-vs-unlock, race/gomem-only/wg-copy-vs-add-from-0, race/gomem-only/wg-copy-vs-done, race/gomem-only/wg-overwrite-vs-wait-at-0
+- Neighbourhood: S16 (race detector footprint and keys) — swept 2026-10-27 by lane `sweep/s16-race` ([AGENT], plan §4, [USER]-approved 2026-10-27). THE MATRIX (119 cells = operations with a memory effect × access kinds × key kinds × happens-before edges × observations × sites, written before probing; reproduced in the lane's report): 85 cells probed on both sides through 88 probe subjects (`scripts/detector-soundness --manifest`: gc go1.26.5 `-race` 10 runs at GOMAXPROCS 1 and 8 vs the enumerator over every schedule and the default tape), 31 covered by existing rows or the 2026-09-02 evidence probes, 2 out of scope (the exit window, BUG-159; the owner-free unlock, U5), 1 folded. Verdicts: 33 agree-race (every one 20/20 red), 48 agree-DRF, 6 over-refusals, 1 named refusal (`unsupported: init-go`, already pinned by `goroutines/spawn-in-init/in-init`). Rows: 87 in five packages `Corpus/coverage/exec/race/sweep-s16-{keys,footprint,edges,init-edge,sync}/` — 33 racy, 46 confluent, 2 membership, 6 strict born RED (two on the open members' Cases lines, four on the findings'). Findings: BUG-370 (`clear(s)` records a write per element where gc's `-race` build instruments nothing — go_mem-racy, TSan-blind, BUG-084's class at a new site, posed for the owner's ruling) and BUG-371 (a zero-size cell recorded as an access: a false race). THIS ENTRY'S CELLS: F1 — not re-probed (the 36 probes of u4kind/u4gomem and the five rows hold the class). The sweep found the SAME DISPOSITION at a different site: `clear(s)` on a slice (BUG-370) — go_mem-racy, invisible to gc's `-race` build because the lowering is a bare memclr — which is this entry's ruling applied outside the sync words; posed for the owner. Left: none of this entry's own cells.
 - Discovered: 2026-09-02 as BUG-080's residual (a) — the go_mem-racy-
   but-TSan-invisible class the BUG-080 slice chose to RUN (aligned with
   the oracle, [AGENT], inside a brief that said "no new over-refusal
@@ -10272,7 +10277,8 @@ constant, nil or a plain variable read gives the zero value, anything else refus
 - Status: open
 - Expect: FAIL
 - Pinned-by: differential
-- Cases: race/sort-op/sorted-window-concurrent-read
+- Cases: race/sort-op/sorted-window-concurrent-read, race/sweep-s16-footprint/sort-len1-vs-write
+- Neighbourhood: S16 (race detector footprint and keys) — swept 2026-10-27 by lane `sweep/s16-race` ([AGENT], plan §4, [USER]-approved 2026-10-27). THE MATRIX (119 cells = operations with a memory effect × access kinds × key kinds × happens-before edges × observations × sites, written before probing; reproduced in the lane's report): 85 cells probed on both sides through 88 probe subjects (`scripts/detector-soundness --manifest`: gc go1.26.5 `-race` 10 runs at GOMAXPROCS 1 and 8 vs the enumerator over every schedule and the default tape), 31 covered by existing rows or the 2026-09-02 evidence probes, 2 out of scope (the exit window, BUG-159; the owner-free unlock, U5), 1 folded. Verdicts: 33 agree-race (every one 20/20 red), 48 agree-DRF, 6 over-refusals, 1 named refusal (`unsupported: init-go`, already pinned by `goroutines/spawn-in-init/in-init`). Rows: 87 in five packages `Corpus/coverage/exec/race/sweep-s16-{keys,footprint,edges,init-edge,sync}/` — 33 racy, 46 confluent, 2 membership, 6 strict born RED (two on the open members' Cases lines, four on the findings'). Findings: BUG-370 (`clear(s)` records a write per element where gc's `-race` build instruments nothing — go_mem-racy, TSan-blind, BUG-084's class at a new site, posed for the owner's ruling) and BUG-371 (a zero-size cell recorded as an access: a false race). THIS ENTRY'S CELLS: C1–C6 — an UNSORTED window beside a read of an element gc moves is a race on both sides (`sort-unsorted-vs-read`, 20/20); the window beside a write outside it is DRF (`sort-window-vs-outside-write`); a write inside the window is a race (`sort-vs-inside-write`); the sort then the join then the read is confluent (`sort-then-edge-read`); a LENGTH-1 window beside a write of its element is this entry's class — gc's insertion sort loop does not run, so gc performs no access at all, while the op reads and writes the element — pinned born RED on this Cases line (`sort-len1-vs-write`). Left: the op's conservative write set itself (the open ruling).
 - Discovered: the reviewer's program `s := []int{1,2,3}` with the sort in one goroutine and `seen = s[0]` in
   another: the lane answers `status=race`, main (the generic path at the time) answers `ok 1 1 2 3`, and
   `go run -race` is green. Entry: [AGENT] lane worker, 2026-10-25 (the review's F1, relayed).
@@ -12523,3 +12529,62 @@ WHAT: `emitPrintStmt` (`tools/nativefrontend/emit.go`, the kind filter right aft
 WHY IT MATTERS: (1) is the admission boundary — the charter's refusal rule wants gc's rejections reproduced as rejections (the negative lane's leg exists for exactly that), and a quarantine stub naming a wrong cause is the class BUG-072 was about; (2) is an over-refusal of a legal program with a misnamed cause — the ledger has no row for it, so it is counted as a ratified pin rather than a coverage gap.
 
 FIX SHAPE (a fix lane, not this sweep's — the trusted lowering): in `emitPrintStmt`, before the non-basic test, (a) refuse an array or struct operand (after `Underlying()`) as a gc REJECTION naming walk/builtin.go's `illegal types for operand: print` — the negative lane then sees a type-check-class refusal and the two negative rows turn PASS; (b) a `*types.Tuple` operand from a call: either lower it (bind the call's results to temps, then print each — gc's own rewrite; the row turns PASS) or refuse it under a ledger row of its own («a multi-value call as a print operand», a named gap) rather than the address text. The address text itself stays for the seven address kinds. Then re-key: `print-builtin`'s pattern should not match the array / struct / tuple spellings any more.
+## BUG-370 — `clear(s)` on a slice records one WRITE per element where gc's `-race` build instruments nothing (the lowering is a bare `memclrNoHeapPointers`/`memclrHasPointers` call), so a concurrent read of an element is refused `race` where `go run -race` is green — go_mem calls the writes a data race, TSan cannot see them [semantic core, race-detector footprint: the `.clearSlice` apply arm; over-refusal vs the oracle (the machine refuses ⊇ gc), a status-level differential observation; found by the S16 sweep of the defect-neighbourhood campaign, 2026-10-27; recorded as a red pin pending the owner's ruling: BUG-084's class (go_mem over TSan) at a new site, or a narrowing]
+
+- Status: open
+- Expect: FAIL
+- Pinned-by: differential
+- Cases: race/sweep-s16-footprint/clear-slice-vs-read
+- Discovered: 2026-10-27, lane `sweep/s16-race` ([AGENT]), matrix cell C11 — the probe `s := []int{1, 2}`, `clear(s)` in a
+  goroutine beside `s[0]` read in main: gc `-race` GREEN 20/20 at GOMAXPROCS 1 and 8, the machine `race` on every
+  enumerated path (RACE-ALL), the default tape `race`.
+- Neighbourhood: S16 (race detector footprint and keys) — found BY the sweep of 2026-10-27 (lane `sweep/s16-race`; the
+  matrix and the counts are on BUG-132's line). Its own cells: `clear(s[:0])` records nothing and is DRF on both sides
+  (`clear-empty-slice`); `clear(m)` on a MAP is instrumented by gc (`mapclear`'s `racewritepc`) and is a race on both
+  sides (`map-clear-vs-read`). Left: none.
+
+WHAT the op does (`GoLean/GoCore/Machine.lean`, the `.clearSlice` apply arm): one emitting write per visible element
+(`Mem.storeRun` from index 0 of the zero run — `Mem.storeElems`, Ops.lean — one `.data` atom at `.index base (offset + i)`
+per element), so a read of any element HB-unordered with the clear is the terminal `raceDetected`. WHAT gc does at the
+pin: `walkClear` (`deps/go/src/cmd/compile/internal/walk/builtin.go:139`) lowers a slice `clear` through `arrayClear`
+(`walk/range.go:555`) to `if len(a) != 0 { memclr{NoHeap,Has}Pointers(&a[0], len(a)*elemsize) }` — a call into the
+runtime's assembly/`mbarrier.go` clearer with NO `racewriterangepc` (contrast `slicecopy` and `growslice`, which
+annotate their ranges, and `mapclear`, which `racewritepc`s the map object) — so TSan never sees the writes and
+`go run -race` is green. DIRECTION: fail-closed — the machine refuses a program the oracle runs; it never answers a value
+where gc reports a race. WHAT go_mem says: spec#Clear sets every element up to `len(s)` to the zero value — write-like
+memory operations on each element's location, unordered by happens-before with the read; by mem#model's read-write
+definition that is a data race whether or not gc's instrumentation realizes it, and mem#restrictions licenses the
+refusal — exactly the disposition the [USER] ruled for the sync words on 2026-09-02 (Q-U4RESIDUAL option (A), BUG-084:
+the go_mem register wins over TSan's realized set). FOR THE OWNER: (A) the ruling extends — the row is red BY DESIGN and
+this entry becomes the record of the designed divergence (BUG-084's form); or (B) align with the oracle by recording no
+footprint for `clear(s)` — unsound against go_mem (a plain read racing the clear would run to the old or the zero value,
+a value verdict on a go_mem-racy program). The lane recommends (A) and makes no change ([AGENT] reading, not the ruling).
+The slice `clear` row is the only shape: `clear(s[:0])` emits nothing on both sides, `clear(m)` races on both sides.
+
+## BUG-371 — a ZERO-SIZE cell (`struct{}`, `[0]T`) is recorded as a memory access by `Mem.load`/`Mem.store`, so two goroutines touching a zero-size variable are refused `race` where gc instruments nothing («can't race on zero-sized things», ssagen) and go_mem has no memory location to race on: a false race [semantic core, race-detector footprint: the emitters' `.data` keys carry no size; over-refusal (fail-closed), a status-level differential observation; found by the S16 sweep of the defect-neighbourhood campaign, 2026-10-27]
+
+- Status: open
+- Pinned-by: differential
+- Cases: race/sweep-s16-footprint/zero-size-write-write, race/sweep-s16-footprint/zero-size-read-write, race/sweep-s16-footprint/zero-array-write-write
+- Discovered: 2026-10-27, lane `sweep/s16-race` ([AGENT]), matrix cells D1–D3 — `var z struct{}` written by both
+  goroutines, read by one and written by the other, and `var a [0]int` written by both: gc `-race` GREEN 20/20 at
+  GOMAXPROCS 1 and 8 on each, the machine `race` on every enumerated path (RACE-ALL) and on the default tape.
+- Neighbourhood: S16 (race detector footprint and keys) — found BY the sweep of 2026-10-27 (lane `sweep/s16-race`; the
+  matrix and the counts are on BUG-132's line). Left (named, not probed): a zero-size FIELD inside a sized struct
+  (`o.z = struct{}{}` beside a whole-struct read of `o`: gc instruments the sized read only, the machine's `.field o z`
+  write overlaps the `.base o` read — the same mechanism, one more route); a zero-size channel element carries no cell.
+
+WHAT the machine does: every emitting operation keys its access by the cell PATH (`Mem.load`/`Mem.store`, Ops.lean,
+«The access vocabulary»: `.access k (.data l.canon)`), with no size on the key, so a zero-size cell is a shadow location
+like any other and two HB-unordered writes of it conflict (`ShadowKey.overlap` on equal paths; `AccessKind.conflicts`).
+WHAT gc does at the pin: the SSA instrumenter returns before emitting any race call when the type's size is zero
+(`cmd/compile/internal/ssagen/ssa.go:1508`, `instrument2`: «can't race on zero-sized things»), and the assignment of a
+zero-sized value is itself a no-op (`:4499`); so `go run -race` is green on every schedule. WHAT the spec and go_mem say:
+a zero-size variable occupies no bytes and «two distinct zero-size variables may have the same address in memory»
+(spec#Size_and_alignment_guarantees) — its access names no memory location, and mem#model's data-race definitions are
+about operations «on memory location x»; the lane reads this as NO race (a false race here, not a designed one — the
+[AGENT]'s reading; the owner may rule it BUG-084's way instead, in which case the rows become `Expect: FAIL` pins).
+DIRECTION: fail-closed — a refusal of race-free programs, never a wrong value. FIX SHAPE: skip the record for a cell
+whose leaf type has size 0 — at the emitter (`tySizeBytes` of the leaf's declared type, `cellLeafTy`, Ops.lean) or in
+the fold — so every sized path is keyed as today; effort S; the three rows flip and `race/free/*` is unaffected (no
+free-lane row has a zero-size cell). Not fixed by this lane (a sweep lane changes no core code).

@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# S16 sweep (lane sweep/s16-race, 2026-10-27), matrix F9–F10: the sync-word keys
+# of one primitive under two spellings (a pointer to the field and the field) and
+# of primitives in slice / array elements. gc -race 10/10 green at GOMAXPROCS 1
+# and 8; the enumerator certified no refusing path (two-spellings: {0, 1}).
+mutex-two-spellings	syncMutexTwoSpellings	-	ok	-	goroutines,channels,race,sync,mutex,structs,pointers,nondet	membership	the child's write under p.Lock (p := &o.mu) is ordered before main's read under o.mu.Lock whichever locks first — one lock under two spellings; main reads 0 or 1; the scheduler site has bound 2, inside width 4	width=4,sites=16,members=2
+mutex-slice-elems-disjoint	syncMutexSliceElemsDisjoint	-	ok	-	goroutines,channels,race,sync,mutex,slices	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
+mutex-slice-elem-contended	syncMutexSliceElemContended	-	ok	-	goroutines,channels,race,sync,mutex,slices	confluent	two increments under one lock; join-ordered readout 2	width=4,sites=16
+mutex-array-elems-disjoint	syncMutexArrayElemsDisjoint	-	ok	-	goroutines,channels,race,sync,mutex,arrays	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16

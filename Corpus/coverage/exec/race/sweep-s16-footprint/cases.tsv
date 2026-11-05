@@ -1,0 +1,62 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# S16 sweep (the defect-neighbourhood campaign, lane sweep/s16-race, 2026-10-27):
+# the race detector's FOOTPRINT per emitting operation and per multi-cell apply
+# arm (dynamic indices through arrays, pointers to arrays, struct fields and
+# slices; headers vs elements; strings; maps; sort, copy, clear, append; the
+# short circuit; a deferred or post-recover write). gc -race 10/10 at GOMAXPROCS
+# 1 and 8 on every row; the enumerator certified RACE-ALL / |set| = 1.
+# SIX RED PINS (strict, expected gc ok, the machine refuses `race` on every path;
+# each on its entry's Cases line, never a pass): struct-array-field-dyn-other-elem
+# (BUG-041: the dynamic-index read of an array FIELD stays the whole field);
+# sort-len1-vs-write (BUG-132: the op reads and writes a length-1 window where
+# gc's insertion sort performs no access); clear-slice-vs-read (BUG-370: gc
+# lowers clear(s) to an uninstrumented memclr, go_mem calls the writes a race);
+# zero-size-write-write, zero-size-read-write, zero-array-write-write (BUG-371:
+# a zero-size cell has no memory location — gc instruments nothing — and the
+# machine records an access on it).
+value-recv-via-ptr-whole-read	footprintValueRecvViaPtrWholeRead	-	race	-	goroutines,channels,race,structs,methods,pointers	racy	-	width=4,sites=16
+ptr-recv-on-value-no-read	footprintPtrRecvOnValueNoRead	-	ok	-	goroutines,channels,race,structs,methods	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
+array-dyn-index-write-write-disjoint	footprintArrayDynIndexWriteWriteDisjoint	0,1	ok	-	goroutines,channels,race,arrays,indexing	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
+ptr-array-dyn-index-read	footprintPtrArrayDynIndexRead	1	ok	-	goroutines,channels,race,arrays,pointers,indexing	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
+struct-array-field-dyn-sibling	footprintStructArrayFieldDynSibling	1	ok	-	goroutines,channels,race,arrays,structs,indexing	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
+struct-array-field-dyn-other-elem	footprintStructArrayFieldDynOtherElem	1	ok	-	goroutines,channels,race,arrays,structs,indexing
+slice-dyn-index-disjoint	footprintSliceDynIndexDisjoint	1	ok	-	goroutines,channels,race,slices,indexing	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
+struct-slice-field-elem-disjoint	footprintStructSliceFieldElemDisjoint	1	ok	-	goroutines,channels,race,slices,structs,indexing	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
+struct-slice-field-sibling	footprintStructSliceFieldSibling	1	ok	-	goroutines,channels,race,slices,structs,indexing	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
+slice-of-slices-disjoint	footprintSliceOfSlicesDisjoint	-	ok	-	goroutines,channels,race,slices,indexing	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
+slice-len-vs-elem-write	footprintSliceLenVsElemWrite	-	ok	-	goroutines,channels,race,slices,len	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
+reslice-vs-elem-read	footprintResliceVsElemRead	-	race	-	goroutines,channels,race,slices,slicing	racy	-	width=4,sites=16
+slice-nil-compare-vs-elem-write	footprintSliceNilCompareVsElemWrite	-	ok	-	goroutines,channels,race,slices,nil,comparisons	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
+map-nil-compare-vs-write	footprintMapNilCompareVsWrite	-	ok	-	goroutines,channels,race,maps,nil,comparisons	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
+chan-nil-compare-vs-close	footprintChanNilCompareVsClose	-	ok	-	goroutines,channels,race,nil,comparisons,close	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
+array-copy-vs-elem-write	footprintArrayCopyVsElemWrite	-	race	-	goroutines,channels,race,arrays,value_copy	racy	-	width=4,sites=16
+string-index-vs-assign	footprintStringIndexVsAssign	-	race	-	goroutines,channels,race,strings,indexing	racy	-	width=4,sites=16
+string-two-readers	footprintStringTwoReaders	-	ok	-	goroutines,channels,race,strings,indexing	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
+range-string-vs-assign	footprintRangeStringVsAssign	-	race	-	goroutines,channels,race,strings,range	racy	-	width=4,sites=16,backedge=full
+map-write-write	footprintMapWriteWrite	-	race	-	goroutines,channels,race,maps	racy	-	width=4,sites=16
+map-delete-vs-read	footprintMapDeleteVsRead	-	race	-	goroutines,channels,race,maps,delete	racy	-	width=4,sites=16
+map-delete-absent-vs-read	footprintMapDeleteAbsentVsRead	-	race	-	goroutines,channels,race,maps,delete	racy	-	width=4,sites=16
+map-clear-vs-read	footprintMapClearVsRead	-	race	-	goroutines,channels,race,maps,clear	racy	-	width=4,sites=16
+map-two-readers	footprintMapTwoReaders	-	ok	-	goroutines,channels,race,maps	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
+map-two-rangers	footprintMapTwoRangers	-	ok	-	goroutines,channels,race,maps,range	confluent	two rangers sum the same two entries in either pick order; join-ordered readout 33	width=4,sites=16,backedge=full
+sort-unsorted-vs-read	footprintSortUnsortedVsRead	-	race	-	goroutines,channels,race,slices,sort,externs	racy	-	width=4,sites=16
+sort-window-vs-outside-write	footprintSortWindowVsOutsideWrite	-	ok	-	goroutines,channels,race,slices,sort,externs	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
+sort-len1-vs-write	footprintSortLen1VsWrite	-	ok	-	goroutines,channels,race,slices,sort,externs
+sort-vs-inside-write	footprintSortVsInsideWrite	-	race	-	goroutines,channels,race,slices,sort,externs	racy	-	width=4,sites=16
+sort-then-edge-read	footprintSortThenEdgeRead	-	ok	-	goroutines,channels,race,slices,sort,externs	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
+copy-dst-vs-read	footprintCopyDstVsRead	-	race	-	goroutines,channels,race,slices,copy	racy	-	width=4,sites=16
+copy-count-zero	footprintCopyCountZero	-	ok	-	goroutines,channels,race,slices,copy	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
+copy-disjoint-runs	footprintCopyDisjointRuns	-	ok	-	goroutines,channels,race,slices,copy	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
+clear-slice-vs-read	footprintClearSliceVsRead	-	ok	-	goroutines,channels,race,slices,clear
+clear-empty-slice	footprintClearEmptySlice	-	ok	-	goroutines,channels,race,slices,clear	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
+append-inplace-tail-vs-read	footprintAppendInplaceTailVsRead	-	race	-	goroutines,channels,race,slices,append	racy	-	width=4,sites=16
+append-spill-reads-old	footprintAppendSpillReadsOld	-	race	-	goroutines,channels,race,slices,append	racy	-	width=32,sites=16
+append-from-slice-reads-src	footprintAppendFromSliceReadsSrc	-	race	-	goroutines,channels,race,slices,append	racy	-	width=4,sites=16
+append-spill-fresh-backing	footprintAppendSpillFreshBacking	-	ok	-	goroutines,channels,race,slices,append	confluent	the spill's capacity consult (bound 31, inside width 32) does not change the readout; join-ordered 95	width=32,sites=16
+zero-size-write-write	footprintZeroSizeWriteWrite	-	ok	-	goroutines,channels,race,structs,zero_values
+zero-size-read-write	footprintZeroSizeReadWrite	-	ok	-	goroutines,channels,race,structs,zero_values
+zero-array-write-write	footprintZeroArrayWriteWrite	-	ok	-	goroutines,channels,race,arrays,zero_values
+short-circuit-no-read	footprintShortCircuit	0	ok	-	goroutines,channels,race,evaluation_order,bools	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
+short-circuit-reads	footprintShortCircuit	1	race	-	goroutines,channels,race,evaluation_order,bools	racy	-	width=4,sites=16
+deferred-write-vs-read	footprintDeferredWriteVsRead	-	race	-	goroutines,channels,race,defer	racy	-	width=4,sites=16
+recover-then-write-vs-read	footprintRecoverThenWriteVsRead	-	race	-	goroutines,channels,race,defer,recover,panic	racy	-	width=4,sites=16

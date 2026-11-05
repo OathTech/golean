@@ -1,0 +1,24 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# S16 sweep (the defect-neighbourhood campaign, lane sweep/s16-race, 2026-10-27):
+# the race detector's KEYS — two spellings of one cell (a pointer to an element
+# or a field, a slice of an array, a sub-slice with an offset, a promoted field,
+# a pointer box's pointer-receiver dispatch, two pointers to one struct, a
+# per-iteration loop variable, a function-valued variable) beside the
+# disjoint-path twins. gc -race 10/10 red at GOMAXPROCS 1 and 8 on every racy
+# row, 10/10 green on every confluent row; the enumerator certified RACE-ALL /
+# |set| = 1 (evidence: the lane's report; probe run 2026-10-27).
+ptr-elem-alias	keysPtrElemAlias	-	race	-	goroutines,channels,race,arrays,pointers	racy	-	width=4,sites=16
+ptr-elem-alias-disjoint	keysPtrElemAliasDisjoint	-	ok	-	goroutines,channels,race,arrays,pointers	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
+slice-of-array-alias	keysSliceOfArrayAlias	-	race	-	goroutines,channels,race,arrays,slices	racy	-	width=4,sites=16
+subslice-offset-alias	keysSubsliceOffsetAlias	-	race	-	goroutines,channels,race,slices	racy	-	width=4,sites=16
+subslice-offset-disjoint	keysSubsliceOffsetDisjoint	-	ok	-	goroutines,channels,race,slices	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
+ptr-field-alias	keysPtrFieldAlias	-	race	-	goroutines,channels,race,structs,pointers	racy	-	width=4,sites=16
+ptr-field-alias-disjoint	keysPtrFieldAliasDisjoint	-	ok	-	goroutines,channels,race,structs,pointers	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
+promoted-field-alias	keysPromotedFieldAlias	-	race	-	goroutines,channels,race,structs,embedding	racy	-	width=4,sites=16
+promoted-field-disjoint	keysPromotedFieldDisjoint	-	ok	-	goroutines,channels,race,structs,embedding	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
+promoted-field-outer-disjoint	keysPromotedFieldOuterDisjoint	-	ok	-	goroutines,channels,race,structs,embedding	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
+iface-ptrbox-ptrrecv-disjoint	keysIfacePtrBoxPtrRecvDisjoint	-	ok	-	goroutines,channels,race,structs,interfaces,methods	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
+iface-ptrbox-ptrrecv-same	keysIfacePtrBoxPtrRecvSame	-	race	-	goroutines,channels,race,structs,interfaces,methods	racy	-	width=4,sites=16
+two-ptr-aliases-disjoint	keysTwoPtrAliasesDisjoint	-	ok	-	goroutines,channels,race,structs,pointers	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
+loopvar-per-iteration	keysLoopvarPerIteration	-	ok	-	goroutines,channels,race,loops,closures,arrays	confluent	two children spawned from a two-iteration loop each write their own element through a per-iteration variable; join-ordered readout 12	width=4,sites=48,backedge=full,work=4000000
+func-value-var	keysFuncValueVar	-	race	-	goroutines,channels,race,functions	racy	-	width=4,sites=16
