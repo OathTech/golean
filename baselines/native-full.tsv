@@ -1,5 +1,6 @@
 # GoLean native-frontend full-corpus differential baseline
 # cases: 7021 (6701 PASS / 320 FAIL)
+# cause keyed 2026-11-05 [AGENT coordinator], train-29 stage, from the stage's full run (scripts/coverage-cause --apply): the five rows that carried `?` — BUG-390's two (`fe:fallthrough-trailing-empty-stmt`, the tools/lowerdiag/causes.tsv row added at this stage) and BUG-391's three (`error:decoder-unseq-head-not-admitted`, the scripts/machine-causes.tsv row added at this stage); no row moved.
 # re-pinned: 2026-10-27 [AGENT], lane frontend/fix-binding-1027 — BUG-300, 301, 302 (the S13 sweep) FIXED in tools/nativefrontend
 #   (the campaign plan's rule that a finding is fixed through the normal train, [USER] approved 2026-10-27, relayed): (1) emit.go
 #   emitDeclStmt lowers a grouped `var ( … )` declaration spec by spec (one `var` node per VarSpec, in source order, into the same
@@ -12183,8 +12184,8 @@ PASS	control-flow/sweep-s17-blocks-empty/block-terminating	-	-
 PASS	control-flow/sweep-s17-blocks-empty/unreachable-after-return	-	-
 PASS	control-flow/sweep-s17-blocks-empty/continue-from-type-switch-block	-	-
 PASS	control-flow/sweep-s17-blocks-empty/break-select-in-switch-in-for	-	-
-FAIL	control-flow/sweep-s17-fallthrough-empty-stmt/fallthrough-then-empty-stmt	frontend-export	fe?:normalizing_frontend-quarantined
-FAIL	control-flow/sweep-s17-fallthrough-empty-stmt/fallthrough-then-empty-stmt-miss	frontend-export	fe?:normalizing_frontend-quarantined
+FAIL	control-flow/sweep-s17-fallthrough-empty-stmt/fallthrough-then-empty-stmt	frontend-export	unrowed/fallthrough-trailing-empty-stmt
+FAIL	control-flow/sweep-s17-fallthrough-empty-stmt/fallthrough-then-empty-stmt-miss	frontend-export	unrowed/fallthrough-trailing-empty-stmt
 PASS	control-flow/sweep-s17-fallthrough-empty-stmt/fallthrough-explicit-semicolon	-	-
 PASS	control-flow/sweep-s17-for-clauses/all-empty	-	-
 PASS	control-flow/sweep-s17-for-clauses/cond-only-semis	-	-
@@ -12432,9 +12433,9 @@ PASS	methods/sweep-s17-selector-forms/method-on-assert	-	-
 PASS	methods/sweep-s17-selector-forms/deref-paren-receiver-alone	-	-
 PASS	methods/sweep-s17-selector-forms/deref-paren-value-receiver-beside-call	-	-
 PASS	methods/sweep-s17-selector-forms/method-on-field	-	-
-FAIL	methods/sweep-s17-unseq-deref-receiver/deref-paren-receiver-beside-call	lean-observation	error:?
-FAIL	methods/sweep-s17-unseq-deref-receiver/deref-paren-receiver-two-calls	lean-observation	error:?
-FAIL	methods/sweep-s17-unseq-deref-receiver/deref-paren-receiver-after-sibling-deref	lean-observation	error:?
+FAIL	methods/sweep-s17-unseq-deref-receiver/deref-paren-receiver-beside-call	lean-observation	error:decoder-unseq-head-not-admitted
+FAIL	methods/sweep-s17-unseq-deref-receiver/deref-paren-receiver-two-calls	lean-observation	error:decoder-unseq-head-not-admitted
+FAIL	methods/sweep-s17-unseq-deref-receiver/deref-paren-receiver-after-sibling-deref	lean-observation	error:decoder-unseq-head-not-admitted
 PASS	multi-assign/sweep-s17-assign-forms/compound-all-ops	-	-
 PASS	multi-assign/sweep-s17-assign-forms/compound-string-concat	-	-
 PASS	multi-assign/sweep-s17-assign-forms/compound-float	-	-
