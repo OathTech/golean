@@ -1,0 +1,2 @@
+# expected_substring	features
+permits only one iteration variable	compile_error,range,channels

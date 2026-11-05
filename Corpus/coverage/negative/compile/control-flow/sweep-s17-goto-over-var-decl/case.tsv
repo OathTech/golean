@@ -1,0 +1,2 @@
+# expected_substring	features
+jumps over declaration	compile_error,control_flow,goto,labels

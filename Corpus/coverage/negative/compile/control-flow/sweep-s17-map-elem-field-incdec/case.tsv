@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot assign to	compile_error,maps,structs,assignment

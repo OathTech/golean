@@ -1,0 +1,21 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s17-forms (2026-11-05), shape S17 (plan §4; the matrix on BUG-001's line). Strict, expected = gc go1.26.5.
+# Unary chains; binary operators mixed across every precedence level; operators in a generic body.
+unary-arith-chains	unaryArithChains	-	ok	-	ints,bitwise
+unary-bool-chain	unaryBoolChain	-	ok	-	bools,if
+unary-ptr-chains	unaryPtrChains	-	ok	-	pointers,ints
+unary-recv-under	unaryRecvUnder	-	ok	-	channels,ints,bitwise,bools
+arith-mix	arithMix	-	ok	-	ints,bitwise,shifts
+assoc-sub	assocSub	-	ok	-	ints
+assoc-shift	assocShift	-	ok	-	ints,shifts
+assoc-and-not	assocAndNot	-	ok	-	ints,bitwise
+assoc-div	assocDiv	-	ok	-	ints,division
+rem-mul	remMul	-	ok	-	ints,modulo
+neg-rem	negRem	-	ok	-	ints,modulo
+compare-chain	compareChain	-	ok	-	comparisons,bools,if
+bool-eq-chain	boolEqChain	-	ok	-	comparisons,bools,equality,if
+logic-mix	logicMix	-	ok	-	comparisons,bools,if
+concat-chain	concatChain	-	ok	-	strings,concat,len,indexing
+bit-mix	bitMix	-	ok	-	ints,bitwise
+shift-plus	shiftPlus	-	ok	-	ints,shifts
+ops-in-generic	opsInGeneric	-	ok	-	generics,ints,floats,division,modulo,conversions

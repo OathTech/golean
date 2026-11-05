@@ -1,0 +1,18 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s17-forms (2026-11-05), shape S17 (plan §4; the matrix on BUG-001's line). Strict, expected = gc go1.26.5.
+# Address-of and dereference chains; stores through chains; a generic body and a defer argument.
+addr-elem-field	addrElemField	-	ok	-	pointers,addressability,arrays,structs,fields
+addr-nested-field	addrNestedField	-	ok	-	pointers,addressability,structs,fields,nested
+addr-slice-elem-field	addrSliceElemField	-	ok	-	pointers,addressability,slices,structs,fields
+addr-ptr-array-elem	addrPtrArrayElem	-	ok	-	pointers,addressability,arrays,indexing
+addr-field-array-elem	addrFieldArrayElem	-	ok	-	pointers,addressability,structs,arrays,fields
+deref-addr	derefAddr	-	ok	-	pointers
+addr-deref-addr	addrDerefAddr	-	ok	-	pointers
+store-via-deref-paren	storeViaDerefParen	-	ok	-	pointers,assignment
+store-via-double-deref	storeViaDoubleDeref	-	ok	-	pointers,assignment
+store-via-deref-addr	storeViaDerefAddr	-	ok	-	pointers,assignment
+triple-deref	tripleDeref	-	ok	-	pointers,assignment
+addr-field-of-deref-paren	addrFieldOfDerefParen	-	ok	-	pointers,structs,fields,addressability
+addr-paren-double-deref	addrParenDoubleDeref	-	ok	-	pointers,addressability
+addr-in-generic	addrInGeneric	-	ok	-	pointers,generics,widths
+addr-defer-arg	addrDeferArg	-	ok	-	pointers,defer,globals,evaluation_order

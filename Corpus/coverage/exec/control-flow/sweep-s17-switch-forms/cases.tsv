@@ -1,0 +1,29 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s17-forms (2026-11-05), shape S17 (plan §4; the matrix on BUG-024's line). Strict, expected = gc go1.26.5.
+# Expression switch shapes: empty bodies, default-only, init statement kinds, tag kinds, tagless multi-value, case expression kinds, nesting, closure, generic.
+empty-tagless	emptyTagless	-	ok	-	control_flow,switch
+empty-tag-eval	emptyTagEval	-	ok	-	control_flow,switch,calls,globals,evaluation_order
+empty-init-tag	emptyInitTag	-	ok	-	control_flow,switch,calls,globals,short_decl
+empty-init-no-tag	emptyInitNoTag	-	ok	-	control_flow,switch,calls,globals
+default-only-tagless	defaultOnlyTagless	-	ok	-	control_flow,switch,default
+default-only-tag	defaultOnlyTag	-	ok	-	control_flow,switch,default
+init-incdec	initIncdec	-	ok	-	control_flow,switch,assignment,cases
+init-send	initSend	-	ok	-	control_flow,switch,channels,len
+init-recv	initRecv	-	ok	-	control_flow,switch,channels,len
+init-call	initCall	-	ok	-	control_flow,switch,calls,globals
+init-compound	initCompound	-	ok	-	control_flow,switch,assignment
+tag-bool-true	tagBool	1	ok	-	control_flow,switch,bools,cases
+tag-bool-false	tagBool	0	ok	-	control_flow,switch,bools,cases
+tag-pointer	tagPointer	-	ok	-	control_flow,switch,pointers,equality,cases
+tag-chan	tagChan	-	ok	-	control_flow,switch,channels,equality,cases
+tag-defined-int	tagDefinedInt	-	ok	-	control_flow,switch,defined_type,constants,iota,cases
+tag-rune	tagRune	-	ok	-	control_flow,switch,runes,cases
+tag-false-literal	tagFalseLiteral	-	ok	-	control_flow,switch,bools,constants,cases
+tagless-multi-value	taglessMultiValue	-	ok	-	control_flow,switch,bools,cases
+case-recv	caseRecv	-	ok	-	control_flow,switch,channels,cases
+case-conversion	caseConversion	-	ok	-	control_flow,switch,conversions,floats,cases
+case-index	caseIndex	-	ok	-	control_flow,switch,slices,indexing,cases
+case-assert	caseAssert	-	ok	-	control_flow,switch,type_assertions,interfaces,cases
+switch-in-select-in-for	switchInSelectInFor	-	ok	-	control_flow,switch,select,loops,break,continue,channels
+switch-in-closure	switchInClosure	-	ok	-	control_flow,switch,closures,default
+switch-in-generic	switchInGeneric	-	ok	-	control_flow,switch,generics,comparability

@@ -1,0 +1,2 @@
+# expected_substring	features
+continue is not in a loop	compile_error,control_flow,continue,switch

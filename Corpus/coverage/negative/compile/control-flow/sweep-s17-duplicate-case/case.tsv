@@ -1,0 +1,2 @@
+# expected_substring	features
+duplicate case	compile_error,control_flow,switch,cases

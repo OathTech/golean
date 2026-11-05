@@ -1,0 +1,2 @@
+# expected_substring	features
+no new variables on left side of :=	compile_error,short_decl

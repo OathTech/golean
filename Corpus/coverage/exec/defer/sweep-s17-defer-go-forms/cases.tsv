@@ -1,0 +1,23 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s17-forms (2026-11-05), shape S17 (plan §4; the matrix on BUG-147's line). Strict, expected = gc go1.26.5.
+# Defer and go callee shapes: field / slice / map / call-result / deref func values, method expressions, interface methods, generic instantiations, spreads, generic bodies.
+defer-field-func	deferFieldFunc	-	ok	-	defer,structs,fields,closures,globals
+defer-slice-elem-func	deferSliceElemFunc	-	ok	-	defer,slices,indexing,closures,globals
+defer-map-func	deferMapFunc	-	ok	-	defer,maps,closures,globals
+defer-call-of-call	deferCallOfCall	-	ok	-	defer,higher_order,closures,globals,evaluation_order
+defer-deref-func	deferDerefFunc	-	ok	-	defer,pointers,closures,globals
+defer-method-expr	deferMethodExpr	-	ok	-	defer,methods,globals
+defer-ptr-method-expr	deferPtrMethodExpr	-	ok	-	defer,methods,pointers
+defer-generic-explicit	deferGenericExplicit	-	ok	-	defer,generics,globals
+defer-generic-inferred	deferGenericInferred	-	ok	-	defer,generics,inference,globals
+defer-spread	deferSpread	-	ok	-	defer,variadic,globals
+defer-in-generic	deferInGeneric	-	ok	-	defer,generics,named-results,closures
+go-field-func	goFieldFunc	-	ok	-	goroutines,structs,fields,closures,channels
+go-slice-elem-func	goSliceElemFunc	-	ok	-	goroutines,slices,indexing,closures,channels
+go-call-of-call	goCallOfCall	-	ok	-	goroutines,higher_order,closures,channels
+go-deref-func	goDerefFunc	-	ok	-	goroutines,pointers,closures,channels
+go-method-expr	goMethodExpr	-	ok	-	goroutines,methods,pointers,channels
+go-iface-method	goIfaceMethod	-	ok	-	goroutines,interfaces,methods,channels
+go-generic-explicit	goGenericExplicit	-	ok	-	goroutines,generics,channels
+go-generic-inferred	goGenericInferred	-	ok	-	goroutines,generics,inference,channels,len
+go-in-generic	goInGeneric	-	ok	-	goroutines,generics,closures,channels,len

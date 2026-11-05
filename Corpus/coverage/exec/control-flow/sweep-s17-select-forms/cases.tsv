@@ -1,0 +1,23 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s17-forms (2026-11-05), shape S17 (plan §4; the matrix on BUG-024's line). Strict, expected = gc go1.26.5.
+# Select receive-clause target shapes (assign forms, blanks, field / array / deref / map / slice-with-ok targets), degenerate bodies, operand shapes, closure, generic.
+assign-one	assignOne	-	ok	-	select,channels,assignment
+assign-two	assignTwo	-	ok	-	select,channels,assignment,comma_ok
+assign-blank-value-open	assignBlankValue	0	ok	-	select,channels,assignment,comma_ok
+assign-blank-value-closed	assignBlankValue	1	ok	-	select,channels,assignment,comma_ok,close
+assign-blank-both	assignBlankBoth	-	ok	-	select,channels,assignment,len
+define-blank-ok	defineBlankOk	-	ok	-	select,channels,short_decl,comma_ok
+define-blank-value	defineBlankValue	-	ok	-	select,channels,short_decl,comma_ok
+target-field	targetField	-	ok	-	select,channels,assignment,structs,fields
+target-array-elem	targetArrayElem	-	ok	-	select,channels,assignment,arrays,indexing
+target-deref	targetDeref	-	ok	-	select,channels,assignment,pointers
+target-map-elem	targetMapElem	-	ok	-	select,channels,assignment,maps,len
+target-slice-elem-ok	targetSliceElemOk	-	ok	-	select,channels,assignment,slices,indexing,comma_ok
+empty-select-deadlock	emptySelectDeadlock	-	deadlock	-	select,deadlock
+single-recv-case	singleRecvCase	-	ok	-	select,channels,short_decl
+single-send-case	singleSendCase	-	ok	-	select,channels
+recv-from-slice-elem	recvFromSliceElem	-	ok	-	select,channels,slices,indexing
+return-from-case	returnFromCase	-	ok	-	select,channels,return
+select-in-closure	selectInClosure	-	ok	-	select,channels,closures,default
+select-in-generic	selectInGeneric	-	ok	-	select,channels,generics,default,len
+recv-converted-chan	recvConvertedChan	-	ok	-	select,channels,conversions

@@ -1,0 +1,2 @@
+# expected_substring	features
+declared and not used	compile_error,select,channels,short_decl

@@ -1,0 +1,13 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s17-forms (2026-11-05), shape S17 (plan §4; the matrix on BUG-172's line). Strict, expected = gc go1.26.5.
+# Fallthrough from multi-value and middle-default clauses, tagless and init forms, in a closure and a generic; goto in a closure and a generic.
+fallthrough-multi-value-case-hit	fallthroughMultiValueCase	2	ok	-	control_flow,switch,fallthrough,cases
+fallthrough-multi-value-case-miss	fallthroughMultiValueCase	3	ok	-	control_flow,switch,fallthrough,cases
+fallthrough-from-middle-default	fallthroughFromMiddleDefault	5	ok	-	control_flow,switch,fallthrough,default
+fallthrough-middle-default-skipped	fallthroughFromMiddleDefault	3	ok	-	control_flow,switch,fallthrough,default
+fallthrough-tagless	fallthroughTagless	-	ok	-	control_flow,switch,fallthrough,bools
+fallthrough-with-init	fallthroughWithInit	-	ok	-	control_flow,switch,fallthrough,short_decl
+fallthrough-in-closure	fallthroughInClosure	-	ok	-	control_flow,switch,fallthrough,closures
+fallthrough-in-generic	fallthroughInGeneric	-	ok	-	control_flow,switch,fallthrough,generics,comparability
+goto-in-closure	gotoInClosure	-	ok	-	control_flow,goto,labels,closures
+goto-in-generic	gotoInGeneric	-	ok	-	control_flow,goto,labels,generics

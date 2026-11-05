@@ -1,0 +1,17 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s17-forms (2026-11-05), shape S17 (plan §4; the matrix on BUG-001's line). Strict, expected = gc go1.26.5.
+# Selector operand shapes: fields and method calls on call results, indexes, map elements, dereferences, assertions, literals, conversions, nested fields; a qualified constant (the deref-paren receiver beside a call: BUG-391, its own package).
+qualified-const	qualifiedConst	-	ok	-	stdlib,constants,conversions
+field-of-call	fieldOfCall	-	ok	-	fields,structs,calls,pointers
+field-of-index	fieldOfIndex	-	ok	-	fields,structs,slices,arrays,indexing
+field-of-map-elem	fieldOfMapElem	-	ok	-	fields,structs,maps
+field-of-deref	fieldOfDeref	-	ok	-	fields,structs,pointers
+field-of-assert	fieldOfAssert	-	ok	-	fields,structs,type_assertions,interfaces,pointers
+field-of-literal	fieldOfLiteral	-	ok	-	fields,structs,literals,pointers
+field-of-conversion	fieldOfConversion	-	ok	-	fields,structs,conversions
+method-on-call-result	methodOnCallResult	-	ok	-	methods,structs,calls,pointers
+method-on-conversion	methodOnConversion	-	ok	-	methods,structs,conversions
+method-on-assert	methodOnAssert	-	ok	-	methods,structs,type_assertions,interfaces
+deref-paren-receiver-alone	derefParenReceiverAlone	-	ok	-	methods,pointers,structs
+deref-paren-value-receiver-beside-call	derefParenValueReceiverBesideCall	-	ok	-	methods,pointers,structs,evaluation_order
+method-on-field	methodOnField	-	ok	-	methods,structs,fields,nested

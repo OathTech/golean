@@ -1,0 +1,24 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s17-forms (2026-11-05), shape S17 (plan §4; the matrix on BUG-001's line). Strict, expected = gc go1.26.5.
+# Composite literal nesting and elision shapes, keyed continuation, func fields, element kinds, placements.
+elided-struct-elems	elidedStructElems	-	ok	-	literals,slices,structs
+elided-nested-slices	elidedNestedSlices	-	ok	-	literals,slices,nested,len
+elided-map-value	elidedMapValue	-	ok	-	literals,maps,structs
+elided-map-key	elidedMapKey	-	ok	-	literals,maps,structs,keys,len
+elided-ptr-elems	elidedPtrElems	-	ok	-	literals,slices,pointers,structs,nil,len
+elided-map-ptr-value	elidedMapPtrValue	-	ok	-	literals,maps,pointers,structs
+elided-array-of-arrays	elidedArrayOfArrays	-	ok	-	literals,arrays,nested
+elided-array-key	elidedArrayKey	-	ok	-	literals,maps,arrays,keys
+slice-of-maps	sliceOfMaps	-	ok	-	literals,slices,maps,nested
+nested-keyed-struct	nestedKeyedStruct	-	ok	-	literals,structs,nested,fields
+keyed-slice-continuation	keyedSliceContinuation	-	ok	-	literals,slices,keys,len
+keyed-ellipsis-array	keyedEllipsisArray	-	ok	-	literals,arrays,keys,strings,len
+struct-func-field-lit	structFuncFieldLit	-	ok	-	literals,structs,closures,fields
+zero-len-array-lit	zeroLenArrayLit	-	ok	-	literals,arrays,zero_len,len
+empty-struct-elems	emptyStructElems	-	ok	-	literals,slices,structs,empty,len
+any-elems-mixed	anyElemsMixed	-	ok	-	literals,slices,interfaces,type_switch,nil
+byte-rune-elems	byteRuneElems	-	ok	-	literals,slices,bytes,runes,conversions
+string-bool-float-elems	stringBoolFloatElems	-	ok	-	literals,slices,arrays,strings,bools,floats
+lit-compare-cond	litCompareCond	-	ok	-	literals,structs,equality,if
+lit-defer-arg	litDeferArg	-	ok	-	literals,structs,defer,globals
+lit-in-closure	litInClosure	-	ok	-	literals,structs,closures

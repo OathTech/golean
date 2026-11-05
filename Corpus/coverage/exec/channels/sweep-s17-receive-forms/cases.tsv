@@ -1,0 +1,20 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s17-forms (2026-11-05), shape S17 (plan §4; the matrix on BUG-024's line). Strict, expected = gc go1.26.5.
+# The receive operator as an operand of further operators and in every statement placement.
+recv-of-recv	recvOfRecv	-	ok	-	channels,nested
+recv-field	recvField	-	ok	-	channels,structs,fields
+recv-deref	recvDeref	-	ok	-	channels,pointers
+recv-compare	recvCompare	-	ok	-	channels,comparisons,if
+recv-len	recvLen	-	ok	-	channels,slices,len
+recv-paren-chan	recvParenChan	-	ok	-	channels
+recv-call-chan	recvCallChan	-	ok	-	channels,calls
+recv-switch-tag	recvSwitchTag	-	ok	-	channels,switch,cases
+recv-if-cond	recvIfCond	-	ok	-	channels,if,bools
+recv-for-cond	recvForCond	-	ok	-	channels,loops,bools
+recv-return	recvReturn	-	ok	-	channels,return
+recv-defer-arg	recvDeferArg	-	ok	-	channels,defer,globals,evaluation_order
+recv-go-arg	recvGoArg	-	ok	-	channels,goroutines
+recv-case-expr	recvCaseExpr	-	ok	-	channels,switch,cases
+recv-map-key	recvMapKey	-	ok	-	channels,maps,keys,strings
+recv-complit-elem	recvComplitElem	-	ok	-	channels,literals,structs,slices,evaluation_order
+recv-in-closure	recvInClosure	-	ok	-	channels,closures

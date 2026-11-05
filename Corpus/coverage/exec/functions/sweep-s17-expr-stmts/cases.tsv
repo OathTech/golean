@@ -1,0 +1,21 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s17-forms (2026-11-05), shape S17 (plan §4; the matrix on BUG-012's line). Strict, expected = gc go1.26.5.
+# Expression statements with a non-identifier callee or discarded results, in every callee shape, a closure and a generic body.
+funclit-stmt-void	funclitStmtVoid	-	ok	-	functions,closures,calls
+funclit-stmt-discard	funclitStmtDiscard	-	ok	-	functions,closures,calls
+generic-call-stmt	genericCallStmt	-	ok	-	functions,generics,calls,globals
+method-value-call-stmt	methodValueCallStmt	-	ok	-	functions,methods,calls,pointers
+method-call-discard	methodCallDiscard	-	ok	-	functions,methods,calls,multi_result
+call-through-map	callThroughMap	-	ok	-	functions,maps,calls,closures
+call-through-slice	callThroughSlice	-	ok	-	functions,slices,calls,closures
+call-through-field	callThroughField	-	ok	-	functions,structs,fields,calls,closures
+call-through-deref	callThroughDeref	-	ok	-	functions,pointers,calls,closures
+call-of-call	callOfCall	-	ok	-	functions,higher_order,calls,closures
+iface-call-discard-two	ifaceCallDiscardTwo	-	ok	-	functions,interfaces,methods,calls,multi_result
+method-expr-call-stmt	methodExprCallStmt	-	ok	-	functions,methods,calls,globals
+ptr-method-expr-call-stmt	ptrMethodExprCallStmt	-	ok	-	functions,methods,calls,pointers
+spread-call-stmt	spreadCallStmt	-	ok	-	functions,variadic,calls,globals
+plain-call-discard-string	plainCallDiscardString	-	ok	-	functions,calls,strings,globals
+stdlib-call-discard	stdlibCallDiscard	-	ok	-	functions,calls,stdlib,strings,len
+discard-in-closure	discardInClosure	-	ok	-	functions,closures,calls,multi_result,globals
+discard-in-generic	discardInGeneric	-	ok	-	functions,generics,calls,globals

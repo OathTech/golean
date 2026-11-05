@@ -1,0 +1,29 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s17-forms (2026-11-05), shape S17 (plan §4; the matrix on BUG-172's line). Strict, expected = gc go1.26.5.
+# The three-clause for at every clause shape: empty parts, init/post statement kinds, condition expression kinds, in a generic body.
+all-empty	allEmpty	-	ok	-	control_flow,loops,break
+cond-only-semis	condOnlySemis	-	ok	-	control_flow,loops
+no-cond	noCond	-	ok	-	control_flow,loops,return
+init-less-post	initLessPost	-	ok	-	control_flow,loops,break
+no-post	noPost	-	ok	-	control_flow,loops,return
+assign-init	assignInit	-	ok	-	control_flow,loops,assignment
+init-incdec	initIncdec	-	ok	-	control_flow,loops,assignment
+init-send	initSend	-	ok	-	control_flow,loops,channels,len
+init-recv	initRecv	-	ok	-	control_flow,loops,channels
+init-call	initCall	-	ok	-	control_flow,loops,calls,globals
+init-compound	initCompound	-	ok	-	control_flow,loops,assignment
+init-tuple-call	initTupleCall	-	ok	-	control_flow,loops,multi_result,short_decl
+init-two-vars	initTwoVars	-	ok	-	control_flow,loops,multi_assign,short_decl
+post-send	postSend	-	ok	-	control_flow,loops,channels
+post-recv	postRecv	-	ok	-	control_flow,loops,channels,len
+post-call	postCall	-	ok	-	control_flow,loops,calls,globals
+post-multi-assign	postMultiAssign	-	ok	-	control_flow,loops,multi_assign
+post-compound	postCompound	-	ok	-	control_flow,loops,assignment
+post-call-assign	postCallAssign	-	ok	-	control_flow,loops,calls,assignment
+cond-recv	condRecv	-	ok	-	control_flow,loops,channels,bools
+cond-funclit	condFunclit	-	ok	-	control_flow,loops,closures,bools
+cond-assert	condAssert	-	ok	-	control_flow,loops,type_assertions,interfaces
+cond-map-read	condMapRead	-	ok	-	control_flow,loops,maps,bools
+for-in-generic	forInGeneric	-	ok	-	control_flow,loops,generics,conversions
+cond-true-literal	condTrueLiteral	-	ok	-	control_flow,loops,constants,break
+cond-false-literal	condFalseLiteral	-	ok	-	control_flow,loops,constants

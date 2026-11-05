@@ -1,0 +1,2 @@
+# expected_substring	features
+select case must be	compile_error,select

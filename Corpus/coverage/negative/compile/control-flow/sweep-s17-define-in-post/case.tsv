@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot declare in post statement	compile_error,control_flow,loops,short_decl

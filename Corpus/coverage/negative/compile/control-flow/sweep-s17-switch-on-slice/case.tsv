@@ -1,0 +1,2 @@
+# expected_substring	features
+can only be compared to nil	compile_error,control_flow,switch,slices

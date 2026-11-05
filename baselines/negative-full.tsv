@@ -1,11 +1,22 @@
 # GoLean negative-corpus (compile-rejection) baseline
 # recorded: 2026-08-18  commit: f68a4d86+ (spec-truth P3 slice 2)  oracle: go build (rejection)  [header corrected 2026-08-31: the old "+ frontend fail-closed" conjunct claimed a check that does not exist — scripts/coverage-negative invokes no GoLean tool (p2-fact claim 5)]
-# manifest_cases: 566  pass: 564  fail: 2
+# manifest_cases: 608  pass: 606  fail: 2
 # re-pinned: 2026-10-27 [AGENT], lane frontend/fix-admission-1027 — BUG-217 and BUG-219 fixed (the main module's path judged
 #   against the pinned GOROOT and gc's reserved names; cmd/go's import rules mirrored at discovery): NINE rows FAIL
 #   frontend-accepts -> PASS from the full run at 63bbba7a with the row edits and records applied in the tree (1117 s) — imports/{vendor-path-import, nested-vendor-path-import,
 #   goroot-vendor-name, bare-internal-path, module-mode-bare-local-import, package-main-import} at frontend=type-check (BUG-219),
 #   modules/{module-path-std-fmt, module-path-std-nested, module-path-cmd} at frontend=module (BUG-217). No other row moves.
+# re-pinned: 2026-11-05 [AGENT], lane sweep/s17-forms — the S17 sweep (lowering coverage holes: statement and expression forms; plan §4,
+#   [USER]-approved 2026-10-27). ADDITIVE ONLY: 42 new ids Corpus/coverage/negative/compile/control-flow/sweep-s17-* from the full run
+#   of scripts/ci --diff at the lane tree 37e2fe89f28ec56b2e84efa2772060e0777d77e9 (914 s); no existing row moved: 539 + 42 = 581, pass 537 + 42 = 579, fail 2.
+#   Every row born PASS (gc rejects AND the frontend refuses as a type-check or parse rejection): the expression statements gc
+#   rejects (len, x.(T), int(x), append, new), break / continue / fallthrough / goto / label placements (outside a loop, in a func
+#   literal in a loop, in a switch not in a loop, continue L on a switch, an unused and a duplicate label, fallthrough in a type
+#   switch / not last / final clause / outside a switch, goto into a block and over a declaration), two defaults in a switch and
+#   in a select, a non-communication select case, an unused select-case variable, duplicate switch cases and map keys, a slice
+#   case, a two-variable channel range, the no-new-variable / blank-only / post-statement short declarations, a mixed
+#   multi-value return and argument list, a field of an interface, slicing a call's array, asserting a non-interface, wrong builtin
+#   and conversion arities, `&&x`, `&m[k]`, `&f()`, `m[k].f++`.
 # re-pinned: 2026-11-05 [AGENT], lane sweep/s11-kinds (on main 12d7a79a) — the defect-neighbourhood campaign's step 2, shape S11 (kinds, widths
 #   and float bit patterns; plan §4, [USER]-approved 2026-10-27): TWENTY-FOUR BORN ROWS, the constant expressions gc rejects at the kind
 #   boundaries — overflowing shifts, sums, conversions and constant declarations at int, int8, int32, rune, uint, uint8, uint64, float32 and
@@ -819,3 +830,45 @@ PASS	constants/sweep-s11-uint8-sum-overflow	-
 PASS	generics/sweep-s11-range-over-mixed-typeset	-
 PASS	ints/sweep-s11-len-plus-int8	-
 PASS	ints/sweep-s11-shift-count-string	-
+PASS	control-flow/sweep-s17-addr-of-call	-
+PASS	control-flow/sweep-s17-addr-of-map-elem	-
+PASS	control-flow/sweep-s17-append-stmt	-
+PASS	control-flow/sweep-s17-assert-non-interface	-
+PASS	control-flow/sweep-s17-assert-stmt	-
+PASS	control-flow/sweep-s17-break-in-funclit-in-loop	-
+PASS	control-flow/sweep-s17-break-outside-loop	-
+PASS	control-flow/sweep-s17-call-multi-value-mixed-args	-
+PASS	control-flow/sweep-s17-cap-of-map	-
+PASS	control-flow/sweep-s17-continue-in-switch-no-loop	-
+PASS	control-flow/sweep-s17-continue-label-on-switch	-
+PASS	control-flow/sweep-s17-conversion-stmt	-
+PASS	control-flow/sweep-s17-conversion-two-args	-
+PASS	control-flow/sweep-s17-define-blank-only	-
+PASS	control-flow/sweep-s17-define-in-post	-
+PASS	control-flow/sweep-s17-define-no-new-vars	-
+PASS	control-flow/sweep-s17-double-ampersand-unary	-
+PASS	control-flow/sweep-s17-duplicate-case	-
+PASS	control-flow/sweep-s17-duplicate-label	-
+PASS	control-flow/sweep-s17-fallthrough-final-clause	-
+PASS	control-flow/sweep-s17-fallthrough-in-type-switch	-
+PASS	control-flow/sweep-s17-fallthrough-not-last	-
+PASS	control-flow/sweep-s17-fallthrough-outside-switch	-
+PASS	control-flow/sweep-s17-field-of-interface	-
+PASS	control-flow/sweep-s17-goto-into-block	-
+PASS	control-flow/sweep-s17-goto-over-var-decl	-
+PASS	control-flow/sweep-s17-len-stmt	-
+PASS	control-flow/sweep-s17-len-two-args	-
+PASS	control-flow/sweep-s17-map-elem-field-incdec	-
+PASS	control-flow/sweep-s17-map-literal-duplicate-key	-
+PASS	control-flow/sweep-s17-new-no-args	-
+PASS	control-flow/sweep-s17-new-stmt	-
+PASS	control-flow/sweep-s17-range-chan-two-vars	-
+PASS	control-flow/sweep-s17-return-multi-value-mixed	-
+PASS	control-flow/sweep-s17-select-case-var-unused	-
+PASS	control-flow/sweep-s17-select-non-comm-case	-
+PASS	control-flow/sweep-s17-select-two-defaults	-
+PASS	control-flow/sweep-s17-slice-of-array-call	-
+PASS	control-flow/sweep-s17-switch-on-slice	-
+PASS	control-flow/sweep-s17-switch-two-defaults	-
+PASS	control-flow/sweep-s17-type-switch-binding-unused	-
+PASS	control-flow/sweep-s17-unused-label	-

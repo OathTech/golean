@@ -1,0 +1,2 @@
+# expected_substring	features
+break is not in a loop, switch, or select	compile_error,control_flow,break,closures

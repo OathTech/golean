@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s17-forms (2026-11-05), shape S17 (plan §4; the matrix on BUG-141's line). Strict, expected = gc go1.26.5.
+# IncDec target spellings, a float operand, the RMW panics, a generic body.
+nested-field-incdec	nestedFieldIncdec	-	ok	-	assignment,structs,fields,nested
+slice-elem-struct-field-incdec	sliceElemStructFieldIncdec	-	ok	-	assignment,slices,structs,fields,indexing
+deref-paren-incdec	derefParenIncdec	-	ok	-	assignment,pointers
+deref-bare-incdec	derefBareIncdec	-	ok	-	assignment,pointers
+float-incdec	floatIncdec	-	ok	-	assignment,floats,conversions
+nil-ptr-field-incdec-panic	nilPtrFieldIncdecPanic	-	panic	invalid memory address or nil pointer dereference	assignment,pointers,nil,panic
+slice-oob-incdec-panic	sliceOobIncdecPanic	-	panic	index out of range	assignment,slices,indexing,panic
+incdec-in-generic	incdecInGeneric	-	ok	-	assignment,generics,overflow,widths,conversions

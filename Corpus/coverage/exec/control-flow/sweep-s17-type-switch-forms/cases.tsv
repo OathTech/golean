@@ -1,0 +1,13 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s17-forms (2026-11-05), shape S17 (plan §4; the matrix on BUG-024's line). Strict, expected = gc go1.26.5.
+# Type switch guard and placement shapes: parenthesised guard, init beside a binding, empty body, nil first, nesting, select, continue, closure.
+paren-guard	parenGuard	-	ok	-	control_flow,type_switch,interfaces
+paren-guard-binding	parenGuardBinding	-	ok	-	control_flow,type_switch,interfaces,short_decl
+init-and-binding	initAndBinding	-	ok	-	control_flow,type_switch,interfaces,calls,short_decl
+empty-no-binding	emptyNoBinding	-	ok	-	control_flow,type_switch,interfaces
+nil-first-nil	nilFirst	0	ok	-	control_flow,type_switch,interfaces,nil
+nil-first-int	nilFirst	1	ok	-	control_flow,type_switch,interfaces,nil
+nested-type-switch	nestedTypeSwitch	-	ok	-	control_flow,type_switch,interfaces,nested,len
+type-switch-in-select	typeSwitchInSelect	-	ok	-	control_flow,type_switch,select,channels,interfaces
+type-switch-continue	typeSwitchContinue	-	ok	-	control_flow,type_switch,loops,range,continue,interfaces
+type-switch-in-closure	typeSwitchInClosure	-	ok	-	control_flow,type_switch,closures,interfaces,nil

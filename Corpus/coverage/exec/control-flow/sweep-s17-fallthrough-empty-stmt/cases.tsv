@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s17-forms (2026-11-05), shape S17 (plan §4; the matrix on BUG-172's line, cell A13.2). Strict, expected = gc go1.26.5.
+# A fallthrough followed by an explicit empty statement (BUG-390: born RED — the emitter's placement check misses it and quarantines the declaration); the same-line semicolon spelling lowers.
+fallthrough-then-empty-stmt	fallthroughThenEmptyStmt	1	ok	-	control_flow,switch,fallthrough,empty
+fallthrough-then-empty-stmt-miss	fallthroughThenEmptyStmt	2	ok	-	control_flow,switch,fallthrough,empty
+fallthrough-explicit-semicolon	fallthroughExplicitSemicolon	1	ok	-	control_flow,switch,fallthrough

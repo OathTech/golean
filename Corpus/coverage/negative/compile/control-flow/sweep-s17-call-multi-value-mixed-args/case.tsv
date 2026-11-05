@@ -1,0 +1,2 @@
+# expected_substring	features
+multiple-value	compile_error,calls,multi_result

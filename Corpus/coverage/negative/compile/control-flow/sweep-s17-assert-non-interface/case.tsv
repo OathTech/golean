@@ -1,0 +1,2 @@
+# expected_substring	features
+is not an interface	compile_error,type_assertions

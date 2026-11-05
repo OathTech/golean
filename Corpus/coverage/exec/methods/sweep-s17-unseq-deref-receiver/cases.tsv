@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s17-forms (2026-11-05), shape S17 (plan §4; the matrix on BUG-001's line, cell B4.5). Strict, expected = gc go1.26.5.
+# BUG-391: a pointer-receiver call on `(*p)` beside a sibling event in one statement — the unseq lowering's `addr-of-deref` receiver occurrence is outside the decoder's admitted fragment: three rows born RED (whole-wire `error`; the green controls are in sweep-s17-selector-forms).
+deref-paren-receiver-beside-call	derefParenReceiverBesideCall	-	ok	-	methods,pointers,structs,evaluation_order
+deref-paren-receiver-two-calls	derefParenReceiverTwoCalls	-	ok	-	methods,pointers,structs,evaluation_order
+deref-paren-receiver-after-sibling-deref	derefParenReceiverAfterSiblingDeref	-	ok	-	methods,pointers,structs,evaluation_order

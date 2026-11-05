@@ -1,0 +1,19 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s17-forms (2026-11-05), shape S17 (plan §4; the matrix on BUG-147's line). Strict, expected = gc go1.26.5.
+# Type assertions as operands and in placements; calls through field func values, call results and converted func values.
+assert-field	assertField	-	ok	-	type_assertions,interfaces,structs,fields
+assert-method	assertMethod	-	ok	-	type_assertions,interfaces,methods
+assert-iface-method	assertIfaceMethod	-	ok	-	type_assertions,interfaces,methods
+assert-index	assertIndex	-	ok	-	type_assertions,interfaces,slices,indexing
+assert-ptr-field	assertPtrField	-	ok	-	type_assertions,interfaces,pointers,fields
+assert-slice	assertSlice	-	ok	-	type_assertions,interfaces,strings,slicing,len
+assert-map-read	assertMapRead	-	ok	-	type_assertions,interfaces,maps
+assert-cond	assertCond	-	ok	-	type_assertions,interfaces,if
+assert-return	assertReturn	-	ok	-	type_assertions,interfaces,return
+assert-arg	assertArg	-	ok	-	type_assertions,interfaces,calls,globals
+assert-defer-arg	assertDeferArg	-	ok	-	type_assertions,interfaces,defer,globals,evaluation_order
+assert-in-closure	assertInClosure	-	ok	-	type_assertions,interfaces,closures
+assert-in-generic	assertInGeneric	-	ok	-	type_assertions,interfaces,generics,len
+call-field-func-value	callFieldFuncValue	-	ok	-	calls,structs,fields,closures,higher_order
+call-call-value	callCallValue	-	ok	-	calls,closures,higher_order
+call-converted-func	callConvertedFunc	-	ok	-	calls,conversions,closures,defined_type

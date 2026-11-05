@@ -1,0 +1,16 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s17-forms (2026-11-05), shape S17 (plan §4; the matrix on BUG-024's line). Strict, expected = gc go1.26.5.
+# Send statement channel-operand and value shapes; a send in a closure and a generic body.
+send-map-elem	sendMapElem	-	ok	-	channels,maps,indexing
+send-field	sendField	-	ok	-	channels,structs,fields
+send-array-elem	sendArrayElem	-	ok	-	channels,arrays,indexing
+send-slice-elem	sendSliceElem	-	ok	-	channels,slices,indexing
+send-deref	sendDeref	-	ok	-	channels,pointers
+send-paren	sendParen	-	ok	-	channels
+send-of-receive	sendOfReceive	-	ok	-	channels,len
+send-conversion	sendConversion	-	ok	-	channels,conversions,defined_type
+send-struct-lit	sendStructLit	-	ok	-	channels,structs,literals
+send-funclit	sendFunclit	-	ok	-	channels,closures,higher_order
+send-empty-struct	sendEmptyStruct	-	ok	-	channels,structs,len
+send-in-closure	sendInClosure	-	ok	-	channels,closures
+send-in-generic	sendInGeneric	-	ok	-	channels,generics,len

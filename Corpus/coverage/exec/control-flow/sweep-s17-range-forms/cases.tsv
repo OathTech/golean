@@ -1,0 +1,22 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s17-forms (2026-11-05), shape S17 (plan §4; the matrix on BUG-226's line). Strict, expected = gc go1.26.5.
+# Range variable-list shapes (blanks in the := and = forms, no variables), operand shapes, a generic body and a closure.
+slice-key-blank-value	sliceKeyBlankValue	-	ok	-	control_flow,range,slices,loops
+slice-both-blank-assign	sliceBothBlankAssign	-	ok	-	control_flow,range,slices,loops,assignment
+map-blank-assign	mapBlankAssign	-	ok	-	control_flow,range,maps,loops,assignment
+string-key-blank-assign	stringKeyBlankAssign	-	ok	-	control_flow,range,strings,unicode,loops,assignment
+array-assign-value	arrayAssignValue	-	ok	-	control_flow,range,arrays,value_copy,loops,assignment
+int-assign-key	intAssignKey	-	ok	-	control_flow,range,ints,loops,assignment
+string-rune-assign	stringRuneAssign	-	ok	-	control_flow,range,strings,runes,loops,assignment
+range-slice-no-var	rangeSliceNoVar	-	ok	-	control_flow,range,slices,loops,literals
+range-string-no-var	rangeStringNoVar	-	ok	-	control_flow,range,strings,unicode,loops
+range-map-no-var	rangeMapNoVar	-	ok	-	control_flow,range,maps,loops
+range-array-no-var	rangeArrayNoVar	-	ok	-	control_flow,range,arrays,loops,literals
+range-bytes-conversion	rangeBytesConversion	-	ok	-	control_flow,range,bytes,conversions,strings,loops
+range-slice-literal	rangeSliceLiteral	-	ok	-	control_flow,range,slices,literals,loops
+range-string-constant	rangeStringConstant	-	ok	-	control_flow,range,strings,constants,loops
+range-map-literal	rangeMapLiteral	-	ok	-	control_flow,range,maps,literals,loops
+range-reslice	rangeReslice	-	ok	-	control_flow,range,slices,slicing,loops
+range-nested-elem	rangeNestedElem	-	ok	-	control_flow,range,maps,slices,indexing,loops
+range-in-generic-map	rangeInGenericMap	-	ok	-	control_flow,range,maps,generics,loops
+range-in-closure	rangeInClosure	-	ok	-	control_flow,range,strings,closures,loops

@@ -1,0 +1,30 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s17-forms (2026-11-05), shape S17 (plan §4; the matrix on BUG-001's line). Strict, expected = gc go1.26.5.
+# Index and slice operand shapes, bounds spellings, a two-argument instantiation, placements.
+index-nested-slice	indexNestedSlice	-	ok	-	indexing,slices,nested
+index-nested-map	indexNestedMap	-	ok	-	indexing,maps,slices,nested
+index-call-result	indexCallResult	-	ok	-	indexing,slices,calls
+index-of-slice-expr	indexOfSliceExpr	-	ok	-	indexing,slicing,slices
+index-deref-paren	indexDerefParen	-	ok	-	indexing,pointers,arrays,slices
+index-string-slice	indexStringSlice	-	ok	-	indexing,slicing,strings,bytes
+index-slice-literal	indexSliceLiteral	-	ok	-	indexing,slices,literals
+index-array-literal	indexArrayLiteral	-	ok	-	indexing,arrays,literals
+index-literal-field-array	indexLiteralFieldArray	-	ok	-	indexing,arrays,structs,literals,fields
+index-const-expr	indexConstExpr	-	ok	-	indexing,arrays,constants,len
+index-len-minus-one	indexLenMinusOne	-	ok	-	indexing,slices,len
+index-defined-int	indexDefinedInt	-	ok	-	indexing,slices,defined_type
+instantiation-two-args-value	instantiationTwoArgsValue	-	ok	-	generics,higher_order,len
+slice-string-const	sliceStringConst	-	ok	-	slicing,strings,constants,len
+slice-of-slice	sliceOfSlice	-	ok	-	slicing,slices,len
+slice-call-result	sliceCallResult	-	ok	-	slicing,slices,calls,len
+slice-nested-elem	sliceNestedElem	-	ok	-	slicing,slices,nested,len
+slice-map-elem	sliceMapElem	-	ok	-	slicing,maps,slices,len
+slice-deref-paren	sliceDerefParen	-	ok	-	slicing,pointers,arrays,len
+slice-tail	sliceTail	-	ok	-	slicing,strings,len
+slice-empty-prefix	sliceEmptyPrefix	-	ok	-	slicing,slices,len,cap
+slice-at-len	sliceAtLen	-	ok	-	slicing,slices,len,cap
+slice-three-zero	sliceThreeZero	-	ok	-	slicing,slices,full_slice,len,cap
+index-defer-arg	indexDeferArg	-	ok	-	indexing,slices,defer,globals,evaluation_order
+index-cond	indexCond	-	ok	-	indexing,slices,if
+slice-defer-arg	sliceDeferArg	-	ok	-	slicing,slices,defer,globals,len
+slice-len-cond	sliceLenCond	-	ok	-	slicing,slices,if,len

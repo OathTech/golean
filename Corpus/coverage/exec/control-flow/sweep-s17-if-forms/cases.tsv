@@ -1,0 +1,26 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s17-forms (2026-11-05), shape S17 (plan §4; the matrix on BUG-024's line). Strict, expected = gc go1.26.5.
+# If statement shapes: init statement kinds, condition expression kinds, empty branches, constant conditions, a generic body.
+init-incdec	initIncdec	-	ok	-	control_flow,if,assignment
+init-send	initSend	-	ok	-	control_flow,if,channels,len
+init-recv	initRecv	-	ok	-	control_flow,if,channels,len
+init-call	initCall	-	ok	-	control_flow,if,calls,globals
+init-compound	initCompound	-	ok	-	control_flow,if,assignment
+init-multi-assign	initMultiAssign	-	ok	-	control_flow,if,multi_assign
+init-call-assign	initCallAssign	-	ok	-	control_flow,if,calls,assignment
+cond-recv	condRecv	-	ok	-	control_flow,if,channels,bools
+cond-assert	condAssert	-	ok	-	control_flow,if,type_assertions,interfaces
+cond-funclit	condFunclit	-	ok	-	control_flow,if,closures,bools
+cond-map-read	condMapRead	-	ok	-	control_flow,if,maps,bools
+cond-index	condIndex	-	ok	-	control_flow,if,slices,indexing,bools
+cond-conversion	condConversion	-	ok	-	control_flow,if,conversions,defined_type,bools
+cond-method-call	condMethodCall	-	ok	-	control_flow,if,methods,literals,bools
+empty-then	emptyThen	1	ok	-	control_flow,if,empty
+empty-else-taken	emptyElse	1	ok	-	control_flow,if,empty
+empty-else-skipped	emptyElse	0	ok	-	control_flow,if,empty
+no-final-else-first	noFinalElse	0	ok	-	control_flow,if
+no-final-else-second	noFinalElse	1	ok	-	control_flow,if
+no-final-else-none	noFinalElse	2	ok	-	control_flow,if
+const-false-cond	constFalseCond	-	ok	-	control_flow,if,constants
+const-true-cond	constTrueCond	-	ok	-	control_flow,if,constants
+if-in-generic	ifInGeneric	-	ok	-	control_flow,if,generics,floats,conversions

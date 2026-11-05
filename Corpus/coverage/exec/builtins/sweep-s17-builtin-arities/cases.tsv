@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s17-forms (2026-11-05), shape S17 (plan §4; the matrix on BUG-012's line). Strict, expected = gc go1.26.5.
+# Built-in arities and placements: append with no elements, one-argument min/max, len of append, builtins as defer arguments and in a generic body.
+append-no-elems	appendNoElems	-	ok	-	builtins,append,slices,len
+min-one-arg-cond	minOneArgCond	-	ok	-	builtins,min,max,if
+len-of-append	lenOfAppend	-	ok	-	builtins,append,len,nil
+builtin-defer-args	builtinDeferArgs	-	ok	-	builtins,defer,len,cap,min,maps,globals,evaluation_order
+builtin-in-generic	builtinInGeneric	-	ok	-	builtins,generics,append,make,copy,len,cap

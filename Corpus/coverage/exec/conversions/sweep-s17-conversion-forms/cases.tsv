@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s17-forms (2026-11-05), shape S17 (plan §4; the matrix on BUG-001's line). Strict, expected = gc go1.26.5.
+# Conversion spellings and placements (the kernel arms are S2's).
+paren-chan-dir	parenChanDir	-	ok	-	conversions,channels
+paren-map	parenMap	-	ok	-	conversions,maps,defined_type
+paren-iface-literal	parenIfaceLiteral	-	ok	-	conversions,interfaces,type_assertions
+conv-then-method	convThenMethod	-	ok	-	conversions,structs,methods
+conv-then-field	convThenField	-	ok	-	conversions,structs,fields
+conv-then-index	convThenIndex	-	ok	-	conversions,strings,bytes,indexing,slicing,defined_type
+conv-cond	convCond	-	ok	-	conversions,bools,floats,if,defined_type
+conv-defer-arg	convDeferArg	-	ok	-	conversions,defer,globals,widths,evaluation_order

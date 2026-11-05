@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s17-forms (2026-11-05), shape S17 (plan §4; the matrix on BUG-012's line). Strict, expected = gc go1.26.5.
+# Blocks and empty statements; break/continue through nested blocks, type switches and selects.
+empty-block	emptyBlock	-	ok	-	control_flow,empty
+lone-semicolon	loneSemicolon	-	ok	-	control_flow,empty,assignment
+body-only-semicolons	bodyOnlySemicolons	-	ok	-	control_flow,empty,return
+block-in-case	blockInCase	-	ok	-	control_flow,switch,cases
+block-terminating	blockTerminating	-	ok	-	control_flow,return
+unreachable-after-return	unreachableAfterReturn	-	ok	-	control_flow,return,empty
+continue-from-type-switch-block	continueFromTypeSwitchBlock	-	ok	-	control_flow,continue,type_switch,range,loops,nested
+break-select-in-switch-in-for	breakSelectInSwitchInFor	-	ok	-	control_flow,break,select,switch,loops,default,nested

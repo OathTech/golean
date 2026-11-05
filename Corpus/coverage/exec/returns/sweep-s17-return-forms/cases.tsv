@@ -1,0 +1,16 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s17-forms (2026-11-05), shape S17 (plan §4; the matrix on BUG-012's line). Strict, expected = gc go1.26.5.
+# Return operand shapes; returns from a select case and a type-switch clause.
+ret-assert	retAssert	-	ok	-	returns,type_assertions,interfaces
+ret-recv	retRecv	-	ok	-	returns,channels
+ret-map-get	retMapGet	-	ok	-	returns,maps
+ret-append	retAppend	-	ok	-	returns,append,slices,len,indexing
+ret-struct-lit	retStructLit	-	ok	-	returns,structs,literals
+ret-addr-lit	retAddrLit	-	ok	-	returns,pointers,structs,literals,fields
+ret-slice-lit	retSliceLit	-	ok	-	returns,slices,literals,len,indexing
+ret-funclit-call	retFunclitCall	-	ok	-	returns,closures,calls
+ret-len-cap	retLenCap	-	ok	-	returns,multi_result,len,cap,make
+ret-nil-nil	retNilNil	-	ok	-	returns,multi_result,nil,pointers,interfaces,if
+ret-conversion	retConversion	-	ok	-	returns,conversions,ints,widths
+ret-from-select	retFromSelect	-	ok	-	returns,select,channels,loops
+ret-from-type-switch	retFromTypeSwitch	-	ok	-	returns,type_switch,interfaces

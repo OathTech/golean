@@ -1,0 +1,12 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s17-forms (2026-11-05), shape S17 (plan §4; the matrix on BUG-012's line). Strict, expected = gc go1.26.5.
+# Function literal shapes: named results with defer, boxes, generic arguments, array elements, immediate calls, package level, control-flow bodies, empty bodies.
+lit-named-result-defer	litNamedResultDefer	-	ok	-	closures,named-results,defer
+lit-in-iface-box	litInIfaceBox	-	ok	-	closures,interfaces,type_assertions
+lit-as-generic-arg	litAsGenericArg	-	ok	-	closures,generics,higher_order,len
+lit-array-elem	litArrayElem	-	ok	-	closures,arrays,higher_order
+lit-immediate-args	litImmediateArgs	-	ok	-	closures,calls
+lit-immediate-spread	litImmediateSpread	-	ok	-	closures,variadic,range
+pkg-level-lit	pkgLevelLit	-	ok	-	closures,globals,init
+lit-body-control	litBodyControl	-	ok	-	closures,control_flow,switch,select,range,labels,goto,channels
+lit-empty-body	litEmptyBody	-	ok	-	closures,empty,return

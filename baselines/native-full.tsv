@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 6631 (6316 PASS / 315 FAIL)
+# cases: 7021 (6701 PASS / 320 FAIL)
 # re-pinned: 2026-10-27 [AGENT], lane frontend/fix-binding-1027 — BUG-300, 301, 302 (the S13 sweep) FIXED in tools/nativefrontend
 #   (the campaign plan's rule that a finding is fixed through the normal train, [USER] approved 2026-10-27, relayed): (1) emit.go
 #   emitDeclStmt lowers a grouped `var ( … )` declaration spec by spec (one `var` node per VarSpec, in source order, into the same
@@ -23,6 +23,414 @@
 #     scoping/sweep-s13-local-iface-dispatch/local-iface-satisfied                   FAIL/lean-observation error:decoder-duplicate-function-id → PASS
 #     scoping/sweep-s13-local-iface-dispatch/local-iface-two-funcs                   FAIL/lean-observation error:decoder-duplicate-function-id → PASS
 # cause keyed 2026-10-27 [AGENT coordinator], train-27 stage, from the stage's full run (scripts/coverage-cause --apply): the 16 rows that carried `?` — BUG-300/302's six `error:decoder-scope-wrong-declaration`, BUG-301's three `error:decoder-duplicate-function-id`, BUG-310's seven `panic:machine-panic` (the three table rows added at this stage); no row moved.
+# re-pinned: 2026-11-05 [AGENT], lane sweep/s17-forms — the defect-neighbourhood campaign's step 2, shape S17 (lowering coverage holes:
+#   statement and expression forms the emitter or the decoder mis-carries; plan docs/2026-10-27_defect-neighbourhood-campaign.md §4,
+#   [USER]-approved 2026-10-27; members BUG-057/024/012/147/141/001/172/226): the shape's 300-cell matrix (every production of
+#   spec#Statements × every expression form × the placements that stress the hoist, the gc-rejected forms as negative material)
+#   probed on both sides — 125 cells by this lane (gc go1.26.5 under the runners' pins against the frontend and native-json-run),
+#   132 covered by existing rows or earlier sweeps, 43 out of scope (25 rowed as negatives); every agreement on a distinct cell
+#   pinned as a strict row and every DISAGREEMENT rowed RED on a new entry's Cases line. NO existing row moved:
+#   6179 + 390 = 6569; PASS 5820 + 385 = 6205; FAIL 359 + 5 = 364. No flip, no removal, no cause change (no runtime
+#   code changed: corpus and records only). NEW rows (390, 27 packages Corpus/coverage/exec/*/sweep-s17-*/, all strict),
+#   appended at the end of the file, measured by CAPPED_MEM_MAX=64G capped scripts/ci --diff at the lane tree 37e2fe89f28ec56b2e84efa2772060e0777d77e9 (914 s wall;
+#   its only drift: these NEW ids), the rows and their cause keys taken from that run's artifacts/coverage/latest.tsv
+#   (scripts/coverage-cause); the --diff at the tip judges. FINDINGS (two entries, status open, red-first): BUG-390 (a `fallthrough`
+#   followed by an explicit empty statement — legal Go — quarantined by the emitter with a cause naming fallthrough itself; 2 rows
+#   FAIL/frontend-export, cause key fe?:normalizing_frontend-quarantined — unclassified, the D5 speedbump names it; the class is a
+#   tools/lowerdiag/causes.tsv row this lane does not edit) and BUG-391 (a pointer-receiver call on `(*p)` beside a sibling event
+#   in one statement, admitted by the unseq grammar as an `addr-of-deref` occurrence the decoder's fragment refuses WHOLE-WIRE;
+#   3 rows FAIL/lean-observation, status error, cause key error:? — unclassified likewise; the key is a scripts/machine-causes.tsv
+#   row this lane does not edit). The rows:
+#     assign-order/sweep-s17-incdec-targets/nested-field-incdec                      PASS/strict
+#     assign-order/sweep-s17-incdec-targets/slice-elem-struct-field-incdec           PASS/strict
+#     assign-order/sweep-s17-incdec-targets/deref-paren-incdec                       PASS/strict
+#     assign-order/sweep-s17-incdec-targets/deref-bare-incdec                        PASS/strict
+#     assign-order/sweep-s17-incdec-targets/float-incdec                             PASS/strict
+#     assign-order/sweep-s17-incdec-targets/nil-ptr-field-incdec-panic               PASS/strict
+#     assign-order/sweep-s17-incdec-targets/slice-oob-incdec-panic                   PASS/strict
+#     assign-order/sweep-s17-incdec-targets/incdec-in-generic                        PASS/strict
+#     builtins/sweep-s17-builtin-arities/append-no-elems                             PASS/strict
+#     builtins/sweep-s17-builtin-arities/min-one-arg-cond                            PASS/strict
+#     builtins/sweep-s17-builtin-arities/len-of-append                               PASS/strict
+#     builtins/sweep-s17-builtin-arities/builtin-defer-args                          PASS/strict
+#     builtins/sweep-s17-builtin-arities/builtin-in-generic                          PASS/strict
+#     channels/sweep-s17-receive-forms/recv-of-recv                                  PASS/strict
+#     channels/sweep-s17-receive-forms/recv-field                                    PASS/strict
+#     channels/sweep-s17-receive-forms/recv-deref                                    PASS/strict
+#     channels/sweep-s17-receive-forms/recv-compare                                  PASS/strict
+#     channels/sweep-s17-receive-forms/recv-len                                      PASS/strict
+#     channels/sweep-s17-receive-forms/recv-paren-chan                               PASS/strict
+#     channels/sweep-s17-receive-forms/recv-call-chan                                PASS/strict
+#     channels/sweep-s17-receive-forms/recv-switch-tag                               PASS/strict
+#     channels/sweep-s17-receive-forms/recv-if-cond                                  PASS/strict
+#     channels/sweep-s17-receive-forms/recv-for-cond                                 PASS/strict
+#     channels/sweep-s17-receive-forms/recv-return                                   PASS/strict
+#     channels/sweep-s17-receive-forms/recv-defer-arg                                PASS/strict
+#     channels/sweep-s17-receive-forms/recv-go-arg                                   PASS/strict
+#     channels/sweep-s17-receive-forms/recv-case-expr                                PASS/strict
+#     channels/sweep-s17-receive-forms/recv-map-key                                  PASS/strict
+#     channels/sweep-s17-receive-forms/recv-complit-elem                             PASS/strict
+#     channels/sweep-s17-receive-forms/recv-in-closure                               PASS/strict
+#     channels/sweep-s17-send-forms/send-map-elem                                    PASS/strict
+#     channels/sweep-s17-send-forms/send-field                                       PASS/strict
+#     channels/sweep-s17-send-forms/send-array-elem                                  PASS/strict
+#     channels/sweep-s17-send-forms/send-slice-elem                                  PASS/strict
+#     channels/sweep-s17-send-forms/send-deref                                       PASS/strict
+#     channels/sweep-s17-send-forms/send-paren                                       PASS/strict
+#     channels/sweep-s17-send-forms/send-of-receive                                  PASS/strict
+#     channels/sweep-s17-send-forms/send-conversion                                  PASS/strict
+#     channels/sweep-s17-send-forms/send-struct-lit                                  PASS/strict
+#     channels/sweep-s17-send-forms/send-funclit                                     PASS/strict
+#     channels/sweep-s17-send-forms/send-empty-struct                                PASS/strict
+#     channels/sweep-s17-send-forms/send-in-closure                                  PASS/strict
+#     channels/sweep-s17-send-forms/send-in-generic                                  PASS/strict
+#     control-flow/sweep-s17-blocks-empty/empty-block                                PASS/strict
+#     control-flow/sweep-s17-blocks-empty/lone-semicolon                             PASS/strict
+#     control-flow/sweep-s17-blocks-empty/body-only-semicolons                       PASS/strict
+#     control-flow/sweep-s17-blocks-empty/block-in-case                              PASS/strict
+#     control-flow/sweep-s17-blocks-empty/block-terminating                          PASS/strict
+#     control-flow/sweep-s17-blocks-empty/unreachable-after-return                   PASS/strict
+#     control-flow/sweep-s17-blocks-empty/continue-from-type-switch-block            PASS/strict
+#     control-flow/sweep-s17-blocks-empty/break-select-in-switch-in-for              PASS/strict
+#     control-flow/sweep-s17-fallthrough-empty-stmt/fallthrough-then-empty-stmt      FAIL/frontend-export cause=fe?:normalizing_frontend-quarantined
+#     control-flow/sweep-s17-fallthrough-empty-stmt/fallthrough-then-empty-stmt-miss FAIL/frontend-export cause=fe?:normalizing_frontend-quarantined
+#     control-flow/sweep-s17-fallthrough-empty-stmt/fallthrough-explicit-semicolon   PASS/strict
+#     control-flow/sweep-s17-for-clauses/all-empty                                   PASS/strict
+#     control-flow/sweep-s17-for-clauses/cond-only-semis                             PASS/strict
+#     control-flow/sweep-s17-for-clauses/no-cond                                     PASS/strict
+#     control-flow/sweep-s17-for-clauses/init-less-post                              PASS/strict
+#     control-flow/sweep-s17-for-clauses/no-post                                     PASS/strict
+#     control-flow/sweep-s17-for-clauses/assign-init                                 PASS/strict
+#     control-flow/sweep-s17-for-clauses/init-incdec                                 PASS/strict
+#     control-flow/sweep-s17-for-clauses/init-send                                   PASS/strict
+#     control-flow/sweep-s17-for-clauses/init-recv                                   PASS/strict
+#     control-flow/sweep-s17-for-clauses/init-call                                   PASS/strict
+#     control-flow/sweep-s17-for-clauses/init-compound                               PASS/strict
+#     control-flow/sweep-s17-for-clauses/init-tuple-call                             PASS/strict
+#     control-flow/sweep-s17-for-clauses/init-two-vars                               PASS/strict
+#     control-flow/sweep-s17-for-clauses/post-send                                   PASS/strict
+#     control-flow/sweep-s17-for-clauses/post-recv                                   PASS/strict
+#     control-flow/sweep-s17-for-clauses/post-call                                   PASS/strict
+#     control-flow/sweep-s17-for-clauses/post-multi-assign                           PASS/strict
+#     control-flow/sweep-s17-for-clauses/post-compound                               PASS/strict
+#     control-flow/sweep-s17-for-clauses/post-call-assign                            PASS/strict
+#     control-flow/sweep-s17-for-clauses/cond-recv                                   PASS/strict
+#     control-flow/sweep-s17-for-clauses/cond-funclit                                PASS/strict
+#     control-flow/sweep-s17-for-clauses/cond-assert                                 PASS/strict
+#     control-flow/sweep-s17-for-clauses/cond-map-read                               PASS/strict
+#     control-flow/sweep-s17-for-clauses/for-in-generic                              PASS/strict
+#     control-flow/sweep-s17-for-clauses/cond-true-literal                           PASS/strict
+#     control-flow/sweep-s17-for-clauses/cond-false-literal                          PASS/strict
+#     control-flow/sweep-s17-goto-fallthrough/fallthrough-multi-value-case-hit       PASS/strict
+#     control-flow/sweep-s17-goto-fallthrough/fallthrough-multi-value-case-miss      PASS/strict
+#     control-flow/sweep-s17-goto-fallthrough/fallthrough-from-middle-default        PASS/strict
+#     control-flow/sweep-s17-goto-fallthrough/fallthrough-middle-default-skipped     PASS/strict
+#     control-flow/sweep-s17-goto-fallthrough/fallthrough-tagless                    PASS/strict
+#     control-flow/sweep-s17-goto-fallthrough/fallthrough-with-init                  PASS/strict
+#     control-flow/sweep-s17-goto-fallthrough/fallthrough-in-closure                 PASS/strict
+#     control-flow/sweep-s17-goto-fallthrough/fallthrough-in-generic                 PASS/strict
+#     control-flow/sweep-s17-goto-fallthrough/goto-in-closure                        PASS/strict
+#     control-flow/sweep-s17-goto-fallthrough/goto-in-generic                        PASS/strict
+#     control-flow/sweep-s17-if-forms/init-incdec                                    PASS/strict
+#     control-flow/sweep-s17-if-forms/init-send                                      PASS/strict
+#     control-flow/sweep-s17-if-forms/init-recv                                      PASS/strict
+#     control-flow/sweep-s17-if-forms/init-call                                      PASS/strict
+#     control-flow/sweep-s17-if-forms/init-compound                                  PASS/strict
+#     control-flow/sweep-s17-if-forms/init-multi-assign                              PASS/strict
+#     control-flow/sweep-s17-if-forms/init-call-assign                               PASS/strict
+#     control-flow/sweep-s17-if-forms/cond-recv                                      PASS/strict
+#     control-flow/sweep-s17-if-forms/cond-assert                                    PASS/strict
+#     control-flow/sweep-s17-if-forms/cond-funclit                                   PASS/strict
+#     control-flow/sweep-s17-if-forms/cond-map-read                                  PASS/strict
+#     control-flow/sweep-s17-if-forms/cond-index                                     PASS/strict
+#     control-flow/sweep-s17-if-forms/cond-conversion                                PASS/strict
+#     control-flow/sweep-s17-if-forms/cond-method-call                               PASS/strict
+#     control-flow/sweep-s17-if-forms/empty-then                                     PASS/strict
+#     control-flow/sweep-s17-if-forms/empty-else-taken                               PASS/strict
+#     control-flow/sweep-s17-if-forms/empty-else-skipped                             PASS/strict
+#     control-flow/sweep-s17-if-forms/no-final-else-first                            PASS/strict
+#     control-flow/sweep-s17-if-forms/no-final-else-second                           PASS/strict
+#     control-flow/sweep-s17-if-forms/no-final-else-none                             PASS/strict
+#     control-flow/sweep-s17-if-forms/const-false-cond                               PASS/strict
+#     control-flow/sweep-s17-if-forms/const-true-cond                                PASS/strict
+#     control-flow/sweep-s17-if-forms/if-in-generic                                  PASS/strict
+#     control-flow/sweep-s17-labeled-forms/labeled-var-decl-goto                     PASS/strict
+#     control-flow/sweep-s17-labeled-forms/labeled-block-goto                        PASS/strict
+#     control-flow/sweep-s17-labeled-forms/labeled-empty-block-forward               PASS/strict
+#     control-flow/sweep-s17-labeled-forms/goto-and-break-same-label                 PASS/strict
+#     control-flow/sweep-s17-labeled-forms/periter-labeled-continue                  PASS/strict
+#     control-flow/sweep-s17-labeled-forms/periter-labeled-break                     PASS/strict
+#     control-flow/sweep-s17-labeled-forms/labeled-for-cond-call-continue            PASS/strict
+#     control-flow/sweep-s17-labeled-forms/labeled-for-post-continue-from-range      PASS/strict
+#     control-flow/sweep-s17-labeled-forms/same-label-two-funcs                      PASS/strict
+#     control-flow/sweep-s17-range-forms/slice-key-blank-value                       PASS/strict
+#     control-flow/sweep-s17-range-forms/slice-both-blank-assign                     PASS/strict
+#     control-flow/sweep-s17-range-forms/map-blank-assign                            PASS/strict
+#     control-flow/sweep-s17-range-forms/string-key-blank-assign                     PASS/strict
+#     control-flow/sweep-s17-range-forms/array-assign-value                          PASS/strict
+#     control-flow/sweep-s17-range-forms/int-assign-key                              PASS/strict
+#     control-flow/sweep-s17-range-forms/string-rune-assign                          PASS/strict
+#     control-flow/sweep-s17-range-forms/range-slice-no-var                          PASS/strict
+#     control-flow/sweep-s17-range-forms/range-string-no-var                         PASS/strict
+#     control-flow/sweep-s17-range-forms/range-map-no-var                            PASS/strict
+#     control-flow/sweep-s17-range-forms/range-array-no-var                          PASS/strict
+#     control-flow/sweep-s17-range-forms/range-bytes-conversion                      PASS/strict
+#     control-flow/sweep-s17-range-forms/range-slice-literal                         PASS/strict
+#     control-flow/sweep-s17-range-forms/range-string-constant                       PASS/strict
+#     control-flow/sweep-s17-range-forms/range-map-literal                           PASS/strict
+#     control-flow/sweep-s17-range-forms/range-reslice                               PASS/strict
+#     control-flow/sweep-s17-range-forms/range-nested-elem                           PASS/strict
+#     control-flow/sweep-s17-range-forms/range-in-generic-map                        PASS/strict
+#     control-flow/sweep-s17-range-forms/range-in-closure                            PASS/strict
+#     control-flow/sweep-s17-select-forms/assign-one                                 PASS/strict
+#     control-flow/sweep-s17-select-forms/assign-two                                 PASS/strict
+#     control-flow/sweep-s17-select-forms/assign-blank-value-open                    PASS/strict
+#     control-flow/sweep-s17-select-forms/assign-blank-value-closed                  PASS/strict
+#     control-flow/sweep-s17-select-forms/assign-blank-both                          PASS/strict
+#     control-flow/sweep-s17-select-forms/define-blank-ok                            PASS/strict
+#     control-flow/sweep-s17-select-forms/define-blank-value                         PASS/strict
+#     control-flow/sweep-s17-select-forms/target-field                               PASS/strict
+#     control-flow/sweep-s17-select-forms/target-array-elem                          PASS/strict
+#     control-flow/sweep-s17-select-forms/target-deref                               PASS/strict
+#     control-flow/sweep-s17-select-forms/target-map-elem                            PASS/strict
+#     control-flow/sweep-s17-select-forms/target-slice-elem-ok                       PASS/strict
+#     control-flow/sweep-s17-select-forms/empty-select-deadlock                      PASS/strict
+#     control-flow/sweep-s17-select-forms/single-recv-case                           PASS/strict
+#     control-flow/sweep-s17-select-forms/single-send-case                           PASS/strict
+#     control-flow/sweep-s17-select-forms/recv-from-slice-elem                       PASS/strict
+#     control-flow/sweep-s17-select-forms/return-from-case                           PASS/strict
+#     control-flow/sweep-s17-select-forms/select-in-closure                          PASS/strict
+#     control-flow/sweep-s17-select-forms/select-in-generic                          PASS/strict
+#     control-flow/sweep-s17-select-forms/recv-converted-chan                        PASS/strict
+#     control-flow/sweep-s17-switch-forms/empty-tagless                              PASS/strict
+#     control-flow/sweep-s17-switch-forms/empty-tag-eval                             PASS/strict
+#     control-flow/sweep-s17-switch-forms/empty-init-tag                             PASS/strict
+#     control-flow/sweep-s17-switch-forms/empty-init-no-tag                          PASS/strict
+#     control-flow/sweep-s17-switch-forms/default-only-tagless                       PASS/strict
+#     control-flow/sweep-s17-switch-forms/default-only-tag                           PASS/strict
+#     control-flow/sweep-s17-switch-forms/init-incdec                                PASS/strict
+#     control-flow/sweep-s17-switch-forms/init-send                                  PASS/strict
+#     control-flow/sweep-s17-switch-forms/init-recv                                  PASS/strict
+#     control-flow/sweep-s17-switch-forms/init-call                                  PASS/strict
+#     control-flow/sweep-s17-switch-forms/init-compound                              PASS/strict
+#     control-flow/sweep-s17-switch-forms/tag-bool-true                              PASS/strict
+#     control-flow/sweep-s17-switch-forms/tag-bool-false                             PASS/strict
+#     control-flow/sweep-s17-switch-forms/tag-pointer                                PASS/strict
+#     control-flow/sweep-s17-switch-forms/tag-chan                                   PASS/strict
+#     control-flow/sweep-s17-switch-forms/tag-defined-int                            PASS/strict
+#     control-flow/sweep-s17-switch-forms/tag-rune                                   PASS/strict
+#     control-flow/sweep-s17-switch-forms/tag-false-literal                          PASS/strict
+#     control-flow/sweep-s17-switch-forms/tagless-multi-value                        PASS/strict
+#     control-flow/sweep-s17-switch-forms/case-recv                                  PASS/strict
+#     control-flow/sweep-s17-switch-forms/case-conversion                            PASS/strict
+#     control-flow/sweep-s17-switch-forms/case-index                                 PASS/strict
+#     control-flow/sweep-s17-switch-forms/case-assert                                PASS/strict
+#     control-flow/sweep-s17-switch-forms/switch-in-select-in-for                    PASS/strict
+#     control-flow/sweep-s17-switch-forms/switch-in-closure                          PASS/strict
+#     control-flow/sweep-s17-switch-forms/switch-in-generic                          PASS/strict
+#     control-flow/sweep-s17-type-switch-forms/paren-guard                           PASS/strict
+#     control-flow/sweep-s17-type-switch-forms/paren-guard-binding                   PASS/strict
+#     control-flow/sweep-s17-type-switch-forms/init-and-binding                      PASS/strict
+#     control-flow/sweep-s17-type-switch-forms/empty-no-binding                      PASS/strict
+#     control-flow/sweep-s17-type-switch-forms/nil-first-nil                         PASS/strict
+#     control-flow/sweep-s17-type-switch-forms/nil-first-int                         PASS/strict
+#     control-flow/sweep-s17-type-switch-forms/nested-type-switch                    PASS/strict
+#     control-flow/sweep-s17-type-switch-forms/type-switch-in-select                 PASS/strict
+#     control-flow/sweep-s17-type-switch-forms/type-switch-continue                  PASS/strict
+#     control-flow/sweep-s17-type-switch-forms/type-switch-in-closure                PASS/strict
+#     conversions/sweep-s17-conversion-forms/paren-chan-dir                          PASS/strict
+#     conversions/sweep-s17-conversion-forms/paren-map                               PASS/strict
+#     conversions/sweep-s17-conversion-forms/paren-iface-literal                     PASS/strict
+#     conversions/sweep-s17-conversion-forms/conv-then-method                        PASS/strict
+#     conversions/sweep-s17-conversion-forms/conv-then-field                         PASS/strict
+#     conversions/sweep-s17-conversion-forms/conv-then-index                         PASS/strict
+#     conversions/sweep-s17-conversion-forms/conv-cond                               PASS/strict
+#     conversions/sweep-s17-conversion-forms/conv-defer-arg                          PASS/strict
+#     defer/sweep-s17-defer-go-forms/defer-field-func                                PASS/strict
+#     defer/sweep-s17-defer-go-forms/defer-slice-elem-func                           PASS/strict
+#     defer/sweep-s17-defer-go-forms/defer-map-func                                  PASS/strict
+#     defer/sweep-s17-defer-go-forms/defer-call-of-call                              PASS/strict
+#     defer/sweep-s17-defer-go-forms/defer-deref-func                                PASS/strict
+#     defer/sweep-s17-defer-go-forms/defer-method-expr                               PASS/strict
+#     defer/sweep-s17-defer-go-forms/defer-ptr-method-expr                           PASS/strict
+#     defer/sweep-s17-defer-go-forms/defer-generic-explicit                          PASS/strict
+#     defer/sweep-s17-defer-go-forms/defer-generic-inferred                          PASS/strict
+#     defer/sweep-s17-defer-go-forms/defer-spread                                    PASS/strict
+#     defer/sweep-s17-defer-go-forms/defer-in-generic                                PASS/strict
+#     defer/sweep-s17-defer-go-forms/go-field-func                                   PASS/strict
+#     defer/sweep-s17-defer-go-forms/go-slice-elem-func                              PASS/strict
+#     defer/sweep-s17-defer-go-forms/go-call-of-call                                 PASS/strict
+#     defer/sweep-s17-defer-go-forms/go-deref-func                                   PASS/strict
+#     defer/sweep-s17-defer-go-forms/go-method-expr                                  PASS/strict
+#     defer/sweep-s17-defer-go-forms/go-iface-method                                 PASS/strict
+#     defer/sweep-s17-defer-go-forms/go-generic-explicit                             PASS/strict
+#     defer/sweep-s17-defer-go-forms/go-generic-inferred                             PASS/strict
+#     defer/sweep-s17-defer-go-forms/go-in-generic                                   PASS/strict
+#     functions/sweep-s17-expr-stmts/funclit-stmt-void                               PASS/strict
+#     functions/sweep-s17-expr-stmts/funclit-stmt-discard                            PASS/strict
+#     functions/sweep-s17-expr-stmts/generic-call-stmt                               PASS/strict
+#     functions/sweep-s17-expr-stmts/method-value-call-stmt                          PASS/strict
+#     functions/sweep-s17-expr-stmts/method-call-discard                             PASS/strict
+#     functions/sweep-s17-expr-stmts/call-through-map                                PASS/strict
+#     functions/sweep-s17-expr-stmts/call-through-slice                              PASS/strict
+#     functions/sweep-s17-expr-stmts/call-through-field                              PASS/strict
+#     functions/sweep-s17-expr-stmts/call-through-deref                              PASS/strict
+#     functions/sweep-s17-expr-stmts/call-of-call                                    PASS/strict
+#     functions/sweep-s17-expr-stmts/iface-call-discard-two                          PASS/strict
+#     functions/sweep-s17-expr-stmts/method-expr-call-stmt                           PASS/strict
+#     functions/sweep-s17-expr-stmts/ptr-method-expr-call-stmt                       PASS/strict
+#     functions/sweep-s17-expr-stmts/spread-call-stmt                                PASS/strict
+#     functions/sweep-s17-expr-stmts/plain-call-discard-string                       PASS/strict
+#     functions/sweep-s17-expr-stmts/stdlib-call-discard                             PASS/strict
+#     functions/sweep-s17-expr-stmts/discard-in-closure                              PASS/strict
+#     functions/sweep-s17-expr-stmts/discard-in-generic                              PASS/strict
+#     functions/sweep-s17-funclit-forms/lit-named-result-defer                       PASS/strict
+#     functions/sweep-s17-funclit-forms/lit-in-iface-box                             PASS/strict
+#     functions/sweep-s17-funclit-forms/lit-as-generic-arg                           PASS/strict
+#     functions/sweep-s17-funclit-forms/lit-array-elem                               PASS/strict
+#     functions/sweep-s17-funclit-forms/lit-immediate-args                           PASS/strict
+#     functions/sweep-s17-funclit-forms/lit-immediate-spread                         PASS/strict
+#     functions/sweep-s17-funclit-forms/pkg-level-lit                                PASS/strict
+#     functions/sweep-s17-funclit-forms/lit-body-control                             PASS/strict
+#     functions/sweep-s17-funclit-forms/lit-empty-body                               PASS/strict
+#     interfaces/sweep-s17-assert-call-forms/assert-field                            PASS/strict
+#     interfaces/sweep-s17-assert-call-forms/assert-method                           PASS/strict
+#     interfaces/sweep-s17-assert-call-forms/assert-iface-method                     PASS/strict
+#     interfaces/sweep-s17-assert-call-forms/assert-index                            PASS/strict
+#     interfaces/sweep-s17-assert-call-forms/assert-ptr-field                        PASS/strict
+#     interfaces/sweep-s17-assert-call-forms/assert-slice                            PASS/strict
+#     interfaces/sweep-s17-assert-call-forms/assert-map-read                         PASS/strict
+#     interfaces/sweep-s17-assert-call-forms/assert-cond                             PASS/strict
+#     interfaces/sweep-s17-assert-call-forms/assert-return                           PASS/strict
+#     interfaces/sweep-s17-assert-call-forms/assert-arg                              PASS/strict
+#     interfaces/sweep-s17-assert-call-forms/assert-defer-arg                        PASS/strict
+#     interfaces/sweep-s17-assert-call-forms/assert-in-closure                       PASS/strict
+#     interfaces/sweep-s17-assert-call-forms/assert-in-generic                       PASS/strict
+#     interfaces/sweep-s17-assert-call-forms/call-field-func-value                   PASS/strict
+#     interfaces/sweep-s17-assert-call-forms/call-call-value                         PASS/strict
+#     interfaces/sweep-s17-assert-call-forms/call-converted-func                     PASS/strict
+#     ints/sweep-s17-operator-forms/unary-arith-chains                               PASS/strict
+#     ints/sweep-s17-operator-forms/unary-bool-chain                                 PASS/strict
+#     ints/sweep-s17-operator-forms/unary-ptr-chains                                 PASS/strict
+#     ints/sweep-s17-operator-forms/unary-recv-under                                 PASS/strict
+#     ints/sweep-s17-operator-forms/arith-mix                                        PASS/strict
+#     ints/sweep-s17-operator-forms/assoc-sub                                        PASS/strict
+#     ints/sweep-s17-operator-forms/assoc-shift                                      PASS/strict
+#     ints/sweep-s17-operator-forms/assoc-and-not                                    PASS/strict
+#     ints/sweep-s17-operator-forms/assoc-div                                        PASS/strict
+#     ints/sweep-s17-operator-forms/rem-mul                                          PASS/strict
+#     ints/sweep-s17-operator-forms/neg-rem                                          PASS/strict
+#     ints/sweep-s17-operator-forms/compare-chain                                    PASS/strict
+#     ints/sweep-s17-operator-forms/bool-eq-chain                                    PASS/strict
+#     ints/sweep-s17-operator-forms/logic-mix                                        PASS/strict
+#     ints/sweep-s17-operator-forms/concat-chain                                     PASS/strict
+#     ints/sweep-s17-operator-forms/bit-mix                                          PASS/strict
+#     ints/sweep-s17-operator-forms/shift-plus                                       PASS/strict
+#     ints/sweep-s17-operator-forms/ops-in-generic                                   PASS/strict
+#     methods/sweep-s17-selector-forms/qualified-const                               PASS/strict
+#     methods/sweep-s17-selector-forms/field-of-call                                 PASS/strict
+#     methods/sweep-s17-selector-forms/field-of-index                                PASS/strict
+#     methods/sweep-s17-selector-forms/field-of-map-elem                             PASS/strict
+#     methods/sweep-s17-selector-forms/field-of-deref                                PASS/strict
+#     methods/sweep-s17-selector-forms/field-of-assert                               PASS/strict
+#     methods/sweep-s17-selector-forms/field-of-literal                              PASS/strict
+#     methods/sweep-s17-selector-forms/field-of-conversion                           PASS/strict
+#     methods/sweep-s17-selector-forms/method-on-call-result                         PASS/strict
+#     methods/sweep-s17-selector-forms/method-on-conversion                          PASS/strict
+#     methods/sweep-s17-selector-forms/method-on-assert                              PASS/strict
+#     methods/sweep-s17-selector-forms/deref-paren-receiver-alone                    PASS/strict
+#     methods/sweep-s17-selector-forms/deref-paren-value-receiver-beside-call        PASS/strict
+#     methods/sweep-s17-selector-forms/method-on-field                               PASS/strict
+#     methods/sweep-s17-unseq-deref-receiver/deref-paren-receiver-beside-call        FAIL/lean-observation cause=error:?
+#     methods/sweep-s17-unseq-deref-receiver/deref-paren-receiver-two-calls          FAIL/lean-observation cause=error:?
+#     methods/sweep-s17-unseq-deref-receiver/deref-paren-receiver-after-sibling-deref FAIL/lean-observation cause=error:?
+#     multi-assign/sweep-s17-assign-forms/compound-all-ops                           PASS/strict
+#     multi-assign/sweep-s17-assign-forms/compound-string-concat                     PASS/strict
+#     multi-assign/sweep-s17-assign-forms/compound-float                             PASS/strict
+#     multi-assign/sweep-s17-assign-forms/compound-uint-ops                          PASS/strict
+#     multi-assign/sweep-s17-assign-forms/compound-defined                           PASS/strict
+#     multi-assign/sweep-s17-assign-forms/multi-deref-targets                        PASS/strict
+#     multi-assign/sweep-s17-assign-forms/multi-field-swap                           PASS/strict
+#     multi-assign/sweep-s17-assign-forms/three-slice-elems                          PASS/strict
+#     multi-assign/sweep-s17-assign-forms/self-assign                                PASS/strict
+#     multi-assign/sweep-s17-assign-forms/compound-named-result                      PASS/strict
+#     multi-assign/sweep-s17-assign-forms/compound-global                            PASS/strict
+#     pointers/sweep-s17-addr-deref-chains/addr-elem-field                           PASS/strict
+#     pointers/sweep-s17-addr-deref-chains/addr-nested-field                         PASS/strict
+#     pointers/sweep-s17-addr-deref-chains/addr-slice-elem-field                     PASS/strict
+#     pointers/sweep-s17-addr-deref-chains/addr-ptr-array-elem                       PASS/strict
+#     pointers/sweep-s17-addr-deref-chains/addr-field-array-elem                     PASS/strict
+#     pointers/sweep-s17-addr-deref-chains/deref-addr                                PASS/strict
+#     pointers/sweep-s17-addr-deref-chains/addr-deref-addr                           PASS/strict
+#     pointers/sweep-s17-addr-deref-chains/store-via-deref-paren                     PASS/strict
+#     pointers/sweep-s17-addr-deref-chains/store-via-double-deref                    PASS/strict
+#     pointers/sweep-s17-addr-deref-chains/store-via-deref-addr                      PASS/strict
+#     pointers/sweep-s17-addr-deref-chains/triple-deref                              PASS/strict
+#     pointers/sweep-s17-addr-deref-chains/addr-field-of-deref-paren                 PASS/strict
+#     pointers/sweep-s17-addr-deref-chains/addr-paren-double-deref                   PASS/strict
+#     pointers/sweep-s17-addr-deref-chains/addr-in-generic                           PASS/strict
+#     pointers/sweep-s17-addr-deref-chains/addr-defer-arg                            PASS/strict
+#     returns/sweep-s17-return-forms/ret-assert                                      PASS/strict
+#     returns/sweep-s17-return-forms/ret-recv                                        PASS/strict
+#     returns/sweep-s17-return-forms/ret-map-get                                     PASS/strict
+#     returns/sweep-s17-return-forms/ret-append                                      PASS/strict
+#     returns/sweep-s17-return-forms/ret-struct-lit                                  PASS/strict
+#     returns/sweep-s17-return-forms/ret-addr-lit                                    PASS/strict
+#     returns/sweep-s17-return-forms/ret-slice-lit                                   PASS/strict
+#     returns/sweep-s17-return-forms/ret-funclit-call                                PASS/strict
+#     returns/sweep-s17-return-forms/ret-len-cap                                     PASS/strict
+#     returns/sweep-s17-return-forms/ret-nil-nil                                     PASS/strict
+#     returns/sweep-s17-return-forms/ret-conversion                                  PASS/strict
+#     returns/sweep-s17-return-forms/ret-from-select                                 PASS/strict
+#     returns/sweep-s17-return-forms/ret-from-type-switch                            PASS/strict
+#     slices/sweep-s17-index-slice-forms/index-nested-slice                          PASS/strict
+#     slices/sweep-s17-index-slice-forms/index-nested-map                            PASS/strict
+#     slices/sweep-s17-index-slice-forms/index-call-result                           PASS/strict
+#     slices/sweep-s17-index-slice-forms/index-of-slice-expr                         PASS/strict
+#     slices/sweep-s17-index-slice-forms/index-deref-paren                           PASS/strict
+#     slices/sweep-s17-index-slice-forms/index-string-slice                          PASS/strict
+#     slices/sweep-s17-index-slice-forms/index-slice-literal                         PASS/strict
+#     slices/sweep-s17-index-slice-forms/index-array-literal                         PASS/strict
+#     slices/sweep-s17-index-slice-forms/index-literal-field-array                   PASS/strict
+#     slices/sweep-s17-index-slice-forms/index-const-expr                            PASS/strict
+#     slices/sweep-s17-index-slice-forms/index-len-minus-one                         PASS/strict
+#     slices/sweep-s17-index-slice-forms/index-defined-int                           PASS/strict
+#     slices/sweep-s17-index-slice-forms/instantiation-two-args-value                PASS/strict
+#     slices/sweep-s17-index-slice-forms/slice-string-const                          PASS/strict
+#     slices/sweep-s17-index-slice-forms/slice-of-slice                              PASS/strict
+#     slices/sweep-s17-index-slice-forms/slice-call-result                           PASS/strict
+#     slices/sweep-s17-index-slice-forms/slice-nested-elem                           PASS/strict
+#     slices/sweep-s17-index-slice-forms/slice-map-elem                              PASS/strict
+#     slices/sweep-s17-index-slice-forms/slice-deref-paren                           PASS/strict
+#     slices/sweep-s17-index-slice-forms/slice-tail                                  PASS/strict
+#     slices/sweep-s17-index-slice-forms/slice-empty-prefix                          PASS/strict
+#     slices/sweep-s17-index-slice-forms/slice-at-len                                PASS/strict
+#     slices/sweep-s17-index-slice-forms/slice-three-zero                            PASS/strict
+#     slices/sweep-s17-index-slice-forms/index-defer-arg                             PASS/strict
+#     slices/sweep-s17-index-slice-forms/index-cond                                  PASS/strict
+#     slices/sweep-s17-index-slice-forms/slice-defer-arg                             PASS/strict
+#     slices/sweep-s17-index-slice-forms/slice-len-cond                              PASS/strict
+#     spec-examples-stmt/sweep-s17-complit-forms/elided-struct-elems                 PASS/strict
+#     spec-examples-stmt/sweep-s17-complit-forms/elided-nested-slices                PASS/strict
+#     spec-examples-stmt/sweep-s17-complit-forms/elided-map-value                    PASS/strict
+#     spec-examples-stmt/sweep-s17-complit-forms/elided-map-key                      PASS/strict
+#     spec-examples-stmt/sweep-s17-complit-forms/elided-ptr-elems                    PASS/strict
+#     spec-examples-stmt/sweep-s17-complit-forms/elided-map-ptr-value                PASS/strict
+#     spec-examples-stmt/sweep-s17-complit-forms/elided-array-of-arrays              PASS/strict
+#     spec-examples-stmt/sweep-s17-complit-forms/elided-array-key                    PASS/strict
+#     spec-examples-stmt/sweep-s17-complit-forms/slice-of-maps                       PASS/strict
+#     spec-examples-stmt/sweep-s17-complit-forms/nested-keyed-struct                 PASS/strict
+#     spec-examples-stmt/sweep-s17-complit-forms/keyed-slice-continuation            PASS/strict
+#     spec-examples-stmt/sweep-s17-complit-forms/keyed-ellipsis-array                PASS/strict
+#     spec-examples-stmt/sweep-s17-complit-forms/struct-func-field-lit               PASS/strict
+#     spec-examples-stmt/sweep-s17-complit-forms/zero-len-array-lit                  PASS/strict
+#     spec-examples-stmt/sweep-s17-complit-forms/empty-struct-elems                  PASS/strict
+#     spec-examples-stmt/sweep-s17-complit-forms/any-elems-mixed                     PASS/strict
+#     spec-examples-stmt/sweep-s17-complit-forms/byte-rune-elems                     PASS/strict
+#     spec-examples-stmt/sweep-s17-complit-forms/string-bool-float-elems             PASS/strict
+#     spec-examples-stmt/sweep-s17-complit-forms/lit-compare-cond                    PASS/strict
+#     spec-examples-stmt/sweep-s17-complit-forms/lit-defer-arg                       PASS/strict
+#     spec-examples-stmt/sweep-s17-complit-forms/lit-in-closure                      PASS/strict
 # re-pinned: 2026-11-05 [AGENT], lane sweep/s11-kinds (on main 12d7a79a) — the defect-neighbourhood campaign's step 2, shape S11 (kinds, widths and
 #   float bit patterns; plan docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved 2026-10-27; members BUG-096, 094, 162, 055,
 #   043, 042, 174, 173): the shape's 2565-cell matrix probed on both sides — 2217 cells by this lane (gc go1.26.5 under the runners' pins
@@ -11724,3 +12132,393 @@ PASS	sync/sweep-s11-waitgroup-width/add-max-cancelled	-	-
 PASS	sync/sweep-s11-waitgroup-width/done-at-zero	-	-
 PASS	sync/sweep-s11-waitgroup-width/add-min-int64	-	-
 PASS	sync/sweep-s11-waitgroup-width/add-below-neg-two-pow-31	-	-
+PASS	assign-order/sweep-s17-incdec-targets/nested-field-incdec	-	-
+PASS	assign-order/sweep-s17-incdec-targets/slice-elem-struct-field-incdec	-	-
+PASS	assign-order/sweep-s17-incdec-targets/deref-paren-incdec	-	-
+PASS	assign-order/sweep-s17-incdec-targets/deref-bare-incdec	-	-
+PASS	assign-order/sweep-s17-incdec-targets/float-incdec	-	-
+PASS	assign-order/sweep-s17-incdec-targets/nil-ptr-field-incdec-panic	-	-
+PASS	assign-order/sweep-s17-incdec-targets/slice-oob-incdec-panic	-	-
+PASS	assign-order/sweep-s17-incdec-targets/incdec-in-generic	-	-
+PASS	builtins/sweep-s17-builtin-arities/append-no-elems	-	-
+PASS	builtins/sweep-s17-builtin-arities/min-one-arg-cond	-	-
+PASS	builtins/sweep-s17-builtin-arities/len-of-append	-	-
+PASS	builtins/sweep-s17-builtin-arities/builtin-defer-args	-	-
+PASS	builtins/sweep-s17-builtin-arities/builtin-in-generic	-	-
+PASS	channels/sweep-s17-receive-forms/recv-of-recv	-	-
+PASS	channels/sweep-s17-receive-forms/recv-field	-	-
+PASS	channels/sweep-s17-receive-forms/recv-deref	-	-
+PASS	channels/sweep-s17-receive-forms/recv-compare	-	-
+PASS	channels/sweep-s17-receive-forms/recv-len	-	-
+PASS	channels/sweep-s17-receive-forms/recv-paren-chan	-	-
+PASS	channels/sweep-s17-receive-forms/recv-call-chan	-	-
+PASS	channels/sweep-s17-receive-forms/recv-switch-tag	-	-
+PASS	channels/sweep-s17-receive-forms/recv-if-cond	-	-
+PASS	channels/sweep-s17-receive-forms/recv-for-cond	-	-
+PASS	channels/sweep-s17-receive-forms/recv-return	-	-
+PASS	channels/sweep-s17-receive-forms/recv-defer-arg	-	-
+PASS	channels/sweep-s17-receive-forms/recv-go-arg	-	-
+PASS	channels/sweep-s17-receive-forms/recv-case-expr	-	-
+PASS	channels/sweep-s17-receive-forms/recv-map-key	-	-
+PASS	channels/sweep-s17-receive-forms/recv-complit-elem	-	-
+PASS	channels/sweep-s17-receive-forms/recv-in-closure	-	-
+PASS	channels/sweep-s17-send-forms/send-map-elem	-	-
+PASS	channels/sweep-s17-send-forms/send-field	-	-
+PASS	channels/sweep-s17-send-forms/send-array-elem	-	-
+PASS	channels/sweep-s17-send-forms/send-slice-elem	-	-
+PASS	channels/sweep-s17-send-forms/send-deref	-	-
+PASS	channels/sweep-s17-send-forms/send-paren	-	-
+PASS	channels/sweep-s17-send-forms/send-of-receive	-	-
+PASS	channels/sweep-s17-send-forms/send-conversion	-	-
+PASS	channels/sweep-s17-send-forms/send-struct-lit	-	-
+PASS	channels/sweep-s17-send-forms/send-funclit	-	-
+PASS	channels/sweep-s17-send-forms/send-empty-struct	-	-
+PASS	channels/sweep-s17-send-forms/send-in-closure	-	-
+PASS	channels/sweep-s17-send-forms/send-in-generic	-	-
+PASS	control-flow/sweep-s17-blocks-empty/empty-block	-	-
+PASS	control-flow/sweep-s17-blocks-empty/lone-semicolon	-	-
+PASS	control-flow/sweep-s17-blocks-empty/body-only-semicolons	-	-
+PASS	control-flow/sweep-s17-blocks-empty/block-in-case	-	-
+PASS	control-flow/sweep-s17-blocks-empty/block-terminating	-	-
+PASS	control-flow/sweep-s17-blocks-empty/unreachable-after-return	-	-
+PASS	control-flow/sweep-s17-blocks-empty/continue-from-type-switch-block	-	-
+PASS	control-flow/sweep-s17-blocks-empty/break-select-in-switch-in-for	-	-
+FAIL	control-flow/sweep-s17-fallthrough-empty-stmt/fallthrough-then-empty-stmt	frontend-export	fe?:normalizing_frontend-quarantined
+FAIL	control-flow/sweep-s17-fallthrough-empty-stmt/fallthrough-then-empty-stmt-miss	frontend-export	fe?:normalizing_frontend-quarantined
+PASS	control-flow/sweep-s17-fallthrough-empty-stmt/fallthrough-explicit-semicolon	-	-
+PASS	control-flow/sweep-s17-for-clauses/all-empty	-	-
+PASS	control-flow/sweep-s17-for-clauses/cond-only-semis	-	-
+PASS	control-flow/sweep-s17-for-clauses/no-cond	-	-
+PASS	control-flow/sweep-s17-for-clauses/init-less-post	-	-
+PASS	control-flow/sweep-s17-for-clauses/no-post	-	-
+PASS	control-flow/sweep-s17-for-clauses/assign-init	-	-
+PASS	control-flow/sweep-s17-for-clauses/init-incdec	-	-
+PASS	control-flow/sweep-s17-for-clauses/init-send	-	-
+PASS	control-flow/sweep-s17-for-clauses/init-recv	-	-
+PASS	control-flow/sweep-s17-for-clauses/init-call	-	-
+PASS	control-flow/sweep-s17-for-clauses/init-compound	-	-
+PASS	control-flow/sweep-s17-for-clauses/init-tuple-call	-	-
+PASS	control-flow/sweep-s17-for-clauses/init-two-vars	-	-
+PASS	control-flow/sweep-s17-for-clauses/post-send	-	-
+PASS	control-flow/sweep-s17-for-clauses/post-recv	-	-
+PASS	control-flow/sweep-s17-for-clauses/post-call	-	-
+PASS	control-flow/sweep-s17-for-clauses/post-multi-assign	-	-
+PASS	control-flow/sweep-s17-for-clauses/post-compound	-	-
+PASS	control-flow/sweep-s17-for-clauses/post-call-assign	-	-
+PASS	control-flow/sweep-s17-for-clauses/cond-recv	-	-
+PASS	control-flow/sweep-s17-for-clauses/cond-funclit	-	-
+PASS	control-flow/sweep-s17-for-clauses/cond-assert	-	-
+PASS	control-flow/sweep-s17-for-clauses/cond-map-read	-	-
+PASS	control-flow/sweep-s17-for-clauses/for-in-generic	-	-
+PASS	control-flow/sweep-s17-for-clauses/cond-true-literal	-	-
+PASS	control-flow/sweep-s17-for-clauses/cond-false-literal	-	-
+PASS	control-flow/sweep-s17-goto-fallthrough/fallthrough-multi-value-case-hit	-	-
+PASS	control-flow/sweep-s17-goto-fallthrough/fallthrough-multi-value-case-miss	-	-
+PASS	control-flow/sweep-s17-goto-fallthrough/fallthrough-from-middle-default	-	-
+PASS	control-flow/sweep-s17-goto-fallthrough/fallthrough-middle-default-skipped	-	-
+PASS	control-flow/sweep-s17-goto-fallthrough/fallthrough-tagless	-	-
+PASS	control-flow/sweep-s17-goto-fallthrough/fallthrough-with-init	-	-
+PASS	control-flow/sweep-s17-goto-fallthrough/fallthrough-in-closure	-	-
+PASS	control-flow/sweep-s17-goto-fallthrough/fallthrough-in-generic	-	-
+PASS	control-flow/sweep-s17-goto-fallthrough/goto-in-closure	-	-
+PASS	control-flow/sweep-s17-goto-fallthrough/goto-in-generic	-	-
+PASS	control-flow/sweep-s17-if-forms/init-incdec	-	-
+PASS	control-flow/sweep-s17-if-forms/init-send	-	-
+PASS	control-flow/sweep-s17-if-forms/init-recv	-	-
+PASS	control-flow/sweep-s17-if-forms/init-call	-	-
+PASS	control-flow/sweep-s17-if-forms/init-compound	-	-
+PASS	control-flow/sweep-s17-if-forms/init-multi-assign	-	-
+PASS	control-flow/sweep-s17-if-forms/init-call-assign	-	-
+PASS	control-flow/sweep-s17-if-forms/cond-recv	-	-
+PASS	control-flow/sweep-s17-if-forms/cond-assert	-	-
+PASS	control-flow/sweep-s17-if-forms/cond-funclit	-	-
+PASS	control-flow/sweep-s17-if-forms/cond-map-read	-	-
+PASS	control-flow/sweep-s17-if-forms/cond-index	-	-
+PASS	control-flow/sweep-s17-if-forms/cond-conversion	-	-
+PASS	control-flow/sweep-s17-if-forms/cond-method-call	-	-
+PASS	control-flow/sweep-s17-if-forms/empty-then	-	-
+PASS	control-flow/sweep-s17-if-forms/empty-else-taken	-	-
+PASS	control-flow/sweep-s17-if-forms/empty-else-skipped	-	-
+PASS	control-flow/sweep-s17-if-forms/no-final-else-first	-	-
+PASS	control-flow/sweep-s17-if-forms/no-final-else-second	-	-
+PASS	control-flow/sweep-s17-if-forms/no-final-else-none	-	-
+PASS	control-flow/sweep-s17-if-forms/const-false-cond	-	-
+PASS	control-flow/sweep-s17-if-forms/const-true-cond	-	-
+PASS	control-flow/sweep-s17-if-forms/if-in-generic	-	-
+PASS	control-flow/sweep-s17-labeled-forms/labeled-var-decl-goto	-	-
+PASS	control-flow/sweep-s17-labeled-forms/labeled-block-goto	-	-
+PASS	control-flow/sweep-s17-labeled-forms/labeled-empty-block-forward	-	-
+PASS	control-flow/sweep-s17-labeled-forms/goto-and-break-same-label	-	-
+PASS	control-flow/sweep-s17-labeled-forms/periter-labeled-continue	-	-
+PASS	control-flow/sweep-s17-labeled-forms/periter-labeled-break	-	-
+PASS	control-flow/sweep-s17-labeled-forms/labeled-for-cond-call-continue	-	-
+PASS	control-flow/sweep-s17-labeled-forms/labeled-for-post-continue-from-range	-	-
+PASS	control-flow/sweep-s17-labeled-forms/same-label-two-funcs	-	-
+PASS	control-flow/sweep-s17-range-forms/slice-key-blank-value	-	-
+PASS	control-flow/sweep-s17-range-forms/slice-both-blank-assign	-	-
+PASS	control-flow/sweep-s17-range-forms/map-blank-assign	-	-
+PASS	control-flow/sweep-s17-range-forms/string-key-blank-assign	-	-
+PASS	control-flow/sweep-s17-range-forms/array-assign-value	-	-
+PASS	control-flow/sweep-s17-range-forms/int-assign-key	-	-
+PASS	control-flow/sweep-s17-range-forms/string-rune-assign	-	-
+PASS	control-flow/sweep-s17-range-forms/range-slice-no-var	-	-
+PASS	control-flow/sweep-s17-range-forms/range-string-no-var	-	-
+PASS	control-flow/sweep-s17-range-forms/range-map-no-var	-	-
+PASS	control-flow/sweep-s17-range-forms/range-array-no-var	-	-
+PASS	control-flow/sweep-s17-range-forms/range-bytes-conversion	-	-
+PASS	control-flow/sweep-s17-range-forms/range-slice-literal	-	-
+PASS	control-flow/sweep-s17-range-forms/range-string-constant	-	-
+PASS	control-flow/sweep-s17-range-forms/range-map-literal	-	-
+PASS	control-flow/sweep-s17-range-forms/range-reslice	-	-
+PASS	control-flow/sweep-s17-range-forms/range-nested-elem	-	-
+PASS	control-flow/sweep-s17-range-forms/range-in-generic-map	-	-
+PASS	control-flow/sweep-s17-range-forms/range-in-closure	-	-
+PASS	control-flow/sweep-s17-select-forms/assign-one	-	-
+PASS	control-flow/sweep-s17-select-forms/assign-two	-	-
+PASS	control-flow/sweep-s17-select-forms/assign-blank-value-open	-	-
+PASS	control-flow/sweep-s17-select-forms/assign-blank-value-closed	-	-
+PASS	control-flow/sweep-s17-select-forms/assign-blank-both	-	-
+PASS	control-flow/sweep-s17-select-forms/define-blank-ok	-	-
+PASS	control-flow/sweep-s17-select-forms/define-blank-value	-	-
+PASS	control-flow/sweep-s17-select-forms/target-field	-	-
+PASS	control-flow/sweep-s17-select-forms/target-array-elem	-	-
+PASS	control-flow/sweep-s17-select-forms/target-deref	-	-
+PASS	control-flow/sweep-s17-select-forms/target-map-elem	-	-
+PASS	control-flow/sweep-s17-select-forms/target-slice-elem-ok	-	-
+PASS	control-flow/sweep-s17-select-forms/empty-select-deadlock	-	-
+PASS	control-flow/sweep-s17-select-forms/single-recv-case	-	-
+PASS	control-flow/sweep-s17-select-forms/single-send-case	-	-
+PASS	control-flow/sweep-s17-select-forms/recv-from-slice-elem	-	-
+PASS	control-flow/sweep-s17-select-forms/return-from-case	-	-
+PASS	control-flow/sweep-s17-select-forms/select-in-closure	-	-
+PASS	control-flow/sweep-s17-select-forms/select-in-generic	-	-
+PASS	control-flow/sweep-s17-select-forms/recv-converted-chan	-	-
+PASS	control-flow/sweep-s17-switch-forms/empty-tagless	-	-
+PASS	control-flow/sweep-s17-switch-forms/empty-tag-eval	-	-
+PASS	control-flow/sweep-s17-switch-forms/empty-init-tag	-	-
+PASS	control-flow/sweep-s17-switch-forms/empty-init-no-tag	-	-
+PASS	control-flow/sweep-s17-switch-forms/default-only-tagless	-	-
+PASS	control-flow/sweep-s17-switch-forms/default-only-tag	-	-
+PASS	control-flow/sweep-s17-switch-forms/init-incdec	-	-
+PASS	control-flow/sweep-s17-switch-forms/init-send	-	-
+PASS	control-flow/sweep-s17-switch-forms/init-recv	-	-
+PASS	control-flow/sweep-s17-switch-forms/init-call	-	-
+PASS	control-flow/sweep-s17-switch-forms/init-compound	-	-
+PASS	control-flow/sweep-s17-switch-forms/tag-bool-true	-	-
+PASS	control-flow/sweep-s17-switch-forms/tag-bool-false	-	-
+PASS	control-flow/sweep-s17-switch-forms/tag-pointer	-	-
+PASS	control-flow/sweep-s17-switch-forms/tag-chan	-	-
+PASS	control-flow/sweep-s17-switch-forms/tag-defined-int	-	-
+PASS	control-flow/sweep-s17-switch-forms/tag-rune	-	-
+PASS	control-flow/sweep-s17-switch-forms/tag-false-literal	-	-
+PASS	control-flow/sweep-s17-switch-forms/tagless-multi-value	-	-
+PASS	control-flow/sweep-s17-switch-forms/case-recv	-	-
+PASS	control-flow/sweep-s17-switch-forms/case-conversion	-	-
+PASS	control-flow/sweep-s17-switch-forms/case-index	-	-
+PASS	control-flow/sweep-s17-switch-forms/case-assert	-	-
+PASS	control-flow/sweep-s17-switch-forms/switch-in-select-in-for	-	-
+PASS	control-flow/sweep-s17-switch-forms/switch-in-closure	-	-
+PASS	control-flow/sweep-s17-switch-forms/switch-in-generic	-	-
+PASS	control-flow/sweep-s17-type-switch-forms/paren-guard	-	-
+PASS	control-flow/sweep-s17-type-switch-forms/paren-guard-binding	-	-
+PASS	control-flow/sweep-s17-type-switch-forms/init-and-binding	-	-
+PASS	control-flow/sweep-s17-type-switch-forms/empty-no-binding	-	-
+PASS	control-flow/sweep-s17-type-switch-forms/nil-first-nil	-	-
+PASS	control-flow/sweep-s17-type-switch-forms/nil-first-int	-	-
+PASS	control-flow/sweep-s17-type-switch-forms/nested-type-switch	-	-
+PASS	control-flow/sweep-s17-type-switch-forms/type-switch-in-select	-	-
+PASS	control-flow/sweep-s17-type-switch-forms/type-switch-continue	-	-
+PASS	control-flow/sweep-s17-type-switch-forms/type-switch-in-closure	-	-
+PASS	conversions/sweep-s17-conversion-forms/paren-chan-dir	-	-
+PASS	conversions/sweep-s17-conversion-forms/paren-map	-	-
+PASS	conversions/sweep-s17-conversion-forms/paren-iface-literal	-	-
+PASS	conversions/sweep-s17-conversion-forms/conv-then-method	-	-
+PASS	conversions/sweep-s17-conversion-forms/conv-then-field	-	-
+PASS	conversions/sweep-s17-conversion-forms/conv-then-index	-	-
+PASS	conversions/sweep-s17-conversion-forms/conv-cond	-	-
+PASS	conversions/sweep-s17-conversion-forms/conv-defer-arg	-	-
+PASS	defer/sweep-s17-defer-go-forms/defer-field-func	-	-
+PASS	defer/sweep-s17-defer-go-forms/defer-slice-elem-func	-	-
+PASS	defer/sweep-s17-defer-go-forms/defer-map-func	-	-
+PASS	defer/sweep-s17-defer-go-forms/defer-call-of-call	-	-
+PASS	defer/sweep-s17-defer-go-forms/defer-deref-func	-	-
+PASS	defer/sweep-s17-defer-go-forms/defer-method-expr	-	-
+PASS	defer/sweep-s17-defer-go-forms/defer-ptr-method-expr	-	-
+PASS	defer/sweep-s17-defer-go-forms/defer-generic-explicit	-	-
+PASS	defer/sweep-s17-defer-go-forms/defer-generic-inferred	-	-
+PASS	defer/sweep-s17-defer-go-forms/defer-spread	-	-
+PASS	defer/sweep-s17-defer-go-forms/defer-in-generic	-	-
+PASS	defer/sweep-s17-defer-go-forms/go-field-func	-	-
+PASS	defer/sweep-s17-defer-go-forms/go-slice-elem-func	-	-
+PASS	defer/sweep-s17-defer-go-forms/go-call-of-call	-	-
+PASS	defer/sweep-s17-defer-go-forms/go-deref-func	-	-
+PASS	defer/sweep-s17-defer-go-forms/go-method-expr	-	-
+PASS	defer/sweep-s17-defer-go-forms/go-iface-method	-	-
+PASS	defer/sweep-s17-defer-go-forms/go-generic-explicit	-	-
+PASS	defer/sweep-s17-defer-go-forms/go-generic-inferred	-	-
+PASS	defer/sweep-s17-defer-go-forms/go-in-generic	-	-
+PASS	functions/sweep-s17-expr-stmts/funclit-stmt-void	-	-
+PASS	functions/sweep-s17-expr-stmts/funclit-stmt-discard	-	-
+PASS	functions/sweep-s17-expr-stmts/generic-call-stmt	-	-
+PASS	functions/sweep-s17-expr-stmts/method-value-call-stmt	-	-
+PASS	functions/sweep-s17-expr-stmts/method-call-discard	-	-
+PASS	functions/sweep-s17-expr-stmts/call-through-map	-	-
+PASS	functions/sweep-s17-expr-stmts/call-through-slice	-	-
+PASS	functions/sweep-s17-expr-stmts/call-through-field	-	-
+PASS	functions/sweep-s17-expr-stmts/call-through-deref	-	-
+PASS	functions/sweep-s17-expr-stmts/call-of-call	-	-
+PASS	functions/sweep-s17-expr-stmts/iface-call-discard-two	-	-
+PASS	functions/sweep-s17-expr-stmts/method-expr-call-stmt	-	-
+PASS	functions/sweep-s17-expr-stmts/ptr-method-expr-call-stmt	-	-
+PASS	functions/sweep-s17-expr-stmts/spread-call-stmt	-	-
+PASS	functions/sweep-s17-expr-stmts/plain-call-discard-string	-	-
+PASS	functions/sweep-s17-expr-stmts/stdlib-call-discard	-	-
+PASS	functions/sweep-s17-expr-stmts/discard-in-closure	-	-
+PASS	functions/sweep-s17-expr-stmts/discard-in-generic	-	-
+PASS	functions/sweep-s17-funclit-forms/lit-named-result-defer	-	-
+PASS	functions/sweep-s17-funclit-forms/lit-in-iface-box	-	-
+PASS	functions/sweep-s17-funclit-forms/lit-as-generic-arg	-	-
+PASS	functions/sweep-s17-funclit-forms/lit-array-elem	-	-
+PASS	functions/sweep-s17-funclit-forms/lit-immediate-args	-	-
+PASS	functions/sweep-s17-funclit-forms/lit-immediate-spread	-	-
+PASS	functions/sweep-s17-funclit-forms/pkg-level-lit	-	-
+PASS	functions/sweep-s17-funclit-forms/lit-body-control	-	-
+PASS	functions/sweep-s17-funclit-forms/lit-empty-body	-	-
+PASS	interfaces/sweep-s17-assert-call-forms/assert-field	-	-
+PASS	interfaces/sweep-s17-assert-call-forms/assert-method	-	-
+PASS	interfaces/sweep-s17-assert-call-forms/assert-iface-method	-	-
+PASS	interfaces/sweep-s17-assert-call-forms/assert-index	-	-
+PASS	interfaces/sweep-s17-assert-call-forms/assert-ptr-field	-	-
+PASS	interfaces/sweep-s17-assert-call-forms/assert-slice	-	-
+PASS	interfaces/sweep-s17-assert-call-forms/assert-map-read	-	-
+PASS	interfaces/sweep-s17-assert-call-forms/assert-cond	-	-
+PASS	interfaces/sweep-s17-assert-call-forms/assert-return	-	-
+PASS	interfaces/sweep-s17-assert-call-forms/assert-arg	-	-
+PASS	interfaces/sweep-s17-assert-call-forms/assert-defer-arg	-	-
+PASS	interfaces/sweep-s17-assert-call-forms/assert-in-closure	-	-
+PASS	interfaces/sweep-s17-assert-call-forms/assert-in-generic	-	-
+PASS	interfaces/sweep-s17-assert-call-forms/call-field-func-value	-	-
+PASS	interfaces/sweep-s17-assert-call-forms/call-call-value	-	-
+PASS	interfaces/sweep-s17-assert-call-forms/call-converted-func	-	-
+PASS	ints/sweep-s17-operator-forms/unary-arith-chains	-	-
+PASS	ints/sweep-s17-operator-forms/unary-bool-chain	-	-
+PASS	ints/sweep-s17-operator-forms/unary-ptr-chains	-	-
+PASS	ints/sweep-s17-operator-forms/unary-recv-under	-	-
+PASS	ints/sweep-s17-operator-forms/arith-mix	-	-
+PASS	ints/sweep-s17-operator-forms/assoc-sub	-	-
+PASS	ints/sweep-s17-operator-forms/assoc-shift	-	-
+PASS	ints/sweep-s17-operator-forms/assoc-and-not	-	-
+PASS	ints/sweep-s17-operator-forms/assoc-div	-	-
+PASS	ints/sweep-s17-operator-forms/rem-mul	-	-
+PASS	ints/sweep-s17-operator-forms/neg-rem	-	-
+PASS	ints/sweep-s17-operator-forms/compare-chain	-	-
+PASS	ints/sweep-s17-operator-forms/bool-eq-chain	-	-
+PASS	ints/sweep-s17-operator-forms/logic-mix	-	-
+PASS	ints/sweep-s17-operator-forms/concat-chain	-	-
+PASS	ints/sweep-s17-operator-forms/bit-mix	-	-
+PASS	ints/sweep-s17-operator-forms/shift-plus	-	-
+PASS	ints/sweep-s17-operator-forms/ops-in-generic	-	-
+PASS	methods/sweep-s17-selector-forms/qualified-const	-	-
+PASS	methods/sweep-s17-selector-forms/field-of-call	-	-
+PASS	methods/sweep-s17-selector-forms/field-of-index	-	-
+PASS	methods/sweep-s17-selector-forms/field-of-map-elem	-	-
+PASS	methods/sweep-s17-selector-forms/field-of-deref	-	-
+PASS	methods/sweep-s17-selector-forms/field-of-assert	-	-
+PASS	methods/sweep-s17-selector-forms/field-of-literal	-	-
+PASS	methods/sweep-s17-selector-forms/field-of-conversion	-	-
+PASS	methods/sweep-s17-selector-forms/method-on-call-result	-	-
+PASS	methods/sweep-s17-selector-forms/method-on-conversion	-	-
+PASS	methods/sweep-s17-selector-forms/method-on-assert	-	-
+PASS	methods/sweep-s17-selector-forms/deref-paren-receiver-alone	-	-
+PASS	methods/sweep-s17-selector-forms/deref-paren-value-receiver-beside-call	-	-
+PASS	methods/sweep-s17-selector-forms/method-on-field	-	-
+FAIL	methods/sweep-s17-unseq-deref-receiver/deref-paren-receiver-beside-call	lean-observation	error:?
+FAIL	methods/sweep-s17-unseq-deref-receiver/deref-paren-receiver-two-calls	lean-observation	error:?
+FAIL	methods/sweep-s17-unseq-deref-receiver/deref-paren-receiver-after-sibling-deref	lean-observation	error:?
+PASS	multi-assign/sweep-s17-assign-forms/compound-all-ops	-	-
+PASS	multi-assign/sweep-s17-assign-forms/compound-string-concat	-	-
+PASS	multi-assign/sweep-s17-assign-forms/compound-float	-	-
+PASS	multi-assign/sweep-s17-assign-forms/compound-uint-ops	-	-
+PASS	multi-assign/sweep-s17-assign-forms/compound-defined	-	-
+PASS	multi-assign/sweep-s17-assign-forms/multi-deref-targets	-	-
+PASS	multi-assign/sweep-s17-assign-forms/multi-field-swap	-	-
+PASS	multi-assign/sweep-s17-assign-forms/three-slice-elems	-	-
+PASS	multi-assign/sweep-s17-assign-forms/self-assign	-	-
+PASS	multi-assign/sweep-s17-assign-forms/compound-named-result	-	-
+PASS	multi-assign/sweep-s17-assign-forms/compound-global	-	-
+PASS	pointers/sweep-s17-addr-deref-chains/addr-elem-field	-	-
+PASS	pointers/sweep-s17-addr-deref-chains/addr-nested-field	-	-
+PASS	pointers/sweep-s17-addr-deref-chains/addr-slice-elem-field	-	-
+PASS	pointers/sweep-s17-addr-deref-chains/addr-ptr-array-elem	-	-
+PASS	pointers/sweep-s17-addr-deref-chains/addr-field-array-elem	-	-
+PASS	pointers/sweep-s17-addr-deref-chains/deref-addr	-	-
+PASS	pointers/sweep-s17-addr-deref-chains/addr-deref-addr	-	-
+PASS	pointers/sweep-s17-addr-deref-chains/store-via-deref-paren	-	-
+PASS	pointers/sweep-s17-addr-deref-chains/store-via-double-deref	-	-
+PASS	pointers/sweep-s17-addr-deref-chains/store-via-deref-addr	-	-
+PASS	pointers/sweep-s17-addr-deref-chains/triple-deref	-	-
+PASS	pointers/sweep-s17-addr-deref-chains/addr-field-of-deref-paren	-	-
+PASS	pointers/sweep-s17-addr-deref-chains/addr-paren-double-deref	-	-
+PASS	pointers/sweep-s17-addr-deref-chains/addr-in-generic	-	-
+PASS	pointers/sweep-s17-addr-deref-chains/addr-defer-arg	-	-
+PASS	returns/sweep-s17-return-forms/ret-assert	-	-
+PASS	returns/sweep-s17-return-forms/ret-recv	-	-
+PASS	returns/sweep-s17-return-forms/ret-map-get	-	-
+PASS	returns/sweep-s17-return-forms/ret-append	-	-
+PASS	returns/sweep-s17-return-forms/ret-struct-lit	-	-
+PASS	returns/sweep-s17-return-forms/ret-addr-lit	-	-
+PASS	returns/sweep-s17-return-forms/ret-slice-lit	-	-
+PASS	returns/sweep-s17-return-forms/ret-funclit-call	-	-
+PASS	returns/sweep-s17-return-forms/ret-len-cap	-	-
+PASS	returns/sweep-s17-return-forms/ret-nil-nil	-	-
+PASS	returns/sweep-s17-return-forms/ret-conversion	-	-
+PASS	returns/sweep-s17-return-forms/ret-from-select	-	-
+PASS	returns/sweep-s17-return-forms/ret-from-type-switch	-	-
+PASS	slices/sweep-s17-index-slice-forms/index-nested-slice	-	-
+PASS	slices/sweep-s17-index-slice-forms/index-nested-map	-	-
+PASS	slices/sweep-s17-index-slice-forms/index-call-result	-	-
+PASS	slices/sweep-s17-index-slice-forms/index-of-slice-expr	-	-
+PASS	slices/sweep-s17-index-slice-forms/index-deref-paren	-	-
+PASS	slices/sweep-s17-index-slice-forms/index-string-slice	-	-
+PASS	slices/sweep-s17-index-slice-forms/index-slice-literal	-	-
+PASS	slices/sweep-s17-index-slice-forms/index-array-literal	-	-
+PASS	slices/sweep-s17-index-slice-forms/index-literal-field-array	-	-
+PASS	slices/sweep-s17-index-slice-forms/index-const-expr	-	-
+PASS	slices/sweep-s17-index-slice-forms/index-len-minus-one	-	-
+PASS	slices/sweep-s17-index-slice-forms/index-defined-int	-	-
+PASS	slices/sweep-s17-index-slice-forms/instantiation-two-args-value	-	-
+PASS	slices/sweep-s17-index-slice-forms/slice-string-const	-	-
+PASS	slices/sweep-s17-index-slice-forms/slice-of-slice	-	-
+PASS	slices/sweep-s17-index-slice-forms/slice-call-result	-	-
+PASS	slices/sweep-s17-index-slice-forms/slice-nested-elem	-	-
+PASS	slices/sweep-s17-index-slice-forms/slice-map-elem	-	-
+PASS	slices/sweep-s17-index-slice-forms/slice-deref-paren	-	-
+PASS	slices/sweep-s17-index-slice-forms/slice-tail	-	-
+PASS	slices/sweep-s17-index-slice-forms/slice-empty-prefix	-	-
+PASS	slices/sweep-s17-index-slice-forms/slice-at-len	-	-
+PASS	slices/sweep-s17-index-slice-forms/slice-three-zero	-	-
+PASS	slices/sweep-s17-index-slice-forms/index-defer-arg	-	-
+PASS	slices/sweep-s17-index-slice-forms/index-cond	-	-
+PASS	slices/sweep-s17-index-slice-forms/slice-defer-arg	-	-
+PASS	slices/sweep-s17-index-slice-forms/slice-len-cond	-	-
+PASS	spec-examples-stmt/sweep-s17-complit-forms/elided-struct-elems	-	-
+PASS	spec-examples-stmt/sweep-s17-complit-forms/elided-nested-slices	-	-
+PASS	spec-examples-stmt/sweep-s17-complit-forms/elided-map-value	-	-
+PASS	spec-examples-stmt/sweep-s17-complit-forms/elided-map-key	-	-
+PASS	spec-examples-stmt/sweep-s17-complit-forms/elided-ptr-elems	-	-
+PASS	spec-examples-stmt/sweep-s17-complit-forms/elided-map-ptr-value	-	-
+PASS	spec-examples-stmt/sweep-s17-complit-forms/elided-array-of-arrays	-	-
+PASS	spec-examples-stmt/sweep-s17-complit-forms/elided-array-key	-	-
+PASS	spec-examples-stmt/sweep-s17-complit-forms/slice-of-maps	-	-
+PASS	spec-examples-stmt/sweep-s17-complit-forms/nested-keyed-struct	-	-
+PASS	spec-examples-stmt/sweep-s17-complit-forms/keyed-slice-continuation	-	-
+PASS	spec-examples-stmt/sweep-s17-complit-forms/keyed-ellipsis-array	-	-
+PASS	spec-examples-stmt/sweep-s17-complit-forms/struct-func-field-lit	-	-
+PASS	spec-examples-stmt/sweep-s17-complit-forms/zero-len-array-lit	-	-
+PASS	spec-examples-stmt/sweep-s17-complit-forms/empty-struct-elems	-	-
+PASS	spec-examples-stmt/sweep-s17-complit-forms/any-elems-mixed	-	-
+PASS	spec-examples-stmt/sweep-s17-complit-forms/byte-rune-elems	-	-
+PASS	spec-examples-stmt/sweep-s17-complit-forms/string-bool-float-elems	-	-
+PASS	spec-examples-stmt/sweep-s17-complit-forms/lit-compare-cond	-	-
+PASS	spec-examples-stmt/sweep-s17-complit-forms/lit-defer-arg	-	-
+PASS	spec-examples-stmt/sweep-s17-complit-forms/lit-in-closure	-	-

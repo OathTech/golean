@@ -1,0 +1,12 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s17-forms (2026-11-05), shape S17 (plan §4; the matrix on BUG-172's line). Strict, expected = gc go1.26.5.
+# Labeled statement shapes: a labeled var / block reached by goto, a label shared by goto and break, labels on the per-iteration for desugar, cond-hoist and post forms, one name in two functions.
+labeled-var-decl-goto	labeledVarDeclGoto	-	ok	-	control_flow,labels,goto,scoping
+labeled-block-goto	labeledBlockGoto	-	ok	-	control_flow,labels,goto
+labeled-empty-block-forward	labeledEmptyBlockForward	-	ok	-	control_flow,labels,goto,empty
+goto-and-break-same-label	gotoAndBreakSameLabel	-	ok	-	control_flow,labels,goto,break,loops
+periter-labeled-continue	periterLabeledContinue	-	ok	-	control_flow,labels,continue,loops,closures,append
+periter-labeled-break	periterLabeledBreak	-	ok	-	control_flow,labels,break,loops,closures,append,len
+labeled-for-cond-call-continue	labeledForCondCallContinue	-	ok	-	control_flow,labels,continue,loops,calls
+labeled-for-post-continue-from-range	labeledForPostContinueFromRange	-	ok	-	control_flow,labels,continue,loops,range,nested
+same-label-two-funcs	sameLabelTwoFuncs	-	ok	-	control_flow,labels,break,continue,loops

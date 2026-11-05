@@ -1,0 +1,14 @@
+# id	subject	args	expected_status	expected_reason	features
+# Sweep lane sweep/s17-forms (2026-11-05), shape S17 (plan §4; the matrix on BUG-057's line). Strict, expected = gc go1.26.5.
+# Compound operators of every kind, parallel assignment target shapes, the self-assignment.
+compound-all-ops	compoundAllOps	-	ok	-	assignment,ints,bitwise,shifts,division,modulo
+compound-string-concat	compoundStringConcat	-	ok	-	assignment,strings,concat,len,indexing
+compound-float	compoundFloat	-	ok	-	assignment,floats,division,conversions
+compound-uint-ops	compoundUintOps	-	ok	-	assignment,ints,bitwise,shifts,widths
+compound-defined	compoundDefined	-	ok	-	assignment,defined_type,shifts,conversions
+multi-deref-targets	multiDerefTargets	-	ok	-	multi_assign,pointers
+multi-field-swap	multiFieldSwap	-	ok	-	multi_assign,structs,fields
+three-slice-elems	threeSliceElems	-	ok	-	multi_assign,slices,indexing,make
+self-assign	selfAssign	-	ok	-	assignment,multi_assign
+compound-named-result	compoundNamedResult	-	ok	-	assignment,named-results,return
+compound-global	compoundGlobal	-	ok	-	assignment,globals,shifts,bitwise

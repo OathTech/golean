@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot take address	compile_error,pointers,calls,addressability
