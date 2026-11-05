@@ -1,0 +1,1042 @@
+{
+ "buildContext": {
+  "buildTags": [],
+  "cgoEnabled": true,
+  "compiler": "gc",
+  "goarch": "amd64",
+  "goos": "linux"
+ },
+ "fileOrder": [
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "main"
+  }
+ ],
+ "funcs": [
+  {
+   "body": {
+    "body": [
+     {
+      "elemType": {
+       "kind": "named",
+       "name": "main.pt"
+      },
+      "stmt": "new",
+      "target": {
+       "id": "$c0",
+       "target": "declare",
+       "type": {
+        "elem": {
+         "kind": "named",
+         "name": "main.pt"
+        },
+        "kind": "pointer"
+       }
+      },
+      "value": {
+       "args": [
+        {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "1"
+        },
+        {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "1"
+        }
+       ],
+       "expr": "struct-lit",
+       "target": {
+        "kind": "named",
+        "name": "main.pt"
+       }
+      }
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "p",
+        "local": 0,
+        "target": "declare",
+        "type": {
+         "elem": {
+          "kind": "named",
+          "name": "main.pt"
+         },
+         "kind": "pointer"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "ident",
+        "name": "$c0",
+        "type": {
+         "elem": {
+          "kind": "named",
+          "name": "main.pt"
+         },
+         "kind": "pointer"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "cells": [
+       {
+        "id": "$u1",
+        "type": {
+         "kind": "named",
+         "name": "main.pt"
+        }
+       },
+       {
+        "id": "$u2",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       {
+        "id": "$u3",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       {
+        "id": "$u4",
+        "type": {
+         "elem": {
+          "kind": "named",
+          "name": "main.pt"
+         },
+         "kind": "pointer"
+        }
+       },
+       {
+        "id": "$u5",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       {
+        "id": "$u6",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "occs": [
+       {
+        "bind": "$u1",
+        "head": {
+         "expr": "deref",
+         "ptr": {
+          "expr": "ident",
+          "local": 0,
+          "name": "p",
+          "type": {
+           "elem": {
+            "kind": "named",
+            "name": "main.pt"
+           },
+           "kind": "pointer"
+          }
+         },
+         "type": {
+          "kind": "named",
+          "name": "main.pt"
+         }
+        },
+        "kind": "eval",
+        "name": "deref0"
+       },
+       {
+        "args": [
+         {
+          "expr": "ident",
+          "name": "$u1",
+          "type": {
+           "kind": "named",
+           "name": "main.pt"
+          }
+         }
+        ],
+        "binds": [
+         "$u2"
+        ],
+        "callee": {
+         "captured": [],
+         "expr": "func-value",
+         "func": "$method$7:main.pt4:mainsum"
+        },
+        "kind": "invoke",
+        "name": "call1",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       },
+       {
+        "bind": "$u4",
+        "head": {
+         "expr": "addr-of-deref",
+         "ptr": {
+          "expr": "ident",
+          "local": 0,
+          "name": "p",
+          "type": {
+           "elem": {
+            "kind": "named",
+            "name": "main.pt"
+           },
+           "kind": "pointer"
+          }
+         },
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "main.pt"
+          },
+          "kind": "pointer"
+         }
+        },
+        "kind": "eval",
+        "name": "recvaddr3"
+       },
+       {
+        "after": [
+         "call1"
+        ],
+        "args": [
+         {
+          "expr": "ident",
+          "name": "$u4",
+          "type": {
+           "elem": {
+            "kind": "named",
+            "name": "main.pt"
+           },
+           "kind": "pointer"
+          }
+         }
+        ],
+        "binds": [
+         "$u5"
+        ],
+        "callee": {
+         "captured": [],
+         "expr": "func-value",
+         "func": "$method$7:main.pt4:mainbump"
+        },
+        "kind": "invoke",
+        "name": "call4",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       },
+       {
+        "bind": "$u3",
+        "head": {
+         "expr": "binary",
+         "op": "*",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "ident",
+          "name": "$u2",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         },
+         "y": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "10"
+         }
+        },
+        "kind": "eval",
+        "name": "op2"
+       },
+       {
+        "bind": "$u6",
+        "head": {
+         "expr": "binary",
+         "op": "+",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "ident",
+          "name": "$u3",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         },
+         "y": {
+          "expr": "ident",
+          "name": "$u5",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         }
+        },
+        "kind": "eval",
+        "name": "op5"
+       }
+      ],
+      "stmt": "unseq",
+      "stores": [],
+      "then": {
+       "results": [
+        {
+         "expr": "ident",
+         "name": "$u6",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       ],
+       "stmt": "return"
+      }
+     }
+    ],
+    "stmt": "block"
+   },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "p",
+     "pos": "main.go:16:2"
+    }
+   ],
+   "name": "e3deref",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "expr": "ident",
+         "local": 0,
+         "name": "p$cap"
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "nil",
+        "type": {
+         "elem": {
+          "kind": "named",
+          "name": "main.pt"
+         },
+         "kind": "pointer"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "1"
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "locals": [
+    {
+     "kind": "capture",
+     "name": "p",
+     "pos": "main.go:25:2",
+     "wire": "p$cap"
+    }
+   ],
+   "name": "e3derefnil$lit0",
+   "params": [
+    {
+     "id": "p$cap",
+     "local": 0,
+     "type": {
+      "elem": {
+       "elem": {
+        "kind": "named",
+        "name": "main.pt"
+       },
+       "kind": "pointer"
+      },
+      "kind": "pointer"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "elemType": {
+       "kind": "named",
+       "name": "main.pt"
+      },
+      "stmt": "new",
+      "target": {
+       "id": "$c7",
+       "target": "declare",
+       "type": {
+        "elem": {
+         "kind": "named",
+         "name": "main.pt"
+        },
+        "kind": "pointer"
+       }
+      },
+      "value": {
+       "args": [
+        {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "1"
+        },
+        {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "1"
+        }
+       ],
+       "expr": "struct-lit",
+       "target": {
+        "kind": "named",
+        "name": "main.pt"
+       }
+      }
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "p",
+        "local": 0,
+        "target": "declare",
+        "type": {
+         "elem": {
+          "kind": "named",
+          "name": "main.pt"
+         },
+         "kind": "pointer"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "ident",
+        "name": "$c7",
+        "type": {
+         "elem": {
+          "kind": "named",
+          "name": "main.pt"
+         },
+         "kind": "pointer"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "wit",
+        "local": 1,
+        "target": "declare",
+        "type": {
+         "kind": "func",
+         "params": [],
+         "results": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "variadic": false
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "captured": [
+         {
+          "expr": "ref",
+          "id": "p",
+          "local": 0
+         }
+        ],
+        "expr": "func-value",
+        "func": "e3derefnil$lit0",
+        "type": {
+         "kind": "func",
+         "params": [],
+         "results": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "variadic": false
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "cells": [
+       {
+        "id": "$u8",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       {
+        "id": "$u9",
+        "type": {
+         "elem": {
+          "kind": "named",
+          "name": "main.pt"
+         },
+         "kind": "pointer"
+        }
+       },
+       {
+        "id": "$u10",
+        "type": {
+         "elem": {
+          "kind": "named",
+          "name": "main.pt"
+         },
+         "kind": "pointer"
+        }
+       },
+       {
+        "id": "$u11",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       {
+        "id": "$u12",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "occs": [
+       {
+        "args": [],
+        "binds": [
+         "$u8"
+        ],
+        "callee": {
+         "expr": "ident",
+         "local": 1,
+         "name": "wit",
+         "type": {
+          "kind": "func",
+          "params": [],
+          "results": [
+           {
+            "int": "int",
+            "kind": "int"
+           }
+          ],
+          "variadic": false
+         }
+        },
+        "kind": "invoke",
+        "name": "call0",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       },
+       {
+        "bind": "$u9",
+        "head": {
+         "expr": "ident",
+         "local": 0,
+         "name": "p",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "main.pt"
+          },
+          "kind": "pointer"
+         }
+        },
+        "kind": "eval",
+        "name": "read1"
+       },
+       {
+        "bind": "$u10",
+        "head": {
+         "expr": "addr-of-deref",
+         "ptr": {
+          "expr": "ident",
+          "name": "$u9",
+          "type": {
+           "elem": {
+            "kind": "named",
+            "name": "main.pt"
+           },
+           "kind": "pointer"
+          }
+         },
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "main.pt"
+          },
+          "kind": "pointer"
+         }
+        },
+        "kind": "eval",
+        "name": "recvaddr2"
+       },
+       {
+        "after": [
+         "call0"
+        ],
+        "args": [
+         {
+          "expr": "ident",
+          "name": "$u10",
+          "type": {
+           "elem": {
+            "kind": "named",
+            "name": "main.pt"
+           },
+           "kind": "pointer"
+          }
+         }
+        ],
+        "binds": [
+         "$u11"
+        ],
+        "callee": {
+         "captured": [],
+         "expr": "func-value",
+         "func": "$method$7:main.pt4:mainbump"
+        },
+        "kind": "invoke",
+        "name": "call3",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       },
+       {
+        "bind": "$u12",
+        "head": {
+         "expr": "binary",
+         "op": "+",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "ident",
+          "name": "$u8",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         },
+         "y": {
+          "expr": "ident",
+          "name": "$u11",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         }
+        },
+        "kind": "eval",
+        "name": "op4"
+       }
+      ],
+      "stmt": "unseq",
+      "stores": [],
+      "then": {
+       "results": [
+        {
+         "expr": "ident",
+         "name": "$u12",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       ],
+       "stmt": "return"
+      }
+     }
+    ],
+    "stmt": "block"
+   },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "p",
+     "pos": "main.go:25:2"
+    },
+    {
+     "kind": "local",
+     "name": "wit",
+     "pos": "main.go:26:2"
+    }
+   ],
+   "name": "e3derefnil",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  }
+ ],
+ "methodSets": [
+  {
+   "coverage": "full",
+   "type": "main.pt"
+  }
+ ],
+ "methods": [
+  {
+   "body": {
+    "body": [
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "+",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "field-get",
+         "field": "x",
+         "recv": {
+          "expr": "ident",
+          "local": 0,
+          "name": "p",
+          "type": {
+           "kind": "named",
+           "name": "main.pt"
+          }
+         },
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "typeId": "main.pt"
+        },
+        "y": {
+         "expr": "field-get",
+         "field": "y",
+         "recv": {
+          "expr": "ident",
+          "local": 0,
+          "name": "p",
+          "type": {
+           "kind": "named",
+           "name": "main.pt"
+          }
+         },
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "typeId": "main.pt"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "id": {
+    "name": "sum",
+    "package": "main"
+   },
+   "locals": [
+    {
+     "kind": "recv",
+     "name": "p",
+     "pos": "main.go:12:7"
+    }
+   ],
+   "params": [],
+   "recv": {
+    "id": "p",
+    "local": 0,
+    "type": {
+     "kind": "named",
+     "name": "main.pt"
+    }
+   },
+   "recvType": "main.pt",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "op": "+",
+      "read": {
+       "expr": "field-get",
+       "field": "x",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "local": 0,
+         "name": "p",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "main.pt"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "main.pt"
+        }
+       },
+       "type": {
+        "int": "int",
+        "kind": "int"
+       },
+       "typeId": "main.pt"
+      },
+      "stmt": "incdec",
+      "target": {
+       "expr": {
+        "base": {
+         "expr": "ident",
+         "local": 0,
+         "name": "p",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "main.pt"
+          },
+          "kind": "pointer"
+         }
+        },
+        "expr": "field-addr",
+        "field": "x",
+        "typeId": "main.pt"
+       },
+       "target": "addr"
+      },
+      "type": {
+       "int": "int",
+       "kind": "int"
+      }
+     },
+     {
+      "results": [
+       {
+        "expr": "field-get",
+        "field": "x",
+        "recv": {
+         "expr": "deref",
+         "ptr": {
+          "expr": "ident",
+          "local": 0,
+          "name": "p",
+          "type": {
+           "elem": {
+            "kind": "named",
+            "name": "main.pt"
+           },
+           "kind": "pointer"
+          }
+         },
+         "type": {
+          "kind": "named",
+          "name": "main.pt"
+         }
+        },
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "typeId": "main.pt"
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "id": {
+    "name": "bump",
+    "package": "main"
+   },
+   "locals": [
+    {
+     "kind": "recv",
+     "name": "p",
+     "pos": "main.go:13:7"
+    }
+   ],
+   "params": [],
+   "recv": {
+    "id": "p",
+    "local": 0,
+    "type": {
+     "elem": {
+      "kind": "named",
+      "name": "main.pt"
+     },
+     "kind": "pointer"
+    }
+   },
+   "recvType": "main.pt",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  }
+ ],
+ "package": "main",
+ "promotions": [],
+ "schema": "golean-native-v3",
+ "types": [
+  {
+   "def": {
+    "fields": [
+     {
+      "embedded": false,
+      "name": "x",
+      "type": {
+       "int": "int",
+       "kind": "int"
+      }
+     },
+     {
+      "embedded": false,
+      "name": "y",
+      "type": {
+       "int": "int",
+       "kind": "int"
+      }
+     }
+    ],
+    "kind": "struct"
+   },
+   "display": "main.pt",
+   "name": "main.pt",
+   "pkg": "main"
+  }
+ ]
+}

@@ -550,7 +550,8 @@ func goleanShimFmtUintPad(v uint64, w int) string {
 	// bound, row fmt/sprintf-dyn/struct-bound): a visible UNRECOVERABLE
 	// machine stop (R4-C-3), never a silent wrong answer.
 	// gc probes: artifacts/w43/probe-fmt K1-K3 (Sprint's space rule:
-	// a space iff NEITHER neighbor is a string), artifacts/w43/probe-b
+	// a space iff NEITHER neighbor is a string KIND — see
+	// goleanShimFmtSprintDyn), artifacts/w43/probe-b
 	// L1-L2 (Sprintln: spaces always, trailing newline), D3
 	// (Sprint(nil) -> "<nil>").
 	fmtDynShimKey: `
@@ -773,11 +774,24 @@ func goleanShimFmtSprintfDyn(format string, args []any) string {
 	return out
 }
 
-func goleanShimFmtSprintDyn(args []any) string {
+// goleanShimFmtSprintDyn is fmt.Sprint: operands rendered as %v, a space
+// between two operands when NEITHER is a string KIND — gc's doPrint:
+// isString := arg != nil && reflect.TypeOf(arg).Kind() == reflect.String,
+// so a DEFINED string type (type S string, rendering through its String or
+// Error method) counts as a string. This shim runs inside the model with no
+// reflection and cannot name the program's types, so the kind test is the
+// isStringKind ORACLE the frontend plants per call site from go/types
+// (fmtdesugar.go fmtStringKindOracle: a.(string), then one comma-ok
+// assertion per named string-kinded type of the program) and passes as a
+// func value — the static bundle's own shape for method values, never an
+// interface dispatch. Before the oracle the test was the concrete type
+// (args[i].(string)): a named string Stringer/error was spaced as a
+// non-string (BUG-400, the S21 sweep 2026-11-05: gc ab, the shim a b).
+func goleanShimFmtSprintDyn(args []any, isStringKind func(any) bool) string {
 	out := ""
 	prevString := false
 	for i := 0; i < len(args); i++ {
-		_, isStr := args[i].(string)
+		isStr := isStringKind(args[i])
 		if i > 0 && !prevString && !isStr {
 			out += " "
 		}

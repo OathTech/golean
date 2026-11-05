@@ -26,6 +26,7 @@
 # 2026-10-13 lane frontend/chan-elem-limit-1013 [AGENT] (release-readiness row 34): regenerated — THREE new formats from gclimits.go (gc's type-size limits, mirrored after type-check), all INTERNAL fail-closed invariants of the size scan, not coverage causes: a substitution failure while instantiating a generic body, an unexpected go/types shape, and the 100000-instantiation closure bound. Unreachable for type-checked Go (go/types rejects unbounded instantiation cycles); listed so a firing one surfaces. The size-limit REJECTIONS themselves are `type-check:` errors, not unsup formats.
 # 2026-10-14 lane frontend/blank-fields-1013 (BUG-129) [AGENT]: regenerated — ONE new emit.go format (the blank-field operand refusal, `blank field _ (field X of X) at X: operand X (X) refused — …`) is CLASSIFIED by the causes.tsv row by-design/blank-field-operand; the unclassified set is unchanged.
 # distinct unsup(...) formats: 490; classified by causes.tsv: 447; unclassified (listed): 43
+# 2026-11-05 lane core/fix-fmt-decoder-1105 [AGENT]: regenerated — ONE new format, BUG-400's fix: `fmt.Sprint space-rule kind oracle: the named string type X cannot be named on the wire (X)` (fmtdesugar.go fmtStringKindOracle) wraps the emitter's own type-naming refusal — reachable only when a named string-kinded type of the program's units has no wire name (an imported generic instantiation, FR-23) — and classifies from the REAL text by the INNER cause (imported-generic-inst), like a stencil stub's wrapper; the list grows by one.
 &composite (elided) in X
 &composite in X
 TypeDef X has no display record — its key was minted outside the identity boundary constructors (docs/2026-09-05_fr19-bug097-design.md §3.1)
@@ -47,6 +48,7 @@ declaration type X has uninstantiated type parameters
 declaration type is not a closed runtime type: X (X)
 file selection in X: X changed on disk between the parse (X bytes) and the directive scan (X bytes) — fail closed
 file selection in X: cannot re-read X for the directive placement rule (X) — fail closed
+fmt.Sprint space-rule kind oracle: the named string type X cannot be named on the wire (X)
 function-local type(s) X reached a TypeId without a scope ordinal (not among the loaded units' declarations — docs/2026-09-05_fr19-bug097-design.md §2.2)
 gc size-limit check: X
 gc size-limit check: more than X generic instantiations — refusing rather than leaving the rest unsized

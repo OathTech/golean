@@ -31,7 +31,8 @@
 # declaration's type, an atom naming a local declared only LATER in its block — on the NATIVE e6ats / e6ashadow witnesses); 56 since fix round 2 of the E6a audit,
 # 2026-09-24 — a post-loop atom naming a `range` statement's key/value variable, RIGHT-typed (the re-verification's R1 and its h12: the binders are the loop BODY's,
 # and while they leaked into the enclosing block a legal outer-shadow program was refused whole — NATIVE witness e6arange), while the untouched W1 wire runs (the canonical
-# tape gives 2: mut first). Fail closed on a missing binary, a failed
+# tape gives 2: mut first); 57 since BUG-391's fix, 2026-11-05 — a non-atom pointer in an `addr-of-deref` head (the implicit receiver address `&*p` of a
+# pointer-receiver call spelled `(*p).M()`, admitted over an atom like `deref`; NATIVE witness e3deref). Fail closed on a missing binary, a failed
 # regeneration, a decoded mutant or a refusal that does not name its cause.
 set -Eeuo pipefail
 # The go environment pinned for every `go` and frontend run this script makes (scripts/go-env-pins.sh:

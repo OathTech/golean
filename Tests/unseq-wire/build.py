@@ -802,6 +802,11 @@ WITNESSES = {
     # one source unit: the value-variable and key-variable outer shadows, and the range variable declared nowhere
     # else, on which `mut-local-range-var-after-loop` rides).
     "e6arange": ("e6arange", []),
+    # BUG-391's fix (2026-11-05, lane core/fix-fmt-decoder-1105): a POINTER-receiver call through the parenthesised
+    # dereference `(*p).bump()` beside a value-receiver call — the receiver address `&*p` an `addr-of-deref` head
+    # (the one head the lowering emitted that the fragment refused) — and the same head FAILING on a nil p beside
+    # a printing call; NATIVE-ONLY (the method keys are envelope facts); the hidden-read mutant rides on it.
+    "e3deref": ("e3deref", []),
 }
 
 
@@ -1108,6 +1113,20 @@ def mutants(wires, natives):
     edit_native("mut-local-range-var-after-loop", "e6arange", "e6arangeafter",
                 lambda g, idents: bool(idents(g, "r", [])),  # the post-loop graph (the only one reading r)
                 name_range_var_after_loop, "has no declaration in the enclosing function")
+    # ---- BUG-391's fix (2026-11-05): the `addr-of-deref` head — admitted over an ATOM pointer only; a non-atom in
+    # the pointer position (a binary over the local) is a hidden read, refused by name like the `deref` head's.
+    def addr_of_deref_nonatom(n, w, idents):
+        hit = 0
+        for o in n["occs"]:
+            if o["kind"] == "eval" and o["head"].get("expr") == "addr-of-deref":
+                p = o["head"]["ptr"]
+                o["head"]["ptr"] = binop("+", p, intc(0), p.get("type"))
+                hit += 1
+        if hit != 1:
+            raise SystemExit(f"e3deref: expected one addr-of-deref head, found {hit}")
+    edit_native("mut-addr-of-deref-nonatom", "e3deref", "e3deref",
+                lambda g, idents: any(o["kind"] == "eval" and o["head"].get("expr") == "addr-of-deref" for o in g["occs"]),
+                addr_of_deref_nonatom, "hidden read in a pure node")
     return out
 
 

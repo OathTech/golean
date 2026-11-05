@@ -32,6 +32,10 @@ open GoLean GoCore Tests.UnseqScheduler
 
 def fixtureDir : String := "Tests/unseq-wire"
 
+/-- The machine's nil-dereference panic text (`Machine.lean`), the needle of the failing
+`addr-of-deref` witness (BUG-391's fix). -/
+def nilDeref : String := "invalid memory address or nil pointer dereference"
+
 /-- Parse a wire file from its BYTES (the production path: duplicate keys,
 surrogates and invalid UTF-8 refuse in the byte parser) and decode it. -/
 def loadWire (file : String) : IO (Except String Program) := do
@@ -179,6 +183,14 @@ def main (_args : List String) : IO Unit := do
     wireSet "NATIVE E3RECV (the frontend's own `recv` occurrence — Stage E E3)" "native-e3recv.json" "e3recv"
       [panicOut (oob 9 1) "len 1\n", panicOut (oob 9 1) "len 0\n"],
     wireSet "NATIVE E3METHOD (a value-receiver method call: the receiver copy vs the argument call — E14)" "native-e3method.json" "e3method" [okZ 6, okZ 15],
+    -- BUG-391's fix (2026-11-05): a POINTER-receiver call through the parenthesised dereference `(*p).bump()`
+    -- beside the value-receiver call `(*p).sum()` — the receiver address `&*p` is the `addr-of-deref` head (the
+    -- nil assertion, no read), which the lowering emitted and the fragment refused, so the whole wire was refused;
+    -- the calls E1-ordered and sum's receiver copy before sum's call: gc's one value, 22. The same head FAILING:
+    -- p captured by wit, which nils it — p's read before wit (3) or after (the nil assertion's panic — gc's).
+    wireSet "NATIVE E3DEREF (a pointer-receiver call through (*p): the receiver address an addr-of-deref head — BUG-391)" "native-e3deref.json" "e3deref" [okZ 22],
+    wireSet "NATIVE E3DEREFNIL (the addr-of-deref head failing: p's read vs the call that nils it)" "native-e3deref.json" "e3derefnil"
+      [okZ 3, panicOut nilDeref],
     wireSet "NATIVE E4ALLOC (the frontend's own `allocate` occurrence — Stage E E4)" "native-e4alloc.json" "e4alloc"
       [panicOut (oob 9 1) "", panicOut (oob 9 1) "wit 5\n"],
     wireSet "NATIVE E4CONV (a conversion as a pure head: the captured string's read vs the mutating call — E12)" "native-e4conv.json" "e4conv" [okZ 98, okZ 123],

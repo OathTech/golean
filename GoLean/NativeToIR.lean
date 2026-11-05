@@ -1849,7 +1849,10 @@ main (`x := true && f()`, `a[f()] = 5`) refused by name; rows
 high («the length of the sliced operand»), which the emitter spells as a length
 of the one evaluated base. Stage E E1 (2026-09-21) admits the `deref` head over
 an atom or a `globaladdr` pointer — the READ of a package-level variable
-(`deref(globaladdr)`) and, for E2, of `*p`. -/
+(`deref(globaladdr)`) and, for E2, of `*p`. BUG-391's fix (2026-11-05) admits
+the `addr-of-deref` head over an atom pointer — the implicit receiver address
+`&*p` of a pointer-receiver call spelled `(*p).M()`, the one head the unseq
+lowering emitted (`recvaddr`) that this fragment refused. -/
 private def unseqCheckHead (cells : Array LocalDecl) (path : String) (head : Json) : LowerM Unit := do
   if jsonMentionsRecover head then
     fail s!"unseq: recover() inside an occurrence head at {path} — recover is an EVENT (it changes the continuation), never a pure op (v2.1 §3.1); refused by name"
@@ -1926,6 +1929,19 @@ private def unseqCheckHead (cells : Array LocalDecl) (path : String) (head : Jso
         | _ => false
       if !(unseqIsAtom p || isGlobal) then
         fail s!"unseq: hidden read in a pure node — {path}.ptr is neither an atom nor a globaladdr (a pointer read dereferences a pointer VALUE or a package-level variable's cell; v2.1 §3.1 internal normal form); refused by name"
+  | "addr-of-deref" =>
+      -- BUG-391's fix (2026-11-05, lane `core/fix-fmt-decoder-1105`): the nil-asserting ADDRESS of a
+      -- dereference — the implicit receiver `&*p` of a POINTER-receiver call spelled `(*p).M()`
+      -- (spec#Calls: `x.m()` is `(&x).m()`; spec#Address_operators: `&*p` panics on a nil `p`), the
+      -- emitter's own spelling (`receiverAddr`, BUG-056's strict op; the unseq lowering's
+      -- `recvaddr` occurrence). ONE checked occurrence over the pointer VALUE that may fail (the nil
+      -- assertion) and touches no memory (`applyStrictOp .addrOfDeref`: no access at all, `Ops.lean`);
+      -- the pointer is an atom (a slot or an admitted local — a package-level pointer's read is its
+      -- own `deref(globaladdr)` occurrence, bound to a slot first). The lowering admitted the spelling
+      -- (`unseqMethodCallee`'s StarExpr arm) while this fragment refused the head, so the WHOLE wire
+      -- was refused by name (rows `methods/sweep-s17-unseq-deref-receiver/*`); the hidden-read
+      -- mutant is `Tests/unseq-wire/mut-addr-of-deref-nonatom`.
+      atom "ptr"
   | "convert" | "bytes-from-string" | "string-from-bytes" | "string-from-rune"
   | "runes-from-string" | "string-from-runes" =>
       -- Stage E E4 (2026-09-21): a CONVERSION is a pure op over ONE atom — it cannot fail
@@ -1936,7 +1952,7 @@ private def unseqCheckHead (cells : Array LocalDecl) (path : String) (head : Jso
       -- Stage E E4: a VALUE struct literal over PAYLOADS (atoms, boxed atoms, zero values).
       unseqCheckStructLit path head
   | other =>
-      fail s!"unseq: head '{other}' at {path} is outside the admitted fragment (admitted heads: ident, a constant (int/bool/string), index-get, slice, builtin-len, builtin-cap, min, max, binary, unary, type-assert, deref, field-get, map-get, convert and the string/byte/rune conversion forms, struct-lit); refused by name"
+      fail s!"unseq: head '{other}' at {path} is outside the admitted fragment (admitted heads: ident, a constant (int/bool/string), index-get, slice, builtin-len, builtin-cap, min, max, binary, unary, type-assert, deref, addr-of-deref, field-get, map-get, convert and the string/byte/rune conversion forms, struct-lit); refused by name"
 
 /-- D8 for an `invoke` callee: an identifier (a func-typed local or slot) or
 a `func-value` whose captures are addresses (`ref`/`ident`/`globaladdr`) of SOURCE

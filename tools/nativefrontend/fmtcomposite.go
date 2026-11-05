@@ -225,15 +225,15 @@ func (e *emitter) fmtRenderValue(fn string, plus bool, t types.Type, val any,
 	}
 
 	if basic, ok := t.Underlying().(*types.Basic); ok {
+		// The leaf's conversion to its helper's parameter type follows the
+		// desugar's one rule (fmtConvertOperand): a defined-bool leaf is the
+		// machine bool itself, never a convert-to-bool (BUG-402).
 		convert := func(target types.Type) (any, error) {
 			tw, err := e.emitType(target)
 			if err != nil {
 				return nil, err
 			}
-			if types.Identical(t, target) {
-				return val, nil
-			}
-			return map[string]any{"expr": "convert", "target": tw, "x": val}, nil
+			return fmtConvertOperand(t, target, tw, val), nil
 		}
 		switch {
 		case basic.Info()&types.IsString != 0:

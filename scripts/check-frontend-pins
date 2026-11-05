@@ -455,6 +455,24 @@ echo "check-frontend-pins: ok [hidden-dep-order] — realized deviation order ma
 # the early kinds or a structural allocation beside a later sibling event; 0 other. The twin driver (probeTwinChoice,
 # default stream, fuel 8e9) under the machine on the OLD and the NEW wire: observation byte-identical (sha256 76d2bc87… both
 # — the same observation as the S1, G19 and hoist-fix re-pins). be06cf70… -> ac401783….
+# [AGENT lane worker, lane core/fix-fmt-decoder-1105] 2026-11-05 twin re-pin: BUG-400's fix (the S21 sweep; fixed through the
+# normal train per the defect-neighbourhood campaign plan, [USER] approved 2026-10-27, relayed) — fmt.Sprint's space rule
+# judges operands by KIND, as gc's doPrint does: goleanShimFmtSprintDyn takes an `isStringKind func(any) bool` ORACLE the
+# desugar plants per call site from go/types (fmtdesugar.go fmtStringKindOracle: a lifted wire function — `$a.(string)`,
+# then one comma-ok assertion per named string-kinded type of the program's units — passed as a func value, the static
+# bundle's shape for method values). Key-by-key JSON comparison of the pinned and the fresh wire: schema golean-native-v3,
+# package, buildContext, fileOrder 20, types 94, globals 56, promotions 71, methodSets 82 IDENTICAL; methods 534 unchanged
+# in number, 4 changed structurally — raft.DefaultLogger.{Debug,Info,Error,Warning}, the five `fmt.Sprint(v...)` sites of
+# the logger minus Fatal (not on the wire): each shim call gains the oracle's func-value argument, nothing else; funcs 456
+# -> 460: the 4 lifted oracles `$method$18:raft.DefaultLogger0:{Debug,Error,Info,Warning}$fmtkind0` ADDED (each: the
+# `string` arm, then the program's named string kinds — raft.CampaignType and the units' other string-underlying types —
+# in wire-name order), 3 changed structurally — goleanShimFmtSprintDyn in raftpb, tracker and raft (the new parameter,
+# the local-index renumbering it causes, the oracle call in place of the `.(string)` assertion) — and 57 changed ONLY by
+# `pos` (the injected shim file's source positions shifted by the shim's new comment lines: 19 helpers x the 3 units;
+# the bodies identical with `pos` dropped); 0 other. The twin driver (probeTwinChoice, default stream, fuel 8e9) under
+# the machine on the OLD and the NEW wire: observation byte-identical (sha256 76d2bc87… both — the same observation as the
+# S1, G19, hoist-fix and train-30 re-pins; the twin's logger receives strings and integers, no named string kind, so no
+# space moves). bee8adb6… -> 7810ae6d….
 # ---- 2. Twin wire pin ----
 # [AGENT coordinator] 2026-11-05 train-28 stage twin re-pin: the binding fixes (lane frontend/fix-binding-1027, its pin
 # 39765cc5…) and the unsequenced-seam fixes (lane frontend/fix-unseq-seam-1027, its pin ac401783…) each moved the twin from

@@ -85278,7 +85278,7 @@
       "lhs": [
        {
         "id": "out",
-        "local": 1,
+        "local": 2,
         "target": "declare",
         "type": {
          "kind": "string"
@@ -85301,7 +85301,7 @@
       "lhs": [
        {
         "id": "prevString",
-        "local": 2,
+        "local": 3,
         "target": "declare",
         "type": {
          "kind": "bool"
@@ -85323,49 +85323,78 @@
       "body": {
        "body": [
         {
-         "expr": {
-          "base": {
-           "expr": "ident",
-           "local": 0,
-           "name": "args",
+         "define": true,
+         "lhs": [
+          {
+           "id": "isStr",
+           "local": 5,
+           "target": "declare",
            "type": {
-            "elem": {
-             "kind": "interface",
-             "name": "any"
-            },
-            "kind": "slice"
+            "kind": "bool"
            }
-          },
-          "expr": "index-get",
-          "index": {
-           "expr": "ident",
-           "local": 3,
-           "name": "i",
-           "type": {
-            "int": "int",
-            "kind": "int"
-           }
-          },
-          "type": {
-           "kind": "interface",
-           "name": "any"
           }
-         },
-         "okTarget": {
-          "id": "isStr",
-          "local": 4,
-          "target": "declare",
-          "type": {
-           "kind": "bool"
+         ],
+         "rhs": [
+          {
+           "args": [
+            {
+             "base": {
+              "expr": "ident",
+              "local": 0,
+              "name": "args",
+              "type": {
+               "elem": {
+                "kind": "interface",
+                "name": "any"
+               },
+               "kind": "slice"
+              }
+             },
+             "expr": "index-get",
+             "index": {
+              "expr": "ident",
+              "local": 4,
+              "name": "i",
+              "type": {
+               "int": "int",
+               "kind": "int"
+              }
+             },
+             "type": {
+              "kind": "interface",
+              "name": "any"
+             }
+            }
+           ],
+           "callee": {
+            "expr": "ident",
+            "local": 1,
+            "name": "isStringKind",
+            "type": {
+             "kind": "func",
+             "params": [
+              {
+               "kind": "interface",
+               "name": "any"
+              }
+             ],
+             "results": [
+              {
+               "kind": "bool"
+              }
+             ],
+             "variadic": false
+            }
+           },
+           "expr": "call-value",
+           "resultTypes": [
+            {
+             "kind": "bool"
+            }
+           ]
           }
-         },
-         "stmt": "type-assert",
-         "target": {
-          "target": "blank"
-         },
-         "targetType": {
-          "kind": "string"
-         }
+         ],
+         "stmt": "assign"
         },
         {
          "cond": {
@@ -85392,7 +85421,7 @@
             },
             "x": {
              "expr": "ident",
-             "local": 3,
+             "local": 4,
              "name": "i",
              "type": {
               "int": "int",
@@ -85416,7 +85445,7 @@
             },
             "x": {
              "expr": "ident",
-             "local": 2,
+             "local": 3,
              "name": "prevString",
              "type": {
               "kind": "bool"
@@ -85432,7 +85461,7 @@
            },
            "x": {
             "expr": "ident",
-            "local": 4,
+            "local": 5,
             "name": "isStr",
             "type": {
              "kind": "bool"
@@ -85447,7 +85476,7 @@
             "op": "+",
             "read": {
              "expr": "ident",
-             "local": 1,
+             "local": 2,
              "name": "out",
              "type": {
               "kind": "string"
@@ -85465,7 +85494,7 @@
             "stmt": "compound-assign",
             "target": {
              "id": "out",
-             "local": 1,
+             "local": 2,
              "target": "var"
             }
            }
@@ -85512,7 +85541,7 @@
              "expr": "index-get",
              "index": {
               "expr": "ident",
-              "local": 3,
+              "local": 4,
               "name": "i",
               "type": {
                "int": "int",
@@ -85540,7 +85569,7 @@
          "op": "+",
          "read": {
           "expr": "ident",
-          "local": 1,
+          "local": 2,
           "name": "out",
           "type": {
            "kind": "string"
@@ -85556,7 +85585,7 @@
          "stmt": "compound-assign",
          "target": {
           "id": "out",
-          "local": 1,
+          "local": 2,
           "target": "var"
          }
         },
@@ -85565,14 +85594,14 @@
          "lhs": [
           {
            "id": "prevString",
-           "local": 2,
+           "local": 3,
            "target": "var"
           }
          ],
          "rhs": [
           {
            "expr": "ident",
-           "local": 4,
+           "local": 5,
            "name": "isStr",
            "type": {
             "kind": "bool"
@@ -85596,7 +85625,7 @@
        },
        "x": {
         "expr": "ident",
-        "local": 3,
+        "local": 4,
         "name": "i",
         "type": {
          "int": "int",
@@ -85635,7 +85664,7 @@
        "lhs": [
         {
          "id": "i",
-         "local": 3,
+         "local": 4,
          "target": "declare",
          "type": {
           "int": "int",
@@ -85659,7 +85688,7 @@
        "op": "+",
        "read": {
         "expr": "ident",
-        "local": 3,
+        "local": 4,
         "name": "i",
         "type": {
          "int": "int",
@@ -85669,7 +85698,7 @@
        "stmt": "incdec",
        "target": {
         "id": "i",
-        "local": 3,
+        "local": 4,
         "target": "var"
        },
        "type": {
@@ -85683,7 +85712,7 @@
       "results": [
        {
         "expr": "ident",
-        "local": 1,
+        "local": 2,
         "name": "out",
         "type": {
          "kind": "string"
@@ -85699,27 +85728,32 @@
     {
      "kind": "param",
      "name": "args",
-     "pos": "golean-stdlib-shims.go:234:29"
+     "pos": "golean-stdlib-shims.go:247:29"
+    },
+    {
+     "kind": "param",
+     "name": "isStringKind",
+     "pos": "golean-stdlib-shims.go:247:41"
     },
     {
      "kind": "local",
      "name": "out",
-     "pos": "golean-stdlib-shims.go:235:2"
+     "pos": "golean-stdlib-shims.go:248:2"
     },
     {
      "kind": "local",
      "name": "prevString",
-     "pos": "golean-stdlib-shims.go:236:2"
+     "pos": "golean-stdlib-shims.go:249:2"
     },
     {
      "kind": "local",
      "name": "i",
-     "pos": "golean-stdlib-shims.go:237:6"
+     "pos": "golean-stdlib-shims.go:250:6"
     },
     {
      "kind": "local",
      "name": "isStr",
-     "pos": "golean-stdlib-shims.go:238:6"
+     "pos": "golean-stdlib-shims.go:251:3"
     }
    ],
    "name": "raftpb.goleanShimFmtSprintDyn",
@@ -85733,6 +85767,25 @@
        "name": "any"
       },
       "kind": "slice"
+     }
+    },
+    {
+     "id": "isStringKind",
+     "local": 1,
+     "type": {
+      "kind": "func",
+      "params": [
+       {
+        "kind": "interface",
+        "name": "any"
+       }
+      ],
+      "results": [
+       {
+        "kind": "bool"
+       }
+      ],
+      "variadic": false
      }
     }
    ],
@@ -86058,17 +86111,17 @@
     {
      "kind": "param",
      "name": "args",
-     "pos": "golean-stdlib-shims.go:248:31"
+     "pos": "golean-stdlib-shims.go:261:31"
     },
     {
      "kind": "local",
      "name": "out",
-     "pos": "golean-stdlib-shims.go:249:2"
+     "pos": "golean-stdlib-shims.go:262:2"
     },
     {
      "kind": "local",
      "name": "i",
-     "pos": "golean-stdlib-shims.go:250:6"
+     "pos": "golean-stdlib-shims.go:263:6"
     }
    ],
    "name": "raftpb.goleanShimFmtSprintlnDyn",
@@ -86717,22 +86770,22 @@
     {
      "kind": "param",
      "name": "v",
-     "pos": "golean-stdlib-shims.go:262:24"
+     "pos": "golean-stdlib-shims.go:275:24"
     },
     {
      "kind": "local",
      "name": "digits",
-     "pos": "golean-stdlib-shims.go:266:2"
+     "pos": "golean-stdlib-shims.go:279:2"
     },
     {
      "kind": "local",
      "name": "out",
-     "pos": "golean-stdlib-shims.go:271:2"
+     "pos": "golean-stdlib-shims.go:284:2"
     },
     {
      "kind": "local",
      "name": "i",
-     "pos": "golean-stdlib-shims.go:272:6"
+     "pos": "golean-stdlib-shims.go:285:6"
     }
    ],
    "name": "raftpb.goleanShimFmtUint",
@@ -86958,7 +87011,7 @@
     {
      "kind": "param",
      "name": "v",
-     "pos": "golean-stdlib-shims.go:278:23"
+     "pos": "golean-stdlib-shims.go:291:23"
     }
    ],
    "name": "raftpb.goleanShimFmtInt",
@@ -87632,27 +87685,27 @@
     {
      "kind": "param",
      "name": "v",
-     "pos": "golean-stdlib-shims.go:285:23"
+     "pos": "golean-stdlib-shims.go:298:23"
     },
     {
      "kind": "local",
      "name": "hexits",
-     "pos": "golean-stdlib-shims.go:289:2"
+     "pos": "golean-stdlib-shims.go:302:2"
     },
     {
      "kind": "local",
      "name": "digits",
-     "pos": "golean-stdlib-shims.go:290:2"
+     "pos": "golean-stdlib-shims.go:303:2"
     },
     {
      "kind": "local",
      "name": "out",
-     "pos": "golean-stdlib-shims.go:295:2"
+     "pos": "golean-stdlib-shims.go:308:2"
     },
     {
      "kind": "local",
      "name": "i",
-     "pos": "golean-stdlib-shims.go:296:6"
+     "pos": "golean-stdlib-shims.go:309:6"
     }
    ],
    "name": "raftpb.goleanShimFmtHex",
@@ -87737,7 +87790,7 @@
     {
      "kind": "param",
      "name": "v",
-     "pos": "golean-stdlib-shims.go:302:24"
+     "pos": "golean-stdlib-shims.go:315:24"
     }
    ],
    "name": "raftpb.goleanShimFmtBool",
@@ -87826,7 +87879,7 @@
     {
      "kind": "param",
      "name": "b",
-     "pos": "golean-stdlib-shims.go:309:30"
+     "pos": "golean-stdlib-shims.go:322:30"
     }
    ],
    "name": "raftpb.goleanShimFmtQuoteBytes",
@@ -91140,27 +91193,27 @@
     {
      "kind": "param",
      "name": "s",
-     "pos": "golean-stdlib-shims.go:313:31"
+     "pos": "golean-stdlib-shims.go:326:31"
     },
     {
      "kind": "local",
      "name": "hexits",
-     "pos": "golean-stdlib-shims.go:314:2"
+     "pos": "golean-stdlib-shims.go:327:2"
     },
     {
      "kind": "local",
      "name": "out",
-     "pos": "golean-stdlib-shims.go:315:2"
+     "pos": "golean-stdlib-shims.go:328:2"
     },
     {
      "kind": "local",
      "name": "i",
-     "pos": "golean-stdlib-shims.go:316:6"
+     "pos": "golean-stdlib-shims.go:329:6"
     },
     {
      "kind": "local",
      "name": "c",
-     "pos": "golean-stdlib-shims.go:317:3"
+     "pos": "golean-stdlib-shims.go:330:3"
     }
    ],
    "name": "raftpb.goleanShimFmtQuoteString",
@@ -91368,12 +91421,12 @@
     {
      "kind": "param",
      "name": "verb",
-     "pos": "golean-stdlib-shims.go:364:30"
+     "pos": "golean-stdlib-shims.go:377:30"
     },
     {
      "kind": "param",
      "name": "s",
-     "pos": "golean-stdlib-shims.go:364:43"
+     "pos": "golean-stdlib-shims.go:377:43"
     }
    ],
    "name": "raftpb.goleanShimFmtStringVerb",
@@ -91833,27 +91886,27 @@
     {
      "kind": "param",
      "name": "s",
-     "pos": "golean-stdlib-shims.go:374:29"
+     "pos": "golean-stdlib-shims.go:387:29"
     },
     {
      "kind": "local",
      "name": "hexits",
-     "pos": "golean-stdlib-shims.go:375:2"
+     "pos": "golean-stdlib-shims.go:388:2"
     },
     {
      "kind": "local",
      "name": "out",
-     "pos": "golean-stdlib-shims.go:376:2"
+     "pos": "golean-stdlib-shims.go:389:2"
     },
     {
      "kind": "local",
      "name": "i",
-     "pos": "golean-stdlib-shims.go:377:6"
+     "pos": "golean-stdlib-shims.go:390:6"
     },
     {
      "kind": "local",
      "name": "c",
-     "pos": "golean-stdlib-shims.go:378:3"
+     "pos": "golean-stdlib-shims.go:391:3"
     }
    ],
    "name": "raftpb.goleanShimFmtHexString",
@@ -92046,32 +92099,32 @@
     {
      "kind": "param",
      "name": "verb",
-     "pos": "golean-stdlib-shims.go:384:26"
+     "pos": "golean-stdlib-shims.go:397:26"
     },
     {
      "kind": "param",
      "name": "method",
-     "pos": "golean-stdlib-shims.go:384:39"
+     "pos": "golean-stdlib-shims.go:397:39"
     },
     {
      "kind": "param",
      "name": "isNilPtr",
-     "pos": "golean-stdlib-shims.go:384:54"
+     "pos": "golean-stdlib-shims.go:397:54"
     },
     {
      "kind": "param",
      "name": "call",
-     "pos": "golean-stdlib-shims.go:384:69"
+     "pos": "golean-stdlib-shims.go:397:69"
     },
     {
      "kind": "local",
      "name": "s",
-     "pos": "golean-stdlib-shims.go:385:2"
+     "pos": "golean-stdlib-shims.go:398:2"
     },
     {
      "kind": "local",
      "name": "panicked",
-     "pos": "golean-stdlib-shims.go:385:5"
+     "pos": "golean-stdlib-shims.go:398:5"
     }
    ],
    "name": "raftpb.goleanShimFmtRender",
@@ -92459,37 +92512,37 @@
     {
      "kind": "capture",
      "name": "panicked",
-     "pos": "golean-stdlib-shims.go:392:106",
+     "pos": "golean-stdlib-shims.go:405:106",
      "wire": "panicked$cap"
     },
     {
      "kind": "capture",
      "name": "isNilPtr",
-     "pos": "golean-stdlib-shims.go:392:58",
+     "pos": "golean-stdlib-shims.go:405:58",
      "wire": "isNilPtr$cap"
     },
     {
      "kind": "capture",
      "name": "out",
-     "pos": "golean-stdlib-shims.go:392:94",
+     "pos": "golean-stdlib-shims.go:405:94",
      "wire": "out$cap"
     },
     {
      "kind": "capture",
      "name": "verb",
-     "pos": "golean-stdlib-shims.go:392:30",
+     "pos": "golean-stdlib-shims.go:405:30",
      "wire": "verb$cap"
     },
     {
      "kind": "capture",
      "name": "method",
-     "pos": "golean-stdlib-shims.go:392:43",
+     "pos": "golean-stdlib-shims.go:405:43",
      "wire": "method$cap"
     },
     {
      "kind": "local",
      "name": "r",
-     "pos": "golean-stdlib-shims.go:394:6"
+     "pos": "golean-stdlib-shims.go:407:6"
     }
    ],
    "name": "raftpb.goleanShimFmtRenderCall$lit0",
@@ -92657,32 +92710,32 @@
     {
      "kind": "param",
      "name": "verb",
-     "pos": "golean-stdlib-shims.go:392:30"
+     "pos": "golean-stdlib-shims.go:405:30"
     },
     {
      "kind": "param",
      "name": "method",
-     "pos": "golean-stdlib-shims.go:392:43"
+     "pos": "golean-stdlib-shims.go:405:43"
     },
     {
      "kind": "param",
      "name": "isNilPtr",
-     "pos": "golean-stdlib-shims.go:392:58"
+     "pos": "golean-stdlib-shims.go:405:58"
     },
     {
      "kind": "param",
      "name": "call",
-     "pos": "golean-stdlib-shims.go:392:73"
+     "pos": "golean-stdlib-shims.go:405:73"
     },
     {
      "kind": "result",
      "name": "out",
-     "pos": "golean-stdlib-shims.go:392:94"
+     "pos": "golean-stdlib-shims.go:405:94"
     },
     {
      "kind": "result",
      "name": "panicked",
-     "pos": "golean-stdlib-shims.go:392:106"
+     "pos": "golean-stdlib-shims.go:405:106"
     }
    ],
    "name": "raftpb.goleanShimFmtRenderCall",
@@ -93025,22 +93078,22 @@
     {
      "kind": "param",
      "name": "verb",
-     "pos": "golean-stdlib-shims.go:406:25"
+     "pos": "golean-stdlib-shims.go:419:25"
     },
     {
      "kind": "param",
      "name": "v",
-     "pos": "golean-stdlib-shims.go:406:38"
+     "pos": "golean-stdlib-shims.go:419:38"
     },
     {
      "kind": "local",
      "name": "s",
-     "pos": "golean-stdlib-shims.go:413:2"
+     "pos": "golean-stdlib-shims.go:426:2"
     },
     {
      "kind": "local",
      "name": "panicked",
-     "pos": "golean-stdlib-shims.go:413:5"
+     "pos": "golean-stdlib-shims.go:426:5"
     }
    ],
    "name": "raftpb.goleanShimFmtError",
@@ -93328,25 +93381,25 @@
     {
      "kind": "capture",
      "name": "panicked",
-     "pos": "golean-stdlib-shims.go:420:64",
+     "pos": "golean-stdlib-shims.go:433:64",
      "wire": "panicked$cap"
     },
     {
      "kind": "capture",
      "name": "out",
-     "pos": "golean-stdlib-shims.go:420:52",
+     "pos": "golean-stdlib-shims.go:433:52",
      "wire": "out$cap"
     },
     {
      "kind": "capture",
      "name": "verb",
-     "pos": "golean-stdlib-shims.go:420:29",
+     "pos": "golean-stdlib-shims.go:433:29",
      "wire": "verb$cap"
     },
     {
      "kind": "local",
      "name": "r",
-     "pos": "golean-stdlib-shims.go:422:6"
+     "pos": "golean-stdlib-shims.go:435:6"
     }
    ],
    "name": "raftpb.goleanShimFmtErrorCall$lit0",
@@ -93480,22 +93533,22 @@
     {
      "kind": "param",
      "name": "verb",
-     "pos": "golean-stdlib-shims.go:420:29"
+     "pos": "golean-stdlib-shims.go:433:29"
     },
     {
      "kind": "param",
      "name": "v",
-     "pos": "golean-stdlib-shims.go:420:42"
+     "pos": "golean-stdlib-shims.go:433:42"
     },
     {
      "kind": "result",
      "name": "out",
-     "pos": "golean-stdlib-shims.go:420:52"
+     "pos": "golean-stdlib-shims.go:433:52"
     },
     {
      "kind": "result",
      "name": "panicked",
-     "pos": "golean-stdlib-shims.go:420:64"
+     "pos": "golean-stdlib-shims.go:433:64"
     }
    ],
    "name": "raftpb.goleanShimFmtErrorCall",
@@ -93901,27 +93954,27 @@
     {
      "kind": "param",
      "name": "r",
-     "pos": "golean-stdlib-shims.go:430:30"
+     "pos": "golean-stdlib-shims.go:443:30"
     },
     {
      "kind": "local",
      "name": "s",
-     "pos": "golean-stdlib-shims.go:431:5"
+     "pos": "golean-stdlib-shims.go:444:5"
     },
     {
      "kind": "local",
      "name": "ok",
-     "pos": "golean-stdlib-shims.go:431:8"
+     "pos": "golean-stdlib-shims.go:444:8"
     },
     {
      "kind": "local",
      "name": "e",
-     "pos": "golean-stdlib-shims.go:434:5"
+     "pos": "golean-stdlib-shims.go:447:5"
     },
     {
      "kind": "local",
      "name": "ok",
-     "pos": "golean-stdlib-shims.go:434:8"
+     "pos": "golean-stdlib-shims.go:447:8"
     }
    ],
    "name": "raftpb.goleanShimFmtPanicValue",
@@ -94051,12 +94104,12 @@
     {
      "kind": "param",
      "name": "s",
-     "pos": "golean-stdlib-shims.go:444:27"
+     "pos": "golean-stdlib-shims.go:457:27"
     },
     {
      "kind": "param",
      "name": "w",
-     "pos": "golean-stdlib-shims.go:444:37"
+     "pos": "golean-stdlib-shims.go:457:37"
     }
    ],
    "name": "raftpb.goleanShimFmtPadLeft",
@@ -94186,12 +94239,12 @@
     {
      "kind": "param",
      "name": "v",
-     "pos": "golean-stdlib-shims.go:451:26"
+     "pos": "golean-stdlib-shims.go:464:26"
     },
     {
      "kind": "param",
      "name": "w",
-     "pos": "golean-stdlib-shims.go:451:35"
+     "pos": "golean-stdlib-shims.go:464:35"
     }
    ],
    "name": "raftpb.goleanShimFmtIntPad",
@@ -94322,12 +94375,12 @@
     {
      "kind": "param",
      "name": "v",
-     "pos": "golean-stdlib-shims.go:455:27"
+     "pos": "golean-stdlib-shims.go:468:27"
     },
     {
      "kind": "param",
      "name": "w",
-     "pos": "golean-stdlib-shims.go:455:37"
+     "pos": "golean-stdlib-shims.go:468:37"
     }
    ],
    "name": "raftpb.goleanShimFmtUintPad",
@@ -104709,7 +104762,7 @@
       "lhs": [
        {
         "id": "out",
-        "local": 1,
+        "local": 2,
         "target": "declare",
         "type": {
          "kind": "string"
@@ -104732,7 +104785,7 @@
       "lhs": [
        {
         "id": "prevString",
-        "local": 2,
+        "local": 3,
         "target": "declare",
         "type": {
          "kind": "bool"
@@ -104754,49 +104807,78 @@
       "body": {
        "body": [
         {
-         "expr": {
-          "base": {
-           "expr": "ident",
-           "local": 0,
-           "name": "args",
+         "define": true,
+         "lhs": [
+          {
+           "id": "isStr",
+           "local": 5,
+           "target": "declare",
            "type": {
-            "elem": {
-             "kind": "interface",
-             "name": "any"
-            },
-            "kind": "slice"
+            "kind": "bool"
            }
-          },
-          "expr": "index-get",
-          "index": {
-           "expr": "ident",
-           "local": 3,
-           "name": "i",
-           "type": {
-            "int": "int",
-            "kind": "int"
-           }
-          },
-          "type": {
-           "kind": "interface",
-           "name": "any"
           }
-         },
-         "okTarget": {
-          "id": "isStr",
-          "local": 4,
-          "target": "declare",
-          "type": {
-           "kind": "bool"
+         ],
+         "rhs": [
+          {
+           "args": [
+            {
+             "base": {
+              "expr": "ident",
+              "local": 0,
+              "name": "args",
+              "type": {
+               "elem": {
+                "kind": "interface",
+                "name": "any"
+               },
+               "kind": "slice"
+              }
+             },
+             "expr": "index-get",
+             "index": {
+              "expr": "ident",
+              "local": 4,
+              "name": "i",
+              "type": {
+               "int": "int",
+               "kind": "int"
+              }
+             },
+             "type": {
+              "kind": "interface",
+              "name": "any"
+             }
+            }
+           ],
+           "callee": {
+            "expr": "ident",
+            "local": 1,
+            "name": "isStringKind",
+            "type": {
+             "kind": "func",
+             "params": [
+              {
+               "kind": "interface",
+               "name": "any"
+              }
+             ],
+             "results": [
+              {
+               "kind": "bool"
+              }
+             ],
+             "variadic": false
+            }
+           },
+           "expr": "call-value",
+           "resultTypes": [
+            {
+             "kind": "bool"
+            }
+           ]
           }
-         },
-         "stmt": "type-assert",
-         "target": {
-          "target": "blank"
-         },
-         "targetType": {
-          "kind": "string"
-         }
+         ],
+         "stmt": "assign"
         },
         {
          "cond": {
@@ -104823,7 +104905,7 @@
             },
             "x": {
              "expr": "ident",
-             "local": 3,
+             "local": 4,
              "name": "i",
              "type": {
               "int": "int",
@@ -104847,7 +104929,7 @@
             },
             "x": {
              "expr": "ident",
-             "local": 2,
+             "local": 3,
              "name": "prevString",
              "type": {
               "kind": "bool"
@@ -104863,7 +104945,7 @@
            },
            "x": {
             "expr": "ident",
-            "local": 4,
+            "local": 5,
             "name": "isStr",
             "type": {
              "kind": "bool"
@@ -104878,7 +104960,7 @@
             "op": "+",
             "read": {
              "expr": "ident",
-             "local": 1,
+             "local": 2,
              "name": "out",
              "type": {
               "kind": "string"
@@ -104896,7 +104978,7 @@
             "stmt": "compound-assign",
             "target": {
              "id": "out",
-             "local": 1,
+             "local": 2,
              "target": "var"
             }
            }
@@ -104943,7 +105025,7 @@
              "expr": "index-get",
              "index": {
               "expr": "ident",
-              "local": 3,
+              "local": 4,
               "name": "i",
               "type": {
                "int": "int",
@@ -104971,7 +105053,7 @@
          "op": "+",
          "read": {
           "expr": "ident",
-          "local": 1,
+          "local": 2,
           "name": "out",
           "type": {
            "kind": "string"
@@ -104987,7 +105069,7 @@
          "stmt": "compound-assign",
          "target": {
           "id": "out",
-          "local": 1,
+          "local": 2,
           "target": "var"
          }
         },
@@ -104996,14 +105078,14 @@
          "lhs": [
           {
            "id": "prevString",
-           "local": 2,
+           "local": 3,
            "target": "var"
           }
          ],
          "rhs": [
           {
            "expr": "ident",
-           "local": 4,
+           "local": 5,
            "name": "isStr",
            "type": {
             "kind": "bool"
@@ -105027,7 +105109,7 @@
        },
        "x": {
         "expr": "ident",
-        "local": 3,
+        "local": 4,
         "name": "i",
         "type": {
          "int": "int",
@@ -105066,7 +105148,7 @@
        "lhs": [
         {
          "id": "i",
-         "local": 3,
+         "local": 4,
          "target": "declare",
          "type": {
           "int": "int",
@@ -105090,7 +105172,7 @@
        "op": "+",
        "read": {
         "expr": "ident",
-        "local": 3,
+        "local": 4,
         "name": "i",
         "type": {
          "int": "int",
@@ -105100,7 +105182,7 @@
        "stmt": "incdec",
        "target": {
         "id": "i",
-        "local": 3,
+        "local": 4,
         "target": "var"
        },
        "type": {
@@ -105114,7 +105196,7 @@
       "results": [
        {
         "expr": "ident",
-        "local": 1,
+        "local": 2,
         "name": "out",
         "type": {
          "kind": "string"
@@ -105130,27 +105212,32 @@
     {
      "kind": "param",
      "name": "args",
-     "pos": "golean-stdlib-shims.go:222:29"
+     "pos": "golean-stdlib-shims.go:235:29"
+    },
+    {
+     "kind": "param",
+     "name": "isStringKind",
+     "pos": "golean-stdlib-shims.go:235:41"
     },
     {
      "kind": "local",
      "name": "out",
-     "pos": "golean-stdlib-shims.go:223:2"
+     "pos": "golean-stdlib-shims.go:236:2"
     },
     {
      "kind": "local",
      "name": "prevString",
-     "pos": "golean-stdlib-shims.go:224:2"
+     "pos": "golean-stdlib-shims.go:237:2"
     },
     {
      "kind": "local",
      "name": "i",
-     "pos": "golean-stdlib-shims.go:225:6"
+     "pos": "golean-stdlib-shims.go:238:6"
     },
     {
      "kind": "local",
      "name": "isStr",
-     "pos": "golean-stdlib-shims.go:226:6"
+     "pos": "golean-stdlib-shims.go:239:3"
     }
    ],
    "name": "tracker.goleanShimFmtSprintDyn",
@@ -105164,6 +105251,25 @@
        "name": "any"
       },
       "kind": "slice"
+     }
+    },
+    {
+     "id": "isStringKind",
+     "local": 1,
+     "type": {
+      "kind": "func",
+      "params": [
+       {
+        "kind": "interface",
+        "name": "any"
+       }
+      ],
+      "results": [
+       {
+        "kind": "bool"
+       }
+      ],
+      "variadic": false
      }
     }
    ],
@@ -105489,17 +105595,17 @@
     {
      "kind": "param",
      "name": "args",
-     "pos": "golean-stdlib-shims.go:236:31"
+     "pos": "golean-stdlib-shims.go:249:31"
     },
     {
      "kind": "local",
      "name": "out",
-     "pos": "golean-stdlib-shims.go:237:2"
+     "pos": "golean-stdlib-shims.go:250:2"
     },
     {
      "kind": "local",
      "name": "i",
-     "pos": "golean-stdlib-shims.go:238:6"
+     "pos": "golean-stdlib-shims.go:251:6"
     }
    ],
    "name": "tracker.goleanShimFmtSprintlnDyn",
@@ -106148,22 +106254,22 @@
     {
      "kind": "param",
      "name": "v",
-     "pos": "golean-stdlib-shims.go:250:24"
+     "pos": "golean-stdlib-shims.go:263:24"
     },
     {
      "kind": "local",
      "name": "digits",
-     "pos": "golean-stdlib-shims.go:254:2"
+     "pos": "golean-stdlib-shims.go:267:2"
     },
     {
      "kind": "local",
      "name": "out",
-     "pos": "golean-stdlib-shims.go:259:2"
+     "pos": "golean-stdlib-shims.go:272:2"
     },
     {
      "kind": "local",
      "name": "i",
-     "pos": "golean-stdlib-shims.go:260:6"
+     "pos": "golean-stdlib-shims.go:273:6"
     }
    ],
    "name": "tracker.goleanShimFmtUint",
@@ -106389,7 +106495,7 @@
     {
      "kind": "param",
      "name": "v",
-     "pos": "golean-stdlib-shims.go:266:23"
+     "pos": "golean-stdlib-shims.go:279:23"
     }
    ],
    "name": "tracker.goleanShimFmtInt",
@@ -107063,27 +107169,27 @@
     {
      "kind": "param",
      "name": "v",
-     "pos": "golean-stdlib-shims.go:273:23"
+     "pos": "golean-stdlib-shims.go:286:23"
     },
     {
      "kind": "local",
      "name": "hexits",
-     "pos": "golean-stdlib-shims.go:277:2"
+     "pos": "golean-stdlib-shims.go:290:2"
     },
     {
      "kind": "local",
      "name": "digits",
-     "pos": "golean-stdlib-shims.go:278:2"
+     "pos": "golean-stdlib-shims.go:291:2"
     },
     {
      "kind": "local",
      "name": "out",
-     "pos": "golean-stdlib-shims.go:283:2"
+     "pos": "golean-stdlib-shims.go:296:2"
     },
     {
      "kind": "local",
      "name": "i",
-     "pos": "golean-stdlib-shims.go:284:6"
+     "pos": "golean-stdlib-shims.go:297:6"
     }
    ],
    "name": "tracker.goleanShimFmtHex",
@@ -107168,7 +107274,7 @@
     {
      "kind": "param",
      "name": "v",
-     "pos": "golean-stdlib-shims.go:290:24"
+     "pos": "golean-stdlib-shims.go:303:24"
     }
    ],
    "name": "tracker.goleanShimFmtBool",
@@ -107257,7 +107363,7 @@
     {
      "kind": "param",
      "name": "b",
-     "pos": "golean-stdlib-shims.go:297:30"
+     "pos": "golean-stdlib-shims.go:310:30"
     }
    ],
    "name": "tracker.goleanShimFmtQuoteBytes",
@@ -110571,27 +110677,27 @@
     {
      "kind": "param",
      "name": "s",
-     "pos": "golean-stdlib-shims.go:301:31"
+     "pos": "golean-stdlib-shims.go:314:31"
     },
     {
      "kind": "local",
      "name": "hexits",
-     "pos": "golean-stdlib-shims.go:302:2"
+     "pos": "golean-stdlib-shims.go:315:2"
     },
     {
      "kind": "local",
      "name": "out",
-     "pos": "golean-stdlib-shims.go:303:2"
+     "pos": "golean-stdlib-shims.go:316:2"
     },
     {
      "kind": "local",
      "name": "i",
-     "pos": "golean-stdlib-shims.go:304:6"
+     "pos": "golean-stdlib-shims.go:317:6"
     },
     {
      "kind": "local",
      "name": "c",
-     "pos": "golean-stdlib-shims.go:305:3"
+     "pos": "golean-stdlib-shims.go:318:3"
     }
    ],
    "name": "tracker.goleanShimFmtQuoteString",
@@ -110799,12 +110905,12 @@
     {
      "kind": "param",
      "name": "verb",
-     "pos": "golean-stdlib-shims.go:352:30"
+     "pos": "golean-stdlib-shims.go:365:30"
     },
     {
      "kind": "param",
      "name": "s",
-     "pos": "golean-stdlib-shims.go:352:43"
+     "pos": "golean-stdlib-shims.go:365:43"
     }
    ],
    "name": "tracker.goleanShimFmtStringVerb",
@@ -111264,27 +111370,27 @@
     {
      "kind": "param",
      "name": "s",
-     "pos": "golean-stdlib-shims.go:362:29"
+     "pos": "golean-stdlib-shims.go:375:29"
     },
     {
      "kind": "local",
      "name": "hexits",
-     "pos": "golean-stdlib-shims.go:363:2"
+     "pos": "golean-stdlib-shims.go:376:2"
     },
     {
      "kind": "local",
      "name": "out",
-     "pos": "golean-stdlib-shims.go:364:2"
+     "pos": "golean-stdlib-shims.go:377:2"
     },
     {
      "kind": "local",
      "name": "i",
-     "pos": "golean-stdlib-shims.go:365:6"
+     "pos": "golean-stdlib-shims.go:378:6"
     },
     {
      "kind": "local",
      "name": "c",
-     "pos": "golean-stdlib-shims.go:366:3"
+     "pos": "golean-stdlib-shims.go:379:3"
     }
    ],
    "name": "tracker.goleanShimFmtHexString",
@@ -111477,32 +111583,32 @@
     {
      "kind": "param",
      "name": "verb",
-     "pos": "golean-stdlib-shims.go:372:26"
+     "pos": "golean-stdlib-shims.go:385:26"
     },
     {
      "kind": "param",
      "name": "method",
-     "pos": "golean-stdlib-shims.go:372:39"
+     "pos": "golean-stdlib-shims.go:385:39"
     },
     {
      "kind": "param",
      "name": "isNilPtr",
-     "pos": "golean-stdlib-shims.go:372:54"
+     "pos": "golean-stdlib-shims.go:385:54"
     },
     {
      "kind": "param",
      "name": "call",
-     "pos": "golean-stdlib-shims.go:372:69"
+     "pos": "golean-stdlib-shims.go:385:69"
     },
     {
      "kind": "local",
      "name": "s",
-     "pos": "golean-stdlib-shims.go:373:2"
+     "pos": "golean-stdlib-shims.go:386:2"
     },
     {
      "kind": "local",
      "name": "panicked",
-     "pos": "golean-stdlib-shims.go:373:5"
+     "pos": "golean-stdlib-shims.go:386:5"
     }
    ],
    "name": "tracker.goleanShimFmtRender",
@@ -111890,37 +111996,37 @@
     {
      "kind": "capture",
      "name": "panicked",
-     "pos": "golean-stdlib-shims.go:380:106",
+     "pos": "golean-stdlib-shims.go:393:106",
      "wire": "panicked$cap"
     },
     {
      "kind": "capture",
      "name": "isNilPtr",
-     "pos": "golean-stdlib-shims.go:380:58",
+     "pos": "golean-stdlib-shims.go:393:58",
      "wire": "isNilPtr$cap"
     },
     {
      "kind": "capture",
      "name": "out",
-     "pos": "golean-stdlib-shims.go:380:94",
+     "pos": "golean-stdlib-shims.go:393:94",
      "wire": "out$cap"
     },
     {
      "kind": "capture",
      "name": "verb",
-     "pos": "golean-stdlib-shims.go:380:30",
+     "pos": "golean-stdlib-shims.go:393:30",
      "wire": "verb$cap"
     },
     {
      "kind": "capture",
      "name": "method",
-     "pos": "golean-stdlib-shims.go:380:43",
+     "pos": "golean-stdlib-shims.go:393:43",
      "wire": "method$cap"
     },
     {
      "kind": "local",
      "name": "r",
-     "pos": "golean-stdlib-shims.go:382:6"
+     "pos": "golean-stdlib-shims.go:395:6"
     }
    ],
    "name": "tracker.goleanShimFmtRenderCall$lit0",
@@ -112088,32 +112194,32 @@
     {
      "kind": "param",
      "name": "verb",
-     "pos": "golean-stdlib-shims.go:380:30"
+     "pos": "golean-stdlib-shims.go:393:30"
     },
     {
      "kind": "param",
      "name": "method",
-     "pos": "golean-stdlib-shims.go:380:43"
+     "pos": "golean-stdlib-shims.go:393:43"
     },
     {
      "kind": "param",
      "name": "isNilPtr",
-     "pos": "golean-stdlib-shims.go:380:58"
+     "pos": "golean-stdlib-shims.go:393:58"
     },
     {
      "kind": "param",
      "name": "call",
-     "pos": "golean-stdlib-shims.go:380:73"
+     "pos": "golean-stdlib-shims.go:393:73"
     },
     {
      "kind": "result",
      "name": "out",
-     "pos": "golean-stdlib-shims.go:380:94"
+     "pos": "golean-stdlib-shims.go:393:94"
     },
     {
      "kind": "result",
      "name": "panicked",
-     "pos": "golean-stdlib-shims.go:380:106"
+     "pos": "golean-stdlib-shims.go:393:106"
     }
    ],
    "name": "tracker.goleanShimFmtRenderCall",
@@ -112456,22 +112562,22 @@
     {
      "kind": "param",
      "name": "verb",
-     "pos": "golean-stdlib-shims.go:394:25"
+     "pos": "golean-stdlib-shims.go:407:25"
     },
     {
      "kind": "param",
      "name": "v",
-     "pos": "golean-stdlib-shims.go:394:38"
+     "pos": "golean-stdlib-shims.go:407:38"
     },
     {
      "kind": "local",
      "name": "s",
-     "pos": "golean-stdlib-shims.go:401:2"
+     "pos": "golean-stdlib-shims.go:414:2"
     },
     {
      "kind": "local",
      "name": "panicked",
-     "pos": "golean-stdlib-shims.go:401:5"
+     "pos": "golean-stdlib-shims.go:414:5"
     }
    ],
    "name": "tracker.goleanShimFmtError",
@@ -112759,25 +112865,25 @@
     {
      "kind": "capture",
      "name": "panicked",
-     "pos": "golean-stdlib-shims.go:408:64",
+     "pos": "golean-stdlib-shims.go:421:64",
      "wire": "panicked$cap"
     },
     {
      "kind": "capture",
      "name": "out",
-     "pos": "golean-stdlib-shims.go:408:52",
+     "pos": "golean-stdlib-shims.go:421:52",
      "wire": "out$cap"
     },
     {
      "kind": "capture",
      "name": "verb",
-     "pos": "golean-stdlib-shims.go:408:29",
+     "pos": "golean-stdlib-shims.go:421:29",
      "wire": "verb$cap"
     },
     {
      "kind": "local",
      "name": "r",
-     "pos": "golean-stdlib-shims.go:410:6"
+     "pos": "golean-stdlib-shims.go:423:6"
     }
    ],
    "name": "tracker.goleanShimFmtErrorCall$lit0",
@@ -112911,22 +113017,22 @@
     {
      "kind": "param",
      "name": "verb",
-     "pos": "golean-stdlib-shims.go:408:29"
+     "pos": "golean-stdlib-shims.go:421:29"
     },
     {
      "kind": "param",
      "name": "v",
-     "pos": "golean-stdlib-shims.go:408:42"
+     "pos": "golean-stdlib-shims.go:421:42"
     },
     {
      "kind": "result",
      "name": "out",
-     "pos": "golean-stdlib-shims.go:408:52"
+     "pos": "golean-stdlib-shims.go:421:52"
     },
     {
      "kind": "result",
      "name": "panicked",
-     "pos": "golean-stdlib-shims.go:408:64"
+     "pos": "golean-stdlib-shims.go:421:64"
     }
    ],
    "name": "tracker.goleanShimFmtErrorCall",
@@ -113332,27 +113438,27 @@
     {
      "kind": "param",
      "name": "r",
-     "pos": "golean-stdlib-shims.go:418:30"
+     "pos": "golean-stdlib-shims.go:431:30"
     },
     {
      "kind": "local",
      "name": "s",
-     "pos": "golean-stdlib-shims.go:419:5"
+     "pos": "golean-stdlib-shims.go:432:5"
     },
     {
      "kind": "local",
      "name": "ok",
-     "pos": "golean-stdlib-shims.go:419:8"
+     "pos": "golean-stdlib-shims.go:432:8"
     },
     {
      "kind": "local",
      "name": "e",
-     "pos": "golean-stdlib-shims.go:422:5"
+     "pos": "golean-stdlib-shims.go:435:5"
     },
     {
      "kind": "local",
      "name": "ok",
-     "pos": "golean-stdlib-shims.go:422:8"
+     "pos": "golean-stdlib-shims.go:435:8"
     }
    ],
    "name": "tracker.goleanShimFmtPanicValue",
@@ -113482,12 +113588,12 @@
     {
      "kind": "param",
      "name": "s",
-     "pos": "golean-stdlib-shims.go:432:27"
+     "pos": "golean-stdlib-shims.go:445:27"
     },
     {
      "kind": "param",
      "name": "w",
-     "pos": "golean-stdlib-shims.go:432:37"
+     "pos": "golean-stdlib-shims.go:445:37"
     }
    ],
    "name": "tracker.goleanShimFmtPadLeft",
@@ -113617,12 +113723,12 @@
     {
      "kind": "param",
      "name": "v",
-     "pos": "golean-stdlib-shims.go:439:26"
+     "pos": "golean-stdlib-shims.go:452:26"
     },
     {
      "kind": "param",
      "name": "w",
-     "pos": "golean-stdlib-shims.go:439:35"
+     "pos": "golean-stdlib-shims.go:452:35"
     }
    ],
    "name": "tracker.goleanShimFmtIntPad",
@@ -113753,12 +113859,12 @@
     {
      "kind": "param",
      "name": "v",
-     "pos": "golean-stdlib-shims.go:443:27"
+     "pos": "golean-stdlib-shims.go:456:27"
     },
     {
      "kind": "param",
      "name": "w",
-     "pos": "golean-stdlib-shims.go:443:37"
+     "pos": "golean-stdlib-shims.go:456:37"
     }
    ],
    "name": "tracker.goleanShimFmtUintPad",
@@ -132933,6 +133039,574 @@
      "type": {
       "kind": "interface",
       "name": "raft.Logger"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "expr": {
+       "expr": "ident",
+       "name": "$a",
+       "type": {
+        "kind": "interface",
+        "name": "any"
+       }
+      },
+      "okTarget": {
+       "id": "$ok0",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "type-assert",
+      "target": {
+       "id": "$v0",
+       "target": "declare",
+       "type": {
+        "kind": "string"
+       }
+      },
+      "targetType": {
+       "kind": "string"
+      }
+     },
+     {
+      "cond": {
+       "expr": "ident",
+       "name": "$ok0",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "results": [
+          {
+           "expr": "bool",
+           "value": true
+          }
+         ],
+         "stmt": "return"
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "expr": {
+       "expr": "ident",
+       "name": "$a",
+       "type": {
+        "kind": "interface",
+        "name": "any"
+       }
+      },
+      "okTarget": {
+       "id": "$ok1",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "type-assert",
+      "target": {
+       "id": "$v1",
+       "target": "declare",
+       "type": {
+        "kind": "named",
+        "name": "raft.CampaignType"
+       }
+      },
+      "targetType": {
+       "kind": "named",
+       "name": "raft.CampaignType"
+      }
+     },
+     {
+      "cond": {
+       "expr": "ident",
+       "name": "$ok1",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "results": [
+          {
+           "expr": "bool",
+           "value": true
+          }
+         ],
+         "stmt": "return"
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "results": [
+       {
+        "expr": "bool",
+        "value": false
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "locals": [],
+   "name": "$method$18:raft.DefaultLogger0:Debug$fmtkind0",
+   "params": [
+    {
+     "id": "$a",
+     "type": {
+      "kind": "interface",
+      "name": "any"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "expr": {
+       "expr": "ident",
+       "name": "$a",
+       "type": {
+        "kind": "interface",
+        "name": "any"
+       }
+      },
+      "okTarget": {
+       "id": "$ok0",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "type-assert",
+      "target": {
+       "id": "$v0",
+       "target": "declare",
+       "type": {
+        "kind": "string"
+       }
+      },
+      "targetType": {
+       "kind": "string"
+      }
+     },
+     {
+      "cond": {
+       "expr": "ident",
+       "name": "$ok0",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "results": [
+          {
+           "expr": "bool",
+           "value": true
+          }
+         ],
+         "stmt": "return"
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "expr": {
+       "expr": "ident",
+       "name": "$a",
+       "type": {
+        "kind": "interface",
+        "name": "any"
+       }
+      },
+      "okTarget": {
+       "id": "$ok1",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "type-assert",
+      "target": {
+       "id": "$v1",
+       "target": "declare",
+       "type": {
+        "kind": "named",
+        "name": "raft.CampaignType"
+       }
+      },
+      "targetType": {
+       "kind": "named",
+       "name": "raft.CampaignType"
+      }
+     },
+     {
+      "cond": {
+       "expr": "ident",
+       "name": "$ok1",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "results": [
+          {
+           "expr": "bool",
+           "value": true
+          }
+         ],
+         "stmt": "return"
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "results": [
+       {
+        "expr": "bool",
+        "value": false
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "locals": [],
+   "name": "$method$18:raft.DefaultLogger0:Info$fmtkind0",
+   "params": [
+    {
+     "id": "$a",
+     "type": {
+      "kind": "interface",
+      "name": "any"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "expr": {
+       "expr": "ident",
+       "name": "$a",
+       "type": {
+        "kind": "interface",
+        "name": "any"
+       }
+      },
+      "okTarget": {
+       "id": "$ok0",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "type-assert",
+      "target": {
+       "id": "$v0",
+       "target": "declare",
+       "type": {
+        "kind": "string"
+       }
+      },
+      "targetType": {
+       "kind": "string"
+      }
+     },
+     {
+      "cond": {
+       "expr": "ident",
+       "name": "$ok0",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "results": [
+          {
+           "expr": "bool",
+           "value": true
+          }
+         ],
+         "stmt": "return"
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "expr": {
+       "expr": "ident",
+       "name": "$a",
+       "type": {
+        "kind": "interface",
+        "name": "any"
+       }
+      },
+      "okTarget": {
+       "id": "$ok1",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "type-assert",
+      "target": {
+       "id": "$v1",
+       "target": "declare",
+       "type": {
+        "kind": "named",
+        "name": "raft.CampaignType"
+       }
+      },
+      "targetType": {
+       "kind": "named",
+       "name": "raft.CampaignType"
+      }
+     },
+     {
+      "cond": {
+       "expr": "ident",
+       "name": "$ok1",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "results": [
+          {
+           "expr": "bool",
+           "value": true
+          }
+         ],
+         "stmt": "return"
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "results": [
+       {
+        "expr": "bool",
+        "value": false
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "locals": [],
+   "name": "$method$18:raft.DefaultLogger0:Error$fmtkind0",
+   "params": [
+    {
+     "id": "$a",
+     "type": {
+      "kind": "interface",
+      "name": "any"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "expr": {
+       "expr": "ident",
+       "name": "$a",
+       "type": {
+        "kind": "interface",
+        "name": "any"
+       }
+      },
+      "okTarget": {
+       "id": "$ok0",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "type-assert",
+      "target": {
+       "id": "$v0",
+       "target": "declare",
+       "type": {
+        "kind": "string"
+       }
+      },
+      "targetType": {
+       "kind": "string"
+      }
+     },
+     {
+      "cond": {
+       "expr": "ident",
+       "name": "$ok0",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "results": [
+          {
+           "expr": "bool",
+           "value": true
+          }
+         ],
+         "stmt": "return"
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "expr": {
+       "expr": "ident",
+       "name": "$a",
+       "type": {
+        "kind": "interface",
+        "name": "any"
+       }
+      },
+      "okTarget": {
+       "id": "$ok1",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "type-assert",
+      "target": {
+       "id": "$v1",
+       "target": "declare",
+       "type": {
+        "kind": "named",
+        "name": "raft.CampaignType"
+       }
+      },
+      "targetType": {
+       "kind": "named",
+       "name": "raft.CampaignType"
+      }
+     },
+     {
+      "cond": {
+       "expr": "ident",
+       "name": "$ok1",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "results": [
+          {
+           "expr": "bool",
+           "value": true
+          }
+         ],
+         "stmt": "return"
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "results": [
+       {
+        "expr": "bool",
+        "value": false
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "locals": [],
+   "name": "$method$18:raft.DefaultLogger0:Warning$fmtkind0",
+   "params": [
+    {
+     "id": "$a",
+     "type": {
+      "kind": "interface",
+      "name": "any"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "bool"
      }
     }
    ],
@@ -201535,7 +202209,7 @@
       "lhs": [
        {
         "id": "out",
-        "local": 1,
+        "local": 2,
         "target": "declare",
         "type": {
          "kind": "string"
@@ -201558,7 +202232,7 @@
       "lhs": [
        {
         "id": "prevString",
-        "local": 2,
+        "local": 3,
         "target": "declare",
         "type": {
          "kind": "bool"
@@ -201580,49 +202254,78 @@
       "body": {
        "body": [
         {
-         "expr": {
-          "base": {
-           "expr": "ident",
-           "local": 0,
-           "name": "args",
+         "define": true,
+         "lhs": [
+          {
+           "id": "isStr",
+           "local": 5,
+           "target": "declare",
            "type": {
-            "elem": {
-             "kind": "interface",
-             "name": "any"
-            },
-            "kind": "slice"
+            "kind": "bool"
            }
-          },
-          "expr": "index-get",
-          "index": {
-           "expr": "ident",
-           "local": 3,
-           "name": "i",
-           "type": {
-            "int": "int",
-            "kind": "int"
-           }
-          },
-          "type": {
-           "kind": "interface",
-           "name": "any"
           }
-         },
-         "okTarget": {
-          "id": "isStr",
-          "local": 4,
-          "target": "declare",
-          "type": {
-           "kind": "bool"
+         ],
+         "rhs": [
+          {
+           "args": [
+            {
+             "base": {
+              "expr": "ident",
+              "local": 0,
+              "name": "args",
+              "type": {
+               "elem": {
+                "kind": "interface",
+                "name": "any"
+               },
+               "kind": "slice"
+              }
+             },
+             "expr": "index-get",
+             "index": {
+              "expr": "ident",
+              "local": 4,
+              "name": "i",
+              "type": {
+               "int": "int",
+               "kind": "int"
+              }
+             },
+             "type": {
+              "kind": "interface",
+              "name": "any"
+             }
+            }
+           ],
+           "callee": {
+            "expr": "ident",
+            "local": 1,
+            "name": "isStringKind",
+            "type": {
+             "kind": "func",
+             "params": [
+              {
+               "kind": "interface",
+               "name": "any"
+              }
+             ],
+             "results": [
+              {
+               "kind": "bool"
+              }
+             ],
+             "variadic": false
+            }
+           },
+           "expr": "call-value",
+           "resultTypes": [
+            {
+             "kind": "bool"
+            }
+           ]
           }
-         },
-         "stmt": "type-assert",
-         "target": {
-          "target": "blank"
-         },
-         "targetType": {
-          "kind": "string"
-         }
+         ],
+         "stmt": "assign"
         },
         {
          "cond": {
@@ -201649,7 +202352,7 @@
             },
             "x": {
              "expr": "ident",
-             "local": 3,
+             "local": 4,
              "name": "i",
              "type": {
               "int": "int",
@@ -201673,7 +202376,7 @@
             },
             "x": {
              "expr": "ident",
-             "local": 2,
+             "local": 3,
              "name": "prevString",
              "type": {
               "kind": "bool"
@@ -201689,7 +202392,7 @@
            },
            "x": {
             "expr": "ident",
-            "local": 4,
+            "local": 5,
             "name": "isStr",
             "type": {
              "kind": "bool"
@@ -201704,7 +202407,7 @@
             "op": "+",
             "read": {
              "expr": "ident",
-             "local": 1,
+             "local": 2,
              "name": "out",
              "type": {
               "kind": "string"
@@ -201722,7 +202425,7 @@
             "stmt": "compound-assign",
             "target": {
              "id": "out",
-             "local": 1,
+             "local": 2,
              "target": "var"
             }
            }
@@ -201769,7 +202472,7 @@
              "expr": "index-get",
              "index": {
               "expr": "ident",
-              "local": 3,
+              "local": 4,
               "name": "i",
               "type": {
                "int": "int",
@@ -201797,7 +202500,7 @@
          "op": "+",
          "read": {
           "expr": "ident",
-          "local": 1,
+          "local": 2,
           "name": "out",
           "type": {
            "kind": "string"
@@ -201813,7 +202516,7 @@
          "stmt": "compound-assign",
          "target": {
           "id": "out",
-          "local": 1,
+          "local": 2,
           "target": "var"
          }
         },
@@ -201822,14 +202525,14 @@
          "lhs": [
           {
            "id": "prevString",
-           "local": 2,
+           "local": 3,
            "target": "var"
           }
          ],
          "rhs": [
           {
            "expr": "ident",
-           "local": 4,
+           "local": 5,
            "name": "isStr",
            "type": {
             "kind": "bool"
@@ -201853,7 +202556,7 @@
        },
        "x": {
         "expr": "ident",
-        "local": 3,
+        "local": 4,
         "name": "i",
         "type": {
          "int": "int",
@@ -201892,7 +202595,7 @@
        "lhs": [
         {
          "id": "i",
-         "local": 3,
+         "local": 4,
          "target": "declare",
          "type": {
           "int": "int",
@@ -201916,7 +202619,7 @@
        "op": "+",
        "read": {
         "expr": "ident",
-        "local": 3,
+        "local": 4,
         "name": "i",
         "type": {
          "int": "int",
@@ -201926,7 +202629,7 @@
        "stmt": "incdec",
        "target": {
         "id": "i",
-        "local": 3,
+        "local": 4,
         "target": "var"
        },
        "type": {
@@ -201940,7 +202643,7 @@
       "results": [
        {
         "expr": "ident",
-        "local": 1,
+        "local": 2,
         "name": "out",
         "type": {
          "kind": "string"
@@ -201956,27 +202659,32 @@
     {
      "kind": "param",
      "name": "args",
-     "pos": "golean-stdlib-shims.go:234:29"
+     "pos": "golean-stdlib-shims.go:247:29"
+    },
+    {
+     "kind": "param",
+     "name": "isStringKind",
+     "pos": "golean-stdlib-shims.go:247:41"
     },
     {
      "kind": "local",
      "name": "out",
-     "pos": "golean-stdlib-shims.go:235:2"
+     "pos": "golean-stdlib-shims.go:248:2"
     },
     {
      "kind": "local",
      "name": "prevString",
-     "pos": "golean-stdlib-shims.go:236:2"
+     "pos": "golean-stdlib-shims.go:249:2"
     },
     {
      "kind": "local",
      "name": "i",
-     "pos": "golean-stdlib-shims.go:237:6"
+     "pos": "golean-stdlib-shims.go:250:6"
     },
     {
      "kind": "local",
      "name": "isStr",
-     "pos": "golean-stdlib-shims.go:238:6"
+     "pos": "golean-stdlib-shims.go:251:3"
     }
    ],
    "name": "raft.goleanShimFmtSprintDyn",
@@ -201990,6 +202698,25 @@
        "name": "any"
       },
       "kind": "slice"
+     }
+    },
+    {
+     "id": "isStringKind",
+     "local": 1,
+     "type": {
+      "kind": "func",
+      "params": [
+       {
+        "kind": "interface",
+        "name": "any"
+       }
+      ],
+      "results": [
+       {
+        "kind": "bool"
+       }
+      ],
+      "variadic": false
      }
     }
    ],
@@ -202315,17 +203042,17 @@
     {
      "kind": "param",
      "name": "args",
-     "pos": "golean-stdlib-shims.go:248:31"
+     "pos": "golean-stdlib-shims.go:261:31"
     },
     {
      "kind": "local",
      "name": "out",
-     "pos": "golean-stdlib-shims.go:249:2"
+     "pos": "golean-stdlib-shims.go:262:2"
     },
     {
      "kind": "local",
      "name": "i",
-     "pos": "golean-stdlib-shims.go:250:6"
+     "pos": "golean-stdlib-shims.go:263:6"
     }
    ],
    "name": "raft.goleanShimFmtSprintlnDyn",
@@ -202974,22 +203701,22 @@
     {
      "kind": "param",
      "name": "v",
-     "pos": "golean-stdlib-shims.go:262:24"
+     "pos": "golean-stdlib-shims.go:275:24"
     },
     {
      "kind": "local",
      "name": "digits",
-     "pos": "golean-stdlib-shims.go:266:2"
+     "pos": "golean-stdlib-shims.go:279:2"
     },
     {
      "kind": "local",
      "name": "out",
-     "pos": "golean-stdlib-shims.go:271:2"
+     "pos": "golean-stdlib-shims.go:284:2"
     },
     {
      "kind": "local",
      "name": "i",
-     "pos": "golean-stdlib-shims.go:272:6"
+     "pos": "golean-stdlib-shims.go:285:6"
     }
    ],
    "name": "raft.goleanShimFmtUint",
@@ -203215,7 +203942,7 @@
     {
      "kind": "param",
      "name": "v",
-     "pos": "golean-stdlib-shims.go:278:23"
+     "pos": "golean-stdlib-shims.go:291:23"
     }
    ],
    "name": "raft.goleanShimFmtInt",
@@ -203889,27 +204616,27 @@
     {
      "kind": "param",
      "name": "v",
-     "pos": "golean-stdlib-shims.go:285:23"
+     "pos": "golean-stdlib-shims.go:298:23"
     },
     {
      "kind": "local",
      "name": "hexits",
-     "pos": "golean-stdlib-shims.go:289:2"
+     "pos": "golean-stdlib-shims.go:302:2"
     },
     {
      "kind": "local",
      "name": "digits",
-     "pos": "golean-stdlib-shims.go:290:2"
+     "pos": "golean-stdlib-shims.go:303:2"
     },
     {
      "kind": "local",
      "name": "out",
-     "pos": "golean-stdlib-shims.go:295:2"
+     "pos": "golean-stdlib-shims.go:308:2"
     },
     {
      "kind": "local",
      "name": "i",
-     "pos": "golean-stdlib-shims.go:296:6"
+     "pos": "golean-stdlib-shims.go:309:6"
     }
    ],
    "name": "raft.goleanShimFmtHex",
@@ -203994,7 +204721,7 @@
     {
      "kind": "param",
      "name": "v",
-     "pos": "golean-stdlib-shims.go:302:24"
+     "pos": "golean-stdlib-shims.go:315:24"
     }
    ],
    "name": "raft.goleanShimFmtBool",
@@ -204083,7 +204810,7 @@
     {
      "kind": "param",
      "name": "b",
-     "pos": "golean-stdlib-shims.go:309:30"
+     "pos": "golean-stdlib-shims.go:322:30"
     }
    ],
    "name": "raft.goleanShimFmtQuoteBytes",
@@ -207397,27 +208124,27 @@
     {
      "kind": "param",
      "name": "s",
-     "pos": "golean-stdlib-shims.go:313:31"
+     "pos": "golean-stdlib-shims.go:326:31"
     },
     {
      "kind": "local",
      "name": "hexits",
-     "pos": "golean-stdlib-shims.go:314:2"
+     "pos": "golean-stdlib-shims.go:327:2"
     },
     {
      "kind": "local",
      "name": "out",
-     "pos": "golean-stdlib-shims.go:315:2"
+     "pos": "golean-stdlib-shims.go:328:2"
     },
     {
      "kind": "local",
      "name": "i",
-     "pos": "golean-stdlib-shims.go:316:6"
+     "pos": "golean-stdlib-shims.go:329:6"
     },
     {
      "kind": "local",
      "name": "c",
-     "pos": "golean-stdlib-shims.go:317:3"
+     "pos": "golean-stdlib-shims.go:330:3"
     }
    ],
    "name": "raft.goleanShimFmtQuoteString",
@@ -207625,12 +208352,12 @@
     {
      "kind": "param",
      "name": "verb",
-     "pos": "golean-stdlib-shims.go:364:30"
+     "pos": "golean-stdlib-shims.go:377:30"
     },
     {
      "kind": "param",
      "name": "s",
-     "pos": "golean-stdlib-shims.go:364:43"
+     "pos": "golean-stdlib-shims.go:377:43"
     }
    ],
    "name": "raft.goleanShimFmtStringVerb",
@@ -208090,27 +208817,27 @@
     {
      "kind": "param",
      "name": "s",
-     "pos": "golean-stdlib-shims.go:374:29"
+     "pos": "golean-stdlib-shims.go:387:29"
     },
     {
      "kind": "local",
      "name": "hexits",
-     "pos": "golean-stdlib-shims.go:375:2"
+     "pos": "golean-stdlib-shims.go:388:2"
     },
     {
      "kind": "local",
      "name": "out",
-     "pos": "golean-stdlib-shims.go:376:2"
+     "pos": "golean-stdlib-shims.go:389:2"
     },
     {
      "kind": "local",
      "name": "i",
-     "pos": "golean-stdlib-shims.go:377:6"
+     "pos": "golean-stdlib-shims.go:390:6"
     },
     {
      "kind": "local",
      "name": "c",
-     "pos": "golean-stdlib-shims.go:378:3"
+     "pos": "golean-stdlib-shims.go:391:3"
     }
    ],
    "name": "raft.goleanShimFmtHexString",
@@ -208303,32 +209030,32 @@
     {
      "kind": "param",
      "name": "verb",
-     "pos": "golean-stdlib-shims.go:384:26"
+     "pos": "golean-stdlib-shims.go:397:26"
     },
     {
      "kind": "param",
      "name": "method",
-     "pos": "golean-stdlib-shims.go:384:39"
+     "pos": "golean-stdlib-shims.go:397:39"
     },
     {
      "kind": "param",
      "name": "isNilPtr",
-     "pos": "golean-stdlib-shims.go:384:54"
+     "pos": "golean-stdlib-shims.go:397:54"
     },
     {
      "kind": "param",
      "name": "call",
-     "pos": "golean-stdlib-shims.go:384:69"
+     "pos": "golean-stdlib-shims.go:397:69"
     },
     {
      "kind": "local",
      "name": "s",
-     "pos": "golean-stdlib-shims.go:385:2"
+     "pos": "golean-stdlib-shims.go:398:2"
     },
     {
      "kind": "local",
      "name": "panicked",
-     "pos": "golean-stdlib-shims.go:385:5"
+     "pos": "golean-stdlib-shims.go:398:5"
     }
    ],
    "name": "raft.goleanShimFmtRender",
@@ -208716,37 +209443,37 @@
     {
      "kind": "capture",
      "name": "panicked",
-     "pos": "golean-stdlib-shims.go:392:106",
+     "pos": "golean-stdlib-shims.go:405:106",
      "wire": "panicked$cap"
     },
     {
      "kind": "capture",
      "name": "isNilPtr",
-     "pos": "golean-stdlib-shims.go:392:58",
+     "pos": "golean-stdlib-shims.go:405:58",
      "wire": "isNilPtr$cap"
     },
     {
      "kind": "capture",
      "name": "out",
-     "pos": "golean-stdlib-shims.go:392:94",
+     "pos": "golean-stdlib-shims.go:405:94",
      "wire": "out$cap"
     },
     {
      "kind": "capture",
      "name": "verb",
-     "pos": "golean-stdlib-shims.go:392:30",
+     "pos": "golean-stdlib-shims.go:405:30",
      "wire": "verb$cap"
     },
     {
      "kind": "capture",
      "name": "method",
-     "pos": "golean-stdlib-shims.go:392:43",
+     "pos": "golean-stdlib-shims.go:405:43",
      "wire": "method$cap"
     },
     {
      "kind": "local",
      "name": "r",
-     "pos": "golean-stdlib-shims.go:394:6"
+     "pos": "golean-stdlib-shims.go:407:6"
     }
    ],
    "name": "raft.goleanShimFmtRenderCall$lit0",
@@ -208914,32 +209641,32 @@
     {
      "kind": "param",
      "name": "verb",
-     "pos": "golean-stdlib-shims.go:392:30"
+     "pos": "golean-stdlib-shims.go:405:30"
     },
     {
      "kind": "param",
      "name": "method",
-     "pos": "golean-stdlib-shims.go:392:43"
+     "pos": "golean-stdlib-shims.go:405:43"
     },
     {
      "kind": "param",
      "name": "isNilPtr",
-     "pos": "golean-stdlib-shims.go:392:58"
+     "pos": "golean-stdlib-shims.go:405:58"
     },
     {
      "kind": "param",
      "name": "call",
-     "pos": "golean-stdlib-shims.go:392:73"
+     "pos": "golean-stdlib-shims.go:405:73"
     },
     {
      "kind": "result",
      "name": "out",
-     "pos": "golean-stdlib-shims.go:392:94"
+     "pos": "golean-stdlib-shims.go:405:94"
     },
     {
      "kind": "result",
      "name": "panicked",
-     "pos": "golean-stdlib-shims.go:392:106"
+     "pos": "golean-stdlib-shims.go:405:106"
     }
    ],
    "name": "raft.goleanShimFmtRenderCall",
@@ -209282,22 +210009,22 @@
     {
      "kind": "param",
      "name": "verb",
-     "pos": "golean-stdlib-shims.go:406:25"
+     "pos": "golean-stdlib-shims.go:419:25"
     },
     {
      "kind": "param",
      "name": "v",
-     "pos": "golean-stdlib-shims.go:406:38"
+     "pos": "golean-stdlib-shims.go:419:38"
     },
     {
      "kind": "local",
      "name": "s",
-     "pos": "golean-stdlib-shims.go:413:2"
+     "pos": "golean-stdlib-shims.go:426:2"
     },
     {
      "kind": "local",
      "name": "panicked",
-     "pos": "golean-stdlib-shims.go:413:5"
+     "pos": "golean-stdlib-shims.go:426:5"
     }
    ],
    "name": "raft.goleanShimFmtError",
@@ -209585,25 +210312,25 @@
     {
      "kind": "capture",
      "name": "panicked",
-     "pos": "golean-stdlib-shims.go:420:64",
+     "pos": "golean-stdlib-shims.go:433:64",
      "wire": "panicked$cap"
     },
     {
      "kind": "capture",
      "name": "out",
-     "pos": "golean-stdlib-shims.go:420:52",
+     "pos": "golean-stdlib-shims.go:433:52",
      "wire": "out$cap"
     },
     {
      "kind": "capture",
      "name": "verb",
-     "pos": "golean-stdlib-shims.go:420:29",
+     "pos": "golean-stdlib-shims.go:433:29",
      "wire": "verb$cap"
     },
     {
      "kind": "local",
      "name": "r",
-     "pos": "golean-stdlib-shims.go:422:6"
+     "pos": "golean-stdlib-shims.go:435:6"
     }
    ],
    "name": "raft.goleanShimFmtErrorCall$lit0",
@@ -209737,22 +210464,22 @@
     {
      "kind": "param",
      "name": "verb",
-     "pos": "golean-stdlib-shims.go:420:29"
+     "pos": "golean-stdlib-shims.go:433:29"
     },
     {
      "kind": "param",
      "name": "v",
-     "pos": "golean-stdlib-shims.go:420:42"
+     "pos": "golean-stdlib-shims.go:433:42"
     },
     {
      "kind": "result",
      "name": "out",
-     "pos": "golean-stdlib-shims.go:420:52"
+     "pos": "golean-stdlib-shims.go:433:52"
     },
     {
      "kind": "result",
      "name": "panicked",
-     "pos": "golean-stdlib-shims.go:420:64"
+     "pos": "golean-stdlib-shims.go:433:64"
     }
    ],
    "name": "raft.goleanShimFmtErrorCall",
@@ -210158,27 +210885,27 @@
     {
      "kind": "param",
      "name": "r",
-     "pos": "golean-stdlib-shims.go:430:30"
+     "pos": "golean-stdlib-shims.go:443:30"
     },
     {
      "kind": "local",
      "name": "s",
-     "pos": "golean-stdlib-shims.go:431:5"
+     "pos": "golean-stdlib-shims.go:444:5"
     },
     {
      "kind": "local",
      "name": "ok",
-     "pos": "golean-stdlib-shims.go:431:8"
+     "pos": "golean-stdlib-shims.go:444:8"
     },
     {
      "kind": "local",
      "name": "e",
-     "pos": "golean-stdlib-shims.go:434:5"
+     "pos": "golean-stdlib-shims.go:447:5"
     },
     {
      "kind": "local",
      "name": "ok",
-     "pos": "golean-stdlib-shims.go:434:8"
+     "pos": "golean-stdlib-shims.go:447:8"
     }
    ],
    "name": "raft.goleanShimFmtPanicValue",
@@ -210308,12 +211035,12 @@
     {
      "kind": "param",
      "name": "s",
-     "pos": "golean-stdlib-shims.go:444:27"
+     "pos": "golean-stdlib-shims.go:457:27"
     },
     {
      "kind": "param",
      "name": "w",
-     "pos": "golean-stdlib-shims.go:444:37"
+     "pos": "golean-stdlib-shims.go:457:37"
     }
    ],
    "name": "raft.goleanShimFmtPadLeft",
@@ -210443,12 +211170,12 @@
     {
      "kind": "param",
      "name": "v",
-     "pos": "golean-stdlib-shims.go:451:26"
+     "pos": "golean-stdlib-shims.go:464:26"
     },
     {
      "kind": "param",
      "name": "w",
-     "pos": "golean-stdlib-shims.go:451:35"
+     "pos": "golean-stdlib-shims.go:464:35"
     }
    ],
    "name": "raft.goleanShimFmtIntPad",
@@ -210579,12 +211306,12 @@
     {
      "kind": "param",
      "name": "v",
-     "pos": "golean-stdlib-shims.go:455:27"
+     "pos": "golean-stdlib-shims.go:468:27"
     },
     {
      "kind": "param",
      "name": "w",
-     "pos": "golean-stdlib-shims.go:455:37"
+     "pos": "golean-stdlib-shims.go:468:37"
     }
    ],
    "name": "raft.goleanShimFmtUintPad",
@@ -438387,6 +439114,11 @@
               },
               "kind": "slice"
              }
+            },
+            {
+             "captured": [],
+             "expr": "func-value",
+             "func": "$method$18:raft.DefaultLogger0:Debug$fmtkind0"
             }
            ],
            "expr": "call",
@@ -438822,6 +439554,11 @@
            },
            "kind": "slice"
           }
+         },
+         {
+          "captured": [],
+          "expr": "func-value",
+          "func": "$method$18:raft.DefaultLogger0:Info$fmtkind0"
          }
         ],
         "expr": "call",
@@ -439216,6 +439953,11 @@
            },
            "kind": "slice"
           }
+         },
+         {
+          "captured": [],
+          "expr": "func-value",
+          "func": "$method$18:raft.DefaultLogger0:Error$fmtkind0"
          }
         ],
         "expr": "call",
@@ -439612,6 +440354,11 @@
            },
            "kind": "slice"
           }
+         },
+         {
+          "captured": [],
+          "expr": "func-value",
+          "func": "$method$18:raft.DefaultLogger0:Warning$fmtkind0"
          }
         ],
         "expr": "call",

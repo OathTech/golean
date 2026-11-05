@@ -90,11 +90,13 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"go/ast"
 	"go/constant"
 	"go/token"
 	"go/types"
+	"sort"
 )
 
 // fmtDesugarFuncs is the modeled fmt surface. Consulted by the
@@ -317,8 +319,19 @@ func (e *emitter) emitFmtCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, bool
 		if !okShim {
 			return nil, false, unsup("fmt.%s fixed-arity desugar: shim %s not injected", fn, shimName)
 		}
+		shimArgs := []any{sliceNode}
+		if fn == "Sprint" {
+			// The space rule's kind oracle (BUG-400): the fixed-arity
+			// pack is a []any, so the kind is judged at run time there
+			// too — one oracle for both routes.
+			oracle, err := e.fmtStringKindOracle()
+			if err != nil {
+				return nil, false, err
+			}
+			shimArgs = append(shimArgs, oracle)
+		}
 		return map[string]any{"expr": "call", "func": e.funcWireName(shimFn),
-			"args":        []any{sliceNode},
+			"args":        shimArgs,
 			"resultTypes": []any{map[string]any{"kind": "string"}}}, true, nil
 	}
 
@@ -990,6 +1003,34 @@ func rangeKeyValueTypes(t types.Type) (types.Type, types.Type) {
 
 // fmtVerbArg compiles one verb x static-kind pair, or refuses naming
 // it. Every call-site argument expression is emitted EXACTLY ONCE.
+// fmtConvertOperand wraps an operand node of static type argTy for a helper
+// parameter of type target: the machine's `convert` op at the target, UNLESS
+// the conversion is a pure static retyping — an identical type, or a
+// bool-underlying operand at the bool target. The bool case is the emitter's
+// own conversion rule (emitCallNode, `bool(x)`): bool has no representation
+// kinds, so the runtime value is unchanged and no machine op runs — the
+// machine's convert fails closed on bool targets (`convertValueToTy` has no
+// bool arm, by design: the wire never needs one). The desugar did not share
+// that rule (BUG-402, the S21 sweep 2026-11-05): `%t` / `%v` / `%+v` over a
+// DEFINED bool and a defined-bool composite leaf emitted a convert-to-bool
+// the core refused by name (`conversion to GoLean.GoCore.Ty.bool`) where gc
+// prints `true` / `false`. ONE rule for every desugar site (the scalar
+// matrix, the width family, the composite leaves), so the core's refusal is
+// unreachable from a type-checked wire: every other target the matrix
+// converts to — int64, uint64, string, []byte — has a core arm (the integer
+// normalization, the string identity, the slice pass-through).
+func fmtConvertOperand(argTy, target types.Type, tw any, node any) any {
+	if types.Identical(argTy, target) {
+		return node
+	}
+	tb, isTB := types.Unalias(target).Underlying().(*types.Basic)
+	ob, isOB := types.Unalias(argTy).Underlying().(*types.Basic)
+	if isTB && isOB && tb.Kind() == types.Bool && ob.Kind() == types.Bool {
+		return node
+	}
+	return map[string]any{"expr": "convert", "target": tw, "x": node}
+}
+
 func (e *emitter) fmtVerbArg(fn, format string, v fmtVerb, arg ast.Expr, k int) (*fmtArgPlan, error) {
 	strTy := map[string]any{"kind": "string"}
 	argTy := e.goTypeOf(arg)
@@ -1022,9 +1063,7 @@ func (e *emitter) fmtVerbArg(fn, format string, v fmtVerb, arg ast.Expr, k int) 
 		if err != nil {
 			return nil, err
 		}
-		if !types.Identical(argTy, target) {
-			node = map[string]any{"expr": "convert", "target": tw, "x": node}
-		}
+		node = fmtConvertOperand(argTy, target, tw, node)
 		body := any(paramRef(tw))
 		if helperName != "" {
 			body = helper(helperName, paramRef(tw))
@@ -1199,9 +1238,7 @@ func (e *emitter) fmtVerbArg(fn, format string, v fmtVerb, arg ast.Expr, k int) 
 		if err != nil {
 			return nil, err
 		}
-		if !types.Identical(argTy, target) {
-			node = map[string]any{"expr": "convert", "target": tw, "x": node}
-		}
+		node = fmtConvertOperand(argTy, target, tw, node)
 		widthLit := map[string]any{"expr": "int", "value": itoa(width),
 			"type": map[string]any{"kind": "int", "int": "int"}}
 		return &fmtArgPlan{callArgs: []any{node},
@@ -1321,6 +1358,14 @@ func (e *emitter) emitFmtDynCall(c *ast.CallExpr, fn string) (any, bool, error) 
 		return nil, false, err
 	}
 	args = append(args, sNode)
+	if fn == "Sprint" {
+		// The space rule's kind oracle (BUG-400), planted from go/types.
+		oracle, err := e.fmtStringKindOracle()
+		if err != nil {
+			return nil, false, err
+		}
+		args = append(args, oracle)
+	}
 	shimObj := e.pkg.Scope().Lookup(shim)
 	shimFn, okShim := shimObj.(*types.Func)
 	if !okShim {
@@ -1329,6 +1374,147 @@ func (e *emitter) emitFmtDynCall(c *ast.CallExpr, fn string) (any, bool, error) 
 	return map[string]any{"expr": "call", "func": e.funcWireName(shimFn),
 		"args":        args,
 		"resultTypes": []any{map[string]any{"kind": "string"}}}, true, nil
+}
+
+// fmtStringKindOracle synthesizes, per fmt.Sprint call site, the lifted
+// function the dynamic Sprint shim consults for gc's SPACE RULE, which
+// judges operands by KIND: fmt/print.go's doPrint sets
+//
+//	isString := arg != nil && reflect.TypeOf(arg).Kind() == reflect.String
+//
+// so a DEFINED string type is a string there. The shim tested the concrete
+// type (`args[i].(string)`), false for every defined string type, and a
+// `type S string` rendering through String()/Error() was spaced as a
+// non-string — gc `ab`, the shim `a b` (BUG-400, the S21 sweep 2026-11-05;
+// rows fmt/sweep-s21-sprint-space/*). The shim runs inside the model
+// without reflection and its source is injected BEFORE type-check, where it
+// cannot name the program's types (the dyn bundle's recorded bound), so the
+// kind test is planted HERE, from go/types, as `func($a any) bool`:
+// `$a.(string)` first, then one comma-ok assertion per named string-kinded
+// type of the program's units (every package-scope defined type whose
+// underlying type is a string kind, and every generic instantiation whose
+// underlying is — the stencils the emitter names), `true` on the first hit,
+// `false` otherwise. The oracle travels as a func-value PARAMETER of
+// goleanShimFmtSprintDyn — the static bundle's shape for method values
+// (fmtShimBundleKey's comment), no interface dispatch, no new reserved
+// name, the shim source unchanged across programs. Lifted per call site
+// like fmtSliceLift (a quarantined declaration drops its lifts with it; the
+// body is a few statements).
+//
+// COMPLETENESS — what makes `false` an answer and not a guess: a value
+// RENDERS in the dyn shim only as nil, as a basic or slice kind of
+// goleanShimFmtDynVerb's type switch (string among them), or through a
+// String()/Error() method. A method-bearing string-kinded type is a named
+// type declared, WITH its methods, in the type's own package; only the
+// units' method bodies lower (an imported package's methods are stubs that
+// refuse by name), so every string kind that can reach the space rule AND
+// render has an arm. A named string type with no arm — a function-local
+// one (no methods possible), an imported one — cannot render: the
+// operand's own render refuses by name before the string is produced, so
+// its kind answer is never observed. Generic instantiations are read off
+// every unit's Instances; a stencil the emitter cannot name refuses here,
+// by name, before any space is judged.
+func (e *emitter) fmtStringKindOracle() (any, error) {
+	anyTy := types.Universe.Lookup("any").Type()
+	anyW, err := e.emitType(anyTy)
+	if err != nil {
+		return nil, err
+	}
+	boolTy := map[string]any{"kind": "bool"}
+	// the string kinds: `string` itself, then the program's named ones
+	var scopes []*types.Scope
+	var infos []*types.Info
+	if e.units == nil {
+		// a directly constructed single-package emitter (unit tests)
+		scopes, infos = []*types.Scope{e.pkg.Scope()}, []*types.Info{e.info}
+	} else {
+		for _, u := range e.units {
+			scopes = append(scopes, u.pkg.Scope())
+			infos = append(infos, u.info)
+		}
+	}
+	isStringKind := func(t types.Type) bool {
+		b, ok := t.Underlying().(*types.Basic)
+		return ok && b.Info()&types.IsString != 0
+	}
+	var named []*types.Named
+	for _, scope := range scopes {
+		for _, n := range scope.Names() {
+			tn, ok := scope.Lookup(n).(*types.TypeName)
+			if !ok || tn.IsAlias() {
+				continue
+			}
+			nt, ok := tn.Type().(*types.Named)
+			if !ok || nt.TypeParams().Len() > 0 || !isStringKind(nt) {
+				continue
+			}
+			named = append(named, nt)
+		}
+	}
+	for _, info := range infos {
+		for _, inst := range info.Instances {
+			// A method declaration's receiver `G[T]` is recorded as an
+			// instance at the parameter itself: no stencil, no value.
+			nt, ok := inst.Type.(*types.Named)
+			if !ok || nt.TypeArgs().Len() == 0 || !isStringKind(nt) || mentionsTypeParam(nt, nil) {
+				continue
+			}
+			named = append(named, nt)
+		}
+	}
+	// one arm per DISTINCT wire type — `string` first, then the named ones
+	// in a stable order (the wire's bytes are pinned by golden rows; map
+	// iteration above is unordered)
+	arms := map[string]any{}
+	for _, nt := range named {
+		tw, err := e.emitType(nt)
+		if err != nil {
+			return nil, unsup("fmt.Sprint space-rule kind oracle: the named string type %s cannot be named on the wire (%v)", nt, err)
+		}
+		b, err := json.Marshal(tw)
+		if err != nil {
+			return nil, err
+		}
+		arms[string(b)] = tw
+	}
+	keys := make([]string, 0, len(arms))
+	for k := range arms {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	ordered := []any{map[string]any{"kind": "string"}}
+	for _, k := range keys {
+		ordered = append(ordered, arms[k])
+	}
+	name := e.curFuncID + "$fmtkind" + itoa(e.liftSeq)
+	e.liftSeq++
+	aRef := map[string]any{"expr": "ident", "name": "$a", "type": anyW}
+	body := []any{}
+	for i, tw := range ordered {
+		vVar, okVar := "$v"+itoa(i), "$ok"+itoa(i)
+		body = append(body,
+			map[string]any{"stmt": "type-assert",
+				"target":     map[string]any{"target": "declare", "id": vVar, "type": tw},
+				"okTarget":   map[string]any{"target": "declare", "id": okVar, "type": boolTy},
+				"expr":       aRef,
+				"targetType": tw},
+			map[string]any{"stmt": "if",
+				"cond": map[string]any{"expr": "ident", "name": okVar, "type": boolTy},
+				"then": map[string]any{"stmt": "block", "body": []any{
+					map[string]any{"stmt": "return",
+						"results": []any{map[string]any{"expr": "bool", "value": true}}}}}})
+	}
+	body = append(body, map[string]any{"stmt": "return",
+		"results": []any{map[string]any{"expr": "bool", "value": false}}})
+	e.lifted = append(e.lifted, map[string]any{
+		"name":     name,
+		"params":   []any{map[string]any{"id": "$a", "type": anyW}},
+		"results":  []any{map[string]any{"id": "$res0", "type": boolTy}},
+		"variadic": false,
+		"locals":   []any{},
+		"body":     map[string]any{"stmt": "block", "body": body},
+	})
+	return map[string]any{"expr": "func-value", "func": name, "captured": []any{}}, nil
 }
 
 // fmtShimWireName mints the FuncId of an injected fmt helper in the
