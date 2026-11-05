@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+# RED (frontend-export) BY DESIGN since BUG-340's fix (2026-11-05): the E7 detector refuses the static-target twins by name; expected = gc.
+method-value-static	methodValueStatic	-	ok	-	init,globals,evaluation_order,interfaces,methods
+embedded-iface-static	embeddedIfaceStatic	-	ok	-	init,globals,evaluation_order,interfaces,embedding,methods

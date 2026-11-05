@@ -1329,8 +1329,12 @@ gc's early store a deviation, L-016, 2026-09-02).
   design note). The cheap interim — the fail-closed frontend DETECTOR
   (method-through-interface-conversion reachability) — LANDED
   2026-08-31 (see above), converting the unguarded silent-divergence
-  into a visible refusal; the func-value channel and the full envelope
-  remain on this obligation. Full envelope: MODERATE
+  into a visible refusal; since 2026-11-05 (BUG-340's fix) the detector
+  covers every selection resolving to an interface method — a method value,
+  a method expression, a promotion through an embedded interface, a call on
+  a constrained type parameter — and fires only on a target gc may fold; a
+  call through an unresolvable function value and the full envelope remain
+  on this obligation. Full envelope: MODERATE
   ($pkginit becomes schedule-bearing; strict-lane init cases must stay
   on the deterministic default point). North-star exposure recorded:
   etcd-io/raft has package-level vars — must be checked at the target

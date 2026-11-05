@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+# RED (frontend-export) BY DESIGN since BUG-341's fix (2026-11-05): the gating package classifies MAYBE-STATIC and BUG-061's guard refuses the sensitive order by name (c-pin/staticinit-uncertain-order); expected = gc.
+int64-of-int	int64OfInt	-	ok	-	multipackage,imports,init,globals,evaluation_order,conversions
+uint64-of-uint	uint64OfUint	-	ok	-	multipackage,imports,init,globals,evaluation_order,conversions
+uintptr-of-uint	uintptrOfUint	-	ok	-	multipackage,imports,init,globals,evaluation_order,conversions
+int-of-int64	intOfInt64	-	ok	-	multipackage,imports,init,globals,evaluation_order,conversions

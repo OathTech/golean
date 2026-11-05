@@ -2,22 +2,16 @@ package main
 
 // Sweep S19 (package initialization order), lane sweep/s19-init-order,
 // 2026-10-27 — the E7 hidden-dependency channels the detector
-// (tools/nativefrontend/hiddendep.go) does NOT cover: a method VALUE
-// taken through an interface, and an interface method PROMOTED through
-// struct embedding. Neither is a CallExpr whose Fun is an interface
-// MethodVal selection, which is what the detector's REACH condition keys
-// on, so both programs lower and realize go/types' InitOrder, where x has
-// no dependency on y and is initialized FIRST.
-//
-// THE MECHANISM, probed 2026-10-27: gc's own order is the SAME InitOrder
-// (noder writes types2's `InitOrder`, the same analysis); its divergence
-// on hidden dependencies comes from cmd/compile/internal/staticinit,
-// which folds every STATIC initializer (`var y = 4`) into the data
-// section at link time, so a dynamic initializer that reads y through a
-// hidden channel sees 4 whatever its position in InitOrder. With a
-// DYNAMIC target (`var y = mark(1)`) nothing folds and gc realizes the
-// InitOrder literally — the two `*-dynamic` rows agree, the two
-// `*-static` rows are BUG-340's red pins (gc 454, the machine 54).
+// (tools/nativefrontend/hiddendep.go) did NOT cover before BUG-340's fix: a
+// method VALUE taken through an interface, and an interface method PROMOTED
+// through struct embedding. The DYNAMIC-target twins live here: with
+// `var y = mark(1)` nothing folds under gc's staticinit, gc realizes the
+// InitOrder literally and the two sides agree — and the detector, which
+// since 2026-11-05 (lane frontend/fix-init-admission-1105) fires only on a
+// target gc may fold, lets them lower. The static-target twins, refused by
+// name since that fix, are init/sweep-s19-hidden-dep-funcvalue-static
+// (BUG-340's Cases rows; one package per verdict, since the E7 refusal is
+// whole-export).
 
 // D3: a method value through an interface, called by a later initializer.
 var trD3 int
@@ -35,18 +29,6 @@ var d3x = d3mv() + mkD3(3)
 var d3y = mkD3(1)
 
 func methodValueDynamic() int { return trD3*100 + d3x }
-
-type d3sI interface{ gets() int }
-
-type d3sT struct{}
-
-func (d3sT) gets() int { return d3sy*10 + 2 }
-
-var d3smv = d3sI(d3sT{}).gets
-var d3sx = d3smv() + 3
-var d3sy = 4
-
-func methodValueStatic() int { return d3sx*10 + d3sy }
 
 // D7: an interface method promoted through struct embedding.
 var trD7 int
@@ -66,19 +48,6 @@ var d7y = mkD7(1)
 
 func embeddedIfaceDynamic() int { return trD7*100 + d7x }
 
-type d7sI interface{ vals() int }
-
-type d7sT struct{}
-
-func (d7sT) vals() int { return d7sy*10 + 2 }
-
-type d7sS struct{ d7sI }
-
-var d7sx = d7sS{d7sT{}}.vals() + 3
-var d7sy = 4
-
-func embeddedIfaceStatic() int { return d7sx*10 + d7sy }
-
 func main() {
-	println(methodValueDynamic(), methodValueStatic(), embeddedIfaceDynamic(), embeddedIfaceStatic())
+	println(methodValueDynamic(), embeddedIfaceDynamic())
 }

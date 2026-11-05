@@ -1,5 +1,3 @@
 # id	subject	args	expected_status	expected_reason	features
 method-value-dynamic	methodValueDynamic	-	ok	-	init,globals,evaluation_order,interfaces,methods
-method-value-static	methodValueStatic	-	ok	-	init,globals,evaluation_order,interfaces,methods
 embedded-iface-dynamic	embeddedIfaceDynamic	-	ok	-	init,globals,evaluation_order,interfaces,embedding,methods
-embedded-iface-static	embeddedIfaceStatic	-	ok	-	init,globals,evaluation_order,interfaces,embedding,methods
