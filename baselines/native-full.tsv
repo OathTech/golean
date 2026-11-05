@@ -1,5 +1,6 @@
 # GoLean native-frontend full-corpus differential baseline
 # cases: 7475 (7087 PASS / 388 FAIL)
+# cause keyed 2026-11-05 [AGENT coordinator], train-30 stage: BUG-402's three rows `unsupported:?` → `unsupported:convert-to-bool-arm` (the scripts/machine-causes.tsv row added at this stage; the gate at this tip verifies the key); no row moved.
 # cause keyed 2026-11-05 [AGENT coordinator], train-29 stage, from the stage's full run (scripts/coverage-cause --apply): the five rows that carried `?` — BUG-390's two (`unrowed/fallthrough-trailing-empty-stmt`, the tools/lowerdiag/causes.tsv row added at this stage) and BUG-391's three (`error:decoder-unseq-head-not-admitted`, the scripts/machine-causes.tsv row added at this stage); no row moved.
 # re-pinned: 2026-10-27 [AGENT], lane frontend/fix-binding-1027 — BUG-300, 301, 302 (the S13 sweep) FIXED in tools/nativefrontend
 #   (the campaign plan's rule that a finding is fixed through the normal train, [USER] approved 2026-10-27, relayed): (1) emit.go
@@ -13217,7 +13218,7 @@ PASS	fmt/sweep-s21-composites/plusv-depth-3	-	-
 PASS	fmt/sweep-s21-composites/bool-and-string-fields	-	-
 PASS	fmt/sweep-s21-composites/nil-slice-field	-	-
 PASS	fmt/sweep-s21-composites/slice-of-slice-of-strings	-	-
-FAIL	fmt/sweep-s21-composites/named-bool-field	lean-observation	unsupported:?
+FAIL	fmt/sweep-s21-composites/named-bool-field	lean-observation	unsupported:convert-to-bool-arm
 PASS	fmt/sweep-s21-contexts/initializers	-	-
 PASS	fmt/sweep-s21-contexts/in-method	-	-
 PASS	fmt/sweep-s21-contexts/in-goroutine	-	-
@@ -13285,8 +13286,8 @@ PASS	fmt/sweep-s21-static-verbs/v-kinds-all	-	-
 PASS	fmt/sweep-s21-static-verbs/plusv-scalars	-	-
 PASS	fmt/sweep-s21-static-verbs/v-error-and-stringer	-	-
 PASS	fmt/sweep-s21-static-verbs/v-nil-ptr-handled	-	-
-FAIL	fmt/sweep-s21-static-verbs/t-named-bool	lean-observation	unsupported:?
-FAIL	fmt/sweep-s21-static-verbs/v-named-bool	lean-observation	unsupported:?
+FAIL	fmt/sweep-s21-static-verbs/t-named-bool	lean-observation	unsupported:convert-to-bool-arm
+FAIL	fmt/sweep-s21-static-verbs/v-named-bool	lean-observation	unsupported:convert-to-bool-arm
 PASS	fmt/sweep-s21-static-verbs/d-generic-body	-	-
 PASS	fmt/sweep-s21-static-verbs/width-kinds	-	-
 PASS	fmt/sweep-s21-static-verbs/const-expr-format	-	-

@@ -36,3 +36,4 @@ decoder-scope-wrong-declaration	error	but the wire names declaration
 decoder-duplicate-function-id	error	duplicate function id
 machine-panic	panic	runtime error:
 decoder-unseq-head-not-admitted	error	outside the admitted fragment
+convert-to-bool-arm	unsupported	conversion to GoLean.GoCore.Ty.bool
