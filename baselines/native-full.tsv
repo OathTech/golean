@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 6307 (5992 PASS / 315 FAIL)
+# cases: 6631 (6316 PASS / 315 FAIL)
 # re-pinned: 2026-10-27 [AGENT], lane frontend/fix-binding-1027 — BUG-300, 301, 302 (the S13 sweep) FIXED in tools/nativefrontend
 #   (the campaign plan's rule that a finding is fixed through the normal train, [USER] approved 2026-10-27, relayed): (1) emit.go
 #   emitDeclStmt lowers a grouped `var ( … )` declaration spec by spec (one `var` node per VarSpec, in source order, into the same
@@ -23,6 +23,345 @@
 #     scoping/sweep-s13-local-iface-dispatch/local-iface-satisfied                   FAIL/lean-observation error:decoder-duplicate-function-id → PASS
 #     scoping/sweep-s13-local-iface-dispatch/local-iface-two-funcs                   FAIL/lean-observation error:decoder-duplicate-function-id → PASS
 # cause keyed 2026-10-27 [AGENT coordinator], train-27 stage, from the stage's full run (scripts/coverage-cause --apply): the 16 rows that carried `?` — BUG-300/302's six `error:decoder-scope-wrong-declaration`, BUG-301's three `error:decoder-duplicate-function-id`, BUG-310's seven `panic:machine-panic` (the three table rows added at this stage); no row moved.
+# re-pinned: 2026-11-05 [AGENT], lane sweep/s11-kinds (on main 12d7a79a) — the defect-neighbourhood campaign's step 2, shape S11 (kinds, widths and
+#   float bit patterns; plan docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved 2026-10-27; members BUG-096, 094, 162, 055,
+#   043, 042, 174, 173): the shape's 2565-cell matrix probed on both sides — 2217 cells by this lane (gc go1.26.5 under the runners' pins
+#   against the frontend and native-json-run, floats observed as bit patterns), 335 covered by existing rows, 6 sites read, 7 out of scope
+#   by name — every probed value equal on both sides: no wrong wrap, truncation, sign extension, rounding or bit pattern at any width.
+#   NO existing row moved: 6179 + 324 = 6503; PASS 5820 + 324 = 6144; FAIL 359 + 0 = 359. No flip, no removal, no cause change (no
+#   runtime code changed: corpus and records only). NEW rows (324, 25 strict packages Corpus/coverage/exec/{ints/sweep-s11-{wrap-kinds,
+#   divmod-signs,shift-classes,shift-count-kinds,bitwise-kinds,conv-pairs,incdec-extremes,index-kinds,desugar-literals},floats/sweep-s11-
+#   {int-to-float,float-to-int,float32-rounding,bit-patterns,nan-compare,round-trips},builtins/sweep-s11-min-max-kinds,constants/sweep-s11-
+#   {boundaries,underflow},conversions/sweep-s11-string-rune,generics/sweep-s11-kind-ops,init/sweep-s11-kinds-in-init,multi-assign/sweep-s11-
+#   discard-kinds,sync/sweep-s11-waitgroup-width,atomics/sweep-s11-width,strconv/sweep-s11-width}/, every row born green; the strconv
+#   range-error row declares depth=64 under the strict-lane depth guard), appended at the end of the file, measured by CAPPED_MEM_MAX=64G
+#   capped scripts/ci --diff at the lane tree 89eb2a53 before this re-pin (its only drift: these 324 NEW ids), the rows taken from that run's
+#   artifacts/coverage/latest.tsv (2026-11-05, 911 s wall: differential 6503 = 5820 + 324 PASS + 359 FAIL, negative 563 = 537 + 24 PASS + 2 FAIL,
+#   every gate step ok); the --diff at the tip judges. FINDINGS: none (no BUG entry, no red-first row; BUG-380–389 unused). The rows:
+#     atomics/sweep-s11-width/typed-wraps                                      PASS/-
+#     atomics/sweep-s11-width/func-wraps                                       PASS/-
+#     atomics/sweep-s11-width/add-returns                                      PASS/-
+#     builtins/sweep-s11-min-max-kinds/int8                                    PASS/-
+#     builtins/sweep-s11-min-max-kinds/int16                                   PASS/-
+#     builtins/sweep-s11-min-max-kinds/int32                                   PASS/-
+#     builtins/sweep-s11-min-max-kinds/int64                                   PASS/-
+#     builtins/sweep-s11-min-max-kinds/int                                     PASS/-
+#     builtins/sweep-s11-min-max-kinds/uint8                                   PASS/-
+#     builtins/sweep-s11-min-max-kinds/uint16                                  PASS/-
+#     builtins/sweep-s11-min-max-kinds/uint32                                  PASS/-
+#     builtins/sweep-s11-min-max-kinds/uint64                                  PASS/-
+#     builtins/sweep-s11-min-max-kinds/uint                                    PASS/-
+#     builtins/sweep-s11-min-max-kinds/uintptr                                 PASS/-
+#     builtins/sweep-s11-min-max-kinds/constants-mixed                         PASS/-
+#     builtins/sweep-s11-min-max-kinds/nan-positions                           PASS/-
+#     builtins/sweep-s11-min-max-kinds/nan-positions-32                        PASS/-
+#     builtins/sweep-s11-min-max-kinds/signed-zeros-3                          PASS/-
+#     builtins/sweep-s11-min-max-kinds/signed-zeros-32                         PASS/-
+#     builtins/sweep-s11-min-max-kinds/infinities                              PASS/-
+#     builtins/sweep-s11-min-max-kinds/payload-3-args                          PASS/-
+#     builtins/sweep-s11-min-max-kinds/untyped-at-32                           PASS/-
+#     builtins/sweep-s11-min-max-kinds/defined-float                           PASS/-
+#     constants/sweep-s11-boundaries/typed-extremes                            PASS/-
+#     constants/sweep-s11-boundaries/folding                                   PASS/-
+#     constants/sweep-s11-boundaries/into-floats                               PASS/-
+#     constants/sweep-s11-boundaries/float-rationals                           PASS/-
+#     constants/sweep-s11-boundaries/float-count-index                         PASS/-
+#     constants/sweep-s11-boundaries/untyped-defaults                          PASS/-
+#     constants/sweep-s11-boundaries/defined-kinds                             PASS/-
+#     constants/sweep-s11-underflow                                            PASS/-
+#     conversions/sweep-s11-string-rune/rune-boundaries                        PASS/-
+#     conversions/sweep-s11-string-rune/rune-high                              PASS/-
+#     conversions/sweep-s11-string-rune/other-kinds                            PASS/-
+#     conversions/sweep-s11-string-rune/to-defined                             PASS/-
+#     conversions/sweep-s11-string-rune/generic                                PASS/-
+#     floats/sweep-s11-bit-patterns/signed-zero-productions                    PASS/-
+#     floats/sweep-s11-bit-patterns/signed-zero-conversions                    PASS/-
+#     floats/sweep-s11-bit-patterns/denormal-arith                             PASS/-
+#     floats/sweep-s11-bit-patterns/denormal-compare-convert                   PASS/-
+#     floats/sweep-s11-bit-patterns/infinity-productions                       PASS/-
+#     floats/sweep-s11-bit-patterns/infinity-rounding                          PASS/-
+#     floats/sweep-s11-bit-patterns/extreme-literals                           PASS/-
+#     floats/sweep-s11-bit-patterns/math-constants                             PASS/-
+#     floats/sweep-s11-bit-patterns/nan-payload-round-trips                    PASS/-
+#     floats/sweep-s11-float-to-int/f64-signed                                 PASS/-
+#     floats/sweep-s11-float-to-int/f64-unsigned                               PASS/-
+#     floats/sweep-s11-float-to-int/f64-exact-bounds                           PASS/-
+#     floats/sweep-s11-float-to-int/f32-targets                                PASS/-
+#     floats/sweep-s11-float-to-int/uintptr-targets                            PASS/-
+#     floats/sweep-s11-float-to-int/defined                                    PASS/-
+#     floats/sweep-s11-float32-rounding/per-op                                 PASS/-
+#     floats/sweep-s11-float32-rounding/ties-at-max                            PASS/-
+#     floats/sweep-s11-float32-rounding/denormals                              PASS/-
+#     floats/sweep-s11-float32-rounding/fma-shape                              PASS/-
+#     floats/sweep-s11-float32-rounding/cancellation                           PASS/-
+#     floats/sweep-s11-float32-rounding/narrow-ties                            PASS/-
+#     floats/sweep-s11-float32-rounding/narrow-denormals                       PASS/-
+#     floats/sweep-s11-float32-rounding/narrow-overflow                        PASS/-
+#     floats/sweep-s11-float32-rounding/narrow-widen-specials                  PASS/-
+#     floats/sweep-s11-int-to-float/f64-int64-9223372036854775807              PASS/-
+#     floats/sweep-s11-int-to-float/f64-int64-m9223372036854775808             PASS/-
+#     floats/sweep-s11-int-to-float/f64-uint64-18446744073709551615            PASS/-
+#     floats/sweep-s11-int-to-float/f64-uint64-9223372036854775808             PASS/-
+#     floats/sweep-s11-int-to-float/f64-uint64-9223372036854775809             PASS/-
+#     floats/sweep-s11-int-to-float/f64-uint64-9223372036854776832             PASS/-
+#     floats/sweep-s11-int-to-float/f64-uint64-9223372036854776833             PASS/-
+#     floats/sweep-s11-int-to-float/f64-uint64-9223372036854778880             PASS/-
+#     floats/sweep-s11-int-to-float/f64-uint64-9223372036854777855             PASS/-
+#     floats/sweep-s11-int-to-float/f64-int64-9007199254740993                 PASS/-
+#     floats/sweep-s11-int-to-float/f64-int64-9007199254740994                 PASS/-
+#     floats/sweep-s11-int-to-float/f64-int64-9007199254740995                 PASS/-
+#     floats/sweep-s11-int-to-float/f64-int64-9007199254740997                 PASS/-
+#     floats/sweep-s11-int-to-float/f64-int64-m9007199254740993                PASS/-
+#     floats/sweep-s11-int-to-float/f64-int64-m9007199254740995                PASS/-
+#     floats/sweep-s11-int-to-float/f64-uint32-4294967295                      PASS/-
+#     floats/sweep-s11-int-to-float/f64-int32-m2147483648                      PASS/-
+#     floats/sweep-s11-int-to-float/f64-int8-m128                              PASS/-
+#     floats/sweep-s11-int-to-float/f64-int16-32767                            PASS/-
+#     floats/sweep-s11-int-to-float/f64-uint8-255                              PASS/-
+#     floats/sweep-s11-int-to-float/f64-uintptr-18446744073709551615           PASS/-
+#     floats/sweep-s11-int-to-float/f64-int-m9223372036854775807               PASS/-
+#     floats/sweep-s11-int-to-float/f32-int32-16777217                         PASS/-
+#     floats/sweep-s11-int-to-float/f32-int32-16777218                         PASS/-
+#     floats/sweep-s11-int-to-float/f32-int32-16777219                         PASS/-
+#     floats/sweep-s11-int-to-float/f32-int32-m16777217                        PASS/-
+#     floats/sweep-s11-int-to-float/f32-int64-9223372036854775807              PASS/-
+#     floats/sweep-s11-int-to-float/f32-uint64-18446744073709551615            PASS/-
+#     floats/sweep-s11-int-to-float/f32-uint64-9223372586610589696             PASS/-
+#     floats/sweep-s11-int-to-float/f32-uint64-9223372586610589697             PASS/-
+#     floats/sweep-s11-int-to-float/f32-int32-m2147483648                      PASS/-
+#     floats/sweep-s11-int-to-float/f32-uint32-4294967295                      PASS/-
+#     floats/sweep-s11-int-to-float/f32-int64-9007199791611905                 PASS/-
+#     floats/sweep-s11-int-to-float/f32-int64-m9007199791611905                PASS/-
+#     floats/sweep-s11-int-to-float/f32-int16-m32768                           PASS/-
+#     floats/sweep-s11-int-to-float/f32-uint16-65535                           PASS/-
+#     floats/sweep-s11-int-to-float/f32-uintptr-16777217                       PASS/-
+#     floats/sweep-s11-int-to-float/f32-int-16777221                           PASS/-
+#     floats/sweep-s11-int-to-float/defined-and-rune                           PASS/-
+#     floats/sweep-s11-int-to-float/constants                                  PASS/-
+#     floats/sweep-s11-nan-compare/left-64                                     PASS/-
+#     floats/sweep-s11-nan-compare/right-64                                    PASS/-
+#     floats/sweep-s11-nan-compare/both-64                                     PASS/-
+#     floats/sweep-s11-nan-compare/left-32                                     PASS/-
+#     floats/sweep-s11-nan-compare/right-32                                    PASS/-
+#     floats/sweep-s11-nan-compare/both-32                                     PASS/-
+#     floats/sweep-s11-nan-compare/versus-specials                             PASS/-
+#     floats/sweep-s11-nan-compare/negated-forms                               PASS/-
+#     floats/sweep-s11-nan-compare/switch                                      PASS/-
+#     floats/sweep-s11-nan-compare/payload                                     PASS/-
+#     floats/sweep-s11-nan-compare/defined-and-controls                        PASS/-
+#     floats/sweep-s11-round-trips/int64                                       PASS/-
+#     floats/sweep-s11-round-trips/float64                                     PASS/-
+#     floats/sweep-s11-round-trips/uint64                                      PASS/-
+#     floats/sweep-s11-round-trips/narrow                                      PASS/-
+#     generics/sweep-s11-kind-ops/wrap-kinds                                   PASS/-
+#     generics/sweep-s11-kind-ops/shift-kinds                                  PASS/-
+#     generics/sweep-s11-kind-ops/compl-conv                                   PASS/-
+#     generics/sweep-s11-kind-ops/incdec-minmax                                PASS/-
+#     generics/sweep-s11-kind-ops/div-range                                    PASS/-
+#     generics/sweep-s11-kind-ops/lit-shift-by-t                               PASS/-
+#     generics/sweep-s11-kind-ops/floats                                       PASS/-
+#     init/sweep-s11-kinds-in-init                                             PASS/-
+#     ints/sweep-s11-bitwise-kinds/int8                                        PASS/-
+#     ints/sweep-s11-bitwise-kinds/int16                                       PASS/-
+#     ints/sweep-s11-bitwise-kinds/int32                                       PASS/-
+#     ints/sweep-s11-bitwise-kinds/int64                                       PASS/-
+#     ints/sweep-s11-bitwise-kinds/int                                         PASS/-
+#     ints/sweep-s11-bitwise-kinds/uint8                                       PASS/-
+#     ints/sweep-s11-bitwise-kinds/uint16                                      PASS/-
+#     ints/sweep-s11-bitwise-kinds/uint32                                      PASS/-
+#     ints/sweep-s11-bitwise-kinds/uint64                                      PASS/-
+#     ints/sweep-s11-bitwise-kinds/uint                                        PASS/-
+#     ints/sweep-s11-bitwise-kinds/uintptr                                     PASS/-
+#     ints/sweep-s11-bitwise-kinds/compound-int8                               PASS/-
+#     ints/sweep-s11-bitwise-kinds/const-operands                              PASS/-
+#     ints/sweep-s11-conv-pairs/int8-min                                       PASS/-
+#     ints/sweep-s11-conv-pairs/int8-max                                       PASS/-
+#     ints/sweep-s11-conv-pairs/int8-pattern                                   PASS/-
+#     ints/sweep-s11-conv-pairs/int8-negone                                    PASS/-
+#     ints/sweep-s11-conv-pairs/int16-min                                      PASS/-
+#     ints/sweep-s11-conv-pairs/int16-max                                      PASS/-
+#     ints/sweep-s11-conv-pairs/int16-pattern                                  PASS/-
+#     ints/sweep-s11-conv-pairs/int16-negone                                   PASS/-
+#     ints/sweep-s11-conv-pairs/int32-min                                      PASS/-
+#     ints/sweep-s11-conv-pairs/int32-max                                      PASS/-
+#     ints/sweep-s11-conv-pairs/int32-pattern                                  PASS/-
+#     ints/sweep-s11-conv-pairs/int32-negone                                   PASS/-
+#     ints/sweep-s11-conv-pairs/int64-min                                      PASS/-
+#     ints/sweep-s11-conv-pairs/int64-max                                      PASS/-
+#     ints/sweep-s11-conv-pairs/int64-pattern                                  PASS/-
+#     ints/sweep-s11-conv-pairs/int64-negone                                   PASS/-
+#     ints/sweep-s11-conv-pairs/int-min                                        PASS/-
+#     ints/sweep-s11-conv-pairs/int-max                                        PASS/-
+#     ints/sweep-s11-conv-pairs/int-pattern                                    PASS/-
+#     ints/sweep-s11-conv-pairs/int-negone                                     PASS/-
+#     ints/sweep-s11-conv-pairs/uint8-min                                      PASS/-
+#     ints/sweep-s11-conv-pairs/uint8-max                                      PASS/-
+#     ints/sweep-s11-conv-pairs/uint8-pattern                                  PASS/-
+#     ints/sweep-s11-conv-pairs/uint16-min                                     PASS/-
+#     ints/sweep-s11-conv-pairs/uint16-max                                     PASS/-
+#     ints/sweep-s11-conv-pairs/uint16-pattern                                 PASS/-
+#     ints/sweep-s11-conv-pairs/uint32-min                                     PASS/-
+#     ints/sweep-s11-conv-pairs/uint32-max                                     PASS/-
+#     ints/sweep-s11-conv-pairs/uint32-pattern                                 PASS/-
+#     ints/sweep-s11-conv-pairs/uint64-min                                     PASS/-
+#     ints/sweep-s11-conv-pairs/uint64-max                                     PASS/-
+#     ints/sweep-s11-conv-pairs/uint64-pattern                                 PASS/-
+#     ints/sweep-s11-conv-pairs/uint-min                                       PASS/-
+#     ints/sweep-s11-conv-pairs/uint-max                                       PASS/-
+#     ints/sweep-s11-conv-pairs/uint-pattern                                   PASS/-
+#     ints/sweep-s11-conv-pairs/uintptr-min                                    PASS/-
+#     ints/sweep-s11-conv-pairs/uintptr-max                                    PASS/-
+#     ints/sweep-s11-conv-pairs/uintptr-pattern                                PASS/-
+#     ints/sweep-s11-conv-pairs/defined-sources                                PASS/-
+#     ints/sweep-s11-conv-pairs/defined-targets                                PASS/-
+#     ints/sweep-s11-conv-pairs/aliases                                        PASS/-
+#     ints/sweep-s11-conv-pairs/chained                                        PASS/-
+#     ints/sweep-s11-conv-pairs/constants-at-defined                           PASS/-
+#     ints/sweep-s11-desugar-literals/defined-int8                             PASS/-
+#     ints/sweep-s11-desugar-literals/defined-int16                            PASS/-
+#     ints/sweep-s11-desugar-literals/defined-int32                            PASS/-
+#     ints/sweep-s11-desugar-literals/defined-int64                            PASS/-
+#     ints/sweep-s11-desugar-literals/defined-int                              PASS/-
+#     ints/sweep-s11-desugar-literals/defined-unsigned                         PASS/-
+#     ints/sweep-s11-desugar-literals/defined-float32                          PASS/-
+#     ints/sweep-s11-desugar-literals/range-uint8-max                          PASS/-
+#     ints/sweep-s11-desugar-literals/range-int8-max                           PASS/-
+#     ints/sweep-s11-desugar-literals/range-wide-kinds                         PASS/-
+#     ints/sweep-s11-desugar-literals/range-typed-constants                    PASS/-
+#     ints/sweep-s11-desugar-literals/range-loop-var-modified                  PASS/-
+#     ints/sweep-s11-desugar-literals/range-defined-method                     PASS/-
+#     ints/sweep-s11-desugar-literals/map-compound-kinds                       PASS/-
+#     ints/sweep-s11-desugar-literals/map-compound-float32                     PASS/-
+#     ints/sweep-s11-divmod-signs/int8                                         PASS/-
+#     ints/sweep-s11-divmod-signs/int16                                        PASS/-
+#     ints/sweep-s11-divmod-signs/int32                                        PASS/-
+#     ints/sweep-s11-divmod-signs/int64                                        PASS/-
+#     ints/sweep-s11-divmod-signs/int                                          PASS/-
+#     ints/sweep-s11-divmod-signs/uint8                                        PASS/-
+#     ints/sweep-s11-divmod-signs/uint16                                       PASS/-
+#     ints/sweep-s11-divmod-signs/uint32                                       PASS/-
+#     ints/sweep-s11-divmod-signs/uint64                                       PASS/-
+#     ints/sweep-s11-divmod-signs/uint                                         PASS/-
+#     ints/sweep-s11-divmod-signs/uintptr                                      PASS/-
+#     ints/sweep-s11-divmod-signs/defined-int32                                PASS/-
+#     ints/sweep-s11-divmod-signs/compound                                     PASS/-
+#     ints/sweep-s11-divmod-signs/const-dividend-neg                           PASS/-
+#     ints/sweep-s11-divmod-signs/const-dividend-pos                           PASS/-
+#     ints/sweep-s11-incdec-extremes/int8                                      PASS/-
+#     ints/sweep-s11-incdec-extremes/int16                                     PASS/-
+#     ints/sweep-s11-incdec-extremes/int32                                     PASS/-
+#     ints/sweep-s11-incdec-extremes/int64                                     PASS/-
+#     ints/sweep-s11-incdec-extremes/int                                       PASS/-
+#     ints/sweep-s11-incdec-extremes/uint8                                     PASS/-
+#     ints/sweep-s11-incdec-extremes/uint16                                    PASS/-
+#     ints/sweep-s11-incdec-extremes/uint32                                    PASS/-
+#     ints/sweep-s11-incdec-extremes/uint64                                    PASS/-
+#     ints/sweep-s11-incdec-extremes/uint                                      PASS/-
+#     ints/sweep-s11-incdec-extremes/uintptr                                   PASS/-
+#     ints/sweep-s11-incdec-extremes/defined                                   PASS/-
+#     ints/sweep-s11-incdec-extremes/aliases                                   PASS/-
+#     ints/sweep-s11-incdec-extremes/field                                     PASS/-
+#     ints/sweep-s11-incdec-extremes/elements                                  PASS/-
+#     ints/sweep-s11-incdec-extremes/pointer                                   PASS/-
+#     ints/sweep-s11-incdec-extremes/floats-absorbed                           PASS/-
+#     ints/sweep-s11-index-kinds/every-kind                                    PASS/-
+#     ints/sweep-s11-index-kinds/string-and-array                              PASS/-
+#     ints/sweep-s11-index-kinds/slice-mixed-kinds                             PASS/-
+#     ints/sweep-s11-index-kinds/make-with-kinds                               PASS/-
+#     ints/sweep-s11-index-kinds/array-sizes-by-kind                           PASS/-
+#     ints/sweep-s11-index-kinds/len-cap-arithmetic                            PASS/-
+#     ints/sweep-s11-index-kinds/panic-uint8-past-len                          PASS/-
+#     ints/sweep-s11-index-kinds/panic-uint64-huge                             PASS/-
+#     ints/sweep-s11-index-kinds/panic-int8-min                                PASS/-
+#     ints/sweep-s11-index-kinds/panic-uint32-max                              PASS/-
+#     ints/sweep-s11-index-kinds/panic-uintptr-past-len                        PASS/-
+#     ints/sweep-s11-index-kinds/panic-rune-negative                           PASS/-
+#     ints/sweep-s11-index-kinds/panic-int16-min-array                         PASS/-
+#     ints/sweep-s11-index-kinds/panic-slice-high-uint8                        PASS/-
+#     ints/sweep-s11-shift-classes/shl-int8-pos                                PASS/-
+#     ints/sweep-s11-shift-classes/shl-int8-neg                                PASS/-
+#     ints/sweep-s11-shift-classes/shl-int8-negone                             PASS/-
+#     ints/sweep-s11-shift-classes/shr-int8-pos                                PASS/-
+#     ints/sweep-s11-shift-classes/shr-int8-neg                                PASS/-
+#     ints/sweep-s11-shift-classes/shr-int8-negone                             PASS/-
+#     ints/sweep-s11-shift-classes/shl-int16-pos                               PASS/-
+#     ints/sweep-s11-shift-classes/shl-int16-neg                               PASS/-
+#     ints/sweep-s11-shift-classes/shl-int16-negone                            PASS/-
+#     ints/sweep-s11-shift-classes/shr-int16-pos                               PASS/-
+#     ints/sweep-s11-shift-classes/shr-int16-neg                               PASS/-
+#     ints/sweep-s11-shift-classes/shr-int16-negone                            PASS/-
+#     ints/sweep-s11-shift-classes/shl-int32-pos                               PASS/-
+#     ints/sweep-s11-shift-classes/shl-int32-neg                               PASS/-
+#     ints/sweep-s11-shift-classes/shl-int32-negone                            PASS/-
+#     ints/sweep-s11-shift-classes/shr-int32-pos                               PASS/-
+#     ints/sweep-s11-shift-classes/shr-int32-neg                               PASS/-
+#     ints/sweep-s11-shift-classes/shr-int32-negone                            PASS/-
+#     ints/sweep-s11-shift-classes/shl-int64-pos                               PASS/-
+#     ints/sweep-s11-shift-classes/shl-int64-neg                               PASS/-
+#     ints/sweep-s11-shift-classes/shl-int64-negone                            PASS/-
+#     ints/sweep-s11-shift-classes/shr-int64-pos                               PASS/-
+#     ints/sweep-s11-shift-classes/shr-int64-neg                               PASS/-
+#     ints/sweep-s11-shift-classes/shr-int64-negone                            PASS/-
+#     ints/sweep-s11-shift-classes/shl-int-pos                                 PASS/-
+#     ints/sweep-s11-shift-classes/shl-int-neg                                 PASS/-
+#     ints/sweep-s11-shift-classes/shl-int-negone                              PASS/-
+#     ints/sweep-s11-shift-classes/shr-int-pos                                 PASS/-
+#     ints/sweep-s11-shift-classes/shr-int-neg                                 PASS/-
+#     ints/sweep-s11-shift-classes/shr-int-negone                              PASS/-
+#     ints/sweep-s11-shift-classes/shl-uint8-pos                               PASS/-
+#     ints/sweep-s11-shift-classes/shr-uint8-pos                               PASS/-
+#     ints/sweep-s11-shift-classes/shl-uint16-pos                              PASS/-
+#     ints/sweep-s11-shift-classes/shr-uint16-pos                              PASS/-
+#     ints/sweep-s11-shift-classes/shl-uint32-pos                              PASS/-
+#     ints/sweep-s11-shift-classes/shr-uint32-pos                              PASS/-
+#     ints/sweep-s11-shift-classes/shl-uint64-pos                              PASS/-
+#     ints/sweep-s11-shift-classes/shr-uint64-pos                              PASS/-
+#     ints/sweep-s11-shift-classes/shl-uint-pos                                PASS/-
+#     ints/sweep-s11-shift-classes/shr-uint-pos                                PASS/-
+#     ints/sweep-s11-shift-classes/shl-uintptr-pos                             PASS/-
+#     ints/sweep-s11-shift-classes/shr-uintptr-pos                             PASS/-
+#     ints/sweep-s11-shift-count-kinds/count-kinds-at-width                    PASS/-
+#     ints/sweep-s11-shift-count-kinds/count-kinds-compound                    PASS/-
+#     ints/sweep-s11-shift-count-kinds/constant-counts-past-width              PASS/-
+#     ints/sweep-s11-shift-count-kinds/untyped-left-operand                    PASS/-
+#     ints/sweep-s11-shift-count-kinds/untyped-left-explicit                   PASS/-
+#     ints/sweep-s11-shift-count-kinds/defined-and-routes                      PASS/-
+#     ints/sweep-s11-wrap-kinds/int8                                           PASS/-
+#     ints/sweep-s11-wrap-kinds/int16                                          PASS/-
+#     ints/sweep-s11-wrap-kinds/int32                                          PASS/-
+#     ints/sweep-s11-wrap-kinds/int64                                          PASS/-
+#     ints/sweep-s11-wrap-kinds/int                                            PASS/-
+#     ints/sweep-s11-wrap-kinds/uint8                                          PASS/-
+#     ints/sweep-s11-wrap-kinds/uint16                                         PASS/-
+#     ints/sweep-s11-wrap-kinds/uint32                                         PASS/-
+#     ints/sweep-s11-wrap-kinds/uint64                                         PASS/-
+#     ints/sweep-s11-wrap-kinds/uint                                           PASS/-
+#     ints/sweep-s11-wrap-kinds/uintptr                                        PASS/-
+#     ints/sweep-s11-wrap-kinds/byte                                           PASS/-
+#     ints/sweep-s11-wrap-kinds/rune                                           PASS/-
+#     ints/sweep-s11-wrap-kinds/defined-int8                                   PASS/-
+#     ints/sweep-s11-wrap-kinds/defined-uint16                                 PASS/-
+#     ints/sweep-s11-wrap-kinds/defined-int64                                  PASS/-
+#     ints/sweep-s11-wrap-kinds/defined-uint64                                 PASS/-
+#     ints/sweep-s11-wrap-kinds/compound-int8                                  PASS/-
+#     ints/sweep-s11-wrap-kinds/compound-uint8                                 PASS/-
+#     ints/sweep-s11-wrap-kinds/compound-int64                                 PASS/-
+#     ints/sweep-s11-wrap-kinds/compound-uint64                                PASS/-
+#     multi-assign/sweep-s11-discard-kinds/scalars                             PASS/-
+#     multi-assign/sweep-s11-discard-kinds/composites                          PASS/-
+#     multi-assign/sweep-s11-discard-kinds/multi-value                         PASS/-
+#     multi-assign/sweep-s11-discard-kinds/receive-and-vars                    PASS/-
+#     strconv/sweep-s11-width/format-widths                                    PASS/-
+#     strconv/sweep-s11-width/parse-happy-widths                               PASS/-
+#     strconv/sweep-s11-width/parse-range-errors                               PASS/-
+#     sync/sweep-s11-waitgroup-width/add-max-then-one                          PASS/-
+#     sync/sweep-s11-waitgroup-width/add-two-pow-32                            PASS/-
+#     sync/sweep-s11-waitgroup-width/add-two-pow-32-plus-one                   PASS/-
+#     sync/sweep-s11-waitgroup-width/add-neg-two-pow-31                        PASS/-
+#     sync/sweep-s11-waitgroup-width/add-max-cancelled                         PASS/-
+#     sync/sweep-s11-waitgroup-width/done-at-zero                              PASS/-
+#     sync/sweep-s11-waitgroup-width/add-min-int64                             PASS/-
+#     sync/sweep-s11-waitgroup-width/add-below-neg-two-pow-31                  PASS/-
 # re-pinned: 2026-11-05 [AGENT], lane sweep/s18-sizes (rebased onto main 12d7a79a) — the defect-neighbourhood campaign's step 2, shape S18 (implementation-
 #   specific sizes; plan docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved 2026-10-27; members BUG-021, BUG-118):
 #   the shape's 1055-cell matrix probed on both sides — 1042 cells by this lane (gc go1.26.5 plain and -race under the runners' pins
@@ -11061,3 +11400,327 @@ PASS	strings/sweep-s18-conv-singletons/runes-8193-nomut	-	-
 PASS	strings/sweep-s18-conv-singletons/runes-defined-const	-	-
 PASS	strings/sweep-s18-conv-singletons/runes-invalid-40-nomut	-	-
 PASS	strings/sweep-s18-conv-singletons/runes-multibyte-33-esc	-	-
+PASS	atomics/sweep-s11-width/typed-wraps	-	-
+PASS	atomics/sweep-s11-width/func-wraps	-	-
+PASS	atomics/sweep-s11-width/add-returns	-	-
+PASS	builtins/sweep-s11-min-max-kinds/int8	-	-
+PASS	builtins/sweep-s11-min-max-kinds/int16	-	-
+PASS	builtins/sweep-s11-min-max-kinds/int32	-	-
+PASS	builtins/sweep-s11-min-max-kinds/int64	-	-
+PASS	builtins/sweep-s11-min-max-kinds/int	-	-
+PASS	builtins/sweep-s11-min-max-kinds/uint8	-	-
+PASS	builtins/sweep-s11-min-max-kinds/uint16	-	-
+PASS	builtins/sweep-s11-min-max-kinds/uint32	-	-
+PASS	builtins/sweep-s11-min-max-kinds/uint64	-	-
+PASS	builtins/sweep-s11-min-max-kinds/uint	-	-
+PASS	builtins/sweep-s11-min-max-kinds/uintptr	-	-
+PASS	builtins/sweep-s11-min-max-kinds/constants-mixed	-	-
+PASS	builtins/sweep-s11-min-max-kinds/nan-positions	-	-
+PASS	builtins/sweep-s11-min-max-kinds/nan-positions-32	-	-
+PASS	builtins/sweep-s11-min-max-kinds/signed-zeros-3	-	-
+PASS	builtins/sweep-s11-min-max-kinds/signed-zeros-32	-	-
+PASS	builtins/sweep-s11-min-max-kinds/infinities	-	-
+PASS	builtins/sweep-s11-min-max-kinds/payload-3-args	-	-
+PASS	builtins/sweep-s11-min-max-kinds/untyped-at-32	-	-
+PASS	builtins/sweep-s11-min-max-kinds/defined-float	-	-
+PASS	constants/sweep-s11-boundaries/typed-extremes	-	-
+PASS	constants/sweep-s11-boundaries/folding	-	-
+PASS	constants/sweep-s11-boundaries/into-floats	-	-
+PASS	constants/sweep-s11-boundaries/float-rationals	-	-
+PASS	constants/sweep-s11-boundaries/float-count-index	-	-
+PASS	constants/sweep-s11-boundaries/untyped-defaults	-	-
+PASS	constants/sweep-s11-boundaries/defined-kinds	-	-
+PASS	constants/sweep-s11-underflow	-	-
+PASS	conversions/sweep-s11-string-rune/rune-boundaries	-	-
+PASS	conversions/sweep-s11-string-rune/rune-high	-	-
+PASS	conversions/sweep-s11-string-rune/other-kinds	-	-
+PASS	conversions/sweep-s11-string-rune/to-defined	-	-
+PASS	conversions/sweep-s11-string-rune/generic	-	-
+PASS	floats/sweep-s11-bit-patterns/signed-zero-productions	-	-
+PASS	floats/sweep-s11-bit-patterns/signed-zero-conversions	-	-
+PASS	floats/sweep-s11-bit-patterns/denormal-arith	-	-
+PASS	floats/sweep-s11-bit-patterns/denormal-compare-convert	-	-
+PASS	floats/sweep-s11-bit-patterns/infinity-productions	-	-
+PASS	floats/sweep-s11-bit-patterns/infinity-rounding	-	-
+PASS	floats/sweep-s11-bit-patterns/extreme-literals	-	-
+PASS	floats/sweep-s11-bit-patterns/math-constants	-	-
+PASS	floats/sweep-s11-bit-patterns/nan-payload-round-trips	-	-
+PASS	floats/sweep-s11-float-to-int/f64-signed	-	-
+PASS	floats/sweep-s11-float-to-int/f64-unsigned	-	-
+PASS	floats/sweep-s11-float-to-int/f64-exact-bounds	-	-
+PASS	floats/sweep-s11-float-to-int/f32-targets	-	-
+PASS	floats/sweep-s11-float-to-int/uintptr-targets	-	-
+PASS	floats/sweep-s11-float-to-int/defined	-	-
+PASS	floats/sweep-s11-float32-rounding/per-op	-	-
+PASS	floats/sweep-s11-float32-rounding/ties-at-max	-	-
+PASS	floats/sweep-s11-float32-rounding/denormals	-	-
+PASS	floats/sweep-s11-float32-rounding/fma-shape	-	-
+PASS	floats/sweep-s11-float32-rounding/cancellation	-	-
+PASS	floats/sweep-s11-float32-rounding/narrow-ties	-	-
+PASS	floats/sweep-s11-float32-rounding/narrow-denormals	-	-
+PASS	floats/sweep-s11-float32-rounding/narrow-overflow	-	-
+PASS	floats/sweep-s11-float32-rounding/narrow-widen-specials	-	-
+PASS	floats/sweep-s11-int-to-float/f64-int64-9223372036854775807	-	-
+PASS	floats/sweep-s11-int-to-float/f64-int64-m9223372036854775808	-	-
+PASS	floats/sweep-s11-int-to-float/f64-uint64-18446744073709551615	-	-
+PASS	floats/sweep-s11-int-to-float/f64-uint64-9223372036854775808	-	-
+PASS	floats/sweep-s11-int-to-float/f64-uint64-9223372036854775809	-	-
+PASS	floats/sweep-s11-int-to-float/f64-uint64-9223372036854776832	-	-
+PASS	floats/sweep-s11-int-to-float/f64-uint64-9223372036854776833	-	-
+PASS	floats/sweep-s11-int-to-float/f64-uint64-9223372036854778880	-	-
+PASS	floats/sweep-s11-int-to-float/f64-uint64-9223372036854777855	-	-
+PASS	floats/sweep-s11-int-to-float/f64-int64-9007199254740993	-	-
+PASS	floats/sweep-s11-int-to-float/f64-int64-9007199254740994	-	-
+PASS	floats/sweep-s11-int-to-float/f64-int64-9007199254740995	-	-
+PASS	floats/sweep-s11-int-to-float/f64-int64-9007199254740997	-	-
+PASS	floats/sweep-s11-int-to-float/f64-int64-m9007199254740993	-	-
+PASS	floats/sweep-s11-int-to-float/f64-int64-m9007199254740995	-	-
+PASS	floats/sweep-s11-int-to-float/f64-uint32-4294967295	-	-
+PASS	floats/sweep-s11-int-to-float/f64-int32-m2147483648	-	-
+PASS	floats/sweep-s11-int-to-float/f64-int8-m128	-	-
+PASS	floats/sweep-s11-int-to-float/f64-int16-32767	-	-
+PASS	floats/sweep-s11-int-to-float/f64-uint8-255	-	-
+PASS	floats/sweep-s11-int-to-float/f64-uintptr-18446744073709551615	-	-
+PASS	floats/sweep-s11-int-to-float/f64-int-m9223372036854775807	-	-
+PASS	floats/sweep-s11-int-to-float/f32-int32-16777217	-	-
+PASS	floats/sweep-s11-int-to-float/f32-int32-16777218	-	-
+PASS	floats/sweep-s11-int-to-float/f32-int32-16777219	-	-
+PASS	floats/sweep-s11-int-to-float/f32-int32-m16777217	-	-
+PASS	floats/sweep-s11-int-to-float/f32-int64-9223372036854775807	-	-
+PASS	floats/sweep-s11-int-to-float/f32-uint64-18446744073709551615	-	-
+PASS	floats/sweep-s11-int-to-float/f32-uint64-9223372586610589696	-	-
+PASS	floats/sweep-s11-int-to-float/f32-uint64-9223372586610589697	-	-
+PASS	floats/sweep-s11-int-to-float/f32-int32-m2147483648	-	-
+PASS	floats/sweep-s11-int-to-float/f32-uint32-4294967295	-	-
+PASS	floats/sweep-s11-int-to-float/f32-int64-9007199791611905	-	-
+PASS	floats/sweep-s11-int-to-float/f32-int64-m9007199791611905	-	-
+PASS	floats/sweep-s11-int-to-float/f32-int16-m32768	-	-
+PASS	floats/sweep-s11-int-to-float/f32-uint16-65535	-	-
+PASS	floats/sweep-s11-int-to-float/f32-uintptr-16777217	-	-
+PASS	floats/sweep-s11-int-to-float/f32-int-16777221	-	-
+PASS	floats/sweep-s11-int-to-float/defined-and-rune	-	-
+PASS	floats/sweep-s11-int-to-float/constants	-	-
+PASS	floats/sweep-s11-nan-compare/left-64	-	-
+PASS	floats/sweep-s11-nan-compare/right-64	-	-
+PASS	floats/sweep-s11-nan-compare/both-64	-	-
+PASS	floats/sweep-s11-nan-compare/left-32	-	-
+PASS	floats/sweep-s11-nan-compare/right-32	-	-
+PASS	floats/sweep-s11-nan-compare/both-32	-	-
+PASS	floats/sweep-s11-nan-compare/versus-specials	-	-
+PASS	floats/sweep-s11-nan-compare/negated-forms	-	-
+PASS	floats/sweep-s11-nan-compare/switch	-	-
+PASS	floats/sweep-s11-nan-compare/payload	-	-
+PASS	floats/sweep-s11-nan-compare/defined-and-controls	-	-
+PASS	floats/sweep-s11-round-trips/int64	-	-
+PASS	floats/sweep-s11-round-trips/float64	-	-
+PASS	floats/sweep-s11-round-trips/uint64	-	-
+PASS	floats/sweep-s11-round-trips/narrow	-	-
+PASS	generics/sweep-s11-kind-ops/wrap-kinds	-	-
+PASS	generics/sweep-s11-kind-ops/shift-kinds	-	-
+PASS	generics/sweep-s11-kind-ops/compl-conv	-	-
+PASS	generics/sweep-s11-kind-ops/incdec-minmax	-	-
+PASS	generics/sweep-s11-kind-ops/div-range	-	-
+PASS	generics/sweep-s11-kind-ops/lit-shift-by-t	-	-
+PASS	generics/sweep-s11-kind-ops/floats	-	-
+PASS	init/sweep-s11-kinds-in-init	-	-
+PASS	ints/sweep-s11-bitwise-kinds/int8	-	-
+PASS	ints/sweep-s11-bitwise-kinds/int16	-	-
+PASS	ints/sweep-s11-bitwise-kinds/int32	-	-
+PASS	ints/sweep-s11-bitwise-kinds/int64	-	-
+PASS	ints/sweep-s11-bitwise-kinds/int	-	-
+PASS	ints/sweep-s11-bitwise-kinds/uint8	-	-
+PASS	ints/sweep-s11-bitwise-kinds/uint16	-	-
+PASS	ints/sweep-s11-bitwise-kinds/uint32	-	-
+PASS	ints/sweep-s11-bitwise-kinds/uint64	-	-
+PASS	ints/sweep-s11-bitwise-kinds/uint	-	-
+PASS	ints/sweep-s11-bitwise-kinds/uintptr	-	-
+PASS	ints/sweep-s11-bitwise-kinds/compound-int8	-	-
+PASS	ints/sweep-s11-bitwise-kinds/const-operands	-	-
+PASS	ints/sweep-s11-conv-pairs/int8-min	-	-
+PASS	ints/sweep-s11-conv-pairs/int8-max	-	-
+PASS	ints/sweep-s11-conv-pairs/int8-pattern	-	-
+PASS	ints/sweep-s11-conv-pairs/int8-negone	-	-
+PASS	ints/sweep-s11-conv-pairs/int16-min	-	-
+PASS	ints/sweep-s11-conv-pairs/int16-max	-	-
+PASS	ints/sweep-s11-conv-pairs/int16-pattern	-	-
+PASS	ints/sweep-s11-conv-pairs/int16-negone	-	-
+PASS	ints/sweep-s11-conv-pairs/int32-min	-	-
+PASS	ints/sweep-s11-conv-pairs/int32-max	-	-
+PASS	ints/sweep-s11-conv-pairs/int32-pattern	-	-
+PASS	ints/sweep-s11-conv-pairs/int32-negone	-	-
+PASS	ints/sweep-s11-conv-pairs/int64-min	-	-
+PASS	ints/sweep-s11-conv-pairs/int64-max	-	-
+PASS	ints/sweep-s11-conv-pairs/int64-pattern	-	-
+PASS	ints/sweep-s11-conv-pairs/int64-negone	-	-
+PASS	ints/sweep-s11-conv-pairs/int-min	-	-
+PASS	ints/sweep-s11-conv-pairs/int-max	-	-
+PASS	ints/sweep-s11-conv-pairs/int-pattern	-	-
+PASS	ints/sweep-s11-conv-pairs/int-negone	-	-
+PASS	ints/sweep-s11-conv-pairs/uint8-min	-	-
+PASS	ints/sweep-s11-conv-pairs/uint8-max	-	-
+PASS	ints/sweep-s11-conv-pairs/uint8-pattern	-	-
+PASS	ints/sweep-s11-conv-pairs/uint16-min	-	-
+PASS	ints/sweep-s11-conv-pairs/uint16-max	-	-
+PASS	ints/sweep-s11-conv-pairs/uint16-pattern	-	-
+PASS	ints/sweep-s11-conv-pairs/uint32-min	-	-
+PASS	ints/sweep-s11-conv-pairs/uint32-max	-	-
+PASS	ints/sweep-s11-conv-pairs/uint32-pattern	-	-
+PASS	ints/sweep-s11-conv-pairs/uint64-min	-	-
+PASS	ints/sweep-s11-conv-pairs/uint64-max	-	-
+PASS	ints/sweep-s11-conv-pairs/uint64-pattern	-	-
+PASS	ints/sweep-s11-conv-pairs/uint-min	-	-
+PASS	ints/sweep-s11-conv-pairs/uint-max	-	-
+PASS	ints/sweep-s11-conv-pairs/uint-pattern	-	-
+PASS	ints/sweep-s11-conv-pairs/uintptr-min	-	-
+PASS	ints/sweep-s11-conv-pairs/uintptr-max	-	-
+PASS	ints/sweep-s11-conv-pairs/uintptr-pattern	-	-
+PASS	ints/sweep-s11-conv-pairs/defined-sources	-	-
+PASS	ints/sweep-s11-conv-pairs/defined-targets	-	-
+PASS	ints/sweep-s11-conv-pairs/aliases	-	-
+PASS	ints/sweep-s11-conv-pairs/chained	-	-
+PASS	ints/sweep-s11-conv-pairs/constants-at-defined	-	-
+PASS	ints/sweep-s11-desugar-literals/defined-int8	-	-
+PASS	ints/sweep-s11-desugar-literals/defined-int16	-	-
+PASS	ints/sweep-s11-desugar-literals/defined-int32	-	-
+PASS	ints/sweep-s11-desugar-literals/defined-int64	-	-
+PASS	ints/sweep-s11-desugar-literals/defined-int	-	-
+PASS	ints/sweep-s11-desugar-literals/defined-unsigned	-	-
+PASS	ints/sweep-s11-desugar-literals/defined-float32	-	-
+PASS	ints/sweep-s11-desugar-literals/range-uint8-max	-	-
+PASS	ints/sweep-s11-desugar-literals/range-int8-max	-	-
+PASS	ints/sweep-s11-desugar-literals/range-wide-kinds	-	-
+PASS	ints/sweep-s11-desugar-literals/range-typed-constants	-	-
+PASS	ints/sweep-s11-desugar-literals/range-loop-var-modified	-	-
+PASS	ints/sweep-s11-desugar-literals/range-defined-method	-	-
+PASS	ints/sweep-s11-desugar-literals/map-compound-kinds	-	-
+PASS	ints/sweep-s11-desugar-literals/map-compound-float32	-	-
+PASS	ints/sweep-s11-divmod-signs/int8	-	-
+PASS	ints/sweep-s11-divmod-signs/int16	-	-
+PASS	ints/sweep-s11-divmod-signs/int32	-	-
+PASS	ints/sweep-s11-divmod-signs/int64	-	-
+PASS	ints/sweep-s11-divmod-signs/int	-	-
+PASS	ints/sweep-s11-divmod-signs/uint8	-	-
+PASS	ints/sweep-s11-divmod-signs/uint16	-	-
+PASS	ints/sweep-s11-divmod-signs/uint32	-	-
+PASS	ints/sweep-s11-divmod-signs/uint64	-	-
+PASS	ints/sweep-s11-divmod-signs/uint	-	-
+PASS	ints/sweep-s11-divmod-signs/uintptr	-	-
+PASS	ints/sweep-s11-divmod-signs/defined-int32	-	-
+PASS	ints/sweep-s11-divmod-signs/compound	-	-
+PASS	ints/sweep-s11-divmod-signs/const-dividend-neg	-	-
+PASS	ints/sweep-s11-divmod-signs/const-dividend-pos	-	-
+PASS	ints/sweep-s11-incdec-extremes/int8	-	-
+PASS	ints/sweep-s11-incdec-extremes/int16	-	-
+PASS	ints/sweep-s11-incdec-extremes/int32	-	-
+PASS	ints/sweep-s11-incdec-extremes/int64	-	-
+PASS	ints/sweep-s11-incdec-extremes/int	-	-
+PASS	ints/sweep-s11-incdec-extremes/uint8	-	-
+PASS	ints/sweep-s11-incdec-extremes/uint16	-	-
+PASS	ints/sweep-s11-incdec-extremes/uint32	-	-
+PASS	ints/sweep-s11-incdec-extremes/uint64	-	-
+PASS	ints/sweep-s11-incdec-extremes/uint	-	-
+PASS	ints/sweep-s11-incdec-extremes/uintptr	-	-
+PASS	ints/sweep-s11-incdec-extremes/defined	-	-
+PASS	ints/sweep-s11-incdec-extremes/aliases	-	-
+PASS	ints/sweep-s11-incdec-extremes/field	-	-
+PASS	ints/sweep-s11-incdec-extremes/elements	-	-
+PASS	ints/sweep-s11-incdec-extremes/pointer	-	-
+PASS	ints/sweep-s11-incdec-extremes/floats-absorbed	-	-
+PASS	ints/sweep-s11-index-kinds/every-kind	-	-
+PASS	ints/sweep-s11-index-kinds/string-and-array	-	-
+PASS	ints/sweep-s11-index-kinds/slice-mixed-kinds	-	-
+PASS	ints/sweep-s11-index-kinds/make-with-kinds	-	-
+PASS	ints/sweep-s11-index-kinds/array-sizes-by-kind	-	-
+PASS	ints/sweep-s11-index-kinds/len-cap-arithmetic	-	-
+PASS	ints/sweep-s11-index-kinds/panic-uint8-past-len	-	-
+PASS	ints/sweep-s11-index-kinds/panic-uint64-huge	-	-
+PASS	ints/sweep-s11-index-kinds/panic-int8-min	-	-
+PASS	ints/sweep-s11-index-kinds/panic-uint32-max	-	-
+PASS	ints/sweep-s11-index-kinds/panic-uintptr-past-len	-	-
+PASS	ints/sweep-s11-index-kinds/panic-rune-negative	-	-
+PASS	ints/sweep-s11-index-kinds/panic-int16-min-array	-	-
+PASS	ints/sweep-s11-index-kinds/panic-slice-high-uint8	-	-
+PASS	ints/sweep-s11-shift-classes/shl-int8-pos	-	-
+PASS	ints/sweep-s11-shift-classes/shl-int8-neg	-	-
+PASS	ints/sweep-s11-shift-classes/shl-int8-negone	-	-
+PASS	ints/sweep-s11-shift-classes/shr-int8-pos	-	-
+PASS	ints/sweep-s11-shift-classes/shr-int8-neg	-	-
+PASS	ints/sweep-s11-shift-classes/shr-int8-negone	-	-
+PASS	ints/sweep-s11-shift-classes/shl-int16-pos	-	-
+PASS	ints/sweep-s11-shift-classes/shl-int16-neg	-	-
+PASS	ints/sweep-s11-shift-classes/shl-int16-negone	-	-
+PASS	ints/sweep-s11-shift-classes/shr-int16-pos	-	-
+PASS	ints/sweep-s11-shift-classes/shr-int16-neg	-	-
+PASS	ints/sweep-s11-shift-classes/shr-int16-negone	-	-
+PASS	ints/sweep-s11-shift-classes/shl-int32-pos	-	-
+PASS	ints/sweep-s11-shift-classes/shl-int32-neg	-	-
+PASS	ints/sweep-s11-shift-classes/shl-int32-negone	-	-
+PASS	ints/sweep-s11-shift-classes/shr-int32-pos	-	-
+PASS	ints/sweep-s11-shift-classes/shr-int32-neg	-	-
+PASS	ints/sweep-s11-shift-classes/shr-int32-negone	-	-
+PASS	ints/sweep-s11-shift-classes/shl-int64-pos	-	-
+PASS	ints/sweep-s11-shift-classes/shl-int64-neg	-	-
+PASS	ints/sweep-s11-shift-classes/shl-int64-negone	-	-
+PASS	ints/sweep-s11-shift-classes/shr-int64-pos	-	-
+PASS	ints/sweep-s11-shift-classes/shr-int64-neg	-	-
+PASS	ints/sweep-s11-shift-classes/shr-int64-negone	-	-
+PASS	ints/sweep-s11-shift-classes/shl-int-pos	-	-
+PASS	ints/sweep-s11-shift-classes/shl-int-neg	-	-
+PASS	ints/sweep-s11-shift-classes/shl-int-negone	-	-
+PASS	ints/sweep-s11-shift-classes/shr-int-pos	-	-
+PASS	ints/sweep-s11-shift-classes/shr-int-neg	-	-
+PASS	ints/sweep-s11-shift-classes/shr-int-negone	-	-
+PASS	ints/sweep-s11-shift-classes/shl-uint8-pos	-	-
+PASS	ints/sweep-s11-shift-classes/shr-uint8-pos	-	-
+PASS	ints/sweep-s11-shift-classes/shl-uint16-pos	-	-
+PASS	ints/sweep-s11-shift-classes/shr-uint16-pos	-	-
+PASS	ints/sweep-s11-shift-classes/shl-uint32-pos	-	-
+PASS	ints/sweep-s11-shift-classes/shr-uint32-pos	-	-
+PASS	ints/sweep-s11-shift-classes/shl-uint64-pos	-	-
+PASS	ints/sweep-s11-shift-classes/shr-uint64-pos	-	-
+PASS	ints/sweep-s11-shift-classes/shl-uint-pos	-	-
+PASS	ints/sweep-s11-shift-classes/shr-uint-pos	-	-
+PASS	ints/sweep-s11-shift-classes/shl-uintptr-pos	-	-
+PASS	ints/sweep-s11-shift-classes/shr-uintptr-pos	-	-
+PASS	ints/sweep-s11-shift-count-kinds/count-kinds-at-width	-	-
+PASS	ints/sweep-s11-shift-count-kinds/count-kinds-compound	-	-
+PASS	ints/sweep-s11-shift-count-kinds/constant-counts-past-width	-	-
+PASS	ints/sweep-s11-shift-count-kinds/untyped-left-operand	-	-
+PASS	ints/sweep-s11-shift-count-kinds/untyped-left-explicit	-	-
+PASS	ints/sweep-s11-shift-count-kinds/defined-and-routes	-	-
+PASS	ints/sweep-s11-wrap-kinds/int8	-	-
+PASS	ints/sweep-s11-wrap-kinds/int16	-	-
+PASS	ints/sweep-s11-wrap-kinds/int32	-	-
+PASS	ints/sweep-s11-wrap-kinds/int64	-	-
+PASS	ints/sweep-s11-wrap-kinds/int	-	-
+PASS	ints/sweep-s11-wrap-kinds/uint8	-	-
+PASS	ints/sweep-s11-wrap-kinds/uint16	-	-
+PASS	ints/sweep-s11-wrap-kinds/uint32	-	-
+PASS	ints/sweep-s11-wrap-kinds/uint64	-	-
+PASS	ints/sweep-s11-wrap-kinds/uint	-	-
+PASS	ints/sweep-s11-wrap-kinds/uintptr	-	-
+PASS	ints/sweep-s11-wrap-kinds/byte	-	-
+PASS	ints/sweep-s11-wrap-kinds/rune	-	-
+PASS	ints/sweep-s11-wrap-kinds/defined-int8	-	-
+PASS	ints/sweep-s11-wrap-kinds/defined-uint16	-	-
+PASS	ints/sweep-s11-wrap-kinds/defined-int64	-	-
+PASS	ints/sweep-s11-wrap-kinds/defined-uint64	-	-
+PASS	ints/sweep-s11-wrap-kinds/compound-int8	-	-
+PASS	ints/sweep-s11-wrap-kinds/compound-uint8	-	-
+PASS	ints/sweep-s11-wrap-kinds/compound-int64	-	-
+PASS	ints/sweep-s11-wrap-kinds/compound-uint64	-	-
+PASS	multi-assign/sweep-s11-discard-kinds/scalars	-	-
+PASS	multi-assign/sweep-s11-discard-kinds/composites	-	-
+PASS	multi-assign/sweep-s11-discard-kinds/multi-value	-	-
+PASS	multi-assign/sweep-s11-discard-kinds/receive-and-vars	-	-
+PASS	strconv/sweep-s11-width/format-widths	-	-
+PASS	strconv/sweep-s11-width/parse-happy-widths	-	-
+PASS	strconv/sweep-s11-width/parse-range-errors	-	-
+PASS	sync/sweep-s11-waitgroup-width/add-max-then-one	-	-
+PASS	sync/sweep-s11-waitgroup-width/add-two-pow-32	-	-
+PASS	sync/sweep-s11-waitgroup-width/add-two-pow-32-plus-one	-	-
+PASS	sync/sweep-s11-waitgroup-width/add-neg-two-pow-31	-	-
+PASS	sync/sweep-s11-waitgroup-width/add-max-cancelled	-	-
+PASS	sync/sweep-s11-waitgroup-width/done-at-zero	-	-
+PASS	sync/sweep-s11-waitgroup-width/add-min-int64	-	-
+PASS	sync/sweep-s11-waitgroup-width/add-below-neg-two-pow-31	-	-

@@ -1,11 +1,42 @@
 # GoLean negative-corpus (compile-rejection) baseline
 # recorded: 2026-08-18  commit: f68a4d86+ (spec-truth P3 slice 2)  oracle: go build (rejection)  [header corrected 2026-08-31: the old "+ frontend fail-closed" conjunct claimed a check that does not exist — scripts/coverage-negative invokes no GoLean tool (p2-fact claim 5)]
-# manifest_cases: 542  pass: 540  fail: 2
+# manifest_cases: 566  pass: 564  fail: 2
 # re-pinned: 2026-10-27 [AGENT], lane frontend/fix-admission-1027 — BUG-217 and BUG-219 fixed (the main module's path judged
 #   against the pinned GOROOT and gc's reserved names; cmd/go's import rules mirrored at discovery): NINE rows FAIL
 #   frontend-accepts -> PASS from the full run at 63bbba7a with the row edits and records applied in the tree (1117 s) — imports/{vendor-path-import, nested-vendor-path-import,
 #   goroot-vendor-name, bare-internal-path, module-mode-bare-local-import, package-main-import} at frontend=type-check (BUG-219),
 #   modules/{module-path-std-fmt, module-path-std-nested, module-path-cmd} at frontend=module (BUG-217). No other row moves.
+# re-pinned: 2026-11-05 [AGENT], lane sweep/s11-kinds (on main 12d7a79a) — the defect-neighbourhood campaign's step 2, shape S11 (kinds, widths
+#   and float bit patterns; plan §4, [USER]-approved 2026-10-27): TWENTY-FOUR BORN ROWS, the constant expressions gc rejects at the kind
+#   boundaries — overflowing shifts, sums, conversions and constant declarations at int, int8, int32, rune, uint, uint8, uint64, float32 and
+#   float64, a defined-kind constant, the float constant division by zero, a truncated float count and index, a shifted untyped operand in
+#   a float context, the 512-bit constant shift limit, `min` over mixed kinds, `len(s) + int8`, a string shift count, `range` over a type
+#   parameter without a core type — gc (go1.26.5, the runners' pins) rejects each and the frontend refuses it as a rejection with the
+#   matched text. NO existing row moved: 539 + 24 = 563, measured by the lane's full --diff at 89eb2a53 (2026-11-05). The rows:
+#     builtins/sweep-s11-minmax-mixed-kinds                                    PASS/-
+#     constants/sweep-s11-byte-negative                                        PASS/-
+#     constants/sweep-s11-defined-const-overflow                               PASS/-
+#     constants/sweep-s11-float-constant-overflow-typed                        PASS/-
+#     constants/sweep-s11-float-divide-zero                                    PASS/-
+#     constants/sweep-s11-float64-shift-overflow                               PASS/-
+#     constants/sweep-s11-int-from-1e100                                       PASS/-
+#     constants/sweep-s11-int32-shift-overflow                                 PASS/-
+#     constants/sweep-s11-int8-const-plus-one                                  PASS/-
+#     constants/sweep-s11-int8-conversion-overflow                             PASS/-
+#     constants/sweep-s11-rune-shift-overflow                                  PASS/-
+#     constants/sweep-s11-shift-63-overflows-int                               PASS/-
+#     constants/sweep-s11-shift-70-overflows-int                               PASS/-
+#     constants/sweep-s11-shift-operand-float-context                          PASS/-
+#     constants/sweep-s11-shift-past-512-bits                                  PASS/-
+#     constants/sweep-s11-truncated-index                                      PASS/-
+#     constants/sweep-s11-truncated-shift-count                                PASS/-
+#     constants/sweep-s11-uint-negative-conversion                             PASS/-
+#     constants/sweep-s11-uint64-negative-shift                                PASS/-
+#     constants/sweep-s11-uint8-256                                            PASS/-
+#     constants/sweep-s11-uint8-sum-overflow                                   PASS/-
+#     generics/sweep-s11-range-over-mixed-typeset                              PASS/-
+#     ints/sweep-s11-len-plus-int8                                             PASS/-
+#     ints/sweep-s11-shift-count-string                                        PASS/-
 # re-pinned: 2026-10-27 [AGENT], lane sweep/s19-init-order — the defect-neighbourhood campaign's step 2, shape S19 (package
 #   initialization order; plan §4, [USER]-approved 2026-10-27): THREE BORN ROWS, the initialization cycles spec#Package_initialization
 #   makes invalid, through a function body, a method body and two closures stored in variables — gc (go1.26.5, GOPATH mode, the
@@ -764,3 +795,27 @@ PASS	strings/sweep-s27-surrogate-string-escape	-
 PASS	init/sweep-s19-cycle-closures	-
 PASS	init/sweep-s19-cycle-function	-
 PASS	init/sweep-s19-cycle-method	-
+PASS	builtins/sweep-s11-minmax-mixed-kinds	-
+PASS	constants/sweep-s11-byte-negative	-
+PASS	constants/sweep-s11-defined-const-overflow	-
+PASS	constants/sweep-s11-float-constant-overflow-typed	-
+PASS	constants/sweep-s11-float-divide-zero	-
+PASS	constants/sweep-s11-float64-shift-overflow	-
+PASS	constants/sweep-s11-int-from-1e100	-
+PASS	constants/sweep-s11-int32-shift-overflow	-
+PASS	constants/sweep-s11-int8-const-plus-one	-
+PASS	constants/sweep-s11-int8-conversion-overflow	-
+PASS	constants/sweep-s11-rune-shift-overflow	-
+PASS	constants/sweep-s11-shift-63-overflows-int	-
+PASS	constants/sweep-s11-shift-70-overflows-int	-
+PASS	constants/sweep-s11-shift-operand-float-context	-
+PASS	constants/sweep-s11-shift-past-512-bits	-
+PASS	constants/sweep-s11-truncated-index	-
+PASS	constants/sweep-s11-truncated-shift-count	-
+PASS	constants/sweep-s11-uint-negative-conversion	-
+PASS	constants/sweep-s11-uint64-negative-shift	-
+PASS	constants/sweep-s11-uint8-256	-
+PASS	constants/sweep-s11-uint8-sum-overflow	-
+PASS	generics/sweep-s11-range-over-mixed-typeset	-
+PASS	ints/sweep-s11-len-plus-int8	-
+PASS	ints/sweep-s11-shift-count-string	-
