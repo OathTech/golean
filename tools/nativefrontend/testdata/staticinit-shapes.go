@@ -25,6 +25,8 @@ type T2 struct{ m map[int]int }
 type T3 struct{ r []rune }
 type I interface{ M() int }
 type MyInt int
+type MyInt64 int64
+type F32 float32
 type R []rune
 
 // TB has a BLANK field: gc's initplan (staticinit/sched.go:545) skips it,
@@ -235,6 +237,13 @@ var (
 	FVar           = one             // base
 	InlV           = one()           // base
 	Ch    chan int                   // base
+	CU    uint     = 5               // base
+	CUP   uintptr  = 5               // base
+	C64   int64    = 5               // base
+	CMy   MyInt    = 5               // base
+	CB    byte     = 5               // base
+	CF             = 1.5             // base
+	CF32  F32      = 1.5             // base
 
 	Nest = []T{{x: 1}, {x: 2}}
 	M    = map[int]int{1: 2}
@@ -301,6 +310,20 @@ var (
 	RunesV          = []rune(Str)
 	S2              = string(Bytes)
 	F2I             = float64(Arr[0])
+	ConvI64         = int64(C)
+	ConvU64         = uint64(CU)
+	ConvUP          = uintptr(CU)
+	ConvIntOf64     = int(C64)
+	ConvUintOfUP    = uint(CUP)
+	ConvU64OfUP     = uint64(CUP)
+	ConvMy64        = MyInt64(C)
+	ConvI64OfMy     = int64(CMy)
+	ConvU8          = uint8(C)
+	ConvI32         = int32(C)
+	ConvU8OfB       = uint8(CB)
+	ConvF64         = float64(CF)
+	ConvF32N        = float32(CF32)
+	ConvF64OfI64    = float64(C64)
 	New             = new(int)
 	Mk              = make([]int, 3)
 	Len             = len(Sl)

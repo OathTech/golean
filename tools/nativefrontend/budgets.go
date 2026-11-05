@@ -207,30 +207,28 @@ func (e *emitter) qualifiedTypeNameNoNote(obj *types.TypeName) string {
 }
 
 // budgetFootprint: the decoder's FOOTPRINT of t in scalar leaves
-// (`tyFootprint?` + `typeDefFootprint?`), saturating.
+// (`tyFootprint?` + `typeDefFootprint?`), saturating in the ARITHMETIC
+// only: a multiplying dimension grows the count, a unit dimension does
+// not, and the recursion is the type's own nesting — finite on a
+// type-checked program (go/types refuses value-recursive types; a
+// pointer, slice, map, chan, func or interface is one leaf and ends the
+// descent), so no depth bound stands in for it. BUG-412 (2026-11-05): a
+// bound of 64 levels, commented as unreachable, saturated the one-leaf
+// `[1]…[1]int` at 65 levels to 2^63−1 leaves and refused it by a name it
+// never earned; the decoder and the core walk the same type with no bound.
 func (e *emitter) budgetFootprint(t types.Type) int64 {
-	return e.budgetFootprintDepth(t, 0)
-}
-
-func (e *emitter) budgetFootprintDepth(t types.Type, depth int) int64 {
-	if depth > 64 {
-		// Go forbids value-recursive types (go/types refuses them), so
-		// this depth is unreachable on a type-checked program; saturate
-		// (over-budget) rather than guess.
-		return math.MaxInt64
-	}
 	switch u := types.Unalias(t).(type) {
 	case *types.Array:
-		return satMul(u.Len(), e.budgetFootprintDepth(u.Elem(), depth+1))
+		return satMul(u.Len(), e.budgetFootprint(u.Elem()))
 	case *types.Named:
 		if e.budgetLeafNamed(u) {
 			return 1
 		}
-		return e.budgetFootprintDepth(u.Underlying(), depth+1)
+		return e.budgetFootprint(u.Underlying())
 	case *types.Struct:
 		var total int64
 		for i := 0; i < u.NumFields(); i++ {
-			total = satAdd(total, e.budgetFootprintDepth(u.Field(i).Type(), depth+1))
+			total = satAdd(total, e.budgetFootprint(u.Field(i).Type()))
 		}
 		if total < 1 {
 			total = 1
@@ -269,16 +267,22 @@ func (e *emitter) typeBudgetViolation(t types.Type) string {
 	if e.budgetMemo == nil {
 		e.budgetMemo = map[*types.Named]string{}
 	}
-	v, _ := e.typeBudgetViolationWalk(t, map[*types.Named]int{}, 0)
+	v, _ := e.typeBudgetViolationWalk(t, map[*types.Named]int{})
 	return v
 }
 
 // typeBudgetViolationWalk returns the violation and the LOWEST stack
 // index of an open named type whose recursion it cut (noCut if none).
+// The descent is the type's nesting, with `visiting` closing the one
+// cycle a type-checked program can have (a named type reached again
+// through a pointer, slice, map, chan or func); it carries no depth
+// bound (BUG-412's fix round: the former cut at 64 levels left a
+// per-dimension violation nested deeper unchecked, for the wire's
+// decoder to refuse whole).
 const noCut = math.MaxInt
 
-func (e *emitter) typeBudgetViolationWalk(t types.Type, visiting map[*types.Named]int, depth int) (string, int) {
-	if t == nil || depth > 64 {
+func (e *emitter) typeBudgetViolationWalk(t types.Type, visiting map[*types.Named]int) (string, int) {
+	if t == nil {
 		return "", noCut
 	}
 	// seq: walk a list of component types, first violation wins; the cut
@@ -286,7 +290,7 @@ func (e *emitter) typeBudgetViolationWalk(t types.Type, visiting map[*types.Name
 	seq := func(ts ...types.Type) (string, int) {
 		low := noCut
 		for _, c := range ts {
-			v, cut := e.typeBudgetViolationWalk(c, visiting, depth+1)
+			v, cut := e.typeBudgetViolationWalk(c, visiting)
 			if cut < low {
 				low = cut
 			}

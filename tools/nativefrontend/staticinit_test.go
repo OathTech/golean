@@ -373,3 +373,53 @@ func loadOne(t *testing.T, src string) (*loader, *sourcePkg) {
 	}
 	return l, l.locals["p"]
 }
+
+// BUG-341 (2026-11-05): a conversion between integer kinds of one
+// types.SimType class on the pinned target (int ≡ int64, uint ≡ uint64 ≡
+// uintptr) is OCONVNOP under gc (typecheck.Convertop case 4) and the
+// operand decides, so the gating program refuses by name exactly as it does
+// for `MyInt(zv)`; a representation-changing conversion, a conversion of a
+// dynamic operand, and a same-kind FLOATING-POINT conversion (kept as OCONV
+// by tcConv) are certain work and the program lowers. The oracle table
+// (staticinit-shapes.go Conv* rows) carries gc's recorded verdict per pair.
+func TestBug341SameClassConversionIsTheOperands(t *testing.T) {
+	refused := map[string]string{
+		"int64-of-int":      "var zv = 3\nvar C = int64(zv)\n",
+		"uint64-of-uint":    "var zv uint = 3\nvar C = uint64(zv)\n",
+		"uintptr-of-uint":   "var zv uint = 3\nvar C = uintptr(zv)\n",
+		"int-of-int64":      "var zv int64 = 3\nvar C = int(zv)\n",
+		"uint-of-uintptr":   "var zv uintptr = 3\nvar C = uint(zv)\n",
+		"uint64-of-uintptr": "var zv uintptr = 3\nvar C = uint64(zv)\n",
+		"myint64-of-int":    "type MyInt64 int64\n\nvar zv = 3\nvar C = MyInt64(zv)\n",
+		"int64-of-myint":    "type MyInt int\n\nvar zv MyInt = 3\nvar C = int64(zv)\n",
+	}
+	lowers := map[string]string{
+		"uint8-of-int":       "var zv = 300\nvar C = uint8(zv)\n",
+		"int32-of-int":       "var zv = 3\nvar C = int32(zv)\n",
+		"float64-of-int":     "var zv = 3\nvar C = float64(zv)\n",
+		"int64-of-dynamic":   "func zf() int { x := 1; x++; return x }\n\nvar zv = zf()\nvar C = int64(zv)\n",
+		"float64-of-float64": "var zv = 1.5\nvar C = float64(zv)\n",
+		"float32-of-named":   "type F float32\n\nvar zv F = 1.5\nvar C = float32(zv)\n",
+	}
+	for name, zq := range refused {
+		t.Run("refused/"+name, func(t *testing.T) {
+			_, err := lowerDir(t, writeDir(t, bug061Program("package zq\n\n"+zq)))
+			if err == nil {
+				t.Fatal("a same-class conversion of a static global is the operand's shape: the BUG-061 guard did not fire")
+			}
+			conv := zq[strings.LastIndex(zq, "var C = ") : len(zq)-1]
+			for _, want := range []string{"BUG-061", "package(s) zq have no certain initialization work", conv} {
+				if !strings.Contains(err.Error(), want) {
+					t.Errorf("refusal lacks %q:\n%v", want, err)
+				}
+			}
+		})
+	}
+	for name, zq := range lowers {
+		t.Run("lowers/"+name, func(t *testing.T) {
+			if _, err := lowerDir(t, writeDir(t, bug061Program("package zq\n\n"+zq))); err != nil {
+				t.Fatalf("a certain-work conversion must lower: %v", err)
+			}
+		})
+	}
+}

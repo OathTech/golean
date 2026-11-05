@@ -401,3 +401,75 @@ func ok() int { return 7 }
 		}
 	}
 }
+
+// BUG-412 (2026-11-05): the footprint and violation walks carry no depth
+// bound — the recursion is the type's own nesting. A one-leaf type nested
+// past 64 levels lowers; a per-dimension or footprint violation nested
+// past 64 levels refuses by its own name with its TRUE count (before: the
+// footprint saturated at depth 65 to 2^63−1 and the violation walk stopped
+// looking, so `[1]…[1]int` was refused as over budget and a `[70000]int`
+// nested deeper was named by the saturated footprint).
+func TestBudgetWalksHaveNoDepthBound(t *testing.T) {
+	nest := func(n int, dim string) string { return strings.Repeat(dim, n) }
+	structChain := func(n int) string {
+		var b strings.Builder
+		b.WriteString("type L0 struct{ a [1]int }\n")
+		for i := 1; i <= n; i++ {
+			fmt.Fprintf(&b, "type L%d struct{ a [1]L%d }\n", i, i-1)
+		}
+		return b.String()
+	}
+	cases := []struct {
+		name, typeDecl, want string // want "" = lowers; else the refusal text the stub carries
+		notWant              string
+	}{
+		{"one-leaf-65", "type Deep " + nest(65, "[1]") + "int", "", ""},
+		{"one-leaf-300", "type Deep " + nest(300, "[1]") + "int", "", ""},
+		{"struct-chain-70", structChain(70) + "type Deep L70", "", ""},
+		{"array-of-struct-70", "type P struct{ a [2]int }\ntype Deep " + nest(70, "[1]") + "P", "", ""},
+		{"array-of-struct-chain-70", "type P struct{ a [2]int }\n" + strings.Replace(structChain(70), "[1]int", "[1]P", 1) + "type Deep [1]L70", "", ""},
+		{"footprint-at-budget", "type Deep " + nest(24, "[2]") + "byte", "", ""},
+		{"pointer-is-one-leaf", "type Deep " + nest(70, "[1]") + "*[65536]int", "", ""},
+		{"dimension-past-64", "type Deep " + nest(70, "[1]") + "[70000]int", "array type [70000]int of 70000 elements exceeds the per-dimension budget", "9223372036854775807"},
+		{"footprint-past-64-multiplying", "type Deep " + nest(25, "[2]") + "byte", "of 33554432 scalar elements through its nesting exceeds the nested budget", "9223372036854775807"},
+		{"dimension-behind-pointer-past-64", "type Deep " + nest(70, "[1]") + "*[70000]int", "array type [70000]int of 70000 elements exceeds the per-dimension budget", "9223372036854775807"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			src := "package main\n\n" + c.typeDecl + "\n\nfunc use() int { var d Deep; _ = d; return 1 }\n\nfunc ok() int { return 7 }\n"
+			program, err := emitSource(t, src)
+			if err != nil {
+				t.Fatalf("export refused (want per-declaration handling): %v", err)
+			}
+			use := findFunc(program, "use")
+			if use == nil {
+				t.Fatal("use missing from the wire")
+			}
+			if c.want == "" {
+				if use["unsupported"] != nil {
+					t.Fatalf("use was stubbed: %v", use["unsupported"])
+				}
+				td := findTypeDef(program, "main.Deep")
+				if def, _ := td["def"].(map[string]any); td == nil || def["kind"] == "unsupported" {
+					t.Fatalf("Deep is a budget marker: %v", td)
+				}
+				return
+			}
+			reason := fmt.Sprint(use["unsupported"])
+			if !strings.Contains(reason, c.want) {
+				t.Fatalf("use's stub does not name the true cause %q:\n%s", c.want, reason)
+			}
+			if strings.Contains(reason, c.notWant) {
+				t.Fatalf("use's stub carries the saturated count:\n%s", reason)
+			}
+			for _, l := range wireArrayLens(t, program) {
+				if l > 65536 {
+					t.Fatalf("an over-budget array type (len %d) reached the wire", l)
+				}
+			}
+			if f := findFunc(program, "ok"); f == nil || f["unsupported"] != nil {
+				t.Fatalf("ok was refused: %v", f)
+			}
+		})
+	}
+}

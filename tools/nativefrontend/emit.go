@@ -1719,6 +1719,20 @@ func collectCalledFuncs(node any, out map[string]bool) {
 // nil body and never visited any implementation, so an
 // interface-dispatched initializer reaching a quarantined function
 // exported cleanly and poisoned every subject at runtime).
+//
+// ONE quarantined name is passed over: a stdlib shim's RUNTIME-refusal
+// helper (stdlibshim.go shimRuntimeRefusalReasons — goleanShimUnsupported),
+// which emitFuncDecl force-quarantines so that a CALL throws the
+// unrecoverable GoError.unsupported (BUG-154: as a Go panic a shim refusal
+// was catchable by user recover()). Its reach from $pkginit is by
+// construction the fail-closed ARM of an injected shim body — the dyn
+// bundle behind Sprint / Sprintln / a spread Sprintf, the `%q` quoter, the
+// Stringer / error renderers — a STOP, not an unmodeled effect: if the arm
+// is ever hit during initialization the init driver stops by that name at
+// run time, and if it is not, the initializer runs as gc runs it. Refusing
+// the export on the static reach named a bound no run hits and killed
+// every subject of the program (BUG-401, 2026-11-05: `var g =
+// fmt.Sprint("x", 1)`). The stub's quarantine and the throw are untouched.
 func checkInitQuarantine(funcs, methods []any) error {
 	bodies := map[string]any{}
 	quarantined := map[string]string{}
@@ -1778,6 +1792,9 @@ func checkInitQuarantine(funcs, methods []any) error {
 		}
 		sort.Strings(names) // deterministic refusal message
 		for _, name := range names {
+			if _, stop := shimRuntimeRefusalReasons[name]; stop {
+				continue // the shim's run-time stop (BUG-401; the function comment)
+			}
 			if reason, bad := quarantined[name]; bad {
 				return unsup("package initialization reaches quarantined function %s (%s)", name, reason)
 			}

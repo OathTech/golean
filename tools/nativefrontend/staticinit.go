@@ -54,6 +54,12 @@ package main
 // every WORK arm cites its gc case, all at the go1.26.5 pin
 // (deps/go/src/cmd/compile/internal/...):
 //
+//   - typecheck/subr.go Convertop and typecheck/expr.go tcConv (which
+//     conversions ARE OCONVNOP: identical underlying types, unnamed
+//     pointer pairs over them, integer kinds of one types.SimType class
+//     on the pinned target — int ≡ int64, uint ≡ uint64 ≡ uintptr —,
+//     uintptr <-> unsafe.Pointer; a same-kind floating-point conversion
+//     is kept as OCONV for its rounding; BUG-341's fix round, 2026-11-05);
 //   - staticinit/sched.go StaticAssign (the case list; OCONVNOP stripped,
 //     uintptr <-> unsafe.Pointer included) and staticAssignInlinedCall
 //     (the DCL/AS2/GOTO single-return shape; side-effecting arguments,
@@ -569,11 +575,35 @@ func (l *loader) conversionInitKind(u *sourcePkg, call *ast.CallExpr, to types.T
 		return initWork // OBYTES2STR/ORUNES2STR/ORUNESTR: no case
 	}
 	if fb, ok := from.(*types.Basic); ok {
-		if tb, ok := toU.(*types.Basic); ok && fb.Kind() != tb.Kind() {
-			if isPtrSized(fb) && isPtrSized(tb) {
-				return l.exprInitKind(u, arg) // uintptr <-> unsafe.Pointer: OCONVNOP
+		if tb, ok := toU.(*types.Basic); ok {
+			if fb.Kind() == tb.Kind() {
+				if fb.Info()&(types.IsFloat|types.IsComplex) != 0 {
+					// typecheck/expr.go tcConv: a conversion between
+					// floating-point (or complex) types of ONE kind is
+					// turned back from OCONVNOP into OCONV — «casts imply
+					// rounding» — identical types included, so
+					// `float64(zv)` of a float64 global is work (measured:
+					// gc 21 on the gating shape; BUG-341's fix round).
+					return initWork
+				}
+				// One kind under two names (byte ≡ uint8, rune ≡ int32, a
+				// defined integer or bool type): OCONVNOP, the operand decides.
+				return l.exprInitKind(u, arg)
 			}
-			return initWork // OCONV between distinct basic kinds: no case
+			if isPtrSized(fb) && isPtrSized(tb) {
+				return l.exprInitKind(u, arg) // uintptr <-> unsafe.Pointer: OCONVNOP (Convertop cases 8/9)
+			}
+			if fb.Info()&types.IsInteger != 0 && tb.Info()&types.IsInteger != 0 && gcSimKind(fb) == gcSimKind(tb) {
+				// typecheck/subr.go Convertop case 4: two integer kinds of
+				// one types.SimType class are OCONVNOP, and StaticAssign
+				// strips the node and folds the operand as it folds the
+				// operand alone (BUG-341, the S19 sweep: `int64(zv)` of a
+				// static int global was called work, gc emitted no
+				// inittask and the package's importer ran early — a silent
+				// wrong order). The classes are the pinned target's.
+				return l.exprInitKind(u, arg)
+			}
+			return initWork // OCONV between distinct representations: no case
 		}
 	}
 	// Everything else is OCONVNOP-shaped (same underlying representation):
@@ -583,6 +613,38 @@ func (l *loader) conversionInitKind(u *sourcePkg, call *ast.CallExpr, to types.T
 
 func isPtrSized(b *types.Basic) bool {
 	return b.Kind() == types.Uintptr || b.Kind() == types.UnsafePointer
+}
+
+// gcSimKind: cmd/compile/internal/types' SimType over the integer kinds
+// at the pinned target (types/universe.go `typedefs`, filled by InitTypes
+// from PtrSize; linux/amd64 is the platform contract, latitude inventory
+// §11): `int` ≡ `int64`, and `uint` ≡ `uint64` ≡ `uintptr`; every other
+// kind is its own class.
+func gcSimKind(b *types.Basic) types.BasicKind {
+	switch b.Kind() {
+	case types.Int:
+		return types.Int64
+	case types.Uint, types.Uintptr:
+		return types.Uint64
+	}
+	return b.Kind()
+}
+
+// initKindsOf classifies every InitOrder entry of a unit, keyed by the
+// entry's initializer as the emitter's quarantine maps are: the E7
+// detector's target test (hiddendep.go) asks whether a hidden read's
+// target is a shape gc may fold. A tuple initializer (`var a, b = f()`)
+// is certain work, sourceInitWork's rule.
+func (l *loader) initKindsOf(u *sourcePkg) map[ast.Expr]initializerKind {
+	out := map[ast.Expr]initializerKind{}
+	for _, ini := range u.info.InitOrder {
+		if len(ini.Lhs) != 1 {
+			out[ini.Rhs] = initWork
+			continue
+		}
+		out[ini.Rhs] = l.initializerKind(u, ini.Rhs, ini.Lhs[0].Name() == "_")
+	}
+	return out
 }
 
 // isStaticLoc mirrors staticinit.StaticLoc: a package-level name, a
