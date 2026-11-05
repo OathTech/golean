@@ -206,7 +206,10 @@ func run() error {
 	if *unseqCensus {
 		return em.printUnseqCensus(files, *dir)
 	}
-	program, err := em.emitProgram(files)
+	// Emission under the panic recovery (emit.go emitProgramRecovering):
+	// a panic in the emitter is a frontend defect and exits as the named
+	// refusal `native frontend internal error: …`, never as a Go crash.
+	program, err := em.emitProgramRecovering(files)
 	if err != nil {
 		return err
 	}

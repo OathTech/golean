@@ -4,22 +4,109 @@ package main
 // expression node carries its resolved go/types type under "type" so the Lean
 // lowering always has type information where GoCore needs it. Constructs not
 // yet modeled return an unsupported error (fail closed).
+//
+// Two conventions every emitter in this file follows (lane
+// frontend/fix-paren-forms-1105, 2026-11-05, BUG-390/420/421/422 and the S28
+// sweep's audit of the node-kind tests):
+//
+//   - THE UNPAREN RULE. A syntactic test on an expression node that gc reads
+//     through parentheses — an identifier or the blank as an assignment /
+//     range / comma-ok / select target (go/types `lhsVar`: `ast.Unparen(lhs)`),
+//     a call as a multi-value operand (the tuple is recorded on the paren node),
+//     a callee of any shape (go/types `callExpr` evaluates `call.Fun` through
+//     its paren arm) — reads the node through `ast.Unparen` first, so `(_) = v`,
+//     `for (i) = range s`, `a, b := (pair())`, `(atomic.AddInt32)(&x, 1)` are
+//     the spellings they are. A test is NOT unparenthesised where gc itself
+//     rejects the parenthesised form (`(x) := v`, a parenthesised package name
+//     `(fmt).Println`, a struct literal's field key `T{(f): 1}`, `(T){…}`, a
+//     generic function's head `(f)[int]`), where an `ast.Inspect` walk already
+//     descends through the paren node, or where a paren-stripping loop
+//     precedes the test (`receiverAddr`). The S28 lane's audit table of the
+//     54 sites is in BUG-420's entry (docs/BUGS.md).
+//
+//   - NO CRASH LEAVES THE FRONTEND. run() enters emission through
+//     emitProgramRecovering, which turns ANY panic raised while emitting into
+//     the whole-export refusal `native frontend internal error: …` (exit 1,
+//     no wire, the panic site and the declaration in progress named) — a
+//     Go panic is never an acceptable outcome of the trusted lowering, and
+//     a stub or a wrong wire would be worse. Internal invariants that fail
+//     (localID on a nil object, …) `panic` with a message naming the
+//     invariant, so the refusal names its cause. The seam `emitPanicHook`
+//     is the unit test's injection (nil in production).
 
 import (
 	"errors"
+	"fmt"
 	"go/ast"
 	"go/constant"
 	"go/token"
 	"go/types"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"sort"
 	"strings"
 )
 
 // ---- program ----
 
+// emitPanicHook, when non-nil, runs at the start of emitProgram: the unit
+// test's seam for injecting a panic into emission (TestEmissionPanicIsANamedRefusal),
+// proving that emitProgramRecovering turns it into the named refusal. Nil in
+// production; no other caller.
+var emitPanicHook func()
+
+// emitProgramRecovering is the frontend's top-level emission entry (run()):
+// emitProgram under a recover that turns ANY panic raised in emission into a
+// whole-export refusal naming its cause — `native frontend internal error:
+// <panic> while emitting <declaration> at <package frame>` — so the process
+// exits 1 with no wire, never with a Go crash (exit 2 and a stack) and never
+// with a stub. A panic here is a FRONTEND DEFECT (BUG-420 was one: a
+// parenthesised blank reached localID with no go/types object); the refusal
+// says so and names the site, so the differential's frontend-export stage
+// records a cause instead of a crash. The refusal is deliberately NOT an
+// `unsupported`: a defect is not a quarantinable construct.
+func (e *emitter) emitProgramRecovering(files []*ast.File) (program map[string]any, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			decl := e.curFuncName
+			if decl == "" {
+				decl = "<no declaration in progress>"
+			}
+			program = nil
+			err = fmt.Errorf("native frontend internal error: %v — while emitting %s at %s (a frontend defect, not a property of the program: report it with the program)", r, decl, panicSite())
+		}
+	}()
+	return e.emitProgram(files)
+}
+
+// panicSite names the frame that raised the panic emitProgramRecovering is
+// recovering: the innermost frame of THIS package (a file in this
+// directory — the package's symbol prefix is `main.` in the binary and the
+// import path under `go test`) below the runtime and the recovery itself,
+// as `func (file:line)`.
+func panicSite() string {
+	_, here, _, _ := runtime.Caller(0)
+	dir := filepath.Dir(here)
+	pcs := make([]uintptr, 64)
+	n := runtime.Callers(1, pcs)
+	frames := runtime.CallersFrames(pcs[:n])
+	for {
+		fr, more := frames.Next()
+		fn := fr.Function
+		if filepath.Dir(fr.File) == dir && !strings.HasSuffix(fn, ".panicSite") && !strings.Contains(fn, "emitProgramRecovering") {
+			return fmt.Sprintf("%s (%s:%d)", fn, filepath.Base(fr.File), fr.Line)
+		}
+		if !more {
+			return "<frame not found>"
+		}
+	}
+}
+
 func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
+	if emitPanicHook != nil {
+		emitPanicHook()
+	}
 	funcs := []any{}
 	methods := []any{}
 	typeDefs := []any{}
@@ -3455,6 +3542,12 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 					"rhs": []any{map[string]any{"expr": "int", "value": itoa(idx), "type": intTy}}},
 				map[string]any{"stmt": "continue-to", "label": e.gotoLoop},
 			}}, nil
+		case token.FALLTHROUGH:
+			// Every fallthrough in the final non-empty position of an
+			// expression-switch clause is consumed by emitSwitch; gc
+			// rejects every other placement before emission, so this arm
+			// is unreachable on type-checked Go. Named, never absorbed.
+			return nil, unsup("fallthrough statement outside the final non-empty position of a switch clause at %s", e.fset.Position(st.Pos()))
 		default:
 			return nil, unsup("branch statement %s", st.Tok)
 		}
@@ -3479,7 +3572,7 @@ func (e *emitter) emitReturn(st *ast.ReturnStmt) (any, error) {
 	// return by the A-normal-form machinery). Interface-typed result slots
 	// wrap the individual temps.
 	if len(st.Results) == 1 {
-		if call, ok := st.Results[0].(*ast.CallExpr); ok {
+		if call, ok := ast.Unparen(st.Results[0]).(*ast.CallExpr); ok { // `return (pair())` (BUG-422)
 			if tup, isTup := e.goTypeOf(call).(*types.Tuple); isTup {
 				idents, err := e.splatMultiCall(call)
 				if err != nil {
@@ -3612,7 +3705,7 @@ func (e *emitter) wrapInterfaceConversion(target types.Type, rhs types.Type, ope
 // assignTargetType resolves the static type of an assignment target for the
 // guard above (a fresh `:=` definition's type comes from Defs; blanks skip).
 func (e *emitter) assignTargetType(l ast.Expr, define bool) types.Type {
-	if id, ok := l.(*ast.Ident); ok {
+	if id, ok := ast.Unparen(l).(*ast.Ident); ok { // `(x) = v`, `(_) = v` (BUG-420)
 		if id.Name == "_" {
 			return nil
 		}
@@ -3818,12 +3911,12 @@ func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
 	// closed rather than silently reordering.
 	allIdentTargets := true
 	for _, l := range st.Lhs {
-		if _, ok := l.(*ast.Ident); !ok {
+		if _, ok := ast.Unparen(l).(*ast.Ident); !ok { // `(a), (b) = f()` are identifier targets (BUG-420)
 			allIdentTargets = false
 		}
 	}
 	if len(st.Rhs) == 1 {
-		if call, ok := st.Rhs[0].(*ast.CallExpr); ok {
+		if call, ok := ast.Unparen(st.Rhs[0]).(*ast.CallExpr); ok { // `a, b := (pair())` (BUG-422)
 			// Builtins never produce multi-value results and their emitters
 			// may HOIST statements as a side effect — the speculative
 			// emitCallNode below would run those effects twice when it
@@ -3943,9 +4036,9 @@ func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
 func (e *emitter) emitAssignTargetPhase1(l ast.Expr, define bool) (any, error) {
 	if pname, ok := e.capturedPtr(l); ok {
 		return map[string]any{"target": "addr",
-			"expr": map[string]any{"expr": "ident", "name": pname, "local": e.localID(e.info.Uses[l.(*ast.Ident)], "capture", pname)}}, nil
+			"expr": map[string]any{"expr": "ident", "name": pname, "local": e.localID(e.info.Uses[ast.Unparen(l).(*ast.Ident)], "capture", pname)}}, nil
 	}
-	if id, ok := l.(*ast.Ident); ok {
+	if id, ok := ast.Unparen(l).(*ast.Ident); ok { // `(_) = v`, `(x) = v` (BUG-420; go/types lhsVar)
 		if id.Name == "_" {
 			return map[string]any{"target": "blank"}, nil
 		}
@@ -3987,7 +4080,7 @@ func (e *emitter) emitAssignTargetPhase1(l ast.Expr, define bool) (any, error) {
 	// writes through its seeded cell exactly like a local global; it is
 	// name resolution, not field selection, so it must not reach the
 	// lvalue field machinery.
-	if sel, isSel := l.(*ast.SelectorExpr); isSel {
+	if sel, isSel := ast.Unparen(l).(*ast.SelectorExpr); isSel { // `(base.Seed) = v`
 		if pkgName, ok := e.qualifiedPkgRef(sel); ok {
 			v, isVar := e.info.Uses[sel.Sel].(*types.Var)
 			if !isVar {
@@ -4693,7 +4786,7 @@ func (e *emitter) emitRange(rs *ast.RangeStmt) (any, error) {
 			srcKeyGo = u.Elem()
 		}
 		bind := func(outer ast.Expr, temp string, src types.Type) (string, error) {
-			id, isIdent := outer.(*ast.Ident)
+			id, isIdent := ast.Unparen(outer).(*ast.Ident) // `for (i) = range s` (BUG-421; go/types lhsVar)
 			if isIdent && id.Name == "_" {
 				return "", nil
 			}
@@ -5409,7 +5502,16 @@ func (e *emitter) emitSwitch(st *ast.SwitchStmt) (any, error) {
 		}
 		list := cc.Body
 		fallsThru := false
-		if n := len(list); n > 0 {
+		// The placement check reads the clause's last NON-EMPTY statement:
+		// go/types trims trailing empty statements before its fallthrough
+		// analysis (stmt.go stmtList → trimTrailingEmptyStmts), so
+		// `fallthrough` followed by explicit `;`s is the final statement
+		// spec#Fallthrough_statements names (BUG-390: the last-statement
+		// test missed it and the clause was quarantined naming
+		// fallthrough itself). The trailing empties after the branch are
+		// unreachable and dropped with it; a clause without a fallthrough
+		// keeps its list as written.
+		if n := len(trimTrailingEmptyStmts(list)); n > 0 {
 			if br, ok := list[n-1].(*ast.BranchStmt); ok && br.Tok == token.FALLTHROUGH {
 				fallsThru = true
 				list = list[:n-1]
@@ -6198,6 +6300,17 @@ func (e *emitter) probeKind(x ast.Expr) bool {
 		return false
 	}
 	return false
+}
+
+// trimTrailingEmptyStmts is go/types' helper of the same name (stmt.go):
+// the list without its trailing *ast.EmptyStmt entries.
+func trimTrailingEmptyStmts(list []ast.Stmt) []ast.Stmt {
+	for i := len(list); i > 0; i-- {
+		if _, ok := list[i-1].(*ast.EmptyStmt); !ok {
+			return list[:i]
+		}
+	}
+	return nil
 }
 
 func (e *emitter) emitExprBare(x ast.Expr) (any, error) {
@@ -7955,7 +8068,7 @@ func (e *emitter) emitStar(st *ast.StarExpr) (any, error) {
 // emitAddressOf handles &x forms.
 func (e *emitter) emitAddressOf(x ast.Expr) (any, error) {
 	if pname, ok := e.capturedPtr(x); ok {
-		return map[string]any{"expr": "ident", "name": pname, "local": e.localID(e.info.Uses[x.(*ast.Ident)], "capture", pname)}, nil
+		return map[string]any{"expr": "ident", "name": pname, "local": e.localID(e.info.Uses[ast.Unparen(x).(*ast.Ident)], "capture", pname)}, nil
 	}
 	switch ex := x.(type) {
 	case *ast.Ident:
@@ -8103,9 +8216,9 @@ func (e *emitter) emitAddressOf(x ast.Expr) (any, error) {
 func (e *emitter) emitLValuePhase1(x ast.Expr) (any, error) {
 	if pname, ok := e.capturedPtr(x); ok {
 		return map[string]any{"target": "addr",
-			"expr": map[string]any{"expr": "ident", "name": pname, "local": e.localID(e.info.Uses[x.(*ast.Ident)], "capture", pname)}}, nil
+			"expr": map[string]any{"expr": "ident", "name": pname, "local": e.localID(e.info.Uses[ast.Unparen(x).(*ast.Ident)], "capture", pname)}}, nil
 	}
-	if id, ok := x.(*ast.Ident); ok {
+	if id, ok := ast.Unparen(x).(*ast.Ident); ok { // `(x)++`, `(_) = v`, the range bind (BUG-420/421)
 		if id.Name == "_" {
 			return map[string]any{"target": "blank"}, nil
 		}
@@ -8979,7 +9092,7 @@ func (e *emitter) emitFuncLit(lit *ast.FuncLit) (any, error) {
 // emitting a lifted body (§8), so WRITE positions reach the shared cell too:
 // `x = v` becomes `*x$cap = v`, and `&x` becomes the pointer itself.
 func (e *emitter) capturedPtr(x ast.Expr) (string, bool) {
-	id, ok := x.(*ast.Ident)
+	id, ok := ast.Unparen(x).(*ast.Ident) // `(x) = v` in a lifted body
 	if !ok || e.captureParam == nil {
 		return "", false
 	}
@@ -9503,7 +9616,7 @@ func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
 	// allowlisted `pkg.Fn(args)` call emits as an ordinary static call
 	// to the injected shim; every other selector call falls through to
 	// the method machinery and its standing refusals, byte-identical.
-	if sel, ok := c.Fun.(*ast.SelectorExpr); ok {
+	if sel, ok := ast.Unparen(c.Fun).(*ast.SelectorExpr); ok { // `(atomic.AddInt32)(&x, 1)`, `(r.M)(x)`: the callee is read through parentheses, as go/types callExpr reads it
 		// The OBJECT-keyed PRIMITIVES (dotimport.go emitPrimitiveCall —
 		// one lookup on the resolved *types.Func, shared with the
 		// bare-identifier spelling of a dot import, FR-36): sync/atomic's
@@ -9546,7 +9659,7 @@ func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
 
 	// An immediately-invoked func literal `func(){...}(args)`: lift the
 	// literal (the ordinary §8 machinery) and call through the value.
-	if lit, ok := c.Fun.(*ast.FuncLit); ok {
+	if lit, ok := ast.Unparen(c.Fun).(*ast.FuncLit); ok { // `(func() int { … })()`
 		callee, err := e.emitFuncLit(lit)
 		if err != nil {
 			return nil, false, err
@@ -9845,7 +9958,7 @@ func (e *emitter) emitCallArgs(sig *types.Signature, c *ast.CallExpr) ([]any, er
 	// in interface-typed slots; the return path's splat arm in emitReturn
 	// already wrapped per result).
 	if len(c.Args) == 1 {
-		if inner, ok := c.Args[0].(*ast.CallExpr); ok {
+		if inner, ok := ast.Unparen(c.Args[0]).(*ast.CallExpr); ok { // `add((pair()))` (BUG-422)
 			if tup, isTup := e.goTypeOf(inner).(*types.Tuple); isTup {
 				idents, err := e.splatMultiCall(inner)
 				if err != nil {
@@ -11111,7 +11224,7 @@ func syncNegOne() map[string]any {
 // is not a sync-primitive method at all; every recognized-but-out-of-
 // scope member (RLocker, WaitGroup.Go, ...) fails closed.
 func (e *emitter) emitSyncOpStmt(call *ast.CallExpr) (any, bool, error) {
-	sel, ok := call.Fun.(*ast.SelectorExpr)
+	sel, ok := ast.Unparen(call.Fun).(*ast.SelectorExpr) // `(mu.Lock)()` is the direct call
 	if !ok {
 		return nil, false, nil
 	}
@@ -11256,7 +11369,7 @@ func (e *emitter) emitOnceDo(call *ast.CallExpr, recvW any) (any, bool, error) {
 // spellings behave the same by construction. handled=false when the
 // deferred call is not a sync-primitive method.
 func (e *emitter) emitDeferSyncOp(call *ast.CallExpr) (any, bool, error) {
-	sel, ok := call.Fun.(*ast.SelectorExpr)
+	sel, ok := ast.Unparen(call.Fun).(*ast.SelectorExpr) // `defer (mu.Unlock)()` is the direct call
 	if !ok {
 		return nil, false, nil
 	}
@@ -12504,7 +12617,7 @@ func (e *emitter) emitChanRecvAssign(st *ast.AssignStmt, ux *ast.UnaryExpr, defi
 	// One target position: pos 0 receives the element (type elemGo/elemTy),
 	// pos 1 the ok flag (bool).
 	emitPos := func(lv ast.Expr, posGo types.Type, posTy any) error {
-		if id, ok := lv.(*ast.Ident); ok && id.Name == "_" {
+		if id, ok := ast.Unparen(lv).(*ast.Ident); ok && id.Name == "_" { // `(_), ok = …` (BUG-420)
 			if len(st.Lhs) == 2 && lv == st.Lhs[1] {
 				// blank ok: drop to the 1-target form (unobservable)
 				return nil
@@ -12643,7 +12756,7 @@ func (e *emitter) emitChanRecvAssign(st *ast.AssignStmt, ux *ast.UnaryExpr, defi
 func (e *emitter) machineSelectTargets(lhs []ast.Expr, elemGo types.Type) ([]any, bool, error) {
 	ws := []any{}
 	for i, lv := range lhs {
-		if id, ok := lv.(*ast.Ident); ok && id.Name == "_" {
+		if id, ok := ast.Unparen(lv).(*ast.Ident); ok && id.Name == "_" { // `case (v), (_) = <-ch` (BUG-420)
 			return nil, false, nil
 		}
 		posGo := elemGo
@@ -12758,7 +12871,7 @@ func (e *emitter) selectRecvClause(ux *ast.UnaryExpr, lhs []ast.Expr, define boo
 		vName := "$c" + itoa(e.tmpSeq)
 		e.tmpSeq++
 		targets = append(targets, map[string]any{"target": "declare", "id": vName, "type": elemTy})
-		if id, ok := lhs[0].(*ast.Ident); !ok || id.Name != "_" {
+		if id, ok := ast.Unparen(lhs[0]).(*ast.Ident); !ok || id.Name != "_" { // `case (_) = <-ch` (BUG-420)
 			// The user assignment's own operand hoists (an effectful LHS
 			// index, an interface boxing) must stay INSIDE the clause body.
 			saved := e.hoisted
@@ -12786,7 +12899,7 @@ func (e *emitter) selectRecvClause(ux *ast.UnaryExpr, lhs []ast.Expr, define boo
 			okName := "$c" + itoa(e.tmpSeq)
 			e.tmpSeq++
 			targets = append(targets, map[string]any{"target": "declare", "id": okName, "type": boolTy})
-			if id, ok := lhs[1].(*ast.Ident); !ok || id.Name != "_" {
+			if id, ok := ast.Unparen(lhs[1]).(*ast.Ident); !ok || id.Name != "_" { // `case v, (_) = <-ch` (BUG-420)
 				saved := e.hoisted
 				savedRoot := e.sweepStmt
 				e.hoisted = nil

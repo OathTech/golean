@@ -1,0 +1,12 @@
+# id	subject	args	expected_status	expected_reason	features
+# Lane frontend/fix-paren-forms-1105 (2026-11-05): the parenthesised blank on the routes BUG-420's Cases rows do not reach (each crashed the frontend before the fix — the S28 matrix's `out` cell). Strict, expected = gc go1.26.5.
+paren-blank-comma-ok-map	parenBlankCommaOkMap	-	ok	-	assignment,multi_assign,comma_ok,maps
+paren-blank-comma-ok-recv	parenBlankCommaOkRecv	-	ok	-	assignment,multi_assign,comma_ok,channels
+paren-blank-comma-ok-assert	parenBlankCommaOkAssert	-	ok	-	assignment,multi_assign,comma_ok,interfaces
+paren-blank-select-pair	parenBlankSelectPair	-	ok	-	assignment,select,channels
+paren-blank-select-only	parenBlankSelectOnly	-	ok	-	assignment,select,channels
+paren-blank-closure	parenBlankClosure	-	ok	-	assignment,closures
+paren-blank-recv-stmt	parenBlankRecvStmt	-	ok	-	assignment,channels
+paren-blank-generic	parenBlankGeneric	-	ok	-	assignment,multi_assign,generics
+paren-blank-range-key	parenBlankRangeKey	-	ok	-	range,assignment
+paren-blank-range-only	parenBlankRangeOnly	-	ok	-	range,assignment

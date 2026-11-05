@@ -20,6 +20,7 @@ package main
 // certificate). Numeric ids stable across source edits are NOT an API promise.
 
 import (
+	"fmt"
 	"go/types"
 	"path/filepath"
 	"strconv"
@@ -56,6 +57,13 @@ func (e *emitter) localsTable() []any {
 // keeps the SOURCE spelling (obj.Name()) and the declaring identifier's position
 // as `basename.go:line:col`.
 func (e *emitter) localID(obj types.Object, kind, wire string) int {
+	if obj == nil {
+		// A caller handed a reference with no go/types object (BUG-420 was
+		// one: `(_)` read as an addressable identifier). An emitter
+		// invariant, not a program property: panic by name, which
+		// emitProgramRecovering turns into the named whole-export refusal.
+		panic(fmt.Sprintf("localID: no go/types object for the %s reference %q", kind, wire))
+	}
 	if e.localIDs == nil {
 		e.beginLocals()
 	}

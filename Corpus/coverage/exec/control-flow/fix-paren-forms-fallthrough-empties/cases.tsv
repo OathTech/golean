@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+# Lane frontend/fix-paren-forms-1105 (2026-11-05), the fix of BUG-390: trailing empty statements are invisible to the fallthrough placement check (go/types trimTrailingEmptyStmts) — two trailing empties, empties before the fallthrough, an empty-only clause. Strict, expected = gc go1.26.5.
+fallthrough-two-empties	twoEmpties	1	ok	-	control_flow,switch,fallthrough,empty
+fallthrough-two-empties-miss	twoEmpties	2	ok	-	control_flow,switch,fallthrough,empty
+fallthrough-empties-before	emptiesBefore	1	ok	-	control_flow,switch,fallthrough,empty
+fallthrough-empties-before-miss	emptiesBefore	2	ok	-	control_flow,switch,fallthrough,empty
+fallthrough-empties-before-default	emptiesBefore	3	ok	-	control_flow,switch,fallthrough,empty
+empty-only-clause	emptyOnlyClause	1	ok	-	control_flow,switch,empty
+empty-only-clause-miss	emptyOnlyClause	2	ok	-	control_flow,switch,empty

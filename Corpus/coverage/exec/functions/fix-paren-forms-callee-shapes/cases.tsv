@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+# Lane frontend/fix-paren-forms-1105 (2026-11-05): a parenthesised callee is the callee it names — the emitter reads call.Fun through ast.Unparen at the selector and func-literal dispatch (BUG-287's rule, the remaining two callee tests). Strict, expected = gc go1.26.5.
+paren-callee-atomic	parenCalleeAtomic	-	ok	-	calls,atomics,stdlib
+paren-callee-sync	parenCalleeSync	-	ok	-	calls,sync,mutex,waitgroup,defer,goroutines
+paren-callee-shim	parenCalleeShim	-	ok	-	calls,stdlib,strings
+paren-callee-method	parenCalleeMethod	-	ok	-	calls,methods
+paren-callee-funclit	parenCalleeFuncLit	-	ok	-	calls,closures
+paren-callee-field-func	parenCalleeFieldFunc	-	ok	-	calls,closures
