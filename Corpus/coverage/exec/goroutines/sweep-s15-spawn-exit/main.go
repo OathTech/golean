@@ -87,45 +87,43 @@ func deferUnlockDrain() int {
 	return 0
 }
 
-// D9: three children each print one byte — a menu of width 4 and six
-// orders.
-func threePrinters() int {
-	done := make(chan int, 3)
+// D9: three children each send their id onto a cap-3 buffer — a menu of
+// width 4 and six arrival orders, read back as a three-digit number (a
+// value rather than prints so the whole state graph certifies under the
+// dedup engine, which refuses output events).
+func threeSenders() int {
+	ch := make(chan int, 3)
 	go func() {
-		print("a")
-		done <- 1
+		ch <- 1
 	}()
 	go func() {
-		print("b")
-		done <- 1
+		ch <- 2
 	}()
 	go func() {
-		print("c")
-		done <- 1
+		ch <- 3
 	}()
-	<-done
-	<-done
-	<-done
-	return 0
+	a := <-ch
+	b := <-ch
+	c := <-ch
+	return a*100 + b*10 + c
 }
 
-// D10: a child spawns a grandchild; `m`, `c` and `g` are concurrent
-// (the grandchild exists only after the child's spawn, which has no
-// print before it).
-func grandchildPrints() int {
-	done := make(chan int, 2)
+// D10: a child spawns a grandchild; main (1), the child (2) and the
+// grandchild (3) each send their id onto a cap-3 buffer, so the menu holds
+// all three once the grandchild exists; six arrival orders.
+func grandchildSends() int {
+	ch := make(chan int, 3)
 	go func() {
 		go func() {
-			print("g")
-			done <- 1
+			ch <- 3
 		}()
-		print("c")
-		done <- 1
+		ch <- 2
 	}()
-	print("m")
-	<-done
-	<-done
-	return 0
+	ch <- 1
+	a := <-ch
+	b := <-ch
+	c := <-ch
+	return a*100 + b*10 + c
 }
 
 func main() {
@@ -134,6 +132,6 @@ func main() {
 	deferDoneDrain()
 	deferCloseDrain()
 	deferUnlockDrain()
-	threePrinters()
-	grandchildPrints()
+	threeSenders()
+	grandchildSends()
 }
