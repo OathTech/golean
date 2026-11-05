@@ -35,3 +35,4 @@ machine-deadlock	deadlock	all goroutines are asleep
 decoder-scope-wrong-declaration	error	but the wire names declaration
 decoder-duplicate-function-id	error	duplicate function id
 machine-panic	panic	runtime error:
+decoder-unseq-head-not-admitted	error	outside the admitted fragment
