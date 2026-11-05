@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 7021 (6701 PASS / 320 FAIL)
+# cases: 7157 (6818 PASS / 339 FAIL)
 # cause keyed 2026-11-05 [AGENT coordinator], train-29 stage, from the stage's full run (scripts/coverage-cause --apply): the five rows that carried `?` — BUG-390's two (`unrowed/fallthrough-trailing-empty-stmt`, the tools/lowerdiag/causes.tsv row added at this stage) and BUG-391's three (`error:decoder-unseq-head-not-admitted`, the scripts/machine-causes.tsv row added at this stage); no row moved.
 # re-pinned: 2026-10-27 [AGENT], lane frontend/fix-binding-1027 — BUG-300, 301, 302 (the S13 sweep) FIXED in tools/nativefrontend
 #   (the campaign plan's rule that a finding is fixed through the normal train, [USER] approved 2026-10-27, relayed): (1) emit.go
@@ -24,6 +24,163 @@
 #     scoping/sweep-s13-local-iface-dispatch/local-iface-satisfied                   FAIL/lean-observation error:decoder-duplicate-function-id → PASS
 #     scoping/sweep-s13-local-iface-dispatch/local-iface-two-funcs                   FAIL/lean-observation error:decoder-duplicate-function-id → PASS
 # cause keyed 2026-10-27 [AGENT coordinator], train-27 stage, from the stage's full run (scripts/coverage-cause --apply): the 16 rows that carried `?` — BUG-300/302's six `error:decoder-scope-wrong-declaration`, BUG-301's three `error:decoder-duplicate-function-id`, BUG-310's seven `panic:machine-panic` (the three table rows added at this stage); no row moved.
+# re-pinned: 2026-11-05 [AGENT], lane sweep/s28-s29-spelling-symbols (on main 12d7a79a) — the defect-neighbourhood campaign's step 2,
+#   shapes S28 (spelling admission; members BUG-136/115, BUG-287 fixed in train 26) and S29 (synthetic-symbol bookkeeping; members
+#   BUG-031/027, BUG-302 fixed in train 28); plan docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved 2026-10-27.
+#   The S28 matrix (537 cells: every parenthesised spelling of a target / callee / condition / operand / type / receiver /
+#   instantiation / method expression, nil and untyped constants on either side, grouped declarations, keyed vs positional
+#   literals, semicolons, continuations, labels, comments and //go: lookalikes × placements × emit.go's non-unparenthesising
+#   node tests) and the S29 matrix (145 cells: every synthetic symbol × the scopes it is keyed by × the values and the wire's
+#   declaration tables) probed on both sides — gc go1.26.5 under the runners' pins against the frontend and native-json-run;
+#   every agreement on a distinct cell pinned as a strict row, every disagreement rowed RED on an entry's Cases line. NO
+#   existing row moved: 6179 + 136 = 6315; PASS 5820 + 117 = 5937; FAIL 359 + 19 = 378. No flip, no
+#   removal, no cause change (no runtime code changed: corpus and records only). NEW rows (136, 27 + 8 packages
+#   Corpus/coverage/exec/*/sweep-s28-*/ and */sweep-s29-*/, all strict; nine declare depth=32 where the choice consumption
+#   outran the fixed streams), appended at the end of the file, measured by CAPPED_MEM_MAX=64G capped scripts/ci --diff at the
+#   lane tree 4ab5a479 (929 s wall; its only drift: these NEW ids), the rows and their cause keys taken from that run's
+#   artifacts/coverage/latest.tsv (scripts/coverage-cause); the --diff at the tip judges. The 19 red rows: BUG-420 (the
+#   parenthesised blank target `(_) = v` CRASHES the frontend — a Go panic, exit 2; 3 rows FAIL/frontend-export, cause
+#   crash:frontend), BUG-421 (`for (i) = range s` refused by name as a non-identifier target; 2 rows FAIL/frontend-export,
+#   FR-6/range-assign-nonident), BUG-422 (a parenthesised multi-value call refused through the single-value hoist; 5 rows
+#   FAIL/frontend-export — unrowed/expression-shape), and the nine BUG-302 neighbours
+#   (generics/sweep-s29-lit-typeparam-neighbours/*: FAIL/lean-observation, the entry's B6 c4 refusal, on its Cases line —
+#   green against the stage-29 frontend, where train 28's fix covers them). The rows:
+#     assign-order/sweep-s28-paren-blank-target/paren-blank-multi                    FAIL/frontend-export
+#     assign-order/sweep-s28-paren-blank-target/paren-blank-multi-value              FAIL/frontend-export
+#     assign-order/sweep-s28-paren-blank-target/paren-blank-single                   FAIL/frontend-export
+#     assign-order/sweep-s28-paren-targets/paren-array-elem-targets                  PASS/strict
+#     assign-order/sweep-s28-paren-targets/paren-comma-ok-targets                    PASS/strict
+#     assign-order/sweep-s28-paren-targets/paren-deep-nesting                        PASS/strict
+#     assign-order/sweep-s28-paren-targets/paren-deref-targets                       PASS/strict
+#     assign-order/sweep-s28-paren-targets/paren-field-targets                       PASS/strict
+#     assign-order/sweep-s28-paren-targets/paren-local-inc-dec-compound              PASS/strict
+#     assign-order/sweep-s28-paren-targets/paren-multi-targets                       PASS/strict
+#     assign-order/sweep-s28-paren-targets/paren-select-forms                        PASS/strict
+#     assign-order/sweep-s28-paren-targets/paren-send-recv                           PASS/strict
+#     assign-order/sweep-s28-paren-targets/paren-slice-elem-targets                  PASS/strict
+#     binary/sweep-s28-paren-unary-binary/paren-binary                               PASS/strict
+#     binary/sweep-s28-paren-unary-binary/paren-binary-order                         PASS/strict
+#     binary/sweep-s28-paren-unary-binary/paren-div-zero-panic                       PASS/strict
+#     binary/sweep-s28-paren-unary-binary/paren-unary                                PASS/strict
+#     builtins/sweep-s28-paren-call-operands/paren-builtin-callees                   PASS/strict
+#     builtins/sweep-s28-paren-call-operands/paren-builtin-operands                  PASS/strict
+#     builtins/sweep-s28-paren-call-operands/paren-call-args                         PASS/strict
+#     builtins/sweep-s28-paren-call-operands/paren-print-panic-callees               PASS/strict
+#     channels/sweep-s29-defer-close-scopes/closer-in-generic-two-insts              PASS/strict
+#     channels/sweep-s29-defer-close-scopes/closer-in-literal-and-enclosing          PASS/strict
+#     channels/sweep-s29-defer-close-scopes/closer-in-loop                           PASS/strict
+#     channels/sweep-s29-defer-close-scopes/closer-operand-spellings                 PASS/strict
+#     channels/sweep-s29-defer-close-scopes/closers-in-inits                         PASS/strict
+#     channels/sweep-s29-defer-close-scopes/closers-same-name-methods-and-func       PASS/strict
+#     channels/sweep-s29-defer-close-scopes/defer-done-two-literals                  PASS/strict
+#     channels/sweep-s29-defer-close-scopes/defer-unlock-scopes                      PASS/strict
+#     channels/sweep-s29-defer-close-scopes/once-do-scopes                           PASS/strict
+#     channels/sweep-s29-defer-close-scopes/two-closers-one-function                 PASS/strict
+#     comparisons/sweep-s28-const-left-operand/const-left-arithmetic                 PASS/strict
+#     comparisons/sweep-s28-const-left-operand/const-left-comparisons                PASS/strict
+#     comparisons/sweep-s28-nil-left-routes/nil-left-boxed-and-assert                PASS/strict
+#     comparisons/sweep-s28-nil-left-routes/nil-left-routes                          PASS/strict
+#     comparisons/sweep-s28-nil-left-routes/paren-nil-panic                          PASS/strict
+#     comparisons/sweep-s28-nil-left-routes/paren-nil-sinks                          PASS/strict
+#     control-flow/sweep-s28-label-forms/label-in-closure-and-outer                  PASS/strict
+#     control-flow/sweep-s28-label-forms/labelled-block-and-names                    PASS/strict
+#     control-flow/sweep-s28-label-forms/labelled-empty-statements                   PASS/strict
+#     control-flow/sweep-s28-paren-conditions/paren-for-conds                        PASS/strict
+#     control-flow/sweep-s28-paren-conditions/paren-if-conds                         PASS/strict
+#     control-flow/sweep-s28-paren-conditions/paren-returns                          PASS/strict
+#     control-flow/sweep-s28-paren-conditions/paren-switch-tags                      PASS/strict
+#     control-flow/sweep-s28-paren-conditions/paren-type-switches                    PASS/strict
+#     conversions/sweep-s28-paren-type-conversions                                   PASS/strict
+#     defer/sweep-s28-paren-defer-go-stmt/defer-paren-builtins                       PASS/strict
+#     defer/sweep-s28-paren-defer-go-stmt/defer-paren-callees                        PASS/strict
+#     defer/sweep-s28-paren-defer-go-stmt/defer-paren-recover-swallows               PASS/strict
+#     defer/sweep-s28-paren-defer-go-stmt/go-paren-callees-joined                    PASS/strict
+#     defer/sweep-s28-paren-defer-go-stmt/paren-expr-stmts                           PASS/strict
+#     defer/sweep-s29-recover-noop-scopes/noop-does-not-recover                      PASS/strict
+#     defer/sweep-s29-recover-noop-scopes/noop-first                                 PASS/strict
+#     defer/sweep-s29-recover-noop-scopes/noop-in-generic-two-insts                  PASS/strict
+#     defer/sweep-s29-recover-noop-scopes/noop-second                                PASS/strict
+#     defer/sweep-s29-recover-noop-scopes/noop-twice-and-literal                     PASS/strict
+#     directives/sweep-s28-comment-lookalikes/block-noinline                         PASS/strict
+#     directives/sweep-s28-comment-lookalikes/space-noinline-body                    PASS/strict
+#     functions/sweep-s28-comment-forms                                              PASS/strict
+#     functions/sweep-s28-comment-in-args                                            PASS/strict
+#     functions/sweep-s28-continuation-forms                                         PASS/strict
+#     functions/sweep-s28-paren-conv-under-defer-go                                  PASS/strict
+#     functions/sweep-s28-paren-placements/paren-beside-calls                        PASS/strict
+#     functions/sweep-s28-paren-placements/paren-in-closure                          PASS/strict
+#     functions/sweep-s28-paren-placements/paren-in-generic-both                     PASS/strict
+#     functions/sweep-s28-paren-placements/paren-in-method                           PASS/strict
+#     functions/sweep-s28-paren-placements/paren-package-level                       PASS/strict
+#     functions/sweep-s28-paren-types-in-decls/paren-type-decls                      PASS/strict
+#     functions/sweep-s28-paren-types-in-decls/paren-var-decls                       PASS/strict
+#     functions/sweep-s28-semicolon-forms/double-semicolons                          PASS/strict
+#     functions/sweep-s28-semicolon-forms/semicolon-forms                            PASS/strict
+#     functions/sweep-s29-lifted-literal-scopes/lits-as-args                         PASS/strict
+#     functions/sweep-s29-lifted-literal-scopes/lits-in-generic-method-two-insts     PASS/strict
+#     functions/sweep-s29-lifted-literal-scopes/lits-in-generic-two-insts            PASS/strict
+#     functions/sweep-s29-lifted-literal-scopes/lits-in-go-defer                     PASS/strict
+#     functions/sweep-s29-lifted-literal-scopes/lits-in-inits                        PASS/strict
+#     functions/sweep-s29-lifted-literal-scopes/lits-in-same-name-methods            PASS/strict
+#     functions/sweep-s29-lifted-literal-scopes/two-lits-one-line                    PASS/strict
+#     functions/sweep-s29-quarantine-rollback/good-a                                 PASS/strict
+#     functions/sweep-s29-quarantine-rollback/good-b                                 PASS/strict
+#     functions/sweep-s29-quarantine-rollback/good-c                                 PASS/strict
+#     functions/sweep-s29-quarantine-rollback/good-d                                 PASS/strict
+#     functions/sweep-s29-quarantine-rollback/stencil-good-after-bad                 PASS/strict
+#     functions/sweep-s29-temporaries-scopes/fmt-lifts-scopes                        PASS/strict
+#     functions/sweep-s29-temporaries-scopes/goto-two-labels                         PASS/strict
+#     functions/sweep-s29-temporaries-scopes/hoist-in-generic-two-insts              PASS/strict
+#     functions/sweep-s29-temporaries-scopes/hoist-in-literal-inside-hoist           PASS/strict
+#     functions/sweep-s29-temporaries-scopes/hoists-two-statements                   PASS/strict
+#     functions/sweep-s29-temporaries-scopes/loop-var-captures-twice-nested          PASS/strict
+#     functions/sweep-s29-temporaries-scopes/loop-var-in-generic-two-insts           PASS/strict
+#     functions/sweep-s29-temporaries-scopes/multi-value-in-generic-two-insts        PASS/strict
+#     functions/sweep-s29-temporaries-scopes/multi-value-temps                       PASS/strict
+#     functions/sweep-s29-temporaries-scopes/range-assign-nested                     PASS/strict
+#     functions/sweep-s29-temporaries-scopes/select-in-generic-two-insts             PASS/strict
+#     functions/sweep-s29-temporaries-scopes/selects-twice-nested                    PASS/strict
+#     functions/sweep-s29-temporaries-scopes/switch-in-generic-two-insts             PASS/strict
+#     functions/sweep-s29-temporaries-scopes/switches-twice-nested-and-literal       PASS/strict
+#     functions/sweep-s29-temporaries-scopes/type-switches-nested                    PASS/strict
+#     generics/sweep-s28-paren-assert-inst-methodexpr/paren-assertions               PASS/strict
+#     generics/sweep-s28-paren-assert-inst-methodexpr/paren-instantiations           PASS/strict
+#     generics/sweep-s28-paren-assert-inst-methodexpr/paren-method-exprs-values      PASS/strict
+#     generics/sweep-s28-paren-typeparam-constraints                                 PASS/strict
+#     generics/sweep-s29-lit-typeparam-control                                       PASS/strict
+#     generics/sweep-s29-lit-typeparam-neighbours/lit-func-param-t                   FAIL/lean-observation
+#     generics/sweep-s29-lit-typeparam-neighbours/lit-in-generic-method-t            FAIL/lean-observation
+#     generics/sweep-s29-lit-typeparam-neighbours/lit-map-param-t                    FAIL/lean-observation
+#     generics/sweep-s29-lit-typeparam-neighbours/lit-named-result-t                 FAIL/lean-observation
+#     generics/sweep-s29-lit-typeparam-neighbours/lit-nested-param-t                 FAIL/lean-observation
+#     generics/sweep-s29-lit-typeparam-neighbours/lit-ptr-param-t                    FAIL/lean-observation
+#     generics/sweep-s29-lit-typeparam-neighbours/lit-second-param-s                 FAIL/lean-observation
+#     generics/sweep-s29-lit-typeparam-neighbours/lit-slice-param-t                  FAIL/lean-observation
+#     generics/sweep-s29-lit-typeparam-neighbours/lit-struct-param-t                 FAIL/lean-observation
+#     maps/sweep-s28-paren-comma-ok-rhs/paren-comma-ok-rhs-assign-var                PASS/strict
+#     maps/sweep-s28-paren-comma-ok-rhs/paren-comma-ok-rhs-define                    PASS/strict
+#     methods/sweep-s29-receivers-captures-names/capture-binders-subject             PASS/strict
+#     methods/sweep-s29-receivers-captures-names/method-value-spellings              PASS/strict
+#     methods/sweep-s29-receivers-captures-names/receiver-slots                      PASS/strict
+#     methods/sweep-s29-receivers-captures-names/stencil-name-kinds                  PASS/strict
+#     methods/sweep-s29-receivers-captures-names/synthetic-lookalike-names           PASS/strict
+#     multi-assign/sweep-s28-paren-multi-value/paren-multi-value-assign              FAIL/frontend-export
+#     multi-assign/sweep-s28-paren-multi-value/paren-multi-value-define              FAIL/frontend-export
+#     multi-assign/sweep-s28-paren-multi-value/paren-multi-value-return              FAIL/frontend-export
+#     multi-assign/sweep-s28-paren-multi-value/paren-multi-value-spread              FAIL/frontend-export
+#     multi-assign/sweep-s28-paren-multi-value/paren-multi-value-var                 FAIL/frontend-export
+#     range/sweep-s28-paren-range-ident/range-paren-ident-targets                    FAIL/frontend-export
+#     range/sweep-s28-paren-range-ident/range-paren-value-only                       FAIL/frontend-export
+#     scoping/sweep-s28-grouped-decls/grouped-const-forms                            PASS/strict
+#     scoping/sweep-s28-grouped-decls/grouped-type-forms                             PASS/strict
+#     scoping/sweep-s28-grouped-decls/grouped-var-forms                              PASS/strict
+#     slices/sweep-s28-paren-literal-types/paren-literal-types                       PASS/strict
+#     slices/sweep-s28-paren-literal-types/paren-make-new-chan-ptr                   PASS/strict
+#     structs/sweep-s28-keyed-positional/keyed-index-forms                           PASS/strict
+#     structs/sweep-s28-keyed-positional/mixed-keyed-positional-elements             PASS/strict
+#     structs/sweep-s28-paren-operands/paren-index-slice                             PASS/strict
+#     structs/sweep-s28-paren-operands/paren-literal-elements                        PASS/strict
+#     structs/sweep-s28-paren-operands/paren-selectors                               PASS/strict
 # re-pinned: 2026-11-05 [AGENT], lane sweep/s17-forms — the defect-neighbourhood campaign's step 2, shape S17 (lowering coverage holes:
 #   statement and expression forms the emitter or the decoder mis-carries; plan docs/2026-10-27_defect-neighbourhood-campaign.md §4,
 #   [USER]-approved 2026-10-27; members BUG-057/024/012/147/141/001/172/226): the shape's 300-cell matrix (every production of
@@ -12523,3 +12680,139 @@ PASS	spec-examples-stmt/sweep-s17-complit-forms/string-bool-float-elems	-	-
 PASS	spec-examples-stmt/sweep-s17-complit-forms/lit-compare-cond	-	-
 PASS	spec-examples-stmt/sweep-s17-complit-forms/lit-defer-arg	-	-
 PASS	spec-examples-stmt/sweep-s17-complit-forms/lit-in-closure	-	-
+FAIL	assign-order/sweep-s28-paren-blank-target/paren-blank-multi	frontend-export	crash:frontend
+FAIL	assign-order/sweep-s28-paren-blank-target/paren-blank-multi-value	frontend-export	crash:frontend
+FAIL	assign-order/sweep-s28-paren-blank-target/paren-blank-single	frontend-export	crash:frontend
+PASS	assign-order/sweep-s28-paren-targets/paren-array-elem-targets	-	-
+PASS	assign-order/sweep-s28-paren-targets/paren-comma-ok-targets	-	-
+PASS	assign-order/sweep-s28-paren-targets/paren-deep-nesting	-	-
+PASS	assign-order/sweep-s28-paren-targets/paren-deref-targets	-	-
+PASS	assign-order/sweep-s28-paren-targets/paren-field-targets	-	-
+PASS	assign-order/sweep-s28-paren-targets/paren-local-inc-dec-compound	-	-
+PASS	assign-order/sweep-s28-paren-targets/paren-multi-targets	-	-
+PASS	assign-order/sweep-s28-paren-targets/paren-select-forms	-	-
+PASS	assign-order/sweep-s28-paren-targets/paren-send-recv	-	-
+PASS	assign-order/sweep-s28-paren-targets/paren-slice-elem-targets	-	-
+PASS	binary/sweep-s28-paren-unary-binary/paren-binary	-	-
+PASS	binary/sweep-s28-paren-unary-binary/paren-binary-order	-	-
+PASS	binary/sweep-s28-paren-unary-binary/paren-div-zero-panic	-	-
+PASS	binary/sweep-s28-paren-unary-binary/paren-unary	-	-
+PASS	builtins/sweep-s28-paren-call-operands/paren-builtin-callees	-	-
+PASS	builtins/sweep-s28-paren-call-operands/paren-builtin-operands	-	-
+PASS	builtins/sweep-s28-paren-call-operands/paren-call-args	-	-
+PASS	builtins/sweep-s28-paren-call-operands/paren-print-panic-callees	-	-
+PASS	channels/sweep-s29-defer-close-scopes/closer-in-generic-two-insts	-	-
+PASS	channels/sweep-s29-defer-close-scopes/closer-in-literal-and-enclosing	-	-
+PASS	channels/sweep-s29-defer-close-scopes/closer-in-loop	-	-
+PASS	channels/sweep-s29-defer-close-scopes/closer-operand-spellings	-	-
+PASS	channels/sweep-s29-defer-close-scopes/closers-in-inits	-	-
+PASS	channels/sweep-s29-defer-close-scopes/closers-same-name-methods-and-func	-	-
+PASS	channels/sweep-s29-defer-close-scopes/defer-done-two-literals	-	-
+PASS	channels/sweep-s29-defer-close-scopes/defer-unlock-scopes	-	-
+PASS	channels/sweep-s29-defer-close-scopes/once-do-scopes	-	-
+PASS	channels/sweep-s29-defer-close-scopes/two-closers-one-function	-	-
+PASS	comparisons/sweep-s28-const-left-operand/const-left-arithmetic	-	-
+PASS	comparisons/sweep-s28-const-left-operand/const-left-comparisons	-	-
+PASS	comparisons/sweep-s28-nil-left-routes/nil-left-boxed-and-assert	-	-
+PASS	comparisons/sweep-s28-nil-left-routes/nil-left-routes	-	-
+PASS	comparisons/sweep-s28-nil-left-routes/paren-nil-panic	-	-
+PASS	comparisons/sweep-s28-nil-left-routes/paren-nil-sinks	-	-
+PASS	control-flow/sweep-s28-label-forms/label-in-closure-and-outer	-	-
+PASS	control-flow/sweep-s28-label-forms/labelled-block-and-names	-	-
+PASS	control-flow/sweep-s28-label-forms/labelled-empty-statements	-	-
+PASS	control-flow/sweep-s28-paren-conditions/paren-for-conds	-	-
+PASS	control-flow/sweep-s28-paren-conditions/paren-if-conds	-	-
+PASS	control-flow/sweep-s28-paren-conditions/paren-returns	-	-
+PASS	control-flow/sweep-s28-paren-conditions/paren-switch-tags	-	-
+PASS	control-flow/sweep-s28-paren-conditions/paren-type-switches	-	-
+PASS	conversions/sweep-s28-paren-type-conversions	-	-
+PASS	defer/sweep-s28-paren-defer-go-stmt/defer-paren-builtins	-	-
+PASS	defer/sweep-s28-paren-defer-go-stmt/defer-paren-callees	-	-
+PASS	defer/sweep-s28-paren-defer-go-stmt/defer-paren-recover-swallows	-	-
+PASS	defer/sweep-s28-paren-defer-go-stmt/go-paren-callees-joined	-	-
+PASS	defer/sweep-s28-paren-defer-go-stmt/paren-expr-stmts	-	-
+PASS	defer/sweep-s29-recover-noop-scopes/noop-does-not-recover	-	-
+PASS	defer/sweep-s29-recover-noop-scopes/noop-first	-	-
+PASS	defer/sweep-s29-recover-noop-scopes/noop-in-generic-two-insts	-	-
+PASS	defer/sweep-s29-recover-noop-scopes/noop-second	-	-
+PASS	defer/sweep-s29-recover-noop-scopes/noop-twice-and-literal	-	-
+PASS	directives/sweep-s28-comment-lookalikes/block-noinline	-	-
+PASS	directives/sweep-s28-comment-lookalikes/space-noinline-body	-	-
+PASS	functions/sweep-s28-comment-forms	-	-
+PASS	functions/sweep-s28-comment-in-args	-	-
+PASS	functions/sweep-s28-continuation-forms	-	-
+PASS	functions/sweep-s28-paren-conv-under-defer-go	-	-
+PASS	functions/sweep-s28-paren-placements/paren-beside-calls	-	-
+PASS	functions/sweep-s28-paren-placements/paren-in-closure	-	-
+PASS	functions/sweep-s28-paren-placements/paren-in-generic-both	-	-
+PASS	functions/sweep-s28-paren-placements/paren-in-method	-	-
+PASS	functions/sweep-s28-paren-placements/paren-package-level	-	-
+PASS	functions/sweep-s28-paren-types-in-decls/paren-type-decls	-	-
+PASS	functions/sweep-s28-paren-types-in-decls/paren-var-decls	-	-
+PASS	functions/sweep-s28-semicolon-forms/double-semicolons	-	-
+PASS	functions/sweep-s28-semicolon-forms/semicolon-forms	-	-
+PASS	functions/sweep-s29-lifted-literal-scopes/lits-as-args	-	-
+PASS	functions/sweep-s29-lifted-literal-scopes/lits-in-generic-method-two-insts	-	-
+PASS	functions/sweep-s29-lifted-literal-scopes/lits-in-generic-two-insts	-	-
+PASS	functions/sweep-s29-lifted-literal-scopes/lits-in-go-defer	-	-
+PASS	functions/sweep-s29-lifted-literal-scopes/lits-in-inits	-	-
+PASS	functions/sweep-s29-lifted-literal-scopes/lits-in-same-name-methods	-	-
+PASS	functions/sweep-s29-lifted-literal-scopes/two-lits-one-line	-	-
+PASS	functions/sweep-s29-quarantine-rollback/good-a	-	-
+PASS	functions/sweep-s29-quarantine-rollback/good-b	-	-
+PASS	functions/sweep-s29-quarantine-rollback/good-c	-	-
+PASS	functions/sweep-s29-quarantine-rollback/good-d	-	-
+PASS	functions/sweep-s29-quarantine-rollback/stencil-good-after-bad	-	-
+PASS	functions/sweep-s29-temporaries-scopes/fmt-lifts-scopes	-	-
+PASS	functions/sweep-s29-temporaries-scopes/goto-two-labels	-	-
+PASS	functions/sweep-s29-temporaries-scopes/hoist-in-generic-two-insts	-	-
+PASS	functions/sweep-s29-temporaries-scopes/hoist-in-literal-inside-hoist	-	-
+PASS	functions/sweep-s29-temporaries-scopes/hoists-two-statements	-	-
+PASS	functions/sweep-s29-temporaries-scopes/loop-var-captures-twice-nested	-	-
+PASS	functions/sweep-s29-temporaries-scopes/loop-var-in-generic-two-insts	-	-
+PASS	functions/sweep-s29-temporaries-scopes/multi-value-in-generic-two-insts	-	-
+PASS	functions/sweep-s29-temporaries-scopes/multi-value-temps	-	-
+PASS	functions/sweep-s29-temporaries-scopes/range-assign-nested	-	-
+PASS	functions/sweep-s29-temporaries-scopes/select-in-generic-two-insts	-	-
+PASS	functions/sweep-s29-temporaries-scopes/selects-twice-nested	-	-
+PASS	functions/sweep-s29-temporaries-scopes/switch-in-generic-two-insts	-	-
+PASS	functions/sweep-s29-temporaries-scopes/switches-twice-nested-and-literal	-	-
+PASS	functions/sweep-s29-temporaries-scopes/type-switches-nested	-	-
+PASS	generics/sweep-s28-paren-assert-inst-methodexpr/paren-assertions	-	-
+PASS	generics/sweep-s28-paren-assert-inst-methodexpr/paren-instantiations	-	-
+PASS	generics/sweep-s28-paren-assert-inst-methodexpr/paren-method-exprs-values	-	-
+PASS	generics/sweep-s28-paren-typeparam-constraints	-	-
+PASS	generics/sweep-s29-lit-typeparam-control	-	-
+FAIL	generics/sweep-s29-lit-typeparam-neighbours/lit-func-param-t	lean-observation	error:decoder-scope-wrong-declaration
+FAIL	generics/sweep-s29-lit-typeparam-neighbours/lit-in-generic-method-t	lean-observation	error:decoder-scope-wrong-declaration
+FAIL	generics/sweep-s29-lit-typeparam-neighbours/lit-map-param-t	lean-observation	error:decoder-scope-wrong-declaration
+FAIL	generics/sweep-s29-lit-typeparam-neighbours/lit-named-result-t	lean-observation	error:decoder-scope-wrong-declaration
+FAIL	generics/sweep-s29-lit-typeparam-neighbours/lit-nested-param-t	lean-observation	error:decoder-scope-wrong-declaration
+FAIL	generics/sweep-s29-lit-typeparam-neighbours/lit-ptr-param-t	lean-observation	error:decoder-scope-wrong-declaration
+FAIL	generics/sweep-s29-lit-typeparam-neighbours/lit-second-param-s	lean-observation	error:decoder-scope-wrong-declaration
+FAIL	generics/sweep-s29-lit-typeparam-neighbours/lit-slice-param-t	lean-observation	error:decoder-scope-wrong-declaration
+FAIL	generics/sweep-s29-lit-typeparam-neighbours/lit-struct-param-t	lean-observation	error:decoder-scope-wrong-declaration
+PASS	maps/sweep-s28-paren-comma-ok-rhs/paren-comma-ok-rhs-assign-var	-	-
+PASS	maps/sweep-s28-paren-comma-ok-rhs/paren-comma-ok-rhs-define	-	-
+PASS	methods/sweep-s29-receivers-captures-names/capture-binders-subject	-	-
+PASS	methods/sweep-s29-receivers-captures-names/method-value-spellings	-	-
+PASS	methods/sweep-s29-receivers-captures-names/receiver-slots	-	-
+PASS	methods/sweep-s29-receivers-captures-names/stencil-name-kinds	-	-
+PASS	methods/sweep-s29-receivers-captures-names/synthetic-lookalike-names	-	-
+FAIL	multi-assign/sweep-s28-paren-multi-value/paren-multi-value-assign	frontend-export	unrowed/expression-shape
+FAIL	multi-assign/sweep-s28-paren-multi-value/paren-multi-value-define	frontend-export	unrowed/expression-shape
+FAIL	multi-assign/sweep-s28-paren-multi-value/paren-multi-value-return	frontend-export	unrowed/expression-shape
+FAIL	multi-assign/sweep-s28-paren-multi-value/paren-multi-value-spread	frontend-export	unrowed/expression-shape
+FAIL	multi-assign/sweep-s28-paren-multi-value/paren-multi-value-var	frontend-export	unrowed/expression-shape
+FAIL	range/sweep-s28-paren-range-ident/range-paren-ident-targets	frontend-export	FR-6/range-assign-nonident
+FAIL	range/sweep-s28-paren-range-ident/range-paren-value-only	frontend-export	FR-6/range-assign-nonident
+PASS	scoping/sweep-s28-grouped-decls/grouped-const-forms	-	-
+PASS	scoping/sweep-s28-grouped-decls/grouped-type-forms	-	-
+PASS	scoping/sweep-s28-grouped-decls/grouped-var-forms	-	-
+PASS	slices/sweep-s28-paren-literal-types/paren-literal-types	-	-
+PASS	slices/sweep-s28-paren-literal-types/paren-make-new-chan-ptr	-	-
+PASS	structs/sweep-s28-keyed-positional/keyed-index-forms	-	-
+PASS	structs/sweep-s28-keyed-positional/mixed-keyed-positional-elements	-	-
+PASS	structs/sweep-s28-paren-operands/paren-index-slice	-	-
+PASS	structs/sweep-s28-paren-operands/paren-literal-elements	-	-
+PASS	structs/sweep-s28-paren-operands/paren-selectors	-	-

@@ -1,11 +1,50 @@
 # GoLean negative-corpus (compile-rejection) baseline
 # recorded: 2026-08-18  commit: f68a4d86+ (spec-truth P3 slice 2)  oracle: go build (rejection)  [header corrected 2026-08-31: the old "+ frontend fail-closed" conjunct claimed a check that does not exist — scripts/coverage-negative invokes no GoLean tool (p2-fact claim 5)]
-# manifest_cases: 608  pass: 606  fail: 2
+# manifest_cases: 635  pass: 633  fail: 2
 # re-pinned: 2026-10-27 [AGENT], lane frontend/fix-admission-1027 — BUG-217 and BUG-219 fixed (the main module's path judged
 #   against the pinned GOROOT and gc's reserved names; cmd/go's import rules mirrored at discovery): NINE rows FAIL
 #   frontend-accepts -> PASS from the full run at 63bbba7a with the row edits and records applied in the tree (1117 s) — imports/{vendor-path-import, nested-vendor-path-import,
 #   goroot-vendor-name, bare-internal-path, module-mode-bare-local-import, package-main-import} at frontend=type-check (BUG-219),
 #   modules/{module-path-std-fmt, module-path-std-nested, module-path-cmd} at frontend=module (BUG-217). No other row moves.
+# re-pinned: 2026-11-05 [AGENT], lane sweep/s28-s29-spelling-symbols (on main 12d7a79a) — the S28 sweep (spelling admission; plan §4,
+#   [USER]-approved 2026-10-27). ADDITIVE ONLY: 27 new ids Corpus/coverage/negative/compile/*/sweep-s28-* from the full run of
+#   scripts/ci --diff at the lane tree 4ab5a479 (929 s); no existing row moved: 539 + 27 = 566, pass 537 + 27 = 564, fail 2.
+#   Every row born PASS (gc rejects AND the frontend refuses as a type-check, parse or file-selection rejection): the spellings
+#   gc rejects among the sweep's cells — a parenthesised define target and a parenthesised selector target of :=, nil == nil,
+#   nil as a switch tag, duplicate map keys / array indices / field keys, too few positional values, keyed and positional
+#   elements mixed in one struct literal, a parenthesised type in a composite literal (struct and slice), a generic TYPE's
+#   parenthesised constraint (gc's array-length parse), the newline-insertion traps (a brace on the next line after an if
+#   header and after a signature, a bare return before its operand, an operator starting a line, a comma starting a line,
+#   newline-bearing block comments before an operator / a return operand / an if brace / a literal's closing brace / between
+#   a signature and its body / after a parameter list), an unused label on an empty statement, a break to an enclosing
+#   function's label from a closure, a //go:build line inside a body, a parenthesised package name as a selector base. The rows:
+#     comparisons/sweep-s28-nil-eq-nil                                               PASS
+#     comparisons/sweep-s28-switch-nil-tag                                           PASS
+#     control-flow/sweep-s28-comment-newline-if                                      PASS
+#     control-flow/sweep-s28-if-brace-newline                                        PASS
+#     control-flow/sweep-s28-label-closure-break                                     PASS
+#     control-flow/sweep-s28-unused-label-semicolon                                  PASS
+#     directives/sweep-s28-gobuild-in-body                                           PASS
+#     functions/sweep-s28-comment-between-sig-body                                   PASS
+#     functions/sweep-s28-comment-newline-after-params                               PASS
+#     functions/sweep-s28-comment-newline-plus                                       PASS
+#     functions/sweep-s28-func-brace-newline                                         PASS
+#     functions/sweep-s28-newline-before-comma                                       PASS
+#     functions/sweep-s28-split-plus-unused                                          PASS
+#     generics/sweep-s28-typeparam-paren-type-constraint                             PASS
+#     imports/sweep-s28-paren-package-selector                                       PASS
+#     maps/sweep-s28-dup-const-map-key                                               PASS
+#     methods/sweep-s28-paren-receiver-define                                        PASS
+#     multi-assign/sweep-s28-paren-define                                            PASS
+#     returns/sweep-s28-comment-newline-return                                       PASS
+#     returns/sweep-s28-return-newline                                               PASS
+#     slices/sweep-s28-comment-newline-literal                                       PASS
+#     slices/sweep-s28-dup-array-index                                               PASS
+#     slices/sweep-s28-paren-slice-literal-type                                      PASS
+#     structs/sweep-s28-dup-field-key                                                PASS
+#     structs/sweep-s28-mixed-keyed-positional                                       PASS
+#     structs/sweep-s28-paren-literal-type                                           PASS
+#     structs/sweep-s28-positional-too-few                                           PASS
 # re-pinned: 2026-11-05 [AGENT], lane sweep/s17-forms — the S17 sweep (lowering coverage holes: statement and expression forms; plan §4,
 #   [USER]-approved 2026-10-27). ADDITIVE ONLY: 42 new ids Corpus/coverage/negative/compile/control-flow/sweep-s17-* from the full run
 #   of scripts/ci --diff at the lane tree 37e2fe89f28ec56b2e84efa2772060e0777d77e9 (914 s); no existing row moved: 539 + 42 = 581, pass 537 + 42 = 579, fail 2.
@@ -872,3 +911,30 @@ PASS	control-flow/sweep-s17-switch-on-slice	-
 PASS	control-flow/sweep-s17-switch-two-defaults	-
 PASS	control-flow/sweep-s17-type-switch-binding-unused	-
 PASS	control-flow/sweep-s17-unused-label	-
+PASS	comparisons/sweep-s28-nil-eq-nil	-
+PASS	comparisons/sweep-s28-switch-nil-tag	-
+PASS	control-flow/sweep-s28-comment-newline-if	-
+PASS	control-flow/sweep-s28-if-brace-newline	-
+PASS	control-flow/sweep-s28-label-closure-break	-
+PASS	control-flow/sweep-s28-unused-label-semicolon	-
+PASS	directives/sweep-s28-gobuild-in-body	-
+PASS	functions/sweep-s28-comment-between-sig-body	-
+PASS	functions/sweep-s28-comment-newline-after-params	-
+PASS	functions/sweep-s28-comment-newline-plus	-
+PASS	functions/sweep-s28-func-brace-newline	-
+PASS	functions/sweep-s28-newline-before-comma	-
+PASS	functions/sweep-s28-split-plus-unused	-
+PASS	generics/sweep-s28-typeparam-paren-type-constraint	-
+PASS	imports/sweep-s28-paren-package-selector	-
+PASS	maps/sweep-s28-dup-const-map-key	-
+PASS	methods/sweep-s28-paren-receiver-define	-
+PASS	multi-assign/sweep-s28-paren-define	-
+PASS	returns/sweep-s28-comment-newline-return	-
+PASS	returns/sweep-s28-return-newline	-
+PASS	slices/sweep-s28-comment-newline-literal	-
+PASS	slices/sweep-s28-dup-array-index	-
+PASS	slices/sweep-s28-paren-slice-literal-type	-
+PASS	structs/sweep-s28-dup-field-key	-
+PASS	structs/sweep-s28-mixed-keyed-positional	-
+PASS	structs/sweep-s28-paren-literal-type	-
+PASS	structs/sweep-s28-positional-too-few	-
