@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 7475 (7104 PASS / 371 FAIL)
+# cases: 7498 (7140 PASS / 358 FAIL)
 # re-pinned: 2026-11-05 [AGENT], lane frontend/fix-init-admission-1105 — BUG-340, 341 (the S19 sweep), 401 (S21), 412 (S23) FIXED in
 #   tools/nativefrontend (the campaign plan's rule that a finding is fixed through the normal train, [USER] approved 2026-10-27, relayed):
 #   (1) hiddendep.go — the E7 guard's REACH is the selected method's receiver type on every selection (a direct call, a method value,
@@ -38,6 +38,44 @@
 # removed: multipkg/sweep-s19-staticinit-conv/uint64-of-uint — fixture moved 2026-11-05 (lane frontend/fix-init-admission-1105) to multipkg/sweep-s19-staticinit-conv-same-class/uint64-of-uint: the fix turns the row into a whole-export refusal by name, which cannot share a package with its green control
 # removed: multipkg/sweep-s19-staticinit-conv/uintptr-of-uint — fixture moved 2026-11-05 (lane frontend/fix-init-admission-1105) to multipkg/sweep-s19-staticinit-conv-same-class/uintptr-of-uint: the fix turns the row into a whole-export refusal by name, which cannot share a package with its green control
 # removed: multipkg/sweep-s19-staticinit-conv/int-of-int64 — fixture moved 2026-11-05 (lane frontend/fix-init-admission-1105) to multipkg/sweep-s19-staticinit-conv-same-class/int-of-int64: the fix turns the row into a whole-export refusal by name, which cannot share a package with its green control
+# re-pinned: 2026-11-05 [AGENT], lane frontend/fix-paren-forms-1105 — BUG-390 (the S17 sweep) and BUG-420, 421, 422 (the S28
+#   sweep) FIXED in tools/nativefrontend (the campaign plan's rule that a finding is fixed through the normal train, [USER]
+#   approved 2026-10-27, relayed): (1) emit.go reads every node gc reads through parentheses through ast.Unparen — the
+#   blank / identifier targets (go/types lhsVar), the multi-value call operands, the selector / func-literal callees and
+#   the sync hooks (21 of the S28 matrix's 54 tests; the audit in BUG-420's entry); (2) emitSwitch reads the clause's
+#   last NON-EMPTY statement (go/types trimTrailingEmptyStmts ported); (3) any panic in emission is the named
+#   whole-export refusal `native frontend internal error: …` (exit 1, no wire), never a crash. 13 rows FAIL→PASS (the 12
+#   Cases rows of the four entries and ONE frontier row the same rule reaches, named last below), 23 rows ADDED born
+#   green, NOTHING ELSE MOVED: 7475 → 7498 rows; PASS 7096 + 13 + 23 = 7132; FAIL 379 - 13 = 366. No removal, no cause
+#   change. Measured by CAPPED_MEM_MAX=64G capped scripts/ci --diff at the lane tree 9c38bf09 before this re-pin (its only
+#   drift: these 13 flips and the 23 additions), the rows taken from that run's artifacts/coverage/latest.tsv; the --diff
+#   at the tip judges. The moved rows (the first 12 on their entries' Cases lines; the pinned FAIL stage/cause before → PASS):
+#     control-flow/sweep-s17-fallthrough-empty-stmt/fallthrough-then-empty-stmt      FAIL/frontend-export unrowed/fallthrough-trailing-empty-stmt → PASS
+#     control-flow/sweep-s17-fallthrough-empty-stmt/fallthrough-then-empty-stmt-miss FAIL/frontend-export unrowed/fallthrough-trailing-empty-stmt → PASS
+#     assign-order/sweep-s28-paren-blank-target/paren-blank-single                   FAIL/frontend-export crash:frontend → PASS
+#     assign-order/sweep-s28-paren-blank-target/paren-blank-multi                    FAIL/frontend-export crash:frontend → PASS
+#     assign-order/sweep-s28-paren-blank-target/paren-blank-multi-value              FAIL/frontend-export crash:frontend → PASS
+#     range/sweep-s28-paren-range-ident/range-paren-ident-targets                    FAIL/frontend-export FR-6/range-assign-nonident → PASS
+#     range/sweep-s28-paren-range-ident/range-paren-value-only                       FAIL/frontend-export FR-6/range-assign-nonident → PASS
+#     multi-assign/sweep-s28-paren-multi-value/paren-multi-value-define              FAIL/frontend-export unrowed/expression-shape → PASS
+#     multi-assign/sweep-s28-paren-multi-value/paren-multi-value-var                 FAIL/frontend-export unrowed/expression-shape → PASS
+#     multi-assign/sweep-s28-paren-multi-value/paren-multi-value-assign              FAIL/frontend-export unrowed/expression-shape → PASS
+#     multi-assign/sweep-s28-paren-multi-value/paren-multi-value-return              FAIL/frontend-export unrowed/expression-shape → PASS
+#     multi-assign/sweep-s28-paren-multi-value/paren-multi-value-spread              FAIL/frontend-export unrowed/expression-shape → PASS
+#     noodler/frontier/short-circuit-iface-method-value                             FAIL/frontend-export FR-18/alloc-short-circuit → PASS
+#       (`n > 0 && (g.Get)() == 5`: the parenthesised interface-method CALLEE in a short-circuit operand lowered as an
+#       interface method VALUE, which that position refuses by name (FR-18); read through the parentheses it is the direct
+#       interface call — go/types' reading and gc's — and the row's expectation is gc's; FR-18 keeps the method-value
+#       shape, the ledger's FR-18 row updated; not on a Cases line — a frontier witness of the noodler, 2026-09-03)
+#   The added rows (born green, expected = gc go1.26.5; the packages' headers name the lane and the fix):
+#     assign-order/fix-paren-forms-blank-routes/* (10: the parenthesised blank on the comma-ok map read / receive /
+#       assertion, the select pair and blank-only clause, a lifted closure, the receive statement, a generic body, the
+#       range key and the blank-only range — the S28 matrix's `out` cell, every one a crash before the fix)
+#     functions/fix-paren-forms-callee-shapes/* (6: the parenthesised atomic, sync, shim, method, func-literal and
+#       field-func callees)
+#     control-flow/fix-paren-forms-fallthrough-empties/* (7: two trailing empties, empties before the branch, an
+#       empty-only clause)
+#   The negative baseline is unchanged (the four sweep-s17-fallthrough-* rejection rows stay red on gc's side).
 # re-pinned 2026-11-05 [AGENT coordinator], train-30 stage, from the stage's full run: 9 rows FAIL→PASS — the S29 sweep's `generics/sweep-s29-lit-typeparam-neighbours/*` rows, pinned red on main (BUG-302's neighbours) and green here with train 28's binding fix beneath them, as the sweep lane predicted; no other row moved: generics/sweep-s29-lit-typeparam-neighbours/lit-func-param-t, generics/sweep-s29-lit-typeparam-neighbours/lit-in-generic-method-t, generics/sweep-s29-lit-typeparam-neighbours/lit-map-param-t, generics/sweep-s29-lit-typeparam-neighbours/lit-named-result-t, generics/sweep-s29-lit-typeparam-neighbours/lit-nested-param-t, generics/sweep-s29-lit-typeparam-neighbours/lit-ptr-param-t, generics/sweep-s29-lit-typeparam-neighbours/lit-second-param-s, generics/sweep-s29-lit-typeparam-neighbours/lit-slice-param-t, generics/sweep-s29-lit-typeparam-neighbours/lit-struct-param-t
 # cause keyed 2026-11-05 [AGENT coordinator], train-30 stage: BUG-402's three rows `unsupported:?` → `unsupported:convert-to-bool-arm` (the scripts/machine-causes.tsv row added at this stage; the gate at this tip verifies the key); no row moved.
 # cause keyed 2026-11-05 [AGENT coordinator], train-29 stage, from the stage's full run (scripts/coverage-cause --apply): the five rows that carried `?` — BUG-390's two (`unrowed/fallthrough-trailing-empty-stmt`, the tools/lowerdiag/causes.tsv row added at this stage) and BUG-391's three (`error:decoder-unseq-head-not-admitted`, the scripts/machine-causes.tsv row added at this stage); no row moved.
@@ -8402,7 +8440,7 @@ PASS	noodler/frontier/promoted-through-pointer-nonstruct	-	-
 FAIL	noodler/frontier/self-shadow-define	frontend-export	FR-17/self-shadow-define
 FAIL	noodler/frontier/short-circuit-alloc-make	frontend-export	FR-18/alloc-short-circuit
 FAIL	noodler/frontier/short-circuit-alloc-new	frontend-export	FR-18/alloc-short-circuit
-FAIL	noodler/frontier/short-circuit-iface-method-value	frontend-export	FR-18/alloc-short-circuit
+PASS	noodler/frontier/short-circuit-iface-method-value	-	-
 FAIL	noodler/frontier/short-circuit-map-literal	frontend-export	FR-18/alloc-short-circuit
 FAIL	noodler/frontier/short-circuit-slice-literal	frontend-export	FR-18/alloc-short-circuit
 FAIL	noodler/frontier/short-circuit-splat-call	frontend-export	FR-18/alloc-short-circuit
@@ -12665,8 +12703,8 @@ PASS	control-flow/sweep-s17-blocks-empty/block-terminating	-	-
 PASS	control-flow/sweep-s17-blocks-empty/unreachable-after-return	-	-
 PASS	control-flow/sweep-s17-blocks-empty/continue-from-type-switch-block	-	-
 PASS	control-flow/sweep-s17-blocks-empty/break-select-in-switch-in-for	-	-
-FAIL	control-flow/sweep-s17-fallthrough-empty-stmt/fallthrough-then-empty-stmt	frontend-export	unrowed/fallthrough-trailing-empty-stmt
-FAIL	control-flow/sweep-s17-fallthrough-empty-stmt/fallthrough-then-empty-stmt-miss	frontend-export	unrowed/fallthrough-trailing-empty-stmt
+PASS	control-flow/sweep-s17-fallthrough-empty-stmt/fallthrough-then-empty-stmt	-	-
+PASS	control-flow/sweep-s17-fallthrough-empty-stmt/fallthrough-then-empty-stmt-miss	-	-
 PASS	control-flow/sweep-s17-fallthrough-empty-stmt/fallthrough-explicit-semicolon	-	-
 PASS	control-flow/sweep-s17-for-clauses/all-empty	-	-
 PASS	control-flow/sweep-s17-for-clauses/cond-only-semis	-	-
@@ -13004,9 +13042,9 @@ PASS	spec-examples-stmt/sweep-s17-complit-forms/string-bool-float-elems	-	-
 PASS	spec-examples-stmt/sweep-s17-complit-forms/lit-compare-cond	-	-
 PASS	spec-examples-stmt/sweep-s17-complit-forms/lit-defer-arg	-	-
 PASS	spec-examples-stmt/sweep-s17-complit-forms/lit-in-closure	-	-
-FAIL	assign-order/sweep-s28-paren-blank-target/paren-blank-multi	frontend-export	crash:frontend
-FAIL	assign-order/sweep-s28-paren-blank-target/paren-blank-multi-value	frontend-export	crash:frontend
-FAIL	assign-order/sweep-s28-paren-blank-target/paren-blank-single	frontend-export	crash:frontend
+PASS	assign-order/sweep-s28-paren-blank-target/paren-blank-multi	-	-
+PASS	assign-order/sweep-s28-paren-blank-target/paren-blank-multi-value	-	-
+PASS	assign-order/sweep-s28-paren-blank-target/paren-blank-single	-	-
 PASS	assign-order/sweep-s28-paren-targets/paren-array-elem-targets	-	-
 PASS	assign-order/sweep-s28-paren-targets/paren-comma-ok-targets	-	-
 PASS	assign-order/sweep-s28-paren-targets/paren-deep-nesting	-	-
@@ -13123,13 +13161,13 @@ PASS	methods/sweep-s29-receivers-captures-names/method-value-spellings	-	-
 PASS	methods/sweep-s29-receivers-captures-names/receiver-slots	-	-
 PASS	methods/sweep-s29-receivers-captures-names/stencil-name-kinds	-	-
 PASS	methods/sweep-s29-receivers-captures-names/synthetic-lookalike-names	-	-
-FAIL	multi-assign/sweep-s28-paren-multi-value/paren-multi-value-assign	frontend-export	unrowed/expression-shape
-FAIL	multi-assign/sweep-s28-paren-multi-value/paren-multi-value-define	frontend-export	unrowed/expression-shape
-FAIL	multi-assign/sweep-s28-paren-multi-value/paren-multi-value-return	frontend-export	unrowed/expression-shape
-FAIL	multi-assign/sweep-s28-paren-multi-value/paren-multi-value-spread	frontend-export	unrowed/expression-shape
-FAIL	multi-assign/sweep-s28-paren-multi-value/paren-multi-value-var	frontend-export	unrowed/expression-shape
-FAIL	range/sweep-s28-paren-range-ident/range-paren-ident-targets	frontend-export	FR-6/range-assign-nonident
-FAIL	range/sweep-s28-paren-range-ident/range-paren-value-only	frontend-export	FR-6/range-assign-nonident
+PASS	multi-assign/sweep-s28-paren-multi-value/paren-multi-value-assign	-	-
+PASS	multi-assign/sweep-s28-paren-multi-value/paren-multi-value-define	-	-
+PASS	multi-assign/sweep-s28-paren-multi-value/paren-multi-value-return	-	-
+PASS	multi-assign/sweep-s28-paren-multi-value/paren-multi-value-spread	-	-
+PASS	multi-assign/sweep-s28-paren-multi-value/paren-multi-value-var	-	-
+PASS	range/sweep-s28-paren-range-ident/range-paren-ident-targets	-	-
+PASS	range/sweep-s28-paren-range-ident/range-paren-value-only	-	-
 PASS	scoping/sweep-s28-grouped-decls/grouped-const-forms	-	-
 PASS	scoping/sweep-s28-grouped-decls/grouped-type-forms	-	-
 PASS	scoping/sweep-s28-grouped-decls/grouped-var-forms	-	-
@@ -13464,3 +13502,26 @@ FAIL	multipkg/sweep-s19-staticinit-conv-same-class/int64-of-int	frontend-export	
 FAIL	multipkg/sweep-s19-staticinit-conv-same-class/uint64-of-uint	frontend-export	c-pin/staticinit-uncertain-order
 FAIL	multipkg/sweep-s19-staticinit-conv-same-class/uintptr-of-uint	frontend-export	c-pin/staticinit-uncertain-order
 FAIL	multipkg/sweep-s19-staticinit-conv-same-class/int-of-int64	frontend-export	c-pin/staticinit-uncertain-order
+PASS	assign-order/fix-paren-forms-blank-routes/paren-blank-comma-ok-map	-	-
+PASS	assign-order/fix-paren-forms-blank-routes/paren-blank-comma-ok-recv	-	-
+PASS	assign-order/fix-paren-forms-blank-routes/paren-blank-comma-ok-assert	-	-
+PASS	assign-order/fix-paren-forms-blank-routes/paren-blank-select-pair	-	-
+PASS	assign-order/fix-paren-forms-blank-routes/paren-blank-select-only	-	-
+PASS	assign-order/fix-paren-forms-blank-routes/paren-blank-closure	-	-
+PASS	assign-order/fix-paren-forms-blank-routes/paren-blank-recv-stmt	-	-
+PASS	assign-order/fix-paren-forms-blank-routes/paren-blank-generic	-	-
+PASS	assign-order/fix-paren-forms-blank-routes/paren-blank-range-key	-	-
+PASS	assign-order/fix-paren-forms-blank-routes/paren-blank-range-only	-	-
+PASS	functions/fix-paren-forms-callee-shapes/paren-callee-atomic	-	-
+PASS	functions/fix-paren-forms-callee-shapes/paren-callee-sync	-	-
+PASS	functions/fix-paren-forms-callee-shapes/paren-callee-shim	-	-
+PASS	functions/fix-paren-forms-callee-shapes/paren-callee-method	-	-
+PASS	functions/fix-paren-forms-callee-shapes/paren-callee-funclit	-	-
+PASS	functions/fix-paren-forms-callee-shapes/paren-callee-field-func	-	-
+PASS	control-flow/fix-paren-forms-fallthrough-empties/fallthrough-two-empties	-	-
+PASS	control-flow/fix-paren-forms-fallthrough-empties/fallthrough-two-empties-miss	-	-
+PASS	control-flow/fix-paren-forms-fallthrough-empties/fallthrough-empties-before	-	-
+PASS	control-flow/fix-paren-forms-fallthrough-empties/fallthrough-empties-before-miss	-	-
+PASS	control-flow/fix-paren-forms-fallthrough-empties/fallthrough-empties-before-default	-	-
+PASS	control-flow/fix-paren-forms-fallthrough-empties/empty-only-clause	-	-
+PASS	control-flow/fix-paren-forms-fallthrough-empties/empty-only-clause-miss	-	-
