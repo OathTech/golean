@@ -7,7 +7,7 @@ durable was lost: every lane's work is on a branch or in a snapshot ref.
 
 ## 1. What awaits the owner (unchanged since the last ask)
 
-Five trains are staged, gated and fast-forwardable from main `89ba27c5`; ONE
+Five trains were staged, gated and fast-forwardable from main `89ba27c5`; they LANDED on 2026-11-05 on the owner's sign-off (main = `d2bd4740` + this page's records commit). The original ask, kept as written: ONE
 sign-off lands them all: `git merge --ff-only stage/train-27-1027` (tip
 `d2bd4740`, 41 commits). Contents: trains 23–27 — sweep batches 1–4 over sixteen
 shapes (1,426 + 587 rows), the fix lanes that closed nineteen findings, the
