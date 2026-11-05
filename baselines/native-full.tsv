@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 7157 (6818 PASS / 339 FAIL)
+# cases: 7219 (6847 PASS / 372 FAIL)
 # cause keyed 2026-11-05 [AGENT coordinator], train-29 stage, from the stage's full run (scripts/coverage-cause --apply): the five rows that carried `?` — BUG-390's two (`unrowed/fallthrough-trailing-empty-stmt`, the tools/lowerdiag/causes.tsv row added at this stage) and BUG-391's three (`error:decoder-unseq-head-not-admitted`, the scripts/machine-causes.tsv row added at this stage); no row moved.
 # re-pinned: 2026-10-27 [AGENT], lane frontend/fix-binding-1027 — BUG-300, 301, 302 (the S13 sweep) FIXED in tools/nativefrontend
 #   (the campaign plan's rule that a finding is fixed through the normal train, [USER] approved 2026-10-27, relayed): (1) emit.go
@@ -23,6 +23,22 @@
 #     scoping/sweep-s13-local-iface-dispatch/error-local-iface                       FAIL/lean-observation error:decoder-duplicate-function-id → PASS
 #     scoping/sweep-s13-local-iface-dispatch/local-iface-satisfied                   FAIL/lean-observation error:decoder-duplicate-function-id → PASS
 #     scoping/sweep-s13-local-iface-dispatch/local-iface-two-funcs                   FAIL/lean-observation error:decoder-duplicate-function-id → PASS
+# cause keyed 2026-10-27 [AGENT coordinator], train-27 stage, from the stage's full run (scripts/coverage-cause --apply): the 16 rows that carried `?` — BUG-300/302's six `error:decoder-scope-wrong-declaration`, BUG-301's three `error:decoder-duplicate-function-id`, BUG-310's seven `panic:machine-panic` (the three table rows added at this stage); no row moved.
+# re-pinned: 2026-11-05 [AGENT], lane sweep/s23-budgets (on main 12d7a79a) — the defect-neighbourhood campaign's step 2, shape S23 (resource
+#   budgets; plan docs/2026-10-27_defect-neighbourhood-campaign.md §4, [USER]-approved 2026-10-27; members BUG-131, 090, 078): the shape's
+#   109-cell matrix (the doors a large or deep computation enters × count class × element footprint × site), 80 cells probed on both sides
+#   by this lane — 49 as rows, 31 by hand under `capped` — 22 covered by the existing budget rows, 4 out of scope, 3 left. Every budgeted
+#   door answers with a NAMED refusal or gc's value; six findings entered open (BUG-410–415: the string door and the live heap with no
+#   budget, a misnaming depth saturation in the frontend's footprint walk, and three quadratic grinds — per step by frame-local cells, per
+#   element store by backing, per pool step by goroutine count), none rowable: a kill or a grind cannot be a row (the machine leg is
+#   uncapped; the wall clock names them). NO existing row moved: 6179 + 62 = 6241; PASS 5820 + 29 = 5849; FAIL 359 + 33 = 392. No flip,
+#   no removal, no cause change (no runtime code changed: corpus and records only). NEW rows (62, 8 strict packages
+#   Corpus/coverage/exec/{arrays/sweep-s23-{make-elements,make-init,type-sites},slices/sweep-s23-append-growth,strings/sweep-s23-
+#   {conversions,concat},generics/sweep-s23-generic-array,functions/sweep-s23-depth}): 29 PASS, 33 FAIL born RED BY DESIGN on the Cases
+#   lines of BUG-131 (15: FAIL/lean-observation, unsupported:make-footprint-budget-runtime / append-footprint-budget /
+#   conv-footprint-budget — the run-time make at every element kind and route, the spill's growth forms, the string spread), BUG-078 (15:
+#   FAIL/frontend-export, by-design/materialization-budget — the constant count and the type at every declaration site), BUG-090 (2: the
+#   count bound, unsupported:slice-cap-budget) and BUG-412 (1: unit-nesting-65, the misnamed depth saturation). Full run at 81dfca68.
 # cause keyed 2026-10-27 [AGENT coordinator], train-27 stage, from the stage's full run (scripts/coverage-cause --apply): the 16 rows that carried `?` — BUG-300/302's six `error:decoder-scope-wrong-declaration`, BUG-301's three `error:decoder-duplicate-function-id`, BUG-310's seven `panic:machine-panic` (the three table rows added at this stage); no row moved.
 # re-pinned: 2026-11-05 [AGENT], lane sweep/s28-s29-spelling-symbols (on main 12d7a79a) — the defect-neighbourhood campaign's step 2,
 #   shapes S28 (spelling admission; members BUG-136/115, BUG-287 fixed in train 26) and S29 (synthetic-symbol bookkeeping; members
@@ -12816,3 +12832,65 @@ PASS	structs/sweep-s28-keyed-positional/mixed-keyed-positional-elements	-	-
 PASS	structs/sweep-s28-paren-operands/paren-index-slice	-	-
 PASS	structs/sweep-s28-paren-operands/paren-literal-elements	-	-
 PASS	structs/sweep-s28-paren-operands/paren-selectors	-	-
+FAIL	arrays/sweep-s23-make-elements/arg-over	lean-observation	unsupported:make-footprint-budget-runtime
+PASS	arrays/sweep-s23-make-elements/arg-under	-	-
+FAIL	arrays/sweep-s23-make-elements/bigarray-elem-runtime-over	lean-observation	unsupported:make-footprint-budget-runtime
+FAIL	arrays/sweep-s23-make-elements/closure	lean-observation	unsupported:make-footprint-budget-runtime
+FAIL	arrays/sweep-s23-make-elements/const-cap-over	frontend-export	by-design/materialization-budget
+FAIL	arrays/sweep-s23-make-elements/const-len-runtime-cap-over	lean-observation	unsupported:make-footprint-budget-runtime
+FAIL	arrays/sweep-s23-make-elements/count-bound	lean-observation	unsupported:slice-cap-budget
+FAIL	arrays/sweep-s23-make-elements/generic-over	lean-observation	unsupported:make-footprint-budget-runtime
+PASS	arrays/sweep-s23-make-elements/generic-under	-	-
+FAIL	arrays/sweep-s23-make-elements/imported-elem-const	frontend-export	by-design/materialization-budget
+FAIL	arrays/sweep-s23-make-elements/imported-elem-runtime	lean-observation	unsupported:make-footprint-budget-runtime
+FAIL	arrays/sweep-s23-make-elements/in-defer-unwinding	lean-observation	unsupported:make-footprint-budget-runtime
+FAIL	arrays/sweep-s23-make-elements/in-goroutine	lean-observation	unsupported:make-footprint-budget-runtime
+PASS	arrays/sweep-s23-make-elements/leaf-elems	-	-
+FAIL	arrays/sweep-s23-make-elements/nested-elem-runtime-over	lean-observation	unsupported:make-footprint-budget-runtime
+PASS	arrays/sweep-s23-make-elements/pointer-elem	-	-
+FAIL	arrays/sweep-s23-make-elements/struct-elem-const-over	frontend-export	by-design/materialization-budget
+PASS	arrays/sweep-s23-make-elements/struct-elem-runtime-at	-	-
+FAIL	arrays/sweep-s23-make-elements/struct-elem-runtime-over	lean-observation	unsupported:make-footprint-budget-runtime
+FAIL	arrays/sweep-s23-make-elements/zero-size-elem	lean-observation	unsupported:slice-cap-budget
+FAIL	arrays/sweep-s23-make-init/init-make	lean-observation	unsupported:make-footprint-budget-runtime
+FAIL	arrays/sweep-s23-type-sites/deep-nesting-over	frontend-export	by-design/materialization-budget
+FAIL	arrays/sweep-s23-type-sites/defined-chain-over	frontend-export	by-design/materialization-budget
+FAIL	arrays/sweep-s23-type-sites/field-over	frontend-export	by-design/materialization-budget
+PASS	arrays/sweep-s23-type-sites/fields-sum-at	-	-
+FAIL	arrays/sweep-s23-type-sites/fields-sum-over	frontend-export	by-design/materialization-budget
+FAIL	arrays/sweep-s23-type-sites/index-keyed-literal-over	frontend-export	by-design/materialization-budget
+FAIL	arrays/sweep-s23-type-sites/local-over	frontend-export	by-design/materialization-budget
+PASS	arrays/sweep-s23-type-sites/local-sibling	-	-
+FAIL	arrays/sweep-s23-type-sites/map-value-over	frontend-export	by-design/materialization-budget
+PASS	arrays/sweep-s23-type-sites/new-at-dim	-	-
+FAIL	arrays/sweep-s23-type-sites/new-over	frontend-export	by-design/materialization-budget
+FAIL	arrays/sweep-s23-type-sites/param-over	frontend-export	by-design/materialization-budget
+PASS	arrays/sweep-s23-type-sites/pointer-leaves	-	-
+FAIL	arrays/sweep-s23-type-sites/return-over	frontend-export	by-design/materialization-budget
+PASS	arrays/sweep-s23-type-sites/unit-nesting-64	-	-
+FAIL	arrays/sweep-s23-type-sites/unit-nesting-65	frontend-export	by-design/materialization-budget
+PASS	functions/sweep-s23-depth/boxed-nesting-1e3	-	-
+PASS	functions/sweep-s23-depth/call-nesting-500	-	-
+PASS	functions/sweep-s23-depth/defers-1e4	-	-
+PASS	functions/sweep-s23-depth/expr-nesting-500	-	-
+PASS	functions/sweep-s23-depth/list-1e4	-	-
+PASS	functions/sweep-s23-depth/literal-nesting-500	-	-
+PASS	functions/sweep-s23-depth/recursion-1e4	-	-
+PASS	functions/sweep-s23-depth/recursion-defer-panic-1e4	-	-
+PASS	functions/sweep-s23-depth/recursion-goroutine-3000	-	-
+PASS	functions/sweep-s23-depth/recursion-method-closure	-	-
+FAIL	generics/sweep-s23-generic-array/generic-over	frontend-export	by-design/materialization-budget
+PASS	slices/sweep-s23-append-growth/copy-control	-	-
+FAIL	slices/sweep-s23-append-growth/near-budget-one-more	lean-observation	unsupported:append-footprint-budget
+FAIL	slices/sweep-s23-append-growth/one-at-a-time-over	lean-observation	unsupported:append-footprint-budget
+FAIL	slices/sweep-s23-append-growth/spread-make-over	lean-observation	unsupported:make-footprint-budget-runtime
+PASS	slices/sweep-s23-append-growth/string-spread-in-budget	-	-
+FAIL	slices/sweep-s23-append-growth/string-spread-over	lean-observation	unsupported:conv-footprint-budget
+PASS	strings/sweep-s23-concat/append-char-2p14	-	-
+PASS	strings/sweep-s23-concat/builder-in-budget	-	-
+PASS	strings/sweep-s23-concat/double-to-2p24	-	-
+PASS	strings/sweep-s23-conversions/bytes-at-budget	-	-
+PASS	strings/sweep-s23-conversions/runes-multibyte	-	-
+PASS	strings/sweep-s23-conversions/string-of-bytes	-	-
+PASS	strings/sweep-s23-conversions/string-of-runes	-	-
+FAIL	strings/sweep-s23-conversions/to-array-over	frontend-export	by-design/materialization-budget
