@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 7498 (7140 PASS / 358 FAIL)
+# cases: 7498 (7151 PASS / 347 FAIL)
 # re-pinned: 2026-11-05 [AGENT], lane frontend/fix-init-admission-1105 — BUG-340, 341 (the S19 sweep), 401 (S21), 412 (S23) FIXED in
 #   tools/nativefrontend (the campaign plan's rule that a finding is fixed through the normal train, [USER] approved 2026-10-27, relayed):
 #   (1) hiddendep.go — the E7 guard's REACH is the selected method's receiver type on every selection (a direct call, a method value,
@@ -38,6 +38,7 @@
 # removed: multipkg/sweep-s19-staticinit-conv/uint64-of-uint — fixture moved 2026-11-05 (lane frontend/fix-init-admission-1105) to multipkg/sweep-s19-staticinit-conv-same-class/uint64-of-uint: the fix turns the row into a whole-export refusal by name, which cannot share a package with its green control
 # removed: multipkg/sweep-s19-staticinit-conv/uintptr-of-uint — fixture moved 2026-11-05 (lane frontend/fix-init-admission-1105) to multipkg/sweep-s19-staticinit-conv-same-class/uintptr-of-uint: the fix turns the row into a whole-export refusal by name, which cannot share a package with its green control
 # removed: multipkg/sweep-s19-staticinit-conv/int-of-int64 — fixture moved 2026-11-05 (lane frontend/fix-init-admission-1105) to multipkg/sweep-s19-staticinit-conv-same-class/int-of-int64: the fix turns the row into a whole-export refusal by name, which cannot share a package with its green control
+# re-pinned 2026-11-05 [AGENT], lane core/fix-fmt-decoder-1105, from the full run at fab2f16a (`CAPPED_MEM_MAX=64G capped scripts/ci --diff`): 11 rows FAIL→PASS — the Cases rows of BUG-400 (fmt.Sprint's space rule by KIND: the dyn shim consults a kind oracle the desugar plants per call site from go/types, a func-value parameter), BUG-402 (the fmt desugar shares the emitter's bool-retyping rule: no convert-to-bool reaches the core) and BUG-391 (the decoder's unseq fragment admits the `addr-of-deref` head over an atom pointer), fixed through the normal train per the defect-neighbourhood campaign plan ([USER] approved 2026-10-27, relayed); no other row moved; the negative baseline unchanged. cases: 7475 (7096 PASS / 379 FAIL) -> cases: 7475 (7107 PASS / 368 FAIL). The rows, with the cause each carried: fmt/sweep-s21-sprint-space/named-string-stringer (differential -); fmt/sweep-s21-sprint-space/named-string-stringer-mixed (differential -); fmt/sweep-s21-sprint-space/named-string-error (differential -); fmt/sweep-s21-sprint-space/named-string-error-then-int (differential -); fmt/sweep-s21-sprint-space/spread-named-string (differential -); fmt/sweep-s21-static-verbs/t-named-bool (lean-observation unsupported:convert-to-bool-arm); fmt/sweep-s21-static-verbs/v-named-bool (lean-observation unsupported:convert-to-bool-arm); fmt/sweep-s21-composites/named-bool-field (lean-observation unsupported:convert-to-bool-arm); methods/sweep-s17-unseq-deref-receiver/deref-paren-receiver-beside-call (lean-observation error:decoder-unseq-head-not-admitted); methods/sweep-s17-unseq-deref-receiver/deref-paren-receiver-two-calls (lean-observation error:decoder-unseq-head-not-admitted); methods/sweep-s17-unseq-deref-receiver/deref-paren-receiver-after-sibling-deref (lean-observation error:decoder-unseq-head-not-admitted)
 # re-pinned: 2026-11-05 [AGENT], lane frontend/fix-paren-forms-1105 — BUG-390 (the S17 sweep) and BUG-420, 421, 422 (the S28
 #   sweep) FIXED in tools/nativefrontend (the campaign plan's rule that a finding is fixed through the normal train, [USER]
 #   approved 2026-10-27, relayed): (1) emit.go reads every node gc reads through parentheses through ast.Unparen — the
@@ -12952,9 +12953,9 @@ PASS	methods/sweep-s17-selector-forms/method-on-assert	-	-
 PASS	methods/sweep-s17-selector-forms/deref-paren-receiver-alone	-	-
 PASS	methods/sweep-s17-selector-forms/deref-paren-value-receiver-beside-call	-	-
 PASS	methods/sweep-s17-selector-forms/method-on-field	-	-
-FAIL	methods/sweep-s17-unseq-deref-receiver/deref-paren-receiver-beside-call	lean-observation	error:decoder-unseq-head-not-admitted
-FAIL	methods/sweep-s17-unseq-deref-receiver/deref-paren-receiver-two-calls	lean-observation	error:decoder-unseq-head-not-admitted
-FAIL	methods/sweep-s17-unseq-deref-receiver/deref-paren-receiver-after-sibling-deref	lean-observation	error:decoder-unseq-head-not-admitted
+PASS	methods/sweep-s17-unseq-deref-receiver/deref-paren-receiver-beside-call	-	-
+PASS	methods/sweep-s17-unseq-deref-receiver/deref-paren-receiver-two-calls	-	-
+PASS	methods/sweep-s17-unseq-deref-receiver/deref-paren-receiver-after-sibling-deref	-	-
 PASS	multi-assign/sweep-s17-assign-forms/compound-all-ops	-	-
 PASS	multi-assign/sweep-s17-assign-forms/compound-string-concat	-	-
 PASS	multi-assign/sweep-s17-assign-forms/compound-float	-	-
@@ -13289,7 +13290,7 @@ PASS	fmt/sweep-s21-composites/plusv-depth-3	-	-
 PASS	fmt/sweep-s21-composites/bool-and-string-fields	-	-
 PASS	fmt/sweep-s21-composites/nil-slice-field	-	-
 PASS	fmt/sweep-s21-composites/slice-of-slice-of-strings	-	-
-FAIL	fmt/sweep-s21-composites/named-bool-field	lean-observation	unsupported:convert-to-bool-arm
+PASS	fmt/sweep-s21-composites/named-bool-field	-	-
 PASS	fmt/sweep-s21-contexts/initializers	-	-
 PASS	fmt/sweep-s21-contexts/in-method	-	-
 PASS	fmt/sweep-s21-contexts/in-goroutine	-	-
@@ -13335,11 +13336,11 @@ PASS	fmt/sweep-s21-sprint-space/int-stringer-pair	-	-
 PASS	fmt/sweep-s21-sprint-space/empties	-	-
 PASS	fmt/sweep-s21-sprint-space/fixed-mixed	-	-
 PASS	fmt/sweep-s21-sprint-space/sprintln-mixed	-	-
-FAIL	fmt/sweep-s21-sprint-space/named-string-stringer	differential	-
-FAIL	fmt/sweep-s21-sprint-space/named-string-stringer-mixed	differential	-
-FAIL	fmt/sweep-s21-sprint-space/named-string-error	differential	-
-FAIL	fmt/sweep-s21-sprint-space/named-string-error-then-int	differential	-
-FAIL	fmt/sweep-s21-sprint-space/spread-named-string	differential	-
+PASS	fmt/sweep-s21-sprint-space/named-string-stringer	-	-
+PASS	fmt/sweep-s21-sprint-space/named-string-stringer-mixed	-	-
+PASS	fmt/sweep-s21-sprint-space/named-string-error	-	-
+PASS	fmt/sweep-s21-sprint-space/named-string-error-then-int	-	-
+PASS	fmt/sweep-s21-sprint-space/spread-named-string	-	-
 PASS	fmt/sweep-s21-sprint-space/named-string-sprintln	-	-
 PASS	fmt/sweep-s21-static-renders/error-panic-error-payload	-	-
 PASS	fmt/sweep-s21-static-renders/stringer-panic-errorf-payload	-	-
@@ -13357,8 +13358,8 @@ PASS	fmt/sweep-s21-static-verbs/v-kinds-all	-	-
 PASS	fmt/sweep-s21-static-verbs/plusv-scalars	-	-
 PASS	fmt/sweep-s21-static-verbs/v-error-and-stringer	-	-
 PASS	fmt/sweep-s21-static-verbs/v-nil-ptr-handled	-	-
-FAIL	fmt/sweep-s21-static-verbs/t-named-bool	lean-observation	unsupported:convert-to-bool-arm
-FAIL	fmt/sweep-s21-static-verbs/v-named-bool	lean-observation	unsupported:convert-to-bool-arm
+PASS	fmt/sweep-s21-static-verbs/t-named-bool	-	-
+PASS	fmt/sweep-s21-static-verbs/v-named-bool	-	-
 PASS	fmt/sweep-s21-static-verbs/d-generic-body	-	-
 PASS	fmt/sweep-s21-static-verbs/width-kinds	-	-
 PASS	fmt/sweep-s21-static-verbs/const-expr-format	-	-
