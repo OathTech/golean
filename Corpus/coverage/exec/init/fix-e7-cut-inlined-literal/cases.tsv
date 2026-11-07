@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+# RED (frontend-export) BY DESIGN: the E7 detector refuses a target gc folds through an inlined single return; expected = gc.
+inlined-single-return	inlinedLit	-	ok	-	init,globals,evaluation_order,interfaces,methods,structs,calls

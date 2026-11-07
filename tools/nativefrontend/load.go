@@ -140,12 +140,14 @@ type sourcePkg struct {
 	// applied to this unit's text, in table order — the record of what
 	// hand-written text the lowered unit carries (slice 2).
 	overlaid []string
-	// initKinds: the BUG-061 classifier's kind of every InitOrder entry's
-	// initializer, keyed by the entry's Rhs (staticinit.go initKindsOf;
-	// filled by loadProgram once the program is type-checked). Read by
-	// the E7 detector (hiddendep.go): a hidden read of a variable whose
-	// initializer is certain WORK cannot be reordered by gc's folding.
-	initKinds map[ast.Expr]initializerKind
+	// targetFoldKinds: the classifier's kind of every InitOrder entry's
+	// initializer on the TARGET question — may gc write any part of the
+	// variable ahead of its InitOrder position — keyed by the entry's Rhs
+	// (staticinit.go targetFoldKindsOf; filled by loadProgram once the
+	// program is type-checked). Read by the E7 detector (hiddendep.go): a
+	// hidden read of a variable whose initializer has no static path at
+	// the top level finds the machine's zero under gc too.
+	targetFoldKinds map[ast.Expr]initializerKind
 }
 
 // newTypesInfo builds the per-package types.Info with every map the
@@ -899,11 +901,11 @@ func (l *loader) loadProgram(mainFiles []*ast.File) ([]*sourcePkg, error) {
 		return nil, err
 	}
 
-	// The per-initializer classification the E7 detector reads
-	// (hiddendep.go; staticinit.go initKindsOf) — over every unit,
+	// The per-initializer TARGET classification the E7 detector reads
+	// (hiddendep.go; staticinit.go targetFoldKindsOf) — over every unit,
 	// library units included, once the whole program is type-checked.
 	for _, u := range order {
-		u.initKinds = l.initKindsOf(u)
+		u.targetFoldKinds = l.targetFoldKindsOf(u)
 	}
 
 	// gc's schedule, over the PRUNED node set (inittask.go).

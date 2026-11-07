@@ -52,6 +52,13 @@ func sinkF(f func() int, k int) int { return f()*100 + k }
 func sinkS(xs []int, k int) int { return xs[0]*100 + k }
 func sinkP(p *PT, k int) int { return p.n*100 + k }
 
+type P2 struct{ a, b int }
+type PS struct{ s []int }
+
+func sinkAny(a any, k int) int { return k }
+func sinkSA(xs []int, a any, k int) int { return xs[0]*100 + k }
+func sinkFA(f func() int, a any, k int) int { return f() + k }
+
 // BUG-310: the early kinds at sweeps the grammar declines.
 func assertIfCond() int {
 	if iv.(int) > set() {
@@ -103,6 +110,40 @@ func ptrLitClosure() int {
 	fn := func() int { return sinkP(&PT{w.n}, setW()) }
 	return fn()
 }
+
+// The train-31 audit's finding A: a late entry is promoted with its own
+// dependencies only — an unrelated late allocation stays after the sweep's
+// events (lifted bodies decline the grammar).
+func lateSliceThenBox() int {
+	w := T2{1}
+	setW := func() int { w.n = 5; return 10 }
+	fn := func() int { return sinkSA([]int{w.n}, i2.M, setW()) }
+	return fn()
+}
+func lateTwoMethodValues() int {
+	setI := func() int { i2 = T2{5}; return 10 }
+	fn := func() int { return sinkFA(i2.M, i2.M, setI()) }
+	return fn()
+}
+func lateReadsLate() int {
+	w := T2{1}
+	setW := func() int { w.n = 5; return 10 }
+	fn := func() int { return sinkAny(&PS{s: []int{w.n}}, setW()) }
+	return fn()
+}
+
+// The train-31 audit's finding B: a NON-ADDRESSABLE operand of a needsaddr
+// kind boxed into an interface binds at its position (var specs decline
+// the grammar); an addressable one and a by-value kind stay inline.
+func boxStructLit() int  { var x = sinkAny(P2{v.n, 0}, set()); return x }
+func boxArrayLit() int   { var x = sinkAny([2]int{v.n, 0}, set()); return x }
+func boxPtrLit() int     { var x = sinkAny(&P2{v.n, 0}, set()); return x }
+func boxComparison() int { var x = sinkAny(v.n > 0, set()); return x }
+func boxConvInt8() int   { var x = sinkAny(int8(v.n), set()); return x }
+func boxVariable() int   { var x = sinkAny(v, set()); return x }
+func boxIntArith() int   { var x = sinkAny(v.n+0, set()); return x }
+func boxOneFieldLit() int { var x = sinkAny(T2{v.n}, set()); return x }
+func boxSliceLit() int   { var x = sinkAny([]int{v.n}, set()); return x }
 
 func main() {}
 `
@@ -319,5 +360,202 @@ func main() {}
 		if got := e.gcEarlyOperand(rhs); got != want[i] {
 			t.Errorf("gcEarlyOperand(%s) = %v, want %v", src[fset.Position(rhs.Pos()).Offset:fset.Position(rhs.End()).Offset], got, want[i])
 		}
+	}
+}
+
+// TestLateEntriesPromoteByDependency pins the train-31 audit's finding A
+// (lane frontend/fix-e7-cut-1107, 2026-11-07): `insertMain` promotes a late
+// entry with the entries it reads and the ones pushed with it — nothing
+// else. Before, every late entry up to the last one read was promoted, so
+// `sinkS([]int{n}, j.M, set())` read n before set() (gc 500, the machine 0)
+// and `sinkF2(i.M, j.M, set())` nil-checked i.M's box before set() assigned
+// i (gc 1, the machine a nil-dereference panic).
+func TestLateEntriesPromoteByDependency(t *testing.T) {
+	program := earlyBindProgram(t)
+	// A slice literal pushed late before the method value's box: the box's
+	// early binding promotes the `$mv` group only; the slice literal stays
+	// after set()'s temp.
+	fn := wireFunc(t, program, "lateSliceThenBox$lit1")
+	heads := bodyHeads(fn)
+	set, lit, box := indexOfHead(heads, "assign:call-value"), indexOfHead(heads, "slice-lit"), indexOfHead(heads, "assign:to-interface")
+	mv := declIndex(fn, "$mv")
+	if set < 0 || lit < 0 || box < 0 || mv < 0 || !(mv < box && box < set && set < lit) {
+		t.Errorf("lateSliceThenBox: want $mv < box < set() temp < slice literal; $mv %d box %d set %d lit %d, body heads %v", mv, box, set, lit, heads)
+	}
+	// Two interface method values, the second boxed: the second's binding
+	// (and its nil check) precede set()'s temp, the first's follow it.
+	fn = wireFunc(t, program, "lateTwoMethodValues$lit1")
+	heads = bodyHeads(fn)
+	body, _ := fn["body"].(map[string]any)
+	stmts, _ := body["body"].([]any)
+	var mvs []int
+	for i, st := range stmts {
+		if strings.HasPrefix(declaredTemp(st), "$mv") {
+			mvs = append(mvs, i)
+		}
+	}
+	set = indexOfHead(heads, "assign:call-value")
+	box = indexOfHead(heads, "assign:to-interface")
+	if len(mvs) != 2 || set < 0 || box < 0 || !(mvs[0] < box && box < set && set < mvs[1]) {
+		t.Errorf("lateTwoMethodValues: want the boxed $mv < box < set() temp < the other $mv; $mv at %v box %d set %d, body heads %v", mvs, box, set, heads)
+	}
+	// A late `new` reading a late slice literal, boxed: both promoted, in order.
+	fn = wireFunc(t, program, "lateReadsLate$lit1")
+	heads = bodyHeads(fn)
+	set, lit, nw, box := indexOfHead(heads, "assign:call-value"), indexOfHead(heads, "slice-lit"), indexOfHead(heads, "new"), indexOfHead(heads, "assign:to-interface")
+	if set < 0 || lit < 0 || nw < 0 || box < 0 || !(lit < nw && nw < box && box < set) {
+		t.Errorf("lateReadsLate: want slice literal < new < box < set() temp; lit %d new %d box %d set %d, body heads %v", lit, nw, box, set, heads)
+	}
+}
+
+// TestNeedsAddrOperandBoxesEarly pins the train-31 audit's finding B (lane
+// frontend/fix-e7-cut-1107): the boxed temp of a non-addressable needsaddr
+// operand precedes set()'s temp; a by-value kind or an addressable operand
+// keeps the inline box.
+func TestNeedsAddrOperandBoxesEarly(t *testing.T) {
+	program := earlyBindProgram(t)
+	for _, fn := range []string{"boxStructLit", "boxArrayLit", "boxPtrLit", "boxComparison", "boxConvInt8"} {
+		heads := bodyHeads(wireFunc(t, program, fn))
+		box, call := indexOfHead(heads, "assign:to-interface"), indexOfHead(heads, "assign:call")
+		if box < 0 || call < 0 || box >= call {
+			t.Errorf("%s: the boxed operand's temp must precede set()'s; body heads %v", fn, heads)
+		}
+		if n := unseqCount(t, program, fn); n != 0 {
+			t.Errorf("%s: expected the legacy path, got %d unseq graph(s)", fn, n)
+		}
+	}
+	for _, fn := range []string{"boxVariable", "boxIntArith", "boxOneFieldLit", "boxSliceLit"} {
+		heads := bodyHeads(wireFunc(t, program, fn))
+		if indexOfHead(heads, "assign:to-interface") >= 0 {
+			t.Errorf("%s: the box must stay inline (an addressable operand or a by-value kind); body heads %v", fn, heads)
+		}
+	}
+}
+
+// TestNeedsAddrForIface pins dataWordFuncName's port over the kinds: by
+// value (false) for the 2/4/8-byte pointer-free kinds, a sole-component
+// string or slice through one-field structs and one-element arrays; by
+// address (true) for bool, int8, a two-field struct, `[2]int`, a pointer, a
+// func, a chan, a map, a pointer-bearing struct, a 16-byte float pair — and
+// a function-local type capturing the stencil's parameter is laid out at
+// the instantiation (the crash the corpus comparison found on
+// generics/sweep-s3-local-in-generic).
+func TestNeedsAddrForIface(t *testing.T) {
+	src := `package main
+
+type P2 struct{ a, b int }
+type Q1 struct{ a int }
+type R struct{ p *int; k int }
+type SS struct{ s string }
+type SL struct{ s []int }
+type A1 [1]string
+type F2 struct{ x, y float64 }
+type E struct{}
+type Z struct{ a int; z struct{} }
+
+var (
+	b  bool
+	i8 int8
+	i16 int16
+	i32 int32
+	i  int
+	u  uintptr
+	f32 float32
+	f64 float64
+	s  string
+	sl []int
+	p2 P2
+	q1 Q1
+	r  R
+	ss SS
+	slw SL
+	a1 A1
+	a2 [2]int
+	f2 F2
+	e  E
+	z  Z
+	pp *int
+	fn func()
+	ch chan int
+	m  map[int]int
+)
+
+func probe() {
+	_ = b
+	_ = i8
+	_ = i16
+	_ = i32
+	_ = i
+	_ = u
+	_ = f32
+	_ = f64
+	_ = s
+	_ = sl
+	_ = p2
+	_ = q1
+	_ = r
+	_ = ss
+	_ = slw
+	_ = a1
+	_ = a2
+	_ = f2
+	_ = e
+	_ = z
+	_ = pp
+	_ = fn
+	_ = ch
+	_ = m
+}
+
+func main() {}
+`
+	want := []bool{true, true, false, false, false, false, false, false, false, false, true, false, true, false, false, false, true, true, true, true, true, true, true, true}
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, "probe.go", src, 0)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	info := newTypesInfo()
+	conf := types.Config{Importer: importer.Default()}
+	pkg, err := conf.Check("main", fset, []*ast.File{file}, info)
+	if err != nil {
+		t.Fatalf("type-check: %v", err)
+	}
+	e := &emitter{fset: fset, info: info, pkg: pkg}
+	var stmts []ast.Stmt
+	for _, d := range file.Decls {
+		if fd, ok := d.(*ast.FuncDecl); ok && fd.Name.Name == "probe" {
+			stmts = fd.Body.List
+		}
+	}
+	if len(stmts) != len(want) {
+		t.Fatalf("probe has %d statements, the table %d", len(stmts), len(want))
+	}
+	for i, st := range stmts {
+		rhs := st.(*ast.AssignStmt).Rhs[0]
+		if got := e.needsAddrForIface(info.TypeOf(rhs)); got != want[i] {
+			t.Errorf("needsAddrForIface(%s: %s) = %v, want %v", src[fset.Position(rhs.Pos()).Offset:fset.Position(rhs.End()).Offset], info.TypeOf(rhs), got, want[i])
+		}
+	}
+	// A function-local type capturing the generic's parameter: the layout
+	// is the instantiation's (box[int] is one 8-byte field — by value;
+	// box[string] a 16-byte string — by value too, its sole component; a
+	// pair[int] two ints — by address).
+	gsrc := `package main
+
+func wrap[T any](x T) any {
+	type box struct{ v T }
+	type pair struct{ v, w T }
+	return any(box{x}) == any(pair{x, x})
+}
+
+func main() { _ = wrap[int](1); _ = wrap[string]("a") }
+`
+	program, err := emitSource(t, gsrc)
+	if err != nil {
+		t.Fatalf("a local type capturing the stencil's parameter must lower: %v", err)
+	}
+	if program == nil {
+		t.Fatal("no program")
 	}
 }

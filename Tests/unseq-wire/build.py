@@ -807,6 +807,11 @@ WITNESSES = {
     # (the one head the lowering emitted that the fragment refused) — and the same head FAILING on a nil p beside
     # a printing call; NATIVE-ONLY (the method keys are envelope facts); the hidden-read mutant rides on it.
     "e3deref": ("e3deref", []),
+    # the train-31 pre-merge audit's finding D (2026-11-07, lane frontend/fix-e7-cut-1107): the field of a
+    # PACKAGE-LEVEL struct variable read beside a mutating call — `field-get(deref(globaladdr))`, the E1
+    # spelling under the E2 head, which the fragment refused as a non-atom pointer (the whole wire refused
+    # by name); plain and inside a boxed struct literal; NATIVE-ONLY; the hidden-read mutant rides on it.
+    "e2gfld": ("e2gfld", []),
 }
 
 
@@ -1127,6 +1132,23 @@ def mutants(wires, natives):
     edit_native("mut-addr-of-deref-nonatom", "e3deref", "e3deref",
                 lambda g, idents: any(o["kind"] == "eval" and o["head"].get("expr") == "addr-of-deref" for o in g["occs"]),
                 addr_of_deref_nonatom, "hidden read in a pure node")
+    # ---- the train-31 audit's finding D (2026-11-07): the `field-get` head over `deref(globaladdr)` — admitted
+    # for a globaladdr or an atom pointer only; a non-atom pointer under the deref (a binary over the cell's
+    # address) is a hidden read, refused by name like the `deref` head's own.
+    def field_get_deref_nonatom(n, w, idents):
+        hit = 0
+        for o in n["occs"]:
+            if o["kind"] == "eval" and o["head"].get("expr") == "field-get":
+                recv = o["head"]["recv"]
+                if isinstance(recv, dict) and recv.get("expr") == "deref" and recv["ptr"].get("expr") == "globaladdr":
+                    p = recv["ptr"]
+                    recv["ptr"] = binop("+", p, intc(0), p.get("type"))
+                    hit += 1
+        if hit != 1:
+            raise SystemExit(f"e2gfld: expected one field-get head over deref(globaladdr), found {hit}")
+    edit_native("mut-field-get-deref-nonatom", "e2gfld", "e2gfld",
+                lambda g, idents: any(o["kind"] == "eval" and o["head"].get("expr") == "field-get" for o in g["occs"]),
+                field_get_deref_nonatom, "hidden read in a pure node")
     return out
 
 

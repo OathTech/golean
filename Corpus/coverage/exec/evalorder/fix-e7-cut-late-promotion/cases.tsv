@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+slice-then-box	sliceThenBox	-	ok	-	evaluation_order,interfaces,methods,slices,calls
+two-method-values	twoMethodValues	-	ok	-	evaluation_order,interfaces,methods,calls
+tuple-site	tupleSite	-	ok	-	evaluation_order,interfaces,methods,calls
+return-list	returnList	-	ok	-	evaluation_order,interfaces,methods,calls
+nested-calls	nestedCalls	-	ok	-	evaluation_order,interfaces,methods,calls
+nested-slice	nestedSlice	-	ok	-	evaluation_order,interfaces,methods,slices,calls

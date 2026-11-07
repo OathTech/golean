@@ -133,6 +133,16 @@ type emitter struct {
 	// `appendProbe` insert before it, so the main part's indices
 	// (`nodeStarts`, the hooks' `start`) stay valid.
 	lateStmts map[uintptr]bool
+	// lateGroups: the late entry's allocation (one `pushLateHoist` call —
+	// a binding and its nil check), the unit `insertMain` promotes
+	// together; lateGroupSeq mints the ids.
+	lateGroups   map[uintptr]int
+	lateGroupSeq int
+	// fmtKindOracles: the lifted `fmt.Sprint` kind oracles synthesized so
+	// far (fmtdesugar.go fmtStringKindOracle), whose arms are completed
+	// with the program's string-kinded type STENCILS once the mono
+	// worklists have drained (finalizeFmtKindOracles).
+	fmtKindOracles []map[string]any
 	// unseqAddr (evaluation-order model v2.1 Stage C, unseq.go): the
 	// per-function-body cache of the ADDRESS-TAKEN local set the whole-sweep
 	// decision procedure `unseqClassify` reads (a private local is

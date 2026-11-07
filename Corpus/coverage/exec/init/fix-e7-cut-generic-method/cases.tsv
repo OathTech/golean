@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+# RED (frontend-export) BY DESIGN since lane frontend/fix-e7-cut-1107 (2026-11-07): the E7 detector follows an instantiated generic method's origin; expected = gc.
+generic-method	genericMethod	-	ok	-	init,globals,evaluation_order,interfaces,methods,generics
+via-generic-function	viaGenericFunction	-	ok	-	init,globals,evaluation_order,interfaces,methods,generics

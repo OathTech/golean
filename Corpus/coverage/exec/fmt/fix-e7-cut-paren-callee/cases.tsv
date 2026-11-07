@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+paren-sprint	parenSprint	-	ok	-	stdlib,strings
+paren-sprintf-sprintln	parenSprintf	-	ok	-	stdlib,strings
+paren-spread	parenSpread	-	ok	-	stdlib,strings,slices

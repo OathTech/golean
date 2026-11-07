@@ -731,7 +731,9 @@ func (e *emitter) walkFormatterBoxing(u *sourcePkg, iface *types.Interface) erro
 		return boxT(u.info.TypeOf(expr), target, expr.Pos(), ctx)
 	}
 	isFmtPkgCall := func(call *ast.CallExpr) bool {
-		sel, ok := call.Fun.(*ast.SelectorExpr)
+		// The unparen rule (emit.go's header): `(fmt.Sprint)(…)` is the
+		// call it spells, gc reads the callee through its parentheses.
+		sel, ok := ast.Unparen(call.Fun).(*ast.SelectorExpr)
 		if !ok {
 			return false
 		}
@@ -1411,26 +1413,62 @@ func (e *emitter) emitFmtDynCall(c *ast.CallExpr, fn string) (any, bool, error) 
 // render has an arm. A named string type with no arm — a function-local
 // one (no methods possible), an imported one — cannot render: the
 // operand's own render refuses by name before the string is produced, so
-// its kind answer is never observed. Generic instantiations are read off
-// every unit's Instances; a stencil the emitter cannot name refuses here,
-// by name, before any space is judged.
+// its kind answer is never observed. Generic INSTANTIATIONS are the
+// monomorphizer's STENCIL SET — every instantiated source type that
+// reached the wire, `e.typeInsts` after the mono worklists have drained —
+// added to every oracle's arms at the end of emission
+// (finalizeFmtKindOracles): a value of an instantiated type exists at run
+// time only if emitted code constructs it, and its type reached the wire
+// then. Until 2026-11-07 the arms were read off go/types' Instances at
+// the call site, skipping any instance mentioning a type parameter, so
+// `G[T]` inside `func f[T any]()` — the stencil `G[int]` of `f[int]()` —
+// had no arm and answered `false`: gc `gxgy|gx1`, the machine `gx gy|gx 1`
+// (the pre-merge audit of train 31, finding 3; lane
+// frontend/fix-e7-cut-1107). A stencil the emitter cannot name refuses
+// there, by name, before the wire is written.
 func (e *emitter) fmtStringKindOracle() (any, error) {
 	anyTy := types.Universe.Lookup("any").Type()
 	anyW, err := e.emitType(anyTy)
 	if err != nil {
 		return nil, err
 	}
+	name := e.curFuncID + "$fmtkind" + itoa(e.liftSeq)
+	e.liftSeq++
+	fn := map[string]any{
+		"name":     name,
+		"params":   []any{map[string]any{"id": "$a", "type": anyW}},
+		"results":  []any{map[string]any{"id": "$res0", "type": map[string]any{"kind": "bool"}}},
+		"variadic": false,
+		"locals":   []any{},
+	}
+	// The body is written now from the package-scope names (so a unit
+	// test's directly constructed emitter and a program without generics
+	// are complete here) and rewritten with the stencil set at the end
+	// of emission; both go through fmtKindOracleBody.
+	if err := e.fmtKindOracleBody(fn, anyW); err != nil {
+		return nil, err
+	}
+	e.lifted = append(e.lifted, fn)
+	e.fmtKindOracles = append(e.fmtKindOracles, fn)
+	return map[string]any{"expr": "func-value", "func": name, "captured": []any{}}, nil
+}
+
+// fmtKindOracleBody writes fn's body: `$a.(string)` first, then one
+// comma-ok assertion per named string-kinded type — every package-scope
+// defined type of the units whose underlying type is a string kind, and
+// every string-kinded instantiation of the stencil set so far — one arm
+// per DISTINCT wire type in a stable order (the wire's bytes are pinned by
+// golden rows; map iteration is unordered), `true` on the first hit,
+// `false` otherwise.
+func (e *emitter) fmtKindOracleBody(fn map[string]any, anyW any) error {
 	boolTy := map[string]any{"kind": "bool"}
-	// the string kinds: `string` itself, then the program's named ones
 	var scopes []*types.Scope
-	var infos []*types.Info
 	if e.units == nil {
 		// a directly constructed single-package emitter (unit tests)
-		scopes, infos = []*types.Scope{e.pkg.Scope()}, []*types.Info{e.info}
+		scopes = []*types.Scope{e.pkg.Scope()}
 	} else {
 		for _, u := range e.units {
 			scopes = append(scopes, u.pkg.Scope())
-			infos = append(infos, u.info)
 		}
 	}
 	isStringKind := func(t types.Type) bool {
@@ -1451,29 +1489,25 @@ func (e *emitter) fmtStringKindOracle() (any, error) {
 			named = append(named, nt)
 		}
 	}
-	for _, info := range infos {
-		for _, inst := range info.Instances {
-			// A method declaration's receiver `G[T]` is recorded as an
-			// instance at the parameter itself: no stencil, no value.
-			nt, ok := inst.Type.(*types.Named)
-			if !ok || nt.TypeArgs().Len() == 0 || !isStringKind(nt) || mentionsTypeParam(nt, nil) {
-				continue
-			}
-			named = append(named, nt)
+	instKeys := make([]string, 0, len(e.typeInsts))
+	for k := range e.typeInsts {
+		instKeys = append(instKeys, k)
+	}
+	sort.Strings(instKeys)
+	for _, k := range instKeys {
+		if inst := e.typeInsts[k].inst; isStringKind(inst) {
+			named = append(named, inst)
 		}
 	}
-	// one arm per DISTINCT wire type — `string` first, then the named ones
-	// in a stable order (the wire's bytes are pinned by golden rows; map
-	// iteration above is unordered)
 	arms := map[string]any{}
 	for _, nt := range named {
 		tw, err := e.emitType(nt)
 		if err != nil {
-			return nil, unsup("fmt.Sprint space-rule kind oracle: the named string type %s cannot be named on the wire (%v)", nt, err)
+			return unsup("fmt.Sprint space-rule kind oracle: the named string type %s cannot be named on the wire (%v)", nt, err)
 		}
 		b, err := json.Marshal(tw)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		arms[string(b)] = tw
 	}
@@ -1486,8 +1520,6 @@ func (e *emitter) fmtStringKindOracle() (any, error) {
 	for _, k := range keys {
 		ordered = append(ordered, arms[k])
 	}
-	name := e.curFuncID + "$fmtkind" + itoa(e.liftSeq)
-	e.liftSeq++
 	aRef := map[string]any{"expr": "ident", "name": "$a", "type": anyW}
 	body := []any{}
 	for i, tw := range ordered {
@@ -1506,15 +1538,30 @@ func (e *emitter) fmtStringKindOracle() (any, error) {
 	}
 	body = append(body, map[string]any{"stmt": "return",
 		"results": []any{map[string]any{"expr": "bool", "value": false}}})
-	e.lifted = append(e.lifted, map[string]any{
-		"name":     name,
-		"params":   []any{map[string]any{"id": "$a", "type": anyW}},
-		"results":  []any{map[string]any{"id": "$res0", "type": boolTy}},
-		"variadic": false,
-		"locals":   []any{},
-		"body":     map[string]any{"stmt": "block", "body": body},
-	})
-	return map[string]any{"expr": "func-value", "func": name, "captured": []any{}}, nil
+	fn["body"] = map[string]any{"stmt": "block", "body": body}
+	return nil
+}
+
+// finalizeFmtKindOracles rewrites every lifted kind oracle's body with the
+// FINAL stencil set, after the last mono drain of emitProgram (every
+// instantiated type that reached the wire is in e.typeInsts then; a
+// stencil a quarantined body registered was rolled back with it). A
+// quarantined declaration's own oracle was dropped with its lifts: its
+// entry here is an orphan map nobody references, rewritten harmlessly.
+func (e *emitter) finalizeFmtKindOracles() error {
+	if len(e.fmtKindOracles) == 0 {
+		return nil
+	}
+	anyW, err := e.emitType(types.Universe.Lookup("any").Type())
+	if err != nil {
+		return err
+	}
+	for _, fn := range e.fmtKindOracles {
+		if err := e.fmtKindOracleBody(fn, anyW); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // fmtShimWireName mints the FuncId of an injected fmt helper in the

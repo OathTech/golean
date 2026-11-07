@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+generic-method-dynamic	genericMethodDynamic	-	ok	-	init,globals,evaluation_order,interfaces,methods,generics

@@ -3,14 +3,20 @@
 # 2026-10-12, review HIGH-1). scripts/ci's re-pin guard demands a BUGS.md
 # `- Cases:` line for a PASS -> non-PASS flip; a FAIL row whose pinned CAUSE
 # moved from a named key into the non-verdict/crash family (killed:*,
-# timeout, undecided:*, crash:*) was laundered by `scripts/coverage-cause
-# --apply` with no written reason. Rule, mirroring the flip rule: for every
-# id that is FAIL in both OLD and NEW, each cause member of NEW (a `|` set on
-# an alternation row) that is in the family and was NOT a member of OLD's
-# cause must be on a `- Cases:` line of docs/BUGS.md. Moves between two named
-# classes stay free (designed churn: the baseline diff already reported them
-# and the re-pin header gives the reason). An OLD without the cause column
-# counts as no member at all (a first pin of a crash key needs the line too).
+# timeout, undecided:*, crash:*, and since 2026-11-07 the frontend's
+# RECOVERED defect key unrowed/frontend-internal-error — an emission panic
+# turned into a named exit-1 refusal by emitProgramRecovering, BUG-420's
+# lane: the same defect class as crash:frontend, so a row moving from a
+# named refusal into it needs the same written reason; pre-merge audit of
+# train 31, finding 4, lane frontend/fix-e7-cut-1107) was laundered by
+# `scripts/coverage-cause --apply` with no written reason. Rule, mirroring
+# the flip rule: for every id that is FAIL in both OLD and NEW, each cause
+# member of NEW (a `|` set on an alternation row) that is in the family and
+# was NOT a member of OLD's cause must be on a `- Cases:` line of
+# docs/BUGS.md. Moves between two named classes stay free (designed churn:
+# the baseline diff already reported them and the re-pin header gives the
+# reason). An OLD without the cause column counts as no member at all (a
+# first pin of a crash key needs the line too).
 #
 # Usage: scripts/check-cause-regressions <old> <new>
 #   <old>/<new> are a file path or `git:<rev>:<path>`; BUGS file =
@@ -37,7 +43,7 @@ old="$(slurp "$1")"; new="$(slurp "$2")"
 
 rc=0
 out="$(printf '===OLD===\n%s\n===NEW===\n%s\n' "$old" "$new" | awk -F'\t' -v BUGS="$BUGS" '
-  function family(c) { return c ~ /^(killed:|undecided:|crash:)/ || c == "timeout" }
+  function family(c) { return c ~ /^(killed:|undecided:|crash:)/ || c == "timeout" || c == "unrowed/frontend-internal-error" }
   BEGIN {
     while ((getline l < BUGS) > 0)
       if (l ~ /^- Cases:/) { n = split(substr(l, 9), a, /[, ]+/); for (i = 1; i <= n; i++) if (a[i] != "") cased[a[i]] = 1 }
@@ -63,7 +69,7 @@ if [ "$rc" -ge 2 ]; then
 fi
 { printf '%s\n' "$out" | grep . | LC_ALL=C sort; } || true
 if [ "$rc" -eq 1 ]; then
-  echo "check-cause-regressions: FAIL — a FAIL row's cause re-pinned from a named key into killed:/timeout/undecided:/crash: without a BUGS.md Cases: line"
+  echo "check-cause-regressions: FAIL — a FAIL row's cause re-pinned from a named key into killed:/timeout/undecided:/crash:/unrowed/frontend-internal-error without a BUGS.md Cases: line"
   exit 1
 fi
 exit 0

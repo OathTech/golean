@@ -1,0 +1,14 @@
+# id	subject	args	expected_status	expected_reason	features
+bool-cmp	boolCmp	-	ok	-	evaluation_order,interfaces,calls
+int8-conv	int8Conv	-	ok	-	evaluation_order,interfaces,calls,conversions
+array2-lit	array2Lit	-	ok	-	evaluation_order,interfaces,calls,arrays
+struct-lit	structLit	-	ok	-	evaluation_order,interfaces,calls,structs
+ptr-bearing-struct-lit	ptrStruct	-	ok	-	evaluation_order,interfaces,calls,structs,pointers
+ptr-lit	ptrLit	-	ok	-	evaluation_order,interfaces,calls,pointers,structs
+int16-conv-late	int16Conv	-	ok	-	evaluation_order,interfaces,calls,conversions
+int32-conv-late	int32Conv	-	ok	-	evaluation_order,interfaces,calls,conversions
+int-arith-late	intArith	-	ok	-	evaluation_order,interfaces,calls
+string-cat-late	stringCat	-	ok	-	evaluation_order,interfaces,calls,strings
+slice-lit-late	sliceLit	-	ok	-	evaluation_order,interfaces,calls,slices
+array1-lit-late	array1Lit	-	ok	-	evaluation_order,interfaces,calls,arrays
+one-int-struct-late	oneIntLit	-	ok	-	evaluation_order,interfaces,calls,structs

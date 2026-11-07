@@ -191,6 +191,13 @@ def main (_args : List String) : IO Unit := do
     wireSet "NATIVE E3DEREF (a pointer-receiver call through (*p): the receiver address an addr-of-deref head — BUG-391)" "native-e3deref.json" "e3deref" [okZ 22],
     wireSet "NATIVE E3DEREFNIL (the addr-of-deref head failing: p's read vs the call that nils it)" "native-e3deref.json" "e3derefnil"
       [okZ 3, panicOut nilDeref],
+    -- the train-31 pre-merge audit's finding D (2026-11-07, lane frontend/fix-e7-cut-1107): a PACKAGE-LEVEL
+    -- struct's field read beside the call that writes it — `field-get(deref(globaladdr))`, the E1 spelling under
+    -- the E2 head, which the fragment refused as a non-atom pointer (the whole wire refused by name where gc
+    -- runs it). The read vs the call: {0, 500}; gc 500 on the plain argument, 0 inside the boxed literal (gc's
+    -- order pass copies the needsaddr struct at its position — finding B's class; both members modeled).
+    wireSet "NATIVE E2GFLD (a package-level struct's field read vs the mutating call — the audit's finding D)" "native-e2gfld.json" "e2gfld" [okZ 0, okZ 500],
+    wireSet "NATIVE E2GFLDLIT (the same read inside a boxed struct literal)" "native-e2gfld.json" "e2gfldlit" [okZ 0, okZ 500],
     wireSet "NATIVE E4ALLOC (the frontend's own `allocate` occurrence — Stage E E4)" "native-e4alloc.json" "e4alloc"
       [panicOut (oob 9 1) "", panicOut (oob 9 1) "wit 5\n"],
     wireSet "NATIVE E4CONV (a conversion as a pure head: the captured string's read vs the mutating call — E12)" "native-e4conv.json" "e4conv" [okZ 98, okZ 123],

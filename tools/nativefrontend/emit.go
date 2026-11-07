@@ -24,7 +24,7 @@ package main
 //     precedes the test (`receiverAddr`). The S28 lane's audit table of the
 //     54 sites is in BUG-420's entry (docs/BUGS.md).
 //
-//   - NO CRASH LEAVES THE FRONTEND. run() enters emission through
+//   - NO CRASH LEAVES EMISSION. run() enters emission through
 //     emitProgramRecovering, which turns ANY panic raised while emitting into
 //     the whole-export refusal `native frontend internal error: …` (exit 1,
 //     no wire, the panic site and the declaration in progress named) — a
@@ -32,7 +32,12 @@ package main
 //     a stub or a wrong wire would be worse. Internal invariants that fail
 //     (localID on a nil object, …) `panic` with a message naming the
 //     invariant, so the refusal names its cause. The seam `emitPanicHook`
-//     is the unit test's injection (nil in production).
+//     is the unit test's injection (nil in production). SCOPE, honestly:
+//     the recover covers emitProgram only; file selection, shim injection,
+//     loading and type-check (main.go run(), before the emitter exists)
+//     run outside it, and a panic there is still a Go crash — exit 2, the
+//     runner's `crash:frontend` key, which the re-pin guard protects like
+//     the recovered key (pre-merge audit of train 31, finding 5).
 
 import (
 	"errors"
@@ -782,6 +787,15 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 	typeDefs = append(typeDefs, e.opaqueMarkerTypeDefs()...)
 	// BUG-078 / F2: the over-budget inline array markers (budgets.go).
 	typeDefs = append(typeDefs, e.budgetMarkerTypeDefs()...)
+
+	// The fmt.Sprint kind oracles' arms are completed with the FINAL
+	// stencil set (fmtdesugar.go finalizeFmtKindOracles): after the last
+	// mono drain above, every instantiated type that reached the wire is
+	// registered, so a string-kinded `G[int]` produced inside a stencil
+	// gets its arm (BUG-400's completeness; the audit's finding 3).
+	if err := e.finalizeFmtKindOracles(); err != nil {
+		return nil, err
+	}
 
 	// The identity keys are built; refuse the export if any dotted
 	// import path reached a qualifier (the key grammar guard —
@@ -5782,12 +5796,38 @@ func (e *emitter) emitExpr(x ast.Expr) (any, error) {
 // interface method value's late box (`$mv`, `pushLateHoist`) is promoted
 // into the main part by the boxed temp's own hoist, which reads it
 // (`insertMain`). BUG-311, lane frontend/fix-unseq-seam-1027, 2026-10-27.
+//
+// EXTENDED 2026-11-07 (lane frontend/fix-e7-cut-1107; the pre-merge audit
+// of train 31, finding B) from the method-value case to the WHOLE operand
+// class gc's order pass copies: `OCONVIFACE` copies to a temp every
+// NON-ADDRESSABLE operand whose type `needsaddr` (`gcEarlyBoxOperand`,
+// `needsAddrForIface` — dataWordFuncName's port) — a composite literal
+// `P{n, 0}` / `[2]int{n, 0}`, a pointer literal `&P{n, 0}`, a comparison
+// `n > 0`, a conversion `int8(n)`, arithmetic of such a kind, a method
+// value, a closure — so each reads its operands at its position, before a
+// later sibling call, on both gc builds (measured: `sinkAny([2]int{v.n, 0},
+// set())` gc 0, the machine 500 before; `if sinkAny(P{n, 0}, set()) == 0`
+// gc 1, the machine 2; `&P{n, 0}` 1 / 2; `n > 0` 1 / 2; `int8(n)` the
+// same). An ADDRESSABLE operand (a variable, a field or element of one, a
+// dereference) stays late: that is the optimizer-dependent cell BUG-311
+// records (an SSA-able local is copied, an address-taken one passed by
+// address). The late allocations such an operand reads (`&P{…}`'s `new`,
+// a slice literal inside the struct) are promoted by the bound temp's own
+// hoist, as the method value's box is.
 func (e *emitter) boxEarly(x ast.Expr, operand, boxed any, start int, target types.Type) (any, error) {
 	bm, ok := boxed.(map[string]any)
-	if !ok || bm["expr"] != "to-interface" || !e.methodValueExpr(x) {
+	if !ok || bm["expr"] != "to-interface" || !e.gcEarlyBoxOperand(x, target) {
 		return boxed, nil
 	}
 	if e.probeSuppress != 0 || (e.hoistForbidden != "" && !e.scHoistOK) || !e.sweepOrderedEventAfter(x.End()) {
+		return boxed, nil
+	}
+	// An operand already bound in the MAIN part (a call's temp, an early
+	// kind's temp) is evaluated at its position already; its conversion's
+	// timing is unobservable, and the wire stays as it was. A temp of the
+	// LATE suffix (a `&P{…}`'s `new`, a slice literal) is the allocation
+	// gc copies here: bound, and promoted by this hoist.
+	if isHoistedTemp(operand) && e.lastLateReferenced([]any{operand}, e.mainLen()) < 0 {
 		return boxed, nil
 	}
 	// An interface method value's late box (`$mv`) is promoted by the
@@ -5795,19 +5835,191 @@ func (e *emitter) boxEarly(x ast.Expr, operand, boxed any, start int, target typ
 	return e.bindEarly(x, boxed, start, e.applySubst(target))
 }
 
+// gcEarlyBoxOperand reports whether x, flowing into the interface-typed
+// slot target, is an operand gc's order pass copies to a temp at the
+// conversion (order.go `OCONVIFACE`: `dataWordFuncName` needsaddr and the
+// operand not addressable — `addrTemp` copies; an addressable operand is
+// passed by address or copied depending on the optimizer, BUG-311's
+// recorded cell, and is NOT claimed here). A constant or nil is a static
+// temp with no run-time read; an interface-typed operand is no conversion
+// at all; a type parameter answers false (the stencil's substituted type
+// decides, through goTypeOf; a parameter that survives is a refusal
+// elsewhere).
+func (e *emitter) gcEarlyBoxOperand(x ast.Expr, target types.Type) bool {
+	if target == nil || !types.IsInterface(e.applySubst(target)) {
+		return false
+	}
+	tv, ok := e.typesEntry(x)
+	if !ok || tv.Type == nil || tv.Value != nil || tv.IsNil() || !tv.IsValue() {
+		return false
+	}
+	src := tv.Type
+	if types.IsInterface(src) {
+		return false
+	}
+	if _, isParam := types.Unalias(src).(*types.TypeParam); isParam {
+		return false // a parameter the substitution did not reach: not claimed (its emission refuses by name)
+	}
+	if e.methodValueExpr(x) {
+		return true // never addressable; a func value needs its address
+	}
+	if tv.Addressable() {
+		return false
+	}
+	return e.needsAddrForIface(src)
+}
+
+// needsAddrForIface ports cmd/compile/internal/walk/convert.go
+// dataWordFuncName's `needsaddr` (go1.26.5) to go/types: the conversion of
+// a value of type t to an interface passes the value BY VALUE when t is 2
+// bytes at alignment 2 (convT16), 4 bytes pointer-free at alignment 4
+// (convT32), 8 bytes pointer-free at alignment 8 (convT64), or its sole
+// component (through one-field structs and one-element arrays) is a
+// string (convTstring) or a slice (convTslice); every other type — bool,
+// int8, a two-int struct, `[2]int`, a pointer, a func, a chan, a map, a
+// struct holding a pointer — goes BY ADDRESS (convT / convTnoptr), and
+// the order pass copies a non-addressable operand of such a type to a
+// temp first. The layout is gcLayout's — the pinned target's (linux/amd64,
+// the Platform contract, latitude inventory §11), computed under the
+// ACTIVE stencil substitution, so a function-local type that captures the
+// enclosing generic's parameter (`type box struct{ v T }` inside
+// `wrap2[T]`, rows generics/sweep-s3-local-in-generic) is laid out at the
+// instantiation; go/types' own Sizes cannot see through that capture.
+func (e *emitter) needsAddrForIface(t types.Type) bool {
+	t = e.resolveLayoutType(t)
+	if types.IsInterface(t) {
+		return false
+	}
+	size, align, hasPtr := e.gcLayout(t)
+	switch {
+	case size == 2 && align == 2:
+		return false
+	case size == 4 && align == 4 && !hasPtr:
+		return false
+	case size == 8 && align == 8 && !hasPtr:
+		return false
+	}
+	if sc := e.soleComponent(t); sc != nil {
+		switch u := e.resolveLayoutType(sc).Underlying().(type) {
+		case *types.Basic:
+			if u.Info()&types.IsString != 0 {
+				return false
+			}
+		case *types.Slice:
+			return false
+		}
+	}
+	return true
+}
+
+// resolveLayoutType strips aliases and substitutes a type parameter under
+// the active stencil (a parameter with no binding is an internal
+// inconsistency: a generic body is never emitted uninstantiated).
+func (e *emitter) resolveLayoutType(t types.Type) types.Type {
+	t = types.Unalias(t)
+	if tp, ok := t.(*types.TypeParam); ok {
+		sub, bound := e.curSubst[tp]
+		if !bound {
+			panic("needsAddrForIface: unbound type parameter " + tp.String() + " in a layout question (no stencil substitution active)")
+		}
+		return e.resolveLayoutType(sub)
+	}
+	return t
+}
+
+// soleComponent ports cmd/compile/internal/types.(*Type).SoleComponent: the
+// only primitive component of t through one-field structs and one-element
+// arrays, nil when a struct or array has another field count.
+func (e *emitter) soleComponent(t types.Type) types.Type {
+	switch u := e.resolveLayoutType(t).Underlying().(type) {
+	case *types.Struct:
+		if u.NumFields() != 1 {
+			return nil
+		}
+		return e.soleComponent(u.Field(0).Type())
+	case *types.Array:
+		if u.Len() != 1 {
+			return nil
+		}
+		return e.soleComponent(u.Elem())
+	}
+	return t
+}
+
+// gcLayout is the pinned target's size, alignment and pointer-bearing
+// answer for t (cmd/compile/internal/types/size.go CalcSize and
+// PtrDataSize on amd64: words of 8, a string 16, a slice 24, an interface
+// 16, a struct laid out field by field at each field's alignment, padded
+// to its own, with one byte after a trailing zero-size field of a
+// non-empty struct; an array its element's alignment and n times its
+// size; pointers in a pointer, unsafe.Pointer, chan, map, func,
+// interface, string, slice, or an array or struct holding one), computed
+// under the active stencil substitution.
+func (e *emitter) gcLayout(t types.Type) (size, align int64, hasPtr bool) {
+	switch u := e.resolveLayoutType(t).Underlying().(type) {
+	case *types.Basic:
+		switch u.Kind() {
+		case types.Bool, types.Int8, types.Uint8:
+			return 1, 1, false
+		case types.Int16, types.Uint16:
+			return 2, 2, false
+		case types.Int32, types.Uint32, types.Float32:
+			return 4, 4, false
+		case types.Int64, types.Uint64, types.Int, types.Uint, types.Uintptr, types.Float64:
+			return 8, 8, false
+		case types.Complex64:
+			return 8, 4, false
+		case types.Complex128:
+			return 16, 8, false
+		case types.String:
+			return 16, 8, true
+		case types.UnsafePointer:
+			return 8, 8, true
+		}
+		panic("gcLayout: unexpected basic kind " + u.String())
+	case *types.Pointer, *types.Chan, *types.Map, *types.Signature:
+		return 8, 8, true
+	case *types.Slice:
+		return 24, 8, true
+	case *types.Interface:
+		return 16, 8, true
+	case *types.Array:
+		es, ea, ep := e.gcLayout(u.Elem())
+		return es * u.Len(), ea, ep && u.Len() > 0
+	case *types.Struct:
+		var off, maxAlign int64 = 0, 1
+		lastZero := false
+		for i := 0; i < u.NumFields(); i++ {
+			fs, fa, fp := e.gcLayout(u.Field(i).Type())
+			if fa > maxAlign {
+				maxAlign = fa
+			}
+			off = (off + fa - 1) / fa * fa
+			off += fs
+			hasPtr = hasPtr || fp
+			lastZero = fs == 0
+		}
+		if lastZero && off > 0 {
+			off++
+		}
+		return (off + maxAlign - 1) / maxAlign * maxAlign, maxAlign, hasPtr
+	case *types.TypeParam:
+		panic("gcLayout: a type parameter survived resolution")
+	}
+	panic("gcLayout: unexpected type " + t.String())
+}
+
 // earlyBoundValue reports whether the early-binding rule binds value x,
 // flowing into a slot of type target, at its lexical position: one of
-// `gcEarlyOperand`'s kinds, or a method value boxed into an interface slot
-// (`boxEarly`), with an ordered event after it in the sweep and hoisting
-// allowed. The keyed struct literal's pre-bind consults it so that such a
+// `gcEarlyOperand`'s kinds, or a non-addressable operand of a needsaddr
+// kind boxed into an interface slot (`boxEarly`, `gcEarlyBoxOperand`),
+// with an ordered event after it in the sweep and hoisting allowed. The keyed struct literal's pre-bind consults it so that such a
 // value is emitted in SOURCE order, before a later event's pre-bound temp.
 func (e *emitter) earlyBoundValue(x ast.Expr, target types.Type) bool {
 	if e.probeSuppress != 0 || (e.hoistForbidden != "" && !e.scHoistOK) {
 		return false
 	}
-	boxedMV := target != nil && types.IsInterface(e.applySubst(target)) && e.methodValueExpr(x) &&
-		!types.IsInterface(e.goTypeOf(x))
-	if !e.gcEarlyOperand(x) && !boxedMV {
+	if !e.gcEarlyOperand(x) && !e.gcEarlyBoxOperand(x, target) {
 		return false
 	}
 	return e.sweepOrderedEventAfter(x.End())
@@ -6039,21 +6251,70 @@ func (e *emitter) mainLen() int {
 // A late entry that stmts READ (its temp is referenced: the hoisted call
 // that consumes the method value, `$c := sinkF(func-value{$mv}, …)`; the
 // boxed method value's own temp, `$c := to-interface(func-value{$mv})`;
-// a probe over a late allocation) is PROMOTED first, with every late entry
-// before it (their order carries their dependencies): "after the sweep's
-// events" ends where a consumer of the allocation is bound — gc builds the
-// closure or the literal at the statement that consumes it, after the
-// temps its order pass copied before that statement.
+// a probe over a late allocation) is PROMOTED first — with the late
+// entries IT reads, transitively (a `&T{f: []int{n}}` reads its slice
+// literal's temp), and with the entries pushed TOGETHER with it (an
+// interface method value's binding and its nil check are one allocation,
+// `pushLateHoist`'s one call) — in their order; every OTHER late entry
+// stays in the suffix. "After the sweep's events" ends, for that
+// allocation, where its consumer is bound — gc builds the closure or the
+// literal at the statement that consumes it, after the temps its order
+// pass copied before that statement — and for an unrelated allocation it
+// does not end there: gc builds `[]int{n}` in `sinkS([]int{n}, j.M,
+// set())`'s walk, after `set()`, while `j.M`'s box is an addrTemp copy at
+// its position. Before 2026-11-07 every late entry up to the last one read
+// was promoted, the unrelated ones included (the pre-merge audit of train
+// 31, finding A: `sinkS([]int{n}, j.M, set())` read n before set() — gc
+// 500, the machine 0; `sinkF2(i.M, j.M, set())` nil-checked i.M's box
+// before set() assigned i — gc 1, the machine a nil-dereference panic;
+// lane frontend/fix-e7-cut-1107, TestLateEntriesPromoteByDependency).
 func (e *emitter) insertMain(stmts ...any) {
 	n := e.mainLen()
-	if last := e.lastLateReferenced(stmts, n); last >= 0 {
-		for i := n; i <= last; i++ {
-			delete(e.lateStmts, stmtID(e.hoisted[i]))
+	late := e.hoisted[n:]
+	need := make([]bool, len(late))
+	// Seed: the late entries whose declared temp stmts read.
+	for i, st := range late {
+		if name := declaredTemp(st); name != "" {
+			for _, s := range stmts {
+				if wireMentionsIdent(s, name) {
+					need[i] = true
+					break
+				}
+			}
 		}
-		n = last + 1
 	}
-	tail := append([]any{}, e.hoisted[n:]...)
-	e.hoisted = append(append(e.hoisted[:n], stmts...), tail...)
+	// Closure: an entry a needed entry reads is needed; an entry pushed
+	// together with a needed one is needed. A fixpoint over a short list.
+	for changed := true; changed; {
+		changed = false
+		for i := range late {
+			if !need[i] {
+				continue
+			}
+			for j := range late {
+				if need[j] {
+					continue
+				}
+				if (e.lateGroups[stmtID(late[j])] != 0 && e.lateGroups[stmtID(late[j])] == e.lateGroups[stmtID(late[i])]) ||
+					(j < i && declaredTemp(late[j]) != "" && wireMentionsIdent(late[i], declaredTemp(late[j]))) {
+					need[j] = true
+					changed = true
+				}
+			}
+		}
+	}
+	promoted := make([]any, 0, len(late))
+	kept := make([]any, 0, len(late))
+	for i, st := range late {
+		if need[i] {
+			delete(e.lateStmts, stmtID(st))
+			promoted = append(promoted, st)
+		} else {
+			kept = append(kept, st)
+		}
+	}
+	head := append([]any{}, e.hoisted[:n]...)
+	e.hoisted = append(append(append(head, promoted...), stmts...), kept...)
 }
 
 // lastLateReferenced returns the index of the LAST late entry (at or after
@@ -6142,13 +6403,18 @@ func wireMentionsIdent(o any, name string) bool {
 func (e *emitter) pushLateHoist(stmts ...any) {
 	if e.lateStmts == nil {
 		e.lateStmts = map[uintptr]bool{}
+		e.lateGroups = map[uintptr]int{}
 	}
+	// One call, one allocation: its statements promote together
+	// (`insertMain`) — a binding and the nil check that reads it.
+	e.lateGroupSeq++
 	for _, st := range stmts {
 		id := stmtID(st)
 		if id == 0 {
 			panic("pushLateHoist: a late statement must be a map node")
 		}
 		e.lateStmts[id] = true
+		e.lateGroups[id] = e.lateGroupSeq
 	}
 	e.hoisted = append(e.hoisted, stmts...)
 }

@@ -890,7 +890,14 @@ func injectStdlibShims(fset *token.FileSet, files []*ast.File) (*ast.File, error
 			if !ok {
 				return true
 			}
-			sel, ok := call.Fun.(*ast.SelectorExpr)
+			// The unparen rule (emit.go's header): the emitter desugars
+			// `(fmt.Sprint)(1, 2)` as the fmt call it is, so the scan that
+			// decides which shims to inject must see the same callee —
+			// before 2026-11-07 it read the bare `call.Fun`, the shim was
+			// not injected, and the desugar refused with a text naming an
+			// apparatus inconsistency («shim … not injected») in place of
+			// the construct (pre-merge audit, finding 5, the audit's p16).
+			sel, ok := ast.Unparen(call.Fun).(*ast.SelectorExpr)
 			if !ok {
 				return true
 			}

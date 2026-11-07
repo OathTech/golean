@@ -1852,7 +1852,9 @@ an atom or a `globaladdr` pointer — the READ of a package-level variable
 (`deref(globaladdr)`) and, for E2, of `*p`. BUG-391's fix (2026-11-05) admits
 the `addr-of-deref` head over an atom pointer — the implicit receiver address
 `&*p` of a pointer-receiver call spelled `(*p).M()`, the one head the unseq
-lowering emitted (`recvaddr`) that this fragment refused. -/
+lowering emitted (`recvaddr`) that this fragment refused. The train-31 audit's
+finding D (2026-11-07) admits `field-get` over `deref(globaladdr)` — a package-level
+struct's field read, the E1 spelling under E2's head — the second such head. -/
 private def unseqCheckHead (cells : Array LocalDecl) (path : String) (head : Json) : LowerM Unit := do
   if jsonMentionsRecover head then
     fail s!"unseq: recover() inside an occurrence head at {path} — recover is an EVENT (it changes the continuation), never a pure op (v2.1 §3.1); refused by name"
@@ -1900,15 +1902,26 @@ private def unseqCheckHead (cells : Array LocalDecl) (path : String) (head : Jso
   | "field-get" =>
       -- Stage E, family E2 (2026-09-21): ONE field read — the receiver is an atom (a struct
       -- value: a source local or a slot) or `deref(atom)` (through a pointer: the emitter's
-      -- own spelling, `fieldBase`; the nil check and the load are one occurrence).
+      -- own spelling, `fieldBase`; the nil check and the load are one occurrence) or, since
+      -- 2026-11-07 (lane frontend/fix-e7-cut-1107, the train-31 pre-merge audit's finding D),
+      -- `deref(globaladdr)` — the field of a PACKAGE-LEVEL struct variable, `v.n`, which the
+      -- emitter spells as a field read over the global's own read (`emitIdent`'s
+      -- `deref(globaladdr gid)`, the E1 family's admitted pointer position): one load of one
+      -- field of a statically resolved cell, no hidden read. The lowering emitted the head
+      -- (`sink(v.n, mut())`, `sinkAny(P{v.n, 0}, mut())`) and this arm refused it, so the whole
+      -- wire was refused by name; the NATIVE witness is e2gfld, the hidden-read mutant
+      -- `mut-field-get-deref-nonatom`.
       let recv ← StrictJson.field path obj "recv"
       if !unseqIsAtom recv then
         match recv.getObjVal? "expr", recv.getObjVal? "ptr" with
         | .ok (.str "deref"), .ok p =>
-            if !unseqIsAtom p then
-              fail s!"unseq: hidden read in a pure node — {path}.recv dereferences a non-atom pointer; refused by name"
+            let isGlobal := match p.getObjVal? "expr" with
+              | .ok (.str "globaladdr") => true
+              | _ => false
+            if !(unseqIsAtom p || isGlobal) then
+              fail s!"unseq: hidden read in a pure node — {path}.recv dereferences a pointer that is neither an atom nor a globaladdr; refused by name"
         | _, _ =>
-            fail s!"unseq: hidden read in a pure node — {path}.recv is neither an atom nor the dereference of an atom (a field read selects on a struct VALUE or through a pointer VALUE; v2.1 §3.1 internal normal form); refused by name"
+            fail s!"unseq: hidden read in a pure node — {path}.recv is neither an atom nor the dereference of an atom or of a globaladdr (a field read selects on a struct VALUE, through a pointer VALUE, or on a package-level variable's cell; v2.1 §3.1 internal normal form); refused by name"
   | "map-get" =>
       -- Stage E E2: ONE map read on the frozen map VALUE and key VALUE (both atoms).
       atom "base"

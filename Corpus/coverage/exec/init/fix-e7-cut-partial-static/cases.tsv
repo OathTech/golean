@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+# RED (frontend-export) BY DESIGN since lane frontend/fix-e7-cut-1107 (2026-11-07): the E7 detector refuses a target gc writes by parts; expected = gc.
+struct-lit	structLit	-	ok	-	init,globals,evaluation_order,interfaces,methods,structs
+slice-lit	sliceLit	-	ok	-	init,globals,evaluation_order,interfaces,methods,slices
+slice-all-dynamic	sliceAllDyn	-	ok	-	init,globals,evaluation_order,interfaces,methods,slices
+ptr-lit	ptrLit	-	ok	-	init,globals,evaluation_order,interfaces,methods,pointers,structs
+iface-conv	ifaceConv	-	ok	-	init,globals,evaluation_order,interfaces,methods,structs

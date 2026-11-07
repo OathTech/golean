@@ -632,8 +632,10 @@ repin_guard() {  # <baseline file> <exec|negative>
   if [ "$surv_rc" -eq 0 ]; then [ -n "$surv_out" ] && printf '%s\n' "$surv_out" | sed 's/^/  /'
   else printf '%s\n' "$surv_out" | sed 's/^/  /'; bad "re-pin guard ($base: a stage alternation of $old dropped without a named removal, or the check could not run — exit $surv_rc)"; fi
   # Cause regressions (refusal-cause fix round, review HIGH-1): a FAIL row
-  # re-pinned from a named cause into killed:/timeout/undecided:/crash:
-  # needs a BUGS.md Cases: line, like a PASS→non-PASS flip.
+  # re-pinned from a named cause into killed:/timeout/undecided:/crash: (and,
+  # since 2026-11-07, the recovered emission-panic key
+  # unrowed/frontend-internal-error — the same defect class) needs a BUGS.md
+  # Cases: line, like a PASS→non-PASS flip.
   local cause_rc=0 cause_out
   cause_out="$(./scripts/check-cause-regressions "git:$old:$base" "$surv_new" 2>&1)" || cause_rc=$?
   if [ "$cause_rc" -eq 0 ]; then [ -n "$cause_out" ] && printf '%s\n' "$cause_out" | sed 's/^/  /'

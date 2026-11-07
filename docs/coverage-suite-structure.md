@@ -678,7 +678,9 @@ leg runs the frontend WITHOUT `--subject`: it judges a whole program, so
 every differential-corpus export passes `--subject`.
 
 A FAIL row whose cause is re-pinned from a named key into the
-non-verdict/crash family (`killed:`, `timeout`, `undecided:`, `crash:`)
+non-verdict/crash family (`killed:`, `timeout`, `undecided:`, `crash:`, and
+since 2026-11-07 the recovered emission-panic key
+`unrowed/frontend-internal-error`, the same defect class as `crash:frontend`)
 needs a `docs/BUGS.md` `- Cases:` line, like a PASS→non-PASS flip
 (`scripts/check-cause-regressions`, run by `scripts/ci`'s re-pin guard).
 A re-pin that REMOVES a row — PASS or FAIL, with its retired fixture —

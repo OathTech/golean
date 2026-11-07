@@ -1332,9 +1332,18 @@ gc's early store a deviation, L-016, 2026-09-02).
   into a visible refusal; since 2026-11-05 (BUG-340's fix) the detector
   covers every selection resolving to an interface method — a method value,
   a method expression, a promotion through an embedded interface, a call on
-  a constrained type parameter — and fires only on a target gc may fold; a
-  call through an unresolvable function value and the full envelope remain
-  on this obligation. Full envelope: MODERATE
+  a constrained type parameter, and since 2026-11-07 a method of an
+  instantiated generic type (followed through its origin) — and fires only
+  on a target of which gc may write ANY PART ahead of its InitOrder position
+  (a constant; a composite or pointer literal and an interface conversion
+  WHATEVER their operands, since gc writes their static parts, the slice
+  header, the literal's pointer and the itab word into the data section;
+  a target with no static path at the top level — a multi-statement call,
+  arithmetic, an index or field read, a map literal, a tuple — lowers: the
+  2026-11-07 correction of the 2026-11-05 cut, which had read the BUG-061
+  node question as this one, lane frontend/fix-e7-cut-1107); a call through
+  an unresolvable function value and the full envelope remain on this
+  obligation. Full envelope: MODERATE
   ($pkginit becomes schedule-bearing; strict-lane init cases must stay
   on the deterministic default point). North-star exposure recorded:
   etcd-io/raft has package-level vars — must be checked at the target

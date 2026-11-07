@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+in-stencil	inStencil	-	ok	-	stdlib,strings,generics,methods
+nested-stencil	nestedStencil	-	ok	-	stdlib,strings,generics,methods
+any-from-stencil	anyFromStencil	-	ok	-	stdlib,strings,generics,methods,interfaces
+direct-beside-named	directBesideNamed	-	ok	-	stdlib,strings,generics,methods

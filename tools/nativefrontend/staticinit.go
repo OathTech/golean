@@ -292,9 +292,47 @@ func (l *loader) initializerKind(u *sourcePkg, e ast.Expr, blank bool) initializ
 	return k
 }
 
-// exprInitKind is the classifier proper. Each WORK arm names the gc
-// reading it rests on; everything not named is MAYBE-STATIC.
+// foldQuestion is WHAT a classification answers about gc's StaticAssign.
+// The two questions share every arm but two, and they must not be
+// confused: the BUG-061 node question asks whether work REMAINS, the E7
+// target question whether anything is written AHEAD of time (lane
+// frontend/fix-e7-cut-1107, 2026-11-07, the pre-merge audit's blocker:
+// the E7 cut of 2026-11-05 read the node answer as the target answer, so
+// `var y = S{a: 1, b: g()}` — WORK for the node, since `g()` is assigned
+// at run time — was called unfoldable, while gc had written `y.a = 1`
+// into the data section and a hidden read saw it: gc 1013, the machine
+// 13 on the audit's p1).
+type foldQuestion int
+
+const (
+	// foldWhole: does gc leave RESIDUAL WORK for this initializer (the
+	// BUG-061 node question, sourceInitWork)? WORK = some part is
+	// assigned at run time, so the package is certainly a node.
+	foldWhole foldQuestion = iota
+	// foldAnyPart: may gc write ANY PART of the target into the data
+	// section (the E7 target question, hiddendep.go)? WORK = no static
+	// path at the top level — StaticAssign returns false for the shape
+	// and the whole value is assigned at its InitOrder position, the
+	// machine's point. A composite literal is written by parts
+	// (OARRAYLIT / OSTRUCTLIT / OSLICELIT return true, the static
+	// elements through InitConst, a slice's header through InitSlice,
+	// each failing element appended as its own dynamic statement), a
+	// pointer literal's pointer (OPTRLIT: InitAddr of the static temp)
+	// and an interface conversion's itab word (OCONVIFACE: InitAddr,
+	// then the data through `assign`) are static whatever their
+	// operands — so on this question those shapes are MAYBE-STATIC
+	// without looking inside.
+	foldAnyPart
+)
+
+// exprInitKind is the classifier on the node question (BUG-061).
 func (l *loader) exprInitKind(u *sourcePkg, e ast.Expr) initializerKind {
+	return l.exprKind(u, e, foldWhole)
+}
+
+// exprKind is the classifier proper, on question q. Each WORK arm names
+// the gc reading it rests on; everything not named is MAYBE-STATIC.
+func (l *loader) exprKind(u *sourcePkg, e ast.Expr, q foldQuestion) initializerKind {
 	tv, typed := u.info.Types[e]
 	if !typed {
 		// An expression go/types never typed should not exist after a
@@ -308,7 +346,7 @@ func (l *loader) exprInitKind(u *sourcePkg, e ast.Expr) initializerKind {
 	}
 	switch x := e.(type) {
 	case *ast.ParenExpr:
-		return l.exprInitKind(u, x.X)
+		return l.exprKind(u, x.X, q)
 
 	case *ast.Ident:
 		switch obj := u.info.Uses[x].(type) {
@@ -374,6 +412,15 @@ func (l *loader) exprInitKind(u *sourcePkg, e ast.Expr) initializerKind {
 		// 2026-10-14 ruling: the lowering admits only a constant, nil or
 		// a plain variable read there and refuses the literal otherwise,
 		// so a skipped element is one gc would not have evaluated).
+		if q == foldAnyPart {
+			// The target question: the literal's static elements (and a
+			// slice's header, and the zero of every field no element
+			// names) are in the data section before any init code runs,
+			// whatever its other elements do — `[]int{g(), g()}` has
+			// len 2 in place while the machine's y is still nil (the
+			// audit's p2b: gc 202, the machine 2). Foldable, by parts.
+			return initMaybeStatic
+		}
 		var st *types.Struct
 		switch u := tv.Type.Underlying().(type) {
 		case *types.Struct:
@@ -387,7 +434,7 @@ func (l *loader) exprInitKind(u *sourcePkg, e ast.Expr) initializerKind {
 			} else if st != nil && i < st.NumFields() && st.Field(i).Name() == "_" {
 				continue
 			}
-			if l.exprInitKind(u, elt) == initWork {
+			if l.exprKind(u, elt, q) == initWork {
 				return initWork
 			}
 		}
@@ -397,7 +444,11 @@ func (l *loader) exprInitKind(u *sourcePkg, e ast.Expr) initializerKind {
 		switch x.Op {
 		case token.AND:
 			if lit, ok := ast.Unparen(x.X).(*ast.CompositeLit); ok {
-				return l.exprInitKind(u, lit) // OPTRLIT
+				// OPTRLIT: the literal's rule on either question (on
+				// the target question the pointer itself is static —
+				// InitAddr of the static temp — so `y == nil` is false
+				// in place: the audit's p3b, gc 103, the machine 703).
+				return l.exprKind(u, lit, q)
 			}
 			if l.isStaticLoc(u, x.X) {
 				return initMaybeStatic // OADDR of a StaticLoc
@@ -412,7 +463,7 @@ func (l *loader) exprInitKind(u *sourcePkg, e ast.Expr) initializerKind {
 		return initWork // OADD … OOROR of non-constants: no case
 
 	case *ast.CallExpr:
-		return l.callInitKind(u, x, tv)
+		return l.callInitKind(u, x, tv, q)
 
 	case *ast.IndexExpr, *ast.IndexListExpr:
 		// A generic function instantiation used as a value is a func
@@ -432,10 +483,10 @@ func (l *loader) exprInitKind(u *sourcePkg, e ast.Expr) initializerKind {
 
 // callInitKind classifies a call expression: a conversion, a builtin, or
 // a function/method call.
-func (l *loader) callInitKind(u *sourcePkg, call *ast.CallExpr, tv types.TypeAndValue) initializerKind {
+func (l *loader) callInitKind(u *sourcePkg, call *ast.CallExpr, tv types.TypeAndValue, q foldQuestion) initializerKind {
 	funTV, ok := u.info.Types[call.Fun]
 	if ok && funTV.IsType() {
-		return l.conversionInitKind(u, call, tv.Type)
+		return l.conversionInitKind(u, call, tv.Type, q)
 	}
 	if ok && funTV.IsBuiltin() {
 		// make/new/append/copy/len/cap/min/max/complex/real/imag/clear
@@ -517,7 +568,7 @@ func (l *loader) callInitKind(u *sourcePkg, call *ast.CallExpr, tv types.TypeAnd
 // conversion (sched.go OCONVIFACE), and has no case for the
 // value-changing conversions. The fix round of 2026-10-12 added the
 // []rune literal and the nested-interface rules (the review's BLOCKER-2).
-func (l *loader) conversionInitKind(u *sourcePkg, call *ast.CallExpr, to types.Type) initializerKind {
+func (l *loader) conversionInitKind(u *sourcePkg, call *ast.CallExpr, to types.Type, q foldQuestion) initializerKind {
 	if len(call.Args) != 1 {
 		return initMaybeStatic // not a shape go/types accepts; stay conservative
 	}
@@ -556,7 +607,16 @@ func (l *loader) conversionInitKind(u *sourcePkg, call *ast.CallExpr, to types.T
 		if _, fromIface := argTV.Type.Underlying().(*types.Interface); fromIface {
 			return initWork // `return val.Op() == ir.ONIL`: an interface value is not static
 		}
-		if l.exprInitKind(u, arg) == initWork {
+		if q == foldAnyPart {
+			// The target question: with a concrete operand the ITAB word
+			// is written by InitAddr before the data is even looked at,
+			// and the data goes through `assign` (static if it can be,
+			// else a dynamic statement into the temp) — so `y != nil`
+			// and a type switch on y see the dynamic type in place
+			// whatever the operand does. Foldable, by parts.
+			return initMaybeStatic
+		}
+		if l.exprKind(u, arg, q) == initWork {
 			return initWork
 		}
 		return initMaybeStatic
@@ -588,10 +648,10 @@ func (l *loader) conversionInitKind(u *sourcePkg, call *ast.CallExpr, to types.T
 				}
 				// One kind under two names (byte ≡ uint8, rune ≡ int32, a
 				// defined integer or bool type): OCONVNOP, the operand decides.
-				return l.exprInitKind(u, arg)
+				return l.exprKind(u, arg, q)
 			}
 			if isPtrSized(fb) && isPtrSized(tb) {
-				return l.exprInitKind(u, arg) // uintptr <-> unsafe.Pointer: OCONVNOP (Convertop cases 8/9)
+				return l.exprKind(u, arg, q) // uintptr <-> unsafe.Pointer: OCONVNOP (Convertop cases 8/9)
 			}
 			if fb.Info()&types.IsInteger != 0 && tb.Info()&types.IsInteger != 0 && gcSimKind(fb) == gcSimKind(tb) {
 				// typecheck/subr.go Convertop case 4: two integer kinds of
@@ -601,14 +661,14 @@ func (l *loader) conversionInitKind(u *sourcePkg, call *ast.CallExpr, to types.T
 				// static int global was called work, gc emitted no
 				// inittask and the package's importer ran early — a silent
 				// wrong order). The classes are the pinned target's.
-				return l.exprInitKind(u, arg)
+				return l.exprKind(u, arg, q)
 			}
 			return initWork // OCONV between distinct representations: no case
 		}
 	}
 	// Everything else is OCONVNOP-shaped (same underlying representation):
 	// the operand decides.
-	return l.exprInitKind(u, arg)
+	return l.exprKind(u, arg, q)
 }
 
 func isPtrSized(b *types.Basic) bool {
@@ -630,19 +690,26 @@ func gcSimKind(b *types.Basic) types.BasicKind {
 	return b.Kind()
 }
 
-// initKindsOf classifies every InitOrder entry of a unit, keyed by the
-// entry's initializer as the emitter's quarantine maps are: the E7
-// detector's target test (hiddendep.go) asks whether a hidden read's
-// target is a shape gc may fold. A tuple initializer (`var a, b = f()`)
-// is certain work, sourceInitWork's rule.
-func (l *loader) initKindsOf(u *sourcePkg) map[ast.Expr]initializerKind {
+// targetFoldKindsOf classifies every InitOrder entry of a unit on the
+// TARGET question (foldAnyPart), keyed by the entry's initializer as the
+// emitter's quarantine maps are: the E7 detector's target test
+// (hiddendep.go) asks whether gc may write ANY part of a hidden read's
+// target ahead of its InitOrder position. WORK here means NO static path
+// at the top level (a call to a multi-statement body, arithmetic, an
+// index or field read, a receive, a map literal, a tuple — tryStaticInit
+// returns false for `len(lhs) > 1`): the whole value is assigned at the
+// machine's point and a hidden read finds the same zero on both sides.
+// Not the node question: `var y = S{a: 1, b: g()}` is WORK for BUG-061's
+// node and MAYBE-STATIC here (the audit's p1; the blank discard does
+// not apply, a blank target is never read).
+func (l *loader) targetFoldKindsOf(u *sourcePkg) map[ast.Expr]initializerKind {
 	out := map[ast.Expr]initializerKind{}
 	for _, ini := range u.info.InitOrder {
 		if len(ini.Lhs) != 1 {
 			out[ini.Rhs] = initWork
 			continue
 		}
-		out[ini.Rhs] = l.initializerKind(u, ini.Rhs, ini.Lhs[0].Name() == "_")
+		out[ini.Rhs] = l.exprKind(u, ini.Rhs, foldAnyPart)
 	}
 	return out
 }

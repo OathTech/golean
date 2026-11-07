@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features
+call	ctlCall	-	ok	-	init,globals,evaluation_order,interfaces,methods,calls
+map-lit	ctlMap	-	ok	-	init,globals,evaluation_order,interfaces,methods,maps
+arith	ctlArith	-	ok	-	init,globals,evaluation_order,interfaces,methods
+index-read	ctlIndex	-	ok	-	init,globals,evaluation_order,interfaces,methods,arrays
+field-read	ctlField	-	ok	-	init,globals,evaluation_order,interfaces,methods,structs
+tuple	ctlTuple	-	ok	-	init,globals,evaluation_order,interfaces,methods,calls
+new	ctlNew	-	ok	-	init,globals,evaluation_order,interfaces,methods,pointers
+slice-expr	ctlSliceExpr	-	ok	-	init,globals,evaluation_order,interfaces,methods,slices
+bytes-of-var	ctlBytesVar	-	ok	-	init,globals,evaluation_order,interfaces,methods,strings,slices
+conv-float	ctlConvFloat	-	ok	-	init,globals,evaluation_order,interfaces,methods,floats

@@ -4,7 +4,9 @@ package main
 // (t1-fidelity-fixes, 2026-08-31; the charter-era E7 ruling ordered
 // this interim guard to ship FIRST — docs/2026-08-11_latitude-inventory.md
 // §E7 — and it never had until then; the REACH and OBSERVABLE
-// conditions re-cut at BUG-340's fix round, 2026-11-05).
+// conditions re-cut at BUG-340's fix round, 2026-11-05; the OBSERVABLE
+// cut's question corrected and REACH extended to instantiated generic
+// methods by lane frontend/fix-e7-cut-1107, 2026-11-07).
 //
 // THE HOLE IT CLOSES. spec#Package_initialization: "If other, hidden,
 // data dependencies exists between variables, the initialization order
@@ -56,27 +58,42 @@ package main
 //     TRANSITIVELY through statically-resolved references (audit fix
 //     round 2026-09-01, which found the shipped direct-read-only gate
 //     DEFEATED by one helper-function indirection) — a package-level
-//     variable of that unit with a kept initializer gc MAY FOLD: a
-//     constant, or a MAYBE-STATIC shape in the BUG-061 classifier's
-//     terms (staticinit.go; the loader's initKinds). A target whose
-//     initializer is certain WORK (a call to a multi-statement body,
-//     arithmetic, a map literal, …) is assigned at its InitOrder
-//     position on BOTH sides, so a hidden read finds the same value
-//     there and the shape lowers (the S19 sweep's dynamic-target twins
-//     agree; BUG-340's fix round). Only a foldable target can reorder
-//     an observable initialization (methods of OTHER units read their
-//     own unit's variables, and dependency units are fully initialized
-//     before this unit's variables start — the program schedule fixes
-//     cross-unit order).
+//     variable of that unit with a kept initializer of which gc MAY
+//     WRITE ANY PART ahead of its InitOrder position: a constant, or a
+//     MAYBE-STATIC shape on the classifier's TARGET question
+//     (staticinit.go targetFoldKindsOf, foldAnyPart; the loader's
+//     targetFoldKinds). A target is excluded only when its initializer
+//     has NO static path at the top level — a call to a multi-statement
+//     body, arithmetic, an index or field read, a receive, a map
+//     literal, a tuple: StaticAssign returns false for the shape, the
+//     whole value is assigned at its InitOrder position on BOTH sides,
+//     and a hidden read finds the same zero there, so the shape lowers
+//     (the S19 sweep's dynamic-target twins agree; BUG-340's fix round).
+//     A composite or pointer literal and a conversion to an interface
+//     are foldable WHATEVER their operands: gc writes the static
+//     elements, the slice header, the literal's pointer and the itab
+//     word into the data section and emits only the failing elements
+//     as dynamic statements (sched.go StaticAssign, the OARRAYLIT /
+//     OSTRUCTLIT / OSLICELIT / OPTRLIT / OCONVIFACE cases), so
+//     `var y = S{a: 1, b: g()}` has `y.a == 1` in place under gc while
+//     the machine's y is still zero (the pre-merge audit of 2026-11-07:
+//     gc 1013, the machine 13; `[]int{1, g()}` 2202 / 2; `&S{a: 1, b:
+//     g()}` 113 / 713 — the fix round of 2026-11-05 had read the
+//     BUG-061 NODE question, "does work remain", as this one and lowered
+//     these silently; lane frontend/fix-e7-cut-1107). Only a foldable
+//     target can reorder an observable initialization (methods of OTHER
+//     units read their own unit's variables, and dependency units are
+//     fully initialized before this unit's variables start — the program
+//     schedule fixes cross-unit order).
 //
 // Within their stated scope both conditions over-approximate in the
 // sound direction: a static reach that never executes, a name-matched
 // method the dynamic dispatch can never select, or a foldable target gc
 // happens not to fold (staticinit's seenMutation, go.dev/issue/51913)
 // produces a REFUSAL of a program the machine could have run — visible,
-// never wrong. The WORK side of the target test rests on the BUG-061
+// never wrong. The WORK side of the target test rests on the
 // classifier's reading of gc; its residual risk (a shape called WORK
-// where gc folds) is that file's, and is BUG-341's class.
+// where gc writes a part) is that file's, and is BUG-341's class.
 //
 // RECORDED RESIDUAL (deliberate scope boundary, not an oversight): a
 // call through a FUNCTION VALUE the walk cannot resolve (`var f func();
@@ -159,19 +176,21 @@ func (e *emitter) checkHiddenDepInitOrder() error {
 	}
 
 	for _, u := range e.units {
-		// Kept initialized package-level variables of this unit whose
-		// initializer gc MAY fold — the observable targets. A target of
-		// certain WORK is assigned at its InitOrder position under gc
-		// as under the machine: no fold, no divergence, not a target
-		// (file comment, condition 2). The classification is the
-		// loader's (staticinit.go initKindsOf); an entry it did not
-		// classify counts as foldable — fail closed.
+		// Kept initialized package-level variables of this unit of which
+		// gc MAY write a part ahead of its InitOrder position — the
+		// observable targets. A target with NO static path at the top
+		// level is assigned whole at its InitOrder position under gc as
+		// under the machine: nothing in place early, no divergence, not
+		// a target (file comment, condition 2). The classification is the
+		// loader's on the TARGET question (staticinit.go
+		// targetFoldKindsOf, foldAnyPart — not the BUG-061 node question);
+		// an entry it did not classify counts as foldable — fail closed.
 		initVars := map[types.Object]bool{}
 		for _, ini := range u.info.InitOrder {
 			if e.quarantinedInits[ini.Rhs] {
 				continue
 			}
-			if kind, known := u.initKinds[ini.Rhs]; known && kind == initWork {
+			if kind, known := u.targetFoldKinds[ini.Rhs]; known && kind == initWork {
 				continue
 			}
 			for _, v := range ini.Lhs {
@@ -224,10 +243,17 @@ func (e *emitter) checkHiddenDepInitOrder() error {
 							hit = obj.Name()
 							return false
 						}
-						if fn, isFn := obj.(*types.Func); isFn && !seen[fn] {
-							seen[fn] = true
-							if db, ok := bodies[fn]; ok {
-								work = append(work, db)
+						if fn, isFn := obj.(*types.Func); isFn {
+							// An instantiated generic method's object is the
+							// instance's; its body is the origin's (bodies is
+							// keyed by Defs). Origin is the identity for a
+							// non-generic function.
+							fn = fn.Origin()
+							if !seen[fn] {
+								seen[fn] = true
+								if db, ok := bodies[fn]; ok {
+									work = append(work, db)
+								}
 							}
 						}
 					}
@@ -253,6 +279,14 @@ func (e *emitter) checkHiddenDepInitOrder() error {
 			work := []workItem{{ini.Rhs, u}}
 			seen := map[types.Object]bool{}
 			follow := func(fn *types.Func) {
+				// A method of an instantiated generic type (`G[int]{}.M()`)
+				// resolves to the INSTANCE's *types.Func, which bodies — keyed
+				// by the declarations' Defs objects — does not hold; its body
+				// is the origin's (pre-merge audit 2026-11-07, finding 2: the
+				// stenciled method's hidden read was followed nowhere, gc 44,
+				// the machine 4). Origin is the identity for a non-generic
+				// function, so the key is always the declaration's.
+				fn = fn.Origin()
 				if seen[fn] {
 					return
 				}
