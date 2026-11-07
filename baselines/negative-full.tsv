@@ -1,6 +1,16 @@
 # GoLean negative-corpus (compile-rejection) baseline
 # recorded: 2026-08-18  commit: f68a4d86+ (spec-truth P3 slice 2)  oracle: go build (rejection)  [header corrected 2026-08-31: the old "+ frontend fail-closed" conjunct claimed a check that does not exist — scripts/coverage-negative invokes no GoLean tool (p2-fact claim 5)]
-# manifest_cases: 642  pass: 640  fail: 2
+# manifest_cases: 645  pass: 641  fail: 4
+# re-pinned: 2026-11-07 [AGENT], lane sweep/s22-readout (on main 4296a876) — the S22 sweep (the readout; plan §4, [USER]-approved
+#   2026-10-27). ADDITIVE ONLY: 3 new ids Corpus/coverage/negative/compile/builtins/sweep-s22-* from the full run of scripts/ci --diff at
+#   the lane tree cbf245ff; no existing row moved: 642 + 3 = 645, pass 640 + 1 = 641, fail 2 + 2 = 4. builtins/sweep-s22-print-nil-operand
+#   born PASS (gc rejects `println(nil)`, the frontend refuses it as a type-check rejection); builtins/sweep-s22-print-array-operand and
+#   builtins/sweep-s22-print-struct-operand born FAIL at frontend-accepts — gc rejects both (walk/builtin.go badtype «illegal types for
+#   operand: print») and the native frontend EXPORTS them with a per-declaration quarantine naming a phantom cause: BUG-430 (open), the
+#   S22 sweep's finding; they turn PASS when the fix lane refuses arrays and structs as gc rejections. The rows:
+#     builtins/sweep-s22-print-array-operand                                   FAIL/frontend-accepts
+#     builtins/sweep-s22-print-nil-operand                                     PASS/-
+#     builtins/sweep-s22-print-struct-operand                                  FAIL/frontend-accepts
 # re-pinned: 2026-10-27 [AGENT], lane frontend/fix-admission-1027 — BUG-217 and BUG-219 fixed (the main module's path judged
 #   against the pinned GOROOT and gc's reserved names; cmd/go's import rules mirrored at discovery): NINE rows FAIL
 #   frontend-accepts -> PASS from the full run at 63bbba7a with the row edits and records applied in the tree (1117 s) — imports/{vendor-path-import, nested-vendor-path-import,
@@ -958,3 +968,6 @@ PASS	strings/sweep-s21-builder-string-value-call	-
 PASS	strings/sweep-s21-itoa-int64	-
 PASS	strings/sweep-s21-repeat-arity	-
 PASS	strings/sweep-s21-sprintf-nonstring-format	-
+FAIL	builtins/sweep-s22-print-array-operand	frontend-accepts
+PASS	builtins/sweep-s22-print-nil-operand	-
+FAIL	builtins/sweep-s22-print-struct-operand	frontend-accepts

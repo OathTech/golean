@@ -1,5 +1,19 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 7545 (7190 PASS / 355 FAIL)
+# cases: 7633 (7273 PASS / 360 FAIL)
+# re-pinned: 2026-11-07 [AGENT], lane sweep/s22-readout (on main 4296a876) — the defect-neighbourhood campaign's step 2, shape S22 (the
+#   readout: observation naming, refusal text, output, the oracle observer; plan §4, [USER]-approved 2026-10-27). ADDITIVE ONLY: 88 new ids
+#   Corpus/coverage/exec/*/sweep-s22-*/ from the full run of CAPPED_MEM_MAX=32G capped scripts/ci --diff at the lane tree cbf245ff (the
+#   fixtures and records applied, before this re-pin); no existing row moved: 7545 + 88 = 7633; PASS 7190 + 83 = 7273; FAIL 355 + 5 = 360.
+#   The five FAIL rows are RED BY DESIGN or a FINDING: builtins/sweep-s22-print-refused/{complex,defined-float,nil-slice}
+#   (frontend-export, the FR-29 / c-pin print-operand refusals through a complex operand, a defined float kind, a nil slice) and
+#   builtins/sweep-s22-print-init-var (lean-observation, unsupported:init-print — a print reached from a package-level variable
+#   initializer) on BUG-093's Cases line; builtins/sweep-s22-print-output/multi-value-operand (frontend-export, keyed
+#   c-pin/print-builtin by the refusal's own text — the misattribution BUG-430 records: gc accepts and spreads `println(two())`) on
+#   BUG-430's Cases line. The 83 PASS rows: the observation's rendering per tag (ints/sweep-s22-readout-kinds 7,
+#   floats/sweep-s22-readout-floats 8, strings/sweep-s22-readout-strings 5, arrays/sweep-s22-readout-arrays 7,
+#   structs/sweep-s22-readout-structs 11, multipkg/sweep-s22-readout-crosspkg 4, interfaces/sweep-s22-readout-dynamic 9,
+#   generics/sweep-s22-readout-instantiations 9), the output field (builtins/sweep-s22-print-output 14) and the terminal classification
+#   at every attributable report shape (panic-recover/sweep-s22-terminal-shapes 9). The negative baseline gains 3 rows (its header).
 # re-pinned: 2026-11-07 [AGENT], lane frontend/fix-e7-cut-1107 — the train-31 pre-merge audits' findings FIXED at 645e5c26 (BUG-340
 #   amended: the E7 target cut on the classifier's TARGET question and the instantiated-generic-method route; BUG-423, 424, 425, 426
 #   entered fixed: the late suffix's promotion by dependency, gc's needsaddr early copy at every boxing site, the Sprint kind oracle
@@ -13591,3 +13605,91 @@ PASS	control-flow/fix-paren-forms-fallthrough-empties/fallthrough-empties-before
 PASS	control-flow/fix-paren-forms-fallthrough-empties/fallthrough-empties-before-default	-	-
 PASS	control-flow/fix-paren-forms-fallthrough-empties/empty-only-clause	-	-
 PASS	control-flow/fix-paren-forms-fallthrough-empties/empty-only-clause-miss	-	-
+PASS	arrays/sweep-s22-readout-arrays/zero-length	-	-
+PASS	arrays/sweep-s22-readout-arrays/bools	-	-
+PASS	arrays/sweep-s22-readout-arrays/nested	-	-
+PASS	arrays/sweep-s22-readout-arrays/strings-and-structs	-	-
+PASS	arrays/sweep-s22-readout-arrays/mixed-boxes	-	-
+PASS	arrays/sweep-s22-readout-arrays/instantiations	-	-
+PASS	arrays/sweep-s22-readout-arrays/defined-array-type	-	-
+FAIL	builtins/sweep-s22-print-init-var	lean-observation	unsupported:init-print
+PASS	builtins/sweep-s22-print-output/no-trailing-newline	-	-
+PASS	builtins/sweep-s22-print-output/empty-print	-	-
+PASS	builtins/sweep-s22-print-output/nul-byte	-	-
+PASS	builtins/sweep-s22-print-output/cr-and-tab	-	-
+PASS	builtins/sweep-s22-print-output/four-kib	-	-
+PASS	builtins/sweep-s22-print-output/trailer-text-mid-output	-	-
+PASS	builtins/sweep-s22-print-output/untyped-constants	-	-
+PASS	builtins/sweep-s22-print-output/named-constants	-	-
+PASS	builtins/sweep-s22-print-output/byte-and-rune	-	-
+PASS	builtins/sweep-s22-print-output/defined-string-kind	-	-
+PASS	builtins/sweep-s22-print-output/concatenation	-	-
+PASS	builtins/sweep-s22-print-output/deferred-print-normal-return	-	-
+PASS	builtins/sweep-s22-print-output/many-operands	-	-
+FAIL	builtins/sweep-s22-print-output/multi-value-operand	frontend-export	c-pin/print-builtin
+PASS	builtins/sweep-s22-print-output/uintptr-operand	-	-
+FAIL	builtins/sweep-s22-print-refused/complex	frontend-export	FR-15/complex
+FAIL	builtins/sweep-s22-print-refused/defined-float	frontend-export	FR-29/print-float
+FAIL	builtins/sweep-s22-print-refused/nil-slice	frontend-export	c-pin/print-builtin
+PASS	floats/sweep-s22-readout-floats/f64-signed-zeros	-	-
+PASS	floats/sweep-s22-readout-floats/f64-nan-canonical	-	-
+PASS	floats/sweep-s22-readout-floats/f64-infinities	-	-
+PASS	floats/sweep-s22-readout-floats/f64-denormal-and-max	-	-
+PASS	floats/sweep-s22-readout-floats/f32-signed-zeros	-	-
+PASS	floats/sweep-s22-readout-floats/f32-nan-canonical	-	-
+PASS	floats/sweep-s22-readout-floats/f32-infinities-denormal	-	-
+PASS	floats/sweep-s22-readout-floats/defined-float-kinds	-	-
+PASS	generics/sweep-s22-readout-instantiations/pointer-arg	-	-
+PASS	generics/sweep-s22-readout-instantiations/slice-and-array-args	-	-
+PASS	generics/sweep-s22-readout-instantiations/map-args	-	-
+PASS	generics/sweep-s22-readout-instantiations/func-arg	-	-
+PASS	generics/sweep-s22-readout-instantiations/error-arg	-	-
+PASS	generics/sweep-s22-readout-instantiations/defined-kind-args	-	-
+PASS	generics/sweep-s22-readout-instantiations/two-params	-	-
+PASS	generics/sweep-s22-readout-instantiations/pointer-to-instantiation	-	-
+PASS	generics/sweep-s22-readout-instantiations/generic-function-result	-	-
+PASS	interfaces/sweep-s22-readout-dynamic/defined-int-kinds	-	-
+PASS	interfaces/sweep-s22-readout-dynamic/defined-string-bool	-	-
+PASS	interfaces/sweep-s22-readout-dynamic/defined-float	-	-
+PASS	interfaces/sweep-s22-readout-dynamic/struct-and-nil	-	-
+PASS	interfaces/sweep-s22-readout-dynamic/error-results	-	-
+PASS	interfaces/sweep-s22-readout-dynamic/nonempty-interface-result	-	-
+PASS	interfaces/sweep-s22-readout-dynamic/instantiation-boxes	-	-
+PASS	interfaces/sweep-s22-readout-dynamic/box-in-box	-	-
+PASS	interfaces/sweep-s22-readout-dynamic/named-array-dynamic	-	-
+PASS	ints/sweep-s22-readout-kinds/signed-kinds-min	-	-
+PASS	ints/sweep-s22-readout-kinds/signed-kinds-max	-	-
+PASS	ints/sweep-s22-readout-kinds/unsigned-kinds-max	-	-
+PASS	ints/sweep-s22-readout-kinds/unsigned-kinds-zero	-	-
+PASS	ints/sweep-s22-readout-kinds/byte-rune-aliases	-	-
+PASS	ints/sweep-s22-readout-kinds/bools-defined	-	-
+PASS	ints/sweep-s22-readout-kinds/minus-one-every-signed	-	-
+PASS	multipkg/sweep-s22-readout-crosspkg/direct-and-boxed	-	-
+PASS	multipkg/sweep-s22-readout-crosspkg/embedded-foreign	-	-
+PASS	multipkg/sweep-s22-readout-crosspkg/instantiated-at-foreign	-	-
+PASS	multipkg/sweep-s22-readout-crosspkg/foreign-defined-kinds	-	-
+PASS	panic-recover/sweep-s22-terminal-shapes/print-then-fatal	-	-
+PASS	panic-recover/sweep-s22-terminal-shapes/print-then-deadlock	-	-
+PASS	panic-recover/sweep-s22-terminal-shapes/print-in-defer-during-panic	-	-
+PASS	panic-recover/sweep-s22-terminal-shapes/deadlock-during-unwind	-	-
+PASS	panic-recover/sweep-s22-terminal-shapes/deadlock-during-unwind-output	-	-
+PASS	panic-recover/sweep-s22-terminal-shapes/print-then-goroutine-panic	-	-
+PASS	panic-recover/sweep-s22-terminal-shapes/fatal-from-goroutine	-	-
+PASS	panic-recover/sweep-s22-terminal-shapes/print-then-nil-deref	-	-
+PASS	panic-recover/sweep-s22-terminal-shapes/goroutine-prints-then-main-panics	-	-
+PASS	strings/sweep-s22-readout-strings/empty-and-ascii	-	-
+PASS	strings/sweep-s22-readout-strings/multibyte	-	-
+PASS	strings/sweep-s22-readout-strings/nul-and-del	-	-
+PASS	strings/sweep-s22-readout-strings/four-kib	-	-
+PASS	strings/sweep-s22-readout-strings/defined-string-kind	-	-
+PASS	structs/sweep-s22-readout-structs/every-field-kind	-	-
+PASS	structs/sweep-s22-readout-structs/nested	-	-
+PASS	structs/sweep-s22-readout-structs/embedded-value	-	-
+PASS	structs/sweep-s22-readout-structs/unexported-field	-	-
+PASS	structs/sweep-s22-readout-structs/blank-field	-	-
+PASS	structs/sweep-s22-readout-structs/interface-fields	-	-
+PASS	structs/sweep-s22-readout-structs/alias-of-struct	-	-
+PASS	structs/sweep-s22-readout-structs/local-struct-type	-	-
+PASS	structs/sweep-s22-readout-structs/array-field	-	-
+PASS	structs/sweep-s22-readout-structs/empty-struct-in-box	-	-
+PASS	structs/sweep-s22-readout-structs/named-empty-in-box	-	-
