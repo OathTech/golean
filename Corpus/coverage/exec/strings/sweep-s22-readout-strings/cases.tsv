@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# Sweep lane sweep/s22-readout (2026-11-07), shape S22 (the readout: observation naming, refusal text, output, the oracle observer; plan §4; the matrix on BUG-013/019/065/072/093/106/107/114). Strict, expected = gc go1.26.5.
+# A5: the string observation is its byte array: empty, ASCII, multibyte, a NUL byte, DEL, a 4 KiB string, a defined
+# string kind (no type identity); invalid UTF-8 bytes are S27's rows (strings/sweep-s27-*).
+empty-and-ascii	emptyAndASCII	-	ok	-	strings,empty	strict	-	-
+multibyte	multibyte	-	ok	-	strings,unicode	strict	-	-
+nul-and-del	nulAndDel	-	ok	-	strings,bytes	strict	-	-
+four-kib	fourKiB	-	ok	-	strings,concat,loops	strict	-	-
+defined-string-kind	definedStringKind	-	ok	-	strings,defined_type	strict	-	-

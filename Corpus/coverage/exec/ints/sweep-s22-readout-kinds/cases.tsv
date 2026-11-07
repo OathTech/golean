@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# Sweep lane sweep/s22-readout (2026-11-07), shape S22 (the readout: observation naming, refusal text, output, the oracle observer; plan §4; the matrix on BUG-013/019/065/072/093/106/107/114). Strict, expected = gc go1.26.5.
+# A1/A2: the observation's integer KIND per reflect kind name, through DEFINED types (the value carries the kind only),
+# byte/rune aliases, and bool / a defined bool; extremes per kind.
+signed-kinds-min	signedKindsMin	-	ok	-	ints,defined_type,widths	strict	-	-
+signed-kinds-max	signedKindsMax	-	ok	-	ints,defined_type,widths	strict	-	-
+unsigned-kinds-max	unsignedKindsMax	-	ok	-	ints,defined_type,widths	strict	-	-
+unsigned-kinds-zero	unsignedKindsZero	-	ok	-	ints,defined_type,widths,zero_values	strict	-	-
+byte-rune-aliases	byteRuneAliases	-	ok	-	ints,aliases,bytes,runes	strict	-	-
+bools-defined	boolsDefined	-	ok	-	bools,defined_type	strict	-	-
+minus-one-every-signed	minusOneEverySigned	-	ok	-	ints,defined_type,widths	strict	-	-

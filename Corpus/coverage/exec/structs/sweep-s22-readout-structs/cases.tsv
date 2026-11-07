@@ -1,0 +1,17 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# Sweep lane sweep/s22-readout (2026-11-07), shape S22 (the readout: observation naming, refusal text, output, the oracle observer; plan §4; the matrix on BUG-013/019/065/072/093/106/107/114). Strict, expected = gc go1.26.5.
+# A7: the struct observation — typeName (reflect.Type.Name()) and the field list as declared: every field kind, nesting,
+# an EMBEDDED field (its name is the type's name), an unexported field, a BLANK field (gc observes name "_"),
+# interface-typed fields nil and set, an alias of a struct (the aliased name), a type declared INSIDE a function
+# (its local name), an array field, an instantiation holding an empty struct (typeName "" inside Box[struct {}]).
+every-field-kind	everyFieldKind	-	ok	-	structs,fields,ints,floats,strings,bools	strict	-	-
+nested	nested	-	ok	-	structs,nested	strict	-	-
+embedded-value	embeddedValue	-	ok	-	structs,embedding	strict	-	-
+unexported-field	unexportedField	-	ok	-	structs,fields	strict	-	-
+blank-field	blankField	-	ok	-	structs,fields,zero_values	strict	-	-
+interface-fields	interfaceFields	-	ok	-	structs,interfaces,nil	strict	-	-
+alias-of-struct	aliasOfStruct	-	ok	-	structs,aliases	strict	-	-
+local-struct-type	localStructType	-	ok	-	structs,scoping	strict	-	-
+array-field	arrayField	-	ok	-	structs,arrays	strict	-	-
+empty-struct-in-box	emptyStructInBox	-	ok	-	structs,empty,generics	strict	-	-
+named-empty-in-box	namedEmptyInBox	-	ok	-	structs,empty,generics,defined_type	strict	-	-

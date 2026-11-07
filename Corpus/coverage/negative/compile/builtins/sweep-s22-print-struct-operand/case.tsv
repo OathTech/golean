@@ -1,0 +1,2 @@
+# expected_substring	features
+illegal types for operand	print,builtins,structs,compile_error

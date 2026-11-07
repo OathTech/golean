@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# Sweep lane sweep/s22-readout (2026-11-07), shape S22 (the readout: observation naming, refusal text, output, the oracle observer; plan §4; the matrix on BUG-013/019/065/072/093/106/107/114). Strict, expected = gc go1.26.5.
+# B3, DESIGNED RED on BUG-093's Cases line: a print reached from a package-level VARIABLE INITIALIZER's callee (the
+# init-phase refusal's second route beside builtins/print/in-init, which is an init() body): the machine refuses the
+# run by name at runInitConfig rather than dropping the bytes.
+-	readsInitVar	-	ok	-	print,builtins,init	strict	-	-

@@ -1,0 +1,12 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# Sweep lane sweep/s22-readout (2026-11-07), shape S22 (the readout: observation naming, refusal text, output, the oracle observer; plan §4; the matrix on BUG-013/019/065/072/093/106/107/114). Strict, expected = gc go1.26.5.
+# A4: the float observation is the IEEE bit pattern with every NaN canonicalized (0x7FF8000000000000 / 0x7FC00000)
+# and signed zero kept; the special values at both widths, built at run time so no constant folding decides them.
+f64-signed-zeros	f64SignedZeros	-	ok	-	floats,representability	strict	-	-
+f64-nan-canonical	f64NaNCanonical	-	ok	-	floats,representability	strict	-	-
+f64-infinities	f64Infinities	-	ok	-	floats,overflow	strict	-	-
+f64-denormal-and-max	f64DenormalAndMax	-	ok	-	floats,representability,widths	strict	-	-
+f32-signed-zeros	f32SignedZeros	-	ok	-	floats,representability,widths	strict	-	-
+f32-nan-canonical	f32NaNCanonical	-	ok	-	floats,representability,widths	strict	-	-
+f32-infinities-denormal	f32InfinitiesDenormal	-	ok	-	floats,overflow,widths	strict	-	-
+defined-float-kinds	definedFloatKinds	-	ok	-	floats,defined_type,widths	strict	-	-

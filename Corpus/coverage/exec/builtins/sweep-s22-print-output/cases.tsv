@@ -1,0 +1,22 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# Sweep lane sweep/s22-readout (2026-11-07), shape S22 (the readout: observation naming, refusal text, output, the oracle observer; plan §4; the matrix on BUG-013/019/065/072/093/106/107/114). Strict, expected = gc go1.26.5.
+# B1/B3: the `output` field beside the admitted print operand kinds (BUG-093's green side): no trailing newline, an
+# empty print (print() with ZERO operands is FR-29's designed red, builtins/print/refused/zero-operands), a NUL / CR / TAB
+# byte, 4 KiB, the go-run trailer text NOT at the end (BUG-297 is the at-the-end apparatus limit), untyped and named
+# constants, byte / rune, a defined string kind, concatenation, a deferred print through a closure (`defer println(…)`
+# itself is FR-16's named refusal — a gap, not rowed), a multi-value call spread as print operands (gc accepts it).
+no-trailing-newline	noTrailingNewline	-	ok	-	print,builtins,strings	strict	-	-
+empty-print	emptyPrint	-	ok	-	print,builtins,empty	strict	-	-
+nul-byte	nulByte	-	ok	-	print,builtins,bytes	strict	-	-
+cr-and-tab	crAndTab	-	ok	-	print,builtins,strings	strict	-	-
+four-kib	fourKiB	-	ok	-	print,builtins,loops	strict	-	-
+trailer-text-mid-output	trailerTextMidOutput	-	ok	-	print,builtins,strings	strict	-	-
+untyped-constants	untypedConstants	-	ok	-	print,builtins,untyped,constants	strict	-	-
+named-constants	namedConstants	-	ok	-	print,builtins,constants	strict	-	-
+byte-and-rune	byteAndRune	-	ok	-	print,builtins,bytes,runes	strict	-	-
+defined-string-kind	definedStringKind	-	ok	-	print,builtins,strings,defined_type	strict	-	-
+concatenation	concatenation	-	ok	-	print,builtins,strings,concat	strict	-	-
+deferred-print-normal-return	deferredPrintNormalReturn	-	ok	-	print,builtins,defer	strict	-	-
+many-operands	manyOperands	-	ok	-	print,builtins,ints,bools	strict	-	-
+multi-value-operand	multiValueOperand	-	ok	-	print,builtins,multi_result	strict	-	-
+uintptr-operand	uintptrOperand	-	ok	-	print,builtins,ints	strict	-	-

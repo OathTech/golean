@@ -1,0 +1,16 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# Sweep lane sweep/s22-readout (2026-11-07), shape S22 (the readout: observation naming, refusal text, output, the oracle observer; plan §4; the matrix on BUG-013/019/065/072/093/106/107/114). Strict, expected = gc go1.26.5.
+# B2/C1–C3: the terminal classification (status, message, output) at the report shapes the oracle observer can
+# attribute — output then fatal / deadlock / a goroutine's panic / a nil-dereference panic (the signal line), a
+# deferred print during an unrecovered panic, a deadlock raised DURING panic unwinding (gc prints no panic line), a
+# fatal raised in a non-main goroutine. The unattributable shapes (a fatal during unwinding — BUG-106; a pre-main
+# abort — BUG-107; two concurrent reports — BUG-114) stay hand probes and refusals by name.
+print-then-fatal	printThenFatal	-	fatal	sync: unlock of unlocked mutex	print,sync,mutex,fatal	strict	-	-
+print-then-deadlock	printThenDeadlock	-	deadlock	-	print,channels,deadlock	strict	-	-
+print-in-defer-during-panic	printInDeferDuringPanic	-	panic	unrecovered	print,defer,panic	strict	-	-
+deadlock-during-unwind	deadlockDuringUnwind	-	deadlock	-	defer,panic,channels,deadlock	strict	-	-
+deadlock-during-unwind-output	deadlockDuringUnwindOutput	-	deadlock	-	print,defer,panic,channels,deadlock	strict	-	-
+print-then-goroutine-panic	printThenGoroutinePanic	-	panic	from the goroutine	print,goroutines,panic	strict	-	-
+fatal-from-goroutine	fatalFromGoroutine	-	fatal	sync: unlock of unlocked mutex	goroutines,sync,mutex,fatal	strict	-	-
+print-then-nil-deref	printThenNilDeref	-	panic	invalid memory address or nil pointer dereference	print,pointers,nil,panic	strict	-	-
+goroutine-prints-then-main-panics	goroutinePrintsThenMainPanics	-	panic	main after goroutine	print,goroutines,channels,panic	strict	-	-

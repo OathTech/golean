@@ -1,0 +1,16 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# Sweep lane sweep/s22-readout (2026-11-07), shape S22 (the readout: observation naming, refusal text, output, the oracle observer; plan §4; the matrix on BUG-013/019/065/072/093/106/107/114). Strict, expected = gc go1.26.5.
+# A9/A10: an instantiation's observed NAME (typeName directly and `dynamic` through a box) at every type-argument
+# spelling the wire admits, through a PHANTOM parameter so the value itself stays observable: pointer, slice, array,
+# map, func, error, a defined kind, two parameters, a pointer to an instantiation, nested maps; and the instantiated
+# result of a generic function. Beside the S3 rows (readout-byte / -any / -empty-struct / -path / -nested of
+# multipkg/sweep-s3-instantiations). A chan argument is refused by name (the standing mangling-surface gap).
+pointer-arg	pointerArg	-	ok	-	generics,pointers	strict	-	-
+slice-and-array-args	sliceAndArrayArgs	-	ok	-	generics,slices,arrays	strict	-	-
+map-args	mapArgs	-	ok	-	generics,maps	strict	-	-
+func-arg	funcArg	-	ok	-	generics,functions	strict	-	-
+error-arg	errorArg	-	ok	-	generics,interfaces	strict	-	-
+defined-kind-args	definedKindArgs	-	ok	-	generics,defined_type	strict	-	-
+two-params	twoParams	-	ok	-	generics	strict	-	-
+pointer-to-instantiation	pointerToInstantiation	-	ok	-	generics,pointers,nested	strict	-	-
+generic-function-result	genericFunctionResult	-	ok	-	generics,inference	strict	-	-

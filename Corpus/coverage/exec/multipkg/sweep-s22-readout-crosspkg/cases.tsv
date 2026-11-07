@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# Sweep lane sweep/s22-readout (2026-11-07), shape S22 (the readout: observation naming, refusal text, output, the oracle observer; plan §4; the matrix on BUG-013/019/065/072/093/106/107/114). Strict, expected = gc go1.26.5.
+# A7/A8 across a package boundary: a struct from another package observes with its UNQUALIFIED name directly, boxed
+# and embedded (the embedded field's name is the bare type name); an instantiation at the other package's type
+# names the argument by import path (Box[note.T] — the S3 row multipkg/sweep-s3-instantiations/readout-path holds
+# the Box[red/inner.T] spelling; this row is the one-segment path at a phantom parameter and in a field).
+direct-and-boxed	directAndBoxed	-	ok	-	multipackage,structs,interfaces	strict	-	-
+embedded-foreign	embeddedForeign	-	ok	-	multipackage,structs,embedding	strict	-	-
+instantiated-at-foreign	instantiatedAtForeign	-	ok	-	multipackage,generics	strict	-	-
+foreign-defined-kinds	foreignDefinedKinds	-	ok	-	multipackage,defined_type,ints,strings	strict	-	-

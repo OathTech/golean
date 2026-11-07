@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# Sweep lane sweep/s22-readout (2026-11-07), shape S22 (the readout: observation naming, refusal text, output, the oracle observer; plan §4; the matrix on BUG-013/019/065/072/093/106/107/114). Strict, expected = gc go1.26.5.
+# A6: the array observation at every element kind: empty, bool, nested, string, struct, mixed boxes, instantiation.
+zero-length	zeroLength	-	ok	-	arrays,zero_len	strict	-	-
+bools	bools	-	ok	-	arrays,bools	strict	-	-
+nested	nested	-	ok	-	arrays,nested	strict	-	-
+strings-and-structs	stringsAndStructs	-	ok	-	arrays,strings,structs	strict	-	-
+mixed-boxes	mixedBoxes	-	ok	-	arrays,interfaces,nil	strict	-	-
+instantiations	instantiations	-	ok	-	arrays,generics	strict	-	-
+defined-array-type	definedArrayType	-	ok	-	arrays,defined_type	strict	-	-

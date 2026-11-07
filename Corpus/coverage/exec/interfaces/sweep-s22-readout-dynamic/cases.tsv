@@ -1,0 +1,16 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# Sweep lane sweep/s22-readout (2026-11-07), shape S22 (the readout: observation naming, refusal text, output, the oracle observer; plan §4; the matrix on BUG-013/019/065/072/093/106/107/114). Strict, expected = gc go1.26.5.
+# A8: the interface observation's `dynamic` name (reflect.Type.Name() of the dynamic type) at every NAMED dynamic
+# type the oracle observes: defined basic kinds, structs, instantiations, error and a non-empty interface result;
+# the basic kinds themselves are S3's rows (interfaces/sweep-s3-basic-kinds). Unnamed dynamic types (*T, []T, map,
+# chan, [N]T, func, *errors.errorString) and NAMED slice / map / pointer types are refused by name on the oracle
+# side (hand probes on the lane's report) — the recorded comparable-surface boundary, not rowed.
+defined-int-kinds	definedIntKinds	-	ok	-	interfaces,defined_type,ints	strict	-	-
+defined-string-bool	definedStringBool	-	ok	-	interfaces,defined_type,strings,bools	strict	-	-
+defined-float	definedFloat	-	ok	-	interfaces,defined_type,floats	strict	-	-
+struct-and-nil	structAndNil	-	ok	-	interfaces,structs,nil	strict	-	-
+error-results	errorResults	-	ok	-	interfaces,structs,nil	strict	-	-
+nonempty-interface-result	nonemptyInterfaceResult	-	ok	-	interfaces,methods,structs	strict	-	-
+instantiation-boxes	instantiationBoxes	-	ok	-	interfaces,generics	strict	-	-
+box-in-box	boxInBox	-	ok	-	interfaces,generics,nested	strict	-	-
+named-array-dynamic	namedArrayDynamic	-	ok	-	interfaces,arrays,defined_type	strict	-	-

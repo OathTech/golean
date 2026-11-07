@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# Sweep lane sweep/s22-readout (2026-11-07), shape S22 (the readout: observation naming, refusal text, output, the oracle observer; plan §4; the matrix on BUG-013/019/065/072/093/106/107/114). Strict, expected = gc go1.26.5.
+# B3, DESIGNED RED on BUG-093's Cases line: print operand kinds the frontend refuses BY NAME beside the pinned ones —
+# a complex operand (FR-15 / FR-29), a DEFINED float kind (the float refusal through a named type), a nil slice (the
+# address-printing refusal is by static kind, nil or not). Each refusal is a per-declaration quarantine.
+complex	printComplex	-	ok	-	print,builtins,complex	strict	-	-
+defined-float	printDefinedFloat	-	ok	-	print,builtins,floats,defined_type	strict	-	-
+nil-slice	printNilSlice	-	ok	-	print,builtins,slices,nil	strict	-	-

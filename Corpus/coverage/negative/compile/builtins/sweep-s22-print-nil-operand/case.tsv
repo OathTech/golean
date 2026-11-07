@@ -1,0 +1,2 @@
+# expected_substring	features
+use of untyped nil	print,builtins,nil,compile_error
