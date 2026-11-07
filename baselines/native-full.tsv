@@ -1,5 +1,23 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 7498 (7151 PASS / 347 FAIL)
+# cases: 7545 (7190 PASS / 355 FAIL)
+# re-pinned: 2026-11-07 [AGENT], lane frontend/fix-e7-cut-1107 — the train-31 pre-merge audits' findings FIXED at 645e5c26 (BUG-340
+#   amended: the E7 target cut on the classifier's TARGET question and the instantiated-generic-method route; BUG-423, 424, 425, 426
+#   entered fixed: the late suffix's promotion by dependency, gc's needsaddr early copy at every boxing site, the Sprint kind oracle
+#   from the stencil set, a package-level struct's field read admitted by the unseq fragment; the shim-injection scans' unparen; the
+#   re-pin guard's family gains unrowed/frontend-internal-error — a GATE SCRIPT CHANGE, flagged for the owner). 47 rows ADDED, NOTHING
+#   ELSE MOVED: 7498 → 7545 rows; PASS 7151 + 39 = 7190; FAIL 347 + 8 = 355. The eight FAIL rows are RED BY DESIGN on BUG-340's Cases
+#   line (frontend-export, c-pin/hidden-dep-init-order): init/fix-e7-cut-partial-static/{struct-lit,slice-lit,slice-all-dynamic,ptr-lit,
+#   iface-conv} and init/fix-e7-cut-generic-method/{generic-method,via-generic-function} — packages the stage's frontend LOWERED SILENTLY
+#   (gc 1013 / the machine 13 on the struct literal; 44 / 4 on the generic method) and this lane refuses by name — and
+#   init/fix-e7-cut-inlined-literal/inlined-single-return (refused before and after). The 39 PASS rows: init/fix-e7-cut-no-static-path/*
+#   (10) and init/fix-e7-cut-generic-method-dynamic/* (1), the E7 controls; fmt/fix-e7-cut-sprint-stencil/* (4, BUG-425) and
+#   fmt/fix-e7-cut-paren-callee/* (3); evalorder/fix-e7-cut-late-promotion/* (6, BUG-423), evalorder/fix-e7-cut-box-needsaddr/* (13,
+#   BUG-424) and evalorder/fix-e7-cut-global-field-read/* (2, BUG-426, the membership lane: {0, 500}, members=2). Eight packages' wires
+#   gained the early box temps of BUG-424's rule with every verdict unchanged (channels/sweep-s3-chan-dir, fmt/sweep-s21-dyn-verbs,
+#   init/sweep-s19-hidden-dep-funcvalue, interfaces/sweep-s5-{assertion-routes,imported-carriers}, methods/sweep-s5-nonstruct-carriers,
+#   multipkg/private-method-dispatch, pointers/sweep-s4-alias-routes); no PASS → non-PASS move, no removal, no cause change. Measured
+#   by CAPPED_MEM_MAX=32G capped scripts/ci --diff at the lane tree 645e5c26 (its only drift: these 47 new ids), the rows taken from
+#   that run's artifacts/coverage/latest.tsv; the negative baseline unchanged (642/642); the fast tier at the tip judges.
 # re-pinned: 2026-11-05 [AGENT], lane frontend/fix-init-admission-1105 — BUG-340, 341 (the S19 sweep), 401 (S21), 412 (S23) FIXED in
 #   tools/nativefrontend (the campaign plan's rule that a finding is fixed through the normal train, [USER] approved 2026-10-27, relayed):
 #   (1) hiddendep.go — the E7 guard's REACH is the selected method's receiver type on every selection (a direct call, a method value,
@@ -7179,6 +7197,13 @@ PASS	fmt/errorf/fresh	-	-
 PASS	fmt/errorf/sentinel-classify	-	-
 PASS	fmt/errorf/text	-	-
 PASS	fmt/errorf/vs-errors-new	-	-
+PASS	fmt/fix-e7-cut-paren-callee/paren-sprint	-	-
+PASS	fmt/fix-e7-cut-paren-callee/paren-sprintf-sprintln	-	-
+PASS	fmt/fix-e7-cut-paren-callee/paren-spread	-	-
+PASS	fmt/fix-e7-cut-sprint-stencil/in-stencil	-	-
+PASS	fmt/fix-e7-cut-sprint-stencil/nested-stencil	-	-
+PASS	fmt/fix-e7-cut-sprint-stencil/any-from-stencil	-	-
+PASS	fmt/fix-e7-cut-sprint-stencil/direct-beside-named	-	-
 FAIL	fmt/formatter-box-crosspkg/cross-package	frontend-export	apparatus/frontend-apparatus
 FAIL	fmt/formatter-box-generic/generic-body	frontend-export	apparatus/frontend-apparatus
 FAIL	fmt/formatter-box-range/range-assign	frontend-export	apparatus/frontend-apparatus
@@ -12452,6 +12477,25 @@ PASS	generics/sweep-s11-kind-ops/div-range	-	-
 PASS	generics/sweep-s11-kind-ops/lit-shift-by-t	-	-
 PASS	generics/sweep-s11-kind-ops/floats	-	-
 PASS	init/sweep-s11-kinds-in-init	-	-
+PASS	init/fix-e7-cut-generic-method-dynamic/generic-method-dynamic	-	-
+FAIL	init/fix-e7-cut-generic-method/generic-method	frontend-export	c-pin/hidden-dep-init-order
+FAIL	init/fix-e7-cut-generic-method/via-generic-function	frontend-export	c-pin/hidden-dep-init-order
+FAIL	init/fix-e7-cut-inlined-literal/inlined-single-return	frontend-export	c-pin/hidden-dep-init-order
+PASS	init/fix-e7-cut-no-static-path/call	-	-
+PASS	init/fix-e7-cut-no-static-path/map-lit	-	-
+PASS	init/fix-e7-cut-no-static-path/arith	-	-
+PASS	init/fix-e7-cut-no-static-path/index-read	-	-
+PASS	init/fix-e7-cut-no-static-path/field-read	-	-
+PASS	init/fix-e7-cut-no-static-path/tuple	-	-
+PASS	init/fix-e7-cut-no-static-path/new	-	-
+PASS	init/fix-e7-cut-no-static-path/slice-expr	-	-
+PASS	init/fix-e7-cut-no-static-path/bytes-of-var	-	-
+PASS	init/fix-e7-cut-no-static-path/conv-float	-	-
+FAIL	init/fix-e7-cut-partial-static/struct-lit	frontend-export	c-pin/hidden-dep-init-order
+FAIL	init/fix-e7-cut-partial-static/slice-lit	frontend-export	c-pin/hidden-dep-init-order
+FAIL	init/fix-e7-cut-partial-static/slice-all-dynamic	frontend-export	c-pin/hidden-dep-init-order
+FAIL	init/fix-e7-cut-partial-static/ptr-lit	frontend-export	c-pin/hidden-dep-init-order
+FAIL	init/fix-e7-cut-partial-static/iface-conv	frontend-export	c-pin/hidden-dep-init-order
 PASS	ints/sweep-s11-bitwise-kinds/int8	-	-
 PASS	ints/sweep-s11-bitwise-kinds/int16	-	-
 PASS	ints/sweep-s11-bitwise-kinds/int32	-	-
@@ -13269,6 +13313,27 @@ PASS	errors/sweep-s21-join-text/three-and-nested	-	-
 PASS	errors/sweep-s21-join-text/through-errorf-and-sprint	-	-
 PASS	errors/sweep-s21-join-text/elem-panics	-	-
 PASS	errors/sweep-s21-join-text/single-and-unwrap-of-join	-	-
+PASS	evalorder/fix-e7-cut-box-needsaddr/bool-cmp	-	-
+PASS	evalorder/fix-e7-cut-box-needsaddr/int8-conv	-	-
+PASS	evalorder/fix-e7-cut-box-needsaddr/array2-lit	-	-
+PASS	evalorder/fix-e7-cut-box-needsaddr/struct-lit	-	-
+PASS	evalorder/fix-e7-cut-box-needsaddr/ptr-bearing-struct-lit	-	-
+PASS	evalorder/fix-e7-cut-box-needsaddr/ptr-lit	-	-
+PASS	evalorder/fix-e7-cut-box-needsaddr/int16-conv-late	-	-
+PASS	evalorder/fix-e7-cut-box-needsaddr/int32-conv-late	-	-
+PASS	evalorder/fix-e7-cut-box-needsaddr/int-arith-late	-	-
+PASS	evalorder/fix-e7-cut-box-needsaddr/string-cat-late	-	-
+PASS	evalorder/fix-e7-cut-box-needsaddr/slice-lit-late	-	-
+PASS	evalorder/fix-e7-cut-box-needsaddr/array1-lit-late	-	-
+PASS	evalorder/fix-e7-cut-box-needsaddr/one-int-struct-late	-	-
+PASS	evalorder/fix-e7-cut-global-field-read/plain-arg	membership	-
+PASS	evalorder/fix-e7-cut-global-field-read/boxed-literal	membership	-
+PASS	evalorder/fix-e7-cut-late-promotion/slice-then-box	-	-
+PASS	evalorder/fix-e7-cut-late-promotion/two-method-values	-	-
+PASS	evalorder/fix-e7-cut-late-promotion/tuple-site	-	-
+PASS	evalorder/fix-e7-cut-late-promotion/return-list	-	-
+PASS	evalorder/fix-e7-cut-late-promotion/nested-calls	-	-
+PASS	evalorder/fix-e7-cut-late-promotion/nested-slice	-	-
 PASS	fmt/sweep-s21-alias-import/alias-sprintf	-	-
 PASS	fmt/sweep-s21-alias-import/alias-errorf	-	-
 PASS	fmt/sweep-s21-alias-import/alias-sprint-spread	-	-
