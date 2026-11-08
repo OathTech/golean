@@ -507,6 +507,17 @@ requires a written profound reason. The complete list:
    the package-unsafe boundary before the print arm, red by name either
    way). Floats/complex, the zero-operand spellings, init-phase and racy
    prints are NOT on this list — they are FR-29's frontier.
+   An ARRAY or STRUCT operand is not on this list either: gc REJECTS it
+   (walk/builtin.go's operand switch has no arm for it; badtype «illegal
+   types for operand: print»), and since 2026-11-08 (BUG-430, lane
+   `frontend/fix-print-builtin-1108`) the frontend rejects it as gc does —
+   the whole export, type-check class (`gcRejection`, wire.go) — where it
+   had quarantined the declaration with this item's address text; a
+   MULTI-VALUE call operand `println(f())` is gc's spread of the results
+   (typecheck's RewriteMultiValueCall) and lowers as such, each result
+   judged by this item's rule. A dead print (`if false { println([2]int{})
+   }`), which gc's writer prunes and builds, is refused by name with a
+   clause — the gclimits over-refusal shape, not on this list.
 4. **The (c)-pinned reds** (C1 hidden-dep init order, C2 staticinit
    `callinit`, C3 panic-qualifier rendering, C4 abort rendering, C5
    float→int out-of-range — **8 reds** after the 2026-08-20 split;

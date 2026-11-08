@@ -214,6 +214,10 @@ func TestClassifyTextVocabulary(t *testing.T) {
 		// print-builtin row (`chan int`), and a method-expression text the
 		// method-stub unwrapper mistook for a wrapper.
 		`frontend-quarantined: builtin println operand 1 of type chan int prints an address in gc (runtime/print.go printpointer/printslice/printeface/printiface) — the machine has no addresses; refused by name, permanently (stdlib slice 3; ledger §5.1 item 3)`: "print-builtin",
+		// BUG-430 (2026-11-08): an array / struct print operand is gc's rejection
+		// (type-check class, gc's text, the dead-code clause flattened to one
+		// line by the runners), keyed by its own row — never print-builtin's.
+		`native frontend (exit 1): nativefrontend: type-check: main.go:2:29: illegal types for operand: print 	[2]int [GoLean judges every print statement it lowers, including one in a constant-false branch or after a terminating statement, which gc's writer prunes before it judges print operands; such a program is refused by name, not supported]`: "print-operand-gc-rejection",
 		`frontend-quarantined: method expression (*main.T).Mv over a value-receiver method (deref adapter not modeled)`:                                                                                                                                               "method-expr-deref",
 		`make of a potentially-panicking size/hint operand with a potentially-panicking operand to its left in the same statement (the make hoist would reorder the panics; realizing gc's left-to-right point needs full-statement linearization — BUG-032/BUG-083)`: "len-hoist-panic-order",
 	}
