@@ -1,6 +1,14 @@
 # GoLean negative-corpus (compile-rejection) baseline
 # recorded: 2026-08-18  commit: f68a4d86+ (spec-truth P3 slice 2)  oracle: go build (rejection)  [header corrected 2026-08-31: the old "+ frontend fail-closed" conjunct claimed a check that does not exist — scripts/coverage-negative invokes no GoLean tool (p2-fact claim 5)]
-# manifest_cases: 645  pass: 641  fail: 4
+# manifest_cases: 645  pass: 643  fail: 2
+# re-pinned: 2026-11-08 [AGENT], lane frontend/fix-print-builtin-1108 (base e169ec49, the train-33 stage) — BUG-430 FIXED: an array or struct
+#   print operand is gc's REJECTION (walk/builtin.go badtype «illegal types for operand: print») and the frontend now refuses it as one — the
+#   whole export, type-check class, gc's text (tools/nativefrontend/emit.go printOperandKind, wire.go gcRejection) — where it had EXPORTED the
+#   program behind a per-declaration quarantine naming a phantom cause. TWO rows FAIL/frontend-accepts -> PASS from the full run of
+#   CAPPED_MEM_MAX=32G capped scripts/ci --diff at 696d63ea (the fix and its records committed, before this re-pin; the run's only drift was
+#   these two rows): 645 rows, pass 641 + 2 = 643, fail 4 - 2 = 2; no other row moved, no row added or removed. The rows:
+#     builtins/sweep-s22-print-array-operand                                   FAIL/frontend-accepts -> PASS/-
+#     builtins/sweep-s22-print-struct-operand                                  FAIL/frontend-accepts -> PASS/-
 # re-pinned: 2026-11-07 [AGENT], lane sweep/s22-readout (on main 4296a876) — the S22 sweep (the readout; plan §4, [USER]-approved
 #   2026-10-27). ADDITIVE ONLY: 3 new ids Corpus/coverage/negative/compile/builtins/sweep-s22-* from the full run of scripts/ci --diff at
 #   the lane tree cbf245ff; no existing row moved: 642 + 3 = 645, pass 640 + 1 = 641, fail 2 + 2 = 4. builtins/sweep-s22-print-nil-operand
@@ -968,6 +976,6 @@ PASS	strings/sweep-s21-builder-string-value-call	-
 PASS	strings/sweep-s21-itoa-int64	-
 PASS	strings/sweep-s21-repeat-arity	-
 PASS	strings/sweep-s21-sprintf-nonstring-format	-
-FAIL	builtins/sweep-s22-print-array-operand	frontend-accepts
+PASS	builtins/sweep-s22-print-array-operand	-
 PASS	builtins/sweep-s22-print-nil-operand	-
-FAIL	builtins/sweep-s22-print-struct-operand	frontend-accepts
+PASS	builtins/sweep-s22-print-struct-operand	-

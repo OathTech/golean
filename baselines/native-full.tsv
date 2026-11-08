@@ -1,5 +1,13 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 7721 (7354 PASS / 367 FAIL)
+# cases: 7721 (7355 PASS / 366 FAIL)
+# re-pinned: 2026-11-08 [AGENT], lane frontend/fix-print-builtin-1108 (base e169ec49, the train-33 stage) — BUG-430 FIXED: the one-operand
+#   multi-value call `println(two())` is SPREAD into the call's results as gc's typecheck spreads it (RewriteMultiValueCall; emit.go
+#   emitPrintStmt → splatMultiCall, each result judged by the operand-kind rule), where the frontend had refused it with the phantom «prints
+#   an address in gc» text keyed c-pin/print-builtin. ONE row FAIL/frontend-export (c-pin/print-builtin) -> PASS from the full run of
+#   CAPPED_MEM_MAX=32G capped scripts/ci --diff at 696d63ea (the fix and its records committed, before this re-pin; the run's only drift was
+#   this row): 7721 rows, PASS 7354 + 1 = 7355, FAIL 367 - 1 = 366; no other row moved, no cause changed, no row added or removed, no
+#   PASS -> non-PASS flip (BUG-093's seventeen Cases rows unchanged). The negative baseline moves two rows (its header). The row:
+#     builtins/sweep-s22-print-output/multi-value-operand                      FAIL/frontend-export c-pin/print-builtin -> PASS/- -
 # re-pinned: 2026-11-07 [AGENT], lane sweep/s22-readout (on main 4296a876) — the defect-neighbourhood campaign's step 2, shape S22 (the
 #   readout: observation naming, refusal text, output, the oracle observer; plan §4, [USER]-approved 2026-10-27). ADDITIVE ONLY: 88 new ids
 #   Corpus/coverage/exec/*/sweep-s22-*/ from the full run of CAPPED_MEM_MAX=32G capped scripts/ci --diff at the lane tree cbf245ff (the
@@ -13642,7 +13650,7 @@ PASS	builtins/sweep-s22-print-output/defined-string-kind	-	-
 PASS	builtins/sweep-s22-print-output/concatenation	-	-
 PASS	builtins/sweep-s22-print-output/deferred-print-normal-return	-	-
 PASS	builtins/sweep-s22-print-output/many-operands	-	-
-FAIL	builtins/sweep-s22-print-output/multi-value-operand	frontend-export	c-pin/print-builtin
+PASS	builtins/sweep-s22-print-output/multi-value-operand	-	-
 PASS	builtins/sweep-s22-print-output/uintptr-operand	-	-
 FAIL	builtins/sweep-s22-print-refused/complex	frontend-export	FR-15/complex
 FAIL	builtins/sweep-s22-print-refused/defined-float	frontend-export	FR-29/print-float
