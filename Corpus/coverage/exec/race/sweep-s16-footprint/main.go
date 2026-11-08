@@ -20,6 +20,11 @@ type sliceHolder struct {
 	t int
 }
 
+type zeroHolder struct {
+	n int
+	z struct{}
+}
+
 type pairF struct{ a, b int }
 
 func (p pairF) get() int { return p.a + p.b }
@@ -618,6 +623,21 @@ func footprintZeroArrayWriteWrite() int {
 	return len(a) + 1
 }
 
+// D6: a zero-size FIELD inside a sized struct, written beside a whole-struct
+// read of the holder (gc instruments the sized read only; the zero-size store
+// is a no-op without a race call).
+func footprintZeroSizeFieldVsWholeRead() int {
+	var o zeroHolder
+	done := make(chan int)
+	go func() {
+		o.z = struct{}{}
+		done <- 0
+	}()
+	w := o
+	<-done
+	return w.n + 1
+}
+
 // D4/D5: the right operand of && is read only when the left is true.
 func footprintShortCircuit(a int) int {
 	shared := 0
@@ -709,6 +729,7 @@ func main() {
 	println(footprintZeroSizeWriteWrite())
 	println(footprintZeroSizeReadWrite())
 	println(footprintZeroArrayWriteWrite())
+	println(footprintZeroSizeFieldVsWholeRead())
 	println(footprintShortCircuit(0))
 	println(footprintShortCircuit(1))
 	println(footprintDeferredWriteVsRead())

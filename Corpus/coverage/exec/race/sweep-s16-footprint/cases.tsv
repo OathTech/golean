@@ -5,15 +5,16 @@
 # slices; headers vs elements; strings; maps; sort, copy, clear, append; the
 # short circuit; a deferred or post-recover write). gc -race 10/10 at GOMAXPROCS
 # 1 and 8 on every row; the enumerator certified RACE-ALL / |set| = 1.
-# SIX RED PINS (strict, expected gc ok, the machine refuses `race` on every path;
+# SEVEN RED PINS (strict, expected gc ok, the machine refuses `race` on every path;
 # each on its entry's Cases line, never a pass): struct-array-field-dyn-other-elem
 # (BUG-041: the dynamic-index read of an array FIELD stays the whole field);
 # sort-len1-vs-write (BUG-132: the op reads and writes a length-1 window where
 # gc's insertion sort performs no access); clear-slice-vs-read (BUG-370: gc
 # lowers clear(s) to an uninstrumented memclr, go_mem calls the writes a race);
-# zero-size-write-write, zero-size-read-write, zero-array-write-write (BUG-371:
-# a zero-size cell has no memory location — gc instruments nothing — and the
-# machine records an access on it).
+# zero-size-write-write, zero-size-read-write, zero-array-write-write and, added
+# 2026-11-07, zero-size-field-vs-whole-read (BUG-371: a zero-size cell has no
+# memory location — gc instruments nothing — and the machine records an access
+# on it; the field route overlaps the holder's whole-struct read).
 value-recv-via-ptr-whole-read	footprintValueRecvViaPtrWholeRead	-	race	-	goroutines,channels,race,structs,methods,pointers	racy	-	width=4,sites=16
 ptr-recv-on-value-no-read	footprintPtrRecvOnValueNoRead	-	ok	-	goroutines,channels,race,structs,methods	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
 array-dyn-index-write-write-disjoint	footprintArrayDynIndexWriteWriteDisjoint	0,1	ok	-	goroutines,channels,race,arrays,indexing	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
@@ -56,6 +57,7 @@ append-spill-fresh-backing	footprintAppendSpillFreshBacking	-	ok	-	goroutines,ch
 zero-size-write-write	footprintZeroSizeWriteWrite	-	ok	-	goroutines,channels,race,structs,zero_values
 zero-size-read-write	footprintZeroSizeReadWrite	-	ok	-	goroutines,channels,race,structs,zero_values
 zero-array-write-write	footprintZeroArrayWriteWrite	-	ok	-	goroutines,channels,race,arrays,zero_values
+zero-size-field-vs-whole-read	footprintZeroSizeFieldVsWholeRead	-	ok	-	goroutines,channels,race,structs,zero_values
 short-circuit-no-read	footprintShortCircuit	0	ok	-	goroutines,channels,race,evaluation_order,bools	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=16
 short-circuit-reads	footprintShortCircuit	1	race	-	goroutines,channels,race,evaluation_order,bools	racy	-	width=4,sites=16
 deferred-write-vs-read	footprintDeferredWriteVsRead	-	race	-	goroutines,channels,race,defer	racy	-	width=4,sites=16
