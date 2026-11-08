@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 7633 (7273 PASS / 360 FAIL)
+# cases: 7721 (7354 PASS / 367 FAIL)
 # re-pinned: 2026-11-07 [AGENT], lane sweep/s22-readout (on main 4296a876) — the defect-neighbourhood campaign's step 2, shape S22 (the
 #   readout: observation naming, refusal text, output, the oracle observer; plan §4, [USER]-approved 2026-10-27). ADDITIVE ONLY: 88 new ids
 #   Corpus/coverage/exec/*/sweep-s22-*/ from the full run of CAPPED_MEM_MAX=32G capped scripts/ci --diff at the lane tree cbf245ff (the
@@ -14,6 +14,22 @@
 #   structs/sweep-s22-readout-structs 11, multipkg/sweep-s22-readout-crosspkg 4, interfaces/sweep-s22-readout-dynamic 9,
 #   generics/sweep-s22-readout-instantiations 9), the output field (builtins/sweep-s22-print-output 14) and the terminal classification
 #   at every attributable report shape (panic-recover/sweep-s22-terminal-shapes 9). The negative baseline gains 3 rows (its header).
+# re-pinned: 2026-11-08 [AGENT], lane sweep/s16-race (main 4296a876 + the sweep's commit bce8d733) — the defect-neighbourhood
+#   campaign's step 2, shape S16 (the race detector's footprint and keys; members BUG-132/084/080/046/045/041; plan §4,
+#   [USER]-approved 2026-10-27): 88 rows BORN in five packages race/sweep-s16-{keys,footprint,edges,init-edge,sync}/ —
+#   33 racy, 46 confluent, 2 membership (len-chan-vs-send {0,1}, mutex-two-spellings {0,1}), 7 strict — from the full run
+#   of CAPPED_MEM_MAX=32G capped scripts/ci --diff at bce8d733 (its only drift: these 88 new ids; no existing row moved, no
+#   PASS -> non-PASS flip, no removal, no cause change; the negative baseline unchanged, 642/642). 7545 -> 7633 rows; PASS
+#   7190 + 81 = 7271; FAIL 355 + 7 = 362. The seven FAIL rows are BORN RED BY DESIGN, strict with expected gc ok, each at
+#   lean-observation race:race (the machine's bare «data race detected»; the classification is the Cases line), each on
+#   an entry's Cases line: race/sweep-s16-footprint/struct-array-field-dyn-other-elem (BUG-041, the dynamic-index read of
+#   an array FIELD stays the whole field), sort-len1-vs-write (BUG-132, the op reads and writes a length-1 window gc's
+#   insertion sort never touches), clear-slice-vs-read (BUG-370, NEW: clear(s) records a write per element where gc's
+#   -race build instruments nothing — go_mem-racy, TSan-blind, for the owner's ruling), zero-size-write-write,
+#   zero-size-read-write, zero-array-write-write and zero-size-field-vs-whole-read (BUG-371, NEW: a zero-size cell keyed
+#   as a memory access, a false race). Every row was also probed by scripts/detector-soundness at this tip (gc -race 10
+#   runs at each of GOMAXPROCS 1 and 8 vs the enumerator over every schedule): the 33 racy rows 20/20 red, the 48
+#   race-free rows 0/20 with no refusing schedule, the 7 strict rows 0/20 red on gc and refusing on every schedule.
 # re-pinned: 2026-11-07 [AGENT], lane frontend/fix-e7-cut-1107 — the train-31 pre-merge audits' findings FIXED at 645e5c26 (BUG-340
 #   amended: the E7 target cut on the classifier's TARGET question and the instantiated-generic-method route; BUG-423, 424, 425, 426
 #   entered fixed: the late suffix's promotion by dependency, gc's needsaddr early copy at every boxing site, the Sprint kind oracle
@@ -13693,3 +13709,91 @@ PASS	structs/sweep-s22-readout-structs/local-struct-type	-	-
 PASS	structs/sweep-s22-readout-structs/array-field	-	-
 PASS	structs/sweep-s22-readout-structs/empty-struct-in-box	-	-
 PASS	structs/sweep-s22-readout-structs/named-empty-in-box	-	-
+PASS	race/sweep-s16-edges/go-value-recv-copied-at-spawn	confluent	-
+PASS	race/sweep-s16-edges/unbuffered-wrong-direction	racy	-
+PASS	race/sweep-s16-edges/buf-cap1-second-send-edge	confluent	-
+PASS	race/sweep-s16-edges/buf-cap1-first-send-no-edge	racy	-
+PASS	race/sweep-s16-edges/buf-cap2-third-send-edge	confluent	-
+PASS	race/sweep-s16-edges/buf-cap2-second-send-no-edge	racy	-
+PASS	race/sweep-s16-edges/close-then-buffered-value-recv-no-edge	racy	-
+PASS	race/sweep-s16-edges/select-recv-closed-acquires	confluent	-
+PASS	race/sweep-s16-edges/range-chan-close-acquires	confluent	-
+PASS	race/sweep-s16-edges/comma-ok-closed-acquires	confluent	-
+PASS	race/sweep-s16-edges/write-after-close-races	racy	-
+PASS	race/sweep-s16-edges/two-senders-same-chan	confluent	-
+PASS	race/sweep-s16-edges/select-default-send-poll-vs-close	racy	-
+PASS	race/sweep-s16-edges/select-recv-vs-close	confluent	-
+PASS	race/sweep-s16-edges/len-chan-vs-send	membership	-
+PASS	race/sweep-s16-edges/cap-chan-vs-close	confluent	-
+PASS	race/sweep-s16-edges/exit-no-edge	racy	-
+PASS	race/sweep-s16-edges/spawn-edge-write-before	confluent	-
+PASS	race/sweep-s16-edges/spawn-edge-write-after	racy	-
+PASS	race/sweep-s16-edges/grandchild-inherits-clock	confluent	-
+PASS	race/sweep-s16-edges/transitive-two-chans	confluent	-
+PASS	race/sweep-s16-footprint/value-recv-via-ptr-whole-read	racy	-
+PASS	race/sweep-s16-footprint/ptr-recv-on-value-no-read	confluent	-
+PASS	race/sweep-s16-footprint/array-dyn-index-write-write-disjoint	confluent	-
+PASS	race/sweep-s16-footprint/ptr-array-dyn-index-read	confluent	-
+PASS	race/sweep-s16-footprint/struct-array-field-dyn-sibling	confluent	-
+FAIL	race/sweep-s16-footprint/struct-array-field-dyn-other-elem	lean-observation	race:race
+PASS	race/sweep-s16-footprint/slice-dyn-index-disjoint	confluent	-
+PASS	race/sweep-s16-footprint/struct-slice-field-elem-disjoint	confluent	-
+PASS	race/sweep-s16-footprint/struct-slice-field-sibling	confluent	-
+PASS	race/sweep-s16-footprint/slice-of-slices-disjoint	confluent	-
+PASS	race/sweep-s16-footprint/slice-len-vs-elem-write	confluent	-
+PASS	race/sweep-s16-footprint/reslice-vs-elem-read	racy	-
+PASS	race/sweep-s16-footprint/slice-nil-compare-vs-elem-write	confluent	-
+PASS	race/sweep-s16-footprint/map-nil-compare-vs-write	confluent	-
+PASS	race/sweep-s16-footprint/chan-nil-compare-vs-close	confluent	-
+PASS	race/sweep-s16-footprint/array-copy-vs-elem-write	racy	-
+PASS	race/sweep-s16-footprint/string-index-vs-assign	racy	-
+PASS	race/sweep-s16-footprint/string-two-readers	confluent	-
+PASS	race/sweep-s16-footprint/range-string-vs-assign	racy	-
+PASS	race/sweep-s16-footprint/map-write-write	racy	-
+PASS	race/sweep-s16-footprint/map-delete-vs-read	racy	-
+PASS	race/sweep-s16-footprint/map-delete-absent-vs-read	racy	-
+PASS	race/sweep-s16-footprint/map-clear-vs-read	racy	-
+PASS	race/sweep-s16-footprint/map-two-readers	confluent	-
+PASS	race/sweep-s16-footprint/map-two-rangers	confluent	-
+PASS	race/sweep-s16-footprint/sort-unsorted-vs-read	racy	-
+PASS	race/sweep-s16-footprint/sort-window-vs-outside-write	confluent	-
+FAIL	race/sweep-s16-footprint/sort-len1-vs-write	lean-observation	race:race
+PASS	race/sweep-s16-footprint/sort-vs-inside-write	racy	-
+PASS	race/sweep-s16-footprint/sort-then-edge-read	confluent	-
+PASS	race/sweep-s16-footprint/copy-dst-vs-read	racy	-
+PASS	race/sweep-s16-footprint/copy-count-zero	confluent	-
+PASS	race/sweep-s16-footprint/copy-disjoint-runs	confluent	-
+FAIL	race/sweep-s16-footprint/clear-slice-vs-read	lean-observation	race:race
+PASS	race/sweep-s16-footprint/clear-empty-slice	confluent	-
+PASS	race/sweep-s16-footprint/append-inplace-tail-vs-read	racy	-
+PASS	race/sweep-s16-footprint/append-spill-reads-old	racy	-
+PASS	race/sweep-s16-footprint/append-from-slice-reads-src	racy	-
+PASS	race/sweep-s16-footprint/append-spill-fresh-backing	confluent	-
+FAIL	race/sweep-s16-footprint/zero-size-write-write	lean-observation	race:race
+FAIL	race/sweep-s16-footprint/zero-size-read-write	lean-observation	race:race
+FAIL	race/sweep-s16-footprint/zero-array-write-write	lean-observation	race:race
+FAIL	race/sweep-s16-footprint/zero-size-field-vs-whole-read	lean-observation	race:race
+PASS	race/sweep-s16-footprint/short-circuit-no-read	confluent	-
+PASS	race/sweep-s16-footprint/short-circuit-reads	racy	-
+PASS	race/sweep-s16-footprint/deferred-write-vs-read	racy	-
+PASS	race/sweep-s16-footprint/recover-then-write-vs-read	racy	-
+PASS	race/sweep-s16-init-edge/init-write-main-goroutine-read	confluent	-
+PASS	race/sweep-s16-keys/ptr-elem-alias	racy	-
+PASS	race/sweep-s16-keys/ptr-elem-alias-disjoint	confluent	-
+PASS	race/sweep-s16-keys/slice-of-array-alias	racy	-
+PASS	race/sweep-s16-keys/subslice-offset-alias	racy	-
+PASS	race/sweep-s16-keys/subslice-offset-disjoint	confluent	-
+PASS	race/sweep-s16-keys/ptr-field-alias	racy	-
+PASS	race/sweep-s16-keys/ptr-field-alias-disjoint	confluent	-
+PASS	race/sweep-s16-keys/promoted-field-alias	racy	-
+PASS	race/sweep-s16-keys/promoted-field-disjoint	confluent	-
+PASS	race/sweep-s16-keys/promoted-field-outer-disjoint	confluent	-
+PASS	race/sweep-s16-keys/iface-ptrbox-ptrrecv-disjoint	confluent	-
+PASS	race/sweep-s16-keys/iface-ptrbox-ptrrecv-same	racy	-
+PASS	race/sweep-s16-keys/two-ptr-aliases-disjoint	confluent	-
+PASS	race/sweep-s16-keys/loopvar-per-iteration	confluent	-
+PASS	race/sweep-s16-keys/func-value-var	racy	-
+PASS	race/sweep-s16-sync/mutex-two-spellings	membership	-
+PASS	race/sweep-s16-sync/mutex-slice-elems-disjoint	confluent	-
+PASS	race/sweep-s16-sync/mutex-slice-elem-contended	confluent	-
+PASS	race/sweep-s16-sync/mutex-array-elems-disjoint	confluent	-
