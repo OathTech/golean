@@ -4,7 +4,7 @@ Used when several lanes' branches are cherry-picked onto one stage branch and th
 same append-only files conflict. Run from the stage worktree during a cherry-pick:
 
 - `pick.sh <commit>…` — cherry-picks each commit; on a conflict it resolves
-  `docs/BUGS.md`, `docs/changelog/20d3946d-WINDOW.md`, `docs/defect-shapes.md`
+  `docs/BUGS.md`, `docs/APPARATUS-DEFECTS.md`, `docs/changelog/20d3946d-WINDOW.md`, `docs/defect-shapes.md`
   and `docs/spec-divergence-ledger.md` by KEEPING BOTH sides in order
   (`keep-both.py`), the two baselines by a three-way row merge
   (`baseline-union3.py`: ours' body with its reason blocks in place, theirs' row
