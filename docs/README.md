@@ -43,8 +43,10 @@ reading everything else.
   same `BUG-NNN` numbering; the index holds a tombstone for each moved entry.
 - `defect-shapes.md`: the record of `BUGS.md` classified by shape for the defect-neighbourhood
   campaign — the shape vocabulary, one row per entry (site, route, shape, whether its
-  neighbourhood is swept), and the step-2 sweep order with each shape's matrix axes. A living
-  document until the release.
+  neighbourhood is swept), and the step-2 sweep order with each shape's matrix axes. Dated and
+  frozen at the campaign's closure (2026-11-08); the closure report — entries covered, shapes, cells
+  probed, rows added, defects found and fixed, cells left open, the method and its limits — is
+  `2026-11-08_defect-neighbourhood-closure.md`.
 - `2026-08-11_latitude-inventory.md`: every point where Go permits several behaviours, and how
   the machine resolves it. §11 states the two contracts.
 - `language-coverage-ledger.md`: the whole-language bar, the refused-construct frontier
@@ -94,6 +96,11 @@ fresh-context trust review), `2026-10-13_fresh-eyes-fail-closed-pass.md` (the fa
 `codex-briefs/2026-10-13_zero-context-release-pass.md`) and `2026-10-26_deep-clean-release-pass.md`
 (the deep-clean pass, with its punch list `2026-10-26_deep-clean-release-punch-list.md` and the
 five reports under `reviews/2026-10-26-deepclean/`).
+
+The defect-neighbourhood campaign (2026-10-26 → 2026-11-08) is a record in two parts: its plan
+`2026-10-27_defect-neighbourhood-campaign.md` and its closure `2026-11-08_defect-neighbourhood-closure.md`
+(every number derived from the tree, with the command that re-derives it); `defect-shapes.md` above
+is its classification record, frozen at the closure. Its running record is row 56 of the backlog.
 
 The pinned-statement design notes (`2026-09-24_execution-statement.md`,
 `2026-09-28_step-label.md`, `2026-10-04_pool-relation-spec.md`) are records too. What they
