@@ -418,7 +418,7 @@ the counts above.
     SWEPT 2026-10-27 by lane `sweep/s16-race` (re-verified cell by cell 2026-11-08 at main `4296a876`, every verdict the same): 120 cells (operations × access kinds × key kinds × happens-before edges ×
     observations × sites) — 86 probed on both sides (89 probe subjects: gc go1.26.5 `-race` 10 runs at each of GOMAXPROCS 1 and 8, 20 sampled schedules per cell, serial,
     vs the enumerator over every schedule and the default tape, `scripts/detector-soundness --manifest --jobs 1`), 31 covered by
-    existing rows or the 2026-09-02 evidence probes, 2 out of scope (the exit window, the owner-free unlock), 1 folded;
+    existing rows or the 2026-09-02 evidence probes, 2 out of scope (the process-exit window, the pointer/Value/Bool atomics the frontend does not admit), 1 folded (the nil map); the owner-free unlock counted as covered by its eval pin;
     verdicts 33 agree-race (every one 20/20 red), 48 agree-DRF, 7 over-refusals (0/20 red, the machine refusing on every schedule), 1 named refusal (`init-go`); 88 rows
     in five packages `Corpus/coverage/exec/race/sweep-s16-{keys,footprint,edges,init-edge,sync}/` — 33 racy, 46
     confluent, 2 membership, 7 strict born RED (BUG-041's field-chain instance, BUG-132's length-1 window, BUG-370's
