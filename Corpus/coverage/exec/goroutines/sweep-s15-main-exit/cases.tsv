@@ -5,7 +5,7 @@
 # cells are on BUG-159's Neighbourhood line). Lane sweep/s15-scheduling,
 # 2026-10-27, per the defect-neighbourhood campaign's §4 (docs/defect-shapes.md
 # S15). Each set certified by coverage-observations at width 4; gc go1.26.5
-# sampled 200 plain / 200 -race / 50 at GOMAXPROCS=1 under the runners' pins,
+# sampled 100 plain / 100 -race / 30 at GOMAXPROCS=1 under the runners' pins,
 # every draw a member.
 leaked-select-empty	leakedSelectEmpty	-	ok	-	goroutines,select	confluent	main exits while the child is parked on select {} forever: no window opens (nothing runnable), 1 on every schedule	width=4,sites=16
 leaked-mutex	leakedMutex	-	ok	-	goroutines,sync,mutex	confluent	main exits holding the mutex the child waits for: the child parks and is discarded, 1 on every schedule	width=4,sites=16

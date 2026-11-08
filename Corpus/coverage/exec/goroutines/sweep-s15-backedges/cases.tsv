@@ -13,7 +13,7 @@
 # defect-neighbourhood campaign's §4 (docs/defect-shapes.md S15). backedge=1
 # explores the canonical slot plus one anti-progress slot at every back-edge
 # consult — exhaustive at these two-goroutine menus. Each set certified by
-# coverage-observations; gc go1.26.5 sampled 200 plain / 200 -race / 50 at
+# coverage-observations; gc go1.26.5 sampled 100 plain / 100 -race / 30 at
 # GOMAXPROCS=1 under the runners' pins, every draw a member.
 for-clause-interleave	forClauseInterleave	-	ok	-	goroutines,channels,loops,print,nondet	membership	a three-clause for printing twice after the wake: main's m lands before, between or after the two s (the print pre-boundaries and the back-edge consults): certified set {mss, sms, ssm} (members=3)	width=4,sites=24,members=3,work=400000,backedge=1
 range-int-interleave	rangeIntInterleave	-	ok	-	goroutines,channels,loops,range,ints,print,nondet	membership	range over an integer printing twice after the wake: certified set {mss, sms, ssm} (members=3)	width=4,sites=24,members=3,work=400000,backedge=1

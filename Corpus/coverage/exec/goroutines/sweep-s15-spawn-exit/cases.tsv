@@ -4,8 +4,8 @@
 # deferred-call drain at a goroutine's exit). Lane sweep/s15-scheduling,
 # 2026-10-27, per the defect-neighbourhood campaign's §4
 # (docs/defect-shapes.md S15; BUG-040's Neighbourhood line). Each set
-# certified by coverage-observations at width 4; gc go1.26.5 sampled 200
-# plain / 200 -race / 50 at GOMAXPROCS=1 under the runners' pins, every draw
+# certified by coverage-observations at width 4; gc go1.26.5 sampled 100
+# plain / 100 -race / 30 at GOMAXPROCS=1 under the runners' pins, every draw
 # a member. `defer println("d")` / `defer print("D")` of the BUILTIN are
 # frontend-quarantined by name (a coverage gap of the drain cell, recorded
 # in the sweep); the rows use the deferred-literal spelling.

@@ -5,7 +5,7 @@
 # the partner's print. Lane sweep/s15-scheduling, 2026-10-27, per the
 # defect-neighbourhood campaign's §4 (docs/defect-shapes.md S15; BUG-152's
 # Neighbourhood line). Each set certified by coverage-observations at width 4;
-# gc go1.26.5 sampled 200 plain / 200 -race / 50 at GOMAXPROCS=1 under the
+# gc go1.26.5 sampled 100 plain / 100 -race / 30 at GOMAXPROCS=1 under the
 # runners' pins, every draw a member.
 unbuffered-pair-prints	unbufferedPairPrints	-	ok	-	goroutines,channels,print,nondet	membership	an UNBUFFERED send pairs with the parked receiver (or parks until it arrives); after the pairing the sender's S and the receiver's R are concurrent through the post-op flag on each side: certified set {RS, SR} (members=2)	width=4,sites=24,members=2
 recv-then-print	recvThenPrint	-	ok	-	goroutines,channels,print,nondet	membership	a receive completion opens the post-op flag; the receiver's R and the sender's later S are concurrent: certified set {RS, SR} (members=2)	width=4,sites=24,members=2

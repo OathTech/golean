@@ -6,7 +6,7 @@
 # the defect-neighbourhood campaign's §4 (docs/defect-shapes.md S15; BUG-123's
 # Neighbourhood line). The whole state graph is certified under engine=dedup
 # (the DFS tree of three goroutines over atomics and a done channel passes
-# 4 M work units); gc go1.26.5 sampled 200 plain / 200 -race / 50 at
+# 4 M work units); gc go1.26.5 sampled 100 plain / 100 -race / 30 at
 # GOMAXPROCS=1 under the runners' pins, every draw a member.
 sb-litmus	sbLitmus	-	ok	-	sync,atomics,goroutines,channels,nondet	membership	store buffering: each goroutine stores its flag then loads the other's; SC forbids both loads reading 0, so the certified set is {1, 10, 11} (members=3) with 0 absent — the fused atomic steps interleave only at L1 (U-6)	work=2000000,members=3,engine=dedup
 lb-litmus	lbLitmus	-	ok	-	sync,atomics,goroutines,channels,nondet	membership	load buffering: each goroutine loads the other's flag then stores its own; SC forbids both loads reading 1, so the certified set is {0, 1, 10} (members=3) with 11 absent	work=2000000,members=3,engine=dedup
