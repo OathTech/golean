@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 7721 (7355 PASS / 366 FAIL)
+# cases: 7785 (7419 PASS / 366 FAIL)
 # re-pinned: 2026-11-08 [AGENT], lane frontend/fix-print-builtin-1108 (base e169ec49, the train-33 stage) — BUG-430 FIXED: the one-operand
 #   multi-value call `println(two())` is SPREAD into the call's results as gc's typecheck spreads it (RewriteMultiValueCall; emit.go
 #   emitPrintStmt → splatMultiCall, each result judged by the operand-kind rule), where the frontend had refused it with the phantom «prints
@@ -8,6 +8,20 @@
 #   this row): 7721 rows, PASS 7354 + 1 = 7355, FAIL 367 - 1 = 366; no other row moved, no cause changed, no row added or removed, no
 #   PASS -> non-PASS flip (BUG-093's seventeen Cases rows unchanged). The negative baseline moves two rows (its header). The row:
 #     builtins/sweep-s22-print-output/multi-value-operand                      FAIL/frontend-export c-pin/print-builtin -> PASS/- -
+# re-pinned: 2026-11-08 [AGENT], lane sweep/s15-scheduling — the defect-neighbourhood campaign's S15 sweep (scheduling boundaries and
+#   the menu; members BUG-040, 044, 123, 152, 159; plan §4, [USER]-approved 2026-10-27): 64 rows ADDED, NOTHING ELSE MOVED: 7545 → 7609
+#   rows; PASS 7190 + 64 = 7254; FAIL 355 unchanged. The 64 rows, all born PASS: goroutines/sweep-s15-observables/* (8: 5 membership —
+#   the len(ch) read beside a peer's receive {11, 21, 22}, a multi-operand println, prints in deferred calls and a callee — 3 confluent),
+#   goroutines/sweep-s15-completions/* (13 membership: every registry-op completion's post-op print beside the partner's),
+#   goroutines/sweep-s15-backedges/* (13 membership: every loop form's re-entry beside a wake, three pollers under iters=5),
+#   goroutines/sweep-s15-main-exit/* (12: 7 membership incl. three status-diverse panic-with-output cells and statuses=ok+panic, 5
+#   confluent), goroutines/sweep-s15-spawn-exit/* (7: 3 membership — two under engine=dedup — 4 confluent), goroutines/sweep-s15-deadlock/*
+#   (6 strict, the park kinds mixed), sync/sweep-s15-atomics/* (5: the SB / LB / Swap / CAS litmus membership under engine=dedup, Add
+#   confluent). The sweep's finding BUG-360 (main's exit beside a child's fatal) has NO row (the enumerator has no `fatal` status; the
+#   member is rare) and the apparatus entry BUG-361 none (docs/APPARATUS-DEFECTS.md). No PASS → non-PASS move, no removal, no cause
+#   change. Measured by CAPPED_MEM_MAX=32G GOLEAN_COVERAGE_JOBS=4 capped scripts/ci --diff at the lane tree 01d7e68c (its only drift:
+#   these 64 new ids), the rows taken from that run's artifacts/coverage/latest.tsv; the negative baseline unchanged (642/642); the fast
+#   tier at the tip judges.
 # re-pinned: 2026-11-07 [AGENT], lane sweep/s22-readout (on main 4296a876) — the defect-neighbourhood campaign's step 2, shape S22 (the
 #   readout: observation naming, refusal text, output, the oracle observer; plan §4, [USER]-approved 2026-10-27). ADDITIVE ONLY: 88 new ids
 #   Corpus/coverage/exec/*/sweep-s22-*/ from the full run of CAPPED_MEM_MAX=32G capped scripts/ci --diff at the lane tree cbf245ff (the
@@ -13805,3 +13819,67 @@ PASS	race/sweep-s16-sync/mutex-two-spellings	membership	-
 PASS	race/sweep-s16-sync/mutex-slice-elems-disjoint	confluent	-
 PASS	race/sweep-s16-sync/mutex-slice-elem-contended	confluent	-
 PASS	race/sweep-s16-sync/mutex-array-elems-disjoint	confluent	-
+PASS	goroutines/sweep-s15-backedges/for-clause-interleave	membership	-
+PASS	goroutines/sweep-s15-backedges/range-int-interleave	membership	-
+PASS	goroutines/sweep-s15-backedges/range-slice-interleave	membership	-
+PASS	goroutines/sweep-s15-backedges/range-chan-interleave	membership	-
+PASS	goroutines/sweep-s15-backedges/range-map-interleave	membership	-
+PASS	goroutines/sweep-s15-backedges/continue-interleave	membership	-
+PASS	goroutines/sweep-s15-backedges/continue-in-switch-interleave	membership	-
+PASS	goroutines/sweep-s15-backedges/continue-in-select-interleave	membership	-
+PASS	goroutines/sweep-s15-backedges/continue-label-interleave	membership	-
+PASS	goroutines/sweep-s15-backedges/continue-outer-label-interleave	membership	-
+PASS	goroutines/sweep-s15-backedges/goto-interleave	membership	-
+PASS	goroutines/sweep-s15-backedges/select-default-poll	membership	-
+PASS	goroutines/sweep-s15-backedges/len-poll	membership	-
+PASS	goroutines/sweep-s15-completions/unbuffered-pair-prints	membership	-
+PASS	goroutines/sweep-s15-completions/recv-then-print	membership	-
+PASS	goroutines/sweep-s15-completions/close-wake-prints	membership	-
+PASS	goroutines/sweep-s15-completions/select-commit-send-prints	membership	-
+PASS	goroutines/sweep-s15-completions/select-commit-recv-prints	membership	-
+PASS	goroutines/sweep-s15-completions/select-default-prints	membership	-
+PASS	goroutines/sweep-s15-completions/select-wake-prints	membership	-
+PASS	goroutines/sweep-s15-completions/unlock-wake-prints	membership	-
+PASS	goroutines/sweep-s15-completions/done-wake-prints	membership	-
+PASS	goroutines/sweep-s15-completions/once-wake-prints	membership	-
+PASS	goroutines/sweep-s15-completions/runlock-wake-writer-prints	membership	-
+PASS	goroutines/sweep-s15-completions/atomic-then-print	membership	-
+PASS	goroutines/sweep-s15-completions/recovered-send-closed-prints	membership	-
+PASS	goroutines/sweep-s15-deadlock/mixed-wg-mutex	-	-
+PASS	goroutines/sweep-s15-deadlock/mixed-recv-once	-	-
+PASS	goroutines/sweep-s15-deadlock/mixed-select-rlock	-	-
+PASS	goroutines/sweep-s15-deadlock/mixed-wg-nil-chan	-	-
+PASS	goroutines/sweep-s15-deadlock/full-buffer-send	-	-
+PASS	goroutines/sweep-s15-deadlock/select-empty-with-parked-child	-	-
+PASS	goroutines/sweep-s15-main-exit/leaked-select-empty	confluent	-
+PASS	goroutines/sweep-s15-main-exit/leaked-mutex	confluent	-
+PASS	goroutines/sweep-s15-main-exit/leaked-wg-wait	confluent	-
+PASS	goroutines/sweep-s15-main-exit/leaked-once-nested	confluent	-
+PASS	goroutines/sweep-s15-main-exit/woken-child-prints	membership	-
+PASS	goroutines/sweep-s15-main-exit/spinning-child	membership	-
+PASS	goroutines/sweep-s15-main-exit/child-deferred-print	membership	-
+PASS	goroutines/sweep-s15-main-exit/panic-child-parked	confluent	-
+PASS	goroutines/sweep-s15-main-exit/op-then-panic-send	membership	-
+PASS	goroutines/sweep-s15-main-exit/op-then-panic-unlock	membership	-
+PASS	goroutines/sweep-s15-main-exit/op-then-panic-atomic	membership	-
+PASS	goroutines/sweep-s15-main-exit/printer-beside-panicker	membership	-
+PASS	goroutines/sweep-s15-observables/len-peer-recv	membership	-
+PASS	goroutines/sweep-s15-observables/len-beside-close	confluent	-
+PASS	goroutines/sweep-s15-observables/cap-beside-send	confluent	-
+PASS	goroutines/sweep-s15-observables/len-unbuffered-parked-sender	confluent	-
+PASS	goroutines/sweep-s15-observables/println-multi-operand-atomic	membership	-
+PASS	goroutines/sweep-s15-observables/deferred-print-drain	membership	-
+PASS	goroutines/sweep-s15-observables/deferred-print-unwinding	membership	-
+PASS	goroutines/sweep-s15-observables/print-inside-callee	membership	-
+PASS	goroutines/sweep-s15-spawn-exit/go-arg-recv	confluent	-
+PASS	goroutines/sweep-s15-spawn-exit/defer-println-drain	membership	-
+PASS	goroutines/sweep-s15-spawn-exit/defer-done-drain	confluent	-
+PASS	goroutines/sweep-s15-spawn-exit/defer-close-drain	confluent	-
+PASS	goroutines/sweep-s15-spawn-exit/defer-unlock-drain	confluent	-
+PASS	goroutines/sweep-s15-spawn-exit/three-senders	membership	-
+PASS	goroutines/sweep-s15-spawn-exit/grandchild-sends	membership	-
+PASS	sync/sweep-s15-atomics/sb-litmus	membership	-
+PASS	sync/sweep-s15-atomics/lb-litmus	membership	-
+PASS	sync/sweep-s15-atomics/swap-order	membership	-
+PASS	sync/sweep-s15-atomics/cas-order	membership	-
+PASS	sync/sweep-s15-atomics/add-join	confluent	-
