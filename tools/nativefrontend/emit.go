@@ -11214,7 +11214,15 @@ func (e *emitter) emitClearStmt(c *ast.CallExpr) (any, error) {
 //     note §3.3, [AGENT] call disclosed);
 //   - the zero-operand spellings `print()` / `println()` have no machine
 //     shape (the wide-statement mold's A8 invariant: no plan is nullary) —
-//     refused this slice (FR-29; 2 of the 195 gotest print files).
+//     refused this slice (FR-29; 2 of the 195 gotest print files);
+//   - an ARRAY or STRUCT operand is not refused but REJECTED, as gc rejects
+//     it (walk/builtin.go badtype «illegal types for operand: print»; the
+//     whole export, type-check class — BUG-430, 2026-11-08), and a
+//     MULTI-VALUE call operand `println(f())` is SPREAD into the call's
+//     results as gc's typecheck spreads it (printOperandKind, below, and
+//     the spread arm of this function). Before BUG-430 both classes fell
+//     into the address refusal above — a phantom cause: the frontend
+//     exported programs gc does not build, and refused a legal spread.
 //
 // go/types has already converted untyped constant operands to their default
 // types (`check.assignment` with a nil target records the default type), so
@@ -11227,25 +11235,46 @@ func (e *emitter) emitPrintStmt(c *ast.CallExpr, name string) (any, error) {
 	if len(c.Args) == 0 {
 		return nil, unsup("builtin %s with zero operands (no machine shape this slice — the wide-statement mold has no nullary plan; FR-29)", name)
 	}
+	newline := name == "println"
+	// The one-operand spelling whose operand is a MULTI-VALUE call,
+	// `println(f())` with f returning two or more values (BUG-430): gc's
+	// typecheck (typecheck/func.go tcPrint → typecheck.go typecheckargs →
+	// RewriteMultiValueCall, «Rewrite f(g()) into t1, t2, ... = g(); f(t1,
+	// t2, ...)») spreads the results into fresh temps BEFORE walkPrint
+	// judges any operand, so the results are the operands, one each, in
+	// result order, and gc prints `1 two` for a (1, "two") callee. The
+	// same spread serves here: each component is judged by the kind rule
+	// below (a struct result is gc's rejection, a pointer result the
+	// address refusal, exactly as a plain operand of that type), then the
+	// call hoists to a define of temps (splatMultiCall, the `g(f())`
+	// forwarding shape of emitCallArgs) and the temps are the print's
+	// operands. The order is gc's: the call runs once, then the print.
+	// A multi-value call BESIDE other operands never reaches here —
+	// go/types rejects it («multiple-value … in single-value context»).
+	if len(c.Args) == 1 {
+		if inner, ok := ast.Unparen(c.Args[0]).(*ast.CallExpr); ok {
+			if tup, isTup := e.goTypeOf(inner).(*types.Tuple); isTup {
+				for i := 0; i < tup.Len(); i++ {
+					if err := e.printOperandKind(c, name, i, tup.At(i).Type()); err != nil {
+						return nil, err
+					}
+				}
+				idents, err := e.splatMultiCall(inner)
+				if err != nil {
+					return nil, err
+				}
+				return map[string]any{"stmt": "print", "newline": newline, "args": idents}, nil
+			}
+		}
+	}
 	args := []any{}
 	for i, a := range c.Args {
 		t := e.goTypeOf(a)
 		if t == nil {
 			return nil, unsup("builtin %s operand %d has no recorded type (fail closed)", name, i+1)
 		}
-		b, isBasic := t.Underlying().(*types.Basic)
-		if !isBasic || b.Kind() == types.UnsafePointer {
-			return nil, unsup("builtin %s operand %d of type %s prints an address in gc (runtime/print.go printpointer/printslice/printeface/printiface) — the machine has no addresses; refused by name, permanently (stdlib slice 3; ledger §5.1 item 3)", name, i+1, t)
-		}
-		switch {
-		case b.Info()&types.IsUntyped != 0:
-			return nil, unsup("builtin %s operand %d is recorded UNTYPED (%s) — go/types was expected to record the default type; refused by name", name, i+1, t)
-		case b.Kind() == types.Bool, b.Kind() == types.String, b.Info()&types.IsInteger != 0:
-			// admitted: printbool / printint+printuint / printstring
-		case b.Info()&(types.IsFloat|types.IsComplex) != 0:
-			return nil, unsup("builtin %s operand %d of type %s: floats and complex print through internal/strconv.AppendFloat ('g', -1, shortest round-trip) — not modeled this slice (stdlib slice 3; FR-29)", name, i+1, t)
-		default:
-			return nil, unsup("builtin %s operand %d of type %s is not a kind gc's print renders without an address — refused by name (stdlib slice 3)", name, i+1, t)
+		if err := e.printOperandKind(c, name, i, t); err != nil {
+			return nil, err
 		}
 		w, err := e.emitExpr(a)
 		if err != nil {
@@ -11253,7 +11282,66 @@ func (e *emitter) emitPrintStmt(c *ast.CallExpr, name string) (any, error) {
 		}
 		args = append(args, w)
 	}
-	return map[string]any{"stmt": "print", "newline": name == "println", "args": args}, nil
+	return map[string]any{"stmt": "print", "newline": newline, "args": args}, nil
+}
+
+// gcPrintDeadCodeClause is appended to every print-operand rejection: gc's
+// unified-IR writer prunes constant-false branches (`if false { … }`,
+// `for false { … }`, a constant switch's unmatched cases) and statements
+// after a terminating one before walkPrint ever sees them (measured at
+// go1.26.5: `if false { println([2]int{}) }` BUILDS), while this emitter
+// judges every print statement it lowers; a program gc accepts only because
+// its illegal print is dead is refused by name, the over-refusal gclimits.go
+// records for the size limits ([USER] 2026-10-13, relayed, release-readiness
+// row 34: refuse rather than special-case; support may come later).
+const gcPrintDeadCodeClause = " [GoLean judges every print statement it lowers, including one in a constant-false branch or after a terminating statement, which gc's writer prunes before it judges print operands; such a program is refused by name, not supported]"
+
+// printOperandKind judges operand i (0-based; a spread call's component
+// counts as its own operand) of a print/println call, of recorded type t,
+// kind by kind on the UNDERLYING type as gc's walkPrint
+// (walk/builtin.go @ go1.26.5, the switch on n.Type().Kind()) does, and
+// returns nil for the admitted kinds:
+//   - ARRAY and STRUCT (BUG-430): the switch has no arm for them — its
+//     `default:` calls badtype, «illegal types for operand: print», and the
+//     program does not BUILD. A gcRejection (wire.go): the whole export
+//     refuses in the type-check class the negative lane reads, never a
+//     per-declaration stub. The position is the call's left parenthesis,
+//     gc's; the type is spelled as go/types spells it relative to the
+//     package (`struct{}` where gc writes `struct {}`, `A` for a named
+//     type, the instantiated type where gc writes a `go.shape.` form);
+//     the FIRST offending print refuses where gc lists every one — the
+//     verdict is the contract, the spelling, count and position are not.
+//   - pointers, channels, maps, funcs, slices, interfaces, unsafe.Pointer:
+//     gc prints an ADDRESS — unsup, by name, permanently (the c-pin
+//     `print-builtin`, ledger §5.1 item 3).
+//   - floats and complex: internal/strconv.AppendFloat — unsup (FR-29).
+//   - an operand still recorded untyped: a frontend expectation failure.
+//   - bool, every integer kind, string: admitted (printbool / printint /
+//     printuint / printstring).
+//   - a tuple reaching this rule is a multi-value call in a position the
+//     spread above does not cover, which go/types rejects: refused by
+//     name, fail closed, never the address text.
+func (e *emitter) printOperandKind(c *ast.CallExpr, name string, i int, t types.Type) error {
+	switch t.Underlying().(type) {
+	case *types.Array, *types.Struct:
+		return e.rejectAt(c.Lparen, "illegal types for operand: print\n\t%s%s", types.TypeString(t, types.RelativeTo(e.pkg)), gcPrintDeadCodeClause)
+	case *types.Tuple:
+		return unsup("builtin %s operand %d is a multi-value call of type %s outside the one-operand spread `%s(f())` — a shape go/types rejects; refused by name (fail closed)", name, i+1, t, name)
+	}
+	b, isBasic := t.Underlying().(*types.Basic)
+	if !isBasic || b.Kind() == types.UnsafePointer {
+		return unsup("builtin %s operand %d of type %s prints an address in gc (runtime/print.go printpointer/printslice/printeface/printiface) — the machine has no addresses; refused by name, permanently (stdlib slice 3; ledger §5.1 item 3)", name, i+1, t)
+	}
+	switch {
+	case b.Info()&types.IsUntyped != 0:
+		return unsup("builtin %s operand %d is recorded UNTYPED (%s) — go/types was expected to record the default type; refused by name", name, i+1, t)
+	case b.Kind() == types.Bool, b.Kind() == types.String, b.Info()&types.IsInteger != 0:
+		return nil // admitted: printbool / printint+printuint / printstring
+	case b.Info()&(types.IsFloat|types.IsComplex) != 0:
+		return unsup("builtin %s operand %d of type %s: floats and complex print through internal/strconv.AppendFloat ('g', -1, shortest round-trip) — not modeled this slice (stdlib slice 3; FR-29)", name, i+1, t)
+	default:
+		return unsup("builtin %s operand %d of type %s is not a kind gc's print renders without an address — refused by name (stdlib slice 3)", name, i+1, t)
+	}
 }
 
 // deferNoopName is the synthetic function a `defer recover()` defers — a Go

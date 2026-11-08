@@ -576,6 +576,28 @@ func unsup(format string, args ...any) error {
 	return unsupported{fmt.Sprintf(format, args...)}
 }
 
+// gcRejection is gc's REJECTION of the program — a rule gc applies after
+// type-checking, which go/types does not enforce, found while EMITTING a
+// body (the print operand kinds of walk/builtin.go, BUG-430; gclimits.go is
+// the load-time precedent for the same class). It is deliberately not an
+// `unsupported`: every per-declaration quarantine site tests
+// errors.As(unsupported) and lets any other error through, so a rejection
+// surfaces as the WHOLE-EXPORT refusal `type-check: <pos>: <gc's text>` —
+// the class scripts/coverage-negative's frontend leg reads as a rejection
+// — never as a stub that lowers the rest of a program gc does not build.
+// A refusal of a legal program is an `unsupported`, by name, never this.
+type gcRejection struct {
+	pos  token.Position
+	what string
+}
+
+func (r gcRejection) Error() string { return "type-check: " + r.pos.String() + ": " + r.what }
+
+// rejectAt is gc's rejection at a source position, with gc's own message.
+func (e *emitter) rejectAt(pos token.Pos, format string, args ...any) error {
+	return gcRejection{pos: e.fset.Position(pos), what: fmt.Sprintf(format, args...)}
+}
+
 // ---- types ----
 
 func (e *emitter) emitType(t types.Type) (any, error) {
