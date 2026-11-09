@@ -1,0 +1,14 @@
+# id	subject	args	expected_status	expected_reason	features
+local-divisor	l016LocalDivisor	-	ok	-	assignment,evaluation_order,multi_assign,panic,recover,closures,defer,named-results,division
+failing-assertion	l016FailingAssertion	-	ok	-	assignment,evaluation_order,multi_assign,panic,recover,closures,defer,named-results,type_assertions,interfaces
+negative-shift	l016NegativeShift	-	ok	-	assignment,evaluation_order,multi_assign,panic,recover,closures,defer,named-results,shifts
+slice-element-target	l016SliceElementTarget	-	ok	-	assignment,evaluation_order,multi_assign,panic,recover,closures,defer,named-results,division,slices,indexing
+deref-target	l016DerefTarget	-	ok	-	assignment,evaluation_order,multi_assign,panic,recover,closures,defer,named-results,division,pointers
+global-target	l016GlobalTarget	-	ok	-	assignment,evaluation_order,multi_assign,panic,recover,closures,defer,named-results,division,globals
+map-element-target	l016MapElementTarget	-	ok	-	assignment,evaluation_order,multi_assign,panic,recover,closures,defer,named-results,division,maps
+field-through-pointer	l016FieldThroughPointer	-	ok	-	assignment,evaluation_order,multi_assign,panic,recover,closures,defer,named-results,division,pointers,structs
+conversion-operand	l016ConversionOperand	-	ok	-	assignment,evaluation_order,multi_assign,panic,recover,closures,defer,named-results,division,conversions
+global-target-global-divisor	l016GlobalTargetGlobalDivisor	-	ok	-	assignment,evaluation_order,multi_assign,panic,recover,closures,defer,named-results,division,globals
+local-target-global-divisor	l016LocalTargetGlobalDivisor	-	ok	-	assignment,evaluation_order,multi_assign,panic,recover,closures,defer,named-results,division,globals
+global-read-in-operand	l016GlobalReadInOperand	-	ok	-	assignment,evaluation_order,multi_assign,panic,recover,closures,defer,named-results,division,globals
+two-statements-control	l016TwoStatementsControl	-	ok	-	assignment,evaluation_order,panic,recover,closures,defer,named-results,division

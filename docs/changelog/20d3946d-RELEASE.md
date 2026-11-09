@@ -39,8 +39,7 @@ are cited as relayed by the [AGENT] coordinator from the records that carry them
   labels not trustworthy, and the record must say which), the four bundled external kernels by hand on the export,
   `lake comparator` over the 385 statements of `comparator.json`; `lake check --paranoid` is red today (nanoda's stack
   overflow on this export, §3(b)).
-- **The three predicates:** §2 — (1) HOLDS; (2) DOES NOT HOLD absent the D1 ruling, and holds by stated exclusion under
-  the proposed profile of §3; (3) ENUMERATED in §4 (an envelope, not a maximality claim).
+- **The three predicates:** §2 — (1) HOLDS; (2) DOES NOT HOLD absent the profile ruling (D1's pending half), and holds by stated exclusion under the proposed profile of §3; (3) ENUMERATED in §4 (an envelope, not a maximality claim).
 
 ## 1. Cumulative summary — `20d3946d` (the 2026-10-03 offer) → `00afbc7c`
 
@@ -55,13 +54,7 @@ and 1–34 (the numbering restarted at the 2026-10-12 gate cull). Size of the mo
 ### 1.1 The rows
 
 `docs/changelog/20d3946d-WINDOW.md` holds 97 rows (§9), one per landing lane or train — more than one row for a
-train that landed several lanes (train 2: four; train 10: four; train 8: three), and three rows DUPLICATED by the
-train-33/34 restacks' keep-both merges (`sweep/s20-admission` twice — one says 33 exec subjects, the other 34, the
-baseline holds 31 after a fix lane retired 3; `core/fix-bug206-207-1027` twice — the longer carries the lane's part (3);
-`struct-conv-1026` twice — the longer carries the train-20 audit's narrowing). The order is the file's: the two trains of
-2026-11-05 inserted at the top, then `frontend/fix-binding-1027` (train 28) down to `r64`, then the six rows appended
-after `r64` (trains 29–34). Kept as written — the freeze copies, it does not fold or reorder ([AGENT] 2026-11-09; folding
-the three pairs in the WINDOW file is a records edit for the owner's word).
+train that landed several lanes (train 2: four; train 10: four; train 8: three), and four rows DUPLICATED — three by the train-33/34 restacks' keep-both merges (`sweep/s20-admission` twice — one says 33 exec subjects, the other 34, the baseline holds 31 after a fix lane retired 3; `core/fix-bug206-207-1027` twice — the longer carries the lane's part (3); `struct-conv-1026` twice — the longer carries the train-20 audit's narrowing) and one earlier near-duplicate pair present since `89ba27c5`: `records/defect-shapes-1027` (WINDOW lines 48 and 49; the longer carries the DC07, Status-date and untriaged-move amendments). The order is the file's: the two trains of 2026-11-05 inserted at the top, then `frontend/fix-binding-1027` (train 28) down to `r64`, then the six rows appended after `r64` (trains 29–34) — NOT the newest-first order `docs/release.md` §1.4 asks for. Kept as written — the freeze copies, it does not fold or reorder ([AGENT] 2026-11-09); whether to fold the four pairs and reorder newest-first in the WINDOW file before the tag, or to freeze as written, is one question for the owner (§7).
 
 ### 1.2 The corpus and the baselines
 
@@ -71,7 +64,7 @@ the three pairs in the WINDOW file is a records edit for the owner's word).
 | negative baseline (`baselines/negative-full.tsv`) | 394 = 394 PASS / 0 FAIL | 645 = 643 / 2 | +251 born, 0 removed; the 2 FAIL are BUG-221's (`functions/stack-frame-too-large-{array,struct}-arg`, `frontend-accepts`) |
 | the recorded run (`artifacts/coverage/latest.tsv` @ `73b634f0`) | — | 7785: PASS 7419 (6727 strict, 446 `membership`, 166 `confluent`, 80 `racy`); FAIL 366 (242 `frontend-export`, 59 `lean-observation`, 54 `differential`, 10 `go-observation`, 1 `confluent`) | the baseline's stage for `channels/select-select/beside-loop` is `lean-observation\|differential`; the run's is `lean-observation` (58 + 1 = 59) |
 | `baselines/untriaged-count` | coverage 10 / latitude 4 / wrong-answer 0 | coverage 5 / latitude 2 / wrong-answer 0 | the R15 and E7 rows moved onto BUG-170/171's Cases lines (2026-10-27); the five nil-slice-base rows onto BUG-227's (fixed at train 25) |
-| `docs/BUGS.md` | 116 `## BUG-` headings (highest id 116) | 225 headings = 216 live (183 fixed / 33 open; 15 `Expect: FAIL`, five of them open) + 9 `[MOVED]` tombstones | 101 live entries born (ids 117–430; 8 more born and moved to `docs/APPARATUS-DEFECTS.md`, which holds 14: 8 fixed / 6 open); 83 live entries carry a `Status: fixed` date on or after 2026-10-04 |
+| `docs/BUGS.md` | 116 `## BUG-` headings (highest id 116) | 226 headings = 217 live (183 fixed / 34 open; 16 `Expect: FAIL`, six of them open) + 9 `[MOVED]` tombstones | 115 entries born across both indices: 102 live in `docs/BUGS.md` (ids 117–432, BUG-432 entered by this record's audit round), 8 born there and moved to `docs/APPARATUS-DEFECTS.md` with tombstones, 5 born in the apparatus record directly (BUG-296, 297, 298, 361, 431; it holds 14: 8 fixed / 6 open); 83 live entries carry a `Status: fixed` date on or after 2026-10-04 |
 | the raft twin wire pin (`baselines/pins/twin-chdriver.wire.json`) | `d5186f43…` | `7810ae6d…` | six re-pins with written reasons (`scripts/check-frontend-pins`): r65 route A S1 → `661022b9`; G19 `sort-slice` → `fc471d2b`; the hoist fixes (train 26) → `be06cf70`; the binding and unseq-seam fixes (each from `be06cf70` on its own tree, `39765cc5` / `ac401783`) combined at the train-28 stage → `bee8adb6`; the fmt-decoder fixes (train 31) → `7810ae6d`. The twin driver's observation is byte-identical through every re-pin (sha256 `76d2bc87…`, each reason block) |
 
 ### 1.3 Constructors and shapes (each `inductive`'s `| ` lines at both commits, §8)
@@ -94,8 +87,7 @@ the three pairs in the WINDOW file is a records edit for the owner's word).
 **The proof-facing surface (raft-proofs, golean-logic).** The relational layer is GONE from the build (train 13, [USER]
 2026-10-20 relayed; tag `relational/last-main-2026-10-20`): the `Step`/`Steps` relation, `StepML`, the coherence
 theorems, `BridgeSet` (its last state RE-PIN 20, row 602) and 23 proof modules. KEPT with every name unchanged:
-`Prefix`/`Finish` and their laws, the `@[stepFn_eqns]` library (`Equations.lean`: 317 theorems today, 239 attribute
-sites — 296 / 232 at the comparator's birth), `StepFnFacts`, the relation-free single-goroutine pool bridge and
+`Prefix`/`Finish` and their laws, the `@[stepFn_eqns]` library (`Equations.lean`: 317 theorems and 239 `stepFn_eqns]` attribute sites today; 296 and 235 at the comparator's birth commit `841a20c6`, by the same two commands — §8; the comparator row's 232 counted simp-set members, a different measure), `StepFnFacts`, the relation-free single-goroutine pool bridge and
 projections restored verbatim (`PoolFacts`, `PoolProjection`). ADDED for the customer: G11 (`InitDriverFacts`: the init
 driver agrees with `execStmtLoop` up to `initPrintRefusal?`, a successful setup is a `Prefix`, `prefix_det`), G16
 (`TableMonotonicity`: `SubTables` per key, `stepFn_mono`, `prefix_mono`, 13 statements), the raise mark moved to the abort
@@ -192,16 +184,12 @@ neighbourhood campaign (`docs/2026-10-27_defect-neighbourhood-campaign.md`, `doc
    The negative corpus's 2 FAIL rows are on BUG-221's Cases line. `scripts/check-bugs.sh`'s summary line: `ok (216
    bug(s), 9 moved tombstone(s) resolving to docs/APPARATUS-DEFECTS.md; pinned cases behave as claimed)`.
 2. **Zero known wrong answers within an explicitly named supported profile — DOES NOT HOLD absent the ruling; HOLDS BY
-   STATED EXCLUSION under the profile proposed in §3 (D1, PENDING [USER]).** The counts, by id, against the 33 open
-   entries of `docs/BUGS.md` (§8 derives each row's entry from its `Cases:` line):
-   - OPEN WRONG ANSWERS in the strict sense — both sides answer, the answers differ, nothing refuses: **7 entries on 54
-     `differential` FAIL rows** — BUG-176 (14 rows: zero-size element and field addresses, R15), BUG-280 (13: `make([]T,
+   STATED EXCLUSION under the profile proposed in §3 (the pending half of backlog decision D1 — the NAMING of the profile, `docs/release.md` §1.6.2; D1's ruled half, refuse the case if excluding it is easy, [USER] 2026-10-12, is BUG-061's guard).** The counts, by id, against the 34 open entries of `docs/BUGS.md` (§8 derives each row's entry from its `Cases:` line):
+   - OPEN WRONG ANSWERS in the strict sense — both sides answer, the answers differ, nothing refuses: **8 entries on 62 `differential` FAIL rows** — BUG-176 (14 rows: zero-size element and field addresses, R15), BUG-280 (13: `make([]T,
      f(), g())` under gc's inlining — gc's own deviation from spec#Order_of_evaluation), BUG-170 (11: zero-size variable
      addresses, R15), BUG-121 (8: `[]byte(s)` element-address identity, R19), BUG-312 (5: the call-free general form's
      panic selection, E3/E4/E12), BUG-236 (2: the `fmt.Errorf` shim's type name in a failed-assertion text), BUG-171 (1:
-     the hidden-dependency init order through a function-value call the guard cannot follow, E7). Five of the seven are
-     latitude points where the machine holds a spec-conforming member gc does not realize; one is gc's deviation; one a
-     wrong text from a shim.
+     the hidden-dependency init order through a function-value call the guard cannot follow, E7), BUG-432 (8: an earlier multi-assign target stored before a later non-memory operand's panic, visible after `recover` — E5/L-016, gc's own deviation from spec#Assignment_statements; entered and rowed by this record's audit round). Five of the eight are latitude points where the machine holds a spec-conforming member gc does not realize; two are gc's deviations from a forced point (BUG-280, BUG-432); one a wrong text from a shim.
    - OPEN observed-∉-modeled SCHEDULING members, status-level, no row can hold them: **2 entries** — BUG-159 (the abort
      window; a stated limit, [USER] 2026-10-12, item 3 of that day's ask) and BUG-360 (main's exit beside a child's fatal; posed).
    - OPEN over-acceptance at the admission boundary: **1 entry** — BUG-221 (gc's 1 GB stack-frame limit not mirrored:
@@ -216,24 +204,21 @@ neighbourhood campaign (`docs/2026-10-27_defect-neighbourhood-campaign.md`, `doc
    - The other 21 open entries are not wrong answers: over-refusals of the race detector (BUG-041, 132, 370, 371),
      named refusals (BUG-008, 093, 094, 100), apparatus-side refusals (BUG-004, 106, 107, 114), an enumeration left
      tractability (BUG-065), resource and cost findings (BUG-090, 410, 411, 413, 414, 415 — kills and grinds, never an
-     answer), a misnamed over-refusal (BUG-218), the latent granularity entry (BUG-002). 7 + 2 + 1 + 2 (061, 099) + 21 =
-     33.
-   - Against the proposed profile P1 (§3): inside it, 0 open wrong answers — because P1's clause (vii) EXCLUDES BY
-     STATEMENT the shapes of the 7 + 2 entries and clause (i) the gc-rejected programs of BUG-221, while the 7 guarded
+     answer), a misnamed over-refusal (BUG-218), the latent granularity entry (BUG-002). 8 + 2 + 1 + 2 (061, 099) + 21 = 34.
+   - Against the proposed profile P1 (§3): inside it, 0 open wrong answers — because P1's clause (vii) EXCLUDES BY STATEMENT the shapes of the 8 + 2 entries and clause (i) the gc-rejected programs of BUG-221, while the 7 guarded
      classes exclude themselves BY REFUSAL. The honest reading, for the ruling: an exclusion by statement is not enforced
      — a program in one of those shapes lowers and answers, and nothing tells the consumer it is outside the profile.
      The alternatives are the rulings posed (§7: widen the envelopes, or refuse the shapes by name — a frontend lane).
-     Absent the ruling the predicate does not hold: 7 open wrong-answer entries on 54 rows and 2 scheduling members.
+     Absent the ruling the predicate does not hold: 8 open wrong-answer entries on 62 rows and 2 scheduling members.
 3. **A justified behavioural envelope for that profile — ENUMERATED (§4), as an envelope and not as «all latitude
    included».** Every axis of `docs/2026-08-11_latitude-inventory.md` is listed with its class, the member or envelope the
    machine holds, and its re-envelope obligation or the recorded gc deviation; the sources are the inventory's §1–§3
    headings, §5–§7, §10–§11 and the entries named. The enumeration is complete over the inventory's ids; it is not a
    maximality claim (Contract A holds per row where an (a) row says «believed MAXIMAL»), and two of its lists are stale
    by what the campaign found: the §10 honesty-critical list (E3, E5, E7, R19) does not carry BUG-280 (a forced point
-   with gc's deviation, like E5) nor BUG-176 (R15's class at elements and fields), and §5 counts 7 refusal entries where
-   §10 counts 6 — stated here, the inventory being a dated record.
+   with gc's deviation, like E5) nor BUG-176 (R15's class at elements and fields) and still calls BUG-104 an open observed-∉-modeled bug (fixed 2026-09-21 at Stage C, BUG-112 the fixed entry), and §5 counts 7 refusal entries where §10 counts 6 — stated here, the inventory being a dated record.
 
-## 3. The proposed supported profile P1 ([AGENT] 2026-11-09; the ruling is backlog decision D1, PENDING [USER])
+## 3. The proposed supported profile P1 ([AGENT] 2026-11-09; backlog decision D1 was RULED 2026-10-12 in its first half — refuse the case if excluding it is easy, BUG-061 guarded at train 3 — and the NAMING of the profile, `docs/release.md` §1.6.2, is the half still PENDING [USER])
 
 The predicate's profile is the owner's to name. This is the proposal, written so that predicate 2 can be counted against
 it; every clause names what enforces it, or says «stated only».
@@ -245,13 +230,7 @@ it; every clause names what enforces it, or says «stated only».
   NO refusal — no quarantined declaration, no `unsupported` stub (a wire is not a lowering certificate, `docs/cli.md`
   §6.3; the frontend names each refusal on stderr, and the differential's `frontend-export` stage is the check).
 - **(ii) The language fragment.** Everything the frontend lowers; OUTSIDE by name (enforced, each a refusal naming its
-  cause): the frontier rows of `docs/language-coverage-ledger.md` §4 that stand at the tip — complex numbers (FR-15),
-  range-over-func (FR-12), anonymous non-empty struct types (FR-13), tuple components boxed into interfaces (FR-7),
-  `go`/`defer` of a builtin (FR-1, FR-16), goto hoists and nested labels (FR-11, FR-20), a receive, allocation, tuple
-  splat or interface method value in a short-circuit right operand (FR-2, FR-18), the deref adapter of a method expression
-  (FR-3), range-assign to a non-identifier (FR-6), the self-shadowing define with a call RHS (FR-17), imported generic
-  instantiations in signatures and poisoned global types (FR-23, FR-24), `unsafe` idioms, `print` of floats, complex or
-  no operands (FR-29), a function-local defined type as a type argument (c-pin), `uintptr` at the readout; compiler
+  cause): every frontier row of `docs/language-coverage-ledger.md` §4 that stands open at the tip — the ledger is the authority and this clause names none of them (23 rows are neither struck through nor headed CLOSED/RETIRED by the command in §8, FR-28 among them as reopened-narrowed; the record's audit of 2026-11-09 counted 22, the difference being FR-28's reading); `unsafe` idioms; a function-local defined type as a type argument (c-pin); `uintptr` at the readout; compiler
   directives outside the allowlist; blank-field operands outside constant / `nil` / plain variable read; a `package main`
   without `main`; a body-less function.
 - **(iii) The standard library.** The admission register's set (`docs/stdlib-admission-register.md`, byte-equal to the
@@ -277,7 +256,7 @@ it; every clause names what enforces it, or says «stated only».
   `checkCert_slowObs`), the default run being one member — the consulted-sites marker says so; sub-statement
   interleavings are not claimed (U-5, the granularity obligation); liveness is not claimed (finite tapes, no fairness).
   RACY programs are REFUSED (C10): a `race` verdict is outside P1's answers; the detector refuses ⊇ gc, so its
-  over-refusals (BUG-041, 084, 132, 370, 371) are coverage gaps, never answers.
+  over-refusals (BUG-041, 084, 132, 370, 371) are coverage gaps, never answers. A run under `--allow-hidden-dep-init-order` (`docs/cli.md` §6.2: the E7 refusal becomes a stderr warning on every guarded route) LEAVES the profile — the guard is part of P1's admission.
 - **(vi) Observations.** `golean-observation-v1` (`docs/cli.md` §4): the value tags `unit`, `nil`, `bool`, `int` (the
   ten concrete integer kinds), `float` (the IEEE bit pattern, every NaN canonicalized), `string` (bytes), `interface`
   (the dynamic type's unqualified name and the value), `struct`, `array`, `slice`/`map`/`chan` (a raw location as the
@@ -285,7 +264,7 @@ it; every clause names what enforces it, or says «stated only».
   sides: func-typed positions (never emitted), `uintptr`, the concrete type of a recovered runtime error (BUG-099); and
   outside seeded mode the Go observer has no pointer, slice, map or channel arm, so such a strict row is a visible red
   (the comparable surface, F4). Output is the `print`/`println` stream; the compared abort text is gc's first line
-  (FR-32); the statuses are `ok`, `panic`, `fatal`, `deadlock`, `race` (refused per run) and the refusal classes.
+  (FR-32); the statuses are `ok`, `panic`, `fatal`, `deadlock`, `race` (refused per run) and the refusal classes. The choice tape's rule applies (`docs/cli.md` §6.1): an out-of-range pick wraps, an exhausted tape picks 0 and leftovers are not checked — a `--choices` observation is one member of the set, and the default-tape observation is the member the empty tape selects.
 - **(vii) EXCLUDED BY STATEMENT (not enforced; the open known-≠-gc answers, each posed for a ruling, §7):** (1) a
   comparison or map key over the address of a zero-size variable, element or field (R15: BUG-170, BUG-176); (2) the
   element-address identity of `[]byte(s)` / `[]rune(s)` results (R19: BUG-121); (3) the initialization order of a hidden
@@ -293,9 +272,7 @@ it; every clause names what enforces it, or says «stated only».
   method-expression, promoted and type-parameter routes are guarded); (4) which of two failing non-call operands with no
   event between them panics (E3/E4/E12: BUG-312); (5) `make([]T, f(), g())` with two call arguments under gc's default
   inlining (BUG-280, gc's deviation; `-N -l` agrees with the machine); (6) the dynamic type name of a recovered
-  `fmt.Errorf` payload in a failed-assertion text (BUG-236); (7) a child goroutine's output between main's last
-  observable step and its abort, and main's exit beside a child's fatal (BUG-159, BUG-360). Under (vii) the 54 `differential`
-  FAIL rows and the two scheduling entries of §2.2 are outside P1.
+  `fmt.Errorf` payload in a failed-assertion text (BUG-236); (7) a child goroutine's output between main's last observable step and its abort, and main's exit beside a child's fatal (BUG-159, BUG-360); (8) an earlier target of a multi-target assignment read after `recover` from a later operand's panic when that operand reads no memory (E5/L-016: BUG-432, gc's deviation — the two-phase rule holds the store back, gc stores early). Under (vii) the 62 `differential` FAIL rows and the two scheduling entries of §2.2 are outside P1.
 
 ## 4. The behavioural envelope for P1 (predicate 3) — the latitude inventory's axes at the tip
 
@@ -314,7 +291,7 @@ REFUSED — a refusal standing in for latitude. «gc» is the pinned oracle. Rul
 | C7 which clause a WOKEN select commits | (b-n) | narrowed deliberately | re-argue on wake-path changes (§7 below the line) |
 | C8 sync acquisition order | (a) via L1 | zero new sites | — |
 | C9 global deadlock: detect vs hang | (b) | gc's runtime detector (`deadlock` terminal) | observationally coincident; permanent pin candidate |
-| C10 racy programs | REFUSED | `race` terminal; the HB set is TSan's realized edges | over-refusals vs gc: BUG-041 (whole-cell composite reads, narrowed), BUG-084 (sync-primitive plain accesses, red by design), BUG-132 (the sort op's write set, red by design), BUG-370 (`clear`, posed), BUG-371 (zero-size cells, posed); U5 TSan over-reports on release merge |
+| C10 racy programs | REFUSED | `race` terminal; the HB set is TSan's realized edges | over-refusals vs gc: BUG-041 (whole-cell composite reads, narrowed), BUG-084 (sync-primitive plain accesses, red by design), BUG-132 (the sort op's conservative write set — a red pin PENDING the owner's ruling: the 2026-10-25 ruling, backlog row 50 option 1, accepted the `sortSlice` lowering, not this red; the closure's §6 S16 row lists it open), BUG-370 (`clear`, posed), BUG-371 (zero-size cells, posed); U5 TSan over-reports on release merge |
 | C11 unreachable tie-breaks | (c) | — | — |
 | C12 TryLock spurious failure | (a) | site `tryLock` ([USER] 2026-08-31) | — |
 | E1 the spec-ordered core | (c) | lexical order of calls, receives, logical ops | gc DEVIATES at `make([]T, f(), g())` under inlining — BUG-280 (13 rows, posed: the L-016 treatment recommended) |
@@ -474,7 +451,7 @@ the ruling marked pending — never as if ruled.
     recovers an emission panic into a named refusal; loading and type-check are outside that recovery (a crash there is
     `crash:frontend`, guarded by the re-pin guard).
 
-**C. Modelled behaviour known ≠ gc inside the fragment (P1's statement-only exclusions, §3 (vii))**
+**C. Modelled behaviour known ≠ gc inside the fragment** — limits 23–28 and 30 are P1's statement-only exclusions (§3 (vii) items 1–8); 29 is a guarded class (a refusal by name); 31 is an [AGENT] narrowing pending a ruling
 
 23. **R15 zero-size addresses**: the machine answers never-same where gc gives one address by layout — BUG-170 (11 rows,
     variables) and BUG-176 (14 rows, elements and fields); a may-equal choice, gc's layout, or recorded reds — ruling 9.
@@ -491,9 +468,7 @@ the ruling marked pending — never as if ruled.
 29. **A recovered runtime error's concrete type** is one synthetic id; the `observed` readout and the concrete-target
     assertion text REFUSE by name (BUG-099, 4 rows; guarded); the typed-nil pointer at the shim's `r.(error)` refuses
     (S21).
-30. **gc's early store across the phase boundary** (E5, L-016, [USER] 2026-09-02): the machine is forced to the phase
-    boundary and gc deviates; the S6 sweep's 12 cells are recorded at the divergence ledger, no row red; the inventory's
-    §E5 still cites the dossier's reading (a records follow-up).
+30. **gc's early store across the phase boundary** (E5, L-016, [USER] 2026-09-02; BUG-432): the machine is forced to the phase boundary and gc deviates — an earlier target of a multi-target assignment is stored before a later operand's panic when that operand reads no memory (a local division or shift), visible after `recover`; the S6 sweep's twelve cells are now the thirteen strict rows of `assign-order/early-store-under-recover/` (8 red by design on BUG-432's Cases line, 5 agreeing), measured both sides 2026-11-09 — (vii) item 8; reporting upstream is the owner's (the ledger's P5 policy, UNFILED); the inventory's §E5 still cites the dossier's reading (a records follow-up).
 31. **E13 on declined sweeps**: since train 28 a bound early-copy operand realizes gc's order as ONE member where the
     ruled E13 latitude ([USER] 2026-09-05) would enumerate both — an [AGENT] narrowing found by the train-32 audit; keep
     the ruling and restore the probe, or ratify — ruling 1.
@@ -516,8 +491,7 @@ the ruling marked pending — never as if ruled.
     `Bool`, `Pointer[T]`, `And`/`Or` and the `unsafe.Pointer` family refused for wave 2.
 36. **Racy programs are refused** (C10, by doctrine); the detector's HB set is TSan's realized edges, not go_mem's minimal
     relation; it refuses ⊇ gc: BUG-041 (whole-cell composite reads, narrowed to constant indices; 2 rows), BUG-084 (plain
-    accesses beside `race.Disable`d sync ops; 5 rows, red by design), BUG-132 (the sort op's conservative write set; 2
-    rows, red by design, accepted 2026-10-25), BUG-370 (`clear`'s per-element writes; 1 row; ruling 2), BUG-371 (zero-size
+    accesses beside `race.Disable`d sync ops; 5 rows, red by design), BUG-132 (the sort op's conservative write set; 2 rows, `Expect: FAIL` as a red pin PENDING the owner's ruling — the 2026-10-25 ruling, backlog row 50 option 1, accepted the `sortSlice` lowering, not this red; the closure's §6 S16 row lists it open), BUG-370 (`clear`'s per-element writes; 1 row; ruling 2), BUG-371 (zero-size
     cells recorded as locations; 4 rows; ruling 3); U5: TSan over-reports where the machine's release merge is exact.
 37. **The enumerators' reach** (fresh-eyes F3): the DFS defaults (`--max-sites 8`, `--work-cap`) are tripped by most
     two-goroutine shapes, the refusal loud; the dedup engine's fragment excludes the three consults of limit 11; the
@@ -619,7 +593,7 @@ From the closure's §6 (posed by [AGENT] lanes or the coordinator at a train's a
 19. The merge asks of trains 33 and 34 — LANDED on `main` since the closure was written (`00afbc7c` carries both); no
     longer pending.
 
-Beyond the closure's list: **D1** — the supported profile (backlog §5; §3's P1 is the proposal); row 58 — GOPATH mode as
+Beyond the closure's list: **D1's pending half** — the naming of the supported profile (`docs/release.md` §1.6.2; backlog §5's D1 ruled the BUG-061 half on 2026-10-12; §3's P1 is the proposal); **BUG-132** — the sort op's conservative write set, a red pin pending (the closure's §6 S16 row; narrow it or ratify the red); row 58 — GOPATH mode as
 a contract rather than a frontend refusal; row 53 — the dedup `output` scope; row 32 — the per-version frame-line table;
 inventory §11 item 1 — a second Platform instance; R7's envelope shape (BUG-094); the `overlay-import` cap; row 54's
 elaboration-cost follow-ups (not a ruling); and this record's own asks — whether to fold the three duplicated rows in
@@ -678,6 +652,13 @@ grep -P '^source-through\t' docs/stdlib-admission-register.md | cut -f2 | tr '\n
 grep -P '^(substitution|overlay|overlay-import|primitive|intercept|shim|shadow-type|init-callee)\t' docs/stdlib-admission-register.md | cut -f1 | sort | uniq -c
 # the latitude inventory's axes and counts
 grep -n '^### ' docs/2026-08-11_latitude-inventory.md; sed -n '/^## 10\. Counts/,/^### 10.1/p' docs/2026-08-11_latitude-inventory.md
+# the frontier rows standing open (clause (ii)): not struck through, not headed CLOSED/RETIRED
+grep -E '^\| FR-[0-9]+ \|' docs/language-coverage-ledger.md | awk -F'|' '{id=$2; t=$3; if (t ~ /^ *~~/ || t ~ /\*\*(RETIRED|CLOSED) [0-9]/) next; print id}' | wc -l   # 23
+# the equation library at the comparator's birth commit (the same two commands as above)
+git log --diff-filter=A --format=%h -- comparator.json   # 841a20c6
+git show 841a20c6:GoLean/GoCore/Equations.lean | grep -c '^theorem\|^protected theorem\|^@\[stepFn_eqns\] theorem'; git show 841a20c6:GoLean/GoCore/Equations.lean | grep -c 'stepFn_eqns\]'   # 296; 235
+# BUG-432's rows, both sides (the shape of the ledger's L-016)
+scripts/diff-one $(grep -v '^#' Corpus/coverage/exec/assign-order/early-store-under-recover/cases.tsv | cut -f1 | sed 's|^|assign-order/early-store-under-recover/|')   # 8 FAIL/differential (gc 29, the machine 58), 5 PASS
 # the speedbumps run on this branch (docs-only; check-stdlib-register builds the Go frontend and was not run)
 scripts/check-bugs.sh; scripts/check-notices; scripts/check-agents-alias; scripts/check-spec-anchors; scripts/check-coverage; scripts/check-imported-goose; bash scripts/check-mem-callsites
 ```

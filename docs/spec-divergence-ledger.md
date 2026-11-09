@@ -731,7 +731,15 @@ Discipline notes, recorded up front:
   when the deviation lives in `walk`, not the optimizer — check the
   spec sentence before trusting the flag matrix.
 - Status: **recorded; UNFILED upstream — classification pending the
-  P5 filing-policy decision ([USER]).** Filing is a public action
+  P5 filing-policy decision ([USER]).** ROWED 2026-11-09 ([AGENT] lane
+  `records/release-1109`, under the release record's audit): the twelve
+  re-probe cells above plus a two-statement control are the thirteen strict
+  rows of `Corpus/coverage/exec/assign-order/early-store-under-recover/`,
+  the eight diverging ones red by design on BUG-432's Cases line
+  (`docs/BUGS.md`, `Expect: FAIL`) — the rows RECORD gc's deviation as a
+  differential red, they do not pin gc's answer, so the «never a strict
+  corpus row» sentence above is superseded for this shape by the BUG-280
+  form (a red-by-design record of a gc deviation). Filing is a public action
   reserved to Mike (per-filing sign-off, discipline note); nothing has
   been filed. When a filing lands, record the issue number in Sources.
   Cross-records updated 2026-09-02: inventory §E5 (heading, body,
