@@ -59,6 +59,13 @@ push rule). Pushing the tag is a separate sign-off.
 1. On a branch off `main` (a records lane): freeze the changelog (§1.4) and write the stated limits (§1.5) and the three
    predicates (§1.6) with their counts and sources (`scripts/check-bugs.sh`'s summary line, the open `docs/BUGS.md`
    entries, `artifacts/coverage/latest.tsv`, the latitude inventory).
+   DONE 2026-11-09 ([AGENT] lane `records/release-1109`, branch off `main` at `00afbc7c`): the record is
+   `docs/changelog/20d3946d-RELEASE.md` — the window changelog frozen from its table header on (re-checked at the tag
+   commit by the command in its preamble), the cumulative summary measured against `git show 20d3946d:<path>`, the
+   three predicates with their counts (1 holds; 2 does not hold absent the D1 ruling and holds by stated exclusion
+   under the proposed profile; 3 enumerated), the proposed profile for D1 and its envelope, the supported-scope
+   statement citing the campaign closure, 54 stated limits re-derived from this page's §4, the offer's ten and the
+   backlog's debt table, and the rulings carried as pending. Steps 2–5 are open.
 2. Run the audit ask on the branch (CLAUDE.md, merge protocol step 3); merge on sign-off.
 3. At the merged tip, on a clean tree: `capped scripts/ci --diff` (§1.3), then the claim-point kernel check in the
    form that exists today (every figure below measured 2026-10-22 on this box under the nono agent sandbox with
