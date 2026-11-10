@@ -9,6 +9,15 @@ the commits after it carry records only; toolchain `leanprover/lean4:v4.35.0`). 
 contract gained exactly ONE statement (385 → 386) and no kept statement changed its text
 (§ The contract).
 
+> **HELD — NOT TO BE SENT (2026-11-10, after the independent pre-merge audit).** The audit's F1
+> stands against this design: the store-time guard re-walks a box's payload at every cell birth,
+> bind and store, so an interface store is linear in the payload and value-nested boxes are
+> quadratic (measured, main's binary vs this lane's: `deep(16000)` 0.56 s → 22.3 s,
+> `consList(12000)` 0.78 s → 72.2 s, `bigBox(800)` 0.11 s → 8.0 s). The lane stopped for the
+> owner's ruling on the design (backlog row 62 has the options); G23 (1) below describes the
+> HELD design, and its unqualified wording of the invariant (audit F3) and the `stuck` class of
+> the guard's refusals (F6) are rewritten with whichever design is ruled. G23 (2) is unaffected.
+
 ## G23 (1) — the `.interface` arm of the normal form is closed: DONE
 
 `isNormalForTyTy` ended its interface case in `| .interface _, _ => true` and the normalizer in
@@ -103,9 +112,13 @@ owner rules otherwise):
   `.toInterface` boxes its operand without normalizing it, so the invariant holds because the
   store sites enforce it, and a box whose payload is, say, a raw `.nil` at a slice, map or
   channel dynamic type is refused at its first store rather than canonicalized (the G21 arms DO
-  canonicalize a raw `.nil` at such a SLOT). No corpus row stores such a box — the frontend types
-  every `nil` that flows into a non-interface slot — so the choice is corpus-neutral; repairing
-  instead is a larger change (the walk would return a value, with its own lockstep family).
+  canonicalize a raw `.nil` at such a SLOT). The reason no run stores such a box (corrected at
+  the audit, F4): the frontend types an untyped `nil` only for slice, map and pointer slots —
+  `wrapInterfaceConversion` (`tools/nativefrontend/emit.go`) keeps the BARE nil for func- and
+  chan-typed slots — but every such flow passes a normalizing store before it can be boxed (a
+  result cell, a parameter, a variable, an element: the G21 chan arm canonicalizes there), so
+  the operand `.toInterface` sees is already the canonical nil. Repairing instead is a larger
+  change (the walk would return a value, with its own lockstep family).
 - **An opaque dynamic type's payload is unchecked.** This one was FOUND, not designed: the first
   cut refused it, and the full corpus run moved two rows that box imported named types
   (`interfaces/sweep-s5-imported-carriers/duration-stringer`, PASS → stuck;

@@ -3223,10 +3223,10 @@ theorem writeAt_isNormal :
             obtain ⟨q, hq, rfl⟩ := (Array.modifyM_ok_iff fields k hklt _ fields').mp hmod
             simp only [bind_eq_ok, Except.ok.injEq] at hq
             obtain ⟨old', hold', rfl⟩ := hq
-            -- The declared type: a struct value is normal at a `.defined`
-            -- struct declaration, or at an identity-normalized slot
-            -- (`.interface` and the catch-all kinds), where the descent
-            -- returns the slot's own type and normality is the `true` arm.
+            -- The declared type: a struct value is normal only at a `.defined`
+            -- struct declaration; at the shape-checked slots (G21's five kinds,
+            -- `.interface` since G23) no struct root is normal, so those cases
+            -- close by contradiction inside `writeAt_isNormal_struct`.
             obtain ⟨hk, hname, hbefore⟩ := fieldIdx?_spec fields f k hidx
             exact writeAt_isNormal_struct hn hstep hk hold' hname hbefore ih
           · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h

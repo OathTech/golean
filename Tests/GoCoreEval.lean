@@ -3659,6 +3659,11 @@ private def g23IfaceNormalTests : IO Bool := do
   passed := passed && (← expectTrue "G23 descent: a 40-deep list through an interface field (the table has 6 entries) is normal; the same list ending in a bad box is refused"
     (unchanged (.defined 4) (node (chain 40 .nil))
       && refusedAs (.defined 4) (node (chain 40 (box .bool (.int 1 .int)))) boxNeedle))
+  -- The stack (audit F1's open question): the walk is not tail-recursive in the nesting depth.
+  -- At depth 200000 it answers in the compiled binary — neither a crash nor a refusal.
+  passed := passed && (← expectTrue "G23 descent: a 200000-deep list through an interface field answers (normal) — the walk's recursion depth is no crash"
+    (GoCore.isNormalForTy types (.defined 4) (node (chain 200000 .nil))
+      && (match norm (.defined 4) (node (chain 200000 .nil)) with | .ok _ => true | _ => false)))
   -- The boxes of a NON-interface slot's value: a struct field, an array element.
   passed := passed && (← expectTrue "G23: a struct cell with an interface field and an array of interfaces check their boxes too"
     (unchanged (.defined 0) (aVal (box .string str))
