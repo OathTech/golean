@@ -6,9 +6,18 @@ so a row that lands after that record goes here, in the same convention: one row
 each naming what a consumer of GoCore programs, the wire, the CLI or the raft subject can observe, the trusted
 surface touched, and its authority. Opened [AGENT] lane `core/g23-iface-normal-1110`, 2026-11-10, on the reading of
 `docs/release.md` §1.4 that the next window starts at the release's commit. The file is named for `9f4554a6`, the
-commit the record was prepared for; no `release/*` tag existed when it was opened. If the owner tags a different
-commit, this file is renamed for that commit (or, if the tag lands AFTER a row here, the tag's records commit copies
-that row into the frozen record as its preamble prescribes).
+commit the record was prepared for; no `release/*` tag existed when it was opened. Which commit is tagged is the
+owner's decision (audit F2), and the two orders differ in what they require:
+
+- **The tag goes on `9f4554a6` (before G23 lands).** Nothing more: the frozen record describes the tagged tree, and
+  this file is the next window.
+- **The tag goes on a commit AFTER G23 lands.** Then the frozen record is NOT accurate as it stands and the tag's
+  records commit must redo it, not only copy a row: its preamble's freeze check requires this file's row in its §9;
+  its statement count is the pre-G23 tree's (385 at its lines 54, 71, 154 and in the frozen row at 804 — 386 after
+  G23); and its §0 gate lines and reproduce block were measured on the pre-G23 tree and must be re-run at the tag.
+  This file is then renamed for the tagged commit, or folded into the record.
+
+`CLAUDE.md` states the count 385 once (audit F5); that edit is the owner's too.
 
 | Train | Line |
 |---|---|
