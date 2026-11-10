@@ -2408,7 +2408,20 @@ def normalizeValueForTyTy (atDefined : TypeIdx → GoValue → Except Stop GoVal
         stuck s!"array value length mismatch: expected {length}, got {values.size}"
       .array <$> normalizeListWith (normalizeValueForTyTy atDefined elem) values.toList
   | .array length _, value => stuck s!"expected array({length}) value, got {repr value}"
-  | .interface _, value => return value
+  -- An interface slot holds the nil interface or a box (raft-proofs' G23,
+  -- 2026-11-10): every producer emits exactly those two — `defaultValueTy`
+  -- and the typed nil literal give `.nil`, the `.toInterface` arm and the
+  -- machine's own panic payloads give `.interface dyn v`, a type assertion
+  -- to an interface target passes the box through — and the conversion arm
+  -- already refuses a raw value at an interface type. Anything else fails
+  -- closed, in LOCKSTEP with `isNormalForTyTy`. This arm is the
+  -- CONSTRUCTOR check; that the boxed value is normal at the box's dynamic
+  -- type is `GoValue.boxesNormal` below, which needs the whole type table
+  -- at full bound and so sits beside the public `normalizeValueForTy`
+  -- (`boxesGuard`), not here.
+  | .interface _, .nil => return .nil
+  | .interface _, .interface dyn value => return .interface dyn value
+  | .interface _, value => stuck s!"expected interface value, got {repr value}"
   -- Func values carry their own identity; nil is the zero value.
   | .funcType _ _ _, .funcVal fid captured => return .funcVal fid captured
   | .funcType _ _ _, .nil => return .nil
@@ -2483,26 +2496,6 @@ example :
     normalizeValueForTyAt #[(⟨"main.T"⟩, .defined (.int .int))] 1 0 (.int 3 .int)
       = .ok (.int 3 .int) := rfl
 
-/-- Normalize a value at a type over the state's type table (the descent
-seeded at `types.size`). -/
-def normalizeValueForTy (ty : Ty) (value : GoValue) :
-    Except Stop GoValue :=
-  normalizeValueForTyTy (normalizeValueForTyAt ctx.types ctx.types.size) ty value
-
-/-- Allocate a VALUE cell at its declared type — the value NORMALIZED at
-that type (C1 S1, charter §7 D3 — the [AGENT] coordinator's reading of the
-[USER]'s 2026-09-18 non-objection to the triage; explicit [USER] ratification
-REQUESTED at the merge ask, PENDING):
-the pre-C1 `Store.alloc` created the cell with the evaluated value as is
-(the «alloc hole» `State.lean`'s `HeapCell` docstring named; 13 call
-sites, `.allocNew`'s the one that could carry a non-normal value). With
-this, `HeapNormal` holds from the cell's birth and the leaf-typed
-`storeLoc` below is sound. A value the normalizer refuses is refused HERE
-(fail closed, by name) rather than at its first store. -/
-def Store.alloc (s : Store) (value : GoValue) (typ : Ty) : Except Stop (Loc × Store) := do
-  let v ← normalizeValueForTy ctx typ value
-  return s.allocCell (.value typ v)
-
 /-! ### Self-normalization check (sem-adequacy arc slice 3, 2026-08-04)
 
 `isNormalForTy types ty v` decides `normalizeValueForTy σ ty v = .ok v`
@@ -2553,7 +2546,11 @@ def isNormalForTyTy (atDefined : TypeIdx → GoValue → Bool) : Ty → GoValue 
       decide (values.size = length)
         && isNormalListWith (isNormalForTyTy atDefined elem) values.toList
   | .array _ _, _ => false
-  | .interface _, _ => true
+  -- LOCKSTEP with the normalizer's interface arms (G23, 2026-11-10): the
+  -- nil interface or a box; the box's contents are `GoValue.boxesNormal`'s.
+  | .interface _, .nil => true
+  | .interface _, .interface _ _ => true
+  | .interface _, _ => false
   | .funcType _ _ _, .funcVal _ _ => true
   | .funcType _ _ _, .nil => true
   | .funcType _ _ _, _ => false
@@ -2600,10 +2597,100 @@ def isNormalForTyAt (types : TypeEnv) : Nat → TypeIdx → GoValue → Bool
       | some (_, .interfaceDef _) => false
       | none => false
 
+/-! ### The boxes of a value (raft-proofs' G23, 2026-11-10)
+
+The type-directed layers above check an interface slot by CONSTRUCTOR: the nil
+interface or a box. What a box holds is checked here, by a walk that is
+structural on the VALUE: every box `.interface dyn w` occurring in the value —
+through array elements, struct fields and the contents of other boxes — holds
+a `w` that is self-normalized at `dyn` over the whole type table at FULL bound
+(`boxPayloadNormal`), and `w`'s own boxes are checked in turn. The two together
+are the recursive descent at the dynamic type: on a value the type-directed
+check admits, a box sits exactly at an interface-typed position.
+
+Why a separate walk and not an arm of `isNormalForTyTy`: the dynamic type is
+read from the VALUE, so it is no subterm of the slot's type (the type layer's
+structural argument), and it may name ANY table index, so the residual bound
+the index layer hands down is the wrong one — a list linked through an
+interface field is deeper than the table is long. The walk recurses on the
+value and restarts the type descent at `types.size` in every box. A function
+value's captured list is not walked (the type-directed check does not look
+there either: captures are the addresses of the captured variables). -/
+
+/-- Is `w` a legitimate payload of a box of dynamic type `dyn`? Self-normalized
+at `dyn` over the table at full bound, with two producer facts on top: Go never
+double-boxes (`.toInterface` passes an interface-typed source through), so an
+interface dynamic type is refused; and the machine's own runtime-error payload
+(`runtimeErrorValue`, and the frontend's `runtimeError`-flagged panic) is a
+`.string` under the reserved index `runtimeErrorTypeIdx`, whose table entry is
+an opaque declaration no value normalizes at — admitted by name. -/
+def boxPayloadNormal (types : TypeEnv) : Ty → GoValue → Bool
+  | .interface _, _ => false
+  | .defined i, w =>
+      isNormalForTyAt types types.size i w
+        || (decide (i = runtimeErrorTypeIdx) && match w with | .string _ => true | _ => false)
+  | dyn, w => isNormalForTyTy (isNormalForTyAt types types.size) dyn w
+
+mutual
+
+/-- Every box in the value holds a payload normal at the box's dynamic type
+(`boxPayloadNormal`), recursively. Structural on the value; kernel-reducible. -/
+def GoValue.boxesNormal (types : TypeEnv) : GoValue → Bool
+  | .interface dyn w => boxPayloadNormal types dyn w && GoValue.boxesNormal types w
+  | .struct _ fields => boxesNormalFields types fields.toList
+  | .array values => boxesNormalList types values.toList
+  | .unit | .bool _ | .int _ _ | .float _ _ | .string _ | .addr _ | .nil | .slice _
+  | .map _ | .chan _ | .funcVal _ _ | .syncData _ => true
+
+/-- `GoValue.boxesNormal` over an element list. -/
+def boxesNormalList (types : TypeEnv) : List GoValue → Bool
+  | [] => true
+  | v :: vs => GoValue.boxesNormal types v && boxesNormalList types vs
+
+/-- `GoValue.boxesNormal` over a field list. -/
+def boxesNormalFields (types : TypeEnv) : List (String × GoValue) → Bool
+  | [] => true
+  | (_, v) :: vs => GoValue.boxesNormal types v && boxesNormalFields types vs
+
+end
+
 /-- Is `v` self-normalized at `ty` over the type table (`normalizeValueForTy
-σ ty v = .ok v` for any `σ` with `σ.types = types`)? -/
+σ ty v = .ok v` for any `σ` with `σ.types = types`)? The type-directed check
+at full bound, and every box of the value normal at its dynamic type (G23). -/
 def isNormalForTy (types : TypeEnv) (ty : Ty) (value : GoValue) : Bool :=
   isNormalForTyTy (isNormalForTyAt types types.size) ty value
+    && GoValue.boxesNormal types value
+
+/-- The normalizer's half of `GoValue.boxesNormal`: a value whose boxes are all
+normal passes unchanged; any other is refused by name. The normalizer never
+REWRITES inside a box — a box is built by `.toInterface` from an operand of the
+dynamic type and is refused, not repaired, when that operand was not normal. -/
+def boxesGuard (value : GoValue) : Except Stop GoValue :=
+  if GoValue.boxesNormal ctx.types value then return value
+  else stuck s!"expected interface value, got a box whose value is not normal at its dynamic type: {repr value}"
+
+/-- Normalize a value at a type over the state's type table (the descent
+seeded at `types.size`), then require every box of the result normal at its
+dynamic type (`boxesGuard`, G23). -/
+def normalizeValueForTy (ty : Ty) (value : GoValue) :
+    Except Stop GoValue := do
+  let w ← normalizeValueForTyTy (normalizeValueForTyAt ctx.types ctx.types.size) ty value
+  boxesGuard ctx w
+
+/-- Allocate a VALUE cell at its declared type — the value NORMALIZED at
+that type (C1 S1, charter §7 D3 — the [AGENT] coordinator's reading of the
+[USER]'s 2026-09-18 non-objection to the triage; explicit [USER] ratification
+REQUESTED at the merge ask, PENDING):
+the pre-C1 `Store.alloc` created the cell with the evaluated value as is
+(the «alloc hole» `State.lean`'s `HeapCell` docstring named; 13 call
+sites, `.allocNew`'s the one that could carry a non-normal value). With
+this, `HeapNormal` holds from the cell's birth and the leaf-typed
+`storeLoc` below is sound. A value the normalizer refuses is refused HERE
+(fail closed, by name) rather than at its first store. -/
+def Store.alloc (s : Store) (value : GoValue) (typ : Ty) : Except Stop (Loc × Store) := do
+  let v ← normalizeValueForTy ctx typ value
+  return s.allocCell (.value typ v)
+
 
 /-- Field access at a CONVERTIBLE mint tag (triage L7, 2026-08-19 —
 spec#Conversions' struct-tag clause): a pointer conversion `(*B)(a)`
@@ -2703,12 +2790,15 @@ for this shape). A declared type with no component in the type (`.interface`,
 path write under such a root normalizes the leaf at that same type —
 exactly what the whole-root normalization did (audit fix round F3,
 2026-09-18: the first cut REFUSED there on a cell `HeapNormal` admits; the
-pin `Tests/GoCoreContract.lean` `iface_cell_path_write_*`). At `.interface`
-the normalizer is the identity, so the write lands; at the other five the
-normalizer is SHAPE-CHECKED since G21 (2026-10-27: a `.slice`-declared cell
-holds only a `.slice` value, so a path INTO it is impossible under
-`HeapNormal`), and the leaf normalization refuses by name — the pin
-`slice_cell_path_write_refuses`. Refusal texts
+former pin `Tests/GoCoreContract.lean` `iface_cell_path_write_*`). At all six
+the normalizer is SHAPE-CHECKED — the five since G21 (2026-10-27: a
+`.slice`-declared cell holds only a `.slice` value), `.interface` since G23
+(2026-11-10: the nil interface or a box) — so a path INTO such a cell is
+impossible under `HeapNormal`, and the leaf normalization refuses by name:
+the pins `slice_cell_path_write_refuses` and `iface_cell_path_write_refuses`.
+The leaf, once normalized at its declared type, passes `boxesGuard` (G23):
+every box it carries holds a payload normal at the box's dynamic type, so a
+path write keeps the root's boxes normal (`writeAt_boxesNormal`). Refusal texts
 are byte-preserved: a prefix step refuses with `loadLoc`'s texts (the
 former recursion loaded the prefix), the last step with the store texts;
 the one NEW refusal is the leaf-type descent's (`Ty.stepDown`), reachable
@@ -2752,9 +2842,10 @@ def FieldDef.find? (f : String) : List FieldDef → Option FieldDef
 per hop exactly as `normalizeValueForTyAt` descends, to the struct's field
 type; a type with no component (`.interface`, `.bool`, `.string`, `.slice`,
 `.map`, `.pointer` — module docstring) → ITSELF at the same bound, on
-either step (audit fix round F3, 2026-09-18; since G21 the leaf
-normalization at the five shape-checked types refuses the write by name,
-a path into such a cell being impossible under `HeapNormal`).
+either step (audit fix round F3, 2026-09-18; since G21, and G23 for
+`.interface`, the leaf normalization at the six shape-checked types refuses
+the write by name, a path into such a cell being impossible under
+`HeapNormal`).
 `bound`-structural (the index descent, seeded at `types.size`). -/
 def Ty.stepDown (types : TypeEnv) : Nat → Ty → PathStep → Except Stop (Ty × Nat)
   | b, .array _ elem, .index _ => pure (elem, b)
@@ -2840,7 +2931,9 @@ def arrayIndexNatFormed (values : Array GoValue) (index : Int) : Except Stop Nat
 
 /-- Root-first IN-PLACE write of a leaf (module docstring above). -/
 def writeAt : Nat → Ty → GoValue → List PathStep → GoValue → Except Stop GoValue
-  | b, ty, _, [], v => normalizeValueForTyTy (normalizeValueForTyAt ctx.types b) ty v
+  | b, ty, _, [], v => do
+      let w ← normalizeValueForTyTy (normalizeValueForTyAt ctx.types b) ty v
+      boxesGuard ctx w
   | b, ty, .struct actualType fields, .field typeId fieldName :: rest, v => do
       if actualType != typeId && !structTagCompatible ctx actualType typeId then
         stuck s!"expected struct {typeId.key}, got struct {actualType.key}"

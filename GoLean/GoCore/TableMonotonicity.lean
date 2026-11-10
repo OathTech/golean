@@ -455,9 +455,12 @@ theorem Mem_loadRun_eq (h : a.tablesFree = b.tablesFree) : @Mem.loadRun a = @Mem
 theorem Mem_loadSlice_eq (h : a.tablesFree = b.tablesFree) : @Mem.loadSlice a = @Mem.loadSlice b := by
   delta Mem.loadSlice; simp only [Mem_loadElems_eq h]
 
+theorem boxesGuard_eq (h : a.tablesFree = b.tablesFree) : @boxesGuard a = @boxesGuard b := by
+  delta boxesGuard; simp only [types_eq h]
+
 theorem writeAt_eq_app (h : a.tablesFree = b.tablesFree) (n : Nat) (ty : Ty) (v : GoValue) (path : List PathStep) (w : GoValue) :
     writeAt a n ty v path w = writeAt b n ty v path w := by
-  fun_induction writeAt a n ty v path w <;> (try simp only [types_eq h, structTagCompatible_eq h] at *) <;> simp +zetaDelta only [writeAt, types_eq h, *]
+  fun_induction writeAt a n ty v path w <;> (try simp only [types_eq h, structTagCompatible_eq h, boxesGuard_eq h] at *) <;> simp +zetaDelta only [writeAt, types_eq h, *]
   all_goals (try (split <;> simp_all))
 theorem writeAt_eq (h : a.tablesFree = b.tablesFree) : @writeAt a = @writeAt b := by
   funext n ty v path w; exact writeAt_eq_app h n ty v path w

@@ -1239,6 +1239,28 @@ theorem normalizeStructValueWith_locSup {f : Ty → GoValue → Except Stop GoVa
       obtain ⟨arr, harr, rfl⟩ := h
       simpa [GoValue.locSup] using normalizeFieldsWith_locSup hf harr
 
+/-- `boxesGuard` (G23) answers `.ok` exactly on a value whose boxes are all
+normal, and returns that value unchanged. -/
+theorem boxesGuard_ok {w r : GoValue} :
+    boxesGuard ctx w = .ok r ↔ r = w ∧ GoValue.boxesNormal ctx.types w = true := by
+  unfold boxesGuard
+  by_cases hb : GoValue.boxesNormal ctx.types w = true
+  · simp only [hb, ↓reduceIte, pure_eq_ok, Except.ok.injEq, and_true]
+    exact ⟨fun h => h.symm, fun h => h.symm⟩
+  · simp [hb, stuck, throw, throwThe, MonadExceptOf.throw]
+
+/-- The normalizer and its guard, split: the type-directed layer answered `w`
+and every box of `w` is normal. -/
+theorem normalizeValueForTy_ok {ty : Ty} {v w : GoValue} :
+    normalizeValueForTy ctx ty v = .ok w ↔
+      normalizeValueForTyTy (normalizeValueForTyAt ctx.types ctx.types.size) ty v = .ok w
+        ∧ GoValue.boxesNormal ctx.types w = true := by
+  unfold normalizeValueForTy
+  simp only [bind_eq_ok, boxesGuard_ok]
+  constructor
+  · rintro ⟨w', hw', rfl, hb⟩; exact ⟨hw', hb⟩
+  · rintro ⟨hw, hb⟩; exact ⟨w, hw, rfl, hb⟩
+
 /-- The TYPE layer of normalization is loc-bounded by its input, given the
 same for the `.defined` callback. -/
 theorem normalizeValueForTyTy_locSup {f : TypeIdx → GoValue → Except Stop GoValue}
@@ -1276,9 +1298,8 @@ theorem normalizeValueForTyTy_locSup {f : TypeIdx → GoValue → Except Stop Go
         simp [GoValue.locSup]
       · simp at h
     case interface id =>
-      simp only [normalizeValueForTyTy, pure_eq_ok, Except.ok.injEq] at h
-      subst h
-      exact Nat.le_refl _
+      cases v <;> simp [normalizeValueForTyTy] at h <;> subst h <;>
+        exact Nat.le_refl _
     case funcType ps rs _ =>
       cases v <;> simp [normalizeValueForTyTy] at h <;> subst h <;>
         exact Nat.le_refl _
@@ -1364,8 +1385,8 @@ theorem normalizeValueForTyAt_locSup (types : TypeEnv) :
 theorem normalizeValueForTy_locSup {ty : Ty} {v r : GoValue}
     (h : normalizeValueForTy ctx ty v = .ok r) :
     GoValue.locSup r ≤ GoValue.locSup v := by
-  unfold normalizeValueForTy at h
-  exact normalizeValueForTyTy_locSup (fun _ _ _ hh => normalizeValueForTyAt_locSup _ _ hh) h
+  exact normalizeValueForTyTy_locSup (fun _ _ _ hh => normalizeValueForTyAt_locSup _ _ hh)
+    (normalizeValueForTy_ok.mp h).1
 
 theorem defaultFieldsWith_locSup {f : Ty → Except Stop GoValue}
     (hf : ∀ ty r, f ty = .ok r → GoValue.locSup r = 0) :
@@ -1642,7 +1663,11 @@ theorem isNormalForTyTy_sound {f : TypeIdx → GoValue → Bool}
         have hbeq : (kind == kind) = true := by cases kind <;> rfl
         simp [hbeq]
       all_goals exact absurd h (by simp [isNormalForTyTy])
-    | interface _ => simp [normalizeValueForTyTy, pure, Except.pure]
+    | interface _ =>
+      cases v
+      case nil => simp [normalizeValueForTyTy, pure, Except.pure]
+      case interface dyn w => simp [normalizeValueForTyTy, pure, Except.pure]
+      all_goals exact absurd h (by simp [isNormalForTyTy])
     | funcType params results _ =>
       cases v
       case funcVal fid captured =>
@@ -1724,9 +1749,10 @@ identity (in `.ok`) at `σ`. -/
 theorem isNormalForTy_sound {ty : Ty} {v : GoValue}
     (h : isNormalForTy ctx.types ty v = true) :
     normalizeValueForTy ctx ty v = .ok v := by
-  unfold normalizeValueForTy
   unfold isNormalForTy at h
-  exact isNormalForTyTy_sound (fun _ _ hh => isNormalForTyAt_sound _ _ hh) h
+  rw [Bool.and_eq_true] at h
+  exact normalizeValueForTy_ok.mpr
+    ⟨isNormalForTyTy_sound (fun _ _ hh => isNormalForTyAt_sound _ _ hh) h.1, h.2⟩
 
 /-! #### The list/field normalizers' old equations (C1 S1)
 
@@ -2031,8 +2057,15 @@ theorem normalizeValueForTyTy_isNormal {f : TypeIdx → GoValue → Except Stop 
       all_goals exact absurd h (by simp [normalizeValueForTyTy, stuck, throw, throwThe,
         MonadExceptOf.throw])
     | interface _ =>
-      simp only [normalizeValueForTyTy, pure, Except.pure, Except.ok.injEq] at h
-      simp [isNormalForTyTy]
+      cases v
+      case nil =>
+        simp only [normalizeValueForTyTy, pure, Except.pure, Except.ok.injEq] at h
+        subst h; simp [isNormalForTyTy]
+      case interface dyn w =>
+        simp only [normalizeValueForTyTy, pure, Except.pure, Except.ok.injEq] at h
+        subst h; simp [isNormalForTyTy]
+      all_goals exact absurd h (by simp [normalizeValueForTyTy, stuck, throw, throwThe,
+        MonadExceptOf.throw])
     | funcType params results _ =>
       cases v
       case funcVal fid captured =>
@@ -2197,11 +2230,12 @@ theorem normalizeValueForTyAt_isNormal (types : TypeEnv) :
 /-- The wrapper: `normalizeValueForTy` is self-normal at `ctx.types`. -/
 theorem normalizeValueForTy_isNormal (ctx : ProgramCtx) {ty : Ty} {v w : GoValue}
     (h : normalizeValueForTy ctx ty v = .ok w) : isNormalForTy ctx.types ty w = true := by
-  unfold normalizeValueForTy at h
+  obtain ⟨h, hb⟩ := normalizeValueForTy_ok.mp h
   unfold isNormalForTy
-  exact normalizeValueForTyTy_isNormal (f := normalizeValueForTyAt ctx.types ctx.types.size)
+  rw [Bool.and_eq_true]
+  exact ⟨normalizeValueForTyTy_isNormal (f := normalizeValueForTyAt ctx.types ctx.types.size)
     (g := isNormalForTyAt ctx.types ctx.types.size)
-    (fun _ _ _ hh => normalizeValueForTyAt_isNormal _ _ hh) h
+    (fun _ _ _ hh => normalizeValueForTyAt_isNormal _ _ hh) h, hb⟩
 
 
 
@@ -2623,7 +2657,8 @@ theorem writeAt_locSup :
   induction path with
   | nil =>
     intro b ty root v root' h
-    simp only [writeAt] at h
+    simp only [writeAt, bind_eq_ok, boxesGuard_ok] at h
+    obtain ⟨w, h, rfl, -⟩ := h
     exact Nat.le_trans
       (normalizeValueForTyTy_locSup (fun _ _ _ hh => normalizeValueForTyAt_locSup _ _ hh) h)
       (Nat.le_max_right _ _)
@@ -3029,11 +3064,10 @@ theorem writeAt_isNormal_array {rest : List PathStep} {v : GoValue} :
       rcases List.mem_or_eq_of_mem_set hx with hx | rfl
       · exact hlist x hx
       · exact ih (hlist _ (by rw [← Array.getElem_toList hklt]; exact List.getElem_mem _)) hold'
-    -- The identity-normalized types (audit fix round F3): the descent returns
-    -- the type itself and every value is normal there — the catch-all arm.
-    | interface _ => simp [isNormalForTyTy]
-    -- The five shape-checked types (G21): no `.array`/`.struct` value is normal there.
-    | bool | string | slice _ | map _ _ | pointer _ => simp [isNormalForTyTy] at hn
+    -- The shape-checked types (G21; `.interface` since G23): no `.array`/`.struct`
+    -- value is normal there.
+    | interface _ | bool | string | slice _ | map _ _ | pointer _ =>
+      simp [isNormalForTyTy] at hn
     | _ =>
       simp [Ty.stepDown, typeIndexExhausted, unsupported, throw, throwThe,
         MonadExceptOf.throw, stuck] at hstep
@@ -3067,9 +3101,9 @@ theorem writeAt_isNormal_array {rest : List PathStep} {v : GoValue} :
           exact ihb (ty := target) hklt hn hstep hold' ih
         | opaqueDecl _ => simp [unsupported, throw, throwThe, MonadExceptOf.throw] at hstep
         | interfaceDef _ => simp [unsupported, throw, throwThe, MonadExceptOf.throw] at hstep
-    | interface _ => simp [isNormalForTyTy]
     -- The five shape-checked types (G21): no `.array`/`.struct` value is normal there.
-    | bool | string | slice _ | map _ _ | pointer _ => simp [isNormalForTyTy] at hn
+    | interface _ | bool | string | slice _ | map _ _ | pointer _ =>
+      simp [isNormalForTyTy] at hn
     | _ =>
       simp [Ty.stepDown, stuck, throw, throwThe, MonadExceptOf.throw] at hstep
 /-- The struct component, at the index layer where the struct arm lives. -/
@@ -3092,9 +3126,9 @@ theorem writeAt_isNormal_struct {rest : List PathStep} {v : GoValue} :
   | zero =>
     intro ty actual fields tid f fty b' k old' hn hstep hklt hold' hname hbefore ih
     cases ty with
-    | interface _ => simp [isNormalForTyTy]
     -- The five shape-checked types (G21): no `.array`/`.struct` value is normal there.
-    | bool | string | slice _ | map _ _ | pointer _ => simp [isNormalForTyTy] at hn
+    | interface _ | bool | string | slice _ | map _ _ | pointer _ =>
+      simp [isNormalForTyTy] at hn
     | _ =>
       simp [Ty.stepDown, typeIndexExhausted, unsupported, throw, throwThe,
         MonadExceptOf.throw, stuck] at hstep
@@ -3145,9 +3179,9 @@ theorem writeAt_isNormal_struct {rest : List PathStep} {v : GoValue} :
           exact ihb (ty := target) hn hstep hklt hold' hname hbefore ih
         | opaqueDecl _ => simp [unsupported, throw, throwThe, MonadExceptOf.throw] at hstep
         | interfaceDef _ => simp [unsupported, throw, throwThe, MonadExceptOf.throw] at hstep
-    | interface _ => simp [isNormalForTyTy]
     -- The five shape-checked types (G21): no `.array`/`.struct` value is normal there.
-    | bool | string | slice _ | map _ _ | pointer _ => simp [isNormalForTyTy] at hn
+    | interface _ | bool | string | slice _ | map _ _ | pointer _ =>
+      simp [isNormalForTyTy] at hn
     | _ =>
       simp [Ty.stepDown, stuck, throw, throwThe, MonadExceptOf.throw] at hstep
 
@@ -3163,7 +3197,8 @@ theorem writeAt_isNormal :
   induction path with
   | nil =>
     intro b ty root v root' _ h
-    simp only [writeAt] at h
+    simp only [writeAt, bind_eq_ok, boxesGuard_ok] at h
+    obtain ⟨w, h, rfl, -⟩ := h
     exact normalizeValueForTyTy_isNormal (f := normalizeValueForTyAt ctx.types b)
       (g := isNormalForTyAt ctx.types b) (fun _ _ _ hh => normalizeValueForTyAt_isNormal _ _ hh) h
   | cons step rest ih =>
@@ -3211,6 +3246,110 @@ theorem writeAt_isNormal :
       | _ =>
         simp only [writeAt] at h
         split at h <;> simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+/-! ### The boxes of a written root (G23) -/
+
+theorem boxesNormalList_iff {types : TypeEnv} :
+    ∀ {l : List GoValue},
+      boxesNormalList types l = true ↔ ∀ v ∈ l, GoValue.boxesNormal types v = true := by
+  intro l
+  induction l with
+  | nil => simp [boxesNormalList]
+  | cons x xs ih => simp [boxesNormalList, ih]
+
+theorem boxesNormalFields_iff {types : TypeEnv} :
+    ∀ {l : List (String × GoValue)},
+      boxesNormalFields types l = true ↔ ∀ p ∈ l, GoValue.boxesNormal types p.2 = true := by
+  intro l
+  induction l with
+  | nil => simp [boxesNormalFields]
+  | cons x xs ih =>
+    obtain ⟨n, v⟩ := x
+    simp [boxesNormalFields, ih]
+
+/-- An array's boxes are its elements' boxes. -/
+theorem GoValue.boxesNormal_array {types : TypeEnv} {values : Array GoValue} :
+    GoValue.boxesNormal types (.array values) = true ↔
+      ∀ v ∈ values.toList, GoValue.boxesNormal types v = true := by
+  simp only [GoValue.boxesNormal]; exact boxesNormalList_iff
+
+/-- A struct's boxes are its fields' boxes. -/
+theorem GoValue.boxesNormal_struct {types : TypeEnv} {tid : TypeId}
+    {fields : Array (String × GoValue)} :
+    GoValue.boxesNormal types (.struct tid fields) = true ↔
+      ∀ p ∈ fields.toList, GoValue.boxesNormal types p.2 = true := by
+  simp only [GoValue.boxesNormal]; exact boxesNormalFields_iff
+
+/-- THE CONGRUENCE for the boxes (G23): a root whose boxes are all normal,
+written along `path` with a leaf `writeAt` guards (`boxesGuard`), keeps them
+normal. With `writeAt_isNormal` this is `isNormalForTy` preserved by a path
+write (`HeapNormal.of_storeLoc`). -/
+theorem writeAt_boxesNormal :
+    ∀ {path : List PathStep} {b : Nat} {ty : Ty} {root v root' : GoValue},
+      GoValue.boxesNormal ctx.types root = true →
+      writeAt ctx b ty root path v = .ok root' →
+      GoValue.boxesNormal ctx.types root' = true := by
+  intro path
+  induction path with
+  | nil =>
+    intro b ty root v root' _ h
+    simp only [writeAt, bind_eq_ok, boxesGuard_ok] at h
+    obtain ⟨w, -, rfl, hb⟩ := h
+    exact hb
+  | cons step rest ih =>
+    intro b ty root v root' hn h
+    cases step with
+    | field tid f =>
+      cases root with
+      | struct actual fields =>
+        simp only [writeAt] at h
+        by_cases hc : (actual != tid && !structTagCompatible ctx actual tid) = true
+        · simp [hc, stuck, throw, throwThe, MonadExceptOf.throw, Bind.bind, Except.bind] at h
+        · have hc' : (actual != tid && !structTagCompatible ctx actual tid) = false := by
+            simpa using hc
+          simp only [hc', Bool.false_eq_true, ↓reduceIte] at h
+          split at h
+          · rename_i k hidx
+            have hklt := fieldIdx?_lt hidx
+            try simp only [bind_eq_ok] at h
+            obtain ⟨⟨fty, b'⟩, hstep, h⟩ := h
+            simp only [pure_eq_ok, Except.ok.injEq] at h
+            obtain ⟨fields', hmod, rfl⟩ := h
+            obtain ⟨q, hq, rfl⟩ := (Array.modifyM_ok_iff fields k hklt _ fields').mp hmod
+            simp only [bind_eq_ok, Except.ok.injEq] at hq
+            obtain ⟨old', hold', rfl⟩ := hq
+            rw [GoValue.boxesNormal_struct] at hn ⊢
+            have hold : GoValue.boxesNormal ctx.types fields[k].2 = true :=
+              hn _ (by rw [← Array.getElem_toList hklt]; exact List.getElem_mem _)
+            intro p hp
+            rw [Array.toList_set] at hp
+            rcases List.mem_or_eq_of_mem_set hp with hp | rfl
+            · exact hn p hp
+            · exact ih hold hold'
+          · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+      | _ =>
+        simp only [writeAt] at h
+        split at h <;> simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+    | index i =>
+      cases root with
+      | array values =>
+        simp only [writeAt, bind_eq_ok] at h
+        obtain ⟨k, hk, ⟨ety, b'⟩, hstep, values', hmod, h⟩ := h
+        simp only [pure_eq_ok, Except.ok.injEq] at h
+        subst h
+        obtain ⟨_, rfl, hklt⟩ := arrayIndexNatFormed_spec hk
+        obtain ⟨old', hold', rfl⟩ := (Array.modifyM_ok_iff values i.toNat hklt _ values').mp hmod
+        rw [GoValue.boxesNormal_array] at hn ⊢
+        have hold : GoValue.boxesNormal ctx.types values[i.toNat] = true :=
+          hn _ (by rw [← Array.getElem_toList hklt]; exact List.getElem_mem _)
+        intro p hp
+        rw [Array.toList_set] at hp
+        rcases List.mem_or_eq_of_mem_set hp with hp | rfl
+        · exact hn p hp
+        · exact ih hold hold'
+      | _ =>
+        simp only [writeAt] at h
+        split at h <;> simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+
 /-- `storeLoc` preserves `HeapNormal`: the one root-cell update writes a
 root normal at its declared type. -/
 theorem HeapNormal.of_storeLoc {σ σ' : Store} {l : Loc} {v : GoValue}
@@ -3223,8 +3362,8 @@ theorem HeapNormal.of_storeLoc {σ σ' : Store} {l : Loc} {v : GoValue}
   | value ty root =>
     simp only [map_eq_ok] at hf
     obtain ⟨root', hw, rfl⟩ := hf
-    simp only [HeapCell.normal, isNormalForTy] at hcn ⊢
-    exact writeAt_isNormal hcn hw
+    simp only [HeapCell.normal, isNormalForTy, Bool.and_eq_true] at hcn ⊢
+    exact ⟨writeAt_isNormal hcn.1 hw, writeAt_boxesNormal hcn.2 hw⟩
   | mapPayload _ _ =>
     dsimp only at hf
     revert hf

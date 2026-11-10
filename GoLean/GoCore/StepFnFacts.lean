@@ -213,10 +213,17 @@ theorem normalizeValueForTyAt_noPanic (types : TypeEnv) :
     · exact NoPanic.unsupported _
     · exact NoPanic.unsupported _
 
+/-- The box guard (G23) refuses (`stuck`) but never panics. -/
+theorem boxesGuard_noPanic (v : GoValue) : NoPanic (boxesGuard ctx v) := by
+  unfold boxesGuard
+  exact NoPanic.ite (NoPanic.pure _) (NoPanic.stuck _)
+
 theorem normalizeValueForTy_noPanic (ty : Ty) (v : GoValue) :
     NoPanic (normalizeValueForTy ctx ty v) := by
   unfold normalizeValueForTy
-  exact normalizeValueForTyTy_noPanic (fun i v => normalizeValueForTyAt_noPanic _ _ i v) ty v
+  exact NoPanic.bind
+    (normalizeValueForTyTy_noPanic (fun i v => normalizeValueForTyAt_noPanic _ _ i v) ty v)
+    fun _ => boxesGuard_noPanic _
 
 /-! The materialization-footprint count (`tyLeafCount`, Ops.lean) never panics: a
 refusal (`unsupported`) or a number. The three layers mirror the normalizer's. -/
@@ -538,7 +545,9 @@ theorem writeAt_noPanic :
   | nil =>
     intro b ty root v
     simp only [writeAt]
-    exact normalizeValueForTyTy_noPanic (fun _ _ => normalizeValueForTyAt_noPanic _ _ _ _) _ _
+    exact NoPanic.bind
+      (normalizeValueForTyTy_noPanic (fun _ _ => normalizeValueForTyAt_noPanic _ _ _ _) _ _)
+      fun _ => boxesGuard_noPanic _
   | cons step rest ih =>
     intro b ty root v
     cases step with

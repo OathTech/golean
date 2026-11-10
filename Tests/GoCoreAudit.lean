@@ -537,6 +537,12 @@ def exports : List Name := [
     ``GoLean.GoCore.ContractTests.stamp_at_counter_refused,
     ``GoLean.GoCore.ContractTests.distinct_stamps_admitted,
     ``GoLean.GoCore.ContractTests.slice_cell_path_write_refuses,
+    -- G23 (2026-11-10): the interface arm of the normal form, closed — refused and admitted.
+    ``GoLean.GoCore.ContractTests.iface_cell_not_normal,
+    ``GoLean.GoCore.ContractTests.iface_raw_value_refused,
+    ``GoLean.GoCore.ContractTests.iface_boxes_admitted,
+    ``GoLean.GoCore.ContractTests.iface_box_payload_refused,
+    ``GoLean.GoCore.ContractTests.iface_cell_path_write_refuses,
     ``GoLean.GoCore.ContractTests.print_before_panic,
     ``GoLean.GoCore.ContractTests.Interpreter.terminal_at_zero_fuel,
     ``GoLean.GoCore.ContractTests.Interpreter.actual_scope_restoration,

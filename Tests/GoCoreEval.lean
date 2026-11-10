@@ -3550,6 +3550,168 @@ private def makeFootprintRuntimeTests : IO Bool := do
   passed := passed && (← nilSliceBaseFacts)
   pure passed
 
+/-- raft-proofs' G23 (1) (2026-11-10, relayed by the [USER] the same day): the `.interface` arm
+of the normal form is CLOSED, in lockstep with the normalizer. An interface slot holds the nil
+interface or a box; every other constructor is not normal and is refused by name. A box's payload
+is normal at the box's DYNAMIC type, over the whole table at full bound, and so are the boxes
+inside it (`GoValue.boxesNormal`): per dynamic type, a normal payload passes unchanged and a
+non-normal one is refused by name — never repaired. The old C1 F3 stores (an interface cell
+holding an array or a struct) are out of `HeapNormal`; `Store.alloc`, the whole-cell store and
+the path write refuse a bad box at the write. -/
+private def g23IfaceNormalTests : IO Bool := do
+  let mut passed := true
+  -- A table: 0 = struct A {n int8; x any}, 1 = the runtime-error slot's stand-in (opaque),
+  -- 2 = type MyInt int16, 3 = interface definition, 4 = struct Node {next any}.
+  let anyT : GoCore.Ty := .interface ⟨"any"⟩
+  let types : GoCore.TypeEnv :=
+    #[(⟨"main.A"⟩, .struct #[{ name := "n", typ := .int .int8 }, { name := "x", typ := anyT }]),
+      (GoCore.runtimeErrorTypeId, .opaqueDecl "the runtime error sentinel"),
+      (⟨"main.MyInt"⟩, .defined (.int .int16)),
+      (⟨"main.I"⟩, .interfaceDef #[]),
+      (⟨"main.Node"⟩, .struct #[{ name := "next", typ := anyT }])]
+  let tctx : GoLean.GoCore.ProgramCtx := GoLean.GoCore.ProgramCtx.ofTables (types := types)
+  let norm (ty : GoCore.Ty) (v : GoValue) : Except Stop GoValue :=
+    GoCore.normalizeValueForTy tctx ty v
+  let isN (ty : GoCore.Ty) (v : GoValue) : Bool := GoCore.isNormalForTy types ty v
+  let unchanged (ty : GoCore.Ty) (v : GoValue) : Bool :=
+    isN ty v && (match norm ty v with | .ok w => w == v | _ => false)
+  let refusedAs (ty : GoCore.Ty) (v : GoValue) (needle : String) : Bool :=
+    !isN ty v && (match norm ty v with
+      | .error (.stuck msg) => (msg.splitOn needle).length > 1
+      | _ => false)
+  let rawNeedle := "expected interface value, got"
+  let boxNeedle := "a box whose value is not normal at its dynamic type"
+  let box (dyn : GoCore.Ty) (v : GoValue) : GoValue := .interface dyn v
+  let nilSlice : GoValue := .slice { base := none, offset := 0, len := 0, cap := 0 }
+  let nilMap : GoValue := .map { base := none }
+  let nilChan : GoValue := .chan { base := none }
+  let addr : GoValue := .addr (.base ⟨0⟩)
+  let str : GoValue := .string GoString.empty
+  let aVal (x : GoValue) : GoValue := .struct ⟨"main.A"⟩ #[("n", .int 3 .int8), ("x", x)]
+  -- The two admitted constructors.
+  passed := passed && (← expectTrue "G23 interface: the nil interface is normal and passes unchanged"
+    (unchanged anyT .nil && unchanged (.interface ⟨"error"⟩) .nil))
+  passed := passed && (← expectTrue "G23 interface: a box is normal and passes unchanged"
+    (unchanged anyT (box .bool (.bool true)) && unchanged (.interface ⟨"error"⟩) (box .string str)))
+  -- Every other constructor at an interface slot.
+  passed := passed && (← expectTrue "G23 interface: every raw constructor (bool, int, float, string, addr, unit, array, struct, slice, map, chan, func, sync) is NOT normal and the normalizer refuses `expected interface value`"
+    ([.bool true, .int 7 .int, .float 0 .float64, str, addr, .unit, .array #[.int 0 .int],
+      .struct ⟨"main.A"⟩ #[("n", .int 0 .int8), ("x", .nil)], nilSlice, nilMap, nilChan,
+      .funcVal ⟨"F"⟩ [], .syncData (GoCore.SyncKind.zero .mutex)].all fun v =>
+      refusedAs anyT v rawNeedle))
+  -- Per dynamic type: (dyn, a normal payload, a non-normal payload).
+  let pairs : List (String × GoCore.Ty × GoValue × GoValue) :=
+    [("bool", .bool, .bool true, .int 1 .int),
+     ("int8", .int .int8, .int 3 .int8, .int 300 .int8),
+     ("int8, kind", .int .int8, .int (-3) .int8, .int 3 .int),
+     ("float64", .float .float64, .float 0 .float64, .float 0 .float32),
+     ("string", .string, str, .bool true),
+     ("slice", .slice .int, nilSlice, .nil),
+     ("map", .map .int .int, nilMap, .nil),
+     ("chan", .chan .both .int, nilChan, .nil),
+     ("pointer", .pointer .int, addr, .int 0 .int),
+     ("pointer, nil", .pointer (.defined 0), .nil, str),
+     ("func", .funcType [] [] false, .funcVal ⟨"F"⟩ [], addr),
+     ("array", .array 2 .bool, .array #[.bool true, .bool false], .array #[.bool true]),
+     ("sync", .sync .mutex, .syncData (GoCore.SyncKind.zero .mutex), .nil),
+     ("defined struct", .defined 0, aVal .nil, .struct ⟨"main.B"⟩ #[("n", .int 3 .int8), ("x", .nil)]),
+     ("defined struct, field", .defined 0, aVal (box .bool (.bool true)), aVal (.int 1 .int)),
+     ("defined alias", .defined 2, .int 5 .int16, .int 70000 .int16),
+     ("runtime error sentinel", .defined GoCore.runtimeErrorTypeIdx, str, .int 0 .int)]
+  for (name, dyn, good, bad) in pairs do
+    passed := passed && (← expectTrue s!"G23 box at dynamic type {name}: a normal payload passes unchanged, a non-normal one is refused by name"
+      (unchanged anyT (box dyn good) && refusedAs anyT (box dyn bad) boxNeedle))
+  -- Dynamic types no box carries.
+  passed := passed && (← expectTrue "G23 box: an INTERFACE dynamic type is refused (Go never double-boxes), named or defined; so are an unsupported and an unknown one"
+    (refusedAs anyT (box anyT (box .bool (.bool true))) boxNeedle
+      && refusedAs anyT (box anyT .nil) boxNeedle
+      && refusedAs anyT (box (.defined 3) .nil) boxNeedle
+      && refusedAs anyT (box (.unsupported "x") (.bool true)) boxNeedle
+      && refusedAs anyT (box (.defined 99) (.bool true)) boxNeedle))
+  -- The descent: boxes inside a box's payload, at any depth.
+  passed := passed && (← expectTrue "G23 descent: a box inside a boxed array / a boxed struct field is checked at ITS dynamic type"
+    (unchanged anyT (box (.array 1 anyT) (.array #[box (.int .int8) (.int 3 .int8)]))
+      && refusedAs anyT (box (.array 1 anyT) (.array #[box (.int .int8) (.int 300 .int8)])) boxNeedle
+      && unchanged anyT (box (.defined 0) (aVal (box (.defined 0) (aVal .nil))))
+      && refusedAs anyT (box (.defined 0) (aVal (box (.defined 0) (aVal (box .bool str))))) boxNeedle))
+  -- A list linked through an interface field, deeper than the table is long: the type descent
+  -- restarts at full bound in every box.
+  let node (next : GoValue) : GoValue := .struct ⟨"main.Node"⟩ #[("next", next)]
+  let rec chain : Nat → GoValue → GoValue
+    | 0, tail => tail
+    | n + 1, tail => box (.defined 4) (node (chain n tail))
+  passed := passed && (← expectTrue "G23 descent: a 40-deep list through an interface field (the table has 5 entries) is normal; the same list ending in a bad box is refused"
+    (unchanged (.defined 4) (node (chain 40 .nil))
+      && refusedAs (.defined 4) (node (chain 40 (box .bool (.int 1 .int)))) boxNeedle))
+  -- The boxes of a NON-interface slot's value: a struct field, an array element.
+  passed := passed && (← expectTrue "G23: a struct cell with an interface field and an array of interfaces check their boxes too"
+    (unchanged (.defined 0) (aVal (box .string str))
+      && refusedAs (.defined 0) (aVal (box .string (.bool true))) boxNeedle
+      && unchanged (.array 2 anyT) (.array #[.nil, box .bool (.bool true)])
+      && refusedAs (.array 2 anyT) (.array #[.nil, box .bool .nil]) boxNeedle
+      && refusedAs (.array 2 anyT) (.array #[.nil, .bool true]) rawNeedle))
+  -- The machine's own payloads.
+  passed := passed && (← expectTrue "G23: the machine's panic payloads (runtimeErrorValue, stringPanicValue) are normal at an interface slot, over the reserved table too"
+    (unchanged anyT (GoCore.Machine.runtimeErrorValue "boom")
+      && unchanged anyT (GoCore.Machine.stringPanicValue "boom")
+      && GoCore.isNormalForTy GoCore.TypeEnv.reserved anyT (GoCore.Machine.runtimeErrorValue "boom")
+      && GoCore.isNormalForTy #[] anyT (GoCore.Machine.runtimeErrorValue "boom")))
+  -- The heap invariant.
+  let wf (s : GoCore.Store) : Bool := decide (GoCore.Machine.StateWf tctx s)
+  let normal (s : GoCore.Store) : Bool := decide (GoCore.HeapNormal tctx s)
+  let cell (ty : GoCore.Ty) (v : GoValue) : GoCore.Store := { heap := #[.value ty v] }
+  passed := passed && (← expectTrue "G23 heap: an interface cell holding an int, an array or a struct (the old C1 F3 stores) is NOT HeapNormal, so not StateWf"
+    (!normal (cell anyT (.int 7 .int)) && !wf (cell anyT (.int 7 .int))
+      && !normal (cell anyT (.array #[.int 0 .int, .int 1 .int]))
+      && !normal (cell anyT (.struct ⟨"main.A"⟩ #[("f", .int 0 .int)]))))
+  passed := passed && (← expectTrue "G23 heap: an interface cell holding a bad box, at the top or nested, is NOT StateWf"
+    (!wf (cell anyT (box .bool (.int 7 .int)))
+      && !wf (cell (.defined 0) (aVal (box .bool (.int 7 .int))))
+      && !wf (cell anyT (box (.defined 0) (aVal (box .string .nil))))))
+  let goodStore : GoCore.Store :=
+    { heap := #[.value anyT .nil, .value anyT (box .bool (.bool true)),
+                .value (.defined 0) (aVal (box (.defined 2) (.int 5 .int16))),
+                .value (.interface ⟨"error"⟩) (GoCore.Machine.runtimeErrorValue "boom"),
+                .value (.pointer anyT) (.addr (.base ⟨0⟩))] }
+  passed := passed && (← expectTrue "G23 heap: nil interfaces, boxes with normal payloads (nested, the runtime-error payload) are HeapNormal and StateWf"
+    (normal goodStore && wf goodStore))
+  -- The writes refuse at the write.
+  passed := passed && (← expectTrue "G23: Store.alloc at an interface type refuses a raw value and a bad box by name, and births a good box"
+    ((match GoCore.Store.alloc tctx ({} : GoCore.Store) (.int 7 .int) anyT with
+      | .error (.stuck msg) => (msg.splitOn rawNeedle).length > 1
+      | _ => false)
+      && (match GoCore.Store.alloc tctx ({} : GoCore.Store) (box .bool (.int 7 .int)) anyT with
+      | .error (.stuck msg) => (msg.splitOn boxNeedle).length > 1
+      | _ => false)
+      && (match GoCore.Store.alloc tctx ({} : GoCore.Store) (box .bool (.bool true)) anyT with
+      | .ok (_, s) => wf s
+      | _ => false)))
+  let fieldX : Loc := .field (.base ⟨2⟩) ⟨"main.A"⟩ "x"
+  passed := passed && (← expectTrue "G23: a whole-cell store and a path write (a struct's interface field) refuse a raw value and a bad box by name; a good box lands and the store stays StateWf"
+    ((match GoCore.storeLoc tctx goodStore (.base ⟨0⟩) (.bool true) with
+      | .error (.stuck msg) => (msg.splitOn rawNeedle).length > 1
+      | _ => false)
+      && (match GoCore.storeLoc tctx goodStore (.base ⟨0⟩) (box .string (.int 1 .int)) with
+      | .error (.stuck msg) => (msg.splitOn boxNeedle).length > 1
+      | _ => false)
+      && (match GoCore.storeLoc tctx goodStore fieldX (.int 1 .int) with
+      | .error (.stuck msg) => (msg.splitOn rawNeedle).length > 1
+      | _ => false)
+      && (match GoCore.storeLoc tctx goodStore fieldX (box (.slice .int) .nil) with
+      | .error (.stuck msg) => (msg.splitOn boxNeedle).length > 1
+      | _ => false)
+      && (match GoCore.storeLoc tctx goodStore fieldX (box (.slice .int) nilSlice) with
+      | .ok s => wf s && (match GoCore.loadLoc tctx s fieldX with
+          | .ok v => v == box (.slice .int) nilSlice
+          | _ => false)
+      | _ => false)))
+  passed := passed && (← expectTrue "G23: a path write INTO an interface-declared cell holding an array (impossible under HeapNormal) refuses by name at the leaf"
+    (match GoCore.storeLoc tctx (cell anyT (.array #[.int 0 .int, .int 1 .int]))
+        (.index (.base ⟨0⟩) 0) (.int 5 .int) with
+     | .error (.stuck msg) => (msg.splitOn rawNeedle).length > 1
+     | _ => false))
+  pure passed
+
 /-- raft-proofs' G21 (1) (2026-10-27; the [USER]'s relay of 2026-10-26): the five former
 catch-all arms of the normal form (`isNormalForTyTy` at `.bool`, `.string`, `.slice`, `.map`,
 `.pointer`) are SHAPE-CHECKED, in lockstep with the normalizer. Per type: the admitted
@@ -3641,6 +3803,8 @@ private def g21NormalFormTests : IO Bool := do
         (.index (.base ⟨0⟩) 0) (.int 5 .int) with
      | .error (.stuck msg) => (msg.splitOn "expected slice value, got").length > 1
      | _ => false))
+  -- G23 (2026-11-10): the interface arm, folded in here so `main`'s do-block does not grow.
+  passed := passed && (← g23IfaceNormalTests)
   pure passed
 
 /-- raft-proofs' G22 (2026-10-27; the [USER]'s relay of 2026-10-26): a map payload's entry
