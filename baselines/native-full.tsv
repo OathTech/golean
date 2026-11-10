@@ -1,5 +1,18 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 7785 (7419 PASS / 366 FAIL)
+# cases: 7798 (7424 PASS / 374 FAIL)
+# re-pinned: 2026-11-09 [AGENT], lane records/release-1109 (base 00afbc7c, main's tip) — BUG-432 ENTERED AND ROWED: the divergence ledger's
+#   L-016 shape (gc stores an EARLIER multi-assign target before a LATER right-hand operand's panic when that operand reads no memory, visible
+#   after `recover`; ruled gc's deviation 2026-09-02, relayed), found by the independent audit of the release record inside the proposed
+#   release profile with no entry and no row. 13 rows ADDED under assign-order/early-store-under-recover/ (the S6 sweep's twelve re-probe
+#   cells plus a two-statement control), NOTHING ELSE MOVED: 7785 → 7798 from the full run of CAPPED_MEM_MAX=32G capped scripts/ci --diff at
+#   3248a3f8 under the box lock (1097 s; the run's only drift the 13 NEW ids; negative 645/645): 8 FAIL/differential red BY DESIGN on
+#   BUG-432's Cases line (`Expect: FAIL`; gc 29, the machine 58 — the spec's two-phase answer; cause `-`, the stage names the verdict) and
+#   5 PASS; PASS 7419 + 5 = 7424, FAIL 366 + 8 = 374; no existing row moved, no cause changed, no row removed, no PASS -> non-PASS flip.
+#   The rows (result/stage):
+#     assign-order/early-store-under-recover/{local-divisor,negative-shift,slice-element-target,deref-target,global-target,
+#       map-element-target,field-through-pointer,conversion-operand}                                 FAIL/differential -
+#     assign-order/early-store-under-recover/{failing-assertion,global-target-global-divisor,local-target-global-divisor,
+#       global-read-in-operand,two-statements-control}                                                PASS/- -
 # re-pinned: 2026-11-08 [AGENT], lane frontend/fix-print-builtin-1108 (base e169ec49, the train-33 stage) — BUG-430 FIXED: the one-operand
 #   multi-value call `println(two())` is SPREAD into the call's results as gc's typecheck spreads it (RewriteMultiValueCall; emit.go
 #   emitPrintStmt → splatMultiCall, each result judged by the operand-kind rule), where the frontend had refused it with the phantom «prints
@@ -13883,3 +13896,16 @@ PASS	sync/sweep-s15-atomics/lb-litmus	membership	-
 PASS	sync/sweep-s15-atomics/swap-order	membership	-
 PASS	sync/sweep-s15-atomics/cas-order	membership	-
 PASS	sync/sweep-s15-atomics/add-join	confluent	-
+FAIL	assign-order/early-store-under-recover/local-divisor	differential	-
+PASS	assign-order/early-store-under-recover/failing-assertion	-	-
+FAIL	assign-order/early-store-under-recover/negative-shift	differential	-
+FAIL	assign-order/early-store-under-recover/slice-element-target	differential	-
+FAIL	assign-order/early-store-under-recover/deref-target	differential	-
+FAIL	assign-order/early-store-under-recover/global-target	differential	-
+FAIL	assign-order/early-store-under-recover/map-element-target	differential	-
+FAIL	assign-order/early-store-under-recover/field-through-pointer	differential	-
+FAIL	assign-order/early-store-under-recover/conversion-operand	differential	-
+PASS	assign-order/early-store-under-recover/global-target-global-divisor	-	-
+PASS	assign-order/early-store-under-recover/local-target-global-divisor	-	-
+PASS	assign-order/early-store-under-recover/global-read-in-operand	-	-
+PASS	assign-order/early-store-under-recover/two-statements-control	-	-
