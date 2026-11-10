@@ -63,7 +63,8 @@ reading everything else.
   the first release's record (prepared 2026-11-09, `release.md` §3 step 1; the tag is the owner's):
   the window changelog frozen at the tag commit, the cumulative summary since the offer, the three
   release predicates with their counts, the proposed supported profile and its envelope, the
-  supported-scope statement, the stated limits and the rulings carried as pending.
+  supported-scope statement, the stated limits and the rulings carried as pending. `9f4554a6-WINDOW.md`
+  holds the rows that land after that record's freeze (opened 2026-11-10).
 - `2026-08-31_qrow-rulings.md`: the decision log of [USER] rulings (the Q-rows and later
   rulings, appended).
 - `operational-lessons.md`: build, memory and tool incidents, with their measured remedies.
