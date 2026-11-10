@@ -75,17 +75,14 @@ value no typed run stores is not well-formed. -/
 theorem ill_typed_cell_refused :
     ¬ StateWf (ProgramCtx.ofTables (types := #[])) illTyped := by decide
 
-/-! A path write THROUGH an identity-normalized root (C1 audit fix round F3,
-2026-09-18). `isNormalForTyTy (.interface _) _ = true`, so an `.interface`-declared
-cell holding an ARRAY or a STRUCT is `HeapNormal`; main `68b261e6`'s leaf-first
-`storeLoc` (load base → set → store root → normalize at `.interface` = identity)
-ACCEPTED a path write into it, and the C1 S1 root-first write REFUSED it
-(`Ty.stepDown` had no arm for the identity types) — an undisclosed refusal-class
-change on a state the invariant admits, unreachable from Go as far as the audit
-could construct (interface contents are not addressable). Pinned to main's
-behaviour: the descent returns the identity type itself and the leaf is
-normalized there (no masking — exactly what the whole-root identity did). The
-`#eval`s ran first (`docs/evidence/2026-09-18_c1-memory-module/probe-IfaceCell.log`). -/
+/-! An INTERFACE-declared cell holds the nil interface or a box (raft-proofs' G23, 2026-11-10).
+History of this pin: until G23 `isNormalForTyTy (.interface _) _ = true`, so an
+`.interface`-declared cell holding an ARRAY or a STRUCT was `HeapNormal` and a path write into
+it was accepted (C1 audit fix round F3, 2026-09-18: `Ty.stepDown`'s identity arm, pinned as
+`iface_cell_path_write_normal` / `_array` / `_struct` / `_preserves_normal`). The arm is closed:
+those two stores are not `HeapNormal`, and on them the leaf normalization at the descended type
+(`.interface`, the identity arm kept) refuses by name (`stuck`, «expected interface value») —
+the same inversion G21 made at `.slice`. -/
 def ifaceArrayStore : Store :=
   { heap := #[.value (.interface ⟨"any"⟩) (.array #[.int 0 .int, .int 1 .int])] }
 def ifaceStructStore : Store :=
@@ -95,16 +92,49 @@ def sliceArrayStore : Store :=
 def leaf0 : Loc := .index (.base ⟨0⟩) 0
 def leafF : Loc := .field (.base ⟨0⟩) ⟨"main.A"⟩ "f"
 
-theorem iface_cell_path_write_normal :
-    HeapNormal (ProgramCtx.ofTables (types := #[])) ifaceArrayStore ∧
-    HeapNormal (ProgramCtx.ofTables (types := #[])) ifaceStructStore := by decide
+theorem iface_cell_not_normal :
+    ¬ HeapNormal (ProgramCtx.ofTables (types := #[])) ifaceArrayStore ∧
+    ¬ HeapNormal (ProgramCtx.ofTables (types := #[])) ifaceStructStore := by decide
+
+/-! G23 (2026-11-10): what an interface cell may hold, kernel-decided on small stores. A raw
+value is refused; the nil interface and a box whose payload is normal at the box's dynamic type
+are admitted — the payload's own boxes included, at any depth (`GoValue.boxesNormal`); a box
+whose payload is not normal at its dynamic type is refused, at the top or nested; so is a box
+of interface dynamic type (Go never double-boxes); the machine's runtime-error payload (a
+`.string` under the reserved index) is admitted. -/
+def ifaceRawStore : Store := { heap := #[.value (.interface ⟨"any"⟩) (.int 7 .int)] }
+def ifaceBoxStore : Store :=
+  { heap := #[.value (.interface ⟨"any"⟩) .nil,
+              .value (.interface ⟨"any"⟩) (.interface .bool (.bool true)),
+              .value (.interface ⟨"any"⟩)
+                (.interface (.array 1 (.interface ⟨"any"⟩))
+                  (.array #[.interface (.int .int) (.int 3 .int)])),
+              .value (.interface ⟨"error"⟩)
+                (.interface (.defined runtimeErrorTypeIdx) (.string GoString.empty))] }
+def ifaceBadPayloadStore : Store :=
+  { heap := #[.value (.interface ⟨"any"⟩) (.interface .bool (.int 7 .int))] }
+def ifaceNestedBadPayloadStore : Store :=
+  { heap := #[.value (.interface ⟨"any"⟩)
+      (.interface (.array 1 (.interface ⟨"any"⟩)) (.array #[.interface .bool (.int 7 .int)]))] }
+def ifaceDoubleBoxStore : Store :=
+  { heap := #[.value (.interface ⟨"any"⟩)
+      (.interface (.interface ⟨"any"⟩) (.interface .bool (.bool true)))] }
+
+theorem iface_raw_value_refused :
+    ¬ StateWf (ProgramCtx.ofTables (types := #[])) ifaceRawStore := by decide
+theorem iface_boxes_admitted :
+    StateWf (ProgramCtx.ofTables (types := #[])) ifaceBoxStore := by decide
+theorem iface_box_payload_refused :
+    ¬ StateWf (ProgramCtx.ofTables (types := #[])) ifaceBadPayloadStore ∧
+    ¬ StateWf (ProgramCtx.ofTables (types := #[])) ifaceNestedBadPayloadStore ∧
+    ¬ StateWf (ProgramCtx.ofTables (types := #[])) ifaceDoubleBoxStore := by decide
 
 /-- G21 (2026-10-27): a `[]int`-declared cell holding an ARRAY is no longer `HeapNormal`
 (`isNormalForTyTy` at `.slice` admits only a `.slice` value), so a path write INTO such a
 cell — the shape `slice_cell_path_write_array` pinned as accepted — is impossible under the
 invariant, and on the non-normal store the leaf normalization at the descended type
 (`.slice .int`, `Ty.stepDown`'s identity arm) refuses by name (`stuck`, «expected slice
-value»). The interface pins above are unchanged: `.interface` keeps its identity arm. -/
+value»). (The interface pins above were unchanged by G21; G23 inverted them the same way.) -/
 theorem slice_cell_not_normal :
     ¬ HeapNormal (ProgramCtx.ofTables (types := #[])) sliceArrayStore := by decide
 
@@ -129,26 +159,18 @@ theorem stamp_at_counter_refused :
 theorem distinct_stamps_admitted :
     StateWf (ProgramCtx.ofTables (types := #[])) distinctStampStore := by decide
 
-theorem iface_cell_path_write_array :
-    (storeLoc (ProgramCtx.ofTables (types := #[])) ifaceArrayStore leaf0 (.int 5 .int)).map
-        (fun s => loadLoc (ProgramCtx.ofTables (types := #[])) s leaf0)
-      = .ok (.ok (.int 5 .int)) := rfl
-
-theorem iface_cell_path_write_struct :
-    (storeLoc (ProgramCtx.ofTables (types := #[])) ifaceStructStore leafF (.int 5 .int)).map
-        (fun s => loadLoc (ProgramCtx.ofTables (types := #[])) s leafF)
-      = .ok (.ok (.int 5 .int)) := rfl
+theorem iface_cell_path_write_refuses :
+    (match storeLoc (ProgramCtx.ofTables (types := #[])) ifaceArrayStore leaf0 (.int 5 .int) with
+      | .error (.stuck _) => true
+      | _ => false) = true ∧
+    (match storeLoc (ProgramCtx.ofTables (types := #[])) ifaceStructStore leafF (.int 5 .int) with
+      | .error (.stuck _) => true
+      | _ => false) = true := by decide
 
 theorem slice_cell_path_write_refuses :
     (match storeLoc (ProgramCtx.ofTables (types := #[])) sliceArrayStore leaf0 (.int 5 .int) with
       | .error (.stuck _) => true
       | _ => false) = true := by decide
-
-/-- The written store is still `HeapNormal` (the identity arm of the check). -/
-theorem iface_cell_path_write_preserves_normal :
-    (storeLoc (ProgramCtx.ofTables (types := #[])) ifaceArrayStore leaf0 (.int 5 .int)).map
-        (fun s => decide (HeapNormal (ProgramCtx.ofTables (types := #[])) s))
-      = .ok true := rfl
 
 /-- An actual choice site of the current machine, not a toy transition system. -/
 def forkPoint : Config := .panicking [panicEntry "audit"] (.probeK .stop)

@@ -241,8 +241,9 @@ theorem storeLoc_root {s : Store} {a : Addr} {ty : Ty} {old v v' : GoValue}
     exact (Array.getElem?_eq_some_iff.mp hl).2
   unfold storeLoc Store.updateCell
   simp only [Loc.rootPath, hi, ↓reduceDIte, hcell, writeAt]
-  have : normalizeValueForTyTy (normalizeValueForTyAt ctx.types ctx.types.size) ty v = .ok v' := hn
-  simp [this, Bind.bind, Except.bind, Functor.map, Except.map]
+  obtain ⟨hty, hb⟩ := normalizeValueForTy_ok.mp hn
+  have hg : boxesGuard ctx v' = .ok v' := boxesGuard_ok.mpr ⟨rfl, hb⟩
+  simp [hty, hg, Bind.bind, Except.bind, Functor.map, Except.map]
 
 /-- Reading back the cell just written. -/
 theorem Heap.lookup_set_self {h : Heap} {i : Nat} {c : HeapCell} {hi : i < h.size} :

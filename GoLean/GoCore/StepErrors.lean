@@ -323,9 +323,22 @@ theorem normalizeValueForTyAt_strict (types : TypeEnv) :
     unfold normalizeValueForTyAt
     errp
 
+-- Declared ahead of `normalizeValueForTy_strict` (G23): `errp`'s bind rule sees through
+-- `normalizeValueForTy` (a bind since the box guard), so the type layer must be a leaf here.
+theorem normalizeValueForTyTy_strict' {b : Nat} {ty : Ty} {v : GoValue} :
+    ErrP Stop.Strict (normalizeValueForTyTy (normalizeValueForTyAt ctx.types b) ty v) :=
+  normalizeValueForTyTy_strict (normalizeValueForTyAt_strict _ _) ty v
+macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact normalizeValueForTyTy_strict')
+
+/-- The box guard (G23) answers or refuses `stuck`. -/
+theorem boxesGuard_strict {v : GoValue} : ErrP Stop.Strict (boxesGuard ctx v) := by
+  unfold boxesGuard; errp
+macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact boxesGuard_strict)
+
 theorem normalizeValueForTy_strict {ty : Ty} {v : GoValue} :
     ErrP Stop.Strict (normalizeValueForTy ctx ty v) :=
-  normalizeValueForTyTy_strict (normalizeValueForTyAt_strict _ _) ty v
+  ErrP.bind (normalizeValueForTyTy_strict (normalizeValueForTyAt_strict _ _) ty v)
+    fun _ => boxesGuard_strict
 macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact normalizeValueForTy_strict)
 
 theorem defaultFieldsWith_strict {f : Ty → Except Stop GoValue}
@@ -445,11 +458,6 @@ theorem stepDown_strict (types : TypeEnv) (b : Nat) (ty : Ty) (st : PathStep) :
 theorem stepDown_strict' {types : TypeEnv} {b : Nat} {ty : Ty} {st : PathStep} :
     ErrP Stop.Strict (Ty.stepDown types b ty st) := stepDown_strict types b ty st
 macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact stepDown_strict')
-
-theorem normalizeValueForTyTy_strict' {b : Nat} {ty : Ty} {v : GoValue} :
-    ErrP Stop.Strict (normalizeValueForTyTy (normalizeValueForTyAt ctx.types b) ty v) :=
-  normalizeValueForTyTy_strict (normalizeValueForTyAt_strict _ _) ty v
-macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact normalizeValueForTyTy_strict')
 
 theorem ErrP.modifyM {ε α : Type} {Q : ε → Prop} {xs : Array α} {i : Nat} {f : α → Except ε α}
     (h : ∀ a, ErrP Q (f a)) : ErrP Q (xs.modifyM i f) := by
