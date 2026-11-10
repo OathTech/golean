@@ -65,7 +65,10 @@ push rule). Pushing the tag is a separate sign-off.
    three predicates with their counts (1 holds; 2 does not hold absent the D1 ruling and holds by stated exclusion
    under the proposed profile; 3 enumerated), the proposed profile for D1 and its envelope, the supported-scope
    statement citing the campaign closure, 54 stated limits re-derived from this page's §4, the offer's ten and the
-   backlog's debt table, and the rulings carried as pending. Steps 2–5 are open.
+   backlog's debt table, and the rulings carried as pending. Its independent audit the same day found the
+   E5/L-016 shape inside the proposed profile unrowed: BUG-432 entered and rowed red by design (13 strict rows under
+   `assign-order/early-store-under-recover/`), the baseline re-pinned from a full gate run (7798 rows), and the
+   audit's other findings dispositioned on the branch (the record's §0 and the backlog's row 61). Steps 2–5 are open.
 2. Run the audit ask on the branch (CLAUDE.md, merge protocol step 3); merge on sign-off.
 3. At the merged tip, on a clean tree: `capped scripts/ci --diff` (§1.3), then the claim-point kernel check in the
    form that exists today (every figure below measured 2026-10-22 on this box under the nono agent sandbox with

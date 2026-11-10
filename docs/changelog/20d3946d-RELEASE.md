@@ -1,68 +1,115 @@
 # Changelog `20d3946d` → the first release — the FROZEN record of `docs/changelog/20d3946d-WINDOW.md` (prepared 2026-11-09, `docs/release.md` §3 step 1)
 
-**Status: PREPARED, NOT TAGGED.** Written by the [AGENT] records lane `records/release-1109` on a branch off `main` at
-`00afbc7c` (the train-34 landing with the campaign closure), per `docs/release.md` §1.4–§1.6 and §3 step 1. No
-`release/*` tag exists; `lakefile.toml`'s `version` is `0.1.0`, unmoved. A release is the [USER]'s act (`docs/release.md`
-§2): steps 2–5 of §3 — the audit ask, the merge, `capped scripts/ci --diff` and the kernel checks at the merged tip, the
-record's §0 line and the tag — are open. Nothing under `GoLean/`, `tools/`, `scripts/`, `Corpus/` or `baselines/` changed
-for this record; no build, gate or lock was taken.
+**Status: PREPARED, NOT TAGGED.** Written by the [AGENT] records lane `records/release-1109` on a branch off
+`main` at `00afbc7c` (the train-34 landing with the campaign closure), per `docs/release.md` §1.4–§1.6 and §3
+step 1. No `release/*` tag exists; `lakefile.toml`'s `version` is `0.1.0`, unmoved. A release is the [USER]'s
+act (`docs/release.md` §2): steps 2–5 of §3 — the audit ask, the merge, `capped scripts/ci --diff` and the
+kernel checks at the merged tip, the record's §0 line and the tag — are open. Nothing under `GoLean/`,
+`tools/` or `scripts/` changed for this record. Its audit round (2026-11-09) added one corpus package
+(`Corpus/coverage/exec/assign-order/early-store-under-recover/`, thirteen rows, BUG-432) and re-pinned
+`baselines/native-full.tsv` from a full `scripts/ci --diff` run under the box lock (§0); no tag, no push.
 
-**The tag commit and the freeze.** The tag goes on the commit that merges this branch into `main` (§3 step 4: the record
-cannot name its own commit). §9 below is `docs/changelog/20d3946d-WINDOW.md` at `00afbc7c`, copied verbatim from its
-table header on. The freeze is RE-CHECKED at the tag commit: `diff <(sed -n '9,$p' docs/changelog/20d3946d-WINDOW.md)
-<(sed -n '/^| Train | Line |$/,$p' docs/changelog/20d3946d-RELEASE.md)` must be empty there; a row that lands between
-this branch and the tag is added to §9 by the records commit that carries the tag, never silently.
+**The tag commit and the freeze.** The tag goes on the commit that merges this branch into `main` (§3 step 4:
+the record cannot name its own commit). §9 below is `docs/changelog/20d3946d-WINDOW.md` at `00afbc7c`, copied
+verbatim from its table header on. The freeze is RE-CHECKED at the tag commit: `diff <(sed -n '9,$p'
+docs/changelog/20d3946d-WINDOW.md) <(sed -n '/^| Train | Line |$/,$p' docs/changelog/20d3946d-RELEASE.md)`
+must be empty there; a row that lands between this branch and the tag is added to §9 by the records commit
+that carries the tag, never silently.
 
-Every number here is derived from the tree at `00afbc7c` — §8 lists the command beside each — or from the recorded full
-run `artifacts/coverage/latest.tsv` at `73b634f0` (the commit the run's `latest.meta.tsv` names; `git_dirty false`; the
-two commits between it and `00afbc7c` are records-only: `git diff --stat 73b634f0 00afbc7c -- GoLean tools scripts
-Corpus baselines lakefile.toml lean-toolchain` is empty). Where two sources disagree, both are given. Numbers that exist
-only in a lane's ephemeral report are cited through the closure report and marked **[lane]**. Provenance: [USER] rulings
-are cited as relayed by the [AGENT] coordinator from the records that carry them; proposals are marked [AGENT].
+Every number here is derived from the tree at `00afbc7c` — §8 lists the command beside each — or from the
+recorded full run `artifacts/coverage/latest.tsv` at `3248a3f8` (the commit the run's `latest.meta.tsv` names;
+`git_dirty false`; the commits after it on this branch carry records and the baseline re-pin only: `git diff
+--stat 3248a3f8 HEAD -- GoLean tools scripts Corpus lakefile.toml lean-toolchain` is empty). The figures of
+the tree are at `00afbc7c` unless a line says otherwise; the corpus and entry figures include the audit
+round's thirteen rows and BUG-432. Where two sources disagree, both are given. Numbers that exist only in a
+lane's ephemeral report are cited through the closure report and marked **[lane]**. Provenance: [USER] rulings
+are cited as relayed by the [AGENT] coordinator from the records that carry them; proposals are marked
+[AGENT].
 
-## 0. The release record (`docs/release.md` §3 step 4 — filled at the tag; the placeholders say what is missing)
+## 0. The release record (filled at the tag, `docs/release.md` §3 step 4; placeholders say what is missing)
 
 - **Tag:** `release/<YYYY-MM-DD>` — NOT CREATED. The [USER] tags (§2).
-- **Commit:** the merge of `records/release-1109` into `main`; its parent is `00afbc7c`, and only records commits may sit
-  between the gated commit and the record's commit (§3 step 4).
-- **Toolchains at the tag:** `lean-toolchain` = `leanprover/lean4:v4.35.0`; `baselines/go-oracle-pin` = `go1.26.5`
-  (never floated; CLAUDE.md, the trusted surface #2). At the offer commit `20d3946d` the Lean pin was `v4.32.2`
-  (`git show 20d3946d:lean-toolchain`); the Go pin is unchanged.
-- **The gate at the tag (§1.3): NOT RUN by this lane.** The last RECORDED full run is at `73b634f0`
-  (`artifacts/coverage/latest.meta.tsv`): differential 7785 rows, 7419 PASS / 366 FAIL; negative 645, 643 PASS / 2 FAIL;
-  `go_drift_actual false`; the baselines at `00afbc7c` carry the same figures (`sed -n 2p baselines/native-full.tsv`:
-  `cases: 7785 (7419 PASS / 366 FAIL)`; `sed -n 3p baselines/negative-full.tsv`: `manifest_cases: 645  pass: 643
-  fail: 2`). The owner's `capped scripts/ci --diff` at the merged tip supplies this line's wall time, row counts and
-  exit code (§3 step 3); its logs are not committed.
-- **The kernel checks (§3 step 3 (a)–(c)): NOT RUN by this lane.** The form that exists on this box is §3's: the plain
-  `lake check` (sandboxed where `bwrap` starts — unverified here; else `--inadvisably-no-sandbox`, which the toolchain
-  labels not trustworthy, and the record must say which), the four bundled external kernels by hand on the export,
-  `lake comparator` over the 385 statements of `comparator.json`; `lake check --paranoid` is red today (nanoda's stack
-  overflow on this export, §3(b)).
-- **The three predicates:** §2 — (1) HOLDS; (2) DOES NOT HOLD absent the profile ruling (D1's pending half), and holds by stated exclusion under the proposed profile of §3; (3) ENUMERATED in §4 (an envelope, not a maximality claim).
+- **Commit:** the merge of `records/release-1109` into `main`; its parent is `00afbc7c`, and only records
+  commits may sit between the gated commit and the record's commit (§3 step 4).
+- **Toolchains at the tag:** `lean-toolchain` = `leanprover/lean4:v4.35.0`; `baselines/go-oracle-pin` =
+  `go1.26.5` (never floated; CLAUDE.md, the trusted surface #2). At the offer commit `20d3946d` the Lean pin
+  was `v4.32.2` (`git show 20d3946d:lean-toolchain`); the Go pin is unchanged.
+- **The gate at the tag (§1.3): the owner's run at the merged tip fills this line** (§3 step 3; its logs are
+  not committed). What this branch ran: `CAPPED_MEM_MAX=32G capped scripts/ci --diff` at `3248a3f8` under the
+  box lock, 2026-11-09, 1097 s wall, 32 jobs — RESULT: FAIL by the one expected drift, the thirteen rows of
+  BUG-432 born (`NEW id (not in baseline)`: 8 FAIL/differential, 5 PASS); every gate step ok (`lake build` of
+  the 14 targets by name, the kernel replay of 55 modules, the core totality audit, 504 eval tests, the
+  frontend and harness `go test`s, the unseq-wire, wire-boundary, method-identity, frontend-pin, declaration
+  and equation checks, the unseq scheduler); the negative diff 645/645, no regression; the three re-pin guards
+  ok; the speedbumps ok except `check-bugs` red for the same born rows (BUG-432's Cases rows not yet in the
+  baseline), `lake check` and `lake comparator` ok (`--inadvisably-no-sandbox` where `bwrap` cannot start),
+  `coverage-cause --unclassified` ok. The baseline was then re-pinned from that run (its header block names
+  the rows) and the fast tier run at the final tip — its lines are in the audit-round report, not here. The
+  recorded run: differential 7798 rows, 7424 PASS / 374 FAIL; negative 645, 643 / 2; `go_drift_actual false`;
+  `sed -n 2p baselines/native-full.tsv`: `cases: 7798 (7424 PASS / 374 FAIL)`; `sed -n 3p
+  baselines/negative-full.tsv`: `manifest_cases: 645  pass: 643  fail: 2`.
+- **The kernel checks (§3 step 3 (a)–(c)): NOT RUN by this lane.** The form that exists on this box is §3's:
+  the plain `lake check` (sandboxed where `bwrap` starts — unverified here; else `--inadvisably-no-sandbox`,
+  which the toolchain labels not trustworthy, and the record must say which), the four bundled external
+  kernels by hand on the export, `lake comparator` over the 385 statements of `comparator.json`; `lake check
+  --paranoid` is red today (nanoda's stack overflow on this export, §3(b)).
+- **The three predicates:** §2 — (1) HOLDS; (2) DOES NOT HOLD absent the profile ruling (D1's pending half),
+  and holds by stated exclusion under the proposed profile of §3; (3) ENUMERATED in §4 (an envelope, not a
+  maximality claim).
+
+**To reproduce this record's claims (self-contained).** On a clean clone at the tag commit, with the
+toolchains the README's «Getting started» names (elan with `lean-toolchain`'s version, Go 1.26.5 exactly,
+Python ≥ 3.11), the reference checkouts (`scripts/setup-deps`; goose and go are gate-required) and,
+optionally, the box tool `capped` (detected at run time; `CAPPED_MEM_MAX` sets its limit, default 32G):
+
+```sh
+# the merge gate (§1.3): every row fresh, judged against the tracked baselines at the tag commit
+CAPPED_MEM_MAX=32G capped scripts/ci --diff          # RESULT: PASS, the two baseline diffs, the kernel replay, the speedbumps
+# the claim-point kernel checks, in the form that exists (docs/release.md §3 step 3)
+CAPPED_MEM_MAX=64G capped lake check                  # sandboxed where bwrap starts; else lake check --inadvisably-no-sandbox, and say so
+LAKE_CHECK_EXPORT=1 capped lake check > export.ndjson # then the four bundled kernels by hand on the export (docs/release.md §3 (a))
+CAPPED_MEM_MAX=64G capped lake comparator             # «Your solution is okay!», the 385 statements of comparator.json
+# where this record's counts come from
+scripts/coverage-cause --unclassified artifacts/coverage/latest.tsv   # predicate 1, over the run the gate just recorded
+scripts/check-bugs.sh; scripts/check-bugs.sh --list                   # the entries' summary line; the untriaged ids
+sed -n 2p baselines/native-full.tsv; sed -n 3p baselines/negative-full.tsv   # the baselines' row counts
+```
+
+§8 lists every other derivation beside its number; §2 counts the predicates against the recorded run named in
+§0; §9 is the freeze, re-checked at the tag by the command in the preamble.
 
 ## 1. Cumulative summary — `20d3946d` (the 2026-10-03 offer) → `00afbc7c`
 
-The offer's own summary (`docs/changelog/61958f2e-WINDOW.md`, frozen at the offer) measured `61958f2e` → `20d3946d`;
-this one measures the offer → the tip the same way, against `git show 20d3946d:<path>`. 519 commits, a linear history
-(`git log --oneline 20d3946d..HEAD | wc -l` = `git log --first-parent …` = 519); trains r64–r75 (the pre-cull numbering)
-and 1–34 (the numbering restarted at the 2026-10-12 gate cull). Size of the move: `GoLean/GoCore/` 41 files,
-+12629/−19834 lines; `GoLean/` as a whole 49 files, +16618/−20134 (the relational retirement dominates the deletions);
-`GoLean/NativeToIR.lean` + `GoLean/CLI.lean` +1710/−238; `tools/nativefrontend/` 60 files, +69246/−792 (Go files 54 →
-81); `scripts/` 70 files, +6256/−2757.
+The offer's own summary (`docs/changelog/61958f2e-WINDOW.md`, frozen at the offer) measured `61958f2e` →
+`20d3946d`; this one measures the offer → the tip the same way, against `git show 20d3946d:<path>`. 519
+commits, a linear history (`git log --oneline 20d3946d..HEAD | wc -l` = `git log --first-parent …` = 519);
+trains r64–r75 (the pre-cull numbering) and 1–34 (the numbering restarted at the 2026-10-12 gate cull). Size
+of the move: `GoLean/GoCore/` 41 files, +12629/−19834 lines; `GoLean/` as a whole 49 files, +16618/−20134 (the
+relational retirement dominates the deletions); `GoLean/NativeToIR.lean` + `GoLean/CLI.lean` +1710/−238;
+`tools/nativefrontend/` 60 files, +69246/−792 (Go files 54 → 81); `scripts/` 70 files, +6256/−2757.
 
 ### 1.1 The rows
 
-`docs/changelog/20d3946d-WINDOW.md` holds 97 rows (§9), one per landing lane or train — more than one row for a
-train that landed several lanes (train 2: four; train 10: four; train 8: three), and four rows DUPLICATED — three by the train-33/34 restacks' keep-both merges (`sweep/s20-admission` twice — one says 33 exec subjects, the other 34, the baseline holds 31 after a fix lane retired 3; `core/fix-bug206-207-1027` twice — the longer carries the lane's part (3); `struct-conv-1026` twice — the longer carries the train-20 audit's narrowing) and one earlier near-duplicate pair present since `89ba27c5`: `records/defect-shapes-1027` (WINDOW lines 48 and 49; the longer carries the DC07, Status-date and untriaged-move amendments). The order is the file's: the two trains of 2026-11-05 inserted at the top, then `frontend/fix-binding-1027` (train 28) down to `r64`, then the six rows appended after `r64` (trains 29–34) — NOT the newest-first order `docs/release.md` §1.4 asks for. Kept as written — the freeze copies, it does not fold or reorder ([AGENT] 2026-11-09); whether to fold the four pairs and reorder newest-first in the WINDOW file before the tag, or to freeze as written, is one question for the owner (§7).
+`docs/changelog/20d3946d-WINDOW.md` holds 97 rows (§9), one per landing lane or train — more than one row for
+a train that landed several lanes (train 2: four; train 10: four; train 8: three), and four rows DUPLICATED —
+three by the train-33/34 restacks' keep-both merges (`sweep/s20-admission` twice — one says 33 exec subjects,
+the other 34, the baseline holds 31 after a fix lane retired 3; `core/fix-bug206-207-1027` twice — the longer
+carries the lane's part (3); `struct-conv-1026` twice — the longer carries the train-20 audit's narrowing) and
+one earlier near-duplicate pair present since `89ba27c5`: `records/defect-shapes-1027` (WINDOW lines 48 and
+49; the longer carries the DC07, Status-date and untriaged-move amendments). The order is the file's: the two
+trains of 2026-11-05 inserted at the top, then `frontend/fix-binding-1027` (train 28) down to `r64`, then the
+six rows appended after `r64` (trains 29–34) — NOT the newest-first order `docs/release.md` §1.4 asks for.
+Kept as written — the freeze copies, it does not fold or reorder ([AGENT] 2026-11-09); whether to fold the
+four pairs and reorder newest-first in the WINDOW file before the tag, or to freeze as written, is one
+question for the owner (§7).
 
 ### 1.2 The corpus and the baselines
 
 | | at `20d3946d` | at `00afbc7c` | moved |
 |---|---|---|---|
-| differential baseline (`baselines/native-full.tsv`) | 3860 = 3623 PASS / 237 FAIL | 7785 = 7419 PASS / 366 FAIL | +3925 rows born, 0 removed; of the 3860 surviving rows 15 FAIL→PASS (10 from `frontend-export`, 5 from `lean-observation`), **0 PASS→non-PASS**, 7 `membership`→strict and 1 strict→`membership` (lane moves, both PASS), 3 FAIL rows changed stage (`differential`→`frontend-export`: BUG-061's witness, now refused by name; `differential`→`lean-observation`: BUG-099's `observed` row, now refused at the readout; `lean-observation`→`frontend-export`: `arrays/materialization-budget/over-budget`, the decoder's type-table refusal now ahead of the run) |
+| differential baseline (`baselines/native-full.tsv`) | 3860 = 3623 PASS / 237 FAIL | 7798 = 7424 PASS / 374 FAIL (7785 = 7419 / 366 at `00afbc7c`; +13 by this record's audit round, BUG-432) | +3938 rows born (3925 by the trains, 13 by this record), 0 removed; of the 3860 surviving rows 15 FAIL→PASS (10 from `frontend-export`, 5 from `lean-observation`), **0 PASS→non-PASS**, 7 `membership`→strict and 1 strict→`membership` (lane moves, both PASS), 3 FAIL rows changed stage (`differential`→`frontend-export`: BUG-061's witness, now refused by name; `differential`→`lean-observation`: BUG-099's `observed` row, now refused at the readout; `lean-observation`→`frontend-export`: `arrays/materialization-budget/over-budget`, the decoder's type-table refusal now ahead of the run) |
 | negative baseline (`baselines/negative-full.tsv`) | 394 = 394 PASS / 0 FAIL | 645 = 643 / 2 | +251 born, 0 removed; the 2 FAIL are BUG-221's (`functions/stack-frame-too-large-{array,struct}-arg`, `frontend-accepts`) |
-| the recorded run (`artifacts/coverage/latest.tsv` @ `73b634f0`) | — | 7785: PASS 7419 (6727 strict, 446 `membership`, 166 `confluent`, 80 `racy`); FAIL 366 (242 `frontend-export`, 59 `lean-observation`, 54 `differential`, 10 `go-observation`, 1 `confluent`) | the baseline's stage for `channels/select-select/beside-loop` is `lean-observation\|differential`; the run's is `lean-observation` (58 + 1 = 59) |
+| the recorded run (`artifacts/coverage/latest.tsv` @ `3248a3f8`) | — | 7798: PASS 7424 (6732 strict, 446 `membership`, 166 `confluent`, 80 `racy`); FAIL 374 (242 `frontend-export`, 59 `lean-observation`, 62 `differential`, 10 `go-observation`, 1 `confluent`) | the baseline's stage for `channels/select-select/beside-loop` is `lean-observation\|differential`; the run's is `lean-observation` (58 + 1 = 59) |
 | `baselines/untriaged-count` | coverage 10 / latitude 4 / wrong-answer 0 | coverage 5 / latitude 2 / wrong-answer 0 | the R15 and E7 rows moved onto BUG-170/171's Cases lines (2026-10-27); the five nil-slice-base rows onto BUG-227's (fixed at train 25) |
 | `docs/BUGS.md` | 116 `## BUG-` headings (highest id 116) | 226 headings = 217 live (183 fixed / 34 open; 16 `Expect: FAIL`, six of them open) + 9 `[MOVED]` tombstones | 115 entries born across both indices: 102 live in `docs/BUGS.md` (ids 117–432, BUG-432 entered by this record's audit round), 8 born there and moved to `docs/APPARATUS-DEFECTS.md` with tombstones, 5 born in the apparatus record directly (BUG-296, 297, 298, 361, 431; it holds 14: 8 fixed / 6 open); 83 live entries carry a `Status: fixed` date on or after 2026-10-04 |
 | the raft twin wire pin (`baselines/pins/twin-chdriver.wire.json`) | `d5186f43…` | `7810ae6d…` | six re-pins with written reasons (`scripts/check-frontend-pins`): r65 route A S1 → `661022b9`; G19 `sort-slice` → `fc471d2b`; the hoist fixes (train 26) → `be06cf70`; the binding and unseq-seam fixes (each from `be06cf70` on its own tree, `39765cc5` / `ac401783`) combined at the train-28 stage → `bee8adb6`; the fmt-decoder fixes (train 31) → `7810ae6d`. The twin driver's observation is byte-identical through every re-pin (sha256 `76d2bc87…`, each reason block) |
@@ -84,201 +131,272 @@ train that landed several lanes (train 2: four; train 10: four; train 8: three),
 
 ### 1.4 What a consumer can observe since the offer
 
-**The proof-facing surface (raft-proofs, golean-logic).** The relational layer is GONE from the build (train 13, [USER]
-2026-10-20 relayed; tag `relational/last-main-2026-10-20`): the `Step`/`Steps` relation, `StepML`, the coherence
-theorems, `BridgeSet` (its last state RE-PIN 20, row 602) and 23 proof modules. KEPT with every name unchanged:
-`Prefix`/`Finish` and their laws, the `@[stepFn_eqns]` library (`Equations.lean`: 317 theorems and 239 `stepFn_eqns]` attribute sites today; 296 and 235 at the comparator's birth commit `841a20c6`, by the same two commands — §8; the comparator row's 232 counted simp-set members, a different measure), `StepFnFacts`, the relation-free single-goroutine pool bridge and
-projections restored verbatim (`PoolFacts`, `PoolProjection`). ADDED for the customer: G11 (`InitDriverFacts`: the init
-driver agrees with `execStmtLoop` up to `initPrintRefusal?`, a successful setup is a `Prefix`, `prefix_det`), G16
-(`TableMonotonicity`: `SubTables` per key, `stepFn_mono`, `prefix_mono`, 13 statements), the raise mark moved to the abort
-phase (`Rewrite.raised`, `phaseMark`; three kept statements changed and four added through the contract, 349 → 353 names —
-a boxed abort is one step longer), G18 (slot 0 of `appendSpill` is gc's `growslice` capacity; `appendSpillCapAt_zero`), G19 (`slices.Sort` at
-integer kinds lowers to `sortSlice`; 17 specification theorems), G21 (the normal form shape-checked at every type; two
-footprint doors closed), G22 (`mapPayloadWf` in `StateWf`; `stateWf_empty` strengthens in meaning), `exitOrRefusal` at
-every driver's main-exit mirror (BUG-206; the certificate checker stricter only), `checkCert_slowObs`/`checkCertM_slowObs`
-restored (DC04). The whole kept surface is a `lake comparator` contract: `comparator.json` (385 statement names) against
-the frozen `Contract/Challenge.lean`; `scripts/contract-export` for the cross-pin route. `IntKind` gains `uintptr`: two
-exhaustive matches in golean-logic need an arm each at its next re-pin (the uintptr-repair row). The seeded-heap entry
-(`Seed.lean`, `SeedPool.lean`, `runProgramSeededM`, `SeededReadout.base`) is on main; its BridgeSet rows left with the
-relation. Lean 4.32.2 → 4.35.0 (train 13); `lake check` runs over six library default targets.
+**The proof-facing surface (raft-proofs, golean-logic).**
 
-**The wire and the lowering (trusted surface #1).** The schema name is `golean-native-v3` at both commits. Node-level
-moves for programs with the shape: `sort-slice` nodes again at integer-kind `slices.Sort` sites (G19); a function-local
-`var ( … )` group is one `var` node per spec (BUG-300); hoist temporaries reordered on the legacy path — a short-circuit
-operation, a keyed literal's receive element, gc's early-copy operand kinds and needsaddr boxes bind at their lexical
-position when an ordered event follows, a method value's `$mv` box and the structural allocations after the sweep's
-events, the late promotion narrowed to dependencies (BUG-276–279/286/287, 310/311/313, 423/424); a map element as a
-multi-target or parenthesised target rides the existing `mapElem` plan (BUG-115); dot-imported `Intn`/`Float64bits` lower
-to the primitives (FR-36); the `unseq` fragment admits `addr-of-deref` over an atom pointer and `field-get` over
-`deref(globaladdr)` (BUG-391, 426); the print builtin spreads a multi-value call (BUG-430); the `fmt.Sprint` kind oracle
-per call site (BUG-400); `exprTypeOf` refuses a missing `type` key instead of defaulting to `int` (train 2); the blank
-field holds the zero value (BUG-129); per-declaration budgets (`budgets.tsv`). REFUSAL SCOPE WIDENED (programs that
-lowered now refuse by name): compiler directives outside `//go:build`/`//go:noinline`/`//go:generate` and every `//line`
-(BUG-127), `//go:debug`, go.mod `godebug`, `go.work`, the go environment channels that move gc's answer (BUG-128, 135),
-gc's size limits at every mention (row 34) and body-less functions (BUG-126), a `package main` with no `main` (BUG-125),
-the staticinit-uncertain init order (BUG-061, guarded), blank-field operands outside the allowlist (BUG-130), the E7
-guard's foldable targets on every interface-method route (BUG-340/341 as guards), cmd/go's import rules, reserved
-module paths and a reference to `main` (BUG-216–220), array/struct print operands as gc's rejection (BUG-430), the
-zero-length-array range at widths gc dereferences (BUG-226), a dot-imported stdlib variable per declaration (FR-37).
-REFUSAL SCOPE NARROWED (programs that refused now lower): the parenthesised spellings and `fallthrough` before empty
-statements (BUG-390/420–422), grouped `var` specs, local interface dispatch and generic literal parameters
-(BUG-300–302), map multi-targets (BUG-115), dot-imported functions (FR-36), whole-struct values through a tag-compatible
-pointer conversion (BUG-134, FR-34), the fmt desugar at init and under a defined bool (BUG-401/402), the type-parameter
-E7 route, go/build's header line choice (BUG-216), budget walks at any depth (BUG-412). The `uintptr`-identity refusal of
-train 3 is RETIRED by the repair of train 6. The frontend no longer crashes: an emission panic is a named whole-export
-refusal (BUG-420's fix).
+- The relational layer is GONE from the build (train 13, [USER] 2026-10-20 relayed; tag
+  `relational/last-main-2026-10-20`): the `Step`/`Steps` relation, `StepML`, the coherence theorems,
+  `BridgeSet` (its last state RE-PIN 20, row 602) and 23 proof modules.
+- KEPT with every name unchanged: `Prefix`/`Finish` and their laws; the `@[stepFn_eqns]` library
+  (`Equations.lean`: 317 theorems and 239 `stepFn_eqns]` attribute sites today; 296 and 235 at the
+  comparator's birth commit `841a20c6`, by the same two commands — §8; the comparator row's 232 counted
+  simp-set members, a different measure); `StepFnFacts`; the relation-free single-goroutine pool bridge and
+  projections restored verbatim (`PoolFacts`, `PoolProjection`).
+- ADDED for the customer: G11 (`InitDriverFacts`: the init driver agrees with `execStmtLoop` up to
+  `initPrintRefusal?`, a successful setup is a `Prefix`, `prefix_det`); G16 (`TableMonotonicity`: `SubTables`
+  per key, `stepFn_mono`, `prefix_mono`, 13 statements); the raise mark moved to the abort phase
+  (`Rewrite.raised`, `phaseMark`; three kept statements changed and four added through the contract, 349 → 353
+  names — a boxed abort is one step longer); G18 (slot 0 of `appendSpill` is gc's `growslice` capacity;
+  `appendSpillCapAt_zero`); G19 (`slices.Sort` at integer kinds lowers to `sortSlice`; 17 specification
+  theorems); G21 (the normal form shape-checked at every type; two footprint doors closed); G22
+  (`mapPayloadWf` in `StateWf`; `stateWf_empty` strengthens in meaning); `exitOrRefusal` at every driver's
+  main-exit mirror (BUG-206; the certificate checker stricter only); `checkCert_slowObs`/`checkCertM_slowObs`
+  restored (DC04).
+- The whole kept surface is a `lake comparator` contract: `comparator.json` (385 statement names) against the
+  frozen `Contract/Challenge.lean`; `scripts/contract-export` for the cross-pin route.
+- `IntKind` gains `uintptr`: two exhaustive matches in golean-logic need an arm each at its next re-pin (the
+  uintptr-repair row).
+- The seeded-heap entry (`Seed.lean`, `SeedPool.lean`, `runProgramSeededM`, `SeededReadout.base`) is on main;
+  its BridgeSet rows left with the relation.
+- Lean 4.32.2 → 4.35.0 (train 13); `lake check` runs over six library default targets.
 
-**The core's answers (semantics changes on the trusted surface).** `Config.atBoundary` opens at `len(ch)` and at the
-print apply (BUG-123; FR-30 closed — a child's print beside main's is interleavable); slicing a nil `*[N]T` is gc's
-nil-dereference panic, not `stuck` (BUG-227); the deref read and the store through an assignment target retag a
-tag-compatible struct (BUG-134); the normal form admits only its type's constructors (G21); the default append capacity
-is gc's realized one (G18; the envelope unchanged); `[]byte(s)`/`[]rune(s)` capacity is a choice site over gc's members
-(R3; the rune default moves to gc's point); `uintptr` is its own identity (six rows flip to gc's values); the budgets
-refuse by name where the process was killed (`sliceCapBudget`, `arrayFootprintBudget` at the type, the constant and
-run-time `make`, the append spill, the conversions — BUG-078/090/131); the main-exit classification re-checks every
-parked goroutine (BUG-206); `runeAt` past the end, a field-count mismatch and unequal-length equality are named refusals
-(BUG-207 and the three sole-caller-guarded arms; no admitted program reaches them); a recovered runtime error's `observed`
-readout and every func-typed result refuse at the readout (BUG-099, item 22).
+**The wire and the lowering (trusted surface #1).** The schema name is `golean-native-v3` at both commits.
 
-**The CLI and the observation format.** `golean-observation-v1` keeps its name; ADDITIVE: a CLI-level `status:error`
-carries `"output":""`; `--seed <file>` (`golean-seed-v1`), `--arg-ref`, `--arg-nil` with the `seed` key and `seedRef`
-rendering; `--arg-bool`; the entry-argument checks on all three file-reading subcommands (out-of-range and ill-typed
-`--arg-int` refuse at the CLI); the consulted-choice-sites stderr line with `--choice-report=full` / `--no-choice-report`;
-`--allow-nonterm-iters K` (`--allow-nonterm N` refused by name); `--engine dedup` refuses the inapplicable caps; named
-refusals for a missing input, a failed `--batch` write, `--function main`; `choice-trace`'s status column takes the
-readout's refusal word. REMOVED: `golean --build-provenance` (the cull); `scripts/ci --slow` (refused by name).
+- Node-level moves, for programs with the shape: `sort-slice` nodes again at integer-kind `slices.Sort` sites
+  (G19); a function-local `var ( … )` group is one `var` node per spec (BUG-300); hoist temporaries reordered
+  on the legacy path — a short-circuit operation, a keyed literal's receive element, gc's early-copy operand
+  kinds and needsaddr boxes bind at their lexical position when an ordered event follows, a method value's
+  `$mv` box and the structural allocations after the sweep's events, the late promotion narrowed to
+  dependencies (BUG-276–279/286/287, 310/311/313, 423/424); a map element as a multi-target or parenthesised
+  target rides the existing `mapElem` plan (BUG-115); dot-imported `Intn`/`Float64bits` lower to the
+  primitives (FR-36); the `unseq` fragment admits `addr-of-deref` over an atom pointer and `field-get` over
+  `deref(globaladdr)` (BUG-391, 426); the print builtin spreads a multi-value call (BUG-430); the `fmt.Sprint`
+  kind oracle per call site (BUG-400); `exprTypeOf` refuses a missing `type` key instead of defaulting to
+  `int` (train 2); the blank field holds the zero value (BUG-129); per-declaration budgets (`budgets.tsv`).
+- REFUSAL SCOPE WIDENED (programs that lowered now refuse by name): compiler directives outside
+  `//go:build`/`//go:noinline`/`//go:generate` and every `//line` (BUG-127); `//go:debug`, go.mod `godebug`,
+  `go.work`, the go environment channels that move gc's answer (BUG-128, 135); gc's size limits at every
+  mention (row 34) and body-less functions (BUG-126); a `package main` with no `main` (BUG-125); the
+  staticinit-uncertain init order (BUG-061, guarded); blank-field operands outside the allowlist (BUG-130);
+  the E7 guard's foldable targets on every interface-method route (BUG-340/341 as guards); cmd/go's import
+  rules, reserved module paths and a reference to `main` (BUG-216–220); array/struct print operands as gc's
+  rejection (BUG-430); the zero-length-array range at widths gc dereferences (BUG-226); a dot-imported stdlib
+  variable per declaration (FR-37).
+- REFUSAL SCOPE NARROWED (programs that refused now lower): the parenthesised spellings and `fallthrough`
+  before empty statements (BUG-390/420–422); grouped `var` specs, local interface dispatch and generic literal
+  parameters (BUG-300–302); map multi-targets (BUG-115); dot-imported functions (FR-36); whole-struct values
+  through a tag-compatible pointer conversion (BUG-134, FR-34); the fmt desugar at init and under a defined
+  bool (BUG-401/402); the type-parameter E7 route; go/build's header line choice (BUG-216); budget walks at
+  any depth (BUG-412). The `uintptr`-identity refusal of train 3 is RETIRED by the repair of train 6.
+- The frontend no longer crashes: an emission panic is a named whole-export refusal (BUG-420's fix).
 
-**The apparatus (trusted surface #2).** The oracle generator keeps a pruned import as a blank import (initialization
-preserved); the oracle runs under `GODEBUG=panicnil=0` and the pinned go environment (`scripts/go-env-pins.sh`); every
-FAIL row of the differential baseline carries a cause key and the negative corpus asserts the frontend's rejection class
-(type-check / parse / file selection / module); the forward re-pin guards (`check-cause-regressions`, `check-row-removals`,
-`check-alternation-survival`); `default=gc` membership rows and `seed=` strict rows; `scripts/go-version-diversity`
-(report-only); the kernel replay in both gate tiers; `lake check` and `lake comparator` as `--diff`-tier speedbumps;
-the certificate apparatus deleted; box-independence (`scripts/cap.sh`, no hard-coded paths); the harness's Go observer
-refuses `reflect.Func` and seeds a heap under `--seed`; `signal:` at stage go-crash; `LEAN_TRACE_TIMEOUT_SECONDS`
-validated.
+**The core's answers (semantics changes on the trusted surface).**
 
-**The raft subject.** Route A S1–S3: the faithful protobuf codec with one `intn` pick at package init before `main`
-(slot 0 under the default tape; a positional pre-S1 `--choices` record shifts by one); the nine `slices.Sort` sites are
-`sort-slice` nodes; the twin wire re-pinned six times, its observation byte-identical; the subject deltas U-1/U-2/U-3
-and D-4 retired, D-1/D-3 narrowed (`%+#v` dumps permanent; `errors.Is` refused by name); the recursion-edge row not born.
+- `Config.atBoundary` opens at `len(ch)` and at the print apply (BUG-123; FR-30 closed — a child's print
+  beside main's is interleavable).
+- Slicing a nil `*[N]T` is gc's nil-dereference panic, not `stuck` (BUG-227).
+- The deref read and the store through an assignment target retag a tag-compatible struct (BUG-134).
+- The normal form admits only its type's constructors (G21).
+- The default append capacity is gc's realized one (G18; the envelope unchanged); `[]byte(s)`/`[]rune(s)`
+  capacity is a choice site over gc's members (R3; the rune default moves to gc's point).
+- `uintptr` is its own identity (six rows flip to gc's values).
+- The budgets refuse by name where the process was killed (`sliceCapBudget`, `arrayFootprintBudget` at the
+  type, the constant and run-time `make`, the append spill, the conversions — BUG-078/090/131).
+- The main-exit classification re-checks every parked goroutine (BUG-206); `runeAt` past the end, a
+  field-count mismatch and unequal-length equality are named refusals (BUG-207 and the three
+  sole-caller-guarded arms; no admitted program reaches them).
+- A recovered runtime error's `observed` readout and every func-typed result refuse at the readout (BUG-099,
+  item 22).
+
+**The CLI and the observation format.** `golean-observation-v1` keeps its name.
+
+- ADDITIVE: a CLI-level `status:error` carries `"output":""`; `--seed <file>` (`golean-seed-v1`), `--arg-ref`,
+  `--arg-nil` with the `seed` key and `seedRef` rendering; `--arg-bool`; the entry-argument checks on all
+  three file-reading subcommands (out-of-range and ill-typed `--arg-int` refuse at the CLI); the
+  consulted-choice-sites stderr line with `--choice-report=full` / `--no-choice-report`;
+  `--allow-nonterm-iters K` (`--allow-nonterm N` refused by name); `--engine dedup` refuses the inapplicable
+  caps; named refusals for a missing input, a failed `--batch` write, `--function main`; `choice-trace`'s
+  status column takes the readout's refusal word.
+- REMOVED: `golean --build-provenance` (the cull); `scripts/ci --slow` (refused by name).
+
+**The apparatus (trusted surface #2).**
+
+- The oracle generator keeps a pruned import as a blank import (initialization preserved); the oracle runs
+  under `GODEBUG=panicnil=0` and the pinned go environment (`scripts/go-env-pins.sh`).
+- Every FAIL row of the differential baseline carries a cause key and the negative corpus asserts the
+  frontend's rejection class (type-check / parse / file selection / module); the forward re-pin guards
+  (`check-cause-regressions`, `check-row-removals`, `check-alternation-survival`).
+- `default=gc` membership rows and `seed=` strict rows; `scripts/go-version-diversity` (report-only).
+- The kernel replay in both gate tiers; `lake check` and `lake comparator` as `--diff`-tier speedbumps; the
+  certificate apparatus deleted; box-independence (`scripts/cap.sh`, no hard-coded paths).
+- The harness's Go observer refuses `reflect.Func` and seeds a heap under `--seed`; `signal:` at stage
+  go-crash; `LEAN_TRACE_TIMEOUT_SECONDS` validated.
+
+**The raft subject.**
+
+- Route A S1–S3: the faithful protobuf codec with one `intn` pick at package init before `main` (slot 0 under
+  the default tape; a positional pre-S1 `--choices` record shifts by one).
+- The nine `slices.Sort` sites are `sort-slice` nodes; the twin wire re-pinned six times, its observation
+  byte-identical.
+- The subject deltas U-1/U-2/U-3 and D-4 retired, D-1/D-3 narrowed (`%+#v` dumps permanent; `errors.Is`
+  refused by name); the recursion-edge row not born.
 
 **The records.** `docs/release.md` (ruled D2), `docs/README.md`, `docs/semantics-overview.md`, `docs/cli.md`,
-`THIRD_PARTY_NOTICES.md`, LICENSE (Oath Technologies, 2026); the de-quoting of 2026-10-16 (train 12); the defect
-neighbourhood campaign (`docs/2026-10-27_defect-neighbourhood-campaign.md`, `docs/defect-shapes.md`,
-`docs/2026-11-08_defect-neighbourhood-closure.md`); `docs/APPARATUS-DEFECTS.md` (the class boundary ruled 2026-10-27).
+`THIRD_PARTY_NOTICES.md`, LICENSE (Oath Technologies, 2026); the de-quoting of 2026-10-16 (train 12); the
+defect-neighbourhood campaign (`docs/2026-10-27_defect-neighbourhood-campaign.md`, `docs/defect-shapes.md`,
+`docs/2026-11-08_defect-neighbourhood-closure.md`); `docs/APPARATUS-DEFECTS.md` (the class boundary ruled
+2026-10-27); this record's audit round (BUG-432 and its rows, §2.2).
 
 ## 2. The three release predicates (`docs/release.md` §1.6; each its own line, never one green)
 
-1. **No unclassified failures — HOLDS.** The recorded full run holds 366 FAIL rows; `scripts/coverage-cause
-   --unclassified artifacts/coverage/latest.tsv` prints `every FAIL row's cause is classified (366 FAIL row(s),
-   latest.tsv)` and exits 0. Every FAIL row of `baselines/native-full.tsv` carries a cause key (column 4). By pin: 201
-   rows on a `docs/BUGS.md` `Cases:` line; 158 `frontend-export` rows on a named frontier or by-design cause with no entry
-   (FR-15 complex 30; FR-14's five keys 51; FR-13 9; FR-12 9; FR-7 6; FR-23 6; FR-18 5; FR-11 5; FR-1 5; FR-6 4; FR-2 4;
-   FR-21 3; FR-3, FR-24, `out-of-language/unsafe`, `Q-SYNCVAL` 2 each; `unrowed/result-shadow` 4, `unrowed/expression-shape`
-   2; `c-pin/hidden-dep-init-order`, `c-pin/local-type-type-argument`, FR-16, FR-17, FR-20, FR-22, `Q-ATOMIC` 1 each); 7
-   `lean-observation` rows on `baselines/untriaged-ids` (coverage 5: `channels/select-select/{core,beside-loop}`,
-   `goroutines/spawn-in-init/in-init`, `spec-examples-decl/slice-to-array/ok-forms`,
-   `noodler/conversions/nil-slice-zero-array`; latitude 2: `floats/to-int-out-of-range/{nan,range}`) —
-   `scripts/check-bugs.sh`: `backlog — 7 unexplained fidelity failure(s): coverage 5/5; latitude 2/2; wrong-answer 0/0`.
-   The negative corpus's 2 FAIL rows are on BUG-221's Cases line. `scripts/check-bugs.sh`'s summary line: `ok (216
-   bug(s), 9 moved tombstone(s) resolving to docs/APPARATUS-DEFECTS.md; pinned cases behave as claimed)`.
-2. **Zero known wrong answers within an explicitly named supported profile — DOES NOT HOLD absent the ruling; HOLDS BY
-   STATED EXCLUSION under the profile proposed in §3 (the pending half of backlog decision D1 — the NAMING of the profile, `docs/release.md` §1.6.2; D1's ruled half, refuse the case if excluding it is easy, [USER] 2026-10-12, is BUG-061's guard).** The counts, by id, against the 34 open entries of `docs/BUGS.md` (§8 derives each row's entry from its `Cases:` line):
-   - OPEN WRONG ANSWERS in the strict sense — both sides answer, the answers differ, nothing refuses: **8 entries on 62 `differential` FAIL rows** — BUG-176 (14 rows: zero-size element and field addresses, R15), BUG-280 (13: `make([]T,
-     f(), g())` under gc's inlining — gc's own deviation from spec#Order_of_evaluation), BUG-170 (11: zero-size variable
-     addresses, R15), BUG-121 (8: `[]byte(s)` element-address identity, R19), BUG-312 (5: the call-free general form's
-     panic selection, E3/E4/E12), BUG-236 (2: the `fmt.Errorf` shim's type name in a failed-assertion text), BUG-171 (1:
-     the hidden-dependency init order through a function-value call the guard cannot follow, E7), BUG-432 (8: an earlier multi-assign target stored before a later non-memory operand's panic, visible after `recover` — E5/L-016, gc's own deviation from spec#Assignment_statements; entered and rowed by this record's audit round). Five of the eight are latitude points where the machine holds a spec-conforming member gc does not realize; two are gc's deviations from a forced point (BUG-280, BUG-432); one a wrong text from a shim.
-   - OPEN observed-∉-modeled SCHEDULING members, status-level, no row can hold them: **2 entries** — BUG-159 (the abort
-     window; a stated limit, [USER] 2026-10-12, item 3 of that day's ask) and BUG-360 (main's exit beside a child's fatal; posed).
-   - OPEN over-acceptance at the admission boundary: **1 entry** — BUG-221 (gc's 1 GB stack-frame limit not mirrored:
-     2 negative rows, a program gc rejects is exported and answered).
-   - GUARDED wrong-answer classes — a refusal by name replaced a wrong answer and still stands: **7 classes on 37 rows**
-     — BUG-061 (1: the staticinit-uncertain init order), BUG-099 (4: a recovered runtime error's concrete type, refused at
-     the readout and in the assertion text), BUG-130 (14: blank-field operands outside the allowlist), BUG-340 (10) and
-     BUG-341 (4) (the E7 guard's foldable targets and the same-class conversions), BUG-127 (3: compiler directives), BUG-128
-     (1: `//go:debug`). BUG-124 (`uintptr` identity) was guarded at train 3 and REPAIRED at train 6 — not a guard any more;
-     BUG-098 (unexported method names) was fixed by identity, not by a guard.
+1. **No unclassified failures — HOLDS.** The recorded full run holds 374 FAIL rows; `scripts/coverage-cause
+   --unclassified artifacts/coverage/latest.tsv` prints `every FAIL row's cause is classified (374 FAIL
+   row(s), latest.tsv)` and exits 0. Every FAIL row of `baselines/native-full.tsv` carries a cause key (column
+   4). By pin: 209 rows on a `docs/BUGS.md` `Cases:` line (BUG-432's eight among them); 158 `frontend-export`
+   rows on a named frontier or by-design cause with no entry (FR-15 complex 30; FR-14's five keys 51; FR-13 9;
+   FR-12 9; FR-7 6; FR-23 6; FR-18 5; FR-11 5; FR-1 5; FR-6 4; FR-2 4; FR-21 3; FR-3, FR-24,
+   `out-of-language/unsafe`, `Q-SYNCVAL` 2 each; `unrowed/result-shadow` 4, `unrowed/expression-shape` 2;
+   `c-pin/hidden-dep-init-order`, `c-pin/local-type-type-argument`, FR-16, FR-17, FR-20, FR-22, `Q-ATOMIC` 1
+   each); 7 `lean-observation` rows on `baselines/untriaged-ids` (coverage 5:
+   `channels/select-select/{core,beside-loop}`, `goroutines/spawn-in-init/in-init`,
+   `spec-examples-decl/slice-to-array/ok-forms`, `noodler/conversions/nil-slice-zero-array`; latitude 2:
+   `floats/to-int-out-of-range/{nan,range}`) — `scripts/check-bugs.sh`: `backlog — 7 unexplained fidelity
+   failure(s): coverage 5/5; latitude 2/2; wrong-answer 0/0`. The negative corpus's 2 FAIL rows are on
+   BUG-221's Cases line. `scripts/check-bugs.sh`'s summary line: `ok (217 bug(s), 9 moved tombstone(s)
+   resolving to docs/APPARATUS-DEFECTS.md; pinned cases behave as claimed)`.
+2. **Zero known wrong answers within an explicitly named supported profile — DOES NOT HOLD absent the ruling;
+   HOLDS BY STATED EXCLUSION under the profile proposed in §3 (the pending half of backlog decision D1 — the
+   NAMING of the profile, `docs/release.md` §1.6.2; D1's ruled half, refuse the case if excluding it is easy,
+   [USER] 2026-10-12, is BUG-061's guard).** The counts, by id, against the 34 open entries of `docs/BUGS.md`
+   (§8 derives each row's entry from its `Cases:` line):
+   - OPEN WRONG ANSWERS in the strict sense — both sides answer, the answers differ, nothing refuses: **8
+     entries on 62 `differential` FAIL rows** — BUG-176 (14 rows: zero-size element and field addresses, R15),
+     BUG-280 (13: `make([]T, f(), g())` under gc's inlining — gc's own deviation from
+     spec#Order_of_evaluation), BUG-170 (11: zero-size variable addresses, R15), BUG-121 (8: `[]byte(s)`
+     element-address identity, R19), BUG-312 (5: the call-free general form's panic selection, E3/E4/E12),
+     BUG-236 (2: the `fmt.Errorf` shim's type name in a failed-assertion text), BUG-171 (1: the
+     hidden-dependency init order through a function-value call the guard cannot follow, E7), BUG-432 (8: an
+     earlier multi-assign target stored before a later non-memory operand's panic, visible after `recover` —
+     E5/L-016, gc's own deviation from spec#Assignment_statements; entered and rowed by this record's audit
+     round). Five of the eight are latitude points where the machine holds a spec-conforming member gc does
+     not realize; two are gc's deviations from a forced point (BUG-280, BUG-432); one a wrong text from a
+     shim.
+   - OPEN observed-∉-modeled SCHEDULING members, status-level, no row can hold them: **2 entries** — BUG-159
+     (the abort window; a stated limit, [USER] 2026-10-12, item 3 of that day's ask) and BUG-360 (main's exit
+     beside a child's fatal; posed).
+   - OPEN over-acceptance at the admission boundary: **1 entry** — BUG-221 (gc's 1 GB stack-frame limit not
+     mirrored: 2 negative rows, a program gc rejects is exported and answered).
+   - GUARDED wrong-answer classes — a refusal by name replaced a wrong answer and still stands: **7 classes on
+     37 rows** — BUG-061 (1: the staticinit-uncertain init order), BUG-099 (4: a recovered runtime error's
+     concrete type, refused at the readout and in the assertion text), BUG-130 (14: blank-field operands
+     outside the allowlist), BUG-340 (10) and BUG-341 (4) (the E7 guard's foldable targets and the same-class
+     conversions), BUG-127 (3: compiler directives), BUG-128 (1: `//go:debug`). BUG-124 (`uintptr` identity)
+     was guarded at train 3 and REPAIRED at train 6 — not a guard any more; BUG-098 (unexported method names)
+     was fixed by identity, not by a guard.
    - The untriaged counter: `wrong-answer 0/0`, `coverage 5/5`, `latitude 2/2`.
-   - The other 21 open entries are not wrong answers: over-refusals of the race detector (BUG-041, 132, 370, 371),
-     named refusals (BUG-008, 093, 094, 100), apparatus-side refusals (BUG-004, 106, 107, 114), an enumeration left
-     tractability (BUG-065), resource and cost findings (BUG-090, 410, 411, 413, 414, 415 — kills and grinds, never an
-     answer), a misnamed over-refusal (BUG-218), the latent granularity entry (BUG-002). 8 + 2 + 1 + 2 (061, 099) + 21 = 34.
-   - Against the proposed profile P1 (§3): inside it, 0 open wrong answers — because P1's clause (vii) EXCLUDES BY STATEMENT the shapes of the 8 + 2 entries and clause (i) the gc-rejected programs of BUG-221, while the 7 guarded
-     classes exclude themselves BY REFUSAL. The honest reading, for the ruling: an exclusion by statement is not enforced
-     — a program in one of those shapes lowers and answers, and nothing tells the consumer it is outside the profile.
-     The alternatives are the rulings posed (§7: widen the envelopes, or refuse the shapes by name — a frontend lane).
-     Absent the ruling the predicate does not hold: 8 open wrong-answer entries on 62 rows and 2 scheduling members.
-3. **A justified behavioural envelope for that profile — ENUMERATED (§4), as an envelope and not as «all latitude
-   included».** Every axis of `docs/2026-08-11_latitude-inventory.md` is listed with its class, the member or envelope the
-   machine holds, and its re-envelope obligation or the recorded gc deviation; the sources are the inventory's §1–§3
-   headings, §5–§7, §10–§11 and the entries named. The enumeration is complete over the inventory's ids; it is not a
-   maximality claim (Contract A holds per row where an (a) row says «believed MAXIMAL»), and two of its lists are stale
-   by what the campaign found: the §10 honesty-critical list (E3, E5, E7, R19) does not carry BUG-280 (a forced point
-   with gc's deviation, like E5) nor BUG-176 (R15's class at elements and fields) and still calls BUG-104 an open observed-∉-modeled bug (fixed 2026-09-21 at Stage C, BUG-112 the fixed entry), and §5 counts 7 refusal entries where §10 counts 6 — stated here, the inventory being a dated record.
+   - The other 21 open entries are not wrong answers: over-refusals of the race detector (BUG-041, 132, 370,
+     371), named refusals (BUG-008, 093, 094, 100), apparatus-side refusals (BUG-004, 106, 107, 114), an
+     enumeration left tractability (BUG-065), resource and cost findings (BUG-090, 410, 411, 413, 414, 415 —
+     kills and grinds, never an answer), a misnamed over-refusal (BUG-218), the latent granularity entry
+     (BUG-002). 8 + 2 + 1 + 2 (061, 099) + 21 = 34.
+   - Against the proposed profile P1 (§3): inside it, 0 open wrong answers — because P1's clause (vii)
+     EXCLUDES BY STATEMENT the shapes of the 8 + 2 entries and clause (i) the gc-rejected programs of BUG-221,
+     while the 7 guarded classes exclude themselves BY REFUSAL. The honest reading, for the ruling: an
+     exclusion by statement is not enforced — a program in one of those shapes lowers and answers, and nothing
+     tells the consumer it is outside the profile. The alternatives are the rulings posed (§7: widen the
+     envelopes, or refuse the shapes by name — a frontend lane). Absent the ruling the predicate does not
+     hold: 8 open wrong-answer entries on 62 rows and 2 scheduling members.
+3. **A justified behavioural envelope for that profile — ENUMERATED (§4), as an envelope and not as «all
+   latitude included».** Every axis of `docs/2026-08-11_latitude-inventory.md` is listed with its class, the
+   member or envelope the machine holds, and its re-envelope obligation or the recorded gc deviation; the
+   sources are the inventory's §1–§3 headings, §5–§7, §10–§11 and the entries named. The enumeration is
+   complete over the inventory's ids; it is not a maximality claim (Contract A holds per row where an (a) row
+   says «believed MAXIMAL»), and two of its lists are stale by what the campaign found: the §10
+   honesty-critical list (E3, E5, E7, R19) does not carry BUG-280 (a forced point with gc's deviation, like
+   E5) nor BUG-176 (R15's class at elements and fields) and still calls BUG-104 an open observed-∉-modeled bug
+   (fixed 2026-09-21 at Stage C, BUG-112 the fixed entry), and §5 counts 7 refusal entries where §10 counts 6
+   — stated here, the inventory being a dated record.
 
-## 3. The proposed supported profile P1 ([AGENT] 2026-11-09; backlog decision D1 was RULED 2026-10-12 in its first half — refuse the case if excluding it is easy, BUG-061 guarded at train 3 — and the NAMING of the profile, `docs/release.md` §1.6.2, is the half still PENDING [USER])
+## 3. The proposed supported profile P1 ([AGENT] 2026-11-09; the naming is D1's pending half)
 
-The predicate's profile is the owner's to name. This is the proposal, written so that predicate 2 can be counted against
-it; every clause names what enforces it, or says «stated only».
+Backlog decision D1 was RULED 2026-10-12 in its first half — refuse the case if excluding it is easy; BUG-061
+is guarded at train 3 — and the NAMING of the profile (`docs/release.md` §1.6.2) is the half still PENDING
+[USER]. The predicate's profile is the owner's to name. This is the proposal, written so that predicate 2 can
+be counted against it; every clause names what enforces it, or says «stated only».
 
-- **(i) Programs.** Go 1.26 `package main` programs that gc go1.26.5 BUILDS (stated only at the stack-frame limit,
-  BUG-221; enforced elsewhere: the frontend mirrors gc's type-check, parse, file-selection and module rejections and the
-  size limits by over-approximation), under the frontend's environment contract (`docs/cli.md` §1: module or GOPATH mode,
-  no `go.work`, no `//go:debug` or `godebug`, no `GOFLAGS`/`GOEXPERIMENT`/foreign target — enforced), whose export carries
-  NO refusal — no quarantined declaration, no `unsupported` stub (a wire is not a lowering certificate, `docs/cli.md`
-  §6.3; the frontend names each refusal on stderr, and the differential's `frontend-export` stage is the check).
-- **(ii) The language fragment.** Everything the frontend lowers; OUTSIDE by name (enforced, each a refusal naming its
-  cause): every frontier row of `docs/language-coverage-ledger.md` §4 that stands open at the tip — the ledger is the authority and this clause names none of them (23 rows are neither struck through nor headed CLOSED/RETIRED by the command in §8, FR-28 among them as reopened-narrowed; the record's audit of 2026-11-09 counted 22, the difference being FR-28's reading); `unsafe` idioms; a function-local defined type as a type argument (c-pin); `uintptr` at the readout; compiler
-  directives outside the allowlist; blank-field operands outside constant / `nil` / plain variable read; a `package main`
-  without `main`; a body-less function.
-- **(iii) The standard library.** The admission register's set (`docs/stdlib-admission-register.md`, byte-equal to the
-  frontend's tables by `scripts/check-stdlib-register`): 13 source-through packages loaded from the pinned GOROOT source
-  (`bytes`, `cmp`, `encoding/binary`, `errors`, `internal/bytealg`, `internal/strconv`, `internal/stringslite`,
-  `math/bits`, `slices`, `strconv`, `strings`, `unicode`, `unicode/utf8`), 5 substitution rows, 5 overlay rows (`expr`,
-  cap 12; `overlay-import` cap 8, [AGENT]-provisional), the three primitives (`float-bits`, `print-output`, `rand-intn`),
-  the one intercept (`slices.Sort` at integer element kinds → `sortSlice`), the six fmt shims (`fmt.Errorf`, `fmt.Fprint`,
-  `fmt.Fprintf`, `fmt.Sprint`, `fmt.Sprintf`, `fmt.Sprintln` — the desugar's injected text; E10 «no injected library text»
-  not met), the
-  `sync/atomic` shadow types, `sync` (Mutex, RWMutex, WaitGroup, Once, TryLock) as memory-model primitives, 3 init-callee
-  rows. Everything else refuses by name (FR-14, FR-21; `time.*`, `rand.New`, `runtime`, `os.Exit`, `fmt.Println`,
-  `errors.Is`, `%w`). The stdlib methods `(*rand.Rand).Intn` / `IntN` are not bound to the `intn` site (only direct
-  calls are; a user method wrapping one is).
-- **(iv) Platform and runtime.** `Platform.gcAmd64` — gc on linux/amd64, `int` 64-bit, gc's layout, `maxAlloc` 2^48,
-  per-op float rounding, no fusion (R4 at GOAMD64=v1), the canonical NaN (R7); Go 1.26 MODULE runtime defaults
-  (`panic(nil)` is `*runtime.PanicNilError`); the oracle leg pinned `GODEBUG=panicnil=0` in GOPATH mode. One version:
-  gc go1.26.5 exactly (`docs/release.md` §4, Go version).
-- **(v) Drivers and their scope.** The SEQUENTIAL driver for programs with no `go` statement (`golean native-json-run`
-  on the default tape and on explicit `--choices` tapes; `Prefix`/`Finish` the kept laws; `NoRefusal` covers this driver
-  only). The POOL driver at REGISTRY granularity for programs with goroutines that are race-free under the detector:
-  the claim is the CERTIFIED OBSERVATION SET (`coverage-observations`, the DFS engine and the dedup engine under
-  `checkCert_slowObs`), the default run being one member — the consulted-sites marker says so; sub-statement
-  interleavings are not claimed (U-5, the granularity obligation); liveness is not claimed (finite tapes, no fairness).
-  RACY programs are REFUSED (C10): a `race` verdict is outside P1's answers; the detector refuses ⊇ gc, so its
-  over-refusals (BUG-041, 084, 132, 370, 371) are coverage gaps, never answers. A run under `--allow-hidden-dep-init-order` (`docs/cli.md` §6.2: the E7 refusal becomes a stderr warning on every guarded route) LEAVES the profile — the guard is part of P1's admission.
-- **(vi) Observations.** `golean-observation-v1` (`docs/cli.md` §4): the value tags `unit`, `nil`, `bool`, `int` (the
-  ten concrete integer kinds), `float` (the IEEE bit pattern, every NaN canonicalized), `string` (bytes), `interface`
-  (the dynamic type's unqualified name and the value), `struct`, `array`, `slice`/`map`/`chan` (a raw location as the
-  base) and `addr`/`fieldAddr`/`indexAddr` (raw allocation ids; `seedRef` under `--seed`); REFUSED at the readout, both
-  sides: func-typed positions (never emitted), `uintptr`, the concrete type of a recovered runtime error (BUG-099); and
-  outside seeded mode the Go observer has no pointer, slice, map or channel arm, so such a strict row is a visible red
-  (the comparable surface, F4). Output is the `print`/`println` stream; the compared abort text is gc's first line
-  (FR-32); the statuses are `ok`, `panic`, `fatal`, `deadlock`, `race` (refused per run) and the refusal classes. The choice tape's rule applies (`docs/cli.md` §6.1): an out-of-range pick wraps, an exhausted tape picks 0 and leftovers are not checked — a `--choices` observation is one member of the set, and the default-tape observation is the member the empty tape selects.
-- **(vii) EXCLUDED BY STATEMENT (not enforced; the open known-≠-gc answers, each posed for a ruling, §7):** (1) a
-  comparison or map key over the address of a zero-size variable, element or field (R15: BUG-170, BUG-176); (2) the
-  element-address identity of `[]byte(s)` / `[]rune(s)` results (R19: BUG-121); (3) the initialization order of a hidden
-  dependency reached through a function-value call the guard cannot follow (E7: BUG-171 — the direct, method-value,
-  method-expression, promoted and type-parameter routes are guarded); (4) which of two failing non-call operands with no
-  event between them panics (E3/E4/E12: BUG-312); (5) `make([]T, f(), g())` with two call arguments under gc's default
-  inlining (BUG-280, gc's deviation; `-N -l` agrees with the machine); (6) the dynamic type name of a recovered
-  `fmt.Errorf` payload in a failed-assertion text (BUG-236); (7) a child goroutine's output between main's last observable step and its abort, and main's exit beside a child's fatal (BUG-159, BUG-360); (8) an earlier target of a multi-target assignment read after `recover` from a later operand's panic when that operand reads no memory (E5/L-016: BUG-432, gc's deviation — the two-phase rule holds the store back, gc stores early). Under (vii) the 62 `differential` FAIL rows and the two scheduling entries of §2.2 are outside P1.
+- **(i) Programs.** Go 1.26 `package main` programs that gc go1.26.5 BUILDS (stated only at the stack-frame
+  limit, BUG-221; enforced elsewhere: the frontend mirrors gc's type-check, parse, file-selection and module
+  rejections and the size limits by over-approximation), under the frontend's environment contract
+  (`docs/cli.md` §1: module or GOPATH mode, no `go.work`, no `//go:debug` or `godebug`, no
+  `GOFLAGS`/`GOEXPERIMENT`/foreign target — enforced), whose export carries NO refusal — no quarantined
+  declaration, no `unsupported` stub (a wire is not a lowering certificate, `docs/cli.md` §6.3; the frontend
+  names each refusal on stderr, and the differential's `frontend-export` stage is the check).
+- **(ii) The language fragment.** Everything the frontend lowers; OUTSIDE by name (enforced, each a refusal
+  naming its cause): every frontier row of `docs/language-coverage-ledger.md` §4 that stands open at the tip —
+  the ledger is the authority and this clause names none of them (23 rows are neither struck through nor
+  headed CLOSED/RETIRED by the command in §8, FR-28 among them as reopened-narrowed; the record's audit of
+  2026-11-09 counted 22, the difference being FR-28's reading); `unsafe` idioms; a function-local defined type
+  as a type argument (c-pin); `uintptr` at the readout; compiler directives outside the allowlist; blank-field
+  operands outside constant / `nil` / plain variable read; a `package main` without `main`; a body-less
+  function.
+- **(iii) The standard library.** The admission register's set (`docs/stdlib-admission-register.md`,
+  byte-equal to the frontend's tables by `scripts/check-stdlib-register`): 13 source-through packages loaded
+  from the pinned GOROOT source (`bytes`, `cmp`, `encoding/binary`, `errors`, `internal/bytealg`,
+  `internal/strconv`, `internal/stringslite`, `math/bits`, `slices`, `strconv`, `strings`, `unicode`,
+  `unicode/utf8`), 5 substitution rows, 5 overlay rows (`expr`, cap 12; `overlay-import` cap 8,
+  [AGENT]-provisional), the three primitives (`float-bits`, `print-output`, `rand-intn`), the one intercept
+  (`slices.Sort` at integer element kinds → `sortSlice`), the six fmt shims (`fmt.Errorf`, `fmt.Fprint`,
+  `fmt.Fprintf`, `fmt.Sprint`, `fmt.Sprintf`, `fmt.Sprintln` — the desugar's injected text; E10 «no injected
+  library text» not met), the `sync/atomic` shadow types, `sync` (Mutex, RWMutex, WaitGroup, Once, TryLock) as
+  memory-model primitives, 3 init-callee rows. Everything else refuses by name (FR-14, FR-21; `time.*`,
+  `rand.New`, `runtime`, `os.Exit`, `fmt.Println`, `errors.Is`, `%w`). The stdlib methods `(*rand.Rand).Intn`
+  / `IntN` are not bound to the `intn` site (only direct calls are; a user method wrapping one is).
+- **(iv) Platform and runtime.** `Platform.gcAmd64` — gc on linux/amd64, `int` 64-bit, gc's layout, `maxAlloc`
+  2^48, per-op float rounding, no fusion (R4 at GOAMD64=v1), the canonical NaN (R7); Go 1.26 MODULE runtime
+  defaults (`panic(nil)` is `*runtime.PanicNilError`); the oracle leg pinned `GODEBUG=panicnil=0` in GOPATH
+  mode. One version: gc go1.26.5 exactly (`docs/release.md` §4, Go version).
+- **(v) Drivers and their scope.** The SEQUENTIAL driver for programs with no `go` statement (`golean
+  native-json-run` on the default tape and on explicit `--choices` tapes; `Prefix`/`Finish` the kept laws;
+  `NoRefusal` covers this driver only). The POOL driver at REGISTRY granularity for programs with goroutines
+  that are race-free under the detector: the claim is the CERTIFIED OBSERVATION SET (`coverage-observations`,
+  the DFS engine and the dedup engine under `checkCert_slowObs`), the default run being one member — the
+  consulted-sites marker says so; sub-statement interleavings are not claimed (U-5, the granularity
+  obligation); liveness is not claimed (finite tapes, no fairness). RACY programs are REFUSED (C10): a `race`
+  verdict is outside P1's answers; the detector refuses ⊇ gc, so its over-refusals (BUG-041, 084, 132, 370,
+  371) are coverage gaps, never answers. A run under `--allow-hidden-dep-init-order` (`docs/cli.md` §6.2: the
+  E7 refusal becomes a stderr warning on every guarded route) LEAVES the profile — the guard is part of P1's
+  admission.
+- **(vi) Observations.** `golean-observation-v1` (`docs/cli.md` §4): the value tags `unit`, `nil`, `bool`,
+  `int` (the ten concrete integer kinds), `float` (the IEEE bit pattern, every NaN canonicalized), `string`
+  (bytes), `interface` (the dynamic type's unqualified name and the value), `struct`, `array`,
+  `slice`/`map`/`chan` (a raw location as the base) and `addr`/`fieldAddr`/`indexAddr` (raw allocation ids;
+  `seedRef` under `--seed`); REFUSED at the readout, both sides: func-typed positions (never emitted),
+  `uintptr`, the concrete type of a recovered runtime error (BUG-099); and outside seeded mode the Go observer
+  has no pointer, slice, map or channel arm, so such a strict row is a visible red (the comparable surface,
+  F4). Output is the `print`/`println` stream; the compared abort text is gc's first line (FR-32); the
+  statuses are `ok`, `panic`, `fatal`, `deadlock`, `race` (refused per run) and the refusal classes. The
+  choice tape's rule applies (`docs/cli.md` §6.1): an out-of-range pick wraps, an exhausted tape picks 0 and
+  leftovers are not checked — a `--choices` observation is one member of the set, and the default-tape
+  observation is the member the empty tape selects.
+- **(vii) EXCLUDED BY STATEMENT (not enforced; the open known-≠-gc answers, each posed for a ruling, §7):**
+  (1) a comparison or map key over the address of a zero-size variable, element or field (R15: BUG-170,
+  BUG-176); (2) the element-address identity of `[]byte(s)` / `[]rune(s)` results (R19: BUG-121); (3) the
+  initialization order of a hidden dependency reached through a function-value call the guard cannot follow
+  (E7: BUG-171 — the direct, method-value, method-expression, promoted and type-parameter routes are guarded);
+  (4) which of two failing non-call operands with no event between them panics (E3/E4/E12: BUG-312); (5)
+  `make([]T, f(), g())` with two call arguments under gc's default inlining (BUG-280, gc's deviation; `-N -l`
+  agrees with the machine); (6) the dynamic type name of a recovered `fmt.Errorf` payload in a
+  failed-assertion text (BUG-236); (7) a child goroutine's output between main's last observable step and its
+  abort, and main's exit beside a child's fatal (BUG-159, BUG-360); (8) an earlier target of a multi-target
+  assignment read after `recover` from a later operand's panic when that operand reads no memory (E5/L-016:
+  BUG-432, gc's deviation — the two-phase rule holds the store back, gc stores early). Under (vii) the 62
+  `differential` FAIL rows and the two scheduling entries of §2.2 are outside P1.
 
 ## 4. The behavioural envelope for P1 (predicate 3) — the latitude inventory's axes at the tip
 
-Classes as the inventory's (§0, §10): (a) ENVELOPED — a choice site or a set the machine enumerates; (b) PINNED — one
-member, with a re-envelope obligation; (b-n) NARROWED with a recorded caveat; (c) FORCED by the spec; (d) UNKNOWN;
-REFUSED — a refusal standing in for latitude. «gc» is the pinned oracle. Rulings are cited as relayed.
+Classes as the inventory's (§0, §10): (a) ENVELOPED — a choice site or a set the machine enumerates; (b)
+PINNED — one member, with a re-envelope obligation; (b-n) NARROWED with a recorded caveat; (c) FORCED by the
+spec; (d) UNKNOWN; REFUSED — a refusal standing in for latitude. «gc» is the pinned oracle. Rulings are cited
+as relayed.
 
 | Axis | Class | What the machine holds | Obligation / recorded deviation / status at the tip |
 |---|---|---|---|
@@ -334,251 +452,291 @@ REFUSED — a refusal standing in for latitude. «gc» is the pinned oracle. Rul
 
 ## 5. The supported-scope statement (the campaign plan's §7)
 
-The release cites `docs/2026-11-08_defect-neighbourhood-closure.md` as the evidence that the KNOWN defect shapes are
-pinned at their neighbours: 29 shapes classified over every live entry of `docs/BUGS.md` (`docs/defect-shapes.md`, frozen
-at the closure); 27 swept — 26 by probing both sides against gc go1.26.5 under the runners' pins (S1–S23, S27–S29), one
-by reading the core (S26); S24 retired to the apparatus record and S25 not swept by the rulings of 2026-10-27 (relayed).
-About 7,700 matrix cells enumerated and about 6,300 probed on both sides **[lane]**; 3,619 differential rows (3,549
-`sweep-s<n>-*` and 70 of the fix lanes) and 208 negative rows added, nothing removed; at the tip the sweep rows stand
-3,450 PASS / 99 FAIL, every FAIL on a `BUGS.md` Cases line, and the negative sweep rows 206 / 2. 46 fidelity findings
-entered open with red rows and fixed through the normal train where fixed: 32 fixed on trains 24–34, 14 open (seven
-awaiting a ruling — BUG-176, 236, 280, 312, 360, 370, 371; two low — BUG-218, 221; five the budget shape's — BUG-410,
-411, 413, 414, 415); 5 apparatus findings, all open (`docs/APPARATUS-DEFECTS.md`); 4 entries from the train-32 audit, all
-fixed. Ten of the 27 swept shapes had no finding (S1, S2, S3, S5, S6, S11, S14, S18, S27, S29).
+The release cites `docs/2026-11-08_defect-neighbourhood-closure.md` as the evidence that the KNOWN defect
+shapes are pinned at their neighbours: 29 shapes classified over every live entry of `docs/BUGS.md`
+(`docs/defect-shapes.md`, frozen at the closure); 27 swept — 26 by probing both sides against gc go1.26.5
+under the runners' pins (S1–S23, S27–S29), one by reading the core (S26); S24 retired to the apparatus record
+and S25 not swept by the rulings of 2026-10-27 (relayed). About 7,700 matrix cells enumerated and about 6,300
+probed on both sides **[lane]**; 3,619 differential rows (3,549 `sweep-s<n>-*` and 70 of the fix lanes) and
+208 negative rows added, nothing removed; at the tip the sweep rows stand 3,450 PASS / 99 FAIL, every FAIL on
+a `BUGS.md` Cases line, and the negative sweep rows 206 / 2. 46 fidelity findings entered open with red rows
+and fixed through the normal train where fixed: 32 fixed on trains 24–34, 14 open (seven awaiting a ruling —
+BUG-176, 236, 280, 312, 360, 370, 371; two low — BUG-218, 221; five the budget shape's — BUG-410, 411, 413,
+414, 415); 5 apparatus findings, all open (`docs/APPARATUS-DEFECTS.md`); 4 entries from the train-32 audit,
+all fixed. Ten of the 27 swept shapes had no finding (S1, S2, S3, S5, S6, S11, S14, S18, S27, S29).
 
-The cells each shape LEFT are the closure's §6, by shape — named refusals (an honest coverage gap at a cell both sides
-reach: S1 10, S2 9, S3 13, S5 8, S6 4, S7 4, S8 1, S9 9, S10 7, S13 5, S14 2, S17 2, S19 17, S21 38, S22 39, S27 4 (+ parts
-of 6), S28 13, S29 1, S11/S12/S15/S16 by name), envelope questions (S4's 30 red rows on BUG-176/170/121; S7's 13 on
-BUG-280; S8's 5 on BUG-312; S19's 6 on BUG-340/341 as guards; S16's 7 on BUG-041/132/370/371; S23's 32 by design on
-BUG-078/131/090), hand-only cells (S10 6, S12 2, S13 6, S15 15, S19 3, S22 56, S23 31 under `capped`; S21's 194 hand
-subjects) and the rulings posed (§7). What the campaign BOUNDS (closure §7): one oracle, one platform, one version;
-sampling where gc is nondeterministic (S16: 20 schedules per cell; S15: 230 draws per subject; a member gc did not draw
-is not refuted — BUG-360 was seen in 8 of 400 draws in one session and in none of 1,000 in the next); S26 read, not run;
-the lanes' matrices ephemeral. The supported scope is therefore P1 (§3) WITH the limits of §6: the known shapes are
-pinned at their neighbours to the cells the closure lists, and the open cells are the stated exclusions and the pending
+The cells each shape LEFT are the closure's §6, by shape — named refusals (an honest coverage gap at a cell
+both sides reach: S1 10, S2 9, S3 13, S5 8, S6 4, S7 4, S8 1, S9 9, S10 7, S13 5, S14 2, S17 2, S19 17, S21
+38, S22 39, S27 4 (+ parts of 6), S28 13, S29 1, S11/S12/S15/S16 by name), envelope questions (S4's 30 red
+rows on BUG-176/170/121; S7's 13 on BUG-280; S8's 5 on BUG-312; S19's 6 on BUG-340/341 as guards; S16's 7 on
+BUG-041/132/370/371; S23's 32 by design on BUG-078/131/090), hand-only cells (S10 6, S12 2, S13 6, S15 15, S19
+3, S22 56, S23 31 under `capped`; S21's 194 hand subjects) and the rulings posed (§7). What the campaign
+BOUNDS (closure §7): one oracle, one platform, one version; sampling where gc is nondeterministic (S16: 20
+schedules per cell; S15: 230 draws per subject; a member gc did not draw is not refuted — BUG-360 was seen in
+8 of 400 draws in one session and in none of 1,000 in the next); S26 read, not run; the lanes' matrices
+ephemeral. The supported scope is therefore P1 (§3) WITH the limits of §6: the known shapes are pinned at
+their neighbours to the cells the closure lists, and the open cells are the stated exclusions and the pending
 rulings, not green.
 
 ## 6. STATED LIMITS of the first release (one place; each a limit, not a gap read as closed)
 
-Re-derived at `00afbc7c` from the offer's ten (`docs/changelog/61958f2e-WINDOW.md`, «STATED LIMITS of the offer»),
-`docs/release.md` §4, the backlog's §3 debt table and the closure's §6. The ten limits of the offer stand as amended
-here (1–3, 5–8, 13, 39, 51 carry them). A limit the pending rulings affect is stated as it stands on `main` TODAY, with
-the ruling marked pending — never as if ruled.
+Re-derived at `00afbc7c` from the offer's ten (`docs/changelog/61958f2e-WINDOW.md`, «STATED LIMITS of the
+offer»), `docs/release.md` §4, the backlog's §3 debt table and the closure's §6. The ten limits of the offer
+stand as amended here (1–3, 5–8, 13, 39, 51 carry them). A limit the pending rulings affect is stated as it
+stands on `main` TODAY, with the ruling marked pending — never as if ruled.
 
 **A. The proof-facing surface**
 
-1. **The memory floor** (offer limit 1, unchanged in substance): variable reads reach `loadRoot`, plain and chain stores
-   `storeLoc`, block and frame entry `Store.alloc`; a pointer read, a field read, an index read, a map get stop at the
-   composed `applyStrictOp`/`applyRhsOp` — their inner `loadLoc`/`Mem.loadFor` laws are NOT stated. G19's sort equations
-   take `Mem.loadSlice`/`Mem.storeRun` as premises, not as laws; slice header, backing, sublocation and disjoint-update
-   laws are later work.
-2. **The relation is retired** (offer limits 2, 4 and 7 SUPERSEDED, `docs/release.md` §1.5; [USER] 2026-10-20 relayed):
-   no `Step` relation, no coherence theorem, no pool relation, no `BridgeSet`, no run-level preservation claim is in the
-   build (tag `relational/last-main-2026-10-20`). `NoRefusal` and the sequential classification cover the SEQUENTIAL
-   driver only; a `go` statement leaves the domain; a refusal has NO successor — a partial-correctness boundary (CLAUDE.md,
-   D2 wording). The single-goroutine bridge and projections are stated over the executable pool driver alone.
-3. **The legacy evaluation-order triple survives** (offer limit 3; [USER] 2026-09-27): `Stmt.unseqProbe`, `Frame.probeK`,
-   `ChoiceSite.unseqPanic` — 16 core files reference them; E6b–E6e off the path; a consumer's `cases` arms carry them.
-4. **The unseeded readout prints raw location ids** (offer limit 5; `locJson`, six sites in `GoLean/CLI.lean`); seeded
-   mode renders `seedRef` cells and refuses a pointer escaping the seed.
-5. **Setup is a premise; init-time printing is refused** (offer limit 6): the no-globals, no-initializer case is the
-   equation `runProgramSetup_noInit`; `initPrintRefusal?` retained; G11 gives the init driver's agreement with
-   `execStmtLoop` up to that refusal and the R8 converse; the off-apply emptiness lemma (`printOut? c = none → l.out =
-   []`) is absent, so no full label-form iff.
-6. **No lowering correctness theorem; one Platform instance** (offer limit 10): a consumer of a GoCore program inherits
-   the wire's provenance record and `Platform.gcAmd64` (gc, linux/amd64; `intBits` 64; gc's layout; `maxAlloc` 2^48; the
-   four `sync` sizes as amd64 constants that ignore the Platform); a second instance and a 32-bit oracle are PENDING
-   [USER] (inventory §11 item 1).
-7. **Concurrency granularity** (offer limit 9): the wide ops `appendSlice` (spill), `copySlice`, `clearSlice`, `sortSlice`
-   are single steps (U-5); the reduction to Go's access granularity is an open obligation, not a theorem (`NPDRF.lean`
-   left with the relation); the DRF-confluence claim is WITHDRAWN and no `unseq` commutation theorem exists; T-8: 16
-   concurrent strict rows are not confluence-certifiable at registry granularity; BUG-065: one row's exhaustive
-   enumeration left tractability (`goroutines/worker-pool/sum`, the one `confluent` FAIL).
-8. **The comparator's in-repo blind spot** (`docs/release.md` §3(c)): the frozen text is re-elaborated against the live
-   definitions, so a drift through a definition's signature is caught only across a pin by `--challenge-from-export`;
-   the judge is syntactic (binder names and annotations ignored); the kernel replays the solution.
-9. **The kernel checks' form on this box** (§3(a)(b); CLAUDE.md «The gates»): `lake check` under Lake's `bwrap`
-   sandbox is unverified here (`bwrap` not setuid, `apparmor_restrict_unprivileged_userns=1`); the in-tree run is
-   `--inadvisably-no-sandbox`; `--paranoid` is red (nanoda 0.4.19's deterministic stack overflow on this export, 43 GB);
-   the claim-point run is the plain `lake check` plus the four working bundled kernels by hand (about 9 min); the fast
-   tier's `leanchecker` replay covers the on-disk olean set; nine theorem-free modules and the challenge module sit
-   outside both kernel checks.
-10. **No `stepFn`-level `StateWf` preservation theorem** on main (`step_preserves_wf` was relational; raft-proofs' per-arm
-    route holds, row 47); `stateWf_empty` is the only kept statement naming `StateWf`; G21/G22 strengthened its meaning
-    with its text unchanged.
-11. **The dedup certificate's scope**: `checkCert_slowObs` covers member values and terminal status; the printed `output`
-    key is engine-enforced empty (row 53, open); the dedup engine REFUSES the `intn`, `convCap` and `mapIter` consults
-    (D7) and is KILLED at the memory cap on a registry-op polling loop instead of refusing by name (BUG-361, apparatus).
-12. **The retag residual** (BUG-134, row 57): an `addr` target carries no static type, so a forged wire with a wrong
-    declared type answers on that one route; `structTagCompatible` ignores the declaring package of unexported field
-    names (go/types' rejection guards it). Forged-wire only; no type-checked wire reaches either.
+1. **The memory floor** (offer limit 1, unchanged in substance): variable reads reach `loadRoot`, plain and
+   chain stores `storeLoc`, block and frame entry `Store.alloc`; a pointer read, a field read, an index read,
+   a map get stop at the composed `applyStrictOp`/`applyRhsOp` — their inner `loadLoc`/`Mem.loadFor` laws are
+   NOT stated. G19's sort equations take `Mem.loadSlice`/`Mem.storeRun` as premises, not as laws; slice
+   header, backing, sublocation and disjoint-update laws are later work.
+2. **The relation is retired** (offer limits 2, 4 and 7 SUPERSEDED, `docs/release.md` §1.5; [USER] 2026-10-20
+   relayed): no `Step` relation, no coherence theorem, no pool relation, no `BridgeSet`, no run-level
+   preservation claim is in the build (tag `relational/last-main-2026-10-20`). `NoRefusal` and the sequential
+   classification cover the SEQUENTIAL driver only; a `go` statement leaves the domain; a refusal has NO
+   successor — a partial-correctness boundary (CLAUDE.md, D2 wording). The single-goroutine bridge and
+   projections are stated over the executable pool driver alone.
+3. **The legacy evaluation-order triple survives** (offer limit 3; [USER] 2026-09-27): `Stmt.unseqProbe`,
+   `Frame.probeK`, `ChoiceSite.unseqPanic` — 16 core files reference them; E6b–E6e off the path; a consumer's
+   `cases` arms carry them.
+4. **The unseeded readout prints raw location ids** (offer limit 5; `locJson`, six sites in
+   `GoLean/CLI.lean`); seeded mode renders `seedRef` cells and refuses a pointer escaping the seed.
+5. **Setup is a premise; init-time printing is refused** (offer limit 6): the no-globals, no-initializer case
+   is the equation `runProgramSetup_noInit`; `initPrintRefusal?` retained; G11 gives the init driver's
+   agreement with `execStmtLoop` up to that refusal and the R8 converse; the off-apply emptiness lemma
+   (`printOut? c = none → l.out = []`) is absent, so no full label-form iff.
+6. **No lowering correctness theorem; one Platform instance** (offer limit 10): a consumer of a GoCore program
+   inherits the wire's provenance record and `Platform.gcAmd64` (gc, linux/amd64; `intBits` 64; gc's layout;
+   `maxAlloc` 2^48; the four `sync` sizes as amd64 constants that ignore the Platform); a second instance and
+   a 32-bit oracle are PENDING [USER] (inventory §11 item 1).
+7. **Concurrency granularity** (offer limit 9): the wide ops `appendSlice` (spill), `copySlice`, `clearSlice`,
+   `sortSlice` are single steps (U-5); the reduction to Go's access granularity is an open obligation, not a
+   theorem (`NPDRF.lean` left with the relation); the DRF-confluence claim is WITHDRAWN and no `unseq`
+   commutation theorem exists; T-8: 16 concurrent strict rows are not confluence-certifiable at registry
+   granularity; BUG-065: one row's exhaustive enumeration left tractability (`goroutines/worker-pool/sum`, the
+   one `confluent` FAIL).
+8. **The comparator's in-repo blind spot** (`docs/release.md` §3(c)): the frozen text is re-elaborated against
+   the live definitions, so a drift through a definition's signature is caught only across a pin by
+   `--challenge-from-export`; the judge is syntactic (binder names and annotations ignored); the kernel
+   replays the solution.
+9. **The kernel checks' form on this box** (§3(a)(b); CLAUDE.md «The gates»): `lake check` under Lake's
+   `bwrap` sandbox is unverified here (`bwrap` not setuid, `apparmor_restrict_unprivileged_userns=1`); the
+   in-tree run is `--inadvisably-no-sandbox`; `--paranoid` is red (nanoda 0.4.19's deterministic stack
+   overflow on this export, 43 GB); the claim-point run is the plain `lake check` plus the four working
+   bundled kernels by hand (about 9 min); the fast tier's `leanchecker` replay covers the on-disk olean set;
+   nine theorem-free modules and the challenge module sit outside both kernel checks.
+10. **No `stepFn`-level `StateWf` preservation theorem** on main (`step_preserves_wf` was relational;
+    raft-proofs' per-arm route holds, row 47); `stateWf_empty` is the only kept statement naming `StateWf`;
+    G21/G22 strengthened its meaning with its text unchanged.
+11. **The dedup certificate's scope**: `checkCert_slowObs` covers member values and terminal status; the
+    printed `output` key is engine-enforced empty (row 53, open); the dedup engine REFUSES the `intn`,
+    `convCap` and `mapIter` consults (D7) and is KILLED at the memory cap on a registry-op polling loop
+    instead of refusing by name (BUG-361, apparatus).
+12. **The retag residual** (BUG-134, row 57): an `addr` target carries no static type, so a forged wire with a
+    wrong declared type answers on that one route; `structTagCompatible` ignores the declaring package of
+    unexported field names (go/types' rejection guards it). Forged-wire only; no type-checked wire reaches
+    either.
 
 **B. Admission — what the frontend refuses, and what it should**
 
-13. **The frontier**: 158 FAIL rows on named frontier and by-design causes with no entry (the cause families of §2.1) —
-    the language fragment's boundary, each a refusal naming its cause; the ledger's FR rows are the record. The corpus
-    limits of the offer (limit 8) stand: timers, the wall clock, `rand.New` refused; access labels not a differential
-    observable; refusal ≠ panic enforced by the apparatus, not by a row.
-14. **Compiler directives** outside `//go:build`, `//go:noinline`, `//go:generate` and every `//line` form refuse at file
-    selection; the three allowed verbs only in gc's placements (BUG-127; [USER] 2026-10-13 relayed).
-15. **The runtime-defaults and environment contract** (`docs/cli.md` §1; BUG-128/135): the semantics is Go 1.26's with
-    MODULE-mode defaults; the oracle runs in GOPATH mode with go1.16-era GODEBUG defaults and only `panicnil` pinned —
-    sound at the pin because no admitted stdlib member reaches another setting (an obligation on every admission);
-    `//go:debug`, `godebug`, `go.work`, a non-empty `GOFLAGS`, `GOTOOLCHAIN` off the pin, a foreign target, `GOAMD64`
-    above v1, `GOEXPERIMENT` refuse by name. GOPATH mode is left a CONTRACT, not a frontend refusal (row 58, the owner's
-    word pending).
-16. **gc's size limits are mirrored by over-approximation** at EVERY mention (25 shapes refused that gc builds; row 34;
-    [USER] 2026-10-13 relayed); a body-less function likewise (BUG-126). NOT mirrored: gc's 1 GB stack-frame limit —
-    BUG-221, the one open over-acceptance (2 negative rows red: a program gc rejects is exported and answered; low, the
-    owner may strike or fix). BUG-218: the go.mod scanner refuses a `require` path shape or version spelling gc accepts,
-    naming gc for an error gc does not raise (a misnamed over-refusal, low).
-17. **A `package main` without `main` is refused** (BUG-125); `main` is NEVER exported (`--function main` refuses by
-    name); the corpus exports subjects with `--subject`; no whole-program mode.
-18. **A blank struct field's operand is not evaluated** and is admitted only as a constant, `nil` or a plain variable
-    read; any other operand refuses the literal (BUG-129/130; [USER] 2026-10-14; 14 rows red by design).
-19. **Static-initialization-dependent init order** is REFUSED by the staticinit guard (BUG-061 guarded, [USER] 2026-10-12
-    D1; the staticinit MODEL is owed; the gc verdict table bounds the exposure until the next pin move); the E7 guard's
-    FOLDABLE targets on every interface-method route refuse by name (BUG-340/341 as guards, 14 rows red by design; the E7
-    question — modelling gc's link-time folding — pending ruling 15); the function-value route is UNGUARDED (BUG-171, one
-    row red, a known-≠-gc answer).
-20. **`print`/`println` residuals**: float, complex and address-kind operands, the zero-operand spelling and prints
-    during `$pkginit` refuse by name (FR-29, BUG-093, 17 rows red by design); an array or struct operand is gc's rejection
-    — also in DEAD code gc prunes and builds (the gclimits precedent applied by the lane; pending ruling 7).
-21. **`uintptr` at the readout** is refused at both observation seams; the readout asymmetry noted on BUG-114 is pending
-    ruling 4.
-22. **A wire is not a lowering certificate** (`docs/cli.md` §6.3): the frontend exits 0 and emits a stub for a refused
-    declaration; the consumer reads stderr or the differential's `frontend-export` stage. The frontend's top level
-    recovers an emission panic into a named refusal; loading and type-check are outside that recovery (a crash there is
-    `crash:frontend`, guarded by the re-pin guard).
+13. **The frontier**: 158 FAIL rows on named frontier and by-design causes with no entry (the cause families
+    of §2.1) — the language fragment's boundary, each a refusal naming its cause; the ledger's FR rows are the
+    record. The corpus limits of the offer (limit 8) stand: timers, the wall clock, `rand.New` refused; access
+    labels not a differential observable; refusal ≠ panic enforced by the apparatus, not by a row.
+14. **Compiler directives** outside `//go:build`, `//go:noinline`, `//go:generate` and every `//line` form
+    refuse at file selection; the three allowed verbs only in gc's placements (BUG-127; [USER] 2026-10-13
+    relayed).
+15. **The runtime-defaults and environment contract** (`docs/cli.md` §1; BUG-128/135): the semantics is Go
+    1.26's with MODULE-mode defaults; the oracle runs in GOPATH mode with go1.16-era GODEBUG defaults and only
+    `panicnil` pinned — sound at the pin because no admitted stdlib member reaches another setting (an
+    obligation on every admission); `//go:debug`, `godebug`, `go.work`, a non-empty `GOFLAGS`, `GOTOOLCHAIN`
+    off the pin, a foreign target, `GOAMD64` above v1, `GOEXPERIMENT` refuse by name. GOPATH mode is left a
+    CONTRACT, not a frontend refusal (row 58, the owner's word pending).
+16. **gc's size limits are mirrored by over-approximation** at EVERY mention (25 shapes refused that gc
+    builds; row 34; [USER] 2026-10-13 relayed); a body-less function likewise (BUG-126). NOT mirrored: gc's 1
+    GB stack-frame limit — BUG-221, the one open over-acceptance (2 negative rows red: a program gc rejects is
+    exported and answered; low, the owner may strike or fix). BUG-218: the go.mod scanner refuses a `require`
+    path shape or version spelling gc accepts, naming gc for an error gc does not raise (a misnamed
+    over-refusal, low).
+17. **A `package main` without `main` is refused** (BUG-125); `main` is NEVER exported (`--function main`
+    refuses by name); the corpus exports subjects with `--subject`; no whole-program mode.
+18. **A blank struct field's operand is not evaluated** and is admitted only as a constant, `nil` or a plain
+    variable read; any other operand refuses the literal (BUG-129/130; [USER] 2026-10-14; 14 rows red by
+    design).
+19. **Static-initialization-dependent init order** is REFUSED by the staticinit guard (BUG-061 guarded, [USER]
+    2026-10-12 D1; the staticinit MODEL is owed; the gc verdict table bounds the exposure until the next pin
+    move); the E7 guard's FOLDABLE targets on every interface-method route refuse by name (BUG-340/341 as
+    guards, 14 rows red by design; the E7 question — modelling gc's link-time folding — pending ruling 15);
+    the function-value route is UNGUARDED (BUG-171, one row red, a known-≠-gc answer).
+20. **`print`/`println` residuals**: float, complex and address-kind operands, the zero-operand spelling and
+    prints during `$pkginit` refuse by name (FR-29, BUG-093, 17 rows red by design); an array or struct
+    operand is gc's rejection — also in DEAD code gc prunes and builds (the gclimits precedent applied by the
+    lane; pending ruling 7).
+21. **`uintptr` at the readout** is refused at both observation seams; the readout asymmetry noted on BUG-114
+    is pending ruling 4.
+22. **A wire is not a lowering certificate** (`docs/cli.md` §6.3): the frontend exits 0 and emits a stub for a
+    refused declaration; the consumer reads stderr or the differential's `frontend-export` stage. The
+    frontend's top level recovers an emission panic into a named refusal; loading and type-check are outside
+    that recovery (a crash there is `crash:frontend`, guarded by the re-pin guard).
 
-**C. Modelled behaviour known ≠ gc inside the fragment** — limits 23–28 and 30 are P1's statement-only exclusions (§3 (vii) items 1–8); 29 is a guarded class (a refusal by name); 31 is an [AGENT] narrowing pending a ruling
+**C. Modelled behaviour known ≠ gc inside the fragment** — limits 23–28 and 30 are P1's statement-only
+exclusions (§3 (vii) items 1–8); 29 is a guarded class (a refusal by name); 31 is an [AGENT] narrowing pending
+a ruling
 
-23. **R15 zero-size addresses**: the machine answers never-same where gc gives one address by layout — BUG-170 (11 rows,
-    variables) and BUG-176 (14 rows, elements and fields); a may-equal choice, gc's layout, or recorded reds — ruling 9.
-24. **R19 `[]byte(s)` identity**: the machine allocates fresh where gc shares the backing — BUG-121 (8 rows); ruling 9.
-25. **E7 through a function value**: the machine realizes go/types' order where gc's staticinit folds the target —
-    BUG-171 (1 row, `init/hidden-dep-order`); the envelope or the pin to gc's realization is the entry's.
-26. **E3/E4/E12 — the call-free general form**: two failing non-call operands with no event between them; the machine
-    raises the lexical / targets-then-RHS panic, gc the other — BUG-312 (5 rows); the envelope posed (ruling 8).
-27. **`make([]T, f(), g())` with two call arguments**: gc's default build evaluates the cap call first when the callees
-    inline, the machine keeps the spec's order — BUG-280 (13 rows); gc's deviation; three dispositions posed, the third
-    (record as a deviation, red-by-design rows, report upstream) recommended — ruling 10.
-28. **The `fmt.Errorf` shim's type name** in a failed-assertion text (`*main.goleanShimErrorString` where gc prints
-    `*errors.errorString`) — BUG-236 (2 rows); stopped at a design gate, option A recommended — ruling 11.
-29. **A recovered runtime error's concrete type** is one synthetic id; the `observed` readout and the concrete-target
-    assertion text REFUSE by name (BUG-099, 4 rows; guarded); the typed-nil pointer at the shim's `r.(error)` refuses
-    (S21).
-30. **gc's early store across the phase boundary** (E5, L-016, [USER] 2026-09-02; BUG-432): the machine is forced to the phase boundary and gc deviates — an earlier target of a multi-target assignment is stored before a later operand's panic when that operand reads no memory (a local division or shift), visible after `recover`; the S6 sweep's twelve cells are now the thirteen strict rows of `assign-order/early-store-under-recover/` (8 red by design on BUG-432's Cases line, 5 agreeing), measured both sides 2026-11-09 — (vii) item 8; reporting upstream is the owner's (the ledger's P5 policy, UNFILED); the inventory's §E5 still cites the dossier's reading (a records follow-up).
-31. **E13 on declined sweeps**: since train 28 a bound early-copy operand realizes gc's order as ONE member where the
-    ruled E13 latitude ([USER] 2026-09-05) would enumerate both — an [AGENT] narrowing found by the train-32 audit; keep
-    the ruling and restore the probe, or ratify — ruling 1.
+23. **R15 zero-size addresses**: the machine answers never-same where gc gives one address by layout — BUG-170
+    (11 rows, variables) and BUG-176 (14 rows, elements and fields); a may-equal choice, gc's layout, or
+    recorded reds — ruling 9.
+24. **R19 `[]byte(s)` identity**: the machine allocates fresh where gc shares the backing — BUG-121 (8 rows);
+    ruling 9.
+25. **E7 through a function value**: the machine realizes go/types' order where gc's staticinit folds the
+    target — BUG-171 (1 row, `init/hidden-dep-order`); the envelope or the pin to gc's realization is the
+    entry's.
+26. **E3/E4/E12 — the call-free general form**: two failing non-call operands with no event between them; the
+    machine raises the lexical / targets-then-RHS panic, gc the other — BUG-312 (5 rows); the envelope posed
+    (ruling 8).
+27. **`make([]T, f(), g())` with two call arguments**: gc's default build evaluates the cap call first when
+    the callees inline, the machine keeps the spec's order — BUG-280 (13 rows); gc's deviation; three
+    dispositions posed, the third (record as a deviation, red-by-design rows, report upstream) recommended —
+    ruling 10.
+28. **The `fmt.Errorf` shim's type name** in a failed-assertion text (`*main.goleanShimErrorString` where gc
+    prints `*errors.errorString`) — BUG-236 (2 rows); stopped at a design gate, option A recommended — ruling
+    11.
+29. **A recovered runtime error's concrete type** is one synthetic id; the `observed` readout and the
+    concrete-target assertion text REFUSE by name (BUG-099, 4 rows; guarded); the typed-nil pointer at the
+    shim's `r.(error)` refuses (S21).
+30. **gc's early store across the phase boundary** (E5, L-016, [USER] 2026-09-02; BUG-432): the machine is
+    forced to the phase boundary and gc deviates — an earlier target of a multi-target assignment is stored
+    before a later operand's panic when that operand reads no memory (a local division or shift), visible
+    after `recover`; the S6 sweep's twelve cells are now the thirteen strict rows of
+    `assign-order/early-store-under-recover/` (8 red by design on BUG-432's Cases line, 5 agreeing), measured
+    both sides 2026-11-09 — (vii) item 8; reporting upstream is the owner's (the ledger's P5 policy, UNFILED);
+    the inventory's §E5 still cites the dossier's reading (a records follow-up).
+31. **E13 on declined sweeps**: since train 28 a bound early-copy operand realizes gc's order as ONE member
+    where the ruled E13 latitude ([USER] 2026-09-05) would enumerate both — an [AGENT] narrowing found by the
+    train-32 audit; keep the ruling and restore the probe, or ratify — ruling 1.
 
 **D. Scheduling and the detector**
 
-32. **The abort window** (BUG-159; `docs/release.md` §4; [USER] 2026-10-12 item 3 — named, not widened): a goroutine's
-    progress between main's last observable step and its abort is EXCLUDED; gc realizes `AB` dominantly (994 of 1000);
-    the S15 sweep found the same missing member `AB` at every abort kind (a run-time panic, a re-panic, a fatal) —
-    §4's wording after the re-measurement is pending ruling 6. Widening would touch `atBoundary_of_abort`'s successor and
-    the drivers' terminal-priority classification.
-33. **Main's exit beside a child's fatal** (BUG-360): gc writes the fatal's text before the flag that parks main's return,
-    so the program may exit 0 with the fatal's message in its output (8 of 400 draws under load, 0 of 1,000 unloaded);
-    the machine's set is {ok, fatal}; no row can hold it (the enumerator has no `fatal` member) — fix, or a stated limit
-    beside BUG-159: ruling 5.
-34. **Registry granularity and liveness**: scheduler choices are explored at machine boundaries only (C1–C6); the modeled
-    set is the union over FINITE tapes, every finite prefix of every schedule a member; no fairness, no termination
-    claimed; a starving schedule is a member.
-35. **The unknowns** U-2 … U-7 (inventory §6) stand; U-6 (atomics) is modeled as SC fused steps with `atomic.Value`,
-    `Bool`, `Pointer[T]`, `And`/`Or` and the `unsafe.Pointer` family refused for wave 2.
-36. **Racy programs are refused** (C10, by doctrine); the detector's HB set is TSan's realized edges, not go_mem's minimal
-    relation; it refuses ⊇ gc: BUG-041 (whole-cell composite reads, narrowed to constant indices; 2 rows), BUG-084 (plain
-    accesses beside `race.Disable`d sync ops; 5 rows, red by design), BUG-132 (the sort op's conservative write set; 2 rows, `Expect: FAIL` as a red pin PENDING the owner's ruling — the 2026-10-25 ruling, backlog row 50 option 1, accepted the `sortSlice` lowering, not this red; the closure's §6 S16 row lists it open), BUG-370 (`clear`'s per-element writes; 1 row; ruling 2), BUG-371 (zero-size
-    cells recorded as locations; 4 rows; ruling 3); U5: TSan over-reports where the machine's release merge is exact.
-37. **The enumerators' reach** (fresh-eyes F3): the DFS defaults (`--max-sites 8`, `--work-cap`) are tripped by most
-    two-goroutine shapes, the refusal loud; the dedup engine's fragment excludes the three consults of limit 11; the
-    unbounded `continue L`/`goto` spinners refuse at the step fuel; the mutex poller does not close (BUG-361); the strict
-    lane's depth guard is what the gate relies on.
-38. **The pool's per-step cost grows with the goroutine count** (BUG-415: 10^4 goroutines do not finish in 110 s where gc
-    answers in 0.1 s) — a grind, never an answer.
+32. **The abort window** (BUG-159; `docs/release.md` §4; [USER] 2026-10-12 item 3 — named, not widened): a
+    goroutine's progress between main's last observable step and its abort is EXCLUDED; gc realizes `AB`
+    dominantly (994 of 1000); the S15 sweep found the same missing member `AB` at every abort kind (a run-time
+    panic, a re-panic, a fatal) — §4's wording after the re-measurement is pending ruling 6. Widening would
+    touch `atBoundary_of_abort`'s successor and the drivers' terminal-priority classification.
+33. **Main's exit beside a child's fatal** (BUG-360): gc writes the fatal's text before the flag that parks
+    main's return, so the program may exit 0 with the fatal's message in its output (8 of 400 draws under
+    load, 0 of 1,000 unloaded); the machine's set is {ok, fatal}; no row can hold it (the enumerator has no
+    `fatal` member) — fix, or a stated limit beside BUG-159: ruling 5.
+34. **Registry granularity and liveness**: scheduler choices are explored at machine boundaries only (C1–C6);
+    the modeled set is the union over FINITE tapes, every finite prefix of every schedule a member; no
+    fairness, no termination claimed; a starving schedule is a member.
+35. **The unknowns** U-2 … U-7 (inventory §6) stand; U-6 (atomics) is modeled as SC fused steps with
+    `atomic.Value`, `Bool`, `Pointer[T]`, `And`/`Or` and the `unsafe.Pointer` family refused for wave 2.
+36. **Racy programs are refused** (C10, by doctrine); the detector's HB set is TSan's realized edges, not
+    go_mem's minimal relation; it refuses ⊇ gc: BUG-041 (whole-cell composite reads, narrowed to constant
+    indices; 2 rows), BUG-084 (plain accesses beside `race.Disable`d sync ops; 5 rows, red by design), BUG-132
+    (the sort op's conservative write set; 2 rows, `Expect: FAIL` as a red pin PENDING the owner's ruling —
+    the 2026-10-25 ruling, backlog row 50 option 1, accepted the `sortSlice` lowering, not this red; the
+    closure's §6 S16 row lists it open), BUG-370 (`clear`'s per-element writes; 1 row; ruling 2), BUG-371
+    (zero-size cells recorded as locations; 4 rows; ruling 3); U5: TSan over-reports where the machine's
+    release merge is exact.
+37. **The enumerators' reach** (fresh-eyes F3): the DFS defaults (`--max-sites 8`, `--work-cap`) are tripped
+    by most two-goroutine shapes, the refusal loud; the dedup engine's fragment excludes the three consults of
+    limit 11; the unbounded `continue L`/`goto` spinners refuse at the step fuel; the mutex poller does not
+    close (BUG-361); the strict lane's depth guard is what the gate relies on.
+38. **The pool's per-step cost grows with the goroutine count** (BUG-415: 10^4 goroutines do not finish in 110
+    s where gc answers in 0.1 s) — a grind, never an answer.
 
 **E. Resources**
 
-39. **Budgets refuse by name at every door** (`docs/release.md` §4; BUG-078/090/131; [USER] 2026-10-25 and G21): the
-    array length (1<<16 per dimension), the footprint (1<<24 leaves, at the type, the constant `make`, the run-time
-    `make`, the append spill on the REALIZED capacity — so a pick in the envelope can refuse where the default answers —
-    and the conversions), the slice capacity (1<<23); 23 (BUG-078) + 21 (BUG-131) + 3 (BUG-090) rows red by design under
-    `arrays/materialization-*`, `strings/trimspace-repeat` and the conversion rows.
-40. **Known memory kills remain** (BUG-410, 411): a Go STRING has no length budget and costs about 16–20 bytes of memory
-    per byte (a 2^31-byte string built by doubling is killed at 32G where gc answers in 2 s); the budgets bound each
-    backing and never the live heap (64 live `make([]byte, 1<<23)` are killed at 16G). `docs/release.md` §4's sentence
-    that no memory kill of this class is known is contradicted by BUG-410 — the owner's wording, pending ruling 6. A kill
-    (exit 137) is a non-verdict, never a wrong answer.
-41. **Costs** (no wrong answer): the association-list heap (BUG-090: O(live cells) per allocation and cell write), O(n²)
-    recursion depth (BUG-413), O(c) element stores into a backing of c cells (BUG-414), BUG-415 above; the frontend's size
-    scan does not finish on a named struct chain 70 deep (reported, not entered); the runners' per-row budgets
-    (`LEAN_TIMEOUT_SECONDS` 60 s, the tracer 8×) turn a grind into a timeout.
+39. **Budgets refuse by name at every door** (`docs/release.md` §4; BUG-078/090/131; [USER] 2026-10-25 and
+    G21): the array length (1<<16 per dimension), the footprint (1<<24 leaves, at the type, the constant
+    `make`, the run-time `make`, the append spill on the REALIZED capacity — so a pick in the envelope can
+    refuse where the default answers — and the conversions), the slice capacity (1<<23); 23 (BUG-078) + 21
+    (BUG-131) + 3 (BUG-090) rows red by design under `arrays/materialization-*`, `strings/trimspace-repeat`
+    and the conversion rows.
+40. **Known memory kills remain** (BUG-410, 411): a Go STRING has no length budget and costs about 16–20 bytes
+    of memory per byte (a 2^31-byte string built by doubling is killed at 32G where gc answers in 2 s); the
+    budgets bound each backing and never the live heap (64 live `make([]byte, 1<<23)` are killed at 16G).
+    `docs/release.md` §4's sentence that no memory kill of this class is known is contradicted by BUG-410 —
+    the owner's wording, pending ruling 6. A kill (exit 137) is a non-verdict, never a wrong answer.
+41. **Costs** (no wrong answer): the association-list heap (BUG-090: O(live cells) per allocation and cell
+    write), O(n²) recursion depth (BUG-413), O(c) element stores into a backing of c cells (BUG-414), BUG-415
+    above; the frontend's size scan does not finish on a named struct chain 70 deep (reported, not entered);
+    the runners' per-row budgets (`LEAN_TIMEOUT_SECONDS` 60 s, the tracer 8×) turn a grind into a timeout.
 
 **F. Observation and the oracle (trusted surface #2)**
 
-42. **Pre-`main` aborts are outside the observation scope** (BUG-107, 5 rows; [USER] 2026-10-12 D3): the harness
-    registers its crash channel from `main`; the campaign's init-context cells (S10 6, S12 2) agree by hand only.
+42. **Pre-`main` aborts are outside the observation scope** (BUG-107, 5 rows; [USER] 2026-10-12 D3): the
+    harness registers its crash channel from `main`; the campaign's init-context cells (S10 6, S12 2) agree by
+    hand only.
 43. **A fatal raised during panic unwinding** cannot be authenticated (BUG-106, 1 row).
-44. **A second report boundary** after the selected panic origin refuses the gc sample (BUG-114; draw-dependent; the row
-    PASS at K=32).
-45. **Invalid-UTF-8 abort first lines** refuse on both sides (BUG-004, 3 rows); the compared abort text is gc's FIRST
-    line (FR-32); control bytes in a payload are preserved through the projection but unrowed (FR-33).
+44. **A second report boundary** after the selected panic origin refuses the gc sample (BUG-114;
+    draw-dependent; the row PASS at K=32).
+45. **Invalid-UTF-8 abort first lines** refuse on both sides (BUG-004, 3 rows); the compared abort text is
+    gc's FIRST line (FR-32); control bytes in a payload are preserved through the projection but unrowed
+    (FR-33).
 46. **`print` beside a race** refuses at the oracle (BUG-093's `go-observation` row).
-47. **The comparable surface**: `golean-observation-v1`'s kinds; func values refused on both sides (item 22); outside
-    seeded mode the Go observer has no pointer, slice, map or channel arm, so such a strict row is a visible red (F4);
-    the readout's `uintptr` refusal (limit 21).
-48. **One oracle, one platform, one version**: every agreement is at gc go1.26.5 linux/amd64 GOAMD64=v1 under the runners'
-    pins; the language is Go 1.26's (gc 1.27's generic methods refused at parse); a gc 1.25.0–1.25.3 user sees no panic
-    on `any(f) == any(f)`; abort TEXTS are version-sensitive; the harness's abort classifier is pinned to go1.26.5's
-    runtime frame lines, so under another toolchain about 12 % of abort rows compare on raw text only — a per-version
-    frame-line table is PENDING [USER] (row 32); `scripts/go-version-diversity` never re-pins.
-49. **Sampling bounds membership from below**: a membership row pins the envelope's cardinality and gc's draws'
-    membership (K=32 at the gate; the campaign's 20 schedules per S16 cell and 230 draws per S15 subject); a member gc
-    did not draw is not refuted; `default=gc` rows pin the default member only.
-50. **Hand-only and unrowable cells** live on `- Neighbourhood:` lines, not in the corpus (S10 6, S12 2, S13 6, S15 15,
-    S19 3, S22 56, S23 31 under `capped`, S21's 194 hand subjects; the three S20 rows retired because the oracle harness
-    reprints sources through go/printer — BUG-296, apparatus); S26 was read, not run; S24 and S25 were not swept.
+47. **The comparable surface**: `golean-observation-v1`'s kinds; func values refused on both sides (item 22);
+    outside seeded mode the Go observer has no pointer, slice, map or channel arm, so such a strict row is a
+    visible red (F4); the readout's `uintptr` refusal (limit 21).
+48. **One oracle, one platform, one version**: every agreement is at gc go1.26.5 linux/amd64 GOAMD64=v1 under
+    the runners' pins; the language is Go 1.26's (gc 1.27's generic methods refused at parse); a gc
+    1.25.0–1.25.3 user sees no panic on `any(f) == any(f)`; abort TEXTS are version-sensitive; the harness's
+    abort classifier is pinned to go1.26.5's runtime frame lines, so under another toolchain about 12 % of
+    abort rows compare on raw text only — a per-version frame-line table is PENDING [USER] (row 32);
+    `scripts/go-version-diversity` never re-pins.
+49. **Sampling bounds membership from below**: a membership row pins the envelope's cardinality and gc's
+    draws' membership (K=32 at the gate; the campaign's 20 schedules per S16 cell and 230 draws per S15
+    subject); a member gc did not draw is not refuted; `default=gc` rows pin the default member only.
+50. **Hand-only and unrowable cells** live on `- Neighbourhood:` lines, not in the corpus (S10 6, S12 2, S13
+    6, S15 15, S19 3, S22 56, S23 31 under `capped`, S21's 194 hand subjects; the three S20 rows retired
+    because the oracle harness reprints sources through go/printer — BUG-296, apparatus); S26 was read, not
+    run; S24 and S25 were not swept.
 
 **G. The standard library**
 
-51. **The register is the admitted set** (§3 (iii)): 13 source-through packages at the pin, 5 substitutions, the overlay
-    rows (cap 12 `expr`), `overlay-import` cap 8 ([AGENT]-provisional, PENDING [USER] ratification), 3 primitives (the cap
-    full), 1 intercept, 6 fmt shims (`Errorf`, `Fprint`, `Fprintf`, `Sprint`, `Sprintf`, `Sprintln`; E10 not met — injected text the consumer's `cases` see), 5 shadow-type rows (the
-    `sync/atomic` wrappers), 3 init-callee rows; the GODEBUG obligation per admission; the `(*rand.Rand).Intn` method forms
-    unbound (the offer's limit 9, unchanged). Everything else refuses by name (FR-14, FR-21; `time.*`, `rand.New`,
-    `runtime`, `os.Exit`, `fmt.Println`, `errors.Is`, `%w`, `atomic.And`/`Or`, the `math` functions, complex).
-52. **The shims' observable residue**: the `fmt.Sprint` kind oracle is lifted per call site from go/types and completed
-    from the stencil set (BUG-400/425); the shim's ASCII `%q` quoter, invalid UTF-8 in an error payload's first line and
-    the defined-string-type `printanycustomtype` form are named refusals (S27); BUG-236 (limit 28) is the shim's one
-    wrong text.
+51. **The register is the admitted set** (§3 (iii)): 13 source-through packages at the pin, 5 substitutions,
+    the overlay rows (cap 12 `expr`), `overlay-import` cap 8 ([AGENT]-provisional, PENDING [USER]
+    ratification), 3 primitives (the cap full), 1 intercept, 6 fmt shims (`Errorf`, `Fprint`, `Fprintf`,
+    `Sprint`, `Sprintf`, `Sprintln`; E10 not met — injected text the consumer's `cases` see), 5 shadow-type
+    rows (the `sync/atomic` wrappers), 3 init-callee rows; the GODEBUG obligation per admission; the
+    `(*rand.Rand).Intn` method forms unbound (the offer's limit 9, unchanged). Everything else refuses by name
+    (FR-14, FR-21; `time.*`, `rand.New`, `runtime`, `os.Exit`, `fmt.Println`, `errors.Is`, `%w`,
+    `atomic.And`/`Or`, the `math` functions, complex).
+52. **The shims' observable residue**: the `fmt.Sprint` kind oracle is lifted per call site from go/types and
+    completed from the stencil set (BUG-400/425); the shim's ASCII `%q` quoter, invalid UTF-8 in an error
+    payload's first line and the defined-string-type `printanycustomtype` form are named refusals (S27);
+    BUG-236 (limit 28) is the shim's one wrong text.
 
 **H. The records**
 
-53. The lanes' matrices and reports are ephemeral (the charter's artifact rule); what survives is the Neighbourhood line,
-    `docs/defect-shapes.md` §3 (statuses as the lanes wrote them; the index is current), the commit message and the
-    baseline header; the closure's §4 names the places where two of them disagree. The latitude inventory's `file:line`
-    anchors are not maintained (§11 note); its §10 lists are stale by BUG-280 and BUG-176 (§2.3 above).
-54. The rulings posed and not ruled are §7; the release carries each as pending, and nothing in this record presumes
-    one.
+53. The lanes' matrices and reports are ephemeral (the charter's artifact rule); what survives is the
+    Neighbourhood line, `docs/defect-shapes.md` §3 (statuses as the lanes wrote them; the index is current),
+    the commit message and the baseline header; the closure's §4 names the places where two of them disagree.
+    The latitude inventory's `file:line` anchors are not maintained (§11 note); its §10 lists are stale by
+    BUG-280 and BUG-176 (§2.3 above).
+54. The rulings posed and not ruled are §7; the release carries each as pending, and nothing in this record
+    presumes one.
 
 ## 7. Rulings carried as PENDING (none presumed; each as it stands on `main` today)
 
 From the closure's §6 (posed by [AGENT] lanes or the coordinator at a train's ask; row 56 names the train):
 
-1. The E13 narrowing on declined sweeps — keep the ruling and restore the probe, or ratify (train 32; limit 31).
-2. BUG-370: red by design under BUG-084's go_mem-over-TSan form (the lane's recommendation) or narrow the footprint
-   (train 33; limit 36).
+1. The E13 narrowing on declined sweeps — keep the ruling and restore the probe, or ratify (train 32; limit
+   31).
+2. BUG-370: red by design under BUG-084's go_mem-over-TSan form (the lane's recommendation) or narrow the
+   footprint (train 33; limit 36).
 3. BUG-371: fix (a zero-size access is no location) or BUG-084's form (train 33; limit 36).
 4. The readout's `uintptr` asymmetry, noted on BUG-114 (train 33; limit 21).
 5. BUG-360: fix, or a stated limit beside BUG-159 (train 34; limit 33).
-6. `docs/release.md` §4's abort-window wording after the S15 re-measurement, and its memory-kill sentence after BUG-410
-   (trains 34 and 30; limits 32, 40).
+6. `docs/release.md` §4's abort-window wording after the S15 re-measurement, and its memory-kill sentence
+   after BUG-410 (trains 34 and 30; limits 32, 40).
 7. The dead-print over-refusal under the gclimits precedent (train 34; limit 20).
 8. BUG-312's envelope — the call-free general form (trains 27, 28; limit 26).
-9. BUG-176, BUG-170, BUG-121 — the envelope at the zero-size and `[]byte(s)` identity points (train 23; limits 23, 24).
+9. BUG-176, BUG-170, BUG-121 — the envelope at the zero-size and `[]byte(s)` identity points (train 23; limits
+   23, 24).
 10. BUG-280 — gc's own deviation; the third disposition recommended (train 25; limit 27).
 11. BUG-236 — the design gate; option A recommended (train 25; limit 28).
 12. BUG-218, BUG-221 — low; strike or keep (train 24; limit 16).
@@ -587,38 +745,48 @@ From the closure's §6 (posed by [AGENT] lanes or the coordinator at a train's a
 14. The BOM policy and the hoisted-deref alternative for the zero-length range (train 25).
 15. BUG-340/341 — the E7 question behind the guards (train 31; limit 19).
 16. The re-pin guard's family extended in `scripts/check-cause-regressions` (train 32; a gate-script change).
-17. BUG-091's class, and the oracle-observer family BUG-105/106/107/114 with BUG-065 — kept in the index pending the
-    owner (train 22).
+17. BUG-091's class, and the oracle-observer family BUG-105/106/107/114 with BUG-065 — kept in the index
+    pending the owner (train 22).
 18. The train-20 audit's F1/F4 at BUG-135's lane (S20).
-19. The merge asks of trains 33 and 34 — LANDED on `main` since the closure was written (`00afbc7c` carries both); no
-    longer pending.
+19. The merge asks of trains 33 and 34 — LANDED on `main` since the closure was written (`00afbc7c` carries
+    both); no longer pending.
 
-Beyond the closure's list: **D1's pending half** — the naming of the supported profile (`docs/release.md` §1.6.2; backlog §5's D1 ruled the BUG-061 half on 2026-10-12; §3's P1 is the proposal); **BUG-132** — the sort op's conservative write set, a red pin pending (the closure's §6 S16 row; narrow it or ratify the red); row 58 — GOPATH mode as
-a contract rather than a frontend refusal; row 53 — the dedup `output` scope; row 32 — the per-version frame-line table;
-inventory §11 item 1 — a second Platform instance; R7's envelope shape (BUG-094); the `overlay-import` cap; row 54's
-elaboration-cost follow-ups (not a ruling); and this record's own asks — whether to fold the three duplicated rows in
-the WINDOW file, and whether the statement-only exclusions of §3 (vii) are ratified as stated, converted into refusals
-by name, or replaced by the envelopes of rulings 8–10.
+Beyond the closure's list: **D1's pending half** — the naming of the supported profile (`docs/release.md`
+§1.6.2; backlog §5's D1 ruled the BUG-061 half on 2026-10-12; §3's P1 is the proposal); **BUG-132** — the sort
+op's conservative write set, a red pin pending (the closure's §6 S16 row; narrow it or ratify the red); row 58
+— GOPATH mode as a contract rather than a frontend refusal; row 53 — the dedup `output` scope; row 32 — the
+per-version frame-line table; inventory §11 item 1 — a second Platform instance; R7's envelope shape
+(BUG-094); the `overlay-import` cap; row 54's elaboration-cost follow-ups (not a ruling); and this record's
+own asks — whether to fold the three duplicated rows in the WINDOW file, and whether the statement-only
+exclusions of §3 (vii) are ratified as stated, converted into refusals by name, or replaced by the envelopes
+of rulings 8–10.
 
-## 8. Derivations (run at `00afbc7c` in the worktree, `export LC_ALL=C`; every number above comes from one of these or from the file named beside it)
+## 8. Derivations
+
+Run in the worktree at `00afbc7c` (the tree figures) and after the audit round's commits (the corpus and entry
+figures), `export LC_ALL=C`; every number above comes from one of these or from the file named beside it.
 
 ```sh
-git rev-parse --short HEAD                                            # 00afbc7c
-grep git_commit artifacts/coverage/latest.meta.tsv                    # 73b634f0…; git_dirty false
-git diff --stat 73b634f0 00afbc7c -- GoLean tools scripts Corpus baselines lakefile.toml lean-toolchain   # empty
+git rev-parse --short HEAD                                            # 00afbc7c at the record's first commit
+grep git_commit artifacts/coverage/latest.meta.tsv                    # 3248a3f8…; git_dirty false (the gate run of the audit round)
+git diff --stat 3248a3f8 HEAD -- GoLean tools scripts Corpus lakefile.toml lean-toolchain   # empty: records and the re-pin only after the run
 cat lean-toolchain; cat baselines/go-oracle-pin; grep version lakefile.toml; git show 20d3946d:lean-toolchain
 git log --oneline 20d3946d..HEAD | wc -l; git log --first-parent --oneline 20d3946d..HEAD | wc -l         # 519 / 519
 git diff --stat 20d3946d HEAD -- GoLean/GoCore | tail -1; … -- GoLean; … -- GoLean/NativeToIR.lean GoLean/CLI.lean; … -- tools/nativefrontend; … -- scripts
 git ls-tree -r --name-only 20d3946d -- tools/nativefrontend | grep -c '\.go$'; git ls-tree -r --name-only HEAD -- tools/nativefrontend | grep -c '\.go$'   # 54 / 81
 awk 'NR>10 && /^\|/' docs/changelog/20d3946d-WINDOW.md | wc -l                                              # the rows of §9
 # the corpus
-sed -n 2p baselines/native-full.tsv; sed -n 3p baselines/negative-full.tsv                                  # 7785 (7419/366); 645 (643/2)
+sed -n 2p baselines/native-full.tsv; sed -n 3p baselines/negative-full.tsv                                  # 7798 (7424/374); 645 (643/2)
 git show 20d3946d:baselines/native-full.tsv | sed -n 2p; git show 20d3946d:baselines/negative-full.tsv | sed -n 3p   # 3860 (3623/237); 394 (394/0)
 for b in native-full negative-full; do comm -3 <(git show 20d3946d:baselines/$b.tsv | grep -v '^#' | cut -f2 | sort) <(grep -v '^#' baselines/$b.tsv | cut -f2 | sort) | wc -l; done   # added 3925 / 251; removed 0 / 0 (comm -23)
 join -t$'\t' -j1 <(git show 20d3946d:baselines/native-full.tsv | grep -v '^#' | awk -F'\t' 'NR>1{print $2"\t"$1"/"$3}' | sort) <(grep -v '^#' baselines/native-full.tsv | awk -F'\t' 'NR>1{print $2"\t"$1"/"$3}' | sort) | awk -F'\t' '$2!=$3{print $2" -> "$3}' | sort | uniq -c   # the surviving rows' moves
 awk -F'\t' 'NR>1{print $1" "$4}' artifacts/coverage/latest.tsv | sort | uniq -c                            # the run by result and stage
 grep -P '^FAIL\t' baselines/negative-full.tsv | cut -f1-3                                                   # BUG-221's two rows
-scripts/coverage-cause --unclassified artifacts/coverage/latest.tsv; echo $?                                # «every FAIL row's cause is classified (366 …)», 0
+scripts/coverage-cause --unclassified artifacts/coverage/latest.tsv; echo $?                                # «every FAIL row's cause is classified (374 …)», 0
+# the re-pin of the audit round: the 13 rows appended with cause `-`, the header block, then the three checks
+scripts/coverage-baseline-diff artifacts/coverage/latest.tsv baselines/native-full.tsv --full   # no regression (7798)
+scripts/coverage-cause --apply baselines/native-full.tsv artifacts/coverage/latest.tsv | diff - baselines/native-full.tsv   # empty
+scripts/check-bugs.sh                                                                           # ok (217 bug(s), 9 moved …)
 scripts/check-bugs.sh; scripts/check-bugs.sh --list                                                        # the summary line; the 7 untriaged ids
 awk -F'\t' 'NR>1 && $1=="FAIL"{print $4"\t"$2}' artifacts/coverage/latest.tsv | while IFS=$'\t' read st id; do b=$(awk -v id="$id" '/^## BUG-/{c=$2} /^- Cases:/{if(index($0,id)){print c; exit}}' docs/BUGS.md); echo "$st	${b:-UNROWED}"; done | sort | uniq -c   # FAIL rows by stage × entry (§2)
 awk -F'\t' 'NR>1 && $1=="FAIL" && $4=="frontend-export"{print $2}' artifacts/coverage/latest.tsv | while read id; do b=$(awk -v id="$id" '/^## BUG-/{c=$2} /^- Cases:/{if(index($0,id)){print c; exit}}' docs/BUGS.md); [ -z "$b" ] && grep -P "^FAIL\t$id\t" baselines/native-full.tsv | cut -f4; done | sort | uniq -c   # the 158 unrowed rows by cause
@@ -665,8 +833,8 @@ scripts/check-bugs.sh; scripts/check-notices; scripts/check-agents-alias; script
 
 ## 9. The frozen rows — `docs/changelog/20d3946d-WINDOW.md` at `00afbc7c`, from its table header on, verbatim
 
-The file's own header (its purpose, the appending convention) is not repeated; its rows are, in its order (§1.1). The
-re-check command at the tag commit is in this record's preamble.
+The file's own header (its purpose, the appending convention) is not repeated; its rows are, in its order
+(§1.1). The re-check command at the tag commit is in this record's preamble.
 
 | Train | Line |
 |---|---|
