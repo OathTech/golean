@@ -10,6 +10,7 @@
     "GoLean.Contract.GoCore.ExecutionStatement.run_panic_iff",
     "GoLean.Contract.GoCore.ExecutionStatement.replay_coverage",
     "GoLean.Contract.GoCore.Machine.enterFrame_declared",
+    "GoLean.Contract.GoCore.Machine.recoverAtDeferred_none",
     "GoLean.Contract.GoCore.Choices.consumeAtE_eq",
     "GoLean.Contract.GoCore.Choices.consumeAtE_fst_snd",
     "GoLean.Contract.GoCore.Choices.consumeAtE_inv",

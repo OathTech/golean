@@ -3561,14 +3561,16 @@ the path write refuse a bad box at the write. -/
 private def g23IfaceNormalTests : IO Bool := do
   let mut passed := true
   -- A table: 0 = struct A {n int8; x any}, 1 = the runtime-error slot's stand-in (opaque),
-  -- 2 = type MyInt int16, 3 = interface definition, 4 = struct Node {next any}.
+  -- 2 = type MyInt int16, 3 = interface definition, 4 = struct Node {next any},
+  -- 5 = an imported named type (opaque).
   let anyT : GoCore.Ty := .interface ⟨"any"⟩
   let types : GoCore.TypeEnv :=
     #[(⟨"main.A"⟩, .struct #[{ name := "n", typ := .int .int8 }, { name := "x", typ := anyT }]),
       (GoCore.runtimeErrorTypeId, .opaqueDecl "the runtime error sentinel"),
       (⟨"main.MyInt"⟩, .defined (.int .int16)),
       (⟨"main.I"⟩, .interfaceDef #[]),
-      (⟨"main.Node"⟩, .struct #[{ name := "next", typ := anyT }])]
+      (⟨"main.Node"⟩, .struct #[{ name := "next", typ := anyT }]),
+      (⟨"time.Duration"⟩, .opaqueDecl "an imported named type")]
   let tctx : GoLean.GoCore.ProgramCtx := GoLean.GoCore.ProgramCtx.ofTables (types := types)
   let norm (ty : GoCore.Ty) (v : GoValue) : Except Stop GoValue :=
     GoCore.normalizeValueForTy tctx ty v
@@ -3616,11 +3618,25 @@ private def g23IfaceNormalTests : IO Bool := do
      ("sync", .sync .mutex, .syncData (GoCore.SyncKind.zero .mutex), .nil),
      ("defined struct", .defined 0, aVal .nil, .struct ⟨"main.B"⟩ #[("n", .int 3 .int8), ("x", .nil)]),
      ("defined struct, field", .defined 0, aVal (box .bool (.bool true)), aVal (.int 1 .int)),
-     ("defined alias", .defined 2, .int 5 .int16, .int 70000 .int16),
-     ("runtime error sentinel", .defined GoCore.runtimeErrorTypeIdx, str, .int 0 .int)]
+     ("defined alias", .defined 2, .int 5 .int16, .int 70000 .int16)]
   for (name, dyn, good, bad) in pairs do
     passed := passed && (← expectTrue s!"G23 box at dynamic type {name}: a normal payload passes unchanged, a non-normal one is refused by name"
       (unchanged anyT (box dyn good) && refusedAs anyT (box dyn bad) boxNeedle))
+  -- An OPAQUE dynamic type (an imported named type carried by name only): no declared
+  -- structure, so the payload is admitted unchecked — the corpus boxes `time.Duration` (an
+  -- int64) and `sort.IntSlice` (a slice) this way. The runtime-error payload is the same case
+  -- in a table with the reserved entries, and admitted by name, as a string, in any other.
+  passed := passed && (← expectTrue "G23 box at an OPAQUE dynamic type: the payload is admitted unchecked (an int64, a slice, a string under the reserved index)"
+    (unchanged anyT (box (.defined 5) (.int 5 .int64))
+      && unchanged anyT (box (.defined 5) nilSlice)
+      && unchanged anyT (box (.defined GoCore.runtimeErrorTypeIdx) str)
+      && unchanged anyT (box (.defined GoCore.runtimeErrorTypeIdx) (.int 0 .int))))
+  passed := passed && (← expectTrue "G23 box at the reserved runtime-error index over a table WITHOUT the reserved entries: a string is admitted by name, anything else refused"
+    (GoCore.isNormalForTy #[] anyT (box (.defined GoCore.runtimeErrorTypeIdx) str)
+      && !GoCore.isNormalForTy #[] anyT (box (.defined GoCore.runtimeErrorTypeIdx) (.int 0 .int))
+      && (match GoCore.normalizeValueForTy emptyCtx anyT (box (.defined GoCore.runtimeErrorTypeIdx) (.int 0 .int)) with
+          | .error (.stuck msg) => (msg.splitOn boxNeedle).length > 1
+          | _ => false)))
   -- Dynamic types no box carries.
   passed := passed && (← expectTrue "G23 box: an INTERFACE dynamic type is refused (Go never double-boxes), named or defined; so are an unsupported and an unknown one"
     (refusedAs anyT (box anyT (box .bool (.bool true))) boxNeedle
@@ -3640,7 +3656,7 @@ private def g23IfaceNormalTests : IO Bool := do
   let rec chain : Nat → GoValue → GoValue
     | 0, tail => tail
     | n + 1, tail => box (.defined 4) (node (chain n tail))
-  passed := passed && (← expectTrue "G23 descent: a 40-deep list through an interface field (the table has 5 entries) is normal; the same list ending in a bad box is refused"
+  passed := passed && (← expectTrue "G23 descent: a 40-deep list through an interface field (the table has 6 entries) is normal; the same list ending in a bad box is refused"
     (unchanged (.defined 4) (node (chain 40 .nil))
       && refusedAs (.defined 4) (node (chain 40 (box .bool (.int 1 .int)))) boxNeedle))
   -- The boxes of a NON-interface slot's value: a struct field, an array element.
