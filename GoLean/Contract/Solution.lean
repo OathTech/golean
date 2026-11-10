@@ -62,6 +62,12 @@ theorem GoLean.Contract.GoCore.Machine.enterFrame_declared :
     stmt_of% GoLean.GoCore.Machine.enterFrame_declared :=
   GoLean.GoCore.Machine.enterFrame_declared
 
+/-! ## recover (1) -/
+
+theorem GoLean.Contract.GoCore.Machine.recoverAtDeferred_none :
+    stmt_of% GoLean.GoCore.Machine.recoverAtDeferred_none :=
+  GoLean.GoCore.Machine.recoverAtDeferred_none
+
 /-! ## consumeAt (14) -/
 
 theorem GoLean.Contract.GoCore.Choices.consumeAtE_eq :

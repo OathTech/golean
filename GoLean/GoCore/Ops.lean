@@ -2618,17 +2618,33 @@ value's captured list is not walked (the type-directed check does not look
 there either: captures are the addresses of the captured variables). -/
 
 /-- Is `w` a legitimate payload of a box of dynamic type `dyn`? Self-normalized
-at `dyn` over the table at full bound, with two producer facts on top: Go never
-double-boxes (`.toInterface` passes an interface-typed source through), so an
-interface dynamic type is refused; and the machine's own runtime-error payload
-(`runtimeErrorValue`, and the frontend's `runtimeError`-flagged panic) is a
-`.string` under the reserved index `runtimeErrorTypeIdx`, whose table entry is
-an opaque declaration no value normalizes at — admitted by name. -/
+at `dyn` over the table at full bound, with three producer facts on top
+(`.toInterface` boxes its operand at the static type WITHOUT normalizing it, so
+what a box may hold is what an operand of that type may be):
+
+* Go never double-boxes (`.toInterface` passes an interface-typed source
+  through), so an interface dynamic type is refused.
+* A dynamic type whose table entry is an OPAQUE declaration — an imported named
+  type the frontend carries by name only (`time.Duration`, `sort.IntSlice`) —
+  has no declared structure to check against: no value normalizes there (a CELL
+  of such a type is refused), yet a value of it is boxed and passed around
+  (measured: `interfaces/sweep-s5-imported-carriers/duration-stringer` answers
+  as gc does). Its payload is admitted UNCHECKED — the one place the walk says
+  nothing about a box's contents.
+* The machine's own runtime-error payload (`runtimeErrorValue`, and the
+  frontend's `runtimeError`-flagged panic) is a `.string` under the reserved
+  index `runtimeErrorTypeIdx`. In a table that leads with the reserved entries
+  that index IS an opaque declaration (the case above); the machine builds the
+  payload whatever the table is, so over any other table it is admitted by
+  name, as a `.string`. -/
 def boxPayloadNormal (types : TypeEnv) : Ty → GoValue → Bool
   | .interface _, _ => false
   | .defined i, w =>
-      isNormalForTyAt types types.size i w
-        || (decide (i = runtimeErrorTypeIdx) && match w with | .string _ => true | _ => false)
+      match types[i]? with
+      | some (_, .opaqueDecl _) => true
+      | _ =>
+          isNormalForTyAt types types.size i w
+            || (decide (i = runtimeErrorTypeIdx) && match w with | .string _ => true | _ => false)
   | dyn, w => isNormalForTyTy (isNormalForTyAt types types.size) dyn w
 
 mutual

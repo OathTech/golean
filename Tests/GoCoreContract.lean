@@ -423,6 +423,13 @@ contract since 2026-10-25 (lane `gate/contract-pins-1025`), after the relation w
 namespace GoLean.GoCore.ContractTests.Pin
 open GoCore GoCore.Machine GoCore.ExecutionStatement
 
+/-- G23 (2026-11-10): below anything but the panic marker there is nothing to recover — in
+the comparator contract (family `recover`) since the customer proves a recover rule against it. -/
+theorem recoverAtDeferred_none {c : Cont}
+    (h : ∀ (chain : List PanicEntry) (k : Cont), c ≠ Cont.panicResumeK chain k) :
+    recoverAtDeferred c = none :=
+  GoCore.Machine.recoverAtDeferred_none h
+
 /-- The generic certificate theorem, with only sound node equality assumed. -/
 theorem checkCert_slowObs
     {ctx : ProgramCtx} {nodeEqb : DedupNode → DedupNode → Bool}

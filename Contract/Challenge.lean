@@ -23,7 +23,9 @@ follow-up) the set also carries G16's thirteen table-monotonicity statements (`T
 family `g16` of scripts/contract-names.lean), moved here from `Tests/GoCoreContract.lean`'s former
 §E Provisional once the per-key relation of train 17 was ruled final, plus `methodSetCoverage?_mono` at
 the fix round the same day (the coordinator's decision: a first-match lookup of the same kind, named in
-the customer's ask): 366 statements in all. The equation family is EVERY public theorem of
+the customer's ask): 366 statements in all then; 385 with the equations added since and the two dedup
+certificate theorems (2026-10-26); 386 since 2026-11-10 with `recoverAtDeferred_none` (family `recover`,
+raft-proofs' G23). The equation family is EVERY public theorem of
 `Equations.lean` (300 since lane `core/g16-raise-mark-1023`; 234 of them `@[stepFn_eqns]` simp-set members — the customer's rewriting
 library is the module, and its `signalStep_*` rows, `runProgramSetup_noInit`, the
 `allocDecls_*`/`bindParams_*`/`setup_*` facts and the rest are plain theorems there): widened
@@ -122,8 +124,9 @@ constant.
 
 Deliberately, never by regeneration: a kept statement changes → `lake comparator` (the
 `--diff`-tier speedbump scripts/check-comparator, and the claim-point run) names it → the change
-is accepted here (scripts/contract-challenge-draft shows the new text) with a row in
-docs/changelog/20d3946d-WINDOW.md naming the statement and why. A kept theorem added or removed
+is accepted here (scripts/contract-challenge-draft shows the new text) with a row in the
+current window changelog (`docs/changelog/`: `20d3946d-WINDOW.md` up to the first release's
+freeze, `9f4554a6-WINDOW.md` after it) naming the statement and why. A kept theorem added or removed
 → scripts/gen-contract regenerates comparator.json and the Solution, and `scripts/gen-contract
 --check` names the statement this file lacks or no longer needs.
 
@@ -227,6 +230,16 @@ theorem GoLean.Contract.GoCore.Machine.enterFrame_declared :
                            fun (frameEnv : LocalEnv) (s₂ : Store) => do
                            let resultLocs ← pinResultLocs frameEnv func.results.toList
                            pure (Entry.run func frameEnv resultLocs, s₂, []))
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.recoverAtDeferred_none` (GoLean.GoCore.Machine) -/
+-- Added 2026-11-10 (raft-proofs' G23; docs/changelog/9f4554a6-WINDOW.md): written by hand in the
+-- source's form — `Cont.panicResumeK` is the list-form `abbrev` the kept statement names.
+theorem GoLean.Contract.GoCore.Machine.recoverAtDeferred_none :
+    ∀ {c : Cont},
+      (∀ (chain : List PanicEntry) (k : Cont), c ≠ Cont.panicResumeK chain k) →
+        recoverAtDeferred c = none
     := sorry
 
 /-! ## GoLean.GoCore.State -/

@@ -62,6 +62,9 @@ def exports : List Name := [
     ``GoLean.GoCore.Machine.checkCert_slowObs, ``GoLean.GoCore.Machine.checkCertM_slowObs,
     ``GoLean.GoCore.ContractTests.Pin.checkCert_slowObs,
     ``GoLean.GoCore.ContractTests.Pin.checkCertM_slowObs,
+    -- G23 (2026-11-10): the recover fact added to the comparator contract, and its pin.
+    ``GoLean.GoCore.Machine.recoverAtDeferred_none,
+    ``GoLean.GoCore.ContractTests.Pin.recoverAtDeferred_none,
     -- RESTORED 2026-10-21 (fix round F1): the relation-free single-goroutine pool bridge, the
     -- projections and the observation vocabulary (`PoolFacts.lean`, `PoolProjection.lean`,
     -- `single_embedding`), the names that left the list at the retirement and exist again.
