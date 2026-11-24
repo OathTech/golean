@@ -3396,7 +3396,10 @@ def cellLeafTy (s : Store) (l : Loc) : Option Ty :=
   let rp := Loc.rootPath l
   match Heap.lookup s.heap (.base rp.1) with
   | some (.value ty _) => cellLeafTyFrom ctx ctx.types.size ty rp.2
-  | _ => none
+  | some (.mapPayload ..) => none
+  | some (.chanPayload ..) => none
+  | some .dead => none
+  | none => none
 
 /-- **The write side of the whole-value retag** (BUG-134; placement per the
 train-20 audit F1): `some v'` exactly when `v` is a struct value whose tag is

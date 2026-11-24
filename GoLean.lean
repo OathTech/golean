@@ -23,7 +23,7 @@ import GoLean.GoCore.InitDriverFacts
 -- slice of the function/method/promotion tables is the step under the whole, lifted to `Prefix`.
 import GoLean.GoCore.TableMonotonicity
 -- The dead cell for the raft-proofs customer (rung 2, 2026-11-24): refusal at a dead root, the
--- `markDead` frame, and `NoDead` preserved by every machine step and run.
+-- `markDead` frame, and `NoDead` preserved by the step, the drivers, setup and the pool.
 import GoLean.GoCore.DeadCell
 -- The relation-free single-goroutine bridge and projections, re-homed/restored 2026-10-21 (fix
 -- round F1 of the retirement; pending the owner's ruling): `PoolFacts` (ex-MultiSound/PoolTrace/

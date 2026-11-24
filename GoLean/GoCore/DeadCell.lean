@@ -1,6 +1,7 @@
 import GoLean.GoCore.StepFn
 import GoLean.GoCore.StepFnFacts
 import GoLean.GoCore.ExecutionStatement
+import GoLean.GoCore.Seed
 
 /-!
 # The dead cell — refusal, frame and `NoDead` preservation (raft-proofs' rung-2 request)
@@ -13,21 +14,36 @@ keeps its address).
 one: `Store.markDead` (`Store.lean`) is its only producer and no machine operation calls it.
 This module states the four properties the consumer relies on.
 
-1. **Refusal.** Every reader and writer that reaches a dead root cell refuses with `.stuck` —
-   never a Go panic, never a value: `loadLoc_dead`, `loadRoot_dead`, `storeLoc_dead`,
-   `mapPayload?_dead`, `chanPayload?_dead`, `storeMapPayload_dead`, `storeChanPayload_dead`, and
-   the `Mem.*` operations above them. `IsStuck` is the refusal shape.
-2. **No machine step creates one.** `Store.NoDead` is preserved by `stepFn` (`stepFn_noDead`)
-   and by the frame-entry operations a consumer's adapter calls directly (`enterFrame_noDead`,
-   `bindParams_noDead`, `allocDecls_noDead`, `pinResultLocs_noDead`) and by the wide operations
-   (`applyStmtOp_noDead`, `applySyncOp_noDead`, …). The empty store satisfies it
-   (`Store.NoDead.empty`); `Store.markDead` at an allocated address is what breaks it
-   (`Store.markDead_not_noDead`).
+1. **Refusal, per operation.** Each reader and writer that reaches a dead root cell refuses with
+   `.stuck` — never a Go panic, never a value: `loadLoc_dead`, `loadRoot_dead`, `storeLoc_dead`,
+   `mapPayload?_dead`, `chanPayload?_dead`, `storeMapPayload_dead`, `storeChanPayload_dead`, the
+   `Mem.load*`/`store*`/`map*` operations, `syncCell_dead`, `chanCell_dead`, and the strict and
+   sync heads named below. `IsStuck` is the refusal shape. The statements are about the
+   OPERATION: there is no step-level theorem «a step that touches a dead cell is stuck», and
+   the element-run operations (`Mem.loadElems`/`storeElems`/…), the atomics and `storeTarget`
+   have no lemma of their own (each reaches a cell through one of the above). At the pool, a
+   goroutine PARKED on a dead channel or sync cell reads as not runnable to the readiness
+   probes (`wakeReady`, `selectCommits` and the consult projections answer `false`/`none` on a
+   refusing peek, as they do on any ill-shaped cell) while others run; the refusal surfaces
+   when the pool classifies its parked set (`parkedWellFormed`) or the op is applied.
+2. **No machine operation creates one.** `Store.NoDead` is preserved by the sequential step
+   (`stepFn_noDead`) and its runs (`Prefix.noDead`, `runConfig_noDead`, `execStmtLoop_noDead`,
+   `stepFnIter_noDead`), by setup and the seeded entry (`runProgramSetupM_noDead`,
+   `runProgramSetupSeededM_noDead`: the store handed to the entry is `NoDead` outright), by
+   the goroutine pool (`stepMulti_noDead`, `execProgLoop_noDead`), and by the frame-entry and
+   wide operations a consumer's adapter calls directly (`enterFrame_noDead`,
+   `bindParams_noDead`, `allocDecls_noDead`, `applyStmtOp_noDead`, `applySyncOp_noDead`, …).
+   The empty store satisfies it (`Store.NoDead.empty`); `Store.markDead` at an allocated
+   address is what breaks it (`Store.markDead_not_noDead`). `Store.NoDead` is decidable.
 3. **Deadness is decidable** (`HeapCell.isDead`, `HeapCell.isDead_iff`, `State.lean`).
 4. **A dead cell is an occupied address**: `Store.markDead_size`, `Store.markDead_nextAddr`.
 
 The frame lemmas (`Store.markDead_lookup_ne`, `loadLoc_markDead_ne`, `storeLoc_markDead_ne`)
 say that marking one root dead changes no load or store at a location rooted elsewhere.
+`HeapCell.normal` is `true` of a dead cell, so `HeapNormal` and `StateWf` ADMIT dead cells
+(`HeapNormal.markDead`, `StateWf.markDead`): a theorem that concludes `StateWf` says nothing
+about deadness, and one that assumes it covers stores with dead cells. `NoDead` is the
+predicate that excludes them.
 -/
 
 namespace GoLean.GoCore
@@ -1046,6 +1062,283 @@ theorem stepFn_noDead {s : Store} {c : Config} {ch : Choices} (h : s.NoDead) :
   | blockedRecv => exact stepFn_noDead_blockedRecv
   | blockedSelect => exact stepFn_noDead_blockedSelect
   | blockedSync => exact stepFn_noDead_blockedSync
+
+/-! ## The drivers, setup, the seed and the pool
+
+`stepFn_noDead` lifted to everything that iterates or surrounds the step: the fuel drivers
+(`runConfig`, `execStmtLoop`, `stepFnIter`), program setup (`seedGlobals`, the package
+initialiser, `runProgramSetupM` — which starts from the empty store, so its result is `NoDead`
+outright), the seeded entry (`seedCells`, `runProgramSetupSeededM`), and the goroutine pool
+(`stepMulti`, `execProgLoop`), whose wake, pairing and spawn steps write the store without
+going through `stepFn`. Not stated: `execProgLoopOut` (the output-carrying twin of
+`execProgLoop`; `execProgLoopOut_eq_execProgLoop`, `PoolFacts.lean`, relates the two) and the
+readout wrappers above setup, which return no store. -/
+
+theorem runConfig_noDead : ∀ {fuel : Nat} {s : Store} {c : Config} {ch : Choices},
+    s.NoDead → Post (runConfig ctx fuel s c ch) fun r => r.1.NoDead
+  | fuel, s, c, ch, h => by
+    unfold runConfig
+    split
+    · exact Post.pure h
+    · exact Post.throw
+    · exact Post.throw
+    · exact Post.throw
+    · exact Post.throw
+    · split
+      · exact Post.throw
+      · rename_i fuel'
+        refine Post.bind (stepFn_noDead h) fun a ha => ?_
+        exact runConfig_noDead (fuel := fuel') ha
+
+theorem _root_.GoLean.GoCore.Post.forIn_array {α β : Type} {P : β → Prop} {xs : Array α}
+    {f : α → β → Except Stop (ForInStep β)} {b₀ : β} (h0 : P b₀)
+    (hstep : ∀ a b, P b → Post (f a b) fun r => P (forInStepVal r)) : Post (forIn xs b₀ f) P := by
+  intro bf hrun
+  rw [← Array.forIn_toList] at hrun
+  exact forIn_list_inv (fun a _ b r hb hr => hstep a b hb r hr) h0 hrun
+
+theorem seedGlobals_noDead {s : Store} {globals : Array GlobalDef} (h : s.NoDead) :
+    Post (seedGlobals ctx s globals) Store.NoDead := by
+  unfold seedGlobals
+  split
+  · exact Post.error
+  · refine Post.bind (Q := fun st => st.1.NoDead) (Post.forIn_array h ?_) fun st hst => Post.pure hst
+    intro g st hst
+    nd
+
+theorem execStmtLoop_noDead : ∀ {fuel : Nat} {s : Store} {c : Config} {ch : Choices},
+    s.NoDead → Post (execStmtLoop ctx fuel s c ch) fun r => r.1.NoDead
+  | fuel, s, c, ch, h => by
+    unfold execStmtLoop
+    split
+    · exact Post.pure h
+    · exact Post.throw
+    · exact Post.throw
+    · exact Post.throw
+    · exact Post.throw
+    · split
+      · exact Post.throw
+      · rename_i fuel'
+        refine Post.bind (stepFn_noDead h) fun a ha => ?_
+        exact execStmtLoop_noDead (fuel := fuel') ha
+
+theorem stepFnIter_noDead : ∀ {n : Nat} {s : Store} {c : Config} {ch : Choices},
+    s.NoDead → Post (stepFnIter ctx n s c ch) fun r => r.2.1.NoDead
+  | 0, s, c, ch, h => by unfold stepFnIter; exact Post.ok h
+  | n + 1, s, c, ch, h => by
+    unfold stepFnIter
+    refine Post.bind (stepFn_noDead h) fun a ha => ?_
+    exact stepFnIter_noDead (n := n) ha
+
+theorem runInitConfig_noDead : ∀ {fuel : Nat} {s : Store} {c : Config} {ch : Choices},
+    s.NoDead → Post (runInitConfig ctx fuel s c ch) fun r => r.1.NoDead
+  | fuel, s, c, ch, h => by
+    unfold runInitConfig
+    split
+    · exact Post.pure h
+    · exact Post.throw
+    · exact Post.throw
+    · exact Post.throw
+    · exact Post.throw
+    · split
+      · exact Post.throw
+      · split
+        · exact Post.throw
+        · rename_i fuel'
+          refine Post.bind (stepFn_noDead h) fun a ha => ?_
+          exact runInitConfig_noDead (fuel := fuel') ha
+
+theorem runPkgInitM_noDead {fuel : Nat} {s : Store} {ch : Choices} (h : s.NoDead) :
+    Post (runPkgInitM ctx fuel s ch) fun r => r.1.NoDead := by
+  unfold runPkgInitM
+  split
+  · exact Post.pure h
+  · dsimp only
+    split
+    · exact Post.error
+    · split
+      · rename_i r heq; exact Post.pure (runInitConfig_noDead h _ heq)
+      · exact Post.throw
+macro_rules | `(tactic| nd_db) => `(tactic| exact runPkgInitM_noDead (by nd_h))
+macro_rules | `(tactic| nd_db) => `(tactic| exact seedGlobals_noDead Store.NoDead.empty)
+
+/-- **Setup creates no dead cell**: the store a program's setup hands the entry is `NoDead`
+(globals seeded into the empty store, the package initialiser run, the entry's cells bound). -/
+theorem runProgramSetupM_noDead {fuel : Nat} {program : Program} {name : String}
+    {args : Array GoValue} {ch : Choices} :
+    Post (runProgramSetupM fuel program name args ch) fun r => r.2.2.1.NoDead := by
+  unfold runProgramSetupM; nd
+
+macro_rules | `(tactic| nd_db) => `(tactic| exact stepFn_noDead (by nd_h))
+
+theorem spawnStep_noDead {s : Store} {cv : GoValue} {args : List GoValue} {k : Cont} {ch : Choices}
+    (h : s.NoDead) : Post (spawnStep ctx s cv args k ch) fun r => r.2.2.1.NoDead := by
+  unfold spawnStep
+  split
+  · refine Post.bind enterFramePickV_noDead fun a ha => ?_
+    obtain ⟨r, ch', ps⟩ := a
+    cases r with
+    | ok c => exact Post.bind (runCommit_noDead (ha c rfl) h) fun b hb => Post.pure hb
+    | panic msg => exact Post.pure h
+  · exact Post.throw
+  · exact Post.throw
+macro_rules | `(tactic| nd_db) => `(tactic| exact spawnStep_noDead (by nd_h))
+
+theorem resumeRecvDelivery_noDead {s : Store} {v : GoValue} {ok : Bool} {targets : List Assignee}
+    {env : LocalEnv} {k : Cont} (h : s.NoDead) :
+    Post (resumeRecvDelivery s v ok targets env k) fun r => r.2.NoDead := by
+  unfold resumeRecvDelivery; nd
+macro_rules | `(tactic| nd_db) => `(tactic| exact resumeRecvDelivery_noDead (by nd_h))
+
+theorem selectRecvDelivery_noDead {s : Store} {v : GoValue} {ok : Bool} {targets : List Assignee}
+    {body : Stmt} {env : LocalEnv} {k : Cont} (h : s.NoDead) :
+    Post (selectRecvDelivery s v ok targets body env k) fun r => r.2.NoDead := by
+  unfold selectRecvDelivery; nd
+macro_rules | `(tactic| nd_db) => `(tactic| exact selectRecvDelivery_noDead (by nd_h))
+
+theorem resumeThread_noDead {s : Store} {c : Config} (h : s.NoDead) :
+    Post (resumeThread ctx s c) fun r => r.2.1.NoDead := by
+  unfold resumeThread; nd
+macro_rules | `(tactic| nd_db) => `(tactic| exact resumeThread_noDead (by nd_h))
+
+theorem applyPairing_noDead {s : Store} {threads : Array Thread} {i : Nat} {bc : Config}
+    {cand : Nat × PairTarget} (h : s.NoDead) :
+    Post (applyPairing ctx s threads i bc cand) fun r => r.2.1.NoDead := by
+  unfold applyPairing; nd
+macro_rules | `(tactic| nd_db) => `(tactic| exact applyPairing_noDead (by nd_h))
+
+theorem stepThread_noDead {s : Store} {threads : Array Thread} {i : Nat} {ch : Choices}
+    (h : s.NoDead) : Post (stepThread ctx s threads i ch) fun r => r.2.1.NoDead := by
+  unfold stepThread; nd
+  all_goals (rename_i hres; exact Post.pure (hres _ rfl))
+macro_rules | `(tactic| nd_db) => `(tactic| exact stepThread_noDead (by nd_h))
+
+theorem stepThreadInto_noDead {m : MultiConfig} {i : Nat} {ch : Choices} (h : m.shared.NoDead) :
+    Post (stepThreadInto ctx m i ch) fun r => r.1.shared.NoDead := by
+  unfold stepThreadInto; nd
+macro_rules | `(tactic| nd_db) => `(tactic| exact stepThreadInto_noDead (by nd_h))
+
+/-- **No pool step creates a dead cell.** -/
+theorem stepMulti_noDead {m : MultiConfig} {ch : Choices} (h : m.shared.NoDead) :
+    Post (stepMulti ctx m ch) fun r => r.1.shared.NoDead := by
+  unfold stepMulti
+  split
+  · exact Post.throw
+  · split
+    · split
+      · unfold deadlockOrRefusal; exact Post.error
+      · dsimp only
+        split
+        · refine Post.bind (stepThreadInto_noDead h) fun a ha => Post.pure ha
+        · exact Post.throw
+    · exact stepThreadInto_noDead h
+
+theorem MultiConfig.mainOutcome?_shared {m : MultiConfig} {out : Store}
+    (h : m.mainOutcome? = some out) : out = m.shared := by
+  unfold MultiConfig.mainOutcome? at h
+  split at h <;> first | (cases h; rfl) | cases h
+
+/-- **No pool run creates a dead cell**: the store `execProgLoop` returns is `NoDead` when the
+pool's shared store is. -/
+theorem execProgLoop_noDead : ∀ {fuel : Nat} {m : MultiConfig} {r : RaceState} {ch : Choices},
+    m.shared.NoDead → Post (execProgLoop ctx fuel m r ch) fun x => x.1.NoDead
+  | fuel, m, r, ch, h => by
+    unfold execProgLoop
+    split
+    · exact Post.throw
+    · split
+      · exact Post.throw
+      · split
+        · rename_i out hout
+          have ho : out.NoDead := MultiConfig.mainOutcome?_shared hout ▸ h
+          split
+          · unfold exitOrRefusal; split
+            · exact Post.ok ho
+            · exact Post.error
+          · dsimp only
+            split
+            · exact Post.pure ho
+            · split
+              · exact Post.throw
+              · rename_i fuel'
+                refine Post.bind (stepMulti_noDead h) fun a ha => ?_
+                refine Post.bind_any fun r' => ?_
+                exact execProgLoop_noDead (fuel := fuel') ha
+        · split
+          · unfold deadlockOrRefusal; exact Post.error
+          · split
+            · exact Post.throw
+            · rename_i fuel'
+              refine Post.bind (stepMulti_noDead h) fun a ha => ?_
+              refine Post.bind_any fun r' => ?_
+              exact execProgLoop_noDead (fuel := fuel') ha
+
+theorem seedAllocFrom_noDead {b : Nat} : ∀ {cs : List SeedCell} {s : Store} {k : Nat},
+    s.NoDead → Post (seedAllocFrom ctx b s k cs) Store.NoDead
+  | [], s, k, h => by unfold seedAllocFrom; exact Post.ok h
+  | c :: rest, s, k, h => by
+    unfold seedAllocFrom
+    refine Post.bind_any fun z => ?_
+    refine Post.bind (Store.alloc_noDead h) fun a ha => ?_
+    dsimp only
+    split
+    · exact Post.error
+    · exact seedAllocFrom_noDead ha
+
+theorem seedStoreFrom_noDead {b : Nat} : ∀ {vs : List GoValue} {s : Store} {k : Nat},
+    s.NoDead → Post (seedStoreFrom ctx b s k vs) Store.NoDead
+  | [], s, k, h => by unfold seedStoreFrom; exact Post.ok h
+  | v :: rest, s, k, h => by
+    unfold seedStoreFrom
+    refine Post.bind (storeLoc_noDead h) fun a ha => ?_
+    exact seedStoreFrom_noDead ha
+
+theorem seedCells_noDead {s : Store} {seed : Array SeedCell} (h : s.NoDead) :
+    Post (seedCells ctx s seed) fun r => r.1.NoDead := by
+  unfold seedCells
+  dsimp only
+  refine Post.bind_any fun vals => ?_
+  refine Post.bind (seedAllocFrom_noDead h) fun sA hA => ?_
+  refine Post.bind (seedStoreFrom_noDead hA) fun sS hS => Post.pure hS
+
+macro_rules | `(tactic| nd_db) => `(tactic| exact seedCells_noDead (by nd_h))
+
+theorem runProgramSetupSeededM_noDead {fuel : Nat} {program : Program} {name : String}
+    {seed : Array SeedCell} {args : Array SeedArg} {ch : Choices} :
+    Post (runProgramSetupSeededM fuel program name seed args ch) fun r => r.2.2.1.NoDead := by
+  unfold runProgramSetupSeededM; nd
+
+theorem syncCell_dead {s : Store} {l : Loc} (h : s.DeadAt l) : IsStuck (syncCell ctx s l) := by
+  unfold syncCell; exact (loadLoc_dead h).bind _
+
+theorem chanCell_dead {s : Store} {l : Loc} (h : Heap.lookup s.heap l = some .dead) :
+    IsStuck (chanCell s l) := by
+  unfold chanCell; exact chanPayload?_dead h
+
+/-- Marking a cell dead keeps the heap normal: a dead cell states nothing. -/
+theorem _root_.GoLean.GoCore.HeapNormal.markDead {s : Store} (h : HeapNormal ctx s) (a : Addr) :
+    HeapNormal ctx (s.markDead a) := by
+  unfold HeapNormal Heap.normalB at h ⊢
+  rw [List.all_eq_true] at h ⊢
+  intro c hc
+  simp only [Store.markDead, Array.toList_setIfInBounds] at hc
+  rcases List.mem_or_eq_of_mem_set hc with hm | rfl
+  · exact h c hm
+  · rfl
+
+/-- Marking a cell dead keeps the store well-formed: the dead cell holds no location and states
+nothing, and the allocator bound is unchanged. -/
+theorem StateWf.markDead {s : Store} (h : StateWf ctx s) (a : Addr) :
+    StateWf ctx (s.markDead a) := by
+  refine StateWf.mk' ?_ (HeapNormal.markDead h.normal a)
+  rw [Store.markDead_nextAddr, Heap.locSup_le_iff]
+  intro x hx
+  simp only [Store.markDead] at hx
+  have hx' : x ∈ s.heap.toList.set a.id HeapCell.dead := by
+    rw [← Array.toList_setIfInBounds]; exact Array.mem_toList_iff.mpr hx
+  rcases List.mem_or_eq_of_mem_set hx' with hm | rfl
+  · exact Heap.locSup_le_iff.mp h.heap_le x (Array.mem_toList_iff.mp hm)
+  · exact Nat.zero_le _
 
 end Machine
 

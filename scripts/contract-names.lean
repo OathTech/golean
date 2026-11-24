@@ -60,7 +60,10 @@ or a theorem added to or removed from `InitDriverFacts.lean`, changes the list (
               sync heads, the dispatch receiver read), the `markDead` frame, `NoDead` (the empty
               store, the two cell primitives, `stepFn_noDead`, `Prefix.noDead`, the frame-entry,
               memory and wide operations), `HeapCell.isDead_iff`, and beside them the three
-              `Ty.eqb` laws and `applyStrictOp_leafOf_irrel` asked for in the same message. An
+              `Ty.eqb` laws and `applyStrictOp_leafOf_irrel` asked for in the same message; and,
+              from the pre-merge audit's fix round the same day, `NoDead` through the fuel
+              drivers, setup, the seeded entry and the pool, `syncCell_dead`/`chanCell_dead`,
+              and `HeapNormal`/`StateWf` kept by `markDead` (fifteen; ninety in all). An
               EXPLICIT list, like `g16` ([AGENT] 2026-11-24): `DeadCell.lean`'s other theorems
               are the sweep's scaffolding — the `Post` combinators, the per-constructor
               `stepFn_noDead_*` and `applyStmtOpCore.plan_noDead_*` cases, the `.plan`, delivery
@@ -231,6 +234,21 @@ open ContractNames in
       `GoLean.GoCore.Machine.commitClause_noDead,
       `GoLean.GoCore.Machine.stepFrameExit_noDead,
       `GoLean.GoCore.Machine.applyStrictOp_leafOf_irrel,
+      `GoLean.GoCore.Machine.runConfig_noDead,
+      `GoLean.GoCore.Machine.execStmtLoop_noDead,
+      `GoLean.GoCore.Machine.stepFnIter_noDead,
+      `GoLean.GoCore.Machine.seedGlobals_noDead,
+      `GoLean.GoCore.Machine.runInitConfig_noDead,
+      `GoLean.GoCore.Machine.runPkgInitM_noDead,
+      `GoLean.GoCore.Machine.runProgramSetupM_noDead,
+      `GoLean.GoCore.Machine.runProgramSetupSeededM_noDead,
+      `GoLean.GoCore.Machine.seedCells_noDead,
+      `GoLean.GoCore.Machine.stepMulti_noDead,
+      `GoLean.GoCore.Machine.execProgLoop_noDead,
+      `GoLean.GoCore.Machine.syncCell_dead,
+      `GoLean.GoCore.Machine.chanCell_dead,
+      `GoLean.GoCore.Machine.StateWf.markDead,
+      `GoLean.GoCore.HeapNormal.markDead,
       `GoLean.Ty.eqb_refl,
       `GoLean.Ty.eqbList_refl,
       `GoLean.Ty.eqb_iff])]

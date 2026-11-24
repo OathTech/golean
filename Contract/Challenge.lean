@@ -9,6 +9,7 @@ import GoLean.GoCore.PoolProjection
 import GoLean.GoCore.InitDriverFacts
 import GoLean.GoCore.TableMonotonicity
 import GoLean.GoCore.DeadCell
+import GoLean.GoCore.Seed
 
 /-!
 # The comparator CHALLENGE — the kept customer surface, frozen as statements
@@ -4345,7 +4346,7 @@ theorem GoLean.Contract.GoCore.Machine.checkCertM_slowObs
 
 /-! ## The dead cell (raft-proofs' rung-2 request; into the contract 2026-11-24)
 
-Seventy-five statements, frozen 2026-11-24 on the [USER] ruling of that day (backlog row 63;
+Ninety statements (seventy-five, then the fifteen of the audit's fix round below), frozen 2026-11-24 on the [USER] ruling of that day (backlog row 63;
 `docs/changelog/9f4554a6-WINDOW.md`): refusal at a dead root, the `markDead` frame, `NoDead`,
 `HeapCell.isDead_iff`, the three `Ty.eqb` laws and `applyStrictOp_leafOf_irrel`. The text is the
 draft tool's, verified to round-trip, except `Store.NoDead.empty`, spelled by hand. The
@@ -4904,4 +4905,112 @@ set_option warn.sorry false in
 /-- `GoLean.Ty.eqb_iff` (GoLean.GoCore.StateEqb) -/
 theorem GoLean.Contract.Ty.eqb_iff :
     ∀ {a b : Ty}, a.eqb b = true ↔ a = b
+    := sorry
+
+/-! ### The audit's fix round (2026-11-24): `NoDead` through the drivers, setup, the seed and the
+pool; two more refusals; `markDead` keeps `HeapNormal`/`StateWf` — fifteen statements. -/
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.runConfig_noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.runConfig_noDead :
+    ∀ {ctx : ProgramCtx} {fuel : Nat} {s : Store} {c : Config} {ch : Choices},
+      s.NoDead → Post (runConfig ctx fuel s c ch) fun (r : Store × Choices) => r.fst.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.execStmtLoop_noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.execStmtLoop_noDead :
+    ∀ {ctx : ProgramCtx} {fuel : Nat} {s : Store} {c : Config} {ch : Choices},
+      s.NoDead → Post (execStmtLoop ctx fuel s c ch) fun (r : Store × Choices) => r.fst.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.stepFnIter_noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.stepFnIter_noDead :
+    ∀ {ctx : ProgramCtx} {n : Nat} {s : Store} {c : Config} {ch : Choices},
+      s.NoDead → Post (stepFnIter ctx n s c ch) fun (r : Config × Store × Choices) => r.snd.fst.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.seedGlobals_noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.seedGlobals_noDead :
+    ∀ {ctx : ProgramCtx} {s : Store} {globals : Array GlobalDef},
+      s.NoDead → Post (seedGlobals ctx s globals) Store.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.runInitConfig_noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.runInitConfig_noDead :
+    ∀ {ctx : ProgramCtx} {fuel : Nat} {s : Store} {c : Config} {ch : Choices},
+      s.NoDead → Post (runInitConfig ctx fuel s c ch) fun (r : Store × Choices) => r.fst.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.runPkgInitM_noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.runPkgInitM_noDead :
+    ∀ {ctx : ProgramCtx} {fuel : Nat} {s : Store} {ch : Choices},
+      s.NoDead → Post (runPkgInitM ctx fuel s ch) fun (r : Store × Choices) => r.fst.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.runProgramSetupM_noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.runProgramSetupM_noDead :
+    ∀ {fuel : Nat} {program : Program} {name : String} {args : Array GoValue} {ch : Choices},
+      Post (runProgramSetupM fuel program name args ch)
+        fun (r : ProgramCtx × Config × Store × List Loc × Choices) => r.snd.snd.fst.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.runProgramSetupSeededM_noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.runProgramSetupSeededM_noDead :
+    ∀ {fuel : Nat} {program : Program} {name : String} {seed : Array SeedCell} {args : Array SeedArg}
+      {ch : Choices},
+      Post (runProgramSetupSeededM fuel program name seed args ch)
+        fun (r : ProgramCtx × Config × Store × List Loc × Array Loc × Choices) => r.snd.snd.fst.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.seedCells_noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.seedCells_noDead :
+    ∀ {ctx : ProgramCtx} {s : Store} {seed : Array SeedCell},
+      s.NoDead → Post (seedCells ctx s seed) fun (r : Store × Array Loc) => r.fst.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.stepMulti_noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.stepMulti_noDead :
+    ∀ {ctx : ProgramCtx} {m : MultiConfig} {ch : Choices},
+      m.shared.NoDead →
+        Post (stepMulti ctx m ch) fun (r : MultiConfig × Choices × StepEvent) => r.fst.shared.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.execProgLoop_noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.execProgLoop_noDead :
+    ∀ {ctx : ProgramCtx} {fuel : Nat} {m : MultiConfig} {r : RaceState} {ch : Choices},
+      m.shared.NoDead → Post (execProgLoop ctx fuel m r ch) fun (x : Store × Choices) => x.fst.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.syncCell_dead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.syncCell_dead :
+    ∀ {ctx : ProgramCtx} {s : Store} {l : Loc}, s.DeadAt l → IsStuck (syncCell ctx s l)
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.chanCell_dead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.chanCell_dead :
+    ∀ {s : Store} {l : Loc}, s.heap.lookup l = some HeapCell.dead → IsStuck (chanCell s l)
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.StateWf.markDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.StateWf.markDead :
+    ∀ {ctx : ProgramCtx} {s : Store}, StateWf ctx s → ∀ (a : Addr), StateWf ctx (s.markDead a)
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.HeapNormal.markDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.HeapNormal.markDead :
+    ∀ {ctx : ProgramCtx} {s : Store}, HeapNormal ctx s → ∀ (a : Addr), HeapNormal ctx (s.markDead a)
     := sorry

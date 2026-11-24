@@ -3646,7 +3646,9 @@ private def g21NormalFormTests : IO Bool := do
 /-- The dead cell (raft-proofs' rung-2 request, 2026-11-24; `GoLean/GoCore/DeadCell.lean`): a
 marked cell keeps its address and refuses every reader and writer as `stuck` (never a panic,
 never a value), a cell rooted elsewhere is untouched, the allocator's next address is
-unchanged, and what the machine's own allocators build holds no dead cell. -/
+unchanged, a machine step that reads a dead variable cell is stuck while its neighbour reads
+on, and the stores the allocator and a step build are `NoDead` (decided) where a marked one is
+not. -/
 private def deadCellTests : IO Bool := do
   let mut passed := true
   let stuckWith {α : Type} (x : Except Stop α) (text : String) : Bool :=
@@ -3692,6 +3694,21 @@ private def deadCellTests : IO Bool := do
     (GoCore.Machine.Store.eqb (s0.markDead ⟨9⟩) s0))
   passed := passed && (← expectTrue "dead cell: equality sees it — a marked store is not the unmarked one, and is itself"
     (!GoCore.Machine.Store.eqb s1 s0 && GoCore.Machine.Store.eqb s1 s1))
+  passed := passed && (← expectTrue "dead cell: NoDead is decided — true of the unmarked store and of what the allocator builds on it, false of the marked one"
+    (decide s0.NoDead && !decide s1.NoDead
+      && (match GoCore.Store.alloc emptyCtx s0 (.int 0 .int) .int with
+          | .ok (_, t) => decide t.NoDead
+          | .error _ => false)))
+  passed := passed && (← expectTrue "dead cell: a machine step reading a variable bound to a dead cell is stuck, by name"
+    (stuckWith (GoCore.Machine.stepFn emptyCtx (s0.markDead ⟨0⟩)
+      (.evalE (.var (vid "x")) [[(vid "x", .base ⟨0⟩)]] .stop) []) "value load from a dead cell"))
+  passed := passed && (← expectTrue "dead cell: the same step at a neighbouring live variable answers its value, and leaves the store as it was"
+    (match GoCore.Machine.stepFn emptyCtx s1 (.evalE (.var (vid "x")) [[(vid "x", .base ⟨0⟩)]] .stop) [] with
+     | .ok (.retV (.int 7 .int) _, t, _, _) => GoCore.Machine.Store.eqb t s1
+     | _ => false))
+  passed := passed && (← expectTrue "dead cell: cellLeafTy has no type for a dead root, and the store through it is stuck"
+    ((GoCore.cellLeafTy emptyCtx s1 (.base a1)).isNone
+      && stuckWith (GoCore.Mem.storeThrough emptyCtx s1 (.base a1) (.int 1 .int)) "dead cell"))
   pure passed
 
 /-- raft-proofs' G22 (2026-10-27; the [USER]'s relay of 2026-10-26): a map payload's entry

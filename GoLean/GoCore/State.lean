@@ -61,7 +61,8 @@ inductive HeapCell where
   panic, never a value — the refusal arms of `loadLoc`, `storeLoc`, `mapPayload?`,
   `chanPayload?`, `storeMapPayload`, `storeChanPayload`), and NO machine operation creates one:
   the only producer is `Store.markDead` (`Store.lean`), which the machine never calls
-  (`Store.NoDead` is preserved by every step — `DeadCell.lean`). It exists for a consumer that
+  (`Store.NoDead` is preserved by the step, the drivers, setup and the pool — `DeadCell.lean`
+  names each theorem). `cellLeafTy` answers `none` for it, as for any non-value cell. It exists for a consumer that
   moves a variable out of its cell and must keep the cell's address occupied, so that the
   allocator's addresses and order are unchanged. -/
   | dead

@@ -63,12 +63,14 @@ fourth, payload-free cell: an occupied address that holds nothing. No machine op
 one — `Store.markDead` (`Store.lean`) is the only producer and nothing in the machine calls it
 — and `DeadCell.lean` states what a consumer relies on: every reader and writer refuses at a
 dead root with `stuck` (`loadLoc_dead`, `storeLoc_dead`, the payload readers and writers, the
-`Mem.*` operations and the strict/sync heads above them); `Store.NoDead` holds of the empty
-store and is preserved by every step and every run (`stepFn_noDead`, `Prefix.noDead`) and by
-the frame-entry and wide operations; marking a cell changes neither the heap's size nor any
-load or store rooted elsewhere (`Store.markDead_size`, `loadLoc_markDead_ne`,
-`storeLoc_markDead_ne`). `HeapNormal` says nothing about a dead cell; `NoDead` is the predicate
-that excludes it.
+`Mem.*` operations and the strict/sync heads above them — a statement per operation, not per
+step); `Store.NoDead` holds of the empty store and is preserved by the step and its runs
+(`stepFn_noDead`, `Prefix.noDead`, the fuel drivers), by setup and the seeded entry
+(`runProgramSetupM_noDead`), by the pool (`stepMulti_noDead`, `execProgLoop_noDead`) and by the
+frame-entry and wide operations; marking a cell changes neither the heap's size nor any load
+or store rooted elsewhere (`Store.markDead_size`, `loadLoc_markDead_ne`,
+`storeLoc_markDead_ne`). `HeapNormal` and `StateWf` ADMIT a dead cell (`StateWf.markDead`);
+`NoDead` is the predicate that excludes it.
 
 ## 3. The labelled step
 

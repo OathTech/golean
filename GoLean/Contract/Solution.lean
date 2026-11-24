@@ -1583,7 +1583,7 @@ theorem GoLean.Contract.GoCore.ProgramCtx.SubTables.enterFramePickV_mono :
     stmt_of% GoLean.GoCore.ProgramCtx.SubTables.enterFramePickV_mono :=
   GoLean.GoCore.ProgramCtx.SubTables.enterFramePickV_mono
 
-/-! ## deadcell (75) -/
+/-! ## deadcell (90) -/
 
 theorem GoLean.Contract.GoCore.IsStuck.not_ok :
     stmt_of% GoLean.GoCore.IsStuck.not_ok :=
@@ -1872,6 +1872,66 @@ theorem GoLean.Contract.GoCore.Machine.stepFrameExit_noDead :
 theorem GoLean.Contract.GoCore.Machine.applyStrictOp_leafOf_irrel :
     stmt_of% GoLean.GoCore.Machine.applyStrictOp_leafOf_irrel :=
   GoLean.GoCore.Machine.applyStrictOp_leafOf_irrel
+
+theorem GoLean.Contract.GoCore.Machine.runConfig_noDead :
+    stmt_of% GoLean.GoCore.Machine.runConfig_noDead :=
+  GoLean.GoCore.Machine.runConfig_noDead
+
+theorem GoLean.Contract.GoCore.Machine.execStmtLoop_noDead :
+    stmt_of% GoLean.GoCore.Machine.execStmtLoop_noDead :=
+  GoLean.GoCore.Machine.execStmtLoop_noDead
+
+theorem GoLean.Contract.GoCore.Machine.stepFnIter_noDead :
+    stmt_of% GoLean.GoCore.Machine.stepFnIter_noDead :=
+  GoLean.GoCore.Machine.stepFnIter_noDead
+
+theorem GoLean.Contract.GoCore.Machine.seedGlobals_noDead :
+    stmt_of% GoLean.GoCore.Machine.seedGlobals_noDead :=
+  GoLean.GoCore.Machine.seedGlobals_noDead
+
+theorem GoLean.Contract.GoCore.Machine.runInitConfig_noDead :
+    stmt_of% GoLean.GoCore.Machine.runInitConfig_noDead :=
+  GoLean.GoCore.Machine.runInitConfig_noDead
+
+theorem GoLean.Contract.GoCore.Machine.runPkgInitM_noDead :
+    stmt_of% GoLean.GoCore.Machine.runPkgInitM_noDead :=
+  GoLean.GoCore.Machine.runPkgInitM_noDead
+
+theorem GoLean.Contract.GoCore.Machine.runProgramSetupM_noDead :
+    stmt_of% GoLean.GoCore.Machine.runProgramSetupM_noDead :=
+  GoLean.GoCore.Machine.runProgramSetupM_noDead
+
+theorem GoLean.Contract.GoCore.Machine.runProgramSetupSeededM_noDead :
+    stmt_of% GoLean.GoCore.Machine.runProgramSetupSeededM_noDead :=
+  GoLean.GoCore.Machine.runProgramSetupSeededM_noDead
+
+theorem GoLean.Contract.GoCore.Machine.seedCells_noDead :
+    stmt_of% GoLean.GoCore.Machine.seedCells_noDead :=
+  GoLean.GoCore.Machine.seedCells_noDead
+
+theorem GoLean.Contract.GoCore.Machine.stepMulti_noDead :
+    stmt_of% GoLean.GoCore.Machine.stepMulti_noDead :=
+  GoLean.GoCore.Machine.stepMulti_noDead
+
+theorem GoLean.Contract.GoCore.Machine.execProgLoop_noDead :
+    stmt_of% GoLean.GoCore.Machine.execProgLoop_noDead :=
+  GoLean.GoCore.Machine.execProgLoop_noDead
+
+theorem GoLean.Contract.GoCore.Machine.syncCell_dead :
+    stmt_of% GoLean.GoCore.Machine.syncCell_dead :=
+  GoLean.GoCore.Machine.syncCell_dead
+
+theorem GoLean.Contract.GoCore.Machine.chanCell_dead :
+    stmt_of% GoLean.GoCore.Machine.chanCell_dead :=
+  GoLean.GoCore.Machine.chanCell_dead
+
+theorem GoLean.Contract.GoCore.Machine.StateWf.markDead :
+    stmt_of% GoLean.GoCore.Machine.StateWf.markDead :=
+  GoLean.GoCore.Machine.StateWf.markDead
+
+theorem GoLean.Contract.GoCore.HeapNormal.markDead :
+    stmt_of% GoLean.GoCore.HeapNormal.markDead :=
+  GoLean.GoCore.HeapNormal.markDead
 
 theorem GoLean.Contract.Ty.eqb_refl :
     stmt_of% GoLean.Ty.eqb_refl :=

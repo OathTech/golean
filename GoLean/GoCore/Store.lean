@@ -68,11 +68,14 @@ helpers calls it, and it is the only way a dead cell comes to exist (`HeapCell.d
 def Store.markDead (s : Store) (a : Addr) : Store :=
   { heap := s.heap.setIfInBounds a.id .dead }
 
-/-- No cell of the store is dead. Every reachable machine state satisfies it: the empty store
-does, and every machine operation preserves it (`DeadCell.lean`); `Store.markDead` is what
-breaks it. -/
+/-- No cell of the store is dead. The empty store satisfies it, and the step, the fuel drivers,
+setup, the seeded entry and the goroutine pool preserve it (`DeadCell.lean` names each
+theorem); `Store.markDead` is what breaks it. -/
 def Store.NoDead (s : Store) : Prop :=
   ∀ c ∈ s.heap.toList, c ≠ HeapCell.dead
+
+instance (s : Store) : Decidable s.NoDead :=
+  inferInstanceAs (Decidable (∀ c ∈ s.heap.toList, c ≠ HeapCell.dead))
 
 /-! ## Payload cells (A3): the map/channel readers and writers -/
 
