@@ -8,6 +8,7 @@ import GoLean.GoCore.PoolFacts
 import GoLean.GoCore.PoolProjection
 import GoLean.GoCore.InitDriverFacts
 import GoLean.GoCore.TableMonotonicity
+import GoLean.GoCore.DeadCell
 
 /-!
 # The comparator CHALLENGE — the kept customer surface, frozen as statements
@@ -4341,3 +4342,566 @@ theorem GoLean.Contract.GoCore.Machine.checkCertM_slowObs
     {r₀ : RaceState} {cert : DedupCert}
     (hc : checkCert ctx dedupNodeEqb resultLocs m₀ r₀ cert = true) :
     ∀ o : Obs, o ∈ cert.obsSet ↔ SlowObs ctx resultLocs m₀ r₀ o := sorry
+
+/-! ## The dead cell (raft-proofs' rung-2 request; into the contract 2026-11-24)
+
+Seventy-five statements, frozen 2026-11-24 on the [USER] ruling of that day (backlog row 63;
+`docs/changelog/9f4554a6-WINDOW.md`): refusal at a dead root, the `markDead` frame, `NoDead`,
+`HeapCell.isDead_iff`, the three `Ty.eqb` laws and `applyStrictOp_leafOf_irrel`. The text is the
+draft tool's, verified to round-trip, except `Store.NoDead.empty`, spelled by hand. The
+definitions `IsStuck`, `Post` and `Store.DeadAt` live beside the proofs in
+`GoLean/GoCore/DeadCell.lean`, which this file therefore imports (as it imports
+`TableMonotonicity` for `SubTables`): a definition is shared by both sides, never a statement. -/
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.IsStuck.not_ok` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.IsStuck.not_ok :
+    ∀ {α : Type} {x : Except Stop α}, IsStuck x → ∀ (a : α), x ≠ Except.ok a
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.IsStuck.not_panic` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.IsStuck.not_panic :
+    ∀ {α : Type} {x : Except Stop α}, IsStuck x → ∀ (msg : String), x ≠ Except.error (Stop.panic msg)
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.IsStuck.bind` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.IsStuck.bind :
+    ∀ {α β : Type} {x : Except Stop α}, IsStuck x → ∀ (k : α → Except Stop β), IsStuck (x >>= k)
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.loadLoc_dead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.loadLoc_dead :
+    ∀ {ctx : ProgramCtx} {s : Store} {l : Loc},
+      s.heap.lookup (Loc.base (Loc.rootPath l).fst) = some HeapCell.dead → IsStuck (loadLoc ctx s l)
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.loadRoot_dead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.loadRoot_dead :
+    ∀ {ctx : ProgramCtx} {s : Store} {a : Addr},
+      s.heap.lookup (Loc.base a) = some HeapCell.dead → IsStuck (loadRoot ctx s (Loc.base a))
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.storeLoc_dead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.storeLoc_dead :
+    ∀ {ctx : ProgramCtx} {s : Store} {l : Loc} {v : GoValue},
+      s.heap.lookup (Loc.base (Loc.rootPath l).fst) = some HeapCell.dead → IsStuck (storeLoc ctx s l v)
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.mapPayload?_dead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.mapPayload?_dead :
+    ∀ {s : Store} {l : Loc}, s.heap.lookup l = some HeapCell.dead → IsStuck (mapPayload? s l)
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.chanPayload?_dead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.chanPayload?_dead :
+    ∀ {s : Store} {l : Loc}, s.heap.lookup l = some HeapCell.dead → IsStuck (chanPayload? s l)
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.storeMapPayload_dead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.storeMapPayload_dead :
+    ∀ {s : Store} {l : Loc} {es : Array (Nat × GoValue × GoValue)} {n : Nat},
+      s.heap.lookup l = some HeapCell.dead → IsStuck (storeMapPayload s l es n)
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.storeChanPayload_dead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.storeChanPayload_dead :
+    ∀ {s : Store} {l : Loc} {buf : Array GoValue} {cap : Nat} {closed : Bool},
+      s.heap.lookup l = some HeapCell.dead → IsStuck (storeChanPayload s l buf cap closed)
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.Mem.load_dead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.Mem.load_dead :
+    ∀ {ctx : ProgramCtx} {s : Store} {l : Loc}, s.DeadAt l → IsStuck (Mem.load ctx s l)
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.Mem.loadFor_dead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.Mem.loadFor_dead :
+    ∀ {ctx : ProgramCtx} {s : Store} {root leaf : Loc},
+      s.DeadAt root → IsStuck (Mem.loadFor ctx s root leaf)
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.Mem.loadBinding_dead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.Mem.loadBinding_dead :
+    ∀ {ctx : ProgramCtx} {s : Store} {a : Addr},
+      s.heap.lookup (Loc.base a) = some HeapCell.dead → IsStuck (Mem.loadBinding ctx s (Loc.base a))
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.Mem.loadBindingFor_dead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.Mem.loadBindingFor_dead :
+    ∀ {ctx : ProgramCtx} {s : Store} {a : Addr} {leaf : Loc},
+      s.heap.lookup (Loc.base a) = some HeapCell.dead →
+        IsStuck (Mem.loadBindingFor ctx s (Loc.base a) leaf)
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.Mem.store_dead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.Mem.store_dead :
+    ∀ {ctx : ProgramCtx} {s : Store} {l : Loc} {v : GoValue}, s.DeadAt l → IsStuck (Mem.store ctx s l v)
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.Mem.storeThrough_dead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.Mem.storeThrough_dead :
+    ∀ {ctx : ProgramCtx} {s : Store} {l : Loc} {v : GoValue},
+      s.DeadAt l → IsStuck (Mem.storeThrough ctx s l v)
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.Mem.mapRead_dead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.Mem.mapRead_dead :
+    ∀ {s : Store} {l : Loc}, s.heap.lookup l = some HeapCell.dead → IsStuck (Mem.mapRead s l)
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.Mem.mapWrite_dead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.Mem.mapWrite_dead :
+    ∀ {s : Store} {l : Loc} {es : Array (Nat × GoValue × GoValue)} {n : Nat},
+      s.heap.lookup l = some HeapCell.dead → IsStuck (Mem.mapWrite s l es n)
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.loadMany_dead_head` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.loadMany_dead_head :
+    ∀ {ctx : ProgramCtx} {s : Store} {l : Loc} {ls : List Loc},
+      s.DeadAt l → IsStuck (loadMany ctx s (l :: ls))
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.loadMany_not_ok_of_dead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.loadMany_not_ok_of_dead :
+    ∀ {ctx : ProgramCtx} {s : Store} {ls : List Loc} {l : Loc},
+      l ∈ ls → s.DeadAt l → ∀ (vs : List GoValue), loadMany ctx s ls ≠ Except.ok vs
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.loadResults_dead_head` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.loadResults_dead_head :
+    ∀ {ctx : ProgramCtx} {s : Store} {a : Addr} {ls : List Loc},
+      s.heap.lookup (Loc.base a) = some HeapCell.dead → IsStuck (loadResults ctx s (Loc.base a :: ls))
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applyStrictOp_deref_dead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.applyStrictOp_deref_dead :
+    ∀ {ctx : ProgramCtx} {s : Store} {leafOf : Loc → Loc} {ty : Ty} {l : Loc},
+      s.DeadAt l → IsStuck (applyStrictOp ctx s leafOf (StrictOp.deref ty) [GoValue.addr l])
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applyStrictOp_indexGet_dead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.applyStrictOp_indexGet_dead :
+    ∀ {ctx : ProgramCtx} {s : Store} {leafOf : Loc → Loc} {l : Loc} {n : Int} {kind : IntKind},
+      s.DeadAt l →
+        IsStuck (applyStrictOp ctx s leafOf StrictOp.indexGet [GoValue.addr l, GoValue.int n kind])
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applyStrictOp_lengthOf_chan_dead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.applyStrictOp_lengthOf_chan_dead :
+    ∀ {ctx : ProgramCtx} {s : Store} {leafOf : Loc → Loc} {typ : Option Ty} {l : Loc},
+      (∀ (n : Nat) (e : Ty), typ ≠ some (Ty.array n e).pointer) →
+        s.heap.lookup l = some HeapCell.dead →
+          IsStuck (applyStrictOp ctx s leafOf (StrictOp.lengthOf typ) [GoValue.chan { base := some l }])
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applyStrictOp_lengthOf_map_dead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.applyStrictOp_lengthOf_map_dead :
+    ∀ {ctx : ProgramCtx} {s : Store} {leafOf : Loc → Loc} {typ : Option Ty} {l : Loc},
+      (∀ (n : Nat) (e : Ty), typ ≠ some (Ty.array n e).pointer) →
+        s.heap.lookup l = some HeapCell.dead →
+          IsStuck (applyStrictOp ctx s leafOf (StrictOp.lengthOf typ) [GoValue.map { base := some l }])
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applyStrictOp_lengthOf_addr_dead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.applyStrictOp_lengthOf_addr_dead :
+    ∀ {ctx : ProgramCtx} {s : Store} {leafOf : Loc → Loc} {typ : Option Ty} {l : Loc},
+      (∀ (n : Nat) (e : Ty), typ ≠ some (Ty.array n e).pointer) →
+        s.DeadAt l → IsStuck (applyStrictOp ctx s leafOf (StrictOp.lengthOf typ) [GoValue.addr l])
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applyStrictOp_capacityOf_chan_dead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.applyStrictOp_capacityOf_chan_dead :
+    ∀ {ctx : ProgramCtx} {s : Store} {leafOf : Loc → Loc} {typ : Option Ty} {l : Loc},
+      (∀ (n : Nat) (e : Ty), typ ≠ some (Ty.array n e).pointer) →
+        s.heap.lookup l = some HeapCell.dead →
+          IsStuck
+            (applyStrictOp ctx s leafOf (StrictOp.capacityOf typ) [GoValue.chan { base := some l }])
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applyStrictOp_capacityOf_addr_dead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.applyStrictOp_capacityOf_addr_dead :
+    ∀ {ctx : ProgramCtx} {s : Store} {leafOf : Loc → Loc} {typ : Option Ty} {l : Loc},
+      (∀ (n : Nat) (e : Ty), typ ≠ some (Ty.array n e).pointer) →
+        s.DeadAt l → IsStuck (applyStrictOp ctx s leafOf (StrictOp.capacityOf typ) [GoValue.addr l])
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applySyncOpCore_lock_dead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.applySyncOpCore_lock_dead :
+    ∀ {ctx : ProgramCtx} {s : Store} {l : Loc} {env : LocalEnv} {k : Cont},
+      s.DeadAt l → IsStuck (applySyncOpCore ctx s SyncOp.lock [GoValue.addr l] env k)
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applySyncOpCore_unlock_dead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.applySyncOpCore_unlock_dead :
+    ∀ {ctx : ProgramCtx} {s : Store} {l : Loc} {env : LocalEnv} {k : Cont},
+      s.DeadAt l → IsStuck (applySyncOpCore ctx s SyncOp.unlock [GoValue.addr l] env k)
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applySyncOp_lock_dead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.applySyncOp_lock_dead :
+    ∀ {ctx : ProgramCtx} {s : Store} {ch : Choices} {l : Loc} {env : LocalEnv} {k : Cont},
+      s.DeadAt l → IsStuck (applySyncOp ctx s ch SyncOp.lock [GoValue.addr l] env k)
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applySyncOp_unlock_dead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.applySyncOp_unlock_dead :
+    ∀ {ctx : ProgramCtx} {s : Store} {ch : Choices} {l : Loc} {env : LocalEnv} {k : Cont},
+      s.DeadAt l → IsStuck (applySyncOp ctx s ch SyncOp.unlock [GoValue.addr l] env k)
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.receiverAt_deref_dead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.receiverAt_deref_dead :
+    ∀ {ctx : ProgramCtx} {s : Store} {l : Loc},
+      s.DeadAt l → IsStuck (receiverAt ctx s (GoValue.addr l) #[] PromotionAdjust.deref)
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Store.markDead_size` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Store.markDead_size :
+    ∀ (s : Store) (a : Addr), Array.size (s.markDead a).heap = Array.size s.heap
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Store.markDead_nextAddr` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Store.markDead_nextAddr :
+    ∀ (s : Store) (a : Addr), (s.markDead a).nextAddr = s.nextAddr
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Store.markDead_lookup_self` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Store.markDead_lookup_self :
+    ∀ {s : Store} {a : Addr},
+      a.id < Array.size s.heap → (s.markDead a).heap.lookup (Loc.base a) = some HeapCell.dead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Store.markDead_lookup_ne` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Store.markDead_lookup_ne :
+    ∀ {s : Store} {a b : Addr},
+      b ≠ a → (s.markDead a).heap.lookup (Loc.base b) = s.heap.lookup (Loc.base b)
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Store.markDead_not_noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Store.markDead_not_noDead :
+    ∀ {s : Store} {a : Addr}, a.id < Array.size s.heap → ¬(s.markDead a).NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Store.updateCell_markDead_ne` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Store.updateCell_markDead_ne :
+    ∀ {s : Store} {a b : Addr} {f : HeapCell → Except Stop HeapCell},
+      b ≠ a →
+        (s.markDead a).updateCell b f = Except.map (fun (x : Store) => x.markDead a) (s.updateCell b f)
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.loadLoc_markDead_ne` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.loadLoc_markDead_ne :
+    ∀ {ctx : ProgramCtx} {s : Store} {a : Addr} {l : Loc},
+      (Loc.rootPath l).fst ≠ a → loadLoc ctx (s.markDead a) l = loadLoc ctx s l
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.storeLoc_markDead_ne` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.storeLoc_markDead_ne :
+    ∀ {ctx : ProgramCtx} {s : Store} {a : Addr} {l : Loc} {v : GoValue},
+      (Loc.rootPath l).fst ≠ a →
+        storeLoc ctx (s.markDead a) l v =
+          Except.map (fun (x : Store) => x.markDead a) (storeLoc ctx s l v)
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Store.NoDead.empty` (GoLean.GoCore.DeadCell) -/
+-- Spelled by hand: the printed `{ }.NoDead` does not say which structure is empty.
+theorem GoLean.Contract.GoCore.Store.NoDead.empty :
+    Store.NoDead {}
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Store.noDead_iff_lookup` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Store.noDead_iff_lookup :
+    ∀ {s : Store}, s.NoDead ↔ ∀ (a : Addr), s.heap.lookup (Loc.base a) ≠ some HeapCell.dead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Store.NoDead.allocCell` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Store.NoDead.allocCell :
+    ∀ {s : Store} {c : HeapCell}, s.NoDead → c ≠ HeapCell.dead → (s.allocCell c).snd.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Store.NoDead.updateCell` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Store.NoDead.updateCell :
+    ∀ {s : Store} {a : Addr} {f : HeapCell → Except Stop HeapCell},
+      s.NoDead →
+        (∀ (c : HeapCell), Post (f c) fun (x : HeapCell) => x ≠ HeapCell.dead) →
+          Post (s.updateCell a f) Store.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.ExecutionStatement.Prefix.noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.ExecutionStatement.Prefix.noDead :
+    ∀ {ctx : ProgramCtx} {n : Nat} {s sf : Store} {c cf : Config} {ch chf : Choices}
+      {ls : List StepLabel}, Prefix ctx n s c ch ls sf cf chf → s.NoDead → sf.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Store.alloc_noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Store.alloc_noDead :
+    ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {ty : Ty},
+      s.NoDead → Post (Store.alloc ctx s v ty) fun (r : Loc × Store) => r.snd.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.storeLoc_noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.storeLoc_noDead :
+    ∀ {ctx : ProgramCtx} {s : Store} {l : Loc} {v : GoValue},
+      s.NoDead → Post (storeLoc ctx s l v) Store.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Mem.store_noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Mem.store_noDead :
+    ∀ {ctx : ProgramCtx} {s : Store} {l : Loc} {v : GoValue},
+      s.NoDead → Post (Mem.store ctx s l v) fun (r : Store × AccessTrace) => r.fst.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Mem.storeThrough_noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Mem.storeThrough_noDead :
+    ∀ {ctx : ProgramCtx} {s : Store} {l : Loc} {v : GoValue},
+      s.NoDead → Post (Mem.storeThrough ctx s l v) fun (r : Store × AccessTrace) => r.fst.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Mem.mapWrite_noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Mem.mapWrite_noDead :
+    ∀ {s : Store} {l : Loc} {es : Array (Nat × GoValue × GoValue)} {n : Nat},
+      s.NoDead → Post (Mem.mapWrite s l es n) fun (r : Store × AccessTrace) => r.fst.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Mem.storeElems_noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Mem.storeElems_noDead :
+    ∀ {ctx : ProgramCtx} {base : Loc} {vs : List GoValue} {s : Store} {start : Nat},
+      s.NoDead → Post (Mem.storeElems ctx s base start vs) fun (r : Store × AccessTrace) => r.fst.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Mem.storeRun_noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Mem.storeRun_noDead :
+    ∀ {ctx : ProgramCtx} {s : Store} {sl : SliceValue} {start : Nat} {vs : List GoValue},
+      s.NoDead → Post (Mem.storeRun ctx s sl start vs) fun (r : Store × AccessTrace) => r.fst.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.HeapCell.isDead_iff` (GoLean.GoCore.State) -/
+theorem GoLean.Contract.GoCore.HeapCell.isDead_iff :
+    ∀ {c : HeapCell}, c.isDead = true ↔ c = HeapCell.dead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.stepFn_noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.stepFn_noDead :
+    ∀ {ctx : ProgramCtx} {s : Store} {c : Config} {ch : Choices},
+      s.NoDead →
+        Post (stepFn ctx s c ch) fun (r : Config × Store × Choices × StepLabel) => r.snd.fst.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.enterFrame_noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.enterFrame_noDead :
+    ∀ {ctx : ProgramCtx} {s : Store} {fid : FuncId} {args : List GoValue},
+      s.NoDead →
+        Post (enterFrame ctx s fid args) fun (r : Entry × Store × AccessTrace) => r.snd.fst.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.bindParams_noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.bindParams_noDead :
+    ∀ {ctx : ProgramCtx} {ps : List Param} {vs : List GoValue} {env : LocalEnv} {s : Store},
+      s.NoDead → Post (bindParams ctx env s ps vs) fun (r : LocalEnv × Store) => r.snd.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.allocDecls_noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.allocDecls_noDead :
+    ∀ {ctx : ProgramCtx} {ps : List Param} {env : LocalEnv} {s : Store},
+      s.NoDead → Post (allocDecls ctx env s ps) fun (r : LocalEnv × Store) => r.snd.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applyStrictOp_noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.applyStrictOp_noDead :
+    ∀ {ctx : ProgramCtx} {s : Store} {leafOf : Loc → Loc} {op : StrictOp} {vs : List GoValue},
+      s.NoDead →
+        Post (applyStrictOp ctx s leafOf op vs) fun (r : GoValue × Store × AccessTrace) =>
+          r.snd.fst.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applyStrictOpPick_noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.applyStrictOpPick_noDead :
+    ∀ {ctx : ProgramCtx} {s : Store} {leafOf : Loc → Loc} {op : StrictOp} {vs : List GoValue}
+      {ch : Choices},
+      s.NoDead →
+        Post (applyStrictOpPick ctx s leafOf op vs ch)
+          fun (r : (GoValue × Store × AccessTrace) × Choices × List PickRecord) => r.fst.snd.fst.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applyStmtOp_noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.applyStmtOp_noDead :
+    ∀ {ctx : ProgramCtx} {s : Store} {ch : Choices} {op : StmtOp} {nt : Nat} {vs : List GoValue},
+      s.NoDead →
+        Post (applyStmtOp ctx s ch op nt vs)
+          fun (r : Store × Choices × List PickRecord × AccessTrace) => r.fst.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applyStmtOpCore_noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.applyStmtOpCore_noDead :
+    ∀ {ctx : ProgramCtx} {s : Store} {op : StmtOp} {vs : List GoValue},
+      s.NoDead → Post (applyStmtOpCore ctx s op vs) fun (r : Store × AccessTrace) => r.fst.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.storeTarget_noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.storeTarget_noDead :
+    ∀ {ctx : ProgramCtx} {s : Store} {r : TargetRef} {v : GoValue},
+      s.NoDead → Post (storeTarget ctx s r v) fun (r : Store × AccessTrace) => r.fst.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.mapAssignValue_noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.mapAssignValue_noDead :
+    ∀ {ctx : ProgramCtx} {s : Store} {keyTy valueTy : Ty} {b k v : GoValue},
+      s.NoDead →
+        Post (mapAssignValue ctx s keyTy valueTy b k v) fun (r : Store × AccessTrace) => r.fst.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applySyncOp_noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.applySyncOp_noDead :
+    ∀ {ctx : ProgramCtx} {s : Store} {ch : Choices} {op : SyncOp} {vs : List GoValue} {env : LocalEnv}
+      {k : Cont},
+      s.NoDead →
+        Post (applySyncOp ctx s ch op vs env k)
+          fun (r : Config × Store × Choices × List PickRecord × AccessTrace) => r.snd.fst.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applySyncOpCore_noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.applySyncOpCore_noDead :
+    ∀ {ctx : ProgramCtx} {s : Store} {op : SyncOp} {vs : List GoValue} {env : LocalEnv} {k : Cont},
+      s.NoDead →
+        Post (applySyncOpCore ctx s op vs env k) fun (r : Config × Store × AccessTrace) =>
+          r.snd.fst.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applyChanOp_noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.applyChanOp_noDead :
+    ∀ {ctx : ProgramCtx} {s : Store} {op : ChanStOp} {vs : List GoValue} {env : LocalEnv} {k : Cont},
+      s.NoDead →
+        Post (applyChanOp ctx s op vs env k) fun (r : Config × Store × AccessTrace) => r.snd.fst.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applyAtomicOp_noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.applyAtomicOp_noDead :
+    ∀ {ctx : ProgramCtx} {s : Store} {op : AtomicOp} {vs : List GoValue} {env : LocalEnv} {k : Cont},
+      s.NoDead →
+        Post (applyAtomicOp ctx s op vs env k) fun (r : Config × Store × AccessTrace) =>
+          r.snd.fst.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applySelect_noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.applySelect_noDead :
+    ∀ {ctx : ProgramCtx} {s : Store} {clauses : List (SelectClauseHead × Stmt)} {d : Option Stmt}
+      {vs : List GoValue} {env : LocalEnv} {k : Cont} {ch : Choices},
+      s.NoDead →
+        Post (applySelect ctx s clauses d vs env k ch)
+          fun (r : Config × Store × Choices × List PickRecord × Option EvClause × AccessTrace) =>
+          r.snd.fst.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.commitClause_noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.commitClause_noDead :
+    ∀ {ctx : ProgramCtx} {s : Store} {env : LocalEnv} {k : Cont} {c : EvClause},
+      s.NoDead →
+        Post (commitClause ctx s env k c) fun (r : Config × Store × AccessTrace) => r.snd.fst.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.stepFrameExit_noDead` (GoLean.GoCore.DeadCell) -/
+theorem GoLean.Contract.GoCore.Machine.stepFrameExit_noDead :
+    ∀ {ctx : ProgramCtx} {s : Store} {targets : List (TargetShape × List Expr)} {tenv : LocalEnv}
+      {results : List Loc} {ds : List (GoValue × List GoValue)} {k' : Cont} {fr : FuncId}
+      {ch : Choices},
+      s.NoDead →
+        Post (stepFrameExit ctx s targets tenv results ds k' fr ch)
+          fun (r : Config × Store × Choices × StepLabel) => r.snd.fst.NoDead
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applyStrictOp_leafOf_irrel` (GoLean.GoCore.StepFnFacts) -/
+theorem GoLean.Contract.GoCore.Machine.applyStrictOp_leafOf_irrel :
+    ∀ {ctx : ProgramCtx} {s : Store} {op : StrictOp} {vs : List GoValue},
+      (∀ (ty : Ty), op ≠ StrictOp.deref ty) →
+        ∀ (leafOf leafOf' : Loc → Loc),
+          applyStrictOp ctx s leafOf op vs = applyStrictOp ctx s leafOf' op vs
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.Ty.eqb_refl` (GoLean.GoCore.StateEqb) -/
+theorem GoLean.Contract.Ty.eqb_refl :
+    ∀ (t : Ty), t.eqb t = true
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.Ty.eqbList_refl` (GoLean.GoCore.StateEqb) -/
+theorem GoLean.Contract.Ty.eqbList_refl :
+    ∀ (l : List Ty), Ty.eqbList l l = true
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.Ty.eqb_iff` (GoLean.GoCore.StateEqb) -/
+theorem GoLean.Contract.Ty.eqb_iff :
+    ∀ {a b : Ty}, a.eqb b = true ↔ a = b
+    := sorry

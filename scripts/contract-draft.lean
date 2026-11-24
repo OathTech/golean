@@ -28,6 +28,9 @@ comparator compare main with main. Use the draft to see what a deliberate update
 -- The challenge's own imports (Contract/Challenge.lean), NOT the `GoLean` root: since the root
 -- imports GoLean.Contract.Solution, every alias would already exist here and each drafted
 -- `theorem GoLean.Contract.…` would fail as «already declared» (review F2, 2026-10-23).
+import GoLean.GoCore.EnumDedupSound
+import GoLean.GoCore.MachineEqb
+import GoLean.GoCore.DeadCell
 import GoLean.GoCore.State
 import GoLean.GoCore.Machine
 import GoLean.GoCore.Multi

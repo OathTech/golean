@@ -54,6 +54,21 @@ or a theorem added to or removed from `InitDriverFacts.lean`, changes the list (
               of the sweep a contract change. The relation's DEFINITIONS (`SubTables`, `TablesKeyed`,
               `SliceClosed`) are reached by the statements and compared whole, as every definition is.
 
+  deadcell    the dead cell's customer-facing statements (raft-proofs' rung-2 request, backlog row
+              63; into the contract on the [USER] ruling of 2026-11-24): refusal at a dead root
+              (`IsStuck`'s three laws, the readers/writers, the `Mem.*` operations, the strict and
+              sync heads, the dispatch receiver read), the `markDead` frame, `NoDead` (the empty
+              store, the two cell primitives, `stepFn_noDead`, `Prefix.noDead`, the frame-entry,
+              memory and wide operations), `HeapCell.isDead_iff`, and beside them the three
+              `Ty.eqb` laws and `applyStrictOp_leafOf_irrel` asked for in the same message. An
+              EXPLICIT list, like `g16` ([AGENT] 2026-11-24): `DeadCell.lean`'s other theorems
+              are the sweep's scaffolding — the `Post` combinators, the per-constructor
+              `stepFn_noDead_*` and `applyStmtOpCore.plan_noDead_*` cases, the `.plan`, delivery
+              and step-helper lemmas — and freezing them would make a refactor of the sweep a
+              contract change. The definitions the statements reach (`HeapCell.dead`,
+              `Store.markDead`, `Store.NoDead`, `Store.DeadAt`, `IsStuck`, `Post`) are compared
+              whole, as every definition is.
+
 Fails closed (a Lean error, exit 1) when a named theorem is missing, is not a theorem, carries
 universe parameters, lies outside the `GoLean` namespace, or when a family is empty.
 -/
@@ -142,7 +157,83 @@ open ContractNames in
       `GoLean.GoCore.ProgramCtx.SubTables.methodDecl?_mono, `GoLean.GoCore.ProgramCtx.SubTables.promotion?_mono,
       `GoLean.GoCore.ProgramCtx.SubTables.methodSetCoverage?_mono,
       `GoLean.GoCore.ProgramCtx.SubTables.resolveMethod?_mono, `GoLean.GoCore.ProgramCtx.SubTables.callee?_mono,
-      `GoLean.GoCore.ProgramCtx.SubTables.enterFramePickV_mono])]
+      `GoLean.GoCore.ProgramCtx.SubTables.enterFramePickV_mono]),
+    ("deadcell", #[
+      `GoLean.GoCore.IsStuck.not_ok,
+      `GoLean.GoCore.IsStuck.not_panic,
+      `GoLean.GoCore.IsStuck.bind,
+      `GoLean.GoCore.Machine.loadLoc_dead,
+      `GoLean.GoCore.Machine.loadRoot_dead,
+      `GoLean.GoCore.Machine.storeLoc_dead,
+      `GoLean.GoCore.Machine.«mapPayload?_dead»,
+      `GoLean.GoCore.Machine.«chanPayload?_dead»,
+      `GoLean.GoCore.Machine.storeMapPayload_dead,
+      `GoLean.GoCore.Machine.storeChanPayload_dead,
+      `GoLean.GoCore.Machine.Mem.load_dead,
+      `GoLean.GoCore.Machine.Mem.loadFor_dead,
+      `GoLean.GoCore.Machine.Mem.loadBinding_dead,
+      `GoLean.GoCore.Machine.Mem.loadBindingFor_dead,
+      `GoLean.GoCore.Machine.Mem.store_dead,
+      `GoLean.GoCore.Machine.Mem.storeThrough_dead,
+      `GoLean.GoCore.Machine.Mem.mapRead_dead,
+      `GoLean.GoCore.Machine.Mem.mapWrite_dead,
+      `GoLean.GoCore.Machine.loadMany_dead_head,
+      `GoLean.GoCore.Machine.loadMany_not_ok_of_dead,
+      `GoLean.GoCore.Machine.loadResults_dead_head,
+      `GoLean.GoCore.Machine.applyStrictOp_deref_dead,
+      `GoLean.GoCore.Machine.applyStrictOp_indexGet_dead,
+      `GoLean.GoCore.Machine.applyStrictOp_lengthOf_chan_dead,
+      `GoLean.GoCore.Machine.applyStrictOp_lengthOf_map_dead,
+      `GoLean.GoCore.Machine.applyStrictOp_lengthOf_addr_dead,
+      `GoLean.GoCore.Machine.applyStrictOp_capacityOf_chan_dead,
+      `GoLean.GoCore.Machine.applyStrictOp_capacityOf_addr_dead,
+      `GoLean.GoCore.Machine.applySyncOpCore_lock_dead,
+      `GoLean.GoCore.Machine.applySyncOpCore_unlock_dead,
+      `GoLean.GoCore.Machine.applySyncOp_lock_dead,
+      `GoLean.GoCore.Machine.applySyncOp_unlock_dead,
+      `GoLean.GoCore.Machine.receiverAt_deref_dead,
+      `GoLean.GoCore.Store.markDead_size,
+      `GoLean.GoCore.Store.markDead_nextAddr,
+      `GoLean.GoCore.Store.markDead_lookup_self,
+      `GoLean.GoCore.Store.markDead_lookup_ne,
+      `GoLean.GoCore.Store.markDead_not_noDead,
+      `GoLean.GoCore.Store.updateCell_markDead_ne,
+      `GoLean.GoCore.Machine.loadLoc_markDead_ne,
+      `GoLean.GoCore.Machine.storeLoc_markDead_ne,
+      `GoLean.GoCore.Store.NoDead.empty,
+      `GoLean.GoCore.Store.noDead_iff_lookup,
+      `GoLean.GoCore.Store.NoDead.allocCell,
+      `GoLean.GoCore.Store.NoDead.updateCell,
+      `GoLean.GoCore.ExecutionStatement.Prefix.noDead,
+      `GoLean.GoCore.Store.alloc_noDead,
+      `GoLean.GoCore.storeLoc_noDead,
+      `GoLean.GoCore.Mem.store_noDead,
+      `GoLean.GoCore.Mem.storeThrough_noDead,
+      `GoLean.GoCore.Mem.mapWrite_noDead,
+      `GoLean.GoCore.Mem.storeElems_noDead,
+      `GoLean.GoCore.Mem.storeRun_noDead,
+      `GoLean.GoCore.HeapCell.isDead_iff,
+      `GoLean.GoCore.Machine.stepFn_noDead,
+      `GoLean.GoCore.Machine.enterFrame_noDead,
+      `GoLean.GoCore.Machine.bindParams_noDead,
+      `GoLean.GoCore.Machine.allocDecls_noDead,
+      `GoLean.GoCore.Machine.applyStrictOp_noDead,
+      `GoLean.GoCore.Machine.applyStrictOpPick_noDead,
+      `GoLean.GoCore.Machine.applyStmtOp_noDead,
+      `GoLean.GoCore.Machine.applyStmtOpCore_noDead,
+      `GoLean.GoCore.Machine.storeTarget_noDead,
+      `GoLean.GoCore.Machine.mapAssignValue_noDead,
+      `GoLean.GoCore.Machine.applySyncOp_noDead,
+      `GoLean.GoCore.Machine.applySyncOpCore_noDead,
+      `GoLean.GoCore.Machine.applyChanOp_noDead,
+      `GoLean.GoCore.Machine.applyAtomicOp_noDead,
+      `GoLean.GoCore.Machine.applySelect_noDead,
+      `GoLean.GoCore.Machine.commitClause_noDead,
+      `GoLean.GoCore.Machine.stepFrameExit_noDead,
+      `GoLean.GoCore.Machine.applyStrictOp_leafOf_irrel,
+      `GoLean.Ty.eqb_refl,
+      `GoLean.Ty.eqbList_refl,
+      `GoLean.Ty.eqb_iff])]
   let mut seen : Std.HashSet Lean.Name := {}
   for (family, names) in families do
     if names.isEmpty then throwError "contract-names: the family {family} is empty"
