@@ -56,7 +56,28 @@ inductive HeapCell where
   NO waiter queues (design of record D7): blocked goroutines are
   blocked-Config shapes, never channel state. -/
   | chanPayload (buf : Array GoValue) (capacity : Nat) (closed : Bool)
+  /-- A DEAD cell (raft-proofs' rung-2 request, 2026-11-24): an OCCUPIED address that holds
+  nothing. It carries no payload; every reader and writer refuses on it (`stuck`, never a Go
+  panic, never a value — the refusal arms of `loadLoc`, `storeLoc`, `mapPayload?`,
+  `chanPayload?`, `storeMapPayload`, `storeChanPayload`), and NO machine operation creates one:
+  the only producer is `Store.markDead` (`Store.lean`), which the machine never calls
+  (`Store.NoDead` is preserved by every step — `DeadCell.lean`). It exists for a consumer that
+  moves a variable out of its cell and must keep the cell's address occupied, so that the
+  allocator's addresses and order are unchanged. -/
+  | dead
   deriving Repr, BEq
+
+/-- Is the cell the dead cell? The decidable test (`HeapCell` has no `DecidableEq`: its values
+do not); `HeapCell.isDead_iff` is its specification. -/
+def HeapCell.isDead : HeapCell → Bool
+  | .dead => true
+  | _ => false
+
+theorem HeapCell.isDead_iff {c : HeapCell} : c.isDead = true ↔ c = .dead := by
+  cases c <;> simp [HeapCell.isDead]
+
+instance (c : HeapCell) : Decidable (c = .dead) :=
+  decidable_of_iff _ HeapCell.isDead_iff
 
 /-- The heap: a DENSE array of cells — an address IS an index
 (design-hygiene arc A2, 2026-09-04; review §3 A2). `Loc.base ⟨i⟩` names

@@ -3643,6 +3643,57 @@ private def g21NormalFormTests : IO Bool := do
      | _ => false))
   pure passed
 
+/-- The dead cell (raft-proofs' rung-2 request, 2026-11-24; `GoLean/GoCore/DeadCell.lean`): a
+marked cell keeps its address and refuses every reader and writer as `stuck` (never a panic,
+never a value), a cell rooted elsewhere is untouched, the allocator's next address is
+unchanged, and what the machine's own allocators build holds no dead cell. -/
+private def deadCellTests : IO Bool := do
+  let mut passed := true
+  let stuckWith {α : Type} (x : Except Stop α) (text : String) : Bool :=
+    match x with
+    | .error (.stuck msg) => (msg.splitOn text).length > 1
+    | _ => false
+  let s0 : GoCore.Store :=
+    { heap := #[.value .int (.int 7 .int), .value (.array 2 .int) (.array #[.int 1 .int, .int 2 .int]),
+                .mapPayload #[] 0, .chanPayload #[] 1 false] }
+  let a1 : Addr := ⟨1⟩
+  let s1 := s0.markDead a1
+  passed := passed && (← expectTrue "dead cell: markDead keeps the heap size and the next address"
+    (s1.heap.size == s0.heap.size && s1.nextAddr == s0.nextAddr))
+  passed := passed && (← expectTrue "dead cell: isDead decides it — the marked cell only"
+    (s1.heap.toList.map (·.isDead) == [false, true, false, false]))
+  passed := passed && (← expectTrue "dead cell: a root load is stuck, by name"
+    (stuckWith (GoCore.loadLoc emptyCtx s1 (.base a1)) "value load from a dead cell"))
+  passed := passed && (← expectTrue "dead cell: a load under a path is stuck, by name"
+    (stuckWith (GoCore.loadLoc emptyCtx s1 (.index (.base a1) 0)) "value load from a dead cell"))
+  passed := passed && (← expectTrue "dead cell: a root store is stuck, by name"
+    (stuckWith (GoCore.storeLoc emptyCtx s1 (.base a1) (.int 3 .int)) "value store into a dead cell"))
+  passed := passed && (← expectTrue "dead cell: a store under a path is stuck"
+    (stuckWith (GoCore.storeLoc emptyCtx s1 (.index (.base a1) 0) (.int 3 .int)) "dead cell"))
+  passed := passed && (← expectTrue "dead cell: the map and channel payload readers and writers are stuck"
+    (let d := (s0.markDead ⟨2⟩).markDead ⟨3⟩
+     stuckWith (GoCore.mapPayload? d (.base ⟨2⟩)) "got a dead cell"
+       && stuckWith (GoCore.chanPayload? d (.base ⟨3⟩)) "got a dead cell"
+       && stuckWith (GoCore.storeMapPayload d (.base ⟨2⟩) #[] 0) "got a dead cell"
+       && stuckWith (GoCore.storeChanPayload d (.base ⟨3⟩) #[] 1 false) "got a dead cell"))
+  passed := passed && (← expectTrue "dead cell: a cell rooted elsewhere loads and stores as before"
+    ((match GoCore.loadLoc emptyCtx s1 (.base ⟨0⟩) with
+      | .ok (.int 7 .int) => true
+      | _ => false)
+     && (match GoCore.storeLoc emptyCtx s1 (.base ⟨0⟩) (.int 9 .int),
+            GoCore.storeLoc emptyCtx s0 (.base ⟨0⟩) (.int 9 .int) with
+         | .ok t1, .ok t0 => GoCore.Machine.Store.eqb t1 (t0.markDead a1)
+         | _, _ => false)))
+  passed := passed && (← expectTrue "dead cell: the next allocation takes the address past the dead cell, as without it"
+    (match GoCore.Store.alloc emptyCtx s1 (.int 0 .int) .int, GoCore.Store.alloc emptyCtx s0 (.int 0 .int) .int with
+     | .ok (l1, t1), .ok (l0, _) => l1 == l0 && t1.heap.size == s0.heap.size + 1
+     | _, _ => false))
+  passed := passed && (← expectTrue "dead cell: marking out of range changes nothing"
+    (GoCore.Machine.Store.eqb (s0.markDead ⟨9⟩) s0))
+  passed := passed && (← expectTrue "dead cell: equality sees it — a marked store is not the unmarked one, and is itself"
+    (!GoCore.Machine.Store.eqb s1 s0 && GoCore.Machine.Store.eqb s1 s1))
+  pure passed
+
 /-- raft-proofs' G22 (2026-10-27; the [USER]'s relay of 2026-10-26): a map payload's entry
 stamps are DISTINCT and BELOW its counter — `HeapCell.normal`'s `.mapPayload` arm is
 `mapPayloadWf`, so `HeapNormal` and `StateWf` state it for every map cell. Hand-built: a
@@ -4895,6 +4946,7 @@ def main : IO UInt32 := do
   passed := passed && (← g21NormalFormTests)
   passed := passed && (← g21SpillBudgetTests)
   passed := passed && (← g22MapStampTests)
+  passed := passed && (← deadCellTests)
   -- The class pin proper: main.T has a TypeDef on the wire (the OLD
   -- guard's presence key) but NO method-set record — satisfaction must
   -- refuse `unsupported`, proving the guard keys on the RECORD.

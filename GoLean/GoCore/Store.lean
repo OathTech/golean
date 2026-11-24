@@ -60,6 +60,20 @@ def Store.updateCell (s : Store) (a : Addr)
   else
     throw (.internal s!"store to unallocated address {repr (Loc.base a)}: no heap cell (allocation goes through Store.alloc only)")
 
+/-- Mark root cell `a` DEAD, in place (raft-proofs' rung-2 request, 2026-11-24): the cell keeps
+its address — the heap's size, hence the allocator's next address, is unchanged
+(`Store.markDead_size`) — and loses its content. Out of range it is the identity (there is no
+cell to mark; `Array.setIfInBounds`). NOT a machine operation: nothing in `stepFn` or its
+helpers calls it, and it is the only way a dead cell comes to exist (`HeapCell.dead`). -/
+def Store.markDead (s : Store) (a : Addr) : Store :=
+  { heap := s.heap.setIfInBounds a.id .dead }
+
+/-- No cell of the store is dead. Every reachable machine state satisfies it: the empty store
+does, and every machine operation preserves it (`DeadCell.lean`); `Store.markDead` is what
+breaks it. -/
+def Store.NoDead (s : Store) : Prop :=
+  ∀ c ∈ s.heap.toList, c ≠ HeapCell.dead
+
 /-! ## Payload cells (A3): the map/channel readers and writers -/
 
 /-- The map payload at a root cell: `(entries, nextId)`. Anything else
@@ -71,6 +85,7 @@ def mapPayload? (state : Store) (loc : Loc) :
   | some (.mapPayload entries nextId) => return (entries, nextId)
   | some (.value _ v) => stuck s!"expected map data at {repr loc}, got value {repr v}"
   | some (.chanPayload ..) => stuck s!"expected map data at {repr loc}, got channel data"
+  | some .dead => stuck s!"expected map data at {repr loc}, got a dead cell"
   | none => stuck s!"unbound GoCore heap location: {repr loc}"
 
 /-- The channel payload at a root cell: `(buf, capacity, closed)`. -/
@@ -80,6 +95,7 @@ def chanPayload? (state : Store) (loc : Loc) :
   | some (.chanPayload buf capacity closed) => return (buf, capacity, closed)
   | some (.value _ v) => stuck s!"expected channel data at {repr loc}, got value {repr v}"
   | some (.mapPayload ..) => stuck s!"expected channel data at {repr loc}, got map data"
+  | some .dead => stuck s!"expected channel data at {repr loc}, got a dead cell"
   | none => stuck s!"unbound GoCore heap location: {repr loc}"
 
 /-- Replace a map payload WHOLE (the only way a map cell is written); the
@@ -93,6 +109,7 @@ def storeMapPayload (state : Store) (loc : Loc)
         | .mapPayload _ _ => pure (.mapPayload entries nextId)
         | .value _ v => stuck s!"expected map data at {repr loc}, got value {repr v}"
         | .chanPayload .. => stuck s!"expected map data at {repr loc}, got channel data"
+        | .dead => stuck s!"expected map data at {repr loc}, got a dead cell"
   | other => stuck s!"map payload store through a non-root path {repr other}"
 
 /-- Replace a channel payload WHOLE; the cell must already be a channel
@@ -105,6 +122,7 @@ def storeChanPayload (state : Store) (loc : Loc) (buf : Array GoValue)
         | .chanPayload .. => pure (.chanPayload buf capacity closed)
         | .value _ v => stuck s!"expected channel data at {repr loc}, got value {repr v}"
         | .mapPayload .. => stuck s!"expected channel data at {repr loc}, got map data"
+        | .dead => stuck s!"expected channel data at {repr loc}, got a dead cell"
   | other => stuck s!"channel payload store through a non-root path {repr other}"
 
 end GoLean.GoCore

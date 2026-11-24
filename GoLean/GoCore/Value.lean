@@ -125,6 +125,17 @@ structure FuncId where
   key : String
   deriving Repr, BEq, Inhabited, DecidableEq
 
+/-- The derived `BEq` is the key's (lawful) `String` equality (raft-proofs' request (a),
+2026-11-24; the `TypeId` precedent below). -/
+instance : LawfulBEq FuncId where
+  eq_of_beq {a b} h := by
+    obtain ⟨k1⟩ := a
+    obtain ⟨k2⟩ := b
+    exact congrArg _ (eq_of_beq (α := String) h)
+  rfl {a} := by
+    obtain ⟨k⟩ := a
+    exact beq_self_eq_true (α := String) k
+
 /-- Channel direction, a STATIC type property (spec §Channel types: "A
 channel may be constrained only to send or only to receive by assignment
 or explicit conversion" — direction lives in the type, never in the

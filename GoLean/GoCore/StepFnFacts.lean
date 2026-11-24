@@ -412,6 +412,7 @@ theorem loadLoc_eq_readAt (s : Store) : ∀ l : Loc,
       | some (.value _ root) => readAt ctx root (Loc.rootPath l).2
       | some (.mapPayload ..) => stuck s!"value load from a map payload cell {repr (Loc.rootLoc l)}"
       | some (.chanPayload ..) => stuck s!"value load from a channel payload cell {repr (Loc.rootLoc l)}"
+      | some .dead => stuck s!"value load from a dead cell {repr (Loc.rootLoc l)}"
       | none => stuck s!"unbound GoCore heap location: {repr (Loc.rootLoc l)}" := by
   intro l
   induction l with
@@ -446,6 +447,7 @@ theorem loadLoc_eq_readAt (s : Store) : ∀ l : Loc,
     · simp [Bind.bind, Except.bind, stuck, throw, throwThe, MonadExceptOf.throw]
     · simp [Bind.bind, Except.bind, stuck, throw, throwThe, MonadExceptOf.throw]
     · simp [Bind.bind, Except.bind, stuck, throw, throwThe, MonadExceptOf.throw]
+    · simp [Bind.bind, Except.bind, stuck, throw, throwThe, MonadExceptOf.throw]
   | index b i ih =>
     have hroot : (Loc.rootPath (.index b i)).1 = (Loc.rootPath b).1 := rfl
     have hpath : (Loc.rootPath (.index b i)).2 = (Loc.rootPath b).2 ++ [.index i] := rfl
@@ -464,6 +466,7 @@ theorem loadLoc_eq_readAt (s : Store) : ∀ l : Loc,
           cases arrayGet values i <;> rfl
         | _ => simp [readAt, projectStep, Bind.bind, Except.bind, stuck, throw, throwThe,
                 MonadExceptOf.throw]
+    · simp [Bind.bind, Except.bind, stuck, throw, throwThe, MonadExceptOf.throw]
     · simp [Bind.bind, Except.bind, stuck, throw, throwThe, MonadExceptOf.throw]
     · simp [Bind.bind, Except.bind, stuck, throw, throwThe, MonadExceptOf.throw]
     · simp [Bind.bind, Except.bind, stuck, throw, throwThe, MonadExceptOf.throw]
@@ -603,6 +606,7 @@ theorem storeLoc_noPanic_of_loadLoc_ok (s : Store) :
       exact NoPanic.map _ (writeAt_noPanic_of_readAt_ok h v)
     · split <;> exact NoPanic.stuck _
     · split <;> exact NoPanic.stuck _
+    · split <;> exact NoPanic.stuck _
   · exact NoPanic.internal _
 
 theorem tryAcquire_noPanic (op : SyncOp) (pre : SyncPrim) : NoPanic (tryAcquire op pre) := by
@@ -674,6 +678,7 @@ theorem storeLoc_noPanic (s : Store) (l : Loc) (v : GoValue) : NoPanic (storeLoc
     try dsimp only
     split
     · exact NoPanic.map _ (writeAt_noPanic _ _ _ _ _)
+    · split <;> exact NoPanic.stuck _
     · split <;> exact NoPanic.stuck _
     · split <;> exact NoPanic.stuck _
   · exact NoPanic.internal _
@@ -3106,3 +3111,11 @@ theorem execStmtLoop_step {fuel : Nat} {σ : Store} {c : Config}
   · simp only [Bind.bind]
     rw [h]
     rfl
+
+/-- Only the `deref` head reads its narrowing function: every other strict operator's apply is
+the same under any `leafOf` (raft-proofs' request (c), 2026-11-24). -/
+theorem applyStrictOp_leafOf_irrel {s : Store} {op : StrictOp} {vs : List GoValue}
+    (h : ∀ ty, op ≠ .deref ty) (leafOf leafOf' : Loc → Loc) :
+    applyStrictOp ctx s leafOf op vs = applyStrictOp ctx s leafOf' op vs := by
+  unfold applyStrictOp
+  split <;> first | rfl | exact absurd rfl (h _)

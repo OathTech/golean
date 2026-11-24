@@ -142,6 +142,7 @@ def HeapCell.locSup : HeapCell → Nat
   | .value _ v => GoValue.locSup v
   | .mapPayload entries _ => goValueEntriesSup entries.toList
   | .chanPayload buf _ _ => goValueListSup buf.toList
+  | .dead => 0
 
 def heapCellsSup : List HeapCell → Nat
   | [] => 0
@@ -2702,6 +2703,9 @@ theorem storeLoc_shape {σ : Store} :
   | chanPayload _ _ _ =>
     revert hf
     cases (Loc.rootPath l).2 <;> simp [stuck, throw, throwThe, MonadExceptOf.throw]
+  | dead =>
+    revert hf
+    cases (Loc.rootPath l).2 <;> simp [stuck, throw, throwThe, MonadExceptOf.throw]
 
 /-! ## `HeapNormal` preservation (C1 S1, D3) -/
 
@@ -3230,6 +3234,10 @@ theorem HeapNormal.of_storeLoc {σ σ' : Store} {l : Loc} {v : GoValue}
     revert hf
     cases (Loc.rootPath l).2 <;> simp [stuck, throw, throwThe, MonadExceptOf.throw]
   | chanPayload _ _ _ =>
+    dsimp only at hf
+    revert hf
+    cases (Loc.rootPath l).2 <;> simp [stuck, throw, throwThe, MonadExceptOf.throw]
+  | dead =>
     dsimp only at hf
     revert hf
     cases (Loc.rootPath l).2 <;> simp [stuck, throw, throwThe, MonadExceptOf.throw]
@@ -5334,6 +5342,7 @@ theorem storeMapPayload_pres {σ σ' : Store} {l : Loc}
         subst hf; rfl
       | value _ _ => simp [stuck, throw, throwThe, MonadExceptOf.throw] at hf
       | chanPayload _ _ _ => simp [stuck, throw, throwThe, MonadExceptOf.throw] at hf
+      | dead => simp [stuck, throw, throwThe, MonadExceptOf.throw] at hf
     have hh := hw.heap_le
     exact ⟨StateWf.mk' (by omega) hn, by omega⟩
   · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
@@ -5356,6 +5365,7 @@ theorem storeChanPayload_pres {σ σ' : Store} {l : Loc} {buf : Array GoValue}
         subst hf; rfl
       | value _ _ => simp [stuck, throw, throwThe, MonadExceptOf.throw] at hf
       | mapPayload _ _ => simp [stuck, throw, throwThe, MonadExceptOf.throw] at hf
+      | dead => simp [stuck, throw, throwThe, MonadExceptOf.throw] at hf
     have hh := hw.heap_le
     exact ⟨StateWf.mk' (by omega) hn, by omega⟩
   · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h

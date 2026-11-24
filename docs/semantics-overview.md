@@ -58,6 +58,18 @@ value cell self-normalized at its declared type, and every map payload's entry s
 and below the payload's counter (`mapPayloadWf`; raft-proofs' G22, 2026-10-26); the setup path
 decides it (`StepFn.lean`), and `MachineWf` / `MultiWf` (`Multi.lean`) are built on it.
 
+**The dead cell.** `HeapCell.dead` (`State.lean`; raft-proofs' rung-2 request, 2026-11-24) is a
+fourth, payload-free cell: an occupied address that holds nothing. No machine operation creates
+one — `Store.markDead` (`Store.lean`) is the only producer and nothing in the machine calls it
+— and `DeadCell.lean` states what a consumer relies on: every reader and writer refuses at a
+dead root with `stuck` (`loadLoc_dead`, `storeLoc_dead`, the payload readers and writers, the
+`Mem.*` operations and the strict/sync heads above them); `Store.NoDead` holds of the empty
+store and is preserved by every step and every run (`stepFn_noDead`, `Prefix.noDead`) and by
+the frame-entry and wide operations; marking a cell changes neither the heap's size nor any
+load or store rooted elsewhere (`Store.markDead_size`, `loadLoc_markDead_ne`,
+`storeLoc_markDead_ne`). `HeapNormal` says nothing about a dead cell; `NoDead` is the predicate
+that excludes it.
+
 ## 3. The labelled step
 
 Every step carries a label `StepLabel := { trace, picks, out }` (`Ops.lean`):

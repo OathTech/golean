@@ -209,6 +209,41 @@ theorem Ty.eqb_sound {a b : GoCore.Ty} (h : Ty.eqb a b = true) : a = b :=
 theorem Ty.beq_sound {a b : GoCore.Ty} (h : (a == b) = true) : a = b :=
   Ty.eqb_sound h
 
+/-! ## `Ty.eqb` is reflexive (raft-proofs' request 2, 2026-11-24) -/
+
+theorem GoCore.IntKind.beq_refl (k : GoCore.IntKind) : (k == k) = true := by
+  cases k <;> first | rfl | exact beq_self_eq_true (α := String) _
+theorem GoCore.FloatKind.beq_refl (k : GoCore.FloatKind) : (k == k) = true := by cases k <;> rfl
+theorem GoCore.ChanDir.beq_refl (k : GoCore.ChanDir) : (k == k) = true := by cases k <;> rfl
+theorem GoCore.SyncKind.beq_refl (k : GoCore.SyncKind) : (k == k) = true := by cases k <;> rfl
+
+mutual
+/-- `Ty.eqb` is reflexive (the converse direction of `Ty.eqb_sound` at equal arguments). -/
+theorem Ty.eqb_refl : ∀ t : GoCore.Ty, Ty.eqb t t = true
+  | .bool => rfl
+  | .int k => by simp [Ty.eqb, GoCore.IntKind.beq_refl]
+  | .float k => by simp [Ty.eqb, GoCore.FloatKind.beq_refl]
+  | .string => rfl
+  | .array n e => by simp [Ty.eqb, Ty.eqb_refl e]
+  | .slice e => by simp [Ty.eqb, Ty.eqb_refl e]
+  | .map k v => by simp [Ty.eqb, Ty.eqb_refl k, Ty.eqb_refl v]
+  | .chan d e => by simp [Ty.eqb, Ty.eqb_refl e, GoCore.ChanDir.beq_refl]
+  | .pointer e => by simp [Ty.eqb, Ty.eqb_refl e]
+  | .funcType p r v => by simp [Ty.eqb, Ty.eqbList_refl p, Ty.eqbList_refl r]
+  | .interface a => by simp [Ty.eqb]
+  | .defined a => by simp [Ty.eqb]
+  | .unsupported a => by simp [Ty.eqb]
+  | .sync a => by simp [Ty.eqb, GoCore.SyncKind.beq_refl]
+
+theorem Ty.eqbList_refl : ∀ l : List GoCore.Ty, Ty.eqbList l l = true
+  | [] => rfl
+  | a :: as => by simp [Ty.eqbList, Ty.eqb_refl a, Ty.eqbList_refl as]
+end
+
+/-- `Ty.eqb` decides equality. -/
+theorem Ty.eqb_iff {a b : GoCore.Ty} : Ty.eqb a b = true ↔ a = b :=
+  ⟨Ty.eqb_sound, fun h => h ▸ Ty.eqb_refl a⟩
+
 /-! ## `GoValue` soundness (the existing fuel eqb + its list helpers) -/
 
 theorem GoValue.eqbListWith_sound {f : GoValue → GoValue → Bool}

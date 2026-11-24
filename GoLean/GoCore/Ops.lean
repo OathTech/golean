@@ -2657,6 +2657,7 @@ def loadLoc (state : Store) : Loc → Except Stop GoValue
       | some (.value _ v) => return v
       | some (.mapPayload ..) => stuck s!"value load from a map payload cell {repr loc}"
       | some (.chanPayload ..) => stuck s!"value load from a channel payload cell {repr loc}"
+      | some .dead => stuck s!"value load from a dead cell {repr loc}"
       | none => stuck s!"unbound GoCore heap location: {repr loc}"
   | .field base typeId fieldName => do
       match ← loadLoc state base with
@@ -2888,6 +2889,10 @@ def storeLoc (state : Store) (l : Loc) (value : GoValue) : Except Stop Store :=
         match rp.2 with
         | [] => stuck s!"value store into a channel payload cell {repr (Loc.base rp.1)}"
         | _ :: _ => stuck s!"value load from a channel payload cell {repr (Loc.base rp.1)}"
+    | .dead =>
+        match rp.2 with
+        | [] => stuck s!"value store into a dead cell {repr (Loc.base rp.1)}"
+        | _ :: _ => stuck s!"value load from a dead cell {repr (Loc.base rp.1)}"
 
 /-! ## The map payload's representation invariant (raft-proofs' G22, 2026-10-26) -/
 
@@ -2920,11 +2925,14 @@ well-stamped (C1 S1, D3; G22) -/
 /-- A cell is normal when a VALUE cell's value is self-normalized at the cell's
 declared type, and when a MAP PAYLOAD's stamps are distinct and below its counter
 (`mapPayloadWf`, G22); a channel payload states nothing here (its buffer is bounded
-by `StateWf`'s address clause, and it carries no declared value type). -/
+by `StateWf`'s address clause, and it carries no declared value type), and neither does
+a DEAD cell (it holds nothing — so `HeapNormal` and `StateWf` do not exclude one; the
+predicate that does is `Store.NoDead`, preserved by every machine step, `DeadCell.lean`). -/
 def HeapCell.normal (types : TypeEnv) : HeapCell → Bool
   | .value ty v => isNormalForTy types ty v
   | .mapPayload entries nextId => mapPayloadWf entries nextId
   | .chanPayload .. => true
+  | .dead => true
 
 /-- The heap-wide check, structural on the cell list (kernel-reducible). -/
 def Heap.normalB (types : TypeEnv) (h : Heap) : Bool :=

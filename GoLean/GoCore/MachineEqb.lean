@@ -832,6 +832,7 @@ def HeapCell.eqb : HeapCell → HeapCell → Bool
       n₁ == n₂ && GoValue.eqbTriplesWith GoValue.eqb e₁.toList e₂.toList
   | .chanPayload b₁ c₁ k₁, .chanPayload b₂ c₂ k₂ =>
       c₁ == c₂ && k₁ == k₂ && eqbArrayP GoValue.eqb b₁ b₂
+  | .dead, .dead => true
   | _, _ => false
 
 theorem HeapCell.eqb_sound (a b : HeapCell) (h : HeapCell.eqb a b = true) :
@@ -849,6 +850,7 @@ theorem HeapCell.eqb_sound (a b : HeapCell) (h : HeapCell.eqb a b = true) :
     obtain ⟨h1, h2, h3⟩ := andSplit3 h
     cases eq_of_beq h1; cases eq_of_beq h2
     cases eqbArrayP_sound (fun _ _ hh => GoValue.eqb_sound hh) h3; rfl
+  case dead.dead => rfl
 
 /-- Structural `Store` equality: the heap, cell by cell (B7 — the five
 program tables `ExecState.eqb` used to walk when heaps agreed are the
