@@ -68,7 +68,11 @@ push rule). Pushing the tag is a separate sign-off.
    backlog's debt table, and the rulings carried as pending. Its independent audit the same day found the
    E5/L-016 shape inside the proposed profile unrowed: BUG-432 entered and rowed red by design (13 strict rows under
    `assign-order/early-store-under-recover/`), the baseline re-pinned from a full gate run (7798 rows), and the
-   audit's other findings dispositioned on the branch (the record's §0 and the backlog's row 61). Steps 2–5 are open.
+   audit's other findings dispositioned on the branch (the record's §0 and the backlog's row 61).
+   COMPLETED FOR THE TAG 2026-11-25 ([AGENT] lane `records/release-1125`, on the [USER]'s decision of that day
+   that `main` is the release): two trains had landed after the record (the dead cell, G23 one level), so the
+   record gained their summary (§1.5), limits (§6.K) and rows (§8a) and its §0 was filled from the gate and the
+   kernel checks at the gated commit `0b71c82e` (steps 3 and 4, below). Step 5, the tag, is the [USER]'s.
 2. Run the audit ask on the branch (CLAUDE.md, merge protocol step 3); merge on sign-off.
 3. At the merged tip, on a clean tree: `capped scripts/ci --diff` (§1.3), then the claim-point kernel check in the
    form that exists today (every figure below measured 2026-10-22 on this box under the nono agent sandbox with
@@ -80,6 +84,9 @@ push rule). Pushing the tag is a separate sign-off.
      (`/usr/bin/bwrap` is not setuid, `kernel.apparmor_restrict_unprivileged_userns=1`, the AppArmor profiles are
      unreadable from here) — and then the only form is `lake check --inadvisably-no-sandbox`, which the toolchain
      labels «not trustworthy»: there is no sandboxed gate on that box, and the release record (step 4) must say so.
+     MEASURED 2026-11-25 on `owicki-oath`, the [USER]'s run outside the agent sandbox at `0b71c82e`: `bwrap` DOES
+     start there with Lake's flags — `lake check` sandboxed, exit 0, 210 s, largest process 1.6 GB; `lake
+     comparator` sandboxed, 33 s (the first release's record, §0).
      PLUS, on the same export, the four bundled external kernels that work, run by hand exactly as Lake invokes them
      (`Lake/CLI/Check.lean`, `bundledKernels` and `runExternalKernel`: `LEAN_ABORT_ON_PANIC=1`, the export path as
      the last argument; `T` is the toolchain's `bin`, `~/.elan/toolchains/leanprover--lean4---v4.35.0/bin`); the box

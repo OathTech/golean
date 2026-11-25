@@ -1,20 +1,32 @@
-# Changelog `20d3946d` → the first release — the FROZEN record of `docs/changelog/20d3946d-WINDOW.md` (prepared 2026-11-09, `docs/release.md` §3 step 1)
+# Changelog `20d3946d` → the first release — the FROZEN record of `docs/changelog/20d3946d-WINDOW.md` (prepared 2026-11-09, `docs/release.md` §3 step 1; completed for the tag 2026-11-25, step 4)
 
-**Status: PREPARED, NOT TAGGED.** Written by the [AGENT] records lane `records/release-1109` on a branch off
-`main` at `00afbc7c` (the train-34 landing with the campaign closure), per `docs/release.md` §1.4–§1.6 and §3
-step 1. No `release/*` tag exists; `lakefile.toml`'s `version` is `0.1.0`, unmoved. A release is the [USER]'s
-act (`docs/release.md` §2): steps 2–5 of §3 — the audit ask, the merge, `capped scripts/ci --diff` and the
-kernel checks at the merged tip, the record's §0 line and the tag — are open. Nothing under `GoLean/`,
-`tools/` or `scripts/` changed for this record. Its audit round (2026-11-09) added one corpus package
+**Status: COMPLETED FOR THE TAG, 2026-11-25** ([AGENT] records lane `records/release-1125`, on the [USER]'s
+decision of 2026-11-25 that this is the release; the tag itself is the [USER]'s act, `docs/release.md` §2).
+The record documents the GATED commit `0b71c82e` (§0); the tag goes on the records commit that carries this
+completion, with only records commits between the two (§3 step 4).
+
+**What was prepared, and what happened after.** The record was written 2026-11-09 by the [AGENT] records lane
+`records/release-1109` on a branch off `main` at `00afbc7c` (the train-34 landing with the campaign closure)
+and landed as `9f4554a6`; its audit round added one corpus package
 (`Corpus/coverage/exec/assign-order/early-store-under-recover/`, thirteen rows, BUG-432) and re-pinned
-`baselines/native-full.tsv` from a full `scripts/ci --diff` run under the box lock (§0); no tag, no push.
+`baselines/native-full.tsv`. TWO TRAINS LANDED AFTER IT, before the tag: the dead cell (2026-11-24) and G23 in
+its one-level form (2026-11-25), nine commits, `9f4554a6` → `0b71c82e`. They are carried here, not folded
+into the older sections: **§1.5** is their summary against `9f4554a6`, **§6.K** their stated limits, **§8a**
+their rows (verbatim from `docs/changelog/9f4554a6-WINDOW.md`), and **§0** is the gate and the kernel checks
+at `0b71c82e`. §1.1–§1.4, §2–§5, §6.A–H, §7 and §8 are as prepared — their figures are the tree's at
+`00afbc7c` (the corpus and entry figures with the audit round's rows) — and each stands at `0b71c82e` except
+where §1.5 says otherwise: the two trains moved no corpus row, no baseline, no `docs/BUGS.md` entry's status
+and nothing under `tools/` (§8's last block has the commands).
 
-**The tag commit and the freeze.** The tag goes on the commit that merges this branch into `main` (§3 step 4:
-the record cannot name its own commit). §9 below is `docs/changelog/20d3946d-WINDOW.md` at `00afbc7c`, copied
+**The tag commit and the freeze.** The tag goes on the records commit that carries this completion (§3 step
+4: the record cannot name its own commit). §9 below is `docs/changelog/20d3946d-WINDOW.md` at `00afbc7c`, copied
 verbatim from its table header on. The freeze is RE-CHECKED at the tag commit: `diff <(sed -n '9,$p'
 docs/changelog/20d3946d-WINDOW.md) <(sed -n '/^| Train | Line |$/,$p' docs/changelog/20d3946d-RELEASE.md)`
-must be empty there; a row that lands between this branch and the tag is added to §9 by the records commit
-that carries the tag, never silently.
+must be empty there (it is, at this lane's tip: the window file has not been edited since `00afbc7c`). The
+rows that landed between the record's preparation and the tag did not go into that frozen file but into
+`docs/changelog/9f4554a6-WINDOW.md`; they are §8a, checked by `diff <(sed -n '/^| Train | Line |$/,$p'
+docs/changelog/9f4554a6-WINDOW.md | tail -n +3) <(sed -n '/^| Train (after the freeze) | Line |$/,/^$/p'
+docs/changelog/20d3946d-RELEASE.md | tail -n +3 | sed '$d')`, empty at the tag commit.
 
 Every number here is derived from the tree at `00afbc7c` — §8 lists the command beside each — or from the
 recorded full run `artifacts/coverage/latest.tsv` at `3248a3f8` (the commit the run's `latest.meta.tsv` names;
@@ -26,36 +38,48 @@ lane's ephemeral report are cited through the closure report and marked **[lane]
 are cited as relayed by the [AGENT] coordinator from the records that carry them; proposals are marked
 [AGENT].
 
-## 0. The release record (filled at the tag, `docs/release.md` §3 step 4; placeholders say what is missing)
+## 0. The release record (`docs/release.md` §3 step 4)
 
-- **Tag:** `release/<YYYY-MM-DD>` — NOT CREATED. The [USER] tags (§2).
-- **Commit:** the merge of `records/release-1109` into `main`; its parent is `00afbc7c`, and only records
-  commits may sit between the gated commit and the record's commit (§3 step 4).
+- **Tag:** `release/2026-11-25` — created by the [USER] on the records commit that carries this section (§2;
+  the commands are the [USER]'s, given at the ask). `lakefile.toml`'s `version` stays `0.1.0` (not asked for).
+- **Commit:** the gated commit is `0b71c82e` (`main`, pushed 2026-11-25); the tagged commit is its records-only
+  descendant on this lane (`git diff --stat 0b71c82e <tag> -- GoLean Contract Tests tools scripts Corpus
+  baselines lakefile.toml lean-toolchain comparator.json` is empty).
 - **Toolchains at the tag:** `lean-toolchain` = `leanprover/lean4:v4.35.0`; `baselines/go-oracle-pin` =
   `go1.26.5` (never floated; CLAUDE.md, the trusted surface #2). At the offer commit `20d3946d` the Lean pin
   was `v4.32.2` (`git show 20d3946d:lean-toolchain`); the Go pin is unchanged.
-- **The gate at the tag (§1.3): the owner's run at the merged tip fills this line** (§3 step 3; its logs are
-  not committed). What this branch ran: `CAPPED_MEM_MAX=32G capped scripts/ci --diff` at `3248a3f8` under the
-  box lock, 2026-11-09, 1097 s wall, 32 jobs — RESULT: FAIL by the one expected drift, the thirteen rows of
-  BUG-432 born (`NEW id (not in baseline)`: 8 FAIL/differential, 5 PASS); every gate step ok (`lake build` of
-  the 14 targets by name, the kernel replay of 55 modules, the core totality audit, 504 eval tests, the
-  frontend and harness `go test`s, the unseq-wire, wire-boundary, method-identity, frontend-pin, declaration
-  and equation checks, the unseq scheduler); the negative diff 645/645, no regression; the three re-pin guards
-  ok; the speedbumps ok except `check-bugs` red for the same born rows (BUG-432's Cases rows not yet in the
-  baseline), `lake check` and `lake comparator` ok (`--inadvisably-no-sandbox` where `bwrap` cannot start),
-  `coverage-cause --unclassified` ok. The baseline was then re-pinned from that run (its header block names
-  the rows) and the fast tier run at the final tip — its lines are in the audit-round report, not here. The
-  recorded run: differential 7798 rows, 7424 PASS / 374 FAIL; negative 645, 643 / 2; `go_drift_actual false`;
-  `sed -n 2p baselines/native-full.tsv`: `cases: 7798 (7424 PASS / 374 FAIL)`; `sed -n 3p
-  baselines/negative-full.tsv`: `manifest_cases: 645  pass: 643  fail: 2`.
-- **The kernel checks (§3 step 3 (a)–(c)): NOT RUN by this lane.** The form that exists on this box is §3's:
-  the plain `lake check` (sandboxed where `bwrap` starts — unverified here; else `--inadvisably-no-sandbox`,
-  which the toolchain labels not trustworthy, and the record must say which), the four bundled external
-  kernels by hand on the export, `lake comparator` over the 385 statements of `comparator.json`; `lake check
-  --paranoid` is red today (nanoda's stack overflow on this export, §3(b)).
-- **The three predicates:** §2 — (1) HOLDS; (2) DOES NOT HOLD absent the profile ruling (D1's pending half),
-  and holds by stated exclusion under the proposed profile of §3; (3) ENUMERATED in §4 (an envelope, not a
-  maximality claim).
+- **The gate at the gated commit (§1.3):** `CAPPED_MEM_MAX=64G scripts/ci --diff` on `main` at `0b71c82e`, a
+  clean tree, 2026-11-25, inside the agent sandbox on `owicki-oath` — **RESULT: PASS**, exit 0, 1049 s wall
+  (`LEAN_NUM_THREADS=8`, 32 cores). Every gate step ok: the oracle pin (`go1.26.5`), the escape-hatch scan,
+  `lake build` of the 14 targets by name, the kernel replay of 56 modules, the core totality audit, 553
+  eval tests, the frontend and harness `go test`s, the unseq-wire, wire-boundary, method-identity,
+  frontend-pin, declaration and equation checks, the unseq scheduler; the fresh differential run
+  7798 rows, 7424 PASS / 374 FAIL, no regression against `baselines/native-full.tsv`; the fresh
+  negative run 645/645, no regression; the re-pin guards ok; every speedbump ok (the bugs index, feature
+  tags, spec anchors, the stdlib register, the `AGENTS.md` alias, imported-goose, the memory call sites, the
+  notices, the two regenerations, `lake check`, `lake comparator`, the cause classification). Inside the
+  agent sandbox `lake check` and `lake comparator` ran with `--inadvisably-no-sandbox` (`bwrap` cannot start
+  there); the claim-point runs are the next item. The same command had passed at the same commit on the
+  landing lane before the merge (2026-11-25, 1307 s).
+- **The kernel checks (§3 step 3 (a)–(c)), at `0b71c82e`:**
+  - (a) `lake check`, the claim-point form — the [USER]'s run OUTSIDE the agent sandbox, 2026-11-25,
+    `scripts/check-lake-check`: **sandboxed** (`bwrap` starts with Lake's flags on this box), exit 0, 209.93 s,
+    largest process 1555 MB, «Lean default kernel accepts the solution», «Uses axioms: propext, Quot.sound,
+    Classical.choice», 64 project modules exported. So Lake's sandbox DOES start on `owicki-oath` outside
+    the agent sandbox — the point `docs/release.md` §3 (a) left unverified.
+  - (a, continued) the four bundled external kernels on the export, by hand as §3 (a) gives them, inside the
+    agent sandbox (they take no sandbox of their own): `leanchecker-paranoid` exit 0, silent (205 s); `lean4lean` «checked 181484 declarations», exit 0 (211 s); `con-leche` «accepted 181487 declarations (--verified)», exit 0 (26 s); `con-ron` «accepted 181487 declarations (--verified)», exit 0 (16 s) — over an export of 17,338,635 lines, 1.0 GB, written by `LAKE_CHECK_EXPORT=1 capped lake check --inadvisably-no-sandbox` (the export half; `bwrap` cannot start inside the agent sandbox).
+  - (b) `lake check --paranoid`: NOT RUN — red by `docs/release.md` §3 (b) (nanoda's stack overflow on this
+    export); nothing here re-measured it.
+  - (c) `lake comparator` — the [USER]'s run outside the agent sandbox, 2026-11-25, `scripts/check-comparator`:
+    **sandboxed**, exit 0, 33.27 s, largest process 479 MB, 477 theorem names, «Lean default kernel accepts
+    the solution», «Your solution is okay!»; `scripts/gen-contract --check` green before it (2 dedup, 5
+    prefix, 1 enterFrame, 1 recover, 1 iface, 14 consumeAt, 317 eqns, 27 g11, 6 pool, 13 g16, 90 deadcell).
+- **The three predicates:** §2 — (1) HOLDS, re-run on the gate's recorded run at `0b71c82e`:
+  `scripts/coverage-cause --unclassified artifacts/coverage/latest.tsv` prints `every FAIL row's cause is classified (374 FAIL row(s), latest.tsv)`, exit 0; (2) DOES NOT HOLD absent the profile ruling (D1's pending half), and holds by stated
+  exclusion under the proposed profile of §3 — `scripts/check-bugs.sh` at `0b71c82e`: `ok (217 bug(s), 9 moved tombstone(s) …)`, `backlog — 7 unexplained fidelity failure(s): coverage 5/5; latitude 2/2; wrong-answer 0/0`; (3)
+  ENUMERATED in §4 (an envelope, not a maximality claim). None of the three blocks the tag
+  (`docs/release.md` §1.6); the rulings of §7 are carried as pending.
 
 **To reproduce this record's claims (self-contained).** On a clean clone at the tag commit, with the
 toolchains the README's «Getting started» names (elan with `lean-toolchain`'s version, Go 1.26.5 exactly,
@@ -68,7 +92,7 @@ CAPPED_MEM_MAX=32G capped scripts/ci --diff          # RESULT: PASS, the two bas
 # the claim-point kernel checks, in the form that exists (docs/release.md §3 step 3)
 CAPPED_MEM_MAX=64G capped lake check                  # sandboxed where bwrap starts; else lake check --inadvisably-no-sandbox, and say so
 LAKE_CHECK_EXPORT=1 capped lake check > export.ndjson # then the four bundled kernels by hand on the export (docs/release.md §3 (a))
-CAPPED_MEM_MAX=64G capped lake comparator             # «Your solution is okay!», the 385 statements of comparator.json
+CAPPED_MEM_MAX=64G capped lake comparator             # «Your solution is okay!», the 477 statements of comparator.json
 # where this record's counts come from
 scripts/coverage-cause --unclassified artifacts/coverage/latest.tsv   # predicate 1, over the run the gate just recorded
 scripts/check-bugs.sh; scripts/check-bugs.sh --list                   # the entries' summary line; the untriaged ids
@@ -151,7 +175,7 @@ question for the owner (§7).
   (`mapPayloadWf` in `StateWf`; `stateWf_empty` strengthens in meaning); `exitOrRefusal` at every driver's
   main-exit mirror (BUG-206; the certificate checker stricter only); `checkCert_slowObs`/`checkCertM_slowObs`
   restored (DC04).
-- The whole kept surface is a `lake comparator` contract: `comparator.json` (385 statement names) against the
+- The whole kept surface is a `lake comparator` contract: `comparator.json` (385 statement names at `9f4554a6`; 477 at the tag, §1.5) against the
   frozen `Contract/Challenge.lean`; `scripts/contract-export` for the cross-pin route.
 - `IntKind` gains `uintptr`: two exhaustive matches in golean-logic need an arm each at its next re-pin (the
   uintptr-repair row).
@@ -245,6 +269,33 @@ question for the owner (§7).
 defect-neighbourhood campaign (`docs/2026-10-27_defect-neighbourhood-campaign.md`, `docs/defect-shapes.md`,
 `docs/2026-11-08_defect-neighbourhood-closure.md`); `docs/APPARATUS-DEFECTS.md` (the class boundary ruled
 2026-10-27); this record's audit round (BUG-432 and its rows, §2.2).
+
+### 1.5 After the record was prepared — `9f4554a6` → `0b71c82e` (two trains, nine commits)
+
+Measured against `git show 9f4554a6:<path>` (§8's last block). `GoLean/` 13 files, +2337/−78 (one new module,
+`GoLean/GoCore/DeadCell.lean`); nothing under `tools/`, `Corpus/` or `baselines/` (one comment line of
+`docs/BUGS.md`); 532 commits from the offer.
+
+- **The dead cell** (2026-11-24; raft-proofs' request, [USER]-approved the same day; backlog row 63).
+  `HeapCell` gains a fourth, payload-free constructor `dead` — a consumer that matches on `HeapCell` gains a
+  case. `Store.markDead` is its only producer and no machine operation calls it; the six cell readers and
+  writers refuse at a dead cell with `stuck`. New: `Store.NoDead` (decidable; preserved by `stepFn`, `Prefix`,
+  the fuel drivers, setup, the seeded entry and the pool), the refusal and `markDead` frame lemmas,
+  `HeapNormal.markDead`/`StateWf.markDead`; `Ty.eqb_refl`/`Ty.eqb_iff`, `instance LawfulBEq FuncId`,
+  `applyStrictOp_leafOf_irrel`. `cellLeafTy`'s wildcard became explicit arms (same function).
+- **G23, one level** (2026-11-25; raft-proofs' asks of 2026-11-10, the form [USER]-ruled 2026-11-25; backlog
+  row 62). `normalizeValueForTyTy`/`isNormalForTyTy` at an interface type admit the nil interface or a box
+  and refuse every other constructor by name (they were the identity / `true`): an interface-typed cell
+  holding a raw value is no longer `HeapNormal`. Beside them `GoValue.boxesNormal` checks the HEAD of every
+  box's payload met outside a payload (`boxHeadNormal`), enforced at `normalizeValueForTy` and `writeAt`'s
+  leaf. Bodies changed: those two, `normalizeValueForTy`, `isNormalForTy`, `writeAt`. New:
+  `isNormalForTy_interface`, `boxHeadNormal_of_isNormal`. (A deep form of the box check was built
+  2026-11-10, held at its audit and never landed.)
+- **The contract: 385 → 477 statements**, none re-worded: 90 dead-cell statements (family `deadcell`),
+  `isNormalForTy_interface` (`iface`), `recoverAtDeferred_none` (`recover`).
+- **Unchanged:** the corpus and both baselines (7798 / 645 rows, every verdict and cause), the wire, the CLI,
+  the frontend, the raft subject and its pins, the entries of `docs/BUGS.md`, the predicates' counts, the
+  profile and envelope of §3–§4. Eval tests 504 → 553.
 
 ## 2. The three release predicates (`docs/release.md` §1.6; each its own line, never one green)
 
@@ -720,6 +771,33 @@ a ruling
 54. The rulings posed and not ruled are §7; the release carries each as pending, and nothing in this record
     presumes one.
 
+**K. Landed after the record was prepared (§1.5)**
+
+55. **The dead cell's refusal is stated per OPERATION, not per step**: each cell reader and writer is `stuck`
+    at a dead root (and the strict/sync heads named in `DeadCell.lean`), but there is no theorem «a step that
+    touches a dead cell is stuck», and the element-run operations, the atomics and `storeTarget` have no
+    lemma of their own. At the pool, a goroutine parked on a dead channel or sync cell reads as not runnable
+    to the readiness probes until the parked set is classified. No machine run creates a dead cell
+    (`stepFn_noDead`, `execProgLoop_noDead`, `runProgramSetupM_noDead`), so this concerns only a consumer
+    that calls `Store.markDead`.
+56. **`HeapNormal` and `StateWf` admit dead cells** (`HeapCell.normal .dead = true`): every kept theorem that
+    concludes them says nothing about deadness, and every one that assumes them covers stores with dead
+    cells, with no change of text. `Store.NoDead` is the predicate that excludes them; `execProgLoopOut` has
+    no `NoDead` statement of its own.
+57. **A box is checked at its payload's HEAD only** (G23, one level): a boxed struct's fields, a boxed array's
+    elements and any box inside a payload are not checked by `HeapNormal`; a box at an OPAQUE named dynamic
+    type (an imported type carried by name) is admitted with its payload unchecked; map-payload entries and
+    channel buffers are normalized at insertion but not stated by `HeapNormal`; a function value's captures
+    are not walked.
+58. **A box whose dynamic type is an ALIAS of an interface type is refused** at its first store (the head
+    check's one refusal the withdrawn deep form did not make). The frontend emits a named interface as an
+    interface declaration, so no lowered program has one; a hand-built or forged wire can.
+59. **The in-repo comparator re-elaborates the frozen statements against the live definitions** (limit of the
+    contract, restated because both trains moved definitions under unchanged statements): the bodies of
+    `loadLoc`, `storeLoc`, the payload readers and writers, `HeapCell.normal`, `normalizeValueForTy`,
+    `isNormalForTy` and `writeAt` changed with no kept statement's text changing; a consumer sees that only
+    across a pin, by `--challenge-from-export` (`scripts/contract-export`).
+
 ## 7. Rulings carried as PENDING (none presumed; each as it stands on `main` today)
 
 From the closure's §6 (posed by [AGENT] lanes or the coordinator at a train's ask; row 56 names the train):
@@ -801,7 +879,7 @@ awk '/^## BUG-/{live=($0 !~ /\[MOVED/)} live && /^- Status: fixed/{if(match($0,/
 grep -c '^## BUG-' docs/APPARATUS-DEFECTS.md; grep -E '^- Status: ' docs/APPARATUS-DEFECTS.md | cut -c1-16 | sort | uniq -c   # 14; 8 fixed / 6 open
 awk '/^## BUG-/{id=$0; st=""} /^- Status: open/{st=$0} /^## BUG-|^$/{if(st!=""){print id; st=""}}' docs/BUGS.md   # the 33 open entries' headings
 # the kept surface and the core
-grep -c '^    "GoLean\.Contract\.' comparator.json                                                          # 385
+grep -c '^    "GoLean\.Contract\.' comparator.json                                                          # 385 at 9f4554a6; 477 at 0b71c82e
 grep -c '^theorem\|^protected theorem\|^@\[stepFn_eqns\] theorem' GoLean/GoCore/Equations.lean; grep -c 'stepFn_eqns\]' GoLean/GoCore/Equations.lean   # 317; 239
 ls GoLean/GoCore/*.lean | wc -l; git show 20d3946d:GoLean.lean | grep -c '^import'; grep -c '^import' GoLean.lean   # 42; 14; 20
 git diff --name-status 20d3946d HEAD -- GoLean | grep -E '^(A|D)'                                           # the modules added / deleted
@@ -830,6 +908,26 @@ scripts/diff-one $(grep -v '^#' Corpus/coverage/exec/assign-order/early-store-un
 # the speedbumps run on this branch (docs-only; check-stdlib-register builds the Go frontend and was not run)
 scripts/check-bugs.sh; scripts/check-notices; scripts/check-agents-alias; scripts/check-spec-anchors; scripts/check-coverage; scripts/check-imported-goose; bash scripts/check-mem-callsites
 ```
+
+```sh
+# §1.5 and §0 at the gated commit 0b71c82e (the two trains after the record was prepared)
+git log --oneline 9f4554a6..0b71c82e | wc -l; git log --oneline 20d3946d..0b71c82e | wc -l          # 9; 532
+git diff --stat 9f4554a6 0b71c82e -- GoLean | tail -1                                                # 13 files, +2337/−78
+git diff --stat 9f4554a6 0b71c82e -- Corpus baselines tools | tail -1                                # 1 file (docs/BUGS.md is outside these), 1 line: none of the three
+git diff 9f4554a6 0b71c82e --stat -- docs/BUGS.md | tail -1                                          # 1 line changed (a comment in the absorbing-defaults table)
+grep -c '^    "GoLean\.Contract\.' comparator.json; scripts/gen-contract --check | tail -1          # 477; the families
+scripts/check-bugs.sh | tail -3                                                                      # the entries' summary line
+scripts/coverage-cause --unclassified artifacts/coverage/latest.tsv                                  # predicate 1, over the gate's recorded run
+```
+
+## 8a. The rows that landed after the freeze — `docs/changelog/9f4554a6-WINDOW.md` at `0b71c82e`, verbatim
+
+Two rows, newest first; the file's own header is not repeated. The check command is in the preamble.
+
+| Train (after the freeze) | Line |
+|---|---|
+| core/dead-cell-1124 | **raft-proofs' dead cell — a fourth heap-cell constructor a consumer can write and the machine never does; `Ty.eqb_refl`** (their requests of 2026-11-24, approved by the [USER] the same day; backlog row 63). CORE (trusted surface #1, the interpreter; observation-invariant: no machine operation creates the new cell, `stepFn_noDead`, and every differential and negative row is unchanged — the gate's check): `HeapCell.dead` (`State.lean`), with a `stuck` arm in `loadLoc`, `storeLoc`, `mapPayload?`, `chanPayload?`, `storeMapPayload`, `storeChanPayload`; `Store.markDead : Store → Addr → Store` and `Store.NoDead` (`Store.lean`); `HeapCell.isDead` with `isDead_iff`. A consumer that MATCHES on `HeapCell` gains a case. CONTRACT: 385 → 475 statements — the 90 customer-facing ones below are frozen in `Contract/Challenge.lean` (family `deadcell`; [USER] 2026-11-24), the proof scaffolding is not. PROOFS (`GoLean/GoCore/DeadCell.lean`, all new): refusal at a dead root (`loadLoc_dead`, `loadRoot_dead`, `storeLoc_dead`, the payload four, `Mem.load/loadFor/loadBinding/loadBindingFor/store/storeThrough/mapRead/mapWrite_dead`, `loadMany_dead_head`, `loadMany_not_ok_of_dead`, `loadResults_dead_head`, `applyStrictOp_deref/indexGet/lengthOf_*/capacityOf_*_dead`, `applySyncOp(Core)_lock/unlock_dead`, `receiverAt_deref_dead`); the frame (`Store.markDead_size`, `_nextAddr`, `_lookup_self`, `_lookup_ne`, `_not_noDead`, `loadLoc_markDead_ne`, `storeLoc_markDead_ne`, `Store.updateCell_markDead_ne`); `NoDead` preserved (`Store.NoDead.empty`, `stepFn_noDead`, `ExecutionStatement.Prefix.noDead`, `enterFrame_noDead`, `bindParams_noDead`, `allocDecls_noDead`, `applyStmtOp_noDead`, `applySyncOp_noDead`, `applyChanOp_noDead`, `applySelect_noDead`, `applyAtomicOp_noDead`, `storeTarget_noDead` and the rest of the per-operation family; and through the drivers, setup, the seeded entry and the pool: `runConfig_noDead`, `execStmtLoop_noDead`, `stepFnIter_noDead`, `runInitConfig_noDead`, `runPkgInitM_noDead`, `seedGlobals_noDead`, `seedCells_noDead`, `runProgramSetupM_noDead`, `runProgramSetupSeededM_noDead` (setup starts from the empty store, so its result is `NoDead` outright), `stepMulti_noDead`, `execProgLoop_noDead`); `syncCell_dead`, `chanCell_dead`; `HeapNormal.markDead`, `StateWf.markDead`; `Store.NoDead` is decidable. ALSO: `Ty.eqb_refl`, `Ty.eqbList_refl`, `Ty.eqb_iff` (`StateEqb.lean`); `instance : LawfulBEq FuncId` (`Value.lean`); `applyStrictOp_leafOf_irrel` (`StepFnFacts.lean`: only the `deref` head reads its narrowing function). NOT in this train: the panic twin `evalE_strict_nullary_panic` ([USER] 2026-11-24: it stays out; backlog row 63). WHAT A CONSUMER OF KEPT STATEMENTS SHOULD KNOW: `HeapCell.normal` is `true` of a dead cell, so `HeapNormal`/`StateWf` ADMIT dead cells — every kept theorem that concludes them says nothing about deadness and every one that assumes them now covers stores with dead cells, with no change of text; `NoDead` is the predicate that excludes them. The refusal is per OPERATION: there is no step-level «a step touching a dead cell is stuck» theorem, and the pool's readiness probes skip a goroutine parked on a dead cell until the parked set is classified. `execProgLoopOut` has no `NoDead` statement of its own. `cellLeafTy` answers `none` at a dead root (an explicit arm). |
+| core/g23-bplus-1125 | **raft-proofs G23 — an interface slot holds the nil interface or a box whose payload's HEAD agrees with its dynamic type; `isNormalForTy_interface` and `recoverAtDeferred_none` contracted (475 → 477)** (their two asks relayed by the [USER] 2026-11-10; the one-level form ruled by the [USER] 2026-11-25 on their answer of that day; backlog row 62; reply `docs/2026-11-10_reply-to-raft-proofs-g23.md`). CORE (trusted surface #1, the interpreter; observation-invariant on the corpus: every differential and negative row unchanged — the gate's check): `normalizeValueForTyTy` / `isNormalForTyTy` at an interface type admit `.nil` and a box and refuse every other constructor by name (it was the identity / `true`); beside them `GoValue.boxesNormal`, a walk over the value's arrays and struct fields that STOPS at a box and checks its payload's head (`boxHeadNormal`: the normal form's constructor, a number's kind and width, an array's length, a declared struct's tag and field count, a sync kind; an opaque named dynamic type unchecked; an interface dynamic type refused), enforced by `boxesGuard` in `normalizeValueForTy` and at `writeAt`'s leaf and stated by `isNormalForTy` (hence `HeapNormal`, `StateWf`). NOT checked: anything below a payload's head — a boxed struct's fields, a boxed array's elements, a box inside a payload. A consumer that unfolds `isNormalForTy` or `normalizeValueForTy` on a concrete value meets one more conjunct / one more step. Definitions whose body changed: `normalizeValueForTyTy`, `isNormalForTyTy`, `normalizeValueForTy`, `isNormalForTy`, `writeAt` (leaf); new: `boxHeadTy`, `boxHeadAt`, `boxHeadNormal`, `GoValue.boxesNormal`, `boxesNormalList`, `boxesNormalFields`, `boxesGuard`. THEOREMS: the lockstep and preservation families re-proved with statements unchanged; new `isNormalForTy_interface`, `boxesGuard_ok`, `normalizeValueForTy_ok`, `writeAt_boxesNormal` and the list/field/array/struct `boxesNormal` lemmas. CONTRACT: two statements added (`isNormalForTy_interface`, family `iface`; `recoverAtDeferred_none`, family `recover`), none re-worded. HISTORY: first built 2026-11-10 with a deep walk (every payload normal at its dynamic type, recursively) and HELD at its audit's F1 — the store-time guard re-walked payloads, quadratic on value-nested boxes; never landed in that form. |
 
 ## 9. The frozen rows — `docs/changelog/20d3946d-WINDOW.md` at `00afbc7c`, from its table header on, verbatim
 

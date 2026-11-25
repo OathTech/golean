@@ -60,11 +60,13 @@ reading everything else.
 
 - `changelog/`: what changed for consumers. `61958f2e-WINDOW.md` is the frozen 2026-10-03
   offer, and `20d3946d-WINDOW.md` is every consumer-visible change since. `20d3946d-RELEASE.md` is
-  the first release's record (prepared 2026-11-09, `release.md` §3 step 1; the tag is the owner's):
+  the first release's record (prepared 2026-11-09, completed for the tag 2026-11-25 at the gated commit
+  `0b71c82e`, `release.md` §3 steps 1–4; the tag `release/2026-11-25` is the owner's):
   the window changelog frozen at the tag commit, the cumulative summary since the offer, the three
   release predicates with their counts, the proposed supported profile and its envelope, the
   supported-scope statement, the stated limits and the rulings carried as pending. `9f4554a6-WINDOW.md`
-  holds the rows that land after that record's freeze (the dead cell, 2026-11-24; G23, 2026-11-25).
+  holds the two rows that landed after that record's freeze (the dead cell, 2026-11-24; G23,
+  2026-11-25), frozen into the record's §8a at the tag.
 - `2026-08-31_qrow-rulings.md`: the decision log of [USER] rulings (the Q-rows and later
   rulings, appended).
 - `operational-lessons.md`: build, memory and tool incidents, with their measured remedies.
