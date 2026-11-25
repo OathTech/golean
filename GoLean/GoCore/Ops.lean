@@ -2630,7 +2630,13 @@ the normal form at `t` has, with what that constructor alone carries: the kind
 and width of a number, the length of an array, the kind of a sync primitive.
 One match; never looks below the head. An interface or named type has no head
 here (the caller handles a named dynamic type; a box's dynamic type is never an
-interface). In LOCKSTEP with the heads of `isNormalForTyTy`'s arms. -/
+interface). In LOCKSTEP with the heads of `isNormalForTyTy`'s arms, with ONE
+difference: at `.interface` this answers `false` where the type layer admits
+the nil interface or a box — reached only through `boxHeadAt` at an ALIAS of an
+interface type, a table entry the frontend never emits (a named interface is an
+interface declaration) and the one input the withdrawn deep form admitted that
+the head check refuses. `boxHeadNormal_of_isNormal` (`StateWf.lean`) is the
+other direction: a payload normal at a non-interface dynamic type passes. -/
 def boxHeadTy : Ty → GoValue → Bool
   | .int kind, .int value k => decide (kind.normalize value = value) && decide (kind = k)
   | .int _, _ => false
@@ -2728,8 +2734,9 @@ end
 
 /-- Is `v` self-normalized at `ty` over the type table (`normalizeValueForTy
 σ ty v = .ok v` for any `σ` with `σ.types = types`)? The type-directed check
-at full bound, and the head of every box of the value agreeing with its dynamic
-type (G23, one level: `GoValue.boxesNormal`). -/
+at full bound, and the head of every box the walk meets in the value — outside
+any payload — agreeing with its dynamic type (G23, one level:
+`GoValue.boxesNormal`). -/
 def isNormalForTy (types : TypeEnv) (ty : Ty) (value : GoValue) : Bool :=
   isNormalForTyTy (isNormalForTyAt types types.size) ty value
     && GoValue.boxesNormal types value
@@ -2744,8 +2751,9 @@ def boxesGuard (value : GoValue) : Except Stop GoValue :=
   else stuck s!"expected interface value, got a box whose payload's head does not agree with its dynamic type: {repr value}"
 
 /-- Normalize a value at a type over the state's type table (the descent
-seeded at `types.size`), then require the head of every box of the result to
-agree with its dynamic type (`boxesGuard`, G23; one level, never into a payload). -/
+seeded at `types.size`), then require the head of every box the walk meets in
+the result to agree with its dynamic type (`boxesGuard`, G23; one level, never
+into a payload). -/
 def normalizeValueForTy (ty : Ty) (value : GoValue) :
     Except Stop GoValue := do
   let w ← normalizeValueForTyTy (normalizeValueForTyAt ctx.types ctx.types.size) ty value
@@ -2872,8 +2880,9 @@ the normalizer is SHAPE-CHECKED — the five since G21 (2026-10-27: a
 impossible under `HeapNormal`, and the leaf normalization refuses by name:
 the pins `slice_cell_path_write_refuses` and `iface_cell_path_write_refuses`.
 The leaf, once normalized at its declared type, passes `boxesGuard` (G23):
-every box it carries holds a payload whose head agrees with the box's dynamic
-type, so a path write keeps the root's boxes head-checked (`writeAt_boxesNormal`). Refusal texts
+every box it carries outside a payload holds a payload whose head agrees with
+the box's dynamic type, so a path write keeps the root's boxes head-checked
+(`writeAt_boxesNormal`). Refusal texts
 are byte-preserved: a prefix step refuses with `loadLoc`'s texts (the
 former recursion loaded the prefix), the last step with the store texts;
 the one NEW refusal is the leaf-type descent's (`Ty.stepDown`), reachable

@@ -2,8 +2,8 @@
 
 2026-11-10, [AGENT] lane `core/g23-iface-normal-1110` for GoLean, answering the two asks relayed
 by the [USER] 2026-11-10 (the pair is G23 on our side). The pin to consume: GoLean `main` at the
-commit that lands this lane, or later (on the lane's branch the code is complete at `6ff2990f`;
-the commits after it carry records only; toolchain `leanprover/lean4:v4.35.0`). Earlier replies:
+commit that lands this lane, or later (the one-level form: lane `core/g23-bplus-1125`; the deep
+form's branch `core/g23-iface-normal-1110` never landed; toolchain `leanprover/lean4:v4.35.0`). Earlier replies:
 `docs/2026-10-27_reply-to-raft-proofs-g21.md` (G21), `docs/2026-10-27_reply-to-raft-proofs-g22.md`
 (G22). Both halves are done. No row of the differential corpus changed its answer. The comparator
 contract gained exactly TWO statements (475 → 477) and no kept statement changed its text
@@ -114,7 +114,11 @@ theorem isNormalForTy_interface :
 ```
 
 and a store into an interface-typed cell keeps it (`HeapNormal.of_storeLoc`, `storeLoc_wf`,
-unchanged statements).
+unchanged statements). The other direction — the head check refuses no normal payload — is
+`boxHeadNormal_of_isNormal`: a value normal at a non-interface dynamic type passes, over a table
+with no ALIAS of an interface type (`boxHeadTy_of_isNormalForTyTy`, `boxHeadAt_of_isNormalForTyAt`
+beneath it). That alias is the one input the head check refuses and the deep form admitted; the
+frontend emits a named interface as an interface declaration, so no lowered program has one.
 
 What an interface slot and a box may hold, from the producers (every one read; the full corpus
 run unchanged):
@@ -252,8 +256,8 @@ body changed:
 - `GoLean.GoCore.Equations.stateWf_empty : StateWf ctx {}` — `StateWf` says more; the empty
   store satisfies it vacuously (proof unchanged).
 - `GoLean.GoCore.Equations.storeLoc_root` and `GoLean.GoCore.Equations.bindParams_cons` — each
-  takes or states `normalizeValueForTy ctx ty v = .ok v'`, which now also says that the boxes of
-  `v'` are normal. As rewriting rules they are used exactly as before.
+  takes or states `normalizeValueForTy ctx ty v = .ok v'`, which now also says that the boxes the walk
+  meets in `v'` pass the head check. As rewriting rules they are used exactly as before.
 
 Other kept statements name `storeLoc`, `Store.alloc`, `bindParams` or `allocDecls` as opaque
 heads (`next_storeK_var`, `allocDecls_cons`, `enterFrame_declared`, the `setup_*` facts, …);

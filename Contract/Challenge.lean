@@ -26,8 +26,9 @@ family `g16` of scripts/contract-names.lean), moved here from `Tests/GoCoreContr
 §E Provisional once the per-key relation of train 17 was ruled final, plus `methodSetCoverage?_mono` at
 the fix round the same day (the coordinator's decision: a first-match lookup of the same kind, named in
 the customer's ask): 366 statements in all then; 385 with the equations added since and the two dedup
-certificate theorems (2026-10-26); 386 since 2026-11-10 with `recoverAtDeferred_none` (family `recover`,
-raft-proofs' G23). The equation family is EVERY public theorem of
+certificate theorems (2026-10-26); 475 since 2026-11-24 with the ninety dead-cell statements (family `deadcell`, at
+the end of this file); 477 since 2026-11-25 with G23's `recoverAtDeferred_none` (family `recover`)
+and `isNormalForTy_interface` (family `iface`). The equation family is EVERY public theorem of
 `Equations.lean` (300 since lane `core/g16-raise-mark-1023`; 234 of them `@[stepFn_eqns]` simp-set members — the customer's rewriting
 library is the module, and its `signalStep_*` rows, `runProgramSetup_noInit`, the
 `allocDecls_*`/`bindParams_*`/`setup_*` facts and the rest are plain theorems there): widened

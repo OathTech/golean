@@ -1251,7 +1251,7 @@ theorem boxesGuard_ok {w r : GoValue} :
   · simp [hb, stuck, throw, throwThe, MonadExceptOf.throw]
 
 /-- The normalizer and its guard, split: the type-directed layer answered `w`
-and every box of `w` is normal. -/
+and every box the walk meets in `w` passes the head check. -/
 theorem normalizeValueForTy_ok {ty : Ty} {v w : GoValue} :
     normalizeValueForTy ctx ty v = .ok w ↔
       normalizeValueForTyTy (normalizeValueForTyAt ctx.types ctx.types.size) ty v = .ok w
@@ -3294,6 +3294,59 @@ theorem _root_.GoLean.GoCore.isNormalForTy_interface {types : TypeEnv} {n : Type
   cases v <;> simp [isNormalForTyTy, GoValue.boxesNormal]
   rename_i dyn w
   exact ⟨fun h => ⟨dyn, w, ⟨rfl, rfl⟩, h⟩, fun ⟨_, _, ⟨rfl, rfl⟩, h⟩ => h⟩
+
+/-- The head check never refuses a payload that is normal at a non-named, non-interface dynamic
+type: the head of a normal form passes. -/
+theorem _root_.GoLean.GoCore.boxHeadTy_of_isNormalForTyTy {atDefined : TypeIdx → GoValue → Bool} {dyn : Ty}
+    {w : GoValue} (h : isNormalForTyTy atDefined dyn w = true)
+    (hi : ∀ n, dyn ≠ .interface n) (hd : ∀ i, dyn ≠ .defined i) : boxHeadTy dyn w = true := by
+  cases dyn <;> cases w <;> simp_all [isNormalForTyTy, boxHeadTy]
+  all_goals (obtain ⟨h1, h2⟩ := h; subst h2; exact h1)
+
+/-- The same at a NAMED dynamic type whose alias chain does not end at an interface type: a
+payload normal at the name passes the head check. (An alias of an interface type is the one
+entry the head check refuses and the deep form admitted; no lowered program has one — the
+frontend emits a named interface as an interface.) -/
+theorem _root_.GoLean.GoCore.boxHeadAt_of_isNormalForTyAt {types : TypeEnv} : ∀ {bound : Nat} {i : TypeIdx} {w : GoValue},
+    isNormalForTyAt types bound i w = true →
+    (∀ (j : TypeIdx) name n, types[j]? ≠ some (name, TypeDef.defined (.interface n))) →
+    boxHeadAt types bound i w = true
+  | 0, i, w, h, _ => by simp [isNormalForTyAt] at h
+  | bound + 1, i, w, h, hno => by
+    unfold isNormalForTyAt at h
+    unfold boxHeadAt
+    split at h
+    · rename_i name fields heq
+      rw [heq]
+      cases w <;> simp_all
+    · rename_i name target heq
+      rw [heq]
+      cases target with
+      | defined j =>
+        simp only [isNormalForTyTy] at h
+        exact boxHeadAt_of_isNormalForTyAt h hno
+      | interface n => exact absurd heq (hno i name n)
+      | _ =>
+        dsimp only
+        exact boxHeadTy_of_isNormalForTyTy h (by intro n hn; cases hn) (by intro j hj; cases hj)
+    · cases h
+    · cases h
+    · cases h
+
+/-- **The head check refuses no normal payload**: a value normal at a dynamic type that is not an
+interface passes `boxHeadNormal`, over a table with no alias of an interface type. So a box
+built from an operand loaded out of a normal cell of its dynamic type is never refused. -/
+theorem _root_.GoLean.GoCore.boxHeadNormal_of_isNormal {types : TypeEnv} {dyn : Ty} {w : GoValue}
+    (h : isNormalForTyTy (isNormalForTyAt types types.size) dyn w = true)
+    (hi : ∀ n, dyn ≠ .interface n)
+    (hno : ∀ (j : TypeIdx) name n, types[j]? ≠ some (name, TypeDef.defined (.interface n))) :
+    boxHeadNormal types dyn w = true := by
+  cases dyn with
+  | defined i =>
+    simp only [isNormalForTyTy] at h
+    simp only [boxHeadNormal, boxHeadAt_of_isNormalForTyAt h hno, Bool.true_or]
+  | interface n => exact absurd rfl (hi n)
+  | _ => exact boxHeadTy_of_isNormalForTyTy h hi (by intro j hj; cases hj)
 
 /-- THE CONGRUENCE for the boxes (G23): a root whose boxes all pass the head
 check (`GoValue.boxesNormal`), written along `path` with a leaf `writeAt`
