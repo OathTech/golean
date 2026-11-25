@@ -1240,8 +1240,8 @@ theorem normalizeStructValueWith_locSup {f : Ty → GoValue → Except Stop GoVa
       obtain ⟨arr, harr, rfl⟩ := h
       simpa [GoValue.locSup] using normalizeFieldsWith_locSup hf harr
 
-/-- `boxesGuard` (G23) answers `.ok` exactly on a value whose boxes are all
-normal, and returns that value unchanged. -/
+/-- `boxesGuard` (G23) answers `.ok` exactly on a value whose boxes all pass the
+head check (`GoValue.boxesNormal`), and returns that value unchanged. -/
 theorem boxesGuard_ok {w r : GoValue} :
     boxesGuard ctx w = .ok r ↔ r = w ∧ GoValue.boxesNormal ctx.types w = true := by
   unfold boxesGuard
@@ -3283,9 +3283,21 @@ theorem GoValue.boxesNormal_struct {types : TypeEnv} {tid : TypeId}
       ∀ p ∈ fields.toList, GoValue.boxesNormal types p.2 = true := by
   simp only [GoValue.boxesNormal]; exact boxesNormalFields_iff
 
-/-- THE CONGRUENCE for the boxes (G23): a root whose boxes are all normal,
-written along `path` with a leaf `writeAt` guards (`boxesGuard`), keeps them
-normal. With `writeAt_isNormal` this is `isNormalForTy` preserved by a path
+/-- **What an interface slot holds** (raft-proofs' G23; the head-check form of 2026-11-25): a
+value is normal at an interface type exactly when it is the nil interface, or a box whose
+payload's head agrees with the box's dynamic type (`boxHeadNormal`). -/
+theorem _root_.GoLean.GoCore.isNormalForTy_interface {types : TypeEnv} {n : TypeId}
+    {v : GoValue} :
+    isNormalForTy types (.interface n) v = true ↔
+      v = .nil ∨ ∃ dyn w, v = .interface dyn w ∧ boxHeadNormal types dyn w = true := by
+  unfold isNormalForTy
+  cases v <;> simp [isNormalForTyTy, GoValue.boxesNormal]
+  rename_i dyn w
+  exact ⟨fun h => ⟨dyn, w, ⟨rfl, rfl⟩, h⟩, fun ⟨_, _, ⟨rfl, rfl⟩, h⟩ => h⟩
+
+/-- THE CONGRUENCE for the boxes (G23): a root whose boxes all pass the head
+check (`GoValue.boxesNormal`), written along `path` with a leaf `writeAt`
+guards (`boxesGuard`), keeps them so. With `writeAt_isNormal` this is `isNormalForTy` preserved by a path
 write (`HeapNormal.of_storeLoc`). -/
 theorem writeAt_boxesNormal :
     ∀ {path : List PathStep} {b : Nat} {ty : Ty} {root v root' : GoValue},

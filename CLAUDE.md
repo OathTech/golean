@@ -216,14 +216,15 @@ Everything else is untrusted tooling.
   default since 2026-10-25, their `main`s turned into build-time checks,
   [USER] 2026-10-25, row 42's follow-up; sandboxed where `bwrap` can start,
   `--inadvisably-no-sandbox` where it cannot, saying which) and `lake
-  comparator` (`scripts/check-comparator`, about 30 s: the 475 statements
+  comparator` (`scripts/check-comparator`, about 30 s: the 477 statements
   of the surface kept on main for the raft-proofs customer — every theorem
   of `Equations.lean`, the G11 family, the `Prefix`/`Finish` laws, the
   output-fold bridge, `enterFrame_declared`, the `Choices.consumeAt*` laws,
   the thirteen G16 table-monotonicity statements, the two dedup
   certificate theorems `checkCert_slowObs`/`checkCertM_slowObs` (2026-10-26), the
   ninety dead-cell statements of `DeadCell.lean` with the `Ty.eqb` laws and
-  `applyStrictOp_leafOf_irrel` ([USER] 2026-11-24, backlog row 63) —
+  `applyStrictOp_leafOf_irrel` ([USER] 2026-11-24, backlog row 63), and G23's
+  `isNormalForTy_interface` and `recoverAtDeferred_none` ([USER] 2026-11-25, row 62) —
   FROZEN as text in
   `Contract/Challenge.lean`, judged against GoLean's
   own theorems through the generated aliases of

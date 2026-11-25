@@ -97,11 +97,12 @@ theorem iface_cell_not_normal :
     ¬ HeapNormal (ProgramCtx.ofTables (types := #[])) ifaceStructStore := by decide
 
 /-! G23 (2026-11-10): what an interface cell may hold, kernel-decided on small stores. A raw
-value is refused; the nil interface and a box whose payload is normal at the box's dynamic type
-are admitted — the payload's own boxes included, at any depth (`GoValue.boxesNormal`); a box
-whose payload is not normal at its dynamic type is refused, at the top or nested; so is a box
-of interface dynamic type (Go never double-boxes); the machine's runtime-error payload (a
-`.string` under the reserved index) is admitted. -/
+value is refused; the nil interface and a box whose payload's HEAD agrees with the box's dynamic
+type are admitted (`GoValue.boxesNormal`, one level since the [USER]'s ruling of 2026-11-25); a
+box whose payload has the wrong head is refused; a bad box INSIDE a payload is not looked at
+(`iface_nested_payload_not_checked` — refused until 2026-11-25, when the walk entered payloads);
+a box of interface dynamic type is refused (Go never double-boxes); the machine's runtime-error
+payload (a `.string` under the reserved index) is admitted. -/
 def ifaceRawStore : Store := { heap := #[.value (.interface ⟨"any"⟩) (.int 7 .int)] }
 def ifaceBoxStore : Store :=
   { heap := #[.value (.interface ⟨"any"⟩) .nil,
@@ -126,8 +127,9 @@ theorem iface_boxes_admitted :
     StateWf (ProgramCtx.ofTables (types := #[])) ifaceBoxStore := by decide
 theorem iface_box_payload_refused :
     ¬ StateWf (ProgramCtx.ofTables (types := #[])) ifaceBadPayloadStore ∧
-    ¬ StateWf (ProgramCtx.ofTables (types := #[])) ifaceNestedBadPayloadStore ∧
     ¬ StateWf (ProgramCtx.ofTables (types := #[])) ifaceDoubleBoxStore := by decide
+theorem iface_nested_payload_not_checked :
+    StateWf (ProgramCtx.ofTables (types := #[])) ifaceNestedBadPayloadStore := by decide
 
 /-- G21 (2026-10-27): a `[]int`-declared cell holding an ARRAY is no longer `HeapNormal`
 (`isNormalForTyTy` at `.slice` admits only a `.slice` value), so a path write INTO such a

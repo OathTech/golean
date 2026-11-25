@@ -27,6 +27,11 @@ or a theorem added to or removed from `InitDriverFacts.lean`, changes the list (
               (`recoverAtDeferred_marker`, `recoverResult_frame`, `recoverResult_eq`,
               `recoverResult_frame_none`, `recoverResult_glue`, `recoverResult_cons_glue`) were
               not asked for and are not kept; the reply names them.
+  iface       `isNormalForTy_interface` (`StateWf.lean`): a value is normal at an interface type
+              exactly when it is the nil interface or a box whose payload's head agrees with
+              its dynamic type (raft-proofs' G23 (1) in the one-level form ruled by the [USER]
+              2026-11-25; the customer named this characterisation as the statement it would
+              consume). One name ([AGENT] 2026-11-25): the walk's other lemmas are its proof's.
   consumeAt   every theorem `…Choices.consumeAt*` — the `consumeAt_*` and `consumeAtE_*` laws of
               `State.lean` and `Machine.lean` (the customer's G9 list names both spellings).
   eqns        every public theorem of the module `GoLean.GoCore.Equations` — the customer's
@@ -153,6 +158,7 @@ open ContractNames in
       `GoLean.GoCore.ExecutionStatement.replay_coverage]),
     ("enterFrame", #[`GoLean.GoCore.Machine.enterFrame_declared]),
     ("recover", #[`GoLean.GoCore.Machine.recoverAtDeferred_none]),
+    ("iface", #[`GoLean.GoCore.isNormalForTy_interface]),
     ("consumeAt", consumeAtTheorems env),
     ("eqns", eqnsModule),
     ("g11", moduleTheorems env `GoLean.GoCore.InitDriverFacts),

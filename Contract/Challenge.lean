@@ -5027,3 +5027,15 @@ set_option warn.sorry false in
 theorem GoLean.Contract.GoCore.HeapNormal.markDead :
     ∀ {ctx : ProgramCtx} {s : Store}, HeapNormal ctx s → ∀ (a : Addr), HeapNormal ctx (s.markDead a)
     := sorry
+
+/-! ### G23, the one-level form (2026-11-25): what an interface slot holds — one statement
+(`recoverAtDeferred_none`, G23's other contracted statement, is above with its family). -/
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.isNormalForTy_interface` (GoLean.GoCore.StateWf) -/
+theorem GoLean.Contract.GoCore.isNormalForTy_interface :
+    ∀ {types : TypeEnv} {n : TypeId} {v : GoValue},
+      isNormalForTy types (Ty.interface n) v = true ↔
+        v = GoValue.nil ∨
+          ∃ (dyn : Ty), ∃ (w : GoValue), v = GoValue.interface dyn w ∧ boxHeadNormal types dyn w = true
+    := sorry

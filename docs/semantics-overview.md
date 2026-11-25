@@ -54,8 +54,10 @@ consuming shapes (`consumesSelect`, `consumesAppendSlice`, …) are in `Consumes
 
 **Well-formedness.** `StateWf` (`StateWf.lean`) states the store invariants: every heap
 location below the allocator bound, and the heap normal (`HeapNormal`, `Ops.lean`) — every
-value cell self-normalized at its declared type, every box in it holding a payload normal at
-the box's dynamic type (`GoValue.boxesNormal`; raft-proofs' G23, 2026-11-10), and every map
+value cell self-normalized at its declared type, every box met in it — at the top, in an array element, in a
+struct field — holding a payload whose HEAD agrees with the box's dynamic type
+(`GoValue.boxesNormal`, one level: nothing below a payload's head is checked; raft-proofs' G23,
+2026-11-25; `isNormalForTy_interface` states the interface arm), and every map
 payload's entry stamps distinct and below the payload's counter (`mapPayloadWf`; raft-proofs'
 G22, 2026-10-26); the setup path
 decides it (`StepFn.lean`), and `MachineWf` / `MultiWf` (`Multi.lean`) are built on it.

@@ -545,6 +545,7 @@ def exports : List Name := [
     ``GoLean.GoCore.ContractTests.iface_raw_value_refused,
     ``GoLean.GoCore.ContractTests.iface_boxes_admitted,
     ``GoLean.GoCore.ContractTests.iface_box_payload_refused,
+    ``GoLean.GoCore.ContractTests.iface_nested_payload_not_checked,
     ``GoLean.GoCore.ContractTests.iface_cell_path_write_refuses,
     ``GoLean.GoCore.ContractTests.print_before_panic,
     ``GoLean.GoCore.ContractTests.Interpreter.terminal_at_zero_fuel,

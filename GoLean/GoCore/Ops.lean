@@ -2415,10 +2415,10 @@ def normalizeValueForTyTy (atDefined : TypeIdx → GoValue → Except Stop GoVal
   -- to an interface target passes the box through — and the conversion arm
   -- already refuses a raw value at an interface type. Anything else fails
   -- closed, in LOCKSTEP with `isNormalForTyTy`. This arm is the
-  -- CONSTRUCTOR check; that the boxed value is normal at the box's dynamic
-  -- type is `GoValue.boxesNormal` below, which needs the whole type table
-  -- at full bound and so sits beside the public `normalizeValueForTy`
-  -- (`boxesGuard`), not here.
+  -- CONSTRUCTOR check; that the boxed value's HEAD agrees with the box's
+  -- dynamic type is `GoValue.boxesNormal` below, which needs the type table
+  -- and so sits beside the public `normalizeValueForTy` (`boxesGuard`), not
+  -- here.
   | .interface _, .nil => return .nil
   | .interface _, .interface dyn value => return .interface dyn value
   | .interface _, value => stuck s!"expected interface value, got {repr value}"
@@ -2547,7 +2547,7 @@ def isNormalForTyTy (atDefined : TypeIdx → GoValue → Bool) : Ty → GoValue 
         && isNormalListWith (isNormalForTyTy atDefined elem) values.toList
   | .array _ _, _ => false
   -- LOCKSTEP with the normalizer's interface arms (G23, 2026-11-10): the
-  -- nil interface or a box; the box's contents are `GoValue.boxesNormal`'s.
+  -- nil interface or a box; the payload's head is `GoValue.boxesNormal`'s.
   | .interface _, .nil => true
   | .interface _, .interface _ _ => true
   | .interface _, _ => false
@@ -2597,62 +2597,118 @@ def isNormalForTyAt (types : TypeEnv) : Nat → TypeIdx → GoValue → Bool
       | some (_, .interfaceDef _) => false
       | none => false
 
-/-! ### The boxes of a value (raft-proofs' G23, 2026-11-10)
+/-! ### The boxes of a value (raft-proofs' G23, 2026-11-10; one level deep since 2026-11-25)
 
 The type-directed layers above check an interface slot by CONSTRUCTOR: the nil
-interface or a box. What a box holds is checked here, by a walk that is
-structural on the VALUE: every box `.interface dyn w` occurring in the value —
-through array elements, struct fields and the contents of other boxes — holds
-a `w` that is self-normalized at `dyn` over the whole type table at FULL bound
-(`boxPayloadNormal`), and `w`'s own boxes are checked in turn. The two together
-are the recursive descent at the dynamic type: on a value the type-directed
-check admits, a box sits exactly at an interface-typed position.
+interface or a box. What a box holds is checked here, ONE LEVEL deep: every box
+`.interface dyn w` the walk meets — at the top of the value, in an array
+element, in a struct field — has a payload `w` whose HEAD agrees with `dyn`
+(`boxHeadNormal`). The walk does not enter a payload: a box inside a payload,
+the elements of a boxed array and the fields of a boxed struct are not looked
+at. So the check costs what the type-directed normalization of the same value
+already costs, whatever a box holds.
+
+THE HISTORY ([USER] ruling 2026-11-25, backlog row 62): as first built the
+walk entered every payload and required it normal at its dynamic type,
+recursively. The store-time guard then re-walked a payload at every cell
+birth, bind and store — linear per interface store, quadratic on value-nested
+boxes (the lane's audit F1: a 12,000-element interface cons list went from
+0.78 s to 72 s) — and the customer has no use for the deep property: when it
+opens a box it loads through a pointer, whose cell has its own normal form.
+What is stated is therefore the head: complete for a scalar or reference
+dynamic type (the payload IS its head), the tag and field count for a boxed
+struct, the length for a boxed array.
 
 Why a separate walk and not an arm of `isNormalForTyTy`: the dynamic type is
-read from the VALUE, so it is no subterm of the slot's type (the type layer's
-structural argument), and it may name ANY table index, so the residual bound
-the index layer hands down is the wrong one — a list linked through an
-interface field is deeper than the table is long. The walk recurses on the
-value and restarts the type descent at `types.size` in every box. A function
+read from the VALUE and may name any table index, and the type layer carries
+no table; the head check needs one for a named dynamic type. A function
 value's captured list is not walked (the type-directed check does not look
 there either: captures are the addresses of the captured variables). -/
 
-/-- Is `w` a legitimate payload of a box of dynamic type `dyn`? Self-normalized
-at `dyn` over the table at full bound, with three producer facts on top
-(`.toInterface` boxes its operand at the static type WITHOUT normalizing it, so
-what a box may hold is what an operand of that type may be):
+/-- Does the HEAD of `w` agree with the (non-named) type `t`? The constructor
+the normal form at `t` has, with what that constructor alone carries: the kind
+and width of a number, the length of an array, the kind of a sync primitive.
+One match; never looks below the head. An interface or named type has no head
+here (the caller handles a named dynamic type; a box's dynamic type is never an
+interface). In LOCKSTEP with the heads of `isNormalForTyTy`'s arms. -/
+def boxHeadTy : Ty → GoValue → Bool
+  | .int kind, .int value k => decide (kind.normalize value = value) && decide (kind = k)
+  | .int _, _ => false
+  | .float kind, .float bits k => decide (kind.normalizeBits bits = bits) && decide (kind = k)
+  | .float _, _ => false
+  | .array length _, .array values => decide (values.size = length)
+  | .array _ _, _ => false
+  | .funcType _ _ _, .funcVal _ _ => true
+  | .funcType _ _ _, .nil => true
+  | .funcType _ _ _, _ => false
+  | .chan _ _, .chan _ => true
+  | .chan _ _, _ => false
+  | .sync kind, .syncData p => p.kind == kind
+  | .sync _, _ => false
+  | .bool, .bool _ => true
+  | .bool, _ => false
+  | .string, .string _ => true
+  | .string, _ => false
+  | .slice _, .slice _ => true
+  | .slice _, _ => false
+  | .map _ _, .map _ => true
+  | .map _ _, _ => false
+  | .pointer _, .addr _ => true
+  | .pointer _, .nil => true
+  | .pointer _, _ => false
+  | .interface _, _ => false
+  | .defined _, _ => false
+  | .unsupported _, _ => false
+
+/-- The head check at a NAMED dynamic type, following the table's `defined`
+chain (`bound`-structural; the `0` arm fails closed): a struct declaration asks
+for a struct value with the declaration's tag and field count; an alias chain
+ends at a non-named type's head (`boxHeadTy`); an OPAQUE declaration — an
+imported named type the frontend carries by name only (`time.Duration`,
+`sort.IntSlice`) — has no declared structure, and its payload is admitted
+UNCHECKED (measured: `interfaces/sweep-s5-imported-carriers/duration-stringer`
+answers as gc does); an interface declaration or a missing entry is refused. -/
+def boxHeadAt (types : TypeEnv) : Nat → TypeIdx → GoValue → Bool
+  | 0, _, _ => false
+  | bound + 1, i, w =>
+      match types[i]? with
+      | some (name, .struct fields) =>
+          match w with
+          | .struct actual fieldsValue =>
+              decide (actual = name) && decide (fieldsValue.size = fields.size)
+          | _ => false
+      | some (_, .defined (.defined j)) => boxHeadAt types bound j w
+      | some (_, .defined target) => boxHeadTy target w
+      | some (_, .opaqueDecl _) => true
+      | some (_, .interfaceDef _) => false
+      | none => false
+
+/-- Is `w` a legitimate payload of a box of dynamic type `dyn`, as far as its
+HEAD says? Three producer facts beside the head check:
 
 * Go never double-boxes (`.toInterface` passes an interface-typed source
   through), so an interface dynamic type is refused.
-* A dynamic type whose table entry is an OPAQUE declaration — an imported named
-  type the frontend carries by name only (`time.Duration`, `sort.IntSlice`) —
-  has no declared structure to check against: no value normalizes there (a CELL
-  of such a type is refused), yet a value of it is boxed and passed around
-  (measured: `interfaces/sweep-s5-imported-carriers/duration-stringer` answers
-  as gc does). Its payload is admitted UNCHECKED — the one place the walk says
-  nothing about a box's contents.
+* An opaque named dynamic type admits its payload unchecked (`boxHeadAt`).
 * The machine's own runtime-error payload (`runtimeErrorValue`, and the
   frontend's `runtimeError`-flagged panic) is a `.string` under the reserved
   index `runtimeErrorTypeIdx`. In a table that leads with the reserved entries
-  that index IS an opaque declaration (the case above); the machine builds the
-  payload whatever the table is, so over any other table it is admitted by
-  name, as a `.string`. -/
-def boxPayloadNormal (types : TypeEnv) : Ty → GoValue → Bool
+  that index IS an opaque declaration; the machine builds the payload whatever
+  the table is, so over any other table it is admitted by name, as a `.string`. -/
+def boxHeadNormal (types : TypeEnv) : Ty → GoValue → Bool
   | .interface _, _ => false
   | .defined i, w =>
-      match types[i]? with
-      | some (_, .opaqueDecl _) => true
-      | _ =>
-          isNormalForTyAt types types.size i w
-            || (decide (i = runtimeErrorTypeIdx) && match w with | .string _ => true | _ => false)
-  | dyn, w => isNormalForTyTy (isNormalForTyAt types types.size) dyn w
+      boxHeadAt types types.size i w
+        || (decide (i = runtimeErrorTypeIdx) && match w with | .string _ => true | _ => false)
+  | dyn, w => boxHeadTy dyn w
 
 mutual
 
-/-- Every box in the value holds a payload normal at the box's dynamic type
-(`boxPayloadNormal`), recursively. Structural on the value; kernel-reducible. -/
+/-- Every box the walk meets — at the top, in an array element, in a struct
+field — holds a payload whose head agrees with the box's dynamic type
+(`boxHeadNormal`). The walk stops at a box: it does not enter the payload.
+Structural on the value; kernel-reducible. -/
 def GoValue.boxesNormal (types : TypeEnv) : GoValue → Bool
-  | .interface dyn w => boxPayloadNormal types dyn w && GoValue.boxesNormal types w
+  | .interface dyn w => boxHeadNormal types dyn w
   | .struct _ fields => boxesNormalFields types fields.toList
   | .array values => boxesNormalList types values.toList
   | .unit | .bool _ | .int _ _ | .float _ _ | .string _ | .addr _ | .nil | .slice _
@@ -2672,22 +2728,24 @@ end
 
 /-- Is `v` self-normalized at `ty` over the type table (`normalizeValueForTy
 σ ty v = .ok v` for any `σ` with `σ.types = types`)? The type-directed check
-at full bound, and every box of the value normal at its dynamic type (G23). -/
+at full bound, and the head of every box of the value agreeing with its dynamic
+type (G23, one level: `GoValue.boxesNormal`). -/
 def isNormalForTy (types : TypeEnv) (ty : Ty) (value : GoValue) : Bool :=
   isNormalForTyTy (isNormalForTyAt types types.size) ty value
     && GoValue.boxesNormal types value
 
-/-- The normalizer's half of `GoValue.boxesNormal`: a value whose boxes are all
-normal passes unchanged; any other is refused by name. The normalizer never
-REWRITES inside a box — a box is built by `.toInterface` from an operand of the
-dynamic type and is refused, not repaired, when that operand was not normal. -/
+/-- The normalizer's half of `GoValue.boxesNormal`: a value whose boxes all pass
+the head check is returned unchanged; any other is refused by name. The
+normalizer never REWRITES a box — a box is built by `.toInterface` from an
+operand of the dynamic type and is refused, not repaired, when that operand's
+head does not agree with it. -/
 def boxesGuard (value : GoValue) : Except Stop GoValue :=
   if GoValue.boxesNormal ctx.types value then return value
-  else stuck s!"expected interface value, got a box whose value is not normal at its dynamic type: {repr value}"
+  else stuck s!"expected interface value, got a box whose payload's head does not agree with its dynamic type: {repr value}"
 
 /-- Normalize a value at a type over the state's type table (the descent
-seeded at `types.size`), then require every box of the result normal at its
-dynamic type (`boxesGuard`, G23). -/
+seeded at `types.size`), then require the head of every box of the result to
+agree with its dynamic type (`boxesGuard`, G23; one level, never into a payload). -/
 def normalizeValueForTy (ty : Ty) (value : GoValue) :
     Except Stop GoValue := do
   let w ← normalizeValueForTyTy (normalizeValueForTyAt ctx.types ctx.types.size) ty value
@@ -2814,8 +2872,8 @@ the normalizer is SHAPE-CHECKED — the five since G21 (2026-10-27: a
 impossible under `HeapNormal`, and the leaf normalization refuses by name:
 the pins `slice_cell_path_write_refuses` and `iface_cell_path_write_refuses`.
 The leaf, once normalized at its declared type, passes `boxesGuard` (G23):
-every box it carries holds a payload normal at the box's dynamic type, so a
-path write keeps the root's boxes normal (`writeAt_boxesNormal`). Refusal texts
+every box it carries holds a payload whose head agrees with the box's dynamic
+type, so a path write keeps the root's boxes head-checked (`writeAt_boxesNormal`). Refusal texts
 are byte-preserved: a prefix step refuses with `loadLoc`'s texts (the
 former recursion loaded the prefix), the last step with the store texts;
 the one NEW refusal is the leaf-type descent's (`Ty.stepDown`), reachable

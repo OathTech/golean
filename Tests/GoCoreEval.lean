@@ -3553,11 +3553,12 @@ private def makeFootprintRuntimeTests : IO Bool := do
 /-- raft-proofs' G23 (1) (2026-11-10, relayed by the [USER] the same day): the `.interface` arm
 of the normal form is CLOSED, in lockstep with the normalizer. An interface slot holds the nil
 interface or a box; every other constructor is not normal and is refused by name. A box's payload
-is normal at the box's DYNAMIC type, over the whole table at full bound, and so are the boxes
-inside it (`GoValue.boxesNormal`): per dynamic type, a normal payload passes unchanged and a
-non-normal one is refused by name — never repaired. The old C1 F3 stores (an interface cell
-holding an array or a struct) are out of `HeapNormal`; `Store.alloc`, the whole-cell store and
-the path write refuse a bad box at the write. -/
+agrees with the box's DYNAMIC type at its HEAD (`GoValue.boxesNormal`, one level since the
+[USER]'s ruling of 2026-11-25): per dynamic type, a payload with the right head passes unchanged
+and one with the wrong head is refused by name — never repaired; what lies BELOW the head (a
+boxed struct's fields, a boxed array's elements, a box inside a payload) is not looked at. The
+old C1 F3 stores (an interface cell holding an array or a struct) are out of `HeapNormal`;
+`Store.alloc`, the whole-cell store and the path write refuse a bad box at the write. -/
 private def g23IfaceNormalTests : IO Bool := do
   let mut passed := true
   -- A table: 0 = struct A {n int8; x any}, 1 = the runtime-error slot's stand-in (opaque),
@@ -3582,7 +3583,7 @@ private def g23IfaceNormalTests : IO Bool := do
       | .error (.stuck msg) => (msg.splitOn needle).length > 1
       | _ => false)
   let rawNeedle := "expected interface value, got"
-  let boxNeedle := "a box whose value is not normal at its dynamic type"
+  let boxNeedle := "a box whose payload's head does not agree with its dynamic type"
   let box (dyn : GoCore.Ty) (v : GoValue) : GoValue := .interface dyn v
   let nilSlice : GoValue := .slice { base := none, offset := 0, len := 0, cap := 0 }
   let nilMap : GoValue := .map { base := none }
@@ -3617,10 +3618,10 @@ private def g23IfaceNormalTests : IO Bool := do
      ("array", .array 2 .bool, .array #[.bool true, .bool false], .array #[.bool true]),
      ("sync", .sync .mutex, .syncData (GoCore.SyncKind.zero .mutex), .nil),
      ("defined struct", .defined 0, aVal .nil, .struct ⟨"main.B"⟩ #[("n", .int 3 .int8), ("x", .nil)]),
-     ("defined struct, field", .defined 0, aVal (box .bool (.bool true)), aVal (.int 1 .int)),
+     ("defined struct, field count", .defined 0, aVal (box .bool (.bool true)), .struct ⟨"main.A"⟩ #[("n", .int 3 .int8)]),
      ("defined alias", .defined 2, .int 5 .int16, .int 70000 .int16)]
   for (name, dyn, good, bad) in pairs do
-    passed := passed && (← expectTrue s!"G23 box at dynamic type {name}: a normal payload passes unchanged, a non-normal one is refused by name"
+    passed := passed && (← expectTrue s!"G23 box at dynamic type {name}: a payload with the right head passes unchanged, one with the wrong head is refused by name"
       (unchanged anyT (box dyn good) && refusedAs anyT (box dyn bad) boxNeedle))
   -- An OPAQUE dynamic type (an imported named type carried by name only): no declared
   -- structure, so the payload is admitted unchecked — the corpus boxes `time.Duration` (an
@@ -3644,24 +3645,29 @@ private def g23IfaceNormalTests : IO Bool := do
       && refusedAs anyT (box (.defined 3) .nil) boxNeedle
       && refusedAs anyT (box (.unsupported "x") (.bool true)) boxNeedle
       && refusedAs anyT (box (.defined 99) (.bool true)) boxNeedle))
-  -- The descent: boxes inside a box's payload, at any depth.
-  passed := passed && (← expectTrue "G23 descent: a box inside a boxed array / a boxed struct field is checked at ITS dynamic type"
+  -- ONE LEVEL: what lies below a payload's head is not looked at — a bad box inside a boxed
+  -- array or a boxed struct, a boxed struct's ill-typed field, a boxed array's ill-typed element.
+  passed := passed && (← expectTrue "G23 one level: a box inside a boxed array / a boxed struct field is NOT checked — good or bad, the outer box passes unchanged"
     (unchanged anyT (box (.array 1 anyT) (.array #[box (.int .int8) (.int 3 .int8)]))
-      && refusedAs anyT (box (.array 1 anyT) (.array #[box (.int .int8) (.int 300 .int8)])) boxNeedle
+      && unchanged anyT (box (.array 1 anyT) (.array #[box (.int .int8) (.int 300 .int8)]))
       && unchanged anyT (box (.defined 0) (aVal (box (.defined 0) (aVal .nil))))
-      && refusedAs anyT (box (.defined 0) (aVal (box (.defined 0) (aVal (box .bool str))))) boxNeedle))
-  -- A list linked through an interface field, deeper than the table is long: the type descent
-  -- restarts at full bound in every box.
+      && unchanged anyT (box (.defined 0) (aVal (box (.defined 0) (aVal (box .bool str)))))))
+  passed := passed && (← expectTrue "G23 one level: a boxed struct's ill-typed field and a boxed array's ill-typed element are NOT checked; its tag, field count and length are"
+    (unchanged anyT (box (.defined 0) (aVal (.int 1 .int)))
+      && unchanged anyT (box (.array 2 .bool) (.array #[.int 1 .int, .int 2 .int]))
+      && refusedAs anyT (box (.defined 0) (.struct ⟨"main.B"⟩ #[("n", .int 3 .int8), ("x", .nil)])) boxNeedle
+      && refusedAs anyT (box (.array 2 .bool) (.array #[.bool true])) boxNeedle))
+  -- A list linked through an interface field: only the first box's head is checked, so the
+  -- list's depth and its tail do not matter — and the check costs the same at any depth.
   let node (next : GoValue) : GoValue := .struct ⟨"main.Node"⟩ #[("next", next)]
   let rec chain : Nat → GoValue → GoValue
     | 0, tail => tail
     | n + 1, tail => box (.defined 4) (node (chain n tail))
-  passed := passed && (← expectTrue "G23 descent: a 40-deep list through an interface field (the table has 6 entries) is normal; the same list ending in a bad box is refused"
+  passed := passed && (← expectTrue "G23 one level: a 40-deep list through an interface field is normal whatever its tail (a bad box 40 levels down is not looked at); a bad box in the FIRST field is refused"
     (unchanged (.defined 4) (node (chain 40 .nil))
-      && refusedAs (.defined 4) (node (chain 40 (box .bool (.int 1 .int)))) boxNeedle))
-  -- The stack (audit F1's open question): the walk is not tail-recursive in the nesting depth.
-  -- At depth 200000 it answers in the compiled binary — neither a crash nor a refusal.
-  passed := passed && (← expectTrue "G23 descent: a 200000-deep list through an interface field answers (normal) — the walk's recursion depth is no crash"
+      && unchanged (.defined 4) (node (chain 40 (box .bool (.int 1 .int))))
+      && refusedAs (.defined 4) (node (box .bool (.int 1 .int))) boxNeedle))
+  passed := passed && (← expectTrue "G23 one level: a 200000-deep list through an interface field answers (normal)"
     (GoCore.isNormalForTy types (.defined 4) (node (chain 200000 .nil))
       && (match norm (.defined 4) (node (chain 200000 .nil)) with | .ok _ => true | _ => false)))
   -- The boxes of a NON-interface slot's value: a struct field, an array element.
@@ -3685,10 +3691,10 @@ private def g23IfaceNormalTests : IO Bool := do
     (!normal (cell anyT (.int 7 .int)) && !wf (cell anyT (.int 7 .int))
       && !normal (cell anyT (.array #[.int 0 .int, .int 1 .int]))
       && !normal (cell anyT (.struct ⟨"main.A"⟩ #[("f", .int 0 .int)]))))
-  passed := passed && (← expectTrue "G23 heap: an interface cell holding a bad box, at the top or nested, is NOT StateWf"
+  passed := passed && (← expectTrue "G23 heap: a cell holding a bad box at the top or in a field is NOT StateWf; a bad box INSIDE a payload is not looked at"
     (!wf (cell anyT (box .bool (.int 7 .int)))
       && !wf (cell (.defined 0) (aVal (box .bool (.int 7 .int))))
-      && !wf (cell anyT (box (.defined 0) (aVal (box .string .nil))))))
+      && wf (cell anyT (box (.defined 0) (aVal (box .string .nil))))))
   let goodStore : GoCore.Store :=
     { heap := #[.value anyT .nil, .value anyT (box .bool (.bool true)),
                 .value (.defined 0) (aVal (box (.defined 2) (.int 5 .int16))),

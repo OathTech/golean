@@ -10,6 +10,7 @@ import GoLean.GoCore.PoolProjection
 import GoLean.GoCore.Prefix
 import GoLean.GoCore.State
 import GoLean.GoCore.StateEqb
+import GoLean.GoCore.StateWf
 import GoLean.GoCore.StepFnFacts
 import GoLean.GoCore.TableMonotonicity
 
@@ -70,6 +71,12 @@ theorem GoLean.Contract.GoCore.Machine.enterFrame_declared :
 theorem GoLean.Contract.GoCore.Machine.recoverAtDeferred_none :
     stmt_of% GoLean.GoCore.Machine.recoverAtDeferred_none :=
   GoLean.GoCore.Machine.recoverAtDeferred_none
+
+/-! ## iface (1) -/
+
+theorem GoLean.Contract.GoCore.isNormalForTy_interface :
+    stmt_of% GoLean.GoCore.isNormalForTy_interface :=
+  GoLean.GoCore.isNormalForTy_interface
 
 /-! ## consumeAt (14) -/
 

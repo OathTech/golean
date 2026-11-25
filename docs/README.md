@@ -64,9 +64,7 @@ reading everything else.
   the window changelog frozen at the tag commit, the cumulative summary since the offer, the three
   release predicates with their counts, the proposed supported profile and its envelope, the
   supported-scope statement, the stated limits and the rulings carried as pending. `9f4554a6-WINDOW.md`
-  holds the rows that land after that record's freeze (opened 2026-11-24 on lane
-  `core/dead-cell-1124`; the unmerged lane `core/g23-iface-normal-1110` opens a file of the same
-  name, so whichever lands second merges the two).
+  holds the rows that land after that record's freeze (the dead cell, 2026-11-24; G23, 2026-11-25).
 - `2026-08-31_qrow-rulings.md`: the decision log of [USER] rulings (the Q-rows and later
   rulings, appended).
 - `operational-lessons.md`: build, memory and tool incidents, with their measured remedies.
