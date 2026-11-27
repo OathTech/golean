@@ -12,6 +12,8 @@
     "GoLean.Contract.GoCore.Machine.enterFrame_declared",
     "GoLean.Contract.GoCore.Machine.recoverAtDeferred_none",
     "GoLean.Contract.GoCore.isNormalForTy_interface",
+    "GoLean.Contract.GoCore.Machine.applyStmtOp_plan_eq_value",
+    "GoLean.Contract.GoCore.Machine.applyStmtOp_eq_value",
     "GoLean.Contract.GoCore.Choices.consumeAtE_eq",
     "GoLean.Contract.GoCore.Choices.consumeAtE_fst_snd",
     "GoLean.Contract.GoCore.Choices.consumeAtE_inv",

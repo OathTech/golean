@@ -66,7 +66,8 @@ reading everything else.
   release predicates with their counts, the proposed supported profile and its envelope, the
   supported-scope statement, the stated limits and the rulings carried as pending. `9f4554a6-WINDOW.md`
   holds the two rows that landed after that record's freeze (the dead cell, 2026-11-24; G23,
-  2026-11-25), frozen into the record's §8a at the tag.
+  2026-11-25), frozen into the record's §8a at the tag. `9b84b590-WINDOW.md` is the window open since
+  the first release's tag (`release/2026-11-25`).
 - `2026-08-31_qrow-rulings.md`: the decision log of [USER] rulings (the Q-rows and later
   rulings, appended).
 - `operational-lessons.md`: build, memory and tool incidents, with their measured remedies.

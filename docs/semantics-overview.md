@@ -76,6 +76,15 @@ or store rooted elsewhere (`Store.markDead_size`, `loadLoc_markDead_ne`,
 `storeLoc_markDead_ne`). `HeapNormal` and `StateWf` ADMIT a dead cell (`StateWf.markDead`);
 `NoDead` is the predicate that excludes it.
 
+**The wide operators' value forms.** Seven wide-operator arms store a computed value into a
+target address (`allocNew`, `makeSlice`, `makeMap`, `makeChan`, `copySlice`, `appendSlice`,
+`randIntn`). `WideValue.lean` (raft-proofs' request, 2026-11-27) states each without that store —
+`applyStmtOpValue.plan`, on the operands minus the target, returning the value and the store
+after the operator's own writes — and proves the machine's operator at an address target equal
+to the value form followed by the store (`applyStmtOp_plan_eq_value`, `applyStmtOp_eq_value`).
+The machine does not run the value forms; they are a second statement of the same arms, held to
+the first by the equation.
+
 ## 3. The labelled step
 
 Every step carries a label `StepLabel := { trace, picks, out }` (`Ops.lean`):

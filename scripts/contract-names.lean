@@ -32,6 +32,13 @@ or a theorem added to or removed from `InitDriverFacts.lean`, changes the list (
               its dynamic type (raft-proofs' G23 (1) in the one-level form ruled by the [USER]
               2026-11-25; the customer named this characterisation as the statement it would
               consume). One name ([AGENT] 2026-11-25): the walk's other lemmas are its proof's.
+  widevalue   `applyStmtOp_plan_eq_value` and `applyStmtOp_eq_value` (`WideValue.lean`): the
+              machine's wide operator at an address target is its value form followed by the
+              store into the target (raft-proofs' request of 2026-11-27, [USER]-approved the same
+              day with the equations contracted). Two names ([AGENT] 2026-11-27): the seven
+              per-operator equations beneath them are the proof's cases; the definitions the
+              statements reach (`applyStmtOpValue`, `applyStmtOpValue.plan`, `storeValue`, `storeValueInto`,
+              `StmtOp.hasValueForm`) are compared whole, as every definition is.
   consumeAt   every theorem `…Choices.consumeAt*` — the `consumeAt_*` and `consumeAtE_*` laws of
               `State.lean` and `Machine.lean` (the customer's G9 list names both spellings).
   eqns        every public theorem of the module `GoLean.GoCore.Equations` — the customer's
@@ -159,6 +166,8 @@ open ContractNames in
     ("enterFrame", #[`GoLean.GoCore.Machine.enterFrame_declared]),
     ("recover", #[`GoLean.GoCore.Machine.recoverAtDeferred_none]),
     ("iface", #[`GoLean.GoCore.isNormalForTy_interface]),
+    ("widevalue", #[`GoLean.GoCore.Machine.applyStmtOp_plan_eq_value,
+      `GoLean.GoCore.Machine.applyStmtOp_eq_value]),
     ("consumeAt", consumeAtTheorems env),
     ("eqns", eqnsModule),
     ("g11", moduleTheorems env `GoLean.GoCore.InitDriverFacts),

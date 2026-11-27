@@ -31,6 +31,7 @@ comparator compare main with main. Use the draft to see what a deliberate update
 import GoLean.GoCore.EnumDedupSound
 import GoLean.GoCore.MachineEqb
 import GoLean.GoCore.DeadCell
+import GoLean.GoCore.WideValue
 import GoLean.GoCore.State
 import GoLean.GoCore.Machine
 import GoLean.GoCore.Multi

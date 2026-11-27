@@ -9,6 +9,7 @@ import GoLean.GoCore.PoolProjection
 import GoLean.GoCore.InitDriverFacts
 import GoLean.GoCore.TableMonotonicity
 import GoLean.GoCore.DeadCell
+import GoLean.GoCore.WideValue
 import GoLean.GoCore.Seed
 
 /-!
@@ -28,7 +29,8 @@ the fix round the same day (the coordinator's decision: a first-match lookup of 
 the customer's ask): 366 statements in all then; 385 with the equations added since and the two dedup
 certificate theorems (2026-10-26); 475 since 2026-11-24 with the ninety dead-cell statements (family `deadcell`, at
 the end of this file); 477 since 2026-11-25 with G23's `recoverAtDeferred_none` (family `recover`)
-and `isNormalForTy_interface` (family `iface`). The equation family is EVERY public theorem of
+and `isNormalForTy_interface` (family `iface`); 479 since 2026-11-27 with the two wide-operator
+value-form equations (family `widevalue`). The equation family is EVERY public theorem of
 `Equations.lean` (300 since lane `core/g16-raise-mark-1023`; 234 of them `@[stepFn_eqns]` simp-set members — the customer's rewriting
 library is the module, and its `signalStep_*` rows, `runProgramSetup_noInit`, the
 `allocDecls_*`/`bindParams_*`/`setup_*` facts and the rest are plain theorems there): widened
@@ -5039,4 +5041,30 @@ theorem GoLean.Contract.GoCore.isNormalForTy_interface :
       isNormalForTy types (Ty.interface n) v = true ↔
         v = GoValue.nil ∨
           ∃ (dyn : Ty), ∃ (w : GoValue), v = GoValue.interface dyn w ∧ boxHeadNormal types dyn w = true
+    := sorry
+
+/-! ### The wide operators' value forms (2026-11-27): the machine's operator at an address target is
+its value form, then the store — two statements (family `widevalue`; raft-proofs' request, the
+[USER]'s approval of that day). The definitions `applyStmtOpValue`, `applyStmtOpValue.plan`,
+`storeValue`, `storeValueInto` and `StmtOp.hasValueForm` live in `GoLean/GoCore/WideValue.lean`, imported here
+as `DeadCell.lean` is for its definitions. -/
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applyStmtOp_plan_eq_value` (GoLean.GoCore.WideValue) -/
+theorem GoLean.Contract.GoCore.Machine.applyStmtOp_plan_eq_value :
+    ∀ {ctx : ProgramCtx} {s : Store} {choices : Choices} {op : StmtOp} {nt : Nat} {loc : Loc}
+      {vs : List GoValue},
+      op.hasValueForm = true →
+        applyStmtOp.plan ctx s choices op nt (GoValue.addr loc :: vs) =
+          storeValueInto ctx loc <$> applyStmtOpValue.plan ctx s choices op nt vs
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applyStmtOp_eq_value` (GoLean.GoCore.WideValue) -/
+theorem GoLean.Contract.GoCore.Machine.applyStmtOp_eq_value :
+    ∀ {ctx : ProgramCtx} {s : Store} {choices : Choices} {op : StmtOp} {nt : Nat} {loc : Loc}
+      {vs : List GoValue},
+      op.hasValueForm = true →
+        applyStmtOp ctx s choices op nt (GoValue.addr loc :: vs) =
+          applyStmtOpValue ctx s choices op nt vs >>= storeValue ctx loc
     := sorry

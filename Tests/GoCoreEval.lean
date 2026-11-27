@@ -1,4 +1,5 @@
 import GoLean.GoCore
+import GoLean.GoCore.WideValue
 import GoLean.CLI
 -- The UNTRUSTED dedup engine, explicitly: the certificate-mutation
 -- regression tests below manufacture a real certificate with it and
@@ -3834,6 +3835,79 @@ private def g21NormalFormTests : IO Bool := do
   passed := passed && (← g23IfaceNormalTests)
   pure passed
 
+/-- The wide operators' value forms (raft-proofs' request, 2026-11-27; `GoLean/GoCore/WideValue.lean`):
+on concrete stores, for each targeted operator, the machine's `applyStmtOp` at an address target
+answers exactly what the value form answers followed by the store of its value into the target
+— store, stream, picks and trace — and the value is the one expected; an operator with no
+target has no value form and is refused by name; the machine's arity refusal is the value
+form's, one operand shorter. -/
+private def wideValueTests : IO Bool := do
+  let mut passed := true
+  let target (ty : GoCore.Ty) (v : GoValue) : GoCore.Store := { heap := #[.value ty v] }
+  let t : Loc := .base ⟨0⟩
+  -- The machine's answer and the value form's answer followed by the store, compared whole.
+  let agree (s : GoCore.Store) (op : GoCore.Machine.StmtOp) (vs : List GoValue)
+      (expect : GoValue → Bool) : Bool :=
+    match GoCore.Machine.applyStmtOp emptyCtx s [] op 0 (.addr t :: vs),
+          GoCore.Machine.applyStmtOpValue emptyCtx s [] op 0 vs with
+    | .ok (sM, chM, psM, trM), .ok (v, s₁, ch, ps, tr) =>
+        expect v &&
+        (match GoCore.Mem.store emptyCtx s₁ t v with
+         | .ok (s', trT) =>
+             GoCore.Machine.Store.eqb sM s' && chM == ch && psM.length == ps.length
+               && trM.length == (tr ++ trT).length
+         | .error _ => false)
+    | _, _ => false
+  passed := passed && (← expectTrue "wide value: allocNew — the value is the new cell's address, and storing it gives the machine's store"
+    (agree (target (.pointer .int) .nil) (.allocNew .int) [.int 5 .int]
+      (fun v => match v with | .addr (.base ⟨1⟩) => true | _ => false)))
+  passed := passed && (← expectTrue "wide value: makeSlice — the value is the slice header over the new backing"
+    (agree (target (.slice .int) (.slice { base := none, offset := 0, len := 0, cap := 0 }))
+      (.makeSlice .int false) [.int 3 .int]
+      (fun v => match v with
+        | .slice sv => sv.len == 3 && sv.cap == 3 && sv.offset == 0 && sv.base.isSome
+        | _ => false)))
+  passed := passed && (← expectTrue "wide value: makeMap and makeChan — the value is the reference to the new payload cell"
+    (agree (target (.map .int .int) (.map { base := none })) (.makeMap false) []
+        (fun v => match v with | .map mv => mv.base.isSome | _ => false)
+      && agree (target (.chan .both .int) (.chan { base := none })) (.makeChan .int true) [.int 2 .int]
+        (fun v => match v with | .chan cv => cv.base.isSome | _ => false)))
+  passed := passed && (← expectTrue "wide value: randIntn — the value is the pick, the stream threaded as the machine threads it"
+    (agree (target .int (.int 0 .int)) .randIntn [.int 4 .int]
+      (fun v => match v with | .int _ .int => true | _ => false)))
+  -- append and copy over a real backing: cell 1 is a [4]int backing, the slice sees its first two.
+  let backed : GoCore.Store :=
+    { heap := #[.value (.slice .int) (.slice { base := none, offset := 0, len := 0, cap := 0 }),
+                .value (.array 4 .int) (.array #[.int 1 .int, .int 2 .int, .int 0 .int, .int 0 .int]),
+                .value (.array 2 .int) (.array #[.int 8 .int, .int 9 .int])] }
+  let sl : GoValue := .slice { base := some (.base ⟨1⟩), offset := 0, len := 2, cap := 4 }
+  let src : GoValue := .slice { base := some (.base ⟨2⟩), offset := 0, len := 2, cap := 2 }
+  let full : GoValue := .slice { base := some (.base ⟨2⟩), offset := 0, len := 2, cap := 2 }
+  passed := passed && (← expectTrue "wide value: appendSlice in place — the value is the lengthened header, the element writes are the operator's own"
+    (agree backed (.appendSlice .int) [sl, src]
+      (fun v => match v with | .slice sv => sv.len == 4 && sv.cap == 4 | _ => false)))
+  passed := passed && (← expectTrue "wide value: appendSlice spilling — the value is the header over a fresh backing, the pick threaded"
+    (agree backed (.appendSlice .int) [full, src]
+      (fun v => match v with
+        | .slice sv => sv.len == 4 && sv.cap >= 4 && sv.base == some (.base ⟨3⟩)
+        | _ => false)))
+  let intTarget : GoCore.Store := { backed with heap := backed.heap.set! 0 (.value .int (.int 0 .int)) }
+  passed := passed && (← expectTrue "wide value: copySlice — the value is the count, the destination writes are the operator's own"
+    (agree intTarget .copySlice [sl, src]
+      (fun v => match v with | .int 2 .int => true | _ => false)))
+  -- No target, no value form; and the two forms refuse a wrong arity with the same text.
+  passed := passed && (← expectTrue "wide value: an operator with no target (clearMap, print, mapDelete) is refused by name"
+    ([GoCore.Machine.StmtOp.clearMap, .print true, .mapDelete .int].all fun op =>
+      match GoCore.Machine.applyStmtOpValue emptyCtx backed [] op 0 [] with
+      | .error (.stuck msg) => (msg.splitOn "it has no value form").length > 1
+      | _ => false))
+  passed := passed && (← expectTrue "wide value: a wrong arity is the machine's refusal, by the same text"
+    (match GoCore.Machine.applyStmtOp emptyCtx backed [] (.allocNew .int) 0 [.addr t],
+           GoCore.Machine.applyStmtOpValue emptyCtx backed [] (.allocNew .int) 0 [] with
+     | .error (.stuck a), .error (.stuck b) => a == b
+     | _, _ => false))
+  pure passed
+
 /-- The dead cell (raft-proofs' rung-2 request, 2026-11-24; `GoLean/GoCore/DeadCell.lean`): a
 marked cell keeps its address and refuses every reader and writer as `stuck` (never a panic,
 never a value), a cell rooted elsewhere is untouched, the allocator's next address is
@@ -5155,6 +5229,7 @@ def main : IO UInt32 := do
   passed := passed && (← g21SpillBudgetTests)
   passed := passed && (← g22MapStampTests)
   passed := passed && (← deadCellTests)
+  passed := passed && (← wideValueTests)
   -- The class pin proper: main.T has a TypeDef on the wire (the OLD
   -- guard's presence key) but NO method-set record — satisfaction must
   -- refuse `unsupported`, proving the guard keys on the RECORD.
