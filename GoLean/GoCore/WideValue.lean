@@ -37,9 +37,20 @@ address the check cannot fail, and the value form has no target to check. (2) «
 the OPERAND of the final `Mem.store`, which normalizes at the target cell's declared type and
 can refuse; a consumer holding the value outside a cell applies `normalizeValueForTy` at the
 variable's type itself. (3) The operators with no target — `mapAssign`, `mapDelete`,
-`clearMap`, `clearSlice`, `sortSlice`, `print`, and `randIntn` without a target — have no value
-form: `applyStmtOpValue.plan` refuses them by name, and `StmtOp.hasValueForm` says which are
-covered. The comma-ok forms are `applyRhsOp`'s, which already returns values.
+`clearMap`, `clearSlice`, `sortSlice`, `print` — have no value form: `applyStmtOpValue.plan`
+refuses them by name, and `StmtOp.hasValueForm` says which are covered. (4) `randIntn` has two
+machine forms, with a target (`[target, bound]`) and without (`[bound]`, the draw discarded).
+The value form's operand list `[bound]` is the targeted list minus its target AND the
+untargeted list as it is, and `applyStmtOpValue.plan` cannot tell which was meant: it makes the
+draw — the machine's, with the same stream and pick record in both forms — and returns the
+pick. The equation relates the TARGETED machine form only; nothing is stated for the
+untargeted one. (5) Nothing here concerns the stores that are not a wide operator's: a channel
+receive's targets, a select's, a try-lock's result, an atomic's, a call's results — those
+deliver through `enterRecvTargets` / the `tgtOpK` spine / `storeTarget` with the value explicit
+in the configuration, and the comma-ok forms are `applyRhsOp`'s, which already returns values.
+(6) The equation is at the plan and at the composed apply; `stepFn` runs a plan's commit
+through `runCommit`, and a consumer's step equations take the composed `applyStmtOp … = …` as
+their premise (`retV_stmtOpK_apply` and its twins), which `applyStmtOp_eq_value` rewrites.
 -/
 
 namespace GoLean.GoCore.Machine
@@ -140,7 +151,14 @@ def applyStmtOpValueCore.plan (s : Store) (op : StmtOp)
             let (current, trW) ← Mem.storeRun ctx s dstSlice 0 values
             return (.int (Int.ofNat count), current, trR ++ trW)
       | _ => stuck "malformed copySlice operands"
-  | op => stuck s!"the wide operator {repr op} stores into no target: it has no value form"
+  -- The two stream-consulting heads live in `applyStmtOpValue.plan`, as the machine's live in
+  -- `applyStmtOp.plan`: the same refusal the machine's core gives, by the same class.
+  | .appendSlice _ =>
+      throw (.internal "applyStmtOpValueCore: appendSlice dispatches through applyStmtOpValue")
+  | .randIntn =>
+      throw (.internal "applyStmtOpValueCore: randIntn dispatches through applyStmtOpValue")
+  | .mapAssign _ _ | .mapDelete _ | .clearMap | .clearSlice _ | .sortSlice _ | .print _ =>
+      stuck s!"the wide operator {repr op} stores into no target: it has no value form"
 
 /-- **The value form of `applyStmtOp.plan`** for the seven targeted arms: the operands are the
 machine's MINUS the target; the commit performs the operator's own writes and returns the value
@@ -204,12 +222,12 @@ def applyStmtOpValue (s : Store) (choices : Choices) (op : StmtOp) (nt : Nat)
 /-- The store a value form leaves out, on one result: write the value into the target, the
 write's trace appended to the operator's. `Mem.store` normalizes at the target cell's declared
 type and can refuse. -/
-def storeValue (loc : Loc) :
-    GoValue × Store × Choices × List PickRecord × AccessTrace →
-      Except Stop (Store × Choices × List PickRecord × AccessTrace)
-  | (v, s₁, choices, ps, tr) => do
-      let (s', trT) ← Mem.store ctx s₁ loc v
-      return (s', choices, ps, tr ++ trT)
+def storeValue (loc : Loc)
+    (r : GoValue × Store × Choices × List PickRecord × AccessTrace) :
+    Except Stop (Store × Choices × List PickRecord × AccessTrace) :=
+  -- Projections, not a tuple pattern: the definition is reached by a contracted statement, and
+  -- a pattern would put an auto-generated matcher's name into what a consumer compares.
+  (fun w => (w.1, r.2.2.1, r.2.2.2.1, r.2.2.2.2 ++ w.2)) <$> Mem.store ctx r.2.1 loc r.1
 
 /-- `storeValue` after a value form's commit. -/
 def storeValueInto (loc : Loc)

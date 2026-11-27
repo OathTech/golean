@@ -3837,27 +3837,29 @@ private def g21NormalFormTests : IO Bool := do
 
 /-- The wide operators' value forms (raft-proofs' request, 2026-11-27; `GoLean/GoCore/WideValue.lean`):
 on concrete stores, for each targeted operator, the machine's `applyStmtOp` at an address target
-answers exactly what the value form answers followed by the store of its value into the target
-— store, stream, picks and trace — and the value is the one expected; an operator with no
-target has no value form and is refused by name; the machine's arity refusal is the value
-form's, one operand shorter. -/
+answers exactly what the value form answers followed by `storeValue` into the target — the
+store, the stream, the picks and the trace each compared whole, on a non-empty stream where
+the operator draws — and the value is the one expected; a store that refuses and a validate
+panic agree on both sides; an operator with no target has no value form and is refused by
+name; the machine's arity refusal is the value form's, one operand shorter. -/
 private def wideValueTests : IO Bool := do
   let mut passed := true
   let target (ty : GoCore.Ty) (v : GoValue) : GoCore.Store := { heap := #[.value ty v] }
   let t : Loc := .base ⟨0⟩
-  -- The machine's answer and the value form's answer followed by the store, compared whole.
-  let agree (s : GoCore.Store) (op : GoCore.Machine.StmtOp) (vs : List GoValue)
-      (expect : GoValue → Bool) : Bool :=
-    match GoCore.Machine.applyStmtOp emptyCtx s [] op 0 (.addr t :: vs),
-          GoCore.Machine.applyStmtOpValue emptyCtx s [] op 0 vs with
-    | .ok (sM, chM, psM, trM), .ok (v, s₁, ch, ps, tr) =>
-        expect v &&
-        (match GoCore.Mem.store emptyCtx s₁ t v with
-         | .ok (s', trT) =>
-             GoCore.Machine.Store.eqb sM s' && chM == ch && psM.length == ps.length
-               && trM.length == (tr ++ trT).length
+  -- The machine's answer and the value form's answer followed by `storeValue`, compared whole:
+  -- the store cell by cell, the residual stream, the pick records and the trace by `==`.
+  let agreeOn (ch : GoCore.Choices) (s : GoCore.Store) (op : GoCore.Machine.StmtOp)
+      (vs : List GoValue) (expect : GoValue → Bool) : Bool :=
+    match GoCore.Machine.applyStmtOp emptyCtx s ch op 0 (.addr t :: vs),
+          GoCore.Machine.applyStmtOpValue emptyCtx s ch op 0 vs with
+    | .ok (sM, chM, psM, trM), .ok r =>
+        expect r.1 &&
+        (match GoCore.Machine.storeValue emptyCtx t r with
+         | .ok (s', ch', ps', tr') =>
+             GoCore.Machine.Store.eqb sM s' && chM == ch' && psM == ps' && trM == tr'
          | .error _ => false)
     | _, _ => false
+  let agree := agreeOn []
   passed := passed && (← expectTrue "wide value: allocNew — the value is the new cell's address, and storing it gives the machine's store"
     (agree (target (.pointer .int) .nil) (.allocNew .int) [.int 5 .int]
       (fun v => match v with | .addr (.base ⟨1⟩) => true | _ => false)))
@@ -3872,9 +3874,12 @@ private def wideValueTests : IO Bool := do
         (fun v => match v with | .map mv => mv.base.isSome | _ => false)
       && agree (target (.chan .both .int) (.chan { base := none })) (.makeChan .int true) [.int 2 .int]
         (fun v => match v with | .chan cv => cv.base.isSome | _ => false)))
-  passed := passed && (← expectTrue "wide value: randIntn — the value is the pick, the stream threaded as the machine threads it"
-    (agree (target .int (.int 0 .int)) .randIntn [.int 4 .int]
-      (fun v => match v with | .int _ .int => true | _ => false)))
+  passed := passed && (← expectTrue "wide value: randIntn on the stream [3, 1] — the value is the pick 3, the stream left at [1], the pick record the machine's"
+    (agreeOn [3, 1] (target .int (.int 0 .int)) .randIntn [.int 4 .int]
+        (fun v => match v with | .int 3 .int => true | _ => false)
+      && (match GoCore.Machine.applyStmtOpValue emptyCtx (target .int (.int 0 .int)) [3, 1] .randIntn 0 [.int 4 .int] with
+          | .ok (_, _, ch, ps, _) => ch == [1] && ps.length == 1
+          | .error _ => false)))
   -- append and copy over a real backing: cell 1 is a [4]int backing, the slice sees its first two.
   let backed : GoCore.Store :=
     { heap := #[.value (.slice .int) (.slice { base := none, offset := 0, len := 0, cap := 0 }),
@@ -3886,8 +3891,8 @@ private def wideValueTests : IO Bool := do
   passed := passed && (← expectTrue "wide value: appendSlice in place — the value is the lengthened header, the element writes are the operator's own"
     (agree backed (.appendSlice .int) [sl, src]
       (fun v => match v with | .slice sv => sv.len == 4 && sv.cap == 4 | _ => false)))
-  passed := passed && (← expectTrue "wide value: appendSlice spilling — the value is the header over a fresh backing, the pick threaded"
-    (agree backed (.appendSlice .int) [full, src]
+  passed := passed && (← expectTrue "wide value: appendSlice spilling on the stream [1, 7] — the value is the header over a fresh backing, the spill pick drawn from the stream as the machine draws it"
+    (agreeOn [1, 7] backed (.appendSlice .int) [full, src]
       (fun v => match v with
         | .slice sv => sv.len == 4 && sv.cap >= 4 && sv.base == some (.base ⟨3⟩)
         | _ => false)))
@@ -3895,6 +3900,30 @@ private def wideValueTests : IO Bool := do
   passed := passed && (← expectTrue "wide value: copySlice — the value is the count, the destination writes are the operator's own"
     (agree intTarget .copySlice [sl, src]
       (fun v => match v with | .int 2 .int => true | _ => false)))
+  -- The store left out can refuse (the target cell's declared type), and then both sides do, by
+  -- the same text; a validate-phase panic is the same panic on both sides.
+  passed := passed && (← expectTrue "wide value: a target cell of the wrong type refuses the final store on both sides, by the same text"
+    (match GoCore.Machine.applyStmtOp emptyCtx (target .bool (.bool false)) [] (.allocNew .int) 0 [.addr t, .int 5 .int],
+           GoCore.Machine.applyStmtOpValue emptyCtx (target .bool (.bool false)) [] (.allocNew .int) 0 [.int 5 .int] with
+     | .error (.stuck a), .ok r =>
+         (match GoCore.Machine.storeValue emptyCtx t r with
+          | .error (.stuck b) => a == b
+          | _ => false)
+     | _, _ => false))
+  passed := passed && (← expectTrue "wide value: makeSlice with a negative length panics on both sides, by the same text"
+    (match GoCore.Machine.applyStmtOp emptyCtx (target (.slice .int) (.slice { base := none, offset := 0, len := 0, cap := 0 })) []
+             (.makeSlice .int false) 0 [.addr t, .int (-1) .int],
+           GoCore.Machine.applyStmtOpValue emptyCtx (target (.slice .int) (.slice { base := none, offset := 0, len := 0, cap := 0 })) []
+             (.makeSlice .int false) 0 [.int (-1) .int] with
+     | .error (Stop.panic a), .error (Stop.panic b) => a == b
+     | _, _ => false))
+  -- randIntn without a target shares the value form's operand list: the same draw, the pick returned.
+  passed := passed && (← expectTrue "wide value: randIntn's untargeted machine form and the value form make the same draw on the same operands"
+    (match GoCore.Machine.applyStmtOp emptyCtx (target .int (.int 0 .int)) [3, 1] .randIntn 0 [.int 4 .int],
+           GoCore.Machine.applyStmtOpValue emptyCtx (target .int (.int 0 .int)) [3, 1] .randIntn 0 [.int 4 .int] with
+     | .ok (_, chM, psM, _), .ok (v, _, ch, ps, _) =>
+         chM == ch && psM == ps && (match v with | .int 3 .int => true | _ => false)
+     | _, _ => false))
   -- No target, no value form; and the two forms refuse a wrong arity with the same text.
   passed := passed && (← expectTrue "wide value: an operator with no target (clearMap, print, mapDelete) is refused by name"
     ([GoCore.Machine.StmtOp.clearMap, .print true, .mapDelete .int].all fun op =>

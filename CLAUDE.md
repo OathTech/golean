@@ -223,8 +223,8 @@ Everything else is untrusted tooling.
   the thirteen G16 table-monotonicity statements, the two dedup
   certificate theorems `checkCert_slowObs`/`checkCertM_slowObs` (2026-10-26), the
   ninety dead-cell statements of `DeadCell.lean` with the `Ty.eqb` laws and
-  `applyStrictOp_leafOf_irrel` ([USER] 2026-11-24, backlog row 63), and G23's
-  `isNormalForTy_interface` and `recoverAtDeferred_none` ([USER] 2026-11-25, row 62), the two
+  `applyStrictOp_leafOf_irrel` ([USER] 2026-11-24, backlog row 63), G23's
+  `isNormalForTy_interface` and `recoverAtDeferred_none` ([USER] 2026-11-25, row 62), and the two
   wide-operator value-form equations of `WideValue.lean` ([USER] 2026-11-27, row 64) —
   FROZEN as text in
   `Contract/Challenge.lean`, judged against GoLean's
