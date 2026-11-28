@@ -18,32 +18,52 @@ equations, so what the kept surface says about `applyStmtOp` is stated here of
 
 * **Transfer** (`applyStmtOpValue_plan_error_iff`, `_plan_ok_iff`): the two validate phases
   fail together with the same stop and succeed together, at any target address.
-* **The target** (`applyStmtOp_plan_target`, `applyStmtOp_plan_ok_iff_value`): a machine apply
-  that succeeds had an address for its target, so the machine's plan succeeds EXACTLY when the
-  target is an address and the value plan succeeds (every targeted operator but `randIntn`,
-  whose first operand is its bound when it has no target).
+* **The target** (`applyStmtOp_plan_target`, `applyStmtOp_plan_ok_iff_value`,
+  `applyStmtOp_plan_error_of_target`): a machine apply that succeeds had an address for its
+  target, so the machine's plan succeeds EXACTLY when the target is an address and the value
+  plan succeeds; a target that is not an address never succeeds. (`randIntn` in its two-operand
+  form; with one operand it has no target.)
 * **Stops** (`applyStmtOpValue_commit_noPanic`, `_plan_tame`, `_commit_tame`): a commit never
   panics; every stop is a refusal, `fatal` or a recoverable panic.
 * **No dead cell** (`applyStmtOpValue_noDead`).
-* **The effect** (`applyStmtOpValue_effect : … → WideEffect ctx op vs s v s₁`): the value has
-  the operator's constructor (`StmtOp.valueShape`, normal at its type by the
-  `valueShape_*_normal` lemmas); the heap grew by at most one cell; every existing root cell
-  but the one backing the operator may write (`wideWrittenRoot?`) is as it was; `StateWf` is
-  kept, the allocator does not go back, and the value is bounded by it. Under it, the memory
-  frame laws (`Store.updateCell_frame`, `storeLoc_frame`, `Mem.store_frame`,
-  `Mem.storeElems_frame`, `Mem.storeRun_frame`, `Store.alloc_frame`, `Store.allocCell_frame`).
+* **The effect** (`applyStmtOpValue_effect : … → WideEffect ctx op vs s v s₁`, and each clause
+  as its own statement — `applyStmtOpValue_shape`, `_size`, `_frame`, `_frame_of_growth`,
+  `_wf`): the value has the operator's constructor (`StmtOp.valueShape`); the heap grew by at
+  most one cell; every existing root cell but the one backing the operator may write
+  (`wideWrittenRoot?`) is as it was, and if the heap GREW no existing cell was written at all
+  (a spilling `appendSlice` leaves its old backing alone); `StateWf` is kept, the allocator does
+  not go back, and the value is bounded by it. Under it, the memory frame laws
+  (`Store.updateCell_frame`, `storeLoc_frame`, `Mem.store_frame`, `Mem.storeElems_frame`,
+  `Mem.storeRun_frame`, `Store.alloc_frame`, `Store.allocCell_frame`).
+* **The stream** (`applyStmtOpValue_no_draw`, `_appendSlice_stream`, `_randIntn`): only a
+  spilling `appendSlice` and `randIntn` draw; the others return the stream untouched with no
+  pick record. Stated of the value forms themselves because the equation shows the returned
+  stream only through a store into a target that succeeds.
 * **Table slices** (`TableMono.applyStmtOpValue_plan_eq`, `_eq`, `storeValue_eq`): the value
   forms read the type table only.
-* **The step** (`retV_stmtOpK_apply_value`, `_panic`, `_error`, `_store_error`): `stepFn` at
-  the apply position in terms of the value form and the store into the target.
+* **The step** (`retV_stmtOpK_apply_value`, `_panic`, `_error`, `_store_error`,
+  `retV_stmtOpK_apply_randIntn_untargeted`): `stepFn` at the apply position in terms of the
+  value form. Not tagged `@[stepFn_eqns]`: they overlap the machine's own
+  `retV_stmtOpK_apply*`, which the simp set already holds.
 
-NOT STATED, and why. The exact value and store of each operator (an equation per operator in
-the style of `applyStmtOp_sortSlice_exact`) — the effect statement gives the constructor, the
-frame and the bounds, not, say, that `allocNew`'s value is the address `s.heap.size`. That an
-`int` result is in range for its kind. The stream consumption of the value forms as separate
-theorems: by the transfer they consume exactly as the machine's operator does
-(`applyStmtOp_plan_appendSlice_spill`, `_randIntn_draw` and the consumption projection read
-through `applyStmtOp_plan_eq_value`).
+NOT STATED, and why.
+* The exact value and store of each operator (an equation per operator in the style of
+  `applyStmtOp_sortSlice_exact`), `randIntn` excepted: the effect gives the constructor, the
+  frame and the bounds — not, say, that `allocNew`'s value is the address `s.heap.size`, nor
+  what an in-place `appendSlice` or a `copySlice` leaves INSIDE the backing it writes.
+* That an `int` result is in range for its kind; the `valueShape_*_normal` lemmas are
+  constructor facts (any address is normal at any pointer type, …), say nothing at a named
+  (`.defined`) type, and are useful with `isNormalForTy_sound`, which is not in the contract.
+* The TRACE a value form returns, and which `appendSpill` width a spill consults (the stream
+  statement gives «some width»).
+* WHICH stop a non-address target gives: a nil target is the nil-dereference panic and any
+  other non-address is `stuck`, at the point where the arm checks its target, which an operand
+  refusal can precede; only «it does not succeed» is stated. When the target is the ONLY operand
+  (`makeMap`/`makeChan` with no hint or capacity) the value form on `[]` succeeds where the
+  machine stops, and the step is the machine's own `retV_stmtOpK_apply_panic` / `_error`.
+* The machine-side theorems this module rests on or points to (`applyStmtOp_plan_tame`,
+  `applyStmtOp_commit_noPanic`, `applyStmtOp_wf`, `Mem.store_noPanic`, the consumption
+  theorems of `StepFnFacts.lean`) are not in the comparator contract.
 -/
 
 namespace GoLean.GoCore.Machine
@@ -145,14 +165,29 @@ theorem applyStmtOp_plan_target_appendSlice {s : Store} {choices : Choices} {nt 
       fun _ => ∃ loc, tv = .addr loc := by
   unfold applyStmtOp.plan; nd; wv_target
 
-/-- **A wide operator that succeeds had an address for its target** (every targeted operator but
-`randIntn`, whose first operand is its bound when it has no target). -/
+theorem applyStmtOp_plan_target_randIntn {s : Store} {choices : Choices} {nt : Nat}
+    {tv b : GoValue} {rest : List GoValue} :
+    Post (applyStmtOp.plan ctx s choices .randIntn nt (tv :: b :: rest))
+      fun _ => ∃ loc, tv = .addr loc := by
+  unfold applyStmtOp.plan; nd
+  all_goals first
+    | exact Post.pure
+        ⟨_, ((List.cons.injEq _ _ _ _).mp ‹_ :: _ = _›).1.trans ‹_ = GoValue.addr _›⟩
+    | (have hc := ‹_ :: _ = _›; simp at hc)
+
+/-- **A wide operator that succeeds had an address for its target.** For `randIntn` the claim
+is about its TARGETED operand list (two operands): with one operand there is no target, and the
+operand is the bound (`applyStmtOp_plan_randIntn_untargeted`). -/
 theorem applyStmtOp_plan_target {s : Store} {choices : Choices} {op : StmtOp} {nt : Nat}
-    {tv : GoValue} {vs : List GoValue} (h : op.hasValueForm = true) (hr : op ≠ .randIntn) :
+    {tv : GoValue} {vs : List GoValue} (h : op.hasValueForm = true)
+    (hr : op = .randIntn → vs ≠ []) :
     Post (applyStmtOp.plan ctx s choices op nt (tv :: vs)) fun _ => ∃ loc, tv = .addr loc := by
   cases op with
   | appendSlice elem => exact applyStmtOp_plan_target_appendSlice
-  | randIntn => exact absurd rfl hr
+  | randIntn =>
+    cases vs with
+    | nil => exact absurd rfl (hr rfl)
+    | cons b rest => exact applyStmtOp_plan_target_randIntn
   | allocNew typ =>
     unfold applyStmtOp.plan
     exact Post.bind applyStmtOpCore_plan_target_allocNew fun _ h => Post.pure h
@@ -170,12 +205,26 @@ theorem applyStmtOp_plan_target {s : Store} {choices : Choices} {op : StmtOp} {n
     exact Post.bind applyStmtOpCore_plan_target_copySlice fun _ h => Post.pure h
   | _ => cases h
 
+/-- A target that is not an address: the machine's plan does not succeed. (WHICH stop it gives
+is not stated here: a nil target is the nil-dereference panic and any other non-address is
+`stuck`, raised where the arm checks its target — after the operand checks in some arms — so
+an earlier operand refusal can come first.) -/
+theorem applyStmtOp_plan_error_of_target {s : Store} {choices : Choices} {op : StmtOp} {nt : Nat}
+    {tv : GoValue} {vs : List GoValue} (h : op.hasValueForm = true)
+    (hr : op = .randIntn → vs ≠ []) (hnot : ∀ loc, tv ≠ .addr loc) :
+    ∃ e, applyStmtOp.plan ctx s choices op nt (tv :: vs) = .error e := by
+  cases hp : applyStmtOp.plan ctx s choices op nt (tv :: vs) with
+  | error e => exact ⟨e, rfl⟩
+  | ok c =>
+    obtain ⟨loc, hl⟩ := applyStmtOp_plan_target h hr c hp
+    exact absurd hl (hnot loc)
+
 /-- **The machine's wide operator succeeds exactly when its target is an address and its value
 form succeeds**, and then its commit is the value form's followed by the store. -/
 theorem applyStmtOp_plan_ok_iff_value {s : Store} {choices : Choices} {op : StmtOp} {nt : Nat}
     {tv : GoValue} {vs : List GoValue}
     {c : Commit (Store × Choices × List PickRecord × AccessTrace)}
-    (h : op.hasValueForm = true) (hr : op ≠ .randIntn) :
+    (h : op.hasValueForm = true) (hr : op = .randIntn → vs ≠ []) :
     applyStmtOp.plan ctx s choices op nt (tv :: vs) = .ok c
       ↔ ∃ loc cv, tv = .addr loc ∧ applyStmtOpValue.plan ctx s choices op nt vs = .ok cv
           ∧ c = storeValueInto ctx loc cv := by
@@ -371,6 +420,10 @@ structure WideEffect (ctx : ProgramCtx) (op : StmtOp) (vs : List GoValue) (s : S
   /-- Every existing root cell but the operator's written backing is as it was. -/
   frame : ∀ b : Addr, b.id < s.heap.size → some b ≠ wideWrittenRoot? op vs →
     Heap.lookup s₁.heap (.base b) = Heap.lookup s.heap (.base b)
+  /-- If the heap grew, the operator wrote NO existing cell (its one write was the fresh cell):
+  in particular a spilling `appendSlice` leaves its old backing as it was. -/
+  grown : s₁.heap.size = s.heap.size + 1 → ∀ b : Addr, b.id < s.heap.size →
+    Heap.lookup s₁.heap (.base b) = Heap.lookup s.heap (.base b)
   /-- Well-formedness is kept, the allocator does not go back, and the value is bounded. -/
   wf : StateWf ctx s → goValueListSup vs ≤ s.nextAddr →
     StmtOpPres ctx s s₁ ∧ GoValue.locSup v ≤ s₁.nextAddr
@@ -384,7 +437,8 @@ theorem WideEffect.of_alloc {op : StmtOp} {vs : List GoValue} {s s' : Store} {va
     (hval : StateWf ctx s → goValueListSup vs ≤ s.nextAddr → GoValue.locSup val ≤ s.nextAddr)
     (hmk : GoValue.locSup (mk l) ≤ Loc.locSup l) : WideEffect ctx op vs s (mk l) s' := by
   obtain ⟨hl, hsz⟩ := Store.alloc_shape ha
-  refine ⟨hshape, ⟨by omega, by omega⟩, fun b hb _ => Store.alloc_frame ha b hb, fun hw hvs => ?_⟩
+  refine ⟨hshape, ⟨by omega, by omega⟩, fun b hb _ => Store.alloc_frame ha b hb,
+    fun _ b hb => Store.alloc_frame ha b hb, fun hw hvs => ?_⟩
   obtain ⟨hw', hloc, hn⟩ := alloc_wf hw (hval hw hvs) ha
   exact ⟨⟨hw', by omega⟩, Nat.le_trans hmk hloc⟩
 
@@ -394,7 +448,8 @@ theorem WideEffect.of_allocCell {op : StmtOp} {vs : List GoValue} {s : Store} {c
     (hmk : ∀ l, GoValue.locSup (mk l) ≤ Loc.locSup l) :
     WideEffect ctx op vs s (mk (s.allocCell cell).1) (s.allocCell cell).2 := by
   refine ⟨hshape, ⟨by simp [Store.allocCell], by simp [Store.allocCell]⟩,
-    fun b hb _ => Store.allocCell_frame s cell b hb, fun hw hvs => ?_⟩
+    fun b hb _ => Store.allocCell_frame s cell b hb,
+    fun _ b hb => Store.allocCell_frame s cell b hb, fun hw hvs => ?_⟩
   obtain ⟨hw', hloc, hnx⟩ := allocCell_wf (l := (s.allocCell cell).1) (σ' := (s.allocCell cell).2)
     hw (by omega) rfl hn
   exact ⟨⟨hw', by omega⟩, Nat.le_trans (hmk _) hloc⟩
@@ -408,7 +463,8 @@ theorem WideEffect.of_storeRun {op : StmtOp} {vs : List GoValue} {s s' : Store} 
     (hv : StateWf ctx s → goValueListSup vs ≤ s.nextAddr → GoValue.locSup v ≤ s.nextAddr) :
     WideEffect ctx op vs s v s' := by
   obtain ⟨hsz, hf⟩ := Mem.storeRun_frame hr
-  refine ⟨hshape, ⟨by omega, by omega⟩, fun b _ hne => hf b (hroot ▸ hne), fun hw hvs => ?_⟩
+  refine ⟨hshape, ⟨by omega, by omega⟩, fun b _ hne => hf b (hroot ▸ hne),
+    fun hg => absurd hg (by omega), fun hw hvs => ?_⟩
   have hp := Mem.storeRun_pres hw (hb hw hvs) (hvals hw hvs) hr
   exact ⟨hp, Nat.le_trans (hv hw hvs) hp.2⟩
 
@@ -416,7 +472,7 @@ theorem WideEffect.of_pure {op : StmtOp} {vs : List GoValue} {s : Store} {v : Go
     (hshape : op.valueShape v)
     (hv : StateWf ctx s → goValueListSup vs ≤ s.nextAddr → GoValue.locSup v ≤ s.nextAddr) :
     WideEffect ctx op vs s v s :=
-  ⟨hshape, ⟨Nat.le_refl _, Nat.le_succ _⟩, fun _ _ _ => rfl,
+  ⟨hshape, ⟨Nat.le_refl _, Nat.le_succ _⟩, fun _ _ _ => rfl, fun _ _ _ => rfl,
     fun hw hvs => ⟨stmtOpPres_refl hw, hv hw hvs⟩⟩
 
 /-- A bind that keeps the equation of what it bound. -/
@@ -606,10 +662,11 @@ theorem applyStmtOpValue_effect {s s₁ : Store} {choices ch' : Choices} {op : S
   obtain ⟨c, hc, hcs⟩ := h
   exact applyStmtOpValue_plan_effect c hc _ hcs
 
-/-! The value is normal at the type its constructor belongs to: a consumer that keeps it in a
-variable of that type, outside a cell, holds what a cell of that type would after the store. (An
-`int` result — `copySlice`'s count, `randIntn`'s pick — is an `.int _ .int`; that it is in range
-is not stated.) -/
+/-! The value is normal at the UNNAMED type its constructor belongs to — constructor facts (any
+address is normal at any pointer type, any slice value at any slice type, …; `rfl`), recorded so
+a consumer need not unfold `isNormalForTy`. They say nothing at a named (`.defined`) type, and
+an `int` result — `copySlice`'s count, `randIntn`'s pick — is an `.int _ .int` whose range is
+not stated. -/
 
 theorem valueShape_allocNew_normal {types : TypeEnv} {typ : Ty} {v : GoValue}
     (h : (StmtOp.allocNew typ).valueShape v) (t : Ty) : isNormalForTy types (.pointer t) v = true := by
@@ -634,6 +691,113 @@ theorem valueShape_makeChan_normal {types : TypeEnv} {elem : Ty} {hasCap : Bool}
     (h : (StmtOp.makeChan elem hasCap).valueShape v) (d : ChanDir) (t : Ty) :
     isNormalForTy types (.chan d t) v = true := by
   obtain ⟨cv, rfl⟩ := h; rfl
+
+/-! The effect's clauses, each as its own statement (so that each is a frozen statement of the
+contract in its own right, not only through the definition of `WideEffect`). -/
+
+theorem applyStmtOpValue_shape {s s₁ : Store} {choices ch' : Choices} {op : StmtOp} {nt : Nat}
+    {vs : List GoValue} {v : GoValue} {ps : List PickRecord} {tr : AccessTrace}
+    (h : applyStmtOpValue ctx s choices op nt vs = .ok (v, s₁, ch', ps, tr)) :
+    op.valueShape v := (applyStmtOpValue_effect h).shape
+
+theorem applyStmtOpValue_size {s s₁ : Store} {choices ch' : Choices} {op : StmtOp} {nt : Nat}
+    {vs : List GoValue} {v : GoValue} {ps : List PickRecord} {tr : AccessTrace}
+    (h : applyStmtOpValue ctx s choices op nt vs = .ok (v, s₁, ch', ps, tr)) :
+    s.heap.size ≤ s₁.heap.size ∧ s₁.heap.size ≤ s.heap.size + 1 := (applyStmtOpValue_effect h).size
+
+/-- Every existing root cell but the backing the operator may write is as it was. -/
+theorem applyStmtOpValue_frame {s s₁ : Store} {choices ch' : Choices} {op : StmtOp} {nt : Nat}
+    {vs : List GoValue} {v : GoValue} {ps : List PickRecord} {tr : AccessTrace}
+    (h : applyStmtOpValue ctx s choices op nt vs = .ok (v, s₁, ch', ps, tr))
+    {b : Addr} (hb : b.id < s.heap.size) (hne : some b ≠ wideWrittenRoot? op vs) :
+    Heap.lookup s₁.heap (.base b) = Heap.lookup s.heap (.base b) :=
+  (applyStmtOpValue_effect h).frame b hb hne
+
+/-- If the heap grew, NO existing root cell was written — a spilling `appendSlice` leaves its
+old backing as it was. -/
+theorem applyStmtOpValue_frame_of_growth {s s₁ : Store} {choices ch' : Choices} {op : StmtOp}
+    {nt : Nat} {vs : List GoValue} {v : GoValue} {ps : List PickRecord} {tr : AccessTrace}
+    (h : applyStmtOpValue ctx s choices op nt vs = .ok (v, s₁, ch', ps, tr))
+    (hg : s₁.heap.size = s.heap.size + 1) {b : Addr} (hb : b.id < s.heap.size) :
+    Heap.lookup s₁.heap (.base b) = Heap.lookup s.heap (.base b) :=
+  (applyStmtOpValue_effect h).grown hg b hb
+
+/-- Well-formedness is kept, the allocator does not go back, and the value is bounded by it. -/
+theorem applyStmtOpValue_wf {s s₁ : Store} {choices ch' : Choices} {op : StmtOp} {nt : Nat}
+    {vs : List GoValue} {v : GoValue} {ps : List PickRecord} {tr : AccessTrace}
+    (h : applyStmtOpValue ctx s choices op nt vs = .ok (v, s₁, ch', ps, tr))
+    (hw : StateWf ctx s) (hvs : goValueListSup vs ≤ s.nextAddr) :
+    StateWf ctx s₁ ∧ s.nextAddr ≤ s₁.nextAddr ∧ GoValue.locSup v ≤ s₁.nextAddr := by
+  obtain ⟨⟨h1, h2⟩, h3⟩ := (applyStmtOpValue_effect h).wf hw hvs
+  exact ⟨h1, h2, h3⟩
+
+/-! ## The stream: which value forms draw, and what they return
+
+The choice stream and the pick records a value form returns are the machine's — but that is
+visible through the equation only when the store into a target succeeds, and a consumer with
+no target cell has no such store. So it is stated of the value forms themselves: only
+`appendSlice` (when it spills) and `randIntn` draw. -/
+
+/-- Every value form but `appendSlice` and `randIntn` returns the stream untouched, no picks. -/
+theorem applyStmtOpValue_no_draw {s s₁ : Store} {choices ch' : Choices} {op : StmtOp} {nt : Nat}
+    {vs : List GoValue} {v : GoValue} {ps : List PickRecord} {tr : AccessTrace}
+    (hop : ∀ e, op ≠ .appendSlice e) (hr : op ≠ .randIntn)
+    (h : applyStmtOpValue ctx s choices op nt vs = .ok (v, s₁, ch', ps, tr)) :
+    ch' = choices ∧ ps = [] := by
+  unfold applyStmtOpValue at h
+  rw [bind_eq_ok] at h
+  obtain ⟨c, hc, hcs⟩ := h
+  cases op with
+  | appendSlice e => exact absurd rfl (hop e)
+  | randIntn => exact absurd rfl hr
+  | _ =>
+    simp only [applyStmtOpValue.plan, bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hc
+    obtain ⟨c', -, rfl⟩ := hc
+    simp only [bind_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hcs
+    obtain ⟨x, -, -, -, rfl, rfl, -⟩ := hcs
+    exact ⟨rfl, rfl⟩
+
+/-- `appendSlice`: in place (the heap keeps its size) it draws nothing; spilling (the heap grows
+by the new backing) it makes exactly one `appendSpill` consult, and returns the stream and the
+pick record of that consult. -/
+theorem applyStmtOpValue_appendSlice_stream {s s₁ : Store} {choices ch' : Choices} {elem : Ty}
+    {nt : Nat} {vs : List GoValue} {v : GoValue} {ps : List PickRecord} {tr : AccessTrace}
+    (h : applyStmtOpValue ctx s choices (.appendSlice elem) nt vs = .ok (v, s₁, ch', ps, tr)) :
+    (s₁.heap.size = s.heap.size ∧ ch' = choices ∧ ps = [])
+      ∨ (s₁.heap.size = s.heap.size + 1
+          ∧ ∃ w, ch' = (Choices.consumeAtE .appendSpill w choices).2.1
+              ∧ ps = (Choices.consumeAtE .appendSpill w choices).2.2) := by
+  unfold applyStmtOpValue at h
+  rw [bind_eq_ok] at h
+  obtain ⟨c, hc, hcs⟩ := h
+  have key : Post (applyStmtOpValue.plan ctx s choices (.appendSlice elem) nt vs) fun c =>
+      ∀ r, c s = .ok r →
+        (r.2.1.heap.size = s.heap.size ∧ r.2.2.1 = choices ∧ r.2.2.2.1 = [])
+          ∨ (r.2.1.heap.size = s.heap.size + 1
+              ∧ ∃ w, r.2.2.1 = (Choices.consumeAtE .appendSpill w choices).2.1
+                  ∧ r.2.2.2.1 = (Choices.consumeAtE .appendSpill w choices).2.2) := by
+    unfold applyStmtOpValue.plan
+    wsweep
+    · refine Post.pure fun r hr => ?_
+      simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hr
+      obtain ⟨⟨s', trW⟩, hrun, rfl⟩ := hr
+      exact .inl ⟨(Mem.storeRun_frame hrun).1, rfl, rfl⟩
+    · refine Post.pure fun r hr => ?_
+      simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hr
+      obtain ⟨⟨l, s'⟩, ha, rfl⟩ := hr
+      exact .inr ⟨(Store.alloc_shape ha).2, _, rfl, rfl⟩
+  exact key c hc _ hcs
+
+/-- `randIntn`, exactly: one `intn` consult at the bound; the value is the pick, the store is
+untouched, the stream and the pick record are the consult's, the trace is empty. -/
+theorem applyStmtOpValue_randIntn {s : Store} {choices : Choices} {nt : Nat} {n : Int}
+    (hn : ¬ n < 1) :
+    applyStmtOpValue ctx s choices .randIntn nt [.int n .int]
+      = .ok (.int (Choices.consumeAtE .intn n.toNat choices).1 .int, s,
+          (Choices.consumeAtE .intn n.toNat choices).2.1,
+          (Choices.consumeAtE .intn n.toNat choices).2.2, []) := by
+  simp only [applyStmtOpValue, applyStmtOpValue.plan, hn, ↓reduceIte]
+  rfl
 
 end GoLean.GoCore.Machine
 
@@ -737,5 +901,19 @@ theorem retV_stmtOpK_apply_value_store_error {s s₁ : Store} {v w : GoValue} {o
     simp only [storeValue, hs]; rfl
   · subst hm
     exact Mem.store_noPanic s₁ loc w msg hs
+
+/-- `randIntn` without a target at the apply position: the value form's outcome with the pick
+dropped — the store untouched by it, the stream and pick record the consult's. -/
+theorem retV_stmtOpK_apply_randIntn_untargeted {s s₁ : Store} {v w : GoValue} {nt : Nat}
+    {ch' : Choices} {ps : List PickRecord} {tr : AccessTrace} (env : LocalEnv) (k' : Cont)
+    (ch : Choices)
+    (h : applyStmtOpValue ctx s ch .randIntn nt [v] = .ok (w, s₁, ch', ps, tr)) :
+    stepFn ctx s (.retV v (.stmtOpK .randIntn nt [] [] env k')) ch
+      = .ok (.next k', s₁, ch', ⟨tr, ps, []⟩) := by
+  have ha : applyStmtOp ctx s ch .randIntn nt (v :: ([] : List GoValue)).reverse
+      = .ok (s₁, ch', ps, tr) := by
+    show applyStmtOp ctx s ch .randIntn nt [v] = _
+    rw [applyStmtOp_randIntn_untargeted, h]; rfl
+  rw [retV_stmtOpK_apply env k' ch ha]; rfl
 
 end GoLean.GoCore.Machine

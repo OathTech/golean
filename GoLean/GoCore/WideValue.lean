@@ -229,8 +229,9 @@ type and can refuse. -/
 def storeValue (loc : Loc)
     (r : GoValue × Store × Choices × List PickRecord × AccessTrace) :
     Except Stop (Store × Choices × List PickRecord × AccessTrace) :=
-  -- Projections, not a tuple pattern: the definition is reached by a contracted statement, and
-  -- a pattern would put an auto-generated matcher's name into what a consumer compares.
+  -- Projections, not a tuple pattern, so this definition mints no matcher of its own. (The
+  -- plans above still reach auto-generated matchers, as every pattern-matching definition of
+  -- the machine does; a consumer comparing across a pin sees those by name.)
   (fun w => (w.1, r.2.2.1, r.2.2.2.1, r.2.2.2.2 ++ w.2)) <$> Mem.store ctx r.2.1 loc r.1
 
 /-- `storeValue` after a value form's commit. -/
@@ -397,6 +398,18 @@ theorem applyStmtOp_plan_randIntn_untargeted {s : Store} {choices : Choices} {nt
       funext s0
       rfl
   | _ => wv_norm
+
+/-- The un-split form: the machine's untargeted `randIntn` is the value form's apply with the
+value dropped. -/
+theorem applyStmtOp_randIntn_untargeted {s : Store} {choices : Choices} {nt : Nat}
+    {v : GoValue} :
+    applyStmtOp ctx s choices .randIntn nt [v]
+      = (fun r => r.2) <$> applyStmtOpValue ctx s choices .randIntn nt [v] := by
+  unfold applyStmtOp applyStmtOpValue
+  rw [applyStmtOp_plan_randIntn_untargeted]
+  cases applyStmtOpValue.plan ctx s choices .randIntn nt [v] with
+  | error e => rfl
+  | ok c => rfl
 
 /-- An operator that stores into no target has no value form: the value plan refuses, by name. -/
 theorem applyStmtOpValue_plan_of_not_hasValueForm {s : Store} {choices : Choices} {op : StmtOp}

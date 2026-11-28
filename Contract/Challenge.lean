@@ -30,7 +30,7 @@ the fix round the same day (the coordinator's decision: a first-match lookup of 
 the customer's ask): 366 statements in all then; 385 with the equations added since and the two dedup
 certificate theorems (2026-10-26); 475 since 2026-11-24 with the ninety dead-cell statements (family `deadcell`, at
 the end of this file); 477 since 2026-11-25 with G23's `recoverAtDeferred_none` (family `recover`)
-and `isNormalForTy_interface` (family `iface`); 513 since 2026-11-27 with the thirty-six
+and `isNormalForTy_interface` (family `iface`); 524 since 2026-11-28 with the forty-seven
 statements of the wide operators' value-form surface (family `widevalue`). The equation family is EVERY public theorem of
 `Equations.lean` (300 since lane `core/g16-raise-mark-1023`; 234 of them `@[stepFn_eqns]` simp-set members — the customer's rewriting
 library is the module, and its `signalStep_*` rows, `runProgramSetup_noInit`, the
@@ -5044,7 +5044,7 @@ theorem GoLean.Contract.GoCore.isNormalForTy_interface :
           ∃ (dyn : Ty), ∃ (w : GoValue), v = GoValue.interface dyn w ∧ boxHeadNormal types dyn w = true
     := sorry
 
-/-! ### The wide operators' value forms (2026-11-27) — thirty-six statements (family `widevalue`;
+/-! ### The wide operators' value forms (2026-11-27) — forty-seven statements (family `widevalue`;
 raft-proofs' request, widened the same day on the [USER]'s direction that this be a surface
 others might target): the equations tying the machine's wide operator to its value form, every
 case of target, the success characterisation, the value forms' own invariants and effect, the
@@ -5128,7 +5128,7 @@ theorem GoLean.Contract.GoCore.Machine.applyStmtOp_plan_target :
     ∀ {ctx : ProgramCtx} {s : Store} {choices : Choices} {op : StmtOp} {nt : Nat} {tv : GoValue}
       {vs : List GoValue},
       op.hasValueForm = true →
-        op ≠ StmtOp.randIntn →
+        (op = StmtOp.randIntn → vs ≠ []) →
           Post (applyStmtOp.plan ctx s choices op nt (tv :: vs))
             fun (x : Commit (Store × Choices × List PickRecord × AccessTrace)) =>
             ∃ (loc : Loc), tv = GoValue.addr loc
@@ -5140,7 +5140,7 @@ theorem GoLean.Contract.GoCore.Machine.applyStmtOp_plan_ok_iff_value :
     ∀ {ctx : ProgramCtx} {s : Store} {choices : Choices} {op : StmtOp} {nt : Nat} {tv : GoValue}
       {vs : List GoValue} {c : Commit (Store × Choices × List PickRecord × AccessTrace)},
       op.hasValueForm = true →
-        op ≠ StmtOp.randIntn →
+        (op = StmtOp.randIntn → vs ≠ []) →
           (applyStmtOp.plan ctx s choices op nt (tv :: vs) = Except.ok c ↔
             ∃ (loc : Loc),
               ∃ (cv : Commit (GoValue × Store × Choices × List PickRecord × AccessTrace)),
@@ -5370,6 +5370,122 @@ theorem GoLean.Contract.GoCore.Machine.retV_stmtOpK_apply_value_store_error :
           applyStmtOpValue ctx s ch op nt vs = Except.ok (w, s₁, ch', ps, tr) →
             Mem.store ctx s₁ loc w = Except.error e →
               stepFn ctx s (Config.retV v (Cont.stmtOpK op nt done [] env k')) ch = Except.error e
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applyStmtOp_randIntn_untargeted` (GoLean.GoCore.WideValue) -/
+theorem GoLean.Contract.GoCore.Machine.applyStmtOp_randIntn_untargeted :
+    ∀ {ctx : ProgramCtx} {s : Store} {choices : Choices} {nt : Nat} {v : GoValue},
+      applyStmtOp ctx s choices StmtOp.randIntn nt [v] =
+        (fun (r : GoValue × Store × Choices × List PickRecord × AccessTrace) => r.snd) <$>
+          applyStmtOpValue ctx s choices StmtOp.randIntn nt [v]
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applyStmtOp_plan_error_of_target` (GoLean.GoCore.WideValueFacts) -/
+theorem GoLean.Contract.GoCore.Machine.applyStmtOp_plan_error_of_target :
+    ∀ {ctx : ProgramCtx} {s : Store} {choices : Choices} {op : StmtOp} {nt : Nat} {tv : GoValue}
+      {vs : List GoValue},
+      op.hasValueForm = true →
+        (op = StmtOp.randIntn → vs ≠ []) →
+          (∀ (loc : Loc), tv ≠ GoValue.addr loc) →
+            ∃ (e : Stop), applyStmtOp.plan ctx s choices op nt (tv :: vs) = Except.error e
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applyStmtOpValue_shape` (GoLean.GoCore.WideValueFacts) -/
+theorem GoLean.Contract.GoCore.Machine.applyStmtOpValue_shape :
+    ∀ {ctx : ProgramCtx} {s s₁ : Store} {choices ch' : Choices} {op : StmtOp} {nt : Nat}
+      {vs : List GoValue} {v : GoValue} {ps : List PickRecord} {tr : AccessTrace},
+      applyStmtOpValue ctx s choices op nt vs = Except.ok (v, s₁, ch', ps, tr) → op.valueShape v
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applyStmtOpValue_size` (GoLean.GoCore.WideValueFacts) -/
+theorem GoLean.Contract.GoCore.Machine.applyStmtOpValue_size :
+    ∀ {ctx : ProgramCtx} {s s₁ : Store} {choices ch' : Choices} {op : StmtOp} {nt : Nat}
+      {vs : List GoValue} {v : GoValue} {ps : List PickRecord} {tr : AccessTrace},
+      applyStmtOpValue ctx s choices op nt vs = Except.ok (v, s₁, ch', ps, tr) →
+        Array.size s.heap ≤ Array.size s₁.heap ∧ Array.size s₁.heap ≤ Array.size s.heap + 1
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applyStmtOpValue_frame` (GoLean.GoCore.WideValueFacts) -/
+theorem GoLean.Contract.GoCore.Machine.applyStmtOpValue_frame :
+    ∀ {ctx : ProgramCtx} {s s₁ : Store} {choices ch' : Choices} {op : StmtOp} {nt : Nat}
+      {vs : List GoValue} {v : GoValue} {ps : List PickRecord} {tr : AccessTrace},
+      applyStmtOpValue ctx s choices op nt vs = Except.ok (v, s₁, ch', ps, tr) →
+        ∀ {b : Addr},
+          b.id < Array.size s.heap →
+            some b ≠ wideWrittenRoot? op vs → s₁.heap.lookup (Loc.base b) = s.heap.lookup (Loc.base b)
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applyStmtOpValue_frame_of_growth` (GoLean.GoCore.WideValueFacts) -/
+theorem GoLean.Contract.GoCore.Machine.applyStmtOpValue_frame_of_growth :
+    ∀ {ctx : ProgramCtx} {s s₁ : Store} {choices ch' : Choices} {op : StmtOp} {nt : Nat}
+      {vs : List GoValue} {v : GoValue} {ps : List PickRecord} {tr : AccessTrace},
+      applyStmtOpValue ctx s choices op nt vs = Except.ok (v, s₁, ch', ps, tr) →
+        Array.size s₁.heap = Array.size s.heap + 1 →
+          ∀ {b : Addr},
+            b.id < Array.size s.heap → s₁.heap.lookup (Loc.base b) = s.heap.lookup (Loc.base b)
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applyStmtOpValue_wf` (GoLean.GoCore.WideValueFacts) -/
+theorem GoLean.Contract.GoCore.Machine.applyStmtOpValue_wf :
+    ∀ {ctx : ProgramCtx} {s s₁ : Store} {choices ch' : Choices} {op : StmtOp} {nt : Nat}
+      {vs : List GoValue} {v : GoValue} {ps : List PickRecord} {tr : AccessTrace},
+      applyStmtOpValue ctx s choices op nt vs = Except.ok (v, s₁, ch', ps, tr) →
+        StateWf ctx s →
+          goValueListSup vs ≤ s.nextAddr →
+            StateWf ctx s₁ ∧ s.nextAddr ≤ s₁.nextAddr ∧ GoValue.locSup v ≤ s₁.nextAddr
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applyStmtOpValue_no_draw` (GoLean.GoCore.WideValueFacts) -/
+theorem GoLean.Contract.GoCore.Machine.applyStmtOpValue_no_draw :
+    ∀ {ctx : ProgramCtx} {s s₁ : Store} {choices ch' : Choices} {op : StmtOp} {nt : Nat}
+      {vs : List GoValue} {v : GoValue} {ps : List PickRecord} {tr : AccessTrace},
+      (∀ (e : Ty), op ≠ StmtOp.appendSlice e) →
+        op ≠ StmtOp.randIntn →
+          applyStmtOpValue ctx s choices op nt vs = Except.ok (v, s₁, ch', ps, tr) →
+            ch' = choices ∧ ps = []
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applyStmtOpValue_appendSlice_stream` (GoLean.GoCore.WideValueFacts) -/
+theorem GoLean.Contract.GoCore.Machine.applyStmtOpValue_appendSlice_stream :
+    ∀ {ctx : ProgramCtx} {s s₁ : Store} {choices ch' : Choices} {elem : Ty} {nt : Nat}
+      {vs : List GoValue} {v : GoValue} {ps : List PickRecord} {tr : AccessTrace},
+      applyStmtOpValue ctx s choices (StmtOp.appendSlice elem) nt vs = Except.ok (v, s₁, ch', ps, tr) →
+        Array.size s₁.heap = Array.size s.heap ∧ ch' = choices ∧ ps = [] ∨
+          Array.size s₁.heap = Array.size s.heap + 1 ∧
+            ∃ (w : Nat),
+              ch' = (Choices.consumeAtE ChoiceSite.appendSpill w choices).snd.fst ∧
+                ps = (Choices.consumeAtE ChoiceSite.appendSpill w choices).snd.snd
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applyStmtOpValue_randIntn` (GoLean.GoCore.WideValueFacts) -/
+-- Spelled by hand, in the source's form: the printed tuple fixes the trace component's type
+-- before the expected type reaches it.
+theorem GoLean.Contract.GoCore.Machine.applyStmtOpValue_randIntn :
+    ∀ {ctx : ProgramCtx} {s : Store} {choices : Choices} {nt : Nat} {n : Int}, ¬ n < 1 →
+      applyStmtOpValue ctx s choices .randIntn nt [.int n .int]
+        = .ok (.int (Choices.consumeAtE .intn n.toNat choices).1 .int, s,
+            (Choices.consumeAtE .intn n.toNat choices).2.1,
+            (Choices.consumeAtE .intn n.toNat choices).2.2, [])
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.retV_stmtOpK_apply_randIntn_untargeted` (GoLean.GoCore.WideValueFacts) -/
+theorem GoLean.Contract.GoCore.Machine.retV_stmtOpK_apply_randIntn_untargeted :
+    ∀ {ctx : ProgramCtx} {s s₁ : Store} {v w : GoValue} {nt : Nat} {ch' : Choices}
+      {ps : List PickRecord} {tr : AccessTrace} (env : LocalEnv) (k' : Cont) (ch : Choices),
+      applyStmtOpValue ctx s ch StmtOp.randIntn nt [v] = Except.ok (w, s₁, ch', ps, tr) →
+        stepFn ctx s (Config.retV v (Cont.stmtOpK StmtOp.randIntn nt [] [] env k')) ch =
+          Except.ok (Config.next k', s₁, ch', { trace := tr, picks := ps, out := [] })
     := sorry
 
 set_option warn.sorry false in

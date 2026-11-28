@@ -76,8 +76,8 @@ or store rooted elsewhere (`Store.markDead_size`, `loadLoc_markDead_ne`,
 `storeLoc_markDead_ne`). `HeapNormal` and `StateWf` ADMIT a dead cell (`StateWf.markDead`);
 `NoDead` is the predicate that excludes it.
 
-**The value-level surface, by operator family.** Every operator family has an entry point
-that returns the value it computes instead of storing it:
+**The value-level surface, by operator family.** Where an operator computes a value, there is
+an entry point that returns it instead of storing it:
 
 | family | value-level entry point | where a store follows |
 |---|---|---|
@@ -86,6 +86,7 @@ that returns the value it computes instead of storing it:
 | assignment targets, call results, receives, select, try-lock, atomics | the value is explicit in the configuration | `storeTarget`, `enterRecvTargets` |
 | wide statement operators with a target (`allocNew`, `makeSlice`, `makeMap`, `makeChan`, `copySlice`, `appendSlice`, `randIntn`) | `applyStmtOpValue` (`WideValue.lean`, 2026-11-27) | `storeValue`; the machine's `applyStmtOp` is the two composed (`applyStmtOp_eq_value`) |
 | wide statement operators without one (`mapAssign`, `mapDelete`, `clearMap`, `clearSlice`, `sortSlice`, `print`) | none: they compute no value | — |
+| declarations, parameters and results at frame entry, map-range variables | the value is an operand (a default, an argument, the produced key or element) | a FRESH cell: `allocDecls`, `bindParams`, `bindIterVars` — no value-level form, the cell is the point |
 
 The last-but-one row is the newest: the machine's wide operators take their target as an
 address and store into it, and `WideValue.lean` states each without that store —
@@ -93,12 +94,13 @@ address and store into it, and `WideValue.lean` states each without that store �
 an address target equal to the value form followed by the store (`applyStmtOp_plan_eq_value`),
 and untargeted `randIntn` equal to the value form with the value dropped. The machine does not
 run the value forms; they are a second statement of the same arms, held to the first by the
-equations. `WideValueFacts.lean` gives the value forms what the surface gives the operator:
+equations. `WideValueFacts.lean` states of the value forms themselves what a consumer without a target
+cell cannot get through the equations (its header lists what is and is not stated):
 the success characterisation (`applyStmtOp_plan_ok_iff_value`), no-panic commits and
-strictness, `NoDead`, the effect on the store (`applyStmtOpValue_effect`: the value's shape,
-the frame over the memory frame laws, well-formedness with the value bounded), agreement under
-table slices, and the step equations at the apply position (`retV_stmtOpK_apply_value` and its
-three twins).
+strictness, `NoDead`, the effect on the store (`applyStmtOpValue_effect` and its clauses: the
+value's shape, the frame over the memory frame laws, well-formedness with the value bounded),
+which forms draw from the stream, agreement under table slices, and the step equations at the
+apply position (`retV_stmtOpK_apply_value` and its twins).
 
 ## 3. The labelled step
 

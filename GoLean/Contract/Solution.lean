@@ -80,7 +80,7 @@ theorem GoLean.Contract.GoCore.isNormalForTy_interface :
     stmt_of% GoLean.GoCore.isNormalForTy_interface :=
   GoLean.GoCore.isNormalForTy_interface
 
-/-! ## widevalue (36) -/
+/-! ## widevalue (47) -/
 
 theorem GoLean.Contract.GoCore.Machine.applyStmtOp_plan_eq_value :
     stmt_of% GoLean.GoCore.Machine.applyStmtOp_plan_eq_value :=
@@ -213,6 +213,50 @@ theorem GoLean.Contract.GoCore.Machine.retV_stmtOpK_apply_value_error :
 theorem GoLean.Contract.GoCore.Machine.retV_stmtOpK_apply_value_store_error :
     stmt_of% GoLean.GoCore.Machine.retV_stmtOpK_apply_value_store_error :=
   GoLean.GoCore.Machine.retV_stmtOpK_apply_value_store_error
+
+theorem GoLean.Contract.GoCore.Machine.applyStmtOp_randIntn_untargeted :
+    stmt_of% GoLean.GoCore.Machine.applyStmtOp_randIntn_untargeted :=
+  GoLean.GoCore.Machine.applyStmtOp_randIntn_untargeted
+
+theorem GoLean.Contract.GoCore.Machine.applyStmtOp_plan_error_of_target :
+    stmt_of% GoLean.GoCore.Machine.applyStmtOp_plan_error_of_target :=
+  GoLean.GoCore.Machine.applyStmtOp_plan_error_of_target
+
+theorem GoLean.Contract.GoCore.Machine.applyStmtOpValue_shape :
+    stmt_of% GoLean.GoCore.Machine.applyStmtOpValue_shape :=
+  GoLean.GoCore.Machine.applyStmtOpValue_shape
+
+theorem GoLean.Contract.GoCore.Machine.applyStmtOpValue_size :
+    stmt_of% GoLean.GoCore.Machine.applyStmtOpValue_size :=
+  GoLean.GoCore.Machine.applyStmtOpValue_size
+
+theorem GoLean.Contract.GoCore.Machine.applyStmtOpValue_frame :
+    stmt_of% GoLean.GoCore.Machine.applyStmtOpValue_frame :=
+  GoLean.GoCore.Machine.applyStmtOpValue_frame
+
+theorem GoLean.Contract.GoCore.Machine.applyStmtOpValue_frame_of_growth :
+    stmt_of% GoLean.GoCore.Machine.applyStmtOpValue_frame_of_growth :=
+  GoLean.GoCore.Machine.applyStmtOpValue_frame_of_growth
+
+theorem GoLean.Contract.GoCore.Machine.applyStmtOpValue_wf :
+    stmt_of% GoLean.GoCore.Machine.applyStmtOpValue_wf :=
+  GoLean.GoCore.Machine.applyStmtOpValue_wf
+
+theorem GoLean.Contract.GoCore.Machine.applyStmtOpValue_no_draw :
+    stmt_of% GoLean.GoCore.Machine.applyStmtOpValue_no_draw :=
+  GoLean.GoCore.Machine.applyStmtOpValue_no_draw
+
+theorem GoLean.Contract.GoCore.Machine.applyStmtOpValue_appendSlice_stream :
+    stmt_of% GoLean.GoCore.Machine.applyStmtOpValue_appendSlice_stream :=
+  GoLean.GoCore.Machine.applyStmtOpValue_appendSlice_stream
+
+theorem GoLean.Contract.GoCore.Machine.applyStmtOpValue_randIntn :
+    stmt_of% GoLean.GoCore.Machine.applyStmtOpValue_randIntn :=
+  GoLean.GoCore.Machine.applyStmtOpValue_randIntn
+
+theorem GoLean.Contract.GoCore.Machine.retV_stmtOpK_apply_randIntn_untargeted :
+    stmt_of% GoLean.GoCore.Machine.retV_stmtOpK_apply_randIntn_untargeted :=
+  GoLean.GoCore.Machine.retV_stmtOpK_apply_randIntn_untargeted
 
 theorem GoLean.Contract.GoCore.TableMono.applyStmtOpValue_plan_eq :
     stmt_of% GoLean.GoCore.TableMono.applyStmtOpValue_plan_eq :=

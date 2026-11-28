@@ -43,11 +43,20 @@ or a theorem added to or removed from `InitDriverFacts.lean`, changes the list (
               its shape, size, frame and well-formedness clauses, normality of the value at its
               type, agreement under table slices); the memory frame laws those rest on
               (`Store.updateCell_frame` … `Store.allocCell_frame`); the four step equations at the
-              apply position. An EXPLICIT list ([AGENT] 2026-11-27): the per-operator lemmas
-              beneath each are the proofs' cases. The definitions the statements reach
-              (`applyStmtOpValue`, `applyStmtOpValue.plan`, `storeValue`, `storeValueInto`,
-              `dropValue`, `StmtOp.hasValueForm`, `StmtOp.valueShape`, `wideWrittenRoot?`,
-              `WideEffect`, `CommitEffect`, `Post`) are compared whole, as every definition is.
+              apply position; and, from the second audit's fix round (2026-11-28), the effect's
+              clauses each as its own statement (`applyStmtOpValue_shape`, `_size`, `_frame`,
+              `_frame_of_growth`, `_wf` — so each is frozen as text, not only through
+              `WideEffect`), the stream statements (`_no_draw`, `_appendSlice_stream`,
+              `_randIntn`), `applyStmtOp_plan_error_of_target`, and the un-split and step forms of
+              untargeted `randIntn`. An EXPLICIT list ([AGENT] 2026-11-27/28: the [USER] directed
+              the surface and approved contracting the equations; WHICH further statements are
+              kept is the lane's choice): the per-operator lemmas beneath each are the proofs'
+              cases. The definitions the statements reach — new: `applyStmtOpValue`,
+              `applyStmtOpValue.plan`, `storeValue`, `storeValueInto`, `dropValue`,
+              `StmtOp.hasValueForm`, `StmtOp.valueShape`, `wideWrittenRoot?`, `WideEffect`,
+              `CommitEffect`; existing: `Post`, `Commit.NoDead`, `StmtOpPres`, `StateWf`,
+              `goValueListSup`, `GoValue.locSup`, `PlanNoPanic`, `ErrP`, `Stop.Tame` — are compared
+              whole, as every definition is.
   consumeAt   every theorem `…Choices.consumeAt*` — the `consumeAt_*` and `consumeAtE_*` laws of
               `State.lean` and `Machine.lean` (the customer's G9 list names both spellings).
   eqns        every public theorem of the module `GoLean.GoCore.Equations` — the customer's
@@ -209,6 +218,17 @@ open ContractNames in
       `GoLean.GoCore.Machine.retV_stmtOpK_apply_value_panic,
       `GoLean.GoCore.Machine.retV_stmtOpK_apply_value_error,
       `GoLean.GoCore.Machine.retV_stmtOpK_apply_value_store_error,
+`GoLean.GoCore.Machine.applyStmtOp_randIntn_untargeted,
+      `GoLean.GoCore.Machine.applyStmtOp_plan_error_of_target,
+      `GoLean.GoCore.Machine.applyStmtOpValue_shape,
+      `GoLean.GoCore.Machine.applyStmtOpValue_size,
+      `GoLean.GoCore.Machine.applyStmtOpValue_frame,
+      `GoLean.GoCore.Machine.applyStmtOpValue_frame_of_growth,
+      `GoLean.GoCore.Machine.applyStmtOpValue_wf,
+      `GoLean.GoCore.Machine.applyStmtOpValue_no_draw,
+      `GoLean.GoCore.Machine.applyStmtOpValue_appendSlice_stream,
+      `GoLean.GoCore.Machine.applyStmtOpValue_randIntn,
+      `GoLean.GoCore.Machine.retV_stmtOpK_apply_randIntn_untargeted,
       `GoLean.GoCore.TableMono.applyStmtOpValue_plan_eq,
       `GoLean.GoCore.TableMono.applyStmtOpValue_eq,
       `GoLean.GoCore.TableMono.storeValue_eq]),
