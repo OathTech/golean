@@ -32,13 +32,22 @@ or a theorem added to or removed from `InitDriverFacts.lean`, changes the list (
               its dynamic type (raft-proofs' G23 (1) in the one-level form ruled by the [USER]
               2026-11-25; the customer named this characterisation as the statement it would
               consume). One name ([AGENT] 2026-11-25): the walk's other lemmas are its proof's.
-  widevalue   `applyStmtOp_plan_eq_value` and `applyStmtOp_eq_value` (`WideValue.lean`): the
-              machine's wide operator at an address target is its value form followed by the
-              store into the target (raft-proofs' request of 2026-11-27, [USER]-approved the same
-              day with the equations contracted). Two names ([AGENT] 2026-11-27): the seven
-              per-operator equations beneath them are the proof's cases; the definitions the
-              statements reach (`applyStmtOpValue`, `applyStmtOpValue.plan`, `storeValue`, `storeValueInto`,
-              `StmtOp.hasValueForm`) are compared whole, as every definition is.
+  widevalue   the wide operators' value-form surface (`WideValue.lean`, `WideValueFacts.lean`;
+              raft-proofs' request of 2026-11-27, widened the same day on the [USER]'s direction
+              that the surface be a principled set others might target, not the two equations
+              asked for): the equations at an address target and for untargeted `randIntn`, the
+              no-value refusal and the lowering's target count (`stmtPlan_targets`); the
+              validate-phase transfer and the success characterisation
+              (`applyStmtOp_plan_ok_iff_value`); the value forms' own invariants (no panic in a
+              commit, strictness, `NoDead`, the effect statement `applyStmtOpValue_effect` with
+              its shape, size, frame and well-formedness clauses, normality of the value at its
+              type, agreement under table slices); the memory frame laws those rest on
+              (`Store.updateCell_frame` … `Store.allocCell_frame`); the four step equations at the
+              apply position. An EXPLICIT list ([AGENT] 2026-11-27): the per-operator lemmas
+              beneath each are the proofs' cases. The definitions the statements reach
+              (`applyStmtOpValue`, `applyStmtOpValue.plan`, `storeValue`, `storeValueInto`,
+              `dropValue`, `StmtOp.hasValueForm`, `StmtOp.valueShape`, `wideWrittenRoot?`,
+              `WideEffect`, `CommitEffect`, `Post`) are compared whole, as every definition is.
   consumeAt   every theorem `…Choices.consumeAt*` — the `consumeAt_*` and `consumeAtE_*` laws of
               `State.lean` and `Machine.lean` (the customer's G9 list names both spellings).
   eqns        every public theorem of the module `GoLean.GoCore.Equations` — the customer's
@@ -166,8 +175,43 @@ open ContractNames in
     ("enterFrame", #[`GoLean.GoCore.Machine.enterFrame_declared]),
     ("recover", #[`GoLean.GoCore.Machine.recoverAtDeferred_none]),
     ("iface", #[`GoLean.GoCore.isNormalForTy_interface]),
-    ("widevalue", #[`GoLean.GoCore.Machine.applyStmtOp_plan_eq_value,
-      `GoLean.GoCore.Machine.applyStmtOp_eq_value]),
+    ("widevalue", #[
+      `GoLean.GoCore.Machine.applyStmtOp_plan_eq_value,
+      `GoLean.GoCore.Machine.applyStmtOp_eq_value,
+      `GoLean.GoCore.Machine.applyStmtOp_plan_randIntn_untargeted,
+      `GoLean.GoCore.Machine.applyStmtOpValue_plan_of_not_hasValueForm,
+      `GoLean.GoCore.Machine.stmtPlan_targets,
+      `GoLean.GoCore.Machine.applyStmtOpValue_plan_error_iff,
+      `GoLean.GoCore.Machine.applyStmtOpValue_plan_ok_iff,
+      `GoLean.GoCore.Machine.applyStmtOp_plan_target,
+      `GoLean.GoCore.Machine.applyStmtOp_plan_ok_iff_value,
+      `GoLean.GoCore.Machine.applyStmtOpValue_commit_noPanic,
+      `GoLean.GoCore.Machine.applyStmtOpValue_plan_tame,
+      `GoLean.GoCore.Machine.applyStmtOpValue_commit_tame,
+      `GoLean.GoCore.Machine.applyStmtOpValue.plan_noDead,
+      `GoLean.GoCore.Machine.applyStmtOpValue_noDead,
+      `GoLean.GoCore.Machine.applyStmtOpValue_plan_effect,
+      `GoLean.GoCore.Machine.applyStmtOpValue_effect,
+      `GoLean.GoCore.Machine.valueShape_allocNew_normal,
+      `GoLean.GoCore.Machine.valueShape_makeSlice_normal,
+      `GoLean.GoCore.Machine.valueShape_appendSlice_normal,
+      `GoLean.GoCore.Machine.valueShape_makeMap_normal,
+      `GoLean.GoCore.Machine.valueShape_makeChan_normal,
+      `GoLean.GoCore.Machine.Store.updateCell_frame,
+      `GoLean.GoCore.Machine.storeLoc_frame,
+      `GoLean.GoCore.Machine.Mem.store_frame,
+      `GoLean.GoCore.Machine.Mem.storeElems_frame,
+      `GoLean.GoCore.Machine.Mem.storeRun_frame,
+      `GoLean.GoCore.Machine.Store.alloc_frame,
+      `GoLean.GoCore.Machine.Store.allocCell_frame,
+      `GoLean.GoCore.Machine.stmtOpOut_of_hasValueForm,
+      `GoLean.GoCore.Machine.retV_stmtOpK_apply_value,
+      `GoLean.GoCore.Machine.retV_stmtOpK_apply_value_panic,
+      `GoLean.GoCore.Machine.retV_stmtOpK_apply_value_error,
+      `GoLean.GoCore.Machine.retV_stmtOpK_apply_value_store_error,
+      `GoLean.GoCore.TableMono.applyStmtOpValue_plan_eq,
+      `GoLean.GoCore.TableMono.applyStmtOpValue_eq,
+      `GoLean.GoCore.TableMono.storeValue_eq]),
     ("consumeAt", consumeAtTheorems env),
     ("eqns", eqnsModule),
     ("g11", moduleTheorems env `GoLean.GoCore.InitDriverFacts),

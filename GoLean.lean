@@ -28,6 +28,7 @@ import GoLean.GoCore.DeadCell
 -- The wide operators' value forms for the raft-proofs customer (2026-11-27): each targeted arm
 -- without its final store, and the equation tying the machine's operator to it.
 import GoLean.GoCore.WideValue
+import GoLean.GoCore.WideValueFacts
 -- The relation-free single-goroutine bridge and projections, re-homed/restored 2026-10-21 (fix
 -- round F1 of the retirement; pending the owner's ruling): `PoolFacts` (ex-MultiSound/PoolTrace/
 -- ProgramTrace) and `PoolProjection` under its own name.

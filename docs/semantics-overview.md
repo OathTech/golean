@@ -76,14 +76,29 @@ or store rooted elsewhere (`Store.markDead_size`, `loadLoc_markDead_ne`,
 `storeLoc_markDead_ne`). `HeapNormal` and `StateWf` ADMIT a dead cell (`StateWf.markDead`);
 `NoDead` is the predicate that excludes it.
 
-**The wide operators' value forms.** Seven wide-operator arms store a computed value into a
-target address (`allocNew`, `makeSlice`, `makeMap`, `makeChan`, `copySlice`, `appendSlice`,
-`randIntn`). `WideValue.lean` (raft-proofs' request, 2026-11-27) states each without that store —
-`applyStmtOpValue.plan`, on the operands minus the target, returning the value and the store
-after the operator's own writes — and proves the machine's operator at an address target equal
-to the value form followed by the store (`applyStmtOp_plan_eq_value`, `applyStmtOp_eq_value`).
-The machine does not run the value forms; they are a second statement of the same arms, held to
-the first by the equation.
+**The value-level surface, by operator family.** Every operator family has an entry point
+that returns the value it computes instead of storing it:
+
+| family | value-level entry point | where a store follows |
+|---|---|---|
+| strict operators (arithmetic, loads, conversions, `len`/`cap`, …) | `applyStrictOp` / `applyStrictOpPick` return the value | none: the value goes to the continuation |
+| right-hand sides of comma-ok forms (map lookup, type assertion) | `applyRhsOp` returns the values | the `tgtOpK` spine stores them (`storeTarget`) |
+| assignment targets, call results, receives, select, try-lock, atomics | the value is explicit in the configuration | `storeTarget`, `enterRecvTargets` |
+| wide statement operators with a target (`allocNew`, `makeSlice`, `makeMap`, `makeChan`, `copySlice`, `appendSlice`, `randIntn`) | `applyStmtOpValue` (`WideValue.lean`, 2026-11-27) | `storeValue`; the machine's `applyStmtOp` is the two composed (`applyStmtOp_eq_value`) |
+| wide statement operators without one (`mapAssign`, `mapDelete`, `clearMap`, `clearSlice`, `sortSlice`, `print`) | none: they compute no value | — |
+
+The last-but-one row is the newest: the machine's wide operators take their target as an
+address and store into it, and `WideValue.lean` states each without that store —
+`applyStmtOpValue.plan`, on the operands minus the target — proving the machine's operator at
+an address target equal to the value form followed by the store (`applyStmtOp_plan_eq_value`),
+and untargeted `randIntn` equal to the value form with the value dropped. The machine does not
+run the value forms; they are a second statement of the same arms, held to the first by the
+equations. `WideValueFacts.lean` gives the value forms what the surface gives the operator:
+the success characterisation (`applyStmtOp_plan_ok_iff_value`), no-panic commits and
+strictness, `NoDead`, the effect on the store (`applyStmtOpValue_effect`: the value's shape,
+the frame over the memory frame laws, well-formedness with the value bounded), agreement under
+table slices, and the step equations at the apply position (`retV_stmtOpK_apply_value` and its
+three twins).
 
 ## 3. The labelled step
 

@@ -38,19 +38,23 @@ the OPERAND of the final `Mem.store`, which normalizes at the target cell's decl
 can refuse; a consumer holding the value outside a cell applies `normalizeValueForTy` at the
 variable's type itself. (3) The operators with no target — `mapAssign`, `mapDelete`,
 `clearMap`, `clearSlice`, `sortSlice`, `print` — have no value form: `applyStmtOpValue.plan`
-refuses them by name, and `StmtOp.hasValueForm` says which are covered. (4) `randIntn` has two
-machine forms, with a target (`[target, bound]`) and without (`[bound]`, the draw discarded).
-The value form's operand list `[bound]` is the targeted list minus its target AND the
-untargeted list as it is, and `applyStmtOpValue.plan` cannot tell which was meant: it makes the
-draw — the machine's, with the same stream and pick record in both forms — and returns the
-pick. The equation relates the TARGETED machine form only; nothing is stated for the
-untargeted one. (5) Nothing here concerns the stores that are not a wide operator's: a channel
-receive's targets, a select's, a try-lock's result, an atomic's, a call's results — those
-deliver through `enterRecvTargets` / the `tgtOpK` spine / `storeTarget` with the value explicit
-in the configuration, and the comma-ok forms are `applyRhsOp`'s, which already returns values.
-(6) The equation is at the plan and at the composed apply; `stepFn` runs a plan's commit
-through `runCommit`, and a consumer's step equations take the composed `applyStmtOp … = …` as
-their premise (`retV_stmtOpK_apply` and its twins), which `applyStmtOp_eq_value` rewrites.
+refuses them by name (`applyStmtOpValue_plan_of_not_hasValueForm`), and `StmtOp.hasValueForm`
+says which are covered. (4) `randIntn` has two machine forms, with a target (`[target, bound]`)
+and without (`[bound]`, the draw discarded). The value form's operand list `[bound]` is the
+targeted list minus its target AND the untargeted list as it is; it makes the draw — the
+machine's, with the same stream and pick record in both forms — and returns the pick. The
+targeted form is `applyStmtOp_plan_eq_value`'s; the untargeted one is the value form with the
+value dropped (`applyStmtOp_plan_randIntn_untargeted`); which case a statement is in is read
+off its lowering (`stmtPlan_targets`). (5) Nothing here concerns the stores that are not a wide
+operator's: a channel receive's targets, a select's, a try-lock's result, an atomic's, a call's
+results — those deliver through `enterRecvTargets` / the `tgtOpK` spine / `storeTarget` with the
+value explicit in the configuration, and the comma-ok forms are `applyRhsOp`'s, which already
+returns values.
+
+What holds of the value forms standing alone — that a successful machine apply had an address
+for its target, their strictness and no-panic commits, `NoDead`, the effect on the store (the
+value's shape, the frame, well-formedness), agreement under table slices, and the `stepFn`
+equations at the apply position — is `WideValueFacts.lean`.
 -/
 
 namespace GoLean.GoCore.Machine
@@ -362,5 +366,82 @@ theorem applyStmtOp_eq_value {s : Store} {choices : Choices} {op : StmtOp} {nt :
   cases applyStmtOpValue.plan ctx s choices op nt vs with
   | error e => rfl
   | ok c => rfl
+
+/-! ## The other cases: no target
+
+A wide statement has at most one target (`stmtPlan_targets`). With one, the equations above
+apply. With none, either the operator computes no value at all (`StmtOp.hasValueForm = false`:
+the value form refuses, `applyStmtOpValue_plan_of_not_hasValueForm`), or it is `randIntn`
+whose draw is discarded: the machine's untargeted form is the value form with the value
+dropped (`applyStmtOp_plan_randIntn_untargeted`). -/
+
+/-- Drop the value of a value form's commit: what the machine does with a result no target
+takes. -/
+def dropValue (c : Commit (GoValue × Store × Choices × List PickRecord × AccessTrace)) :
+    Commit (Store × Choices × List PickRecord × AccessTrace) := fun s =>
+  (fun r => r.2) <$> c s
+
+/-- **`randIntn` without a target** is the value form with the pick dropped: the same refusals,
+the same draw from the stream, the same pick record, the store untouched. -/
+theorem applyStmtOp_plan_randIntn_untargeted {s : Store} {choices : Choices} {nt : Nat}
+    {v : GoValue} :
+    applyStmtOp.plan ctx s choices .randIntn nt [v]
+      = dropValue <$> applyStmtOpValue.plan ctx s choices .randIntn nt [v] := by
+  simp only [applyStmtOp.plan, applyStmtOpValue.plan]
+  cases v with
+  | int n k =>
+    cases k <;> wv_norm
+    split
+    · rfl
+    · refine congrArg (f := Except.ok) ?_
+      funext s0
+      rfl
+  | _ => wv_norm
+
+/-- An operator that stores into no target has no value form: the value plan refuses, by name. -/
+theorem applyStmtOpValue_plan_of_not_hasValueForm {s : Store} {choices : Choices} {op : StmtOp}
+    {nt : Nat} {vs : List GoValue} (h : op.hasValueForm = false) :
+    ∃ msg, applyStmtOpValue.plan ctx s choices op nt vs = .error (.stuck msg) := by
+  cases op <;> first
+    | exact ⟨_, by simp only [applyStmtOpValue.plan, applyStmtOpValueCore.plan]; rfl⟩
+    | cases h
+
+/-- **What the lowering hands a wide operator**: at most one target, first in the operand list;
+one exactly when the statement has a target, and then the operator has a value form. So a
+consumer reads the case — targeted, untargeted `randIntn`, or no value — off the statement. -/
+theorem stmtPlan_targets {stmt : Stmt} {op : StmtOp} {nt : Nat} {es : List Expr}
+    (h : stmtPlan stmt = some (op, nt, es)) :
+    (nt = 0 ∨ nt = 1)
+      ∧ (nt = 1 → op.hasValueForm = true ∧ ∃ te rest, es = te :: rest)
+      ∧ (nt = 0 → op.hasValueForm = true → op = .randIntn ∧ ∃ n, es = [n]) := by
+  cases stmt <;> simp only [stmtPlan, reduceCtorEq] at h
+  all_goals (try simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at h)
+  all_goals first
+    | (obtain ⟨te, (_ : assigneeExpr _ = some te), h1, h2, h3⟩ := h
+       subst h1 h2 h3
+       simp [StmtOp.hasValueForm])
+    | (obtain ⟨h1, h2, h3⟩ := h
+       subst h1 h2 h3
+       simp [StmtOp.hasValueForm])
+    | skip
+  case randIntn t n =>
+    cases t with
+    | none =>
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨h1, h2, h3⟩ := h
+      subst h1 h2 h3
+      simp [StmtOp.hasValueForm]
+    | some target =>
+      simp only [Option.bind_eq_some_iff, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨te, _, h1, h2, h3⟩ := h
+      subst h1 h2 h3
+      simp [StmtOp.hasValueForm]
+  case print nl args =>
+    split at h
+    · cases h
+    · simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨h1, h2, h3⟩ := h
+      subst h1 h2 h3
+      simp [StmtOp.hasValueForm]
 
 end GoLean.GoCore.Machine

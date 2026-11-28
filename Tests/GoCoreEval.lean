@@ -1,5 +1,6 @@
 import GoLean.GoCore
 import GoLean.GoCore.WideValue
+import GoLean.GoCore.WideValueFacts
 import GoLean.CLI
 -- The UNTRUSTED dedup engine, explicitly: the certificate-mutation
 -- regression tests below manufacture a real certificate with it and
@@ -3924,6 +3925,28 @@ private def wideValueTests : IO Bool := do
      | .ok (_, chM, psM, _), .ok (v, _, ch, ps, _) =>
          chM == ch && psM == ps && (match v with | .int 3 .int => true | _ => false)
      | _, _ => false))
+  -- The untargeted machine form is the value form with the value dropped, as a whole result.
+  passed := passed && (← expectTrue "wide value: randIntn untargeted — the machine's result is the value form's with the value dropped"
+    (match GoCore.Machine.applyStmtOp emptyCtx backed [2, 5] .randIntn 0 [.int 3 .int],
+           GoCore.Machine.applyStmtOpValue emptyCtx backed [2, 5] .randIntn 0 [.int 3 .int] with
+     | .ok (sM, chM, psM, trM), .ok (_, s₁, ch, ps, tr) =>
+         GoCore.Machine.Store.eqb sM s₁ && chM == ch && psM == ps && trM == tr
+     | _, _ => false))
+  -- The one existing root a value form may write: copy's destination, append's slice; none else.
+  passed := passed && (← expectTrue "wide value: wideWrittenRoot? names the destination backing for copySlice and appendSlice, and nothing for the allocating operators"
+    (GoCore.Machine.wideWrittenRoot? .copySlice [sl, src] == some ⟨1⟩
+      && GoCore.Machine.wideWrittenRoot? (.appendSlice .int) [sl, src] == some ⟨1⟩
+      && GoCore.Machine.wideWrittenRoot? (.allocNew .int) [.int 5 .int] == none
+      && GoCore.Machine.wideWrittenRoot? (.makeMap false) [] == none))
+  passed := passed && (← expectTrue "wide value: copySlice leaves every root but the destination backing as it was, and the heap's size"
+    (match GoCore.Machine.applyStmtOpValue emptyCtx intTarget [] .copySlice 0 [sl, src] with
+     | .ok (_, s₁, _, _, _) =>
+         let same (i : Nat) : Bool :=
+           match s₁.heap[i]?, intTarget.heap[i]? with
+           | some a, some b => GoCore.Machine.HeapCell.eqb a b
+           | _, _ => false
+         s₁.heap.size == intTarget.heap.size && same 0 && same 2 && !same 1
+     | .error _ => false))
   -- No target, no value form; and the two forms refuse a wrong arity with the same text.
   passed := passed && (← expectTrue "wide value: an operator with no target (clearMap, print, mapDelete) is refused by name"
     ([GoCore.Machine.StmtOp.clearMap, .print true, .mapDelete .int].all fun op =>
