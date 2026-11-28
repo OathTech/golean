@@ -11,6 +11,7 @@ import GoLean.GoCore.Prefix
 import GoLean.GoCore.State
 import GoLean.GoCore.StateEqb
 import GoLean.GoCore.StateWf
+import GoLean.GoCore.StepErrors
 import GoLean.GoCore.StepFnFacts
 import GoLean.GoCore.TableMonotonicity
 import GoLean.GoCore.WideValue
@@ -269,6 +270,56 @@ theorem GoLean.Contract.GoCore.TableMono.applyStmtOpValue_eq :
 theorem GoLean.Contract.GoCore.TableMono.storeValue_eq :
     stmt_of% GoLean.GoCore.TableMono.storeValue_eq :=
   GoLean.GoCore.TableMono.storeValue_eq
+
+/-! ## widemachine (12) -/
+
+theorem GoLean.Contract.GoCore.Machine.applyStmtOp_plan_tame :
+    stmt_of% GoLean.GoCore.Machine.applyStmtOp_plan_tame :=
+  GoLean.GoCore.Machine.applyStmtOp_plan_tame
+
+theorem GoLean.Contract.GoCore.Machine.applyStmtOp_plan_commitOk :
+    stmt_of% GoLean.GoCore.Machine.applyStmtOp_plan_commitOk :=
+  GoLean.GoCore.Machine.applyStmtOp_plan_commitOk
+
+theorem GoLean.Contract.GoCore.Machine.applyStmtOp_commit_noPanic :
+    stmt_of% GoLean.GoCore.Machine.applyStmtOp_commit_noPanic :=
+  GoLean.GoCore.Machine.applyStmtOp_commit_noPanic
+
+theorem GoLean.Contract.GoCore.Machine.applyStmtOp_wf :
+    stmt_of% GoLean.GoCore.Machine.applyStmtOp_wf :=
+  GoLean.GoCore.Machine.applyStmtOp_wf
+
+theorem GoLean.Contract.GoCore.Machine.applyStmtOp_inv_ok :
+    stmt_of% GoLean.GoCore.Machine.applyStmtOp_inv_ok :=
+  GoLean.GoCore.Machine.applyStmtOp_inv_ok
+
+theorem GoLean.Contract.GoCore.Machine.applyStmtOp_plan_appendSlice_nospill :
+    stmt_of% GoLean.GoCore.Machine.applyStmtOp_plan_appendSlice_nospill :=
+  GoLean.GoCore.Machine.applyStmtOp_plan_appendSlice_nospill
+
+theorem GoLean.Contract.GoCore.Machine.applyStmtOp_plan_appendSlice_spill :
+    stmt_of% GoLean.GoCore.Machine.applyStmtOp_plan_appendSlice_spill :=
+  GoLean.GoCore.Machine.applyStmtOp_plan_appendSlice_spill
+
+theorem GoLean.Contract.GoCore.Machine.applyStmtOp_plan_randIntn_nodraw :
+    stmt_of% GoLean.GoCore.Machine.applyStmtOp_plan_randIntn_nodraw :=
+  GoLean.GoCore.Machine.applyStmtOp_plan_randIntn_nodraw
+
+theorem GoLean.Contract.GoCore.Machine.applyStmtOp_plan_randIntn_draw :
+    stmt_of% GoLean.GoCore.Machine.applyStmtOp_plan_randIntn_draw :=
+  GoLean.GoCore.Machine.applyStmtOp_plan_randIntn_draw
+
+theorem GoLean.Contract.GoCore.Machine.applyStmtOp_plan_of_stmtConsult?_none :
+    stmt_of% GoLean.GoCore.Machine.applyStmtOp_plan_of_stmtConsult?_none :=
+  GoLean.GoCore.Machine.applyStmtOp_plan_of_stmtConsult?_none
+
+theorem GoLean.Contract.GoCore.Machine.Mem.store_noPanic :
+    stmt_of% GoLean.GoCore.Machine.Mem.store_noPanic :=
+  GoLean.GoCore.Machine.Mem.store_noPanic
+
+theorem GoLean.Contract.GoCore.Machine.isNormalForTy_sound :
+    stmt_of% GoLean.GoCore.Machine.isNormalForTy_sound :=
+  GoLean.GoCore.Machine.isNormalForTy_sound
 
 /-! ## consumeAt (14) -/
 

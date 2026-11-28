@@ -216,7 +216,7 @@ Everything else is untrusted tooling.
   default since 2026-10-25, their `main`s turned into build-time checks,
   [USER] 2026-10-25, row 42's follow-up; sandboxed where `bwrap` can start,
   `--inadvisably-no-sandbox` where it cannot, saying which) and `lake
-  comparator` (`scripts/check-comparator`, about 30 s: the 524 statements
+  comparator` (`scripts/check-comparator`, about 30 s: the 536 statements
   of the surface kept on main for the raft-proofs customer — every theorem
   of `Equations.lean`, the G11 family, the `Prefix`/`Finish` laws, the
   output-fold bridge, `enterFrame_declared`, the `Choices.consumeAt*` laws,
@@ -227,7 +227,8 @@ Everything else is untrusted tooling.
   `isNormalForTy_interface` and `recoverAtDeferred_none` ([USER] 2026-11-25, row 62), and the forty-seven
   statements of the wide operators' value-form surface (`WideValue.lean`, `WideValueFacts.lean`;
   the surface directed and its equations approved for the contract by the [USER] 2026-11-27, the
-  list of further statements [AGENT]'s, row 64) —
+  list of further statements [AGENT]'s, row 64; with twelve existing machine-side theorems that
+  surface rests on, [USER] 2026-11-28, row 65) —
   FROZEN as text in
   `Contract/Challenge.lean`, judged against GoLean's
   own theorems through the generated aliases of

@@ -61,9 +61,10 @@ NOT STATED, and why.
   refusal can precede; only «it does not succeed» is stated. When the target is the ONLY operand
   (`makeMap`/`makeChan` with no hint or capacity) the value form on `[]` succeeds where the
   machine stops, and the step is the machine's own `retV_stmtOpK_apply_panic` / `_error`.
-* The machine-side theorems this module rests on or points to (`applyStmtOp_plan_tame`,
-  `applyStmtOp_commit_noPanic`, `applyStmtOp_wf`, `Mem.store_noPanic`, the consumption
-  theorems of `StepFnFacts.lean`) are not in the comparator contract.
+(The machine-side theorems this module rests on or points to — `applyStmtOp_plan_tame`,
+`applyStmtOp_commit_noPanic`, `applyStmtOp_wf`, `Mem.store_noPanic`, the consumption theorems of
+`StepFnFacts.lean`, `isNormalForTy_sound` — are in the comparator contract since 2026-11-28,
+family `widemachine`.)
 -/
 
 namespace GoLean.GoCore.Machine

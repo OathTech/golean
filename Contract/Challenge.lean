@@ -11,6 +11,7 @@ import GoLean.GoCore.TableMonotonicity
 import GoLean.GoCore.DeadCell
 import GoLean.GoCore.WideValue
 import GoLean.GoCore.WideValueFacts
+import GoLean.GoCore.StepErrors
 import GoLean.GoCore.Seed
 
 /-!
@@ -31,7 +32,8 @@ the customer's ask): 366 statements in all then; 385 with the equations added si
 certificate theorems (2026-10-26); 475 since 2026-11-24 with the ninety dead-cell statements (family `deadcell`, at
 the end of this file); 477 since 2026-11-25 with G23's `recoverAtDeferred_none` (family `recover`)
 and `isNormalForTy_interface` (family `iface`); 524 since 2026-11-28 with the forty-seven
-statements of the wide operators' value-form surface (family `widevalue`). The equation family is EVERY public theorem of
+statements of the wide operators' value-form surface (family `widevalue`); 536 the same day with
+twelve existing machine-side theorems that surface rests on (family `widemachine`). The equation family is EVERY public theorem of
 `Equations.lean` (300 since lane `core/g16-raise-mark-1023`; 234 of them `@[stepFn_eqns]` simp-set members — the customer's rewriting
 library is the module, and its `signalStep_*` rows, `runProgramSetup_noInit`, the
 `allocDecls_*`/`bindParams_*`/`setup_*` facts and the rest are plain theorems there): widened
@@ -5505,4 +5507,125 @@ set_option warn.sorry false in
 /-- `GoLean.GoCore.TableMono.storeValue_eq` (GoLean.GoCore.WideValueFacts) -/
 theorem GoLean.Contract.GoCore.TableMono.storeValue_eq :
     ∀ {a b : ProgramCtx}, a.tablesFree = b.tablesFree → storeValue a = storeValue b
+    := sorry
+
+/-! ### The machine-side theorems the value-form surface rests on (2026-11-28) — twelve statements
+(family `widemachine`; the [USER]'s agreement of that day): existing theorems about the machine's
+own wide apply, `Mem.store` and the normal form, kept so that what the value-form statements are
+read through is frozen too. No theorem here is new. -/
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applyStmtOp_plan_tame` (GoLean.GoCore.StepErrors) -/
+theorem GoLean.Contract.GoCore.Machine.applyStmtOp_plan_tame :
+    ∀ {ctx : ProgramCtx} {s : Store} {ch : Choices} {op : StmtOp} {nt : Nat} {vs : List GoValue},
+      ErrP Stop.Tame (applyStmtOp.plan ctx s ch op nt vs)
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applyStmtOp_plan_commitOk` (GoLean.GoCore.StepErrors) -/
+theorem GoLean.Contract.GoCore.Machine.applyStmtOp_plan_commitOk :
+    ∀ {ctx : ProgramCtx} {s : Store} {ch : Choices} {op : StmtOp} {nt : Nat} {vs : List GoValue},
+      CommitOk (applyStmtOp.plan ctx s ch op nt vs)
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applyStmtOp_commit_noPanic` (GoLean.GoCore.StepFnFacts) -/
+theorem GoLean.Contract.GoCore.Machine.applyStmtOp_commit_noPanic :
+    ∀ {ctx : ProgramCtx} (s : Store) (ch : Choices) (op : StmtOp) (nt : Nat) (vs : List GoValue),
+      PlanNoPanic (applyStmtOp.plan ctx s ch op nt vs)
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applyStmtOp_wf` (GoLean.GoCore.StateWf) -/
+theorem GoLean.Contract.GoCore.Machine.applyStmtOp_wf :
+    ∀ {ctx : ProgramCtx} {σ : Store} {ch : Choices} {op : StmtOp} {nt : Nat} {vs : List GoValue}
+      {σ' : Store} {ch' : Choices} {ps : List PickRecord} {tr : AccessTrace},
+      StateWf ctx σ →
+        goValueListSup vs ≤ σ.nextAddr →
+          applyStmtOp ctx σ ch op nt vs = Except.ok (σ', ch', ps, tr) → StmtOpPres ctx σ σ'
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applyStmtOp_inv_ok` (GoLean.GoCore.StepFnFacts) -/
+theorem GoLean.Contract.GoCore.Machine.applyStmtOp_inv_ok :
+    ∀ {ctx : ProgramCtx} {s : Store} {ch : Choices} {op : StmtOp} {nt : Nat} {vs : List GoValue}
+      {a : Store × Choices × List PickRecord × AccessTrace},
+      applyStmtOp ctx s ch op nt vs = Except.ok a →
+        ∃ (c : Commit (Store × Choices × List PickRecord × AccessTrace)),
+          applyStmtOp.plan ctx s ch op nt vs = Except.ok c ∧ c s = Except.ok a
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applyStmtOp_plan_appendSlice_nospill` (GoLean.GoCore.StepFnFacts) -/
+theorem GoLean.Contract.GoCore.Machine.applyStmtOp_plan_appendSlice_nospill :
+    ∀ {ctx : ProgramCtx} {σ : Store} {elem : Ty} {nt : Nat} {vs : List GoValue},
+      appendSpill? ctx σ elem vs = none →
+        ∃ (r : Except Stop (Commit (Store × AccessTrace))),
+          ∀ (ch : Choices),
+            applyStmtOp.plan ctx σ ch (StmtOp.appendSlice elem) nt vs =
+              Except.map (Commit.withStream ch []) r
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applyStmtOp_plan_appendSlice_spill` (GoLean.GoCore.StepFnFacts) -/
+theorem GoLean.Contract.GoCore.Machine.applyStmtOp_plan_appendSlice_spill :
+    ∀ {ctx : ProgramCtx} {σ : Store} {elem : Ty} {nt : Nat} {vs : List GoValue} {w : Nat},
+      appendSpill? ctx σ elem vs = some w →
+        ∃ (g : Nat → Except Stop (Commit (Store × AccessTrace))),
+          (∀ (ch : Choices),
+              applyStmtOp.plan ctx σ ch (StmtOp.appendSlice elem) nt vs =
+                Except.map
+                  (Commit.withStream (Choices.consumeAt ChoiceSite.appendSpill w ch).snd
+                    [{ site := ChoiceSite.appendSpill, bound := w,
+                        pick := (Choices.consumeAt ChoiceSite.appendSpill w ch).fst }])
+                  (g (Choices.consumeAt ChoiceSite.appendSpill w ch).fst)) ∧
+            ∀ (pick : Nat), NoPanic (g pick)
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applyStmtOp_plan_randIntn_nodraw` (GoLean.GoCore.StepFnFacts) -/
+theorem GoLean.Contract.GoCore.Machine.applyStmtOp_plan_randIntn_nodraw :
+    ∀ {ctx : ProgramCtx} {σ : Store} {nt : Nat} {vs : List GoValue},
+      intnBound? vs = none →
+        ∃ (r : Except Stop (Commit (Store × AccessTrace))),
+          ∀ (ch : Choices),
+            applyStmtOp.plan ctx σ ch StmtOp.randIntn nt vs = Except.map (Commit.withStream ch []) r
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applyStmtOp_plan_randIntn_draw` (GoLean.GoCore.StepFnFacts) -/
+theorem GoLean.Contract.GoCore.Machine.applyStmtOp_plan_randIntn_draw :
+    ∀ {ctx : ProgramCtx} {σ : Store} {nt : Nat} {vs : List GoValue} {w : Nat},
+      intnBound? vs = some w →
+        ∃ (g : Nat → Except Stop (Commit (Store × AccessTrace))),
+          (∀ (ch : Choices),
+              applyStmtOp.plan ctx σ ch StmtOp.randIntn nt vs =
+                Except.map
+                  (Commit.withStream (Choices.consumeAt ChoiceSite.intn w ch).snd
+                    [{ site := ChoiceSite.intn, bound := w,
+                        pick := (Choices.consumeAt ChoiceSite.intn w ch).fst }])
+                  (g (Choices.consumeAt ChoiceSite.intn w ch).fst)) ∧
+            ∀ (pick : Nat), NoPanic (g pick)
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.applyStmtOp_plan_of_stmtConsult?_none` (GoLean.GoCore.StepFnFacts) -/
+theorem GoLean.Contract.GoCore.Machine.applyStmtOp_plan_of_stmtConsult?_none :
+    ∀ {ctx : ProgramCtx} {σ : Store} {op : StmtOp} {nt : Nat} {vs : List GoValue},
+      stmtConsult? ctx σ op vs = none →
+        ∃ (r : Except Stop (Commit (Store × AccessTrace))),
+          ∀ (ch : Choices), applyStmtOp.plan ctx σ ch op nt vs = Except.map (Commit.withStream ch []) r
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.Mem.store_noPanic` (GoLean.GoCore.StepFnFacts) -/
+theorem GoLean.Contract.GoCore.Machine.Mem.store_noPanic :
+    ∀ {ctx : ProgramCtx} (s : Store) (l : Loc) (v : GoValue), NoPanic (Mem.store ctx s l v)
+    := sorry
+
+set_option warn.sorry false in
+/-- `GoLean.GoCore.Machine.isNormalForTy_sound` (GoLean.GoCore.StateWf) -/
+theorem GoLean.Contract.GoCore.Machine.isNormalForTy_sound :
+    ∀ {ctx : ProgramCtx} {ty : Ty} {v : GoValue},
+      isNormalForTy ctx.types ty v = true → normalizeValueForTy ctx ty v = Except.ok v
     := sorry

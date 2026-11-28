@@ -57,6 +57,16 @@ or a theorem added to or removed from `InitDriverFacts.lean`, changes the list (
               `CommitEffect`; existing: `Post`, `Commit.NoDead`, `StmtOpPres`, `StateWf`,
               `goValueListSup`, `GoValue.locSup`, `PlanNoPanic`, `ErrP`, `Stop.Tame` — are compared
               whole, as every definition is.
+  widemachine the machine-side theorems the value-form surface rests on or points to, kept so that
+              a consumer reading a value-form fact through them reads a frozen statement (the
+              [USER]'s agreement of 2026-11-28 to the second audit's finding 7): the wide apply's
+              strictness and commit facts (`applyStmtOp_plan_tame`, `_plan_commitOk`,
+              `_commit_noPanic`, `_inv_ok`), its well-formedness (`applyStmtOp_wf`), its stream
+              consumption (`applyStmtOp_plan_appendSlice_nospill`, `_spill`,
+              `_plan_randIntn_nodraw`, `_draw`, `applyStmtOp_plan_of_stmtConsult?_none`),
+              `Mem.store_noPanic`, and `isNormalForTy_sound` (the `valueShape_*_normal` lemmas'
+              companion). An EXPLICIT list ([AGENT] 2026-11-28); `applyStmtOp_noDead` is already
+              kept, in family `deadcell`.
   consumeAt   every theorem `…Choices.consumeAt*` — the `consumeAt_*` and `consumeAtE_*` laws of
               `State.lean` and `Machine.lean` (the customer's G9 list names both spellings).
   eqns        every public theorem of the module `GoLean.GoCore.Equations` — the customer's
@@ -232,6 +242,19 @@ open ContractNames in
       `GoLean.GoCore.TableMono.applyStmtOpValue_plan_eq,
       `GoLean.GoCore.TableMono.applyStmtOpValue_eq,
       `GoLean.GoCore.TableMono.storeValue_eq]),
+    ("widemachine", #[
+      `GoLean.GoCore.Machine.applyStmtOp_plan_tame,
+      `GoLean.GoCore.Machine.applyStmtOp_plan_commitOk,
+      `GoLean.GoCore.Machine.applyStmtOp_commit_noPanic,
+      `GoLean.GoCore.Machine.applyStmtOp_wf,
+      `GoLean.GoCore.Machine.applyStmtOp_inv_ok,
+      `GoLean.GoCore.Machine.applyStmtOp_plan_appendSlice_nospill,
+      `GoLean.GoCore.Machine.applyStmtOp_plan_appendSlice_spill,
+      `GoLean.GoCore.Machine.applyStmtOp_plan_randIntn_nodraw,
+      `GoLean.GoCore.Machine.applyStmtOp_plan_randIntn_draw,
+      `GoLean.GoCore.Machine.«applyStmtOp_plan_of_stmtConsult?_none»,
+      `GoLean.GoCore.Machine.Mem.store_noPanic,
+      `GoLean.GoCore.Machine.isNormalForTy_sound]),
     ("consumeAt", consumeAtTheorems env),
     ("eqns", eqnsModule),
     ("g11", moduleTheorems env `GoLean.GoCore.InitDriverFacts),
